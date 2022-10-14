@@ -19,7 +19,12 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
-import type { APIProjectWithAssignments, APIProject, APIUser } from "types/api_flow_types";
+import type {
+  APIProjectWithAssignments,
+  APIProject,
+  APIUser,
+  APIUserBase,
+} from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
@@ -39,6 +44,7 @@ import Persistence from "libs/persistence";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 const { Search } = Input;
 type OwnProps = {
@@ -222,25 +228,39 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   renderPlaceholder() {
     return this.state.isLoading ? null : (
       <React.Fragment>
-        {"There are no projects. You can "}
-        <Link to="/projects/create">add a project</Link>
-        {" which can be used to track the progress of tasks."}
+        {"There are no projects yet or no projects matching your filters. "}
+        <Link to="/projects/create">Add a new project</Link>
+        {" to distribute and track the progress of annotation tasks or adjust your filters."}
       </React.Fragment>
     );
   }
 
   render() {
-    const marginRight = {
-      marginRight: 20,
-    };
+    const greaterThanZeroFilters = [
+      {
+        text: "0",
+        value: "0",
+      },
+      {
+        text: ">0",
+        value: ">0",
+      },
+    ];
+
     const typeHint: Array<APIProjectWithAssignments> = [];
+    const filteredProjects = Utils.filterWithSearchQueryAND(
+      this.state.projects,
+      ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
+      this.state.searchQuery,
+    );
+
     return (
       <div className="container TestProjectListView">
         <div>
           <div className="pull-right">
             {this.props.taskTypeId ? null : (
               <Link to="/projects/create">
-                <Button icon={<PlusOutlined />} style={marginRight} type="primary">
+                <Button icon={<PlusOutlined />} style={{ marginRight: 20 }} type="primary">
                   Add Project
                 </Button>
               </Link>
@@ -267,11 +287,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
           />
           <Spin spinning={this.state.isLoading} size="large">
             <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.projects,
-                ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
-                this.state.searchQuery,
-              )}
+              dataSource={filteredProjects}
               rowKey="id"
               pagination={{
                 defaultPageSize: 50,
@@ -296,11 +312,81 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 width={250}
               />
               <Column
+                title="Open Assignments"
+                dataIndex="numberOfOpenAssignments"
+                key="numberOfOpenAssignments"
+                sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}
+                filters={greaterThanZeroFilters}
+                onFilter={(value, project: APIProjectWithAssignments) => {
+                  if (value === "0") {
+                    return project.tracingTime === 0;
+                  }
+                  return project.tracingTime > 0;
+                }}
+              />
+              <Column
+                title={
+                  <Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>
+                }
+                dataIndex="tracingTime"
+                key="tracingTime"
+                sorter={Utils.compareBy(typeHint, (project) => project.tracingTime)}
+                render={(tracingTimeMs) =>
+                  Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  })
+                }
+                filters={greaterThanZeroFilters}
+                onFilter={(value, project: APIProjectWithAssignments) => {
+                  if (value === "0") {
+                    return project.tracingTime === 0;
+                  }
+                  return project.tracingTime > 0;
+                }}
+              />
+              <Column
                 title="Team"
                 dataIndex="teamName"
                 key="teamName"
                 sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
-                width={300}
+                filters={_.uniqBy(
+                  filteredProjects.map((project) => ({
+                    text: project.teamName,
+                    value: project.team,
+                  })),
+                  "text",
+                )}
+                onFilter={(value, project: APIProjectWithAssignments) => value === project.team}
+                filterMultiple
+              />
+              <Column
+                title="Owner"
+                dataIndex="owner"
+                key="owner"
+                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
+                render={(owner: APIUserBase) => (
+                  <>
+                    <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                    <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                  </>
+                )}
+                filters={_.uniqBy(
+                  filteredProjects.map((project) => ({
+                    text: `${project.owner.firstName} ${project.owner.lastName}`,
+                    value: project.owner.id,
+                  })),
+                  "text",
+                )}
+                onFilter={(value, project: APIProjectWithAssignments) => value === project.owner.id}
+                filterMultiple
+              />
+              <Column
+                title="Creation Date"
+                dataIndex="created"
+                key="created"
+                sorter={Utils.compareBy(typeHint, (project) => project.created)}
+                render={(created) => <FormattedDate timestamp={created} />}
+                defaultSortOrder="descend"
               />
               <Column
                 title="Priority"
@@ -310,42 +396,18 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 render={(priority, project: APIProjectWithAssignments) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
-              />
-              <Column
-                title="Owner"
-                dataIndex="owner"
-                key="owner"
-                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
-                render={(owner) =>
-                  owner.email ? `${owner.lastName}, ${owner.firstName} (${owner.email})` : "-"
-                }
-              />
-              <Column
-                title="Open Assignments"
-                dataIndex="numberOfOpenAssignments"
-                key="numberOfOpenAssignments"
-                width={200}
-                sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}
-              />
-              <Column
-                title={
-                  <Tooltip title="Total time spent annotating for this project">Time [h]</Tooltip>
-                }
-                dataIndex="tracingTime"
-                key="tracingTime"
-                width={200}
-                sorter={Utils.compareBy(typeHint, (project) => project.tracingTime)}
-                render={(tracingTimeMs) =>
-                  Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
-                    maximumFractionDigits: 1,
-                  })
-                }
+                filters={[
+                  {
+                    text: "Paused",
+                    value: "paused",
+                  },
+                ]}
+                onFilter={(_value, project: APIProjectWithAssignments) => project.paused}
               />
               <Column
                 title="Time Limit"
                 dataIndex="expectedTime"
                 key="expectedTime"
-                width={200}
                 sorter={Utils.compareBy(typeHint, (project) => project.expectedTime)}
                 render={(expectedTime) => `${expectedTime}m`}
               />

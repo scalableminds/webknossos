@@ -312,7 +312,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                       width: "100%",
                     }}
                     onChange={this.handleUserChange}
-                    notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
+                    loading={this.state.isFetchingUsers}
                     options={this.state.users
                       .filter((u) => u.isActive)
                       .map((user: APIUser) => ({

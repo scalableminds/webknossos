@@ -150,18 +150,21 @@ class TaskListView extends React.PureComponent<Props, State> {
           />
         </>
       ),
-      onOk: () => {
+      onOk: async () => {
         const userId = this.state.selectedUserIdForAssignment;
         if (userId != null) {
-          assignTaskToUser(task.id, userId)
-            .then(
-              () => Toast.success("A user was successfully assigned to the task."),
-              (error) =>
-                Toast.error(
-                  `An error occured. The selected user could not be assigned the selected task. ${error}`,
-                ),
-            )
-            .finally(() => this.setState({ selectedUserIdForAssignment: null }));
+          try {
+            const updatedTask = await assignTaskToUser(task.id, userId);
+            this.setState((prevState) => ({
+              tasks: [...prevState.tasks.filter((t) => t.id !== task.id), updatedTask],
+            }));
+
+            Toast.success("A user was successfully assigned to the task.");
+          } catch (error) {
+            handleGenericError(error as Error);
+          } finally {
+            this.setState({ selectedUserIdForAssignment: null });
+          }
         }
       },
     });
@@ -482,12 +485,14 @@ class TaskListView extends React.PureComponent<Props, State> {
                       Edit
                     </a>
                   </div>
-                  <div>
-                    <LinkButton onClick={_.partial(this.assignTaskToUser, task)}>
-                      <UserAddOutlined />
-                      Manually Assign to User
-                    </LinkButton>
-                  </div>
+                  {task.status.open > 0 ? (
+                    <div>
+                      <LinkButton onClick={_.partial(this.assignTaskToUser, task)}>
+                        <UserAddOutlined />
+                        Manually Assign to User
+                      </LinkButton>
+                    </div>
+                  ) : null}
                   {task.status.finished > 0 ? (
                     <div>
                       <AsyncLink

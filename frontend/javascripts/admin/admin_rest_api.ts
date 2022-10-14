@@ -505,6 +505,15 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
+export async function assignTaskToUser(taskId: string, userId: string): Promise<APITask> {
+  return Request.sendJSONReceiveJSON(`/api/tasks/${taskId}/assign`, {
+    data: {
+      userId,
+    },
+    method: "POST",
+  });
+}
+
 // ### Private Links
 
 export function createPrivateLink(

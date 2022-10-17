@@ -1,0 +1,11 @@
+@( name: String, email: String, organizationDisplayName: String, message: String)
+
+@emailBaseTemplate() {
+<p>Hi webKnossos-Team</p>
+<p>User @{name} (@{email}) from @{organizationDisplayName} has a question or feedback for you:</p>
+<p>
+  @{message}
+</p>
+
+<p>With best regards,<br />@{name}</p>
+}

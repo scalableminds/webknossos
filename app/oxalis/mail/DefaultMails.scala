@@ -92,4 +92,16 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
   }
+
+  def helpMail(user: User,
+               userEmail: String,
+               organizationDisplayName: String,
+               message: String): Mail = {
+    Mail(
+      from = defaultSender,
+      subject = s"Help requested // Feedback provided",
+      bodyHtml = html.mail.help(user.name, userEmail, organizationDisplayName, message).body,
+      recipients = List("hello@webknossos.org")
+    )
+  }
 }

@@ -557,6 +557,17 @@ export function diffArrays<T>(
     onlyB,
   };
 }
+export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
+  // This set-based implementation avoids stackoverflow errors from which
+  // _.without(arr, ...elements) suffers.
+  // When measured against a chunk-based _.without approach, this implementation
+  // is 20% faster.
+  // _.pullValues was also tested, but this didn't even terminate in a minute
+  // (whereas the other test sets could be tackled in under one second).
+
+  const auxSet = new Set(elements);
+  return arr.filter((x) => !auxSet.has(x));
+}
 export function zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
   return maybeA.chain((valueA) => maybeB.map((valueB) => [valueA, valueB]));
 }

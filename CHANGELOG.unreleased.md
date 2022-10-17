@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Creating tasks in bulk now also supports referencing task types by their summary instead of id. [#6486](https://github.com/scalableminds/webknossos/pull/6486)
+- Navbar changes: Move dropdown menu into separate Menu button. Removed toggle-button (cog icon)for left-hand side bar from navbar. [#6558](https://github.com/scalableminds/webknossos/pull/6558)
 
 ### Fixed
 - Fixed a bug where some file requests replied with error 400 instead of 404, confusing some zarr clients. [#6515](https://github.com/scalableminds/webknossos/pull/6515)

@@ -333,20 +333,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                     display: "flex",
                   }}
                 >
-                  <ButtonComponent
-                    className={isLeftBorderOpen ? "highlight-togglable-button" : ""}
-                    onClick={this.toggleLeftBorder}
-                    shape="circle"
-                  >
-                    <SettingOutlined
-                      className="without-icon-margin"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    />
-                  </ButtonComponent>
                   <ActionBarView
                     layoutProps={{
                       storedLayoutNamesForView: currentLayoutNames,

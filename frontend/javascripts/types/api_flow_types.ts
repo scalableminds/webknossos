@@ -35,6 +35,7 @@ type APIDataLayerBase = {
   readonly boundingBox: BoundingBoxObject;
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
+  readonly dataFormat?: "wkw" | "zarr";
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";

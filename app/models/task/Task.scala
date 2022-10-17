@@ -109,49 +109,47 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
   private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean) =
     s"""
-        select ${columnsWithPrefix("webknossos.tasks_.")}
-           from
-             webknossos.tasks_
-             join
-               (select domain, value
-                from webknossos.user_experiences
-                where _user = '${userId.id}')
-               as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
-             join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}' and not ($isTeamManagerOrAdmin and state = '${AnnotationState.Cancelled}')) as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
-           where webknossos.tasks_.openInstances > 0
-                 and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
-                 and userAnnotations._task is null
-                 and not webknossos.projects_.paused
-           order by webknossos.projects_.priority desc
-           limit 1
-      """
+          select ${columnsWithPrefix("webknossos.tasks_.")}
+             from
+               webknossos.tasks_
+               join
+                 (select domain, value
+                  from webknossos.user_experiences
+                  where _user = '${userId.id}')
+                 as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
+               join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
+               left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}' and not ($isTeamManagerOrAdmin and state = '${AnnotationState.Cancelled}')) as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             where webknossos.tasks_.openInstances > 0
+                   and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                   and userAnnotations._task is null
+                   and not webknossos.projects_.paused
+             order by webknossos.projects_.priority desc
+             limit 1
+        """
+
+  private def findNextTaskByIdQ(taskId: ObjectId) =
+    s"""
+        select $columns
+        from webknossos.tasks_
+        where _id = '${taskId.id}' and openInstances > 0
+        limit 1
+        """
 
   def assignNext(userId: ObjectId,
                  teamIds: List[ObjectId],
-                 isTeamManagerOrAdmin: Boolean = false): Fox[(Task, ObjectId)] = {
+                 isTeamManagerOrAdmin: Boolean = false): Fox[(ObjectId, ObjectId)] = {
 
     val annotationId = ObjectId.generate
+    val now = new java.sql.Timestamp(System.currentTimeMillis)
 
     val insertAnnotationQ = sqlu"""
            with task as (#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}),
            dataset as (select _id from webknossos.datasets_ limit 1)
            insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-           select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption
-      .map(_.id)
-      .getOrElse("")}, ${userId.id}, '', '#${AnnotationVisibility.Internal}', '', '#${AnnotationState.Initializing.toString}', '{}',
-                    '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
-                     ${new java.sql.Timestamp(System.currentTimeMillis)}, false
+           select $annotationId, dataset._id, task._id, ${teamIds.headOption}, $userId, '', '#${AnnotationVisibility.Internal}', '', '#${AnnotationState.Initializing.toString}', '{}',
+                    '{}', 0, 'Task', $now, $now, false
            from task, dataset
       """
-
-    val findTaskOfInsertedAnnotationQ =
-      sql"""
-           select #${columnsWithPrefix("t.")}
-           from webknossos.annotations_ a
-           join webknossos.tasks_ t on a._task = t._id
-           where a._id = ${annotationId.id}
-         """.as[TasksRow]
 
     for {
       _ <- run(
@@ -159,9 +157,42 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task")
       )
-      r <- run(findTaskOfInsertedAnnotationQ)
+      r <- run(findTaskOfInsertedAnnotationQ(annotationId))
       parsed <- parseFirst(r, "task assignment query")
-    } yield (parsed, annotationId)
+    } yield (parsed._id, annotationId)
+  }
+
+  private def findTaskOfInsertedAnnotationQ(annotationId: ObjectId) =
+    sql"""
+         select #${columnsWithPrefix("t.")}
+         from webknossos.annotations_ a
+         join webknossos.tasks_ t on a._task = t._id
+         where a._id = $annotationId
+       """.as[TasksRow]
+
+  def assignOneTo(taskId: ObjectId, userId: ObjectId, teamIds: List[ObjectId]): Fox[(ObjectId, ObjectId)] = {
+    val annotationId = ObjectId.generate
+    val now = new java.sql.Timestamp(System.currentTimeMillis)
+
+    val insertAnnotationQ =
+      sqlu"""
+      with task as (#${findNextTaskByIdQ(taskId)}),
+      dataset as (select _id from webknossos.datasets_ limit 1)
+      insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+      select $annotationId, dataset._id, task._id, ${teamIds.headOption}, $userId, '', '#${AnnotationVisibility.Internal}', '', '#${AnnotationState.Initializing.toString}', '{}',
+               '{}', 0, 'Task', $now, $now, false
+      from task, dataset
+          """
+
+    for {
+      _ <- run(
+        insertAnnotationQ.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task")
+      )
+      r <- run(findTaskOfInsertedAnnotationQ(annotationId))
+      parsed <- parseFirst(r, "task assignment query")
+    } yield (parsed._id, annotationId)
   }
 
   def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false): Fox[Task] =
@@ -200,7 +231,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      q = sql"""select #${columns}
+      q = sql"""select #$columns
                 from webknossos.tasks_
                 where _id in
                 (select distinct t._id
@@ -219,12 +250,6 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
-
-  def countOpenInstancesForTask(taskId: ObjectId): Fox[Long] =
-    for {
-      result <- run(sql"select openInstances from webknossos.tasks_ where _id = ${taskId.toString}".as[Long])
-      firstResult <- result.headOption.toFox
-    } yield firstResult
 
   def countAllOpenInstancesForOrganization(organizationId: ObjectId): Fox[Long] =
     for {

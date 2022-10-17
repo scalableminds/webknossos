@@ -167,6 +167,7 @@ GET           /tasks/experienceDomains                                          
 GET           /tasks/:id                                                                controllers.TaskController.read(id: String)
 DELETE        /tasks/:id                                                                controllers.TaskController.delete(id: String)
 PUT           /tasks/:id                                                                controllers.TaskController.update(id: String)
+POST          /tasks/:id/assign                                                         controllers.TaskController.assignOne(id: String, userId: String)
 GET           /tasks/:id/annotations                                                    controllers.AnnotationController.annotationsForTask(id: String)
 
 # TaskTypes

@@ -554,7 +554,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 })
               }
             />
-            <CreateResourceButton text="Upload Dataset" link="/dataset/upload" />
+            <CreateResourceButton text="Upload Dataset" link="/datasets/upload" />
           </Row>
 
           <FormItem

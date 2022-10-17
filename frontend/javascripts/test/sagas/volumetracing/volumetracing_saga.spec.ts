@@ -68,7 +68,6 @@ const serverVolumeTracing: ServerVolumeTracing = {
     z: 0,
   },
   userBoundingBoxes: [],
-  dataSetName: "dataset_name",
   largestSegmentId: 0,
 };
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);

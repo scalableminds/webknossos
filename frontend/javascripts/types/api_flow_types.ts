@@ -291,10 +291,12 @@ type APIProjectTypeBase = {
 export type APIProject = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: APIUserBase;
+  readonly created: number;
 };
 export type APIProjectUpdater = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: string;
+  readonly created: number;
 };
 export type APIProjectCreator = APIProjectTypeBase & {
   readonly owner: string;
@@ -693,6 +695,10 @@ export type ServerEditableMapping = {
 export type APIMeshFile = {
   meshFileName: string;
   mappingName?: string | null | undefined;
+  // 0   - is the first mesh file version
+  // 1-2 - the format should behave as v0 (refer to voxelytics for actual differences)
+  // 3   - is the newer version with draco encoding.
+  formatVersion: number;
 };
 export type APIConnectomeFile = {
   connectomeFileName: string;

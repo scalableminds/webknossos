@@ -9,6 +9,8 @@ import messages from "messages";
 
 const ROW_GUTTER = 1;
 
+const ANTD_TOTAL_SPAN = 24;
+
 // Always the left part:
 export const SETTING_LEFT_SPAN = 10;
 
@@ -187,6 +189,7 @@ type SwitchSettingProps = {
   disabled: boolean;
   tooltipText: string | null | undefined;
   loading: boolean;
+  labelSpan?: number | null;
 };
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
@@ -196,13 +199,15 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   };
 
   render() {
-    const { label, onChange, value, disabled, tooltipText, loading } = this.props;
+    const { label, onChange, value, disabled, tooltipText, loading, labelSpan } = this.props;
+    const leftSpanValue = labelSpan || SETTING_LEFT_SPAN;
+    const rightSpanValue = labelSpan != null ? ANTD_TOTAL_SPAN - leftSpanValue : SETTING_RIGHT_SPAN;
     return (
       <Row className="margin-bottom" align="middle" gutter={ROW_GUTTER}>
-        <Col span={SETTING_LEFT_SPAN}>
+        <Col span={leftSpanValue}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_RIGHT_SPAN}>
+        <Col span={rightSpanValue}>
           <Tooltip title={tooltipText} placement="top">
             {/* This div is necessary for the tooltip to be displayed */}
             <div

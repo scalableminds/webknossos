@@ -1,13 +1,17 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import java.nio.file.Path
-
 import ch.systemsx.cisd.hdf5.{HDF5FactoryProvider, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import net.liftweb.common.{Box, Failure, Full}
 
-case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable {
+import java.nio.file.Path
+import scala.util.Using
+
+case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable with AutoCloseable {
   override protected def onFinalize(): Unit = reader.close()
+
+  override def close(): Unit = this.finishAccess()
 }
 
 object CachedHdf5File {
@@ -40,4 +44,22 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
       }
     }
   }
+}
+
+object CachedHdf5Utils {
+  def executeWithCachedHdf5[T](filePath: Path, meshFileCache: Hdf5FileCache)(block: CachedHdf5File => T): Box[T] =
+    for {
+      _ <- if (filePath.toFile.exists()) {
+        Full(true)
+      } else {
+        Failure("mesh.file.open.failed")
+      }
+      result = Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
+        block
+      }
+      boxedResult <- result match {
+        case scala.util.Success(result) => Full(result)
+        case scala.util.Failure(e)      => Failure(e.toString)
+      }
+    } yield boxedResult
 }

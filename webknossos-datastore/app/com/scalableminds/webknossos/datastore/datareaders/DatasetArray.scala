@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.BytesConverter
+import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 

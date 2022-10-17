@@ -225,7 +225,8 @@ Expects:
           .futureBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox
-        taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
+        taskUpdated <- taskDAO.findOne(taskIdValidated)
+        taskJson <- taskService.publicWrites(taskUpdated)(GlobalAccessContext)
       } yield Ok(taskJson)
     }
   }

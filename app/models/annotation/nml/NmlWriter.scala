@@ -102,8 +102,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   def extractTracingParameters(skeletonLayers: List[FetchedAnnotationLayer],
                                volumeLayers: List[FetchedAnnotationLayer],
                                annotation: Option[Annotation],
-                               datasetName: String,
                                organizationName: String,
+                               datasetName: String,
                                scale: Option[Vec3Double]): Fox[NmlParameters] =
     for {
       parameterSourceAnnotationLayer <- selectLayerWithPrecedence(skeletonLayers, volumeLayers)

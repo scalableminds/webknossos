@@ -20,6 +20,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   LeftOutlined,
+  FieldTimeOutlined,
 } from "@ant-design/icons";
 import MiniSearch from "minisearch";
 import ColorHash from "color-hash";
@@ -36,7 +37,12 @@ import {
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import { formatDateMedium, formatDistance, formatDistanceStrict } from "libs/format_utils";
+import {
+  formatDateMedium,
+  formatDistance,
+  formatDistanceStrict,
+  formatDurationStrict,
+} from "libs/format_utils";
 import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
@@ -108,7 +114,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<SyncOutlined spin />} color="processing">
             running
           </Tag>
-          started {moment(taskInfo.beginTime).fromNow()} ago
+          started {moment(taskInfo.beginTime).fromNow()}
         </Tooltip>
       );
     case VoxelyticsRunState.STALE:
@@ -125,7 +131,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             timed out
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago, after{" "}
+          {moment(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -143,7 +149,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<ExclamationCircleOutlined />} color="error">
             cancelled
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago, after{" "}
+          {moment(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -161,7 +167,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             failed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago after{" "}
+          {moment(taskInfo.endTime).fromNow()} after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -179,7 +185,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago in{" "}
+          {moment(taskInfo.endTime).fromNow()}{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -452,6 +458,16 @@ export default function TaskListView({
     );
   };
 
+  const totalRuntime = report.run.tasks.reduce((sum, t) => {
+    if (t.state === VoxelyticsRunState.RUNNING) {
+      return sum.add(moment.duration(moment().diff(moment(t.beginTime))));
+    } else if (t.beginTime != null && t.endTime != null) {
+      return sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime))));
+    } else {
+      return sum;
+    }
+  }, moment.duration(0));
+
   const {
     workflow: { name: readableWorkflowName },
     run: { beginTime: runBeginTimeString },
@@ -465,13 +481,14 @@ export default function TaskListView({
       }}
     >
       <Col xs={10} style={{ display: "flex", flexDirection: "column" }}>
-        <h3>
-          {readableWorkflowName}{" "}
-          <span style={{ color: "#51686e" }}>
-            {" "}
-            {formatDateMedium(new Date(runBeginTimeString))}
-          </span>
-        </h3>
+        <h3 style={{ marginBottom: 0 }}>{readableWorkflowName} </h3>
+        <h4 style={{ color: "#51686e" }}>
+          {formatDateMedium(new Date(runBeginTimeString))}{" "}
+          <Tooltip title={formatDurationStrict(totalRuntime)}>
+            <FieldTimeOutlined style={{ marginLeft: 20 }} />
+            {totalRuntime.humanize()}
+          </Tooltip>
+        </h4>
         <div style={{ flex: 1, position: "relative" }}>
           <DAGView
             key={filteredTasks.map((t) => t.taskName).join("_")}

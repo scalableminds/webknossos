@@ -40,6 +40,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   scale: Option[Vec3Double],
                   volumeFilename: Option[String],
                   organizationName: String,
+                  datasetName: String,
                   annotationOwner: Option[User],
                   annotationTask: Option[Task],
                   skipVolumeData: Boolean = false): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
@@ -52,6 +53,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                    scale,
                    volumeFilename,
                    organizationName,
+                   datasetName,
                    annotationOwner,
                    annotationTask,
                    skipVolumeData)
@@ -64,6 +66,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             scale: Option[Vec3Double],
             volumeFilename: Option[String],
             organizationName: String,
+            datasetName: String,
             annotationOwner: Option[User],
             annotationTask: Option[Task],
             skipVolumeData: Boolean)(implicit writer: XMLStreamWriter): Fox[Unit] =
@@ -79,6 +82,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                                  volumeLayers,
                                                  annotation: Option[Annotation],
                                                  organizationName,
+                                                 datasetName,
                                                  scale)
           _ = writeParameters(parameters)
           _ = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton).map(_.tracing).foreach {
@@ -98,6 +102,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   def extractTracingParameters(skeletonLayers: List[FetchedAnnotationLayer],
                                volumeLayers: List[FetchedAnnotationLayer],
                                annotation: Option[Annotation],
+                               datasetName: String,
                                organizationName: String,
                                scale: Option[Vec3Double]): Fox[NmlParameters] =
     for {
@@ -105,7 +110,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       nmlParameters = parameterSourceAnnotationLayer.tracing match {
         case Left(s) =>
           NmlParameters(
-            s.dataSetName,
+            datasetName,
             organizationName,
             annotation.map(_.description),
             scale,
@@ -119,7 +124,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           )
         case Right(v) =>
           NmlParameters(
-            v.dataSetName,
+            datasetName,
             organizationName,
             annotation.map(_.description),
             scale,

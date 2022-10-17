@@ -368,6 +368,7 @@ Expects:
                                           dataSet.scale,
                                           None,
                                           organizationName,
+                                          dataSet.name,
                                           Some(user),
                                           taskOpt)
         nmlTemporaryFile = temporaryFileCreator.create()
@@ -397,6 +398,7 @@ Expects:
                                           dataset.scale,
                                           None,
                                           organizationName,
+                                          dataset.name,
                                           Some(user),
                                           taskOpt,
                                           skipVolumeData)

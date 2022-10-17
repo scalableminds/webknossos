@@ -68,7 +68,8 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               annotation: Annotation,
                               user: User,
                               taskOpt: Option[Task],
-                              organizationName: String)
+                              organizationName: String,
+                              datasetName: String)
 
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
 // Uses the proto-generated geometry classes, hence the full qualifiers.
@@ -599,7 +600,8 @@ class AnnotationService @Inject()(
                                 annotation,
                                 user,
                                 taskOpt,
-                                organizationName) =>
+                                organizationName,
+                                datasetName) =>
           for {
             fetchedAnnotationLayersForAnnotation <- FetchedAnnotationLayer.layersFromTracings(skeletonTracingIdOpt,
                                                                                               volumeTracingIdOpt,
@@ -610,6 +612,7 @@ class AnnotationService @Inject()(
                                         scaleOpt,
                                         Some(name + "_data.zip"),
                                         organizationName,
+                                        datasetName,
                                         Some(user),
                                         taskOpt)
           } yield (nml, name, volumeDataOpt)
@@ -625,6 +628,7 @@ class AnnotationService @Inject()(
         user <- userService.findOneById(annotation._user, useCache = true) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
+        dataset <- dataSetDAO.findOne(annotation._dataSet)
         organizationName <- organizationDAO.findOrganizationNameForAnnotation(annotation._id)
         skeletonTracingIdOpt <- annotation.skeletonTracingId
         volumeTracingIdOpt <- annotation.volumeTracingId
@@ -639,7 +643,8 @@ class AnnotationService @Inject()(
                            annotation,
                            user,
                            taskOpt,
-                           organizationName)
+                           organizationName,
+                           dataset.name)
 
     def getSkeletonTracings(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =
       for {

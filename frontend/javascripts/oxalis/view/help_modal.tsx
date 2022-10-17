@@ -1,3 +1,4 @@
+import { sendHelpEmail } from "admin/admin_rest_api";
 import { Button, Modal, Input } from "antd";
 import React, { useState } from "react";
 
@@ -9,7 +10,7 @@ function HelpModal() {
     setModalOpen(false);
 
     if (helpText.length > 0) {
-      // API Call or Email
+      sendHelpEmail(helpText);
     }
   };
 
@@ -37,7 +38,7 @@ function HelpModal() {
           rows={6}
           value={helpText}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setHelpText(e.target.value)}
-        ></Input.TextArea>
+        />
       </Modal>
     </>
   );

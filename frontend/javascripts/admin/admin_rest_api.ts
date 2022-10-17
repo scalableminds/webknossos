@@ -2298,3 +2298,10 @@ export function getVoxelyticsArtifactChecksums(
     `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,
   );
 }
+
+// ### Help / Feddback userEmail
+export function sendHelpEmail(message: string) {
+  return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
+    method: "POST",
+  });
+}

@@ -6,7 +6,7 @@ GET           /buildinfo                                                        
 GET           /features                                                                 controllers.Application.features
 GET           /health                                                                   controllers.Application.health
 POST          /analytics/:eventType                                                     controllers.Application.trackAnalyticsEvent(eventType)
-POST          /emailHome                                                                controllers.Application.helpEmail(message: String)
+POST          /helpEmail                                                                controllers.Application.helpEmail(message: String)
 POST          /triggers/initialData                                                     controllers.InitialDataController.triggerInsert
 GET           /maintenance                                                              controllers.MaintenanceController.info
 POST          /maintenance                                                              controllers.MaintenanceController.initMaintenance

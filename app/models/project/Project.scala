@@ -218,7 +218,8 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,
         "isBlacklistedFromReport" -> project.isBlacklistedFromReport,
-        "id" -> project._id.toString
+        "id" -> project._id.toString,
+        "created" -> project.created
       )
     }
 

@@ -26,6 +26,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
                 "0": 4096,
                 "1": 16,
                 "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
+                "7937": "Radeon R9 200 Series",
               };
               return dummyValues[param];
             }
@@ -77,12 +78,19 @@ export function getSupportedTextureSpecs(): GpuSpecs {
 
 function guardAgainstMesaLimit(maxSamplers: number, gl: any) {
   // Adapted from here: https://github.com/pixijs/pixi.js/pull/6354/files
-  const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-  const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+
+  let renderer = gl.getParameter(gl.RENDERER);
+  if (renderer == null) {
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+
+    if (debugInfo != null) {
+      renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+    }
+  }
 
   // Mesa drivers may crash with more than 16 samplers and Firefox
   // will actively refuse to create shaders with more than 16 samplers.
-  if (renderer.slice(0, 4).toUpperCase() === "MESA") {
+  if (renderer && renderer.slice(0, 4).toUpperCase() === "MESA") {
     maxSamplers = Math.min(16, maxSamplers);
   }
 

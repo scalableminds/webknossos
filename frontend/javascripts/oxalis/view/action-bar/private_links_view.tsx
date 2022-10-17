@@ -80,7 +80,7 @@ function useUpdatePrivateLink(annotationId: string) {
       await queryClient.cancelQueries(mutationKey);
 
       // Snapshot the previous value
-      const previousLinks = queryClient.getQueryData(mutationKey);
+      const previousLink = queryClient.getQueryData(mutationKey);
 
       // Optimistically update to the new value
       queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
@@ -88,13 +88,13 @@ function useUpdatePrivateLink(annotationId: string) {
       );
 
       // Return a context object with the snapshotted value
-      return { previousLinks };
+      return { previousLink };
     },
     // If the mutation fails, use the context returned from onMutate to roll back
     onError: (err, _updatedLinkItem, context) => {
       Toast.error("Could not update link.");
       if (context) {
-        queryClient.setQueryData(mutationKey, context.previousLinks);
+        queryClient.setQueryData(mutationKey, context.previousLink);
       }
     },
   });

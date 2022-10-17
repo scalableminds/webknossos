@@ -156,8 +156,7 @@ Expects:
       taskIdValidated <- ObjectId.fromString(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages(
-        "notAllowed")
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
       _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
     } yield JsonOk(Messages("task.removed"))
   }
@@ -215,9 +214,8 @@ Expects:
         teams <- userService.teamIdsFor(userIdValidated)
         task <- taskDAO.findOne(taskIdValidated)
         project <- projectDAO.findOne(task._project)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages(
-          "notAllowed")
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> Messages("notAllowed")
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> "notAllowed"
         (_, initializingAnnotationId) <- taskDAO
           .assignOneTo(taskIdValidated, userIdValidated, teams) ?~> "task.unavailable"
         insertedAnnotationBox <- annotationService

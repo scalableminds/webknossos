@@ -273,11 +273,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const expirationMoment = moment(linkItem.expirationDateTime);
   return (
     <span>
-      <FormattedDate
-        format="YYYY-MM-DD"
-        tooltipFormat="YYYY-MM-DD HH:mm"
-        timestamp={linkItem.expirationDateTime}
-      />
+      <FormattedDate timestamp={linkItem.expirationDateTime} />
       <Popover
         content={
           <>
@@ -318,7 +314,7 @@ function HumanizedDuration({ expirationMoment }: { expirationMoment: moment.Mome
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now.startOf("day").to(expirationMoment.startOf("day"));
+        now.endOf("day").to(expirationMoment.endOf("day"));
   return <span style={{ color: "var(--ant-text-secondary)", marginLeft: 4 }}>{duration}</span>;
 }
 

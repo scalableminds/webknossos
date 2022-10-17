@@ -505,6 +505,12 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
+export async function assignTaskToUser(taskId: string, userId: string): Promise<APITask> {
+  return Request.receiveJSON(`/api/tasks/${taskId}/assign?userId=${userId}`, {
+    method: "POST",
+  });
+}
+
 // ### Private Links
 
 export function createPrivateLink(
@@ -514,7 +520,10 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: moment().add(initialExpirationPeriodInDays, "days").valueOf(),
+      expirationDateTime: moment()
+        .endOf("day")
+        .add(initialExpirationPeriodInDays, "days")
+        .valueOf(),
     },
   });
 }

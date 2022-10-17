@@ -291,10 +291,12 @@ type APIProjectTypeBase = {
 export type APIProject = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: APIUserBase;
+  readonly created: number;
 };
 export type APIProjectUpdater = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: string;
+  readonly created: number;
 };
 export type APIProjectCreator = APIProjectTypeBase & {
   readonly owner: string;

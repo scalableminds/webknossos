@@ -520,7 +520,10 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: moment().add(initialExpirationPeriodInDays, "days").valueOf(),
+      expirationDateTime: moment()
+        .endOf("day")
+        .add(initialExpirationPeriodInDays, "days")
+        .valueOf(),
     },
   });
 }

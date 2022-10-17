@@ -867,6 +867,12 @@ export async function getTracingForAnnotationType(
   // Flow complains since we don't doublecheck that we assign the correct type depending
   // on the tracing's structure.
   tracing.typ = typ;
+
+  // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
+  delete tracing.dataSetName;
+  // @ts-ignore
+  delete tracing.organizationName;
+
   return tracing;
 }
 

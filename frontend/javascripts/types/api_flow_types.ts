@@ -645,7 +645,6 @@ export type ServerTracingBase = {
   userBoundingBoxes: Array<UserBoundingBoxFromServer>;
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
-  dataSetName: string;
   editPosition: Point3;
   editRotation: Point3;
   error?: string;
@@ -661,7 +660,6 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   boundingBox?: ServerBoundingBox;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
-  organizationName?: string;
 };
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the
@@ -679,7 +677,6 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // were added to volume tracings. Also see:
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
-  organizationName?: string;
   mappingName?: string | null | undefined;
   mappingIsEditable?: boolean;
 };

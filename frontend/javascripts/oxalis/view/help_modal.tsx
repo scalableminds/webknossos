@@ -19,7 +19,7 @@ function HelpModal() {
       <Button
         type="primary"
         onClick={() => setModalOpen(true)}
-        style={{ position: "fixed", right: 0, bottom: "20%", transform: "rotate(270deg)" }}
+        style={{ position: "fixed", right: 0, bottom: "20%", transform: "rotate(270deg)", transformOrigin: "top", zIndex: 100 }}
       >
         Help
       </Button>

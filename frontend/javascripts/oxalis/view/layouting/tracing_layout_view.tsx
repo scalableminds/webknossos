@@ -44,7 +44,6 @@ import { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
-import FeedbackModal from "../help_modal";
 
 const { Sider } = Layout;
 
@@ -424,7 +423,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               ) : null}
             </Layout>
           </Layout>
-          <FeedbackModal/>
         </NmlUploadZoneContainer>
       </React.Fragment>
     );

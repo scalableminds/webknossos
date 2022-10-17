@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Remote n5 datasets can now also be explored and added. [#6520](https://github.com/scalableminds/webknossos/pull/6520)
 - Improved performance for applying agglomerate mappings on segmentation data. [#6532](https://github.com/scalableminds/webknossos/pull/6532)
 - Added backspace as an additional keyboard shortcut for deleting the active node. [#6554](https://github.com/scalableminds/webknossos/pull/6554)
+- Added a help button to the UI to send questions and feedbacks to the dev team. [#6560](https://github.com/scalableminds/webknossos/pull/6560)
 
 ### Changed
 - Creating tasks in bulk now also supports referencing task types by their summary instead of id. [#6486](https://github.com/scalableminds/webknossos/pull/6486)

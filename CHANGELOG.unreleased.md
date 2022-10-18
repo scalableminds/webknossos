@@ -17,10 +17,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved performance for applying agglomerate mappings on segmentation data. [#6532](https://github.com/scalableminds/webknossos/pull/6532)
 - Added backspace as an additional keyboard shortcut for deleting the active node. [#6554](https://github.com/scalableminds/webknossos/pull/6554)
 - Tasks can now be assigned to individual users directly. [#6551](https://github.com/scalableminds/webknossos/pull/6551)
+- When reloading a layer, because the underlying data has changed, the histogram will also be reloaded and reflect the changes. [#6537](https://github.com/scalableminds/webknossos/pull/6537)
+- Enable "What's New" update information for all instances. [#6563](https://github.com/scalableminds/webknossos/pull/6563)
 - Add context-menu option to delete skeleton root group. [#6553](https://github.com/scalableminds/webknossos/pull/6553)
 
 ### Changed
 - Creating tasks in bulk now also supports referencing task types by their summary instead of id. [#6486](https://github.com/scalableminds/webknossos/pull/6486)
+- Navbar changes: Move dropdown menu into separate Menu button. Removed toggle-button (cog icon)for left-hand side bar from navbar. [#6558](https://github.com/scalableminds/webknossos/pull/6558)
 
 ### Fixed
 - Fixed a bug where some file requests replied with error 400 instead of 404, confusing some zarr clients. [#6515](https://github.com/scalableminds/webknossos/pull/6515)

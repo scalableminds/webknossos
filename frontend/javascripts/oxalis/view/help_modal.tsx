@@ -3,23 +3,14 @@ import { Modal, Input, Alert } from "antd";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { OxalisState } from "oxalis/store";
-import React, { useState } from "react";
+import React, { CSSProperties, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-function HelpModal() {
+function HelpButton() {
   const [isModalOpen, setModalOpen] = useState(false);
-  const [helpText, setHelpText] = useState("");
 
   const dispatch = useDispatch();
   const activeUser = useSelector((state: OxalisState) => enforceActiveUser(state.activeUser));
-
-  const sendHelp = () => {
-    setModalOpen(false);
-
-    if (helpText.length > 0) {
-      sendHelpEmail(helpText);
-    }
-  };
 
   const discardButton = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     // prevent the modal from also being shown
@@ -57,25 +48,51 @@ function HelpModal() {
       >
         Help
       </Alert>
-      <Modal
-        title="Do you have any questions?"
-        style={{ right: 10, bottom: 40, top: "auto", position: "fixed" }}
-        visible={isModalOpen}
-        onOk={sendHelp}
+      <HelpModal
+        isModalOpen={isModalOpen}
         onCancel={() => setModalOpen(false)}
-        mask={false}
-        okText="Send"
-        width={300}
-      >
-        <p>We are happy to help as soon as possibile and will get back to you.</p>
-        <Input.TextArea
-          rows={6}
-          value={helpText}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setHelpText(e.target.value)}
-        />
-      </Modal>
+        centeredLayout={false}
+      />
     </>
   );
 }
+export default HelpButton;
 
-export default HelpModal;
+type HelpModalProps = {
+  isModalOpen: boolean;
+  centeredLayout: boolean;
+  onCancel: () => void;
+};
+
+export function HelpModal(props: HelpModalProps) {
+  const [helpText, setHelpText] = useState("");
+  const positionStyle: CSSProperties = { right: 10, bottom: 40, top: "auto", position: "fixed" };
+
+  const sendHelp = () => {
+    props.onCancel();
+
+    if (helpText.length > 0) {
+      sendHelpEmail(helpText);
+    }
+  };
+
+  return (
+    <Modal
+      title="Do you have any questions?"
+      style={!props.centeredLayout ? positionStyle : undefined}
+      visible={props.isModalOpen}
+      onOk={sendHelp}
+      onCancel={props.onCancel}
+      mask={props.centeredLayout}
+      okText="Send"
+      width={300}
+    >
+      <p>We are happy to help as soon as possible and will get back to you.</p>
+      <Input.TextArea
+        rows={6}
+        value={helpText}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setHelpText(e.target.value)}
+      />
+    </Modal>
+  );
+}

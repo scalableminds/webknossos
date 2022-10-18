@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Alert, Button, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
+import { Alert, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";

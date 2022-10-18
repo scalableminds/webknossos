@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved performance for applying agglomerate mappings on segmentation data. [#6532](https://github.com/scalableminds/webknossos/pull/6532)
 - Added backspace as an additional keyboard shortcut for deleting the active node. [#6554](https://github.com/scalableminds/webknossos/pull/6554)
 - Tasks can now be assigned to individual users directly. [#6551](https://github.com/scalableminds/webknossos/pull/6551)
+- When reloading a layer, because the underlying data has changed, the histogram will also be reloaded and reflect the changes. [#6537](https://github.com/scalableminds/webknossos/pull/6537)
 
 ### Changed
 - Creating tasks in bulk now also supports referencing task types by their summary instead of id. [#6486](https://github.com/scalableminds/webknossos/pull/6486)

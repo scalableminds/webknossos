@@ -322,7 +322,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   renderGroupActionsDropdown = (node: TreeNode) => {
     // The root group must not be removed or renamed
     const { id, name } = node;
-    const isRoot = id === MISSING_GROUP_ID;
     const hasExpandedSubgroup = anySatisfyDeep(
       node.children,
       (child) => child.expanded && child.type === TYPE_GROUP,
@@ -347,7 +346,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         <Menu.Item
           key="delete"
           data-group-id={id}
-          disabled={isRoot || isEditingDisabled}
+          disabled={isEditingDisabled}
           onClick={() => this.deleteGroup(id)}
         >
           <DeleteOutlined />

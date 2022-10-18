@@ -5,10 +5,10 @@ import type {
   DatasetLayerConfiguration,
   TemporaryConfiguration,
   Mapping,
-  HistogramDataForAllLayers,
   MappingType,
 } from "oxalis/store";
 import Deferred from "libs/deferred";
+import { APIHistogramData } from "types/api_flow_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
@@ -17,7 +17,8 @@ export type ToggleTemporarySettingAction = ReturnType<typeof toggleTemporarySett
 type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
 export type InitializeSettingsAction = ReturnType<typeof initializeSettingsAction>;
 type SetViewModeAction = ReturnType<typeof setViewModeAction>;
-type SetHistogramDataAction = ReturnType<typeof setHistogramDataAction>;
+type SetHistogramDataForLayerAction = ReturnType<typeof setHistogramDataForLayerAction>;
+export type ReloadHistogramAction = ReturnType<typeof reloadHistogramAction>;
 export type ClipHistogramAction = ReturnType<typeof clipHistogramAction>;
 type SetFlightmodeRecordingAction = ReturnType<typeof setFlightmodeRecordingAction>;
 type SetControlModeAction = ReturnType<typeof setControlModeAction>;
@@ -41,7 +42,8 @@ export type SettingAction =
   | SetMappingAction
   | SetMappingNameAction
   | SetHideUnmappedIdsAction
-  | SetHistogramDataAction
+  | SetHistogramDataForLayerAction
+  | ReloadHistogramAction
   | InitializeGpuSetupAction;
 
 export const updateUserSettingAction = (propertyName: keyof UserConfiguration, value: any) =>
@@ -104,9 +106,13 @@ export const setViewModeAction = (viewMode: ViewMode) =>
     viewMode,
   } as const);
 
-export const setHistogramDataAction = (histogramData: HistogramDataForAllLayers) =>
+export const setHistogramDataForLayerAction = (
+  layerName: string,
+  histogramData: APIHistogramData | null | undefined,
+) =>
   ({
-    type: "SET_HISTOGRAM_DATA",
+    type: "SET_HISTOGRAM_DATA_FOR_LAYER",
+    layerName,
     histogramData,
   } as const);
 
@@ -134,6 +140,13 @@ export const dispatchClipHistogramAsync = async (
   dispatch(action);
   await readyDeferred.promise();
 };
+
+export const reloadHistogramAction = (layerName: string) =>
+  ({
+    type: "RELOAD_HISTOGRAM",
+    layerName,
+  } as const);
+
 export const setFlightmodeRecordingAction = (value: boolean) =>
   ({
     type: "SET_FLIGHTMODE_RECORDING",

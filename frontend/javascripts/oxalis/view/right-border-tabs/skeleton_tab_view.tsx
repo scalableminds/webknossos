@@ -198,7 +198,6 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             parsedTracing.treeGroups,
             file.name,
           ),
-          datasetName: parsedTracing.dataSetName,
         };
       } catch (error) {
         // @ts-ignore

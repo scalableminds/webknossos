@@ -15,7 +15,6 @@ export const tracing: ServerVolumeTracing = {
   userBoundingBoxes: [],
   segments: [],
   createdTimestamp: 1529066010230,
-  dataSetName: "ROI2017_wkw",
   editPosition: {
     x: 3904,
     y: 4282,

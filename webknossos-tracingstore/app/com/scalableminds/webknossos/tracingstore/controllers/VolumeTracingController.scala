@@ -14,8 +14,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   EditableMappingUpdateActionGroup,
-  MinCutParameters,
-  RemoteFallbackLayer
+  MinCutParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
@@ -148,7 +147,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
             (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
-              editableMappingService.volumeData(tracing, request.body, urlOrHeaderToken(token, request))
+              editableMappingService.volumeData(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
@@ -182,7 +181,7 @@ class VolumeTracingController @Inject()(
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
             newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
-              editableMappingService.duplicate(tracing.mappingName, tracing, userToken))
+              editableMappingService.duplicate(tracing.mappingName, tracing, tracingId, userToken))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
               tracing,
@@ -194,7 +193,7 @@ class VolumeTracingController @Inject()(
               boundingBoxParsed,
               newEditableMappingId
             )
-            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
+            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, tracingId, newTracing))
           } yield Ok(Json.toJson(newId))
         }
       }
@@ -237,7 +236,7 @@ class VolumeTracingController @Inject()(
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
-            editableMappingService.createIsosurface(tracing, request.body, urlOrHeaderToken(token, request))
+            editableMappingService.createIsosurface(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
           else tracingService.createIsosurface(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {
           // We need four bytes for each float
@@ -271,7 +270,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId)
           _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Cannot query agglomerate skeleton for volume annotation"
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
-          remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+          remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(
             mappingName,
             remoteFallbackLayer,
@@ -321,7 +320,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
-            remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(request.body, remoteFallbackLayer, token)
           } yield Ok(Json.toJson(edges))
         }
@@ -365,7 +364,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
-            remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMapping <- editableMappingService.get(mappingName,
                                                           remoteFallbackLayer,
                                                           urlOrHeaderToken(token, request))

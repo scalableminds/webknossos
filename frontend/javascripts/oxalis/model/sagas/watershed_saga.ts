@@ -37,9 +37,10 @@ import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { EnterAction, EscapeAction } from "../actions/ui_actions";
 import { OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
-import { getColorLayers } from "../accessors/dataset_accessor";
+import { getColorLayers, getResolutionInfo } from "../accessors/dataset_accessor";
 import Dimensions from "../dimensions";
 import { take2 } from "libs/utils";
+import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
@@ -70,25 +71,30 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     console.log("No volumeTracing available.");
     return;
   }
-  const resolutionIndex = 0;
 
-  const targetMag: Vector3 = [1, 1, 1];
-  const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
-
-  console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
   const colorLayers = yield* select((state: OxalisState) => getColorLayers(state.dataset));
   if (colorLayers.length === 0) {
     Toast.warning("No color layer available to use for watershed feature");
     return;
   }
 
+  const colorLayer = colorLayers[0];
+
+  const requestedZoomStep = yield* select((store) => getRequestLogZoomStep(store));
+  const resolutionInfo = getResolutionInfo(colorLayer.resolutions);
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+
+  const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
+
+  console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
-    colorLayers[0].name,
+    colorLayer.name,
     boundingBoxMag1,
-    resolutionIndex,
+    labeledZoomStep,
   );
-  const size = boundingBoxMag1.getSize();
+  const size = boundingBoxTarget.getSize();
   const stride = [1, size[0], size[0] * size[1]];
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
@@ -110,9 +116,6 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   }
 
   const output = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
-
-  const labeledResolution = [1, 1, 1] as Vector3;
-  const labeledZoomStep = 0;
 
   console.time("floodfill");
   floodFill({

@@ -1355,7 +1355,7 @@ class DataApi {
    */
   async getDataForBoundingBox(
     layerName: string,
-    bbox: BoundingBoxType,
+    mag1Bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
@@ -1369,7 +1369,7 @@ class DataApi {
     }
 
     const resolutions = resolutionInfo.getDenseResolutions();
-    const bucketAddresses = this.getBucketAddressesInCuboid(bbox, resolutions, zoomStep);
+    const bucketAddresses = this.getBucketAddressesInCuboid(mag1Bbox, resolutions, zoomStep);
 
     if (bucketAddresses.length > 15000) {
       console.warn(
@@ -1381,7 +1381,7 @@ class DataApi {
       bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
+    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions[zoomStep], zoomStep);
   }
 
   async getViewportData(
@@ -1479,10 +1479,9 @@ class DataApi {
     buckets: Array<Bucket>,
     bbox: BoundingBoxType,
     elementClass: ElementClass,
-    resolutions: Array<Vector3>,
+    resolution: Vector3,
     zoomStep: number,
   ): TypedArray {
-    const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution
     const topLeft = scaleGlobalPositionWithResolution(bbox.min, resolution);

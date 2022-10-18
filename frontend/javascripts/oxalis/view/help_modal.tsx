@@ -1,10 +1,17 @@
-import { sendHelpEmail } from "admin/admin_rest_api";
-import { Button, Modal, Input } from "antd";
+import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { Modal, Input, Alert } from "antd";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 function HelpModal() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [helpText, setHelpText] = useState("");
+
+  const dispatch = useDispatch();
+  const activeUser = useSelector((state: OxalisState) => enforceActiveUser(state.activeUser));
 
   const sendHelp = () => {
     setModalOpen(false);
@@ -14,15 +21,42 @@ function HelpModal() {
     }
   };
 
+  const discardButton = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    // prevent the modal from also being shown
+    e.stopPropagation();
+
+    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
+      hasDiscardedHelpButton: true,
+    });
+    dispatch(setActiveUserAction(newUserSync));
+  };
+
+  if (!activeUser) return null;
+
+  if (activeUser && activeUser.novelUserExperienceInfos.hasDiscardedHelpButton) return null;
+
   return (
     <>
-      <Button
-        type="primary"
+      <Alert
+        style={{
+          position: "fixed",
+          right: 0,
+          bottom: "20%",
+          transform: "rotate(-90deg)",
+          transformOrigin: "bottom right",
+          zIndex: 100,
+          cursor: "pointer",
+          height: 22,
+          padding: 8,
+        }}
+        type="info"
+        message="Help"
+        closable
+        onClose={discardButton}
         onClick={() => setModalOpen(true)}
-        style={{ position: "fixed", right: 0, bottom: "20%", transform: "rotate(270deg)", transformOrigin: "top", zIndex: 100 }}
       >
         Help
-      </Button>
+      </Alert>
       <Modal
         title="Do you have any questions?"
         style={{ right: 10, bottom: 40, top: "auto", position: "fixed" }}

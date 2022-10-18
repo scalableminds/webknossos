@@ -183,7 +183,7 @@ class ReactRouter extends React.Component<Props> {
           <DisableGenericDnd />
           <AdaptViewportMetatag isAuthenticated={isAuthenticated} />
           <Navbar isAuthenticated={isAuthenticated} />
-          <HelpModal/>
+          <HelpModal />
           <Content>
             <Switch>
               <Route

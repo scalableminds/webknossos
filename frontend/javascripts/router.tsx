@@ -56,7 +56,7 @@ import features from "features";
 import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { coalesce } from "libs/utils";
-import HelpModal from "oxalis/view/help_modal";
+import { HelpModal } from "oxalis/view/help_modal";
 const { Content } = Layout;
 
 function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {

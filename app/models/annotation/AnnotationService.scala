@@ -434,14 +434,14 @@ class AnnotationService @Inject()(
         tracingStoreClient.duplicateVolumeTracing(volumeId))
     } yield (newSkeletonId, newVolumeId)
 
-  def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)(
+  def createAnnotationFor(user: User, taskId: ObjectId, initializingAnnotationId: ObjectId)(
       implicit m: MessagesProvider,
       ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =
       for {
         dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
         dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> Messages("dataSet.noAccess", dataSetName)
-        (newSkeletonId, newVolumeId) <- tracingsFromBase(annotation, dataSet) ?~> s"Failed to use annotation base as template for task ${task._id} with annotation base ${annotation._id}"
+        (newSkeletonId, newVolumeId) <- tracingsFromBase(annotation, dataSet) ?~> s"Failed to use annotation base as template for task $taskId with annotation base ${annotation._id}"
         annotationLayers <- AnnotationLayer.layersFromIds(newSkeletonId, newVolumeId)
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
@@ -456,7 +456,7 @@ class AnnotationService @Inject()(
       } yield newAnnotation
 
     for {
-      annotationBase <- baseForTask(task._id) ?~> "Failed to retrieve annotation base."
+      annotationBase <- baseForTask(taskId) ?~> "Failed to retrieve annotation base."
       result <- useAsTemplateAndInsert(annotationBase).toFox
     } yield result
   }

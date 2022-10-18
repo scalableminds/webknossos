@@ -602,6 +602,7 @@ function* loadPrecomputedMeshForSegmentId(
   const dataset = yield* select((state) => state.dataset);
 
   let availableChunks = null;
+  let scale: Vector3 | null = null;
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -629,6 +630,11 @@ function* loadPrecomputedMeshForSegmentId(
         meshFileName,
         id,
       );
+      scale = [
+        segmentInfo.transform[0][0],
+        segmentInfo.transform[1][1],
+        segmentInfo.transform[2][2],
+      ];
       availableChunks = _.first(segmentInfo.chunks.lods)?.chunks || [];
     } else {
       availableChunks = yield* call(
@@ -674,6 +680,10 @@ function* loadPrecomputedMeshForSegmentId(
           const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
           // Compute vertex normals to achieve smooth shading
           geometry.computeVertexNormals();
+          // Apply the scale from the segment info, which includes dataset scale and mag
+          if (scale != null) {
+            geometry.scale(...scale);
+          }
 
           yield* call(
             { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
@@ -681,7 +691,6 @@ function* loadPrecomputedMeshForSegmentId(
             id,
             false,
             chunk.position,
-            true,
           );
         } else {
           // V0

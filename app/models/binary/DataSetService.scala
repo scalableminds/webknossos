@@ -52,7 +52,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataSet.name.invalid.characters"
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataSet.name.invalid.startsWithDot"
-      _ <- bool2Fox(!name.endsWith(".")) ?~> "dataSet.name.invalid.endsWithDot"
       _ <- bool2Fox(name.length >= 3) ?~> "dataSet.name.invalid.lessThanThreeCharacters"
     } yield ()
 

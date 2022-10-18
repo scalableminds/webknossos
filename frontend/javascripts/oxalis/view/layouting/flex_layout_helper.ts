@@ -60,7 +60,7 @@ export function getPositionStatusOf(tabSetNode: TabSetNode): NodePositionStatus 
   // of the root container that contains everything except for the borders.
   isLeftMost = tabSetNodeRect.x === rootContainerRect.x;
   isRightMost =
-    tabSetNodeRect.x + tabSetNodeRect.width ===
+    Math.trunc(tabSetNodeRect.x + tabSetNodeRect.width) ===
     Math.trunc(rootContainerRect.x + rootContainerRect.width);
   return {
     isTopMost,

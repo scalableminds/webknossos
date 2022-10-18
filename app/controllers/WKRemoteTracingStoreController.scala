@@ -2,11 +2,13 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
 import models.annotation.AnnotationState._
-import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationInformationProvider, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.organization.OrganizationDAO
 import models.user.UserDAO
@@ -25,6 +27,7 @@ class WKRemoteTracingStoreController @Inject()(
     dataSetService: DataSetService,
     organizationDAO: OrganizationDAO,
     userDAO: UserDAO,
+    annotationInformationProvider: AnnotationInformationProvider,
     analyticsService: AnalyticsService,
     dataSetDAO: DataSetDAO,
     annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
@@ -67,22 +70,27 @@ class WKRemoteTracingStoreController @Inject()(
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
 
-  def dataSource(name: String, key: String, organizationName: Option[String], dataSetName: String): Action[AnyContent] =
+  def dataSourceForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          organizationIdOpt <- Fox.runOptional(organizationName) {
-            organizationDAO.findOneByName(_).map(_._id)
-          } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
-          organizationId <- Fox.fillOption(organizationIdOpt) {
-            dataSetDAO.getOrganizationForDataSet(dataSetName)
-          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
-            "dataSet.noAccess",
-            dataSetName) ~> FORBIDDEN
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+          dataSet <- dataSetDAO.findOne(annotation._dataSet)
           dataSource <- dataSetService.dataSourceFor(dataSet)
         } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
+  def dataSourceIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        for {
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+          dataSet <- dataSetDAO.findOne(annotation._dataSet)
+          organization <- organizationDAO.findOne(dataSet._organization)
+        } yield Ok(Json.toJson(DataSourceId(dataSet.name, organization.name)))
       }
     }
 

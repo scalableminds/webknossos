@@ -145,7 +145,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             />
           </div>
           <Alert
-            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other elligibility criteria."
+            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
             type="info"
           />
         </>

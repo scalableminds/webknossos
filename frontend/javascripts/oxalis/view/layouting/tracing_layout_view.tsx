@@ -1,5 +1,5 @@
 import { Alert, Layout, Tooltip } from "antd";
-import { SettingOutlined, WarningFilled } from "@ant-design/icons";
+import { WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
@@ -13,7 +13,6 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ContextMenuContainer from "oxalis/view/context_menu";
-import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
 import type { ControllerStatus } from "oxalis/controller";
@@ -31,7 +30,6 @@ import {
 } from "oxalis/view/input_catcher";
 import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import {
-  layoutEmitter,
   storeLayoutConfig,
   setActiveLayout,
   getLastActiveLayout,
@@ -62,7 +60,6 @@ type StateProps = {
   is2d: boolean;
   displayName: string;
   organization: string;
-  isLeftBorderOpen: boolean;
 };
 type DispatchProps = {
   setAutoSaveLayouts: (arg0: boolean) => void;
@@ -254,10 +251,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
-  toggleLeftBorder = () => {
-    layoutEmitter.emit("toggleBorder", "left");
-  };
-
   render() {
     if (this.state.hasError) {
       return (
@@ -279,7 +272,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, isLeftBorderOpen } = this.props;
+    const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -333,20 +326,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                     display: "flex",
                   }}
                 >
-                  <ButtonComponent
-                    className={isLeftBorderOpen ? "highlight-togglable-button" : ""}
-                    onClick={this.toggleLeftBorder}
-                    shape="circle"
-                  >
-                    <SettingOutlined
-                      className="without-icon-margin"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    />
-                  </ButtonComponent>
                   <ActionBarView
                     layoutProps={{
                       storedLayoutNamesForView: currentLayoutNames,
@@ -447,7 +426,6 @@ function mapStateToProps(state: OxalisState): StateProps {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
-    isLeftBorderOpen: state.uiInformation.borderOpenStatus.left,
   };
 }
 

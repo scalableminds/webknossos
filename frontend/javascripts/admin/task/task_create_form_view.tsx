@@ -538,7 +538,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     isEditingMode ||
                     this.state.specificationType === SpecificationEnum.BaseAnnotation
                   }
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                  loading={this.state.isFetchingData}
                   options={this.state.datasets.map((dataset: APIDataset) => ({
                     label: dataset.name,
                     value: dataset.name,
@@ -627,9 +627,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       optionFilterProp="label"
                       style={fullWidth}
                       disabled={isEditingMode}
-                      notFoundContent={
-                        this.state.isFetchingData ? <Spin size="small" /> : "No Data"
-                      }
+                      loading={this.state.isFetchingData}
                       options={this.state.taskTypes.map((taskType: APITaskType) => ({
                         value: taskType.id,
                         label: taskType.summary,
@@ -723,9 +721,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       optionFilterProp="label"
                       style={fullWidth}
                       disabled={isEditingMode}
-                      notFoundContent={
-                        this.state.isFetchingData ? <Spin size="small" /> : "No Data"
-                      }
+                      loading={this.state.isFetchingData}
                       options={this.state.projects.map((project: APIProject) => ({
                         value: project.name,
                         label: project.name,
@@ -753,9 +749,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       optionFilterProp="label"
                       style={fullWidth}
                       disabled={isEditingMode}
-                      notFoundContent={
-                        this.state.isFetchingData ? <Spin size="small" /> : "No Data"
-                      }
+                      loading={this.state.isFetchingData}
                       options={this.state.scripts.map((script: APIScript) => ({
                         value: script.id,
                         label: script.name,

@@ -1,20 +1,23 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   AccessTokenService,
+  RemoteWebKnossosClient,
   UserAccessAnswer,
-  UserAccessRequest,
-  RemoteWebKnossosClient
+  UserAccessRequest
 }
 import com.typesafe.scalalogging.LazyLogging
 import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.libs.ws.WSResponse
+
+import scala.concurrent.ExecutionContext
 
 case class TracingUpdatesReport(tracingId: String,
                                 timestamps: List[Long],
@@ -38,6 +41,8 @@ class TSRemoteWebKnossosClient @Inject()(
 
   private val webKnossosUrl: String = config.Tracingstore.WebKnossos.uri
 
+  private lazy val dataSourceIdByTracingIdCache: AlfuFoxCache[String, DataSourceId] = AlfuFoxCache()
+
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
@@ -49,9 +54,9 @@ class TSRemoteWebKnossosClient @Inject()(
       .addQueryStringOptional("token", userToken)
       .post()
 
-  def getDataSource(organizationNameOpt: Option[String], dataSetName: String): Fox[DataSourceLike] =
-    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource/$dataSetName")
-      .addQueryStringOptional("organizationName", organizationNameOpt)
+  def getDataSourceForTracing(tracingId: String): Fox[DataSourceLike] =
+    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource")
+      .addQueryString("tracingId" -> tracingId)
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[DataSourceLike]
 
@@ -60,6 +65,16 @@ class TSRemoteWebKnossosClient @Inject()(
       .addQueryString("organizationName" -> organizationName)
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[String]
+
+  def getDataSourceIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[DataSourceId] =
+    dataSourceIdByTracingIdCache.getOrLoad(
+      tracingId,
+      tracingId =>
+        rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSourceId")
+          .addQueryString("tracingId" -> tracingId)
+          .addQueryString("key" -> tracingStoreKey)
+          .getWithJsonResponse[DataSourceId]
+    )
 
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")

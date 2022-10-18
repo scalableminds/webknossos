@@ -22,6 +22,7 @@ type AxisKey = "x" | "y" | "z" | "c";
 type DataLayerZarrPartial = {
   dataFormat: "zarr";
   boundingBox: BoundingBox;
+  numChannels: number;
   mags: Array<{
     mag: Vector3;
     path: string;

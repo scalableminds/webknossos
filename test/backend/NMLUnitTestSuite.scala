@@ -26,7 +26,7 @@ class NMLUnitTestSuite extends PlaySpec {
     : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] = {
     val annotationLayers = List(FetchedAnnotationLayer("dummySkeletonTracingId", AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracing), None))
     val nmlEnumarator =
-      new NmlWriter().toNmlStream(annotationLayers, None, None, None, "testOrganization", None, None)
+      new NmlWriter().toNmlStream(annotationLayers, None, None, None, "testOrganization", "dummy_dataset", None, None)
     val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
     NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)

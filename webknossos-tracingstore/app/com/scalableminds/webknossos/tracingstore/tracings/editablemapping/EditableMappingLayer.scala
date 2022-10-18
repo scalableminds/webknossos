@@ -20,7 +20,8 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
     for {
       editableMappingId <- Fox.successful(layer.name)
       _ <- bool2Fox(layer.doesContainBucket(bucket))
-      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(layer.tracing)
+      remoteFallbackLayer <- layer.editableMappingService
+        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
       editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
@@ -54,6 +55,7 @@ case class EditableMappingLayer(name: String,
                                 elementClass: ElementClass.Value,
                                 token: Option[String],
                                 tracing: VolumeTracing,
+                                tracingId: String,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
   override def dataFormat: DataFormat.Value = DataFormat.wkw

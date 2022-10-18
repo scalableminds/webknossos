@@ -156,8 +156,7 @@ Expects:
       taskIdValidated <- ObjectId.fromString(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages(
-        "notAllowed")
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
       _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
     } yield JsonOk(Messages("task.removed"))
   }
@@ -196,13 +195,37 @@ Expects:
       for {
         teams <- taskService.getAllowedTeamsForNextTask(user)
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-        (task, initializingAnnotationId) <- taskDAO
+        (taskId, initializingAnnotationId) <- taskDAO
           .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> "task.unavailable"
-        insertedAnnotationBox <- annotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
+        insertedAnnotationBox <- annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).futureBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
         annotationJSON <- annotationService.publicWrites(annotation, Some(user))
       } yield JsonOk(annotationJSON, Messages("task.assigned"))
+    }
+  }
+  @ApiOperation(hidden = true, value = "")
+  def assignOne(id: String, userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    log() {
+      for {
+        taskIdValidated <- ObjectId.fromString(id)
+        userIdValidated <- ObjectId.fromString(userId)
+        assignee <- userService.findOneById(userIdValidated, useCache = true)
+        teams <- userService.teamIdsFor(userIdValidated)
+        task <- taskDAO.findOne(taskIdValidated)
+        project <- projectDAO.findOne(task._project)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> "notAllowed"
+        (_, initializingAnnotationId) <- taskDAO
+          .assignOneTo(taskIdValidated, userIdValidated, teams) ?~> "task.unavailable"
+        insertedAnnotationBox <- annotationService
+          .createAnnotationFor(assignee, taskIdValidated, initializingAnnotationId)
+          .futureBox
+        _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
+        _ <- insertedAnnotationBox.toFox
+        taskUpdated <- taskDAO.findOne(taskIdValidated)
+        taskJson <- taskService.publicWrites(taskUpdated)(GlobalAccessContext)
+      } yield Ok(taskJson)
     }
   }
 

@@ -37,6 +37,7 @@ export const FormItemWithInfo = ({
   initialValue?: string;
   rules?: Rule[];
   valuePropName?: string;
+  validateFirst?: boolean;
 }) => (
   <FormItem
     {...props}

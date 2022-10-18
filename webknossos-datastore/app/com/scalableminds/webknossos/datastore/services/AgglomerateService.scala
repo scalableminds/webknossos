@@ -202,8 +202,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(
         dataSetName = dataSetName,
-        trees = trees,
-        organizationName = Some(organizationName)
+        trees = trees
       )
       val duration = System.nanoTime() - startTime
       if (duration > 100 * 1e6) {

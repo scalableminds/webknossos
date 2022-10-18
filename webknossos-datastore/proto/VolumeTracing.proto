@@ -24,7 +24,7 @@ message VolumeTracing {
     optional int64 activeSegmentId = 1;
     required BoundingBoxProto boundingBox = 2;
     required int64 createdTimestamp = 3;
-    required string dataSetName = 4;
+    required string dataSetName = 4; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     required Vec3IntProto editPosition = 5;
     required Vec3DoubleProto editRotation = 6;
     required ElementClass elementClass = 7;
@@ -34,7 +34,7 @@ message VolumeTracing {
     required double zoomLevel = 11;
     optional BoundingBoxProto userBoundingBox = 12;
     repeated NamedBoundingBoxProto userBoundingBoxes = 13;
-    optional string organizationName = 14; // to identify the dataset (may differ from annotation orga)
+    optional string organizationName = 14; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     repeated Vec3IntProto resolutions = 15;
     repeated Segment segments = 16;
     optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore

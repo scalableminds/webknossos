@@ -107,6 +107,7 @@ class SkeletonKeybindings {
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
       // Delete active node
       delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
+      backspace: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
       c: () => Store.dispatch(createTreeAction()),
       e: () => SkeletonHandlers.moveAlongDirection(),
       r: () => SkeletonHandlers.moveAlongDirection(true),

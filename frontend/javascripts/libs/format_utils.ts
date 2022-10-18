@@ -1,4 +1,4 @@
-import moment from "moment";
+import moment, { Duration } from "moment";
 import { presetPalettes } from "@ant-design/colors";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
@@ -182,19 +182,21 @@ export function formatDistance(start: Date | number, end: Date | number): string
 }
 export function formatDistanceStrict(start: Date | number, end: Date | number): string {
   const duration = moment.duration(moment(start).diff(moment(end)));
-
+  return formatDurationStrict(duration);
+}
+export function formatDurationStrict(duration: Duration): string {
   const parts: Array<string> = [];
   if (Math.floor(duration.asDays()) > 0) {
-    parts.push(`${Math.floor(duration.asDays())} days`);
+    parts.push(`${Math.floor(duration.asDays())}d`);
   }
   if (duration.hours() > 0) {
-    parts.push(`${duration.hours()} hours`);
+    parts.push(`${duration.hours()}h`);
   }
   if (duration.minutes() > 0) {
-    parts.push(`${duration.minutes()} minutes`);
+    parts.push(`${duration.minutes()}m`);
   }
   if (duration.seconds() > 0) {
-    parts.push(`${duration.seconds()} seconds`);
+    parts.push(`${duration.seconds()}s`);
   }
   return parts.join(" ");
 }

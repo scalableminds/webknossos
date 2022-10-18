@@ -3,6 +3,7 @@ import { Form, Input, Select, Card } from "antd";
 import messages from "messages";
 import { isDatasetNameValid } from "admin/admin_rest_api";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
+import { syncValidator } from "types/validation";
 const FormItem = Form.Item;
 export function CardContainer({
   children,
@@ -32,6 +33,52 @@ export function CardContainer({
     );
   }
 }
+export const layerNameRules = [
+  {
+    min: 3,
+  },
+  // Note that these rules are also checked by the backend
+  {
+    pattern: /^[0-9a-zA-Z_.-]+$/,
+    message: "Only letters, digits and the following characters are allowed: . _ -",
+  },
+  {
+    validator: syncValidator(
+      (value: string) => !value.startsWith("."),
+      "The name must not start with a dot.",
+    ),
+  },
+];
+
+export const getDatasetNameRules = (
+  activeUser: APIUser | null | undefined,
+  isEditing: boolean = false,
+) => [
+  {
+    required: true,
+    message: messages["dataset.import.required.name"],
+  },
+  ...layerNameRules,
+  {
+    validator: async (_rule: any, value: string) => {
+      if (isEditing) {
+        return Promise.resolve();
+      }
+      if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
+      const reasons = await isDatasetNameValid({
+        name: value,
+        owningOrganization: activeUser.organization,
+      });
+
+      if (reasons != null) {
+        return Promise.reject(reasons);
+      } else {
+        return Promise.resolve();
+      }
+    },
+  },
+];
+
 export function DatasetNameFormItem({
   activeUser,
   initialName,
@@ -47,33 +94,7 @@ export function DatasetNameFormItem({
       label={label || "Dataset Name"}
       hasFeedback
       initialValue={initialName}
-      rules={[
-        {
-          required: true,
-          message: messages["dataset.import.required.name"],
-        },
-        {
-          min: 3,
-        },
-        {
-          pattern: /[0-9a-zA-Z_-]+$/,
-        },
-        {
-          validator: async (_rule, value) => {
-            if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
-            const reasons = await isDatasetNameValid({
-              name: value,
-              owningOrganization: activeUser.organization,
-            });
-
-            if (reasons != null) {
-              return Promise.reject(reasons);
-            } else {
-              return Promise.resolve();
-            }
-          },
-        },
-      ]}
+      rules={getDatasetNameRules(activeUser)}
       validateFirst
     >
       <Input />

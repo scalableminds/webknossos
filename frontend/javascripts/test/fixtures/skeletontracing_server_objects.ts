@@ -133,7 +133,6 @@ export const tracing: ServerSkeletonTracing = {
       groupId: 2,
     },
   ],
-  dataSetName: "ROI2017_wkw",
   createdTimestamp: 1502302761387,
   userBoundingBoxes: [],
   activeNodeId: 3,

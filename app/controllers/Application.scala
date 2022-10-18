@@ -1,6 +1,5 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.{GlobalAccessContext}
 import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -76,12 +75,11 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   }
 
   @ApiOperation(hidden = true, value = "")
-  def helpEmail(message: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-    for { 
-        organization <- organizationDAO.findOne(request.identity._organization)
-        userEmail <- userService.emailFor(request.identity)
-        _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.displayName, message))
+  def helpEmail(message: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      organization <- organizationDAO.findOne(request.identity._organization)
+      userEmail <- userService.emailFor(request.identity)
+      _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.displayName, message))
     } yield Ok
   }
 

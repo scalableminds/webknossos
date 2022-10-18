@@ -676,6 +676,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
 
+  const isProofreadingActive = useSelector(
+    (state: OxalisState) => state.uiInformation.activeTool === "PROOFREAD",
+  );
+
   useEffect(() => {
     dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
   }, [visibleSegmentationLayer, dataset]);
@@ -709,7 +713,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
-  const activeNodeId = skeletonTracing?.activeNodeId;
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
@@ -744,13 +747,13 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
           isAgglomerateMappingEnabled.value ? (
             <Menu.Item
               key="merge-agglomerate-skeleton"
-              disabled={activeNodeId == null}
+              disabled={!isProofreadingActive}
               onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
             >
-              {activeNodeId != null ? (
+              {isProofreadingActive ? (
                 <span>Merge with active segment</span>
               ) : (
-                <Tooltip title={"Cannot merge because there's no active node id."}>
+                <Tooltip title="Cannot merge because the proofreading tool is not active.">
                   <span>Merge with active segment</span>
                 </Tooltip>
               )}
@@ -759,16 +762,13 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
           isAgglomerateMappingEnabled.value ? (
             <Menu.Item
               key="min-cut-agglomerate-at-position"
-              disabled={activeNodeId == null}
-              onClick={() =>
-                activeNodeId &&
-                Store.dispatch(minCutAgglomerateWithPositionAction(activeNodeId, globalPosition))
-              }
+              disabled={!isProofreadingActive}
+              onClick={() => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition))}
             >
-              {activeNodeId != null ? (
+              {isProofreadingActive ? (
                 <span>Split from active segment (Min-Cut)</span>
               ) : (
-                <Tooltip title={"Cannot split because there's no active node id."}>
+                <Tooltip title="Cannot merge because the proofreading tool is not active.">
                   <span>Split from active segment (Min-Cut)</span>
                 </Tooltip>
               )}

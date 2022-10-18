@@ -26,8 +26,6 @@ import {
   enforceSkeletonTracing,
   findTreeByName,
   findTreeByNodeId,
-  getActiveNode,
-  getActiveTree,
   getTree,
   getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -71,7 +69,8 @@ export default function* proofreadRootSaga(): Saga<void> {
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE"],
     splitOrMergeOrMinCutAgglomerate,
   );
-  yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
+  // TODO: Disabled for now to avoid interferring with the segment merge/split
+  // yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
   yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
   yield* takeEvery(
     ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
@@ -559,18 +558,26 @@ function* handleProofreadMergeOrMinCut(
   }
   const { layerName, agglomerateFileMag, getDataValue } = preparation;
 
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const sourceNodePosition = V3.floor(action.position);
 
-  const sourceTree = getActiveTree(skeletonTracing).getOrElse(null);
-  const sourceNodeId = skeletonTracing.activeNodeId;
+  // Wait for user to select another segment
+  yield* put(setBusyBlockingInfoAction(false));
 
-  if (sourceTree == null || sourceNodeId == null) {
-    yield* put(setBusyBlockingInfoAction(false));
-    return;
-  }
+  const actionDescription = action.type === "PROOFREAD_MERGE" ? "merge" : "split";
+  const toastKey = "proofread-wait-for-action";
+  Toast.info(
+    `Click onto another segment to ${actionDescription} the segments. Close this toast to abort this action.`,
+    {
+      key: toastKey,
+      sticky: true,
+      onClose: () => console.log("Canceling proofreading action..."),
+    },
+  );
 
-  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
-  const targetNodePosition = V3.floor(action.position);
+  const proofreadAction = yield* take(["PROOFREAD_AT_POSITION"]);
+  const targetNodePosition = V3.floor(proofreadAction.position);
+  Toast.close(toastKey);
+  yield* put(setBusyBlockingInfoAction(true, "Proofreading action"));
 
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,
@@ -650,23 +657,6 @@ function* handleProofreadMergeOrMinCut(
 
   /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
-
-  const currentlyActiveNode = (yield* call(getActiveNode, skeletonTracing)).getOrElse(null);
-  const activeNodePosition = currentlyActiveNode?.position;
-
-  yield* put(deleteTreeAction(sourceTree.treeId, true));
-  const treeNameAndId = yield* call(
-    loadAgglomerateSkeletonWithId,
-    loadAgglomerateSkeletonAction(layerName, volumeTracing.mappingName, newSourceNodeAgglomerateId),
-  );
-  if (treeNameAndId) {
-    loadedAgglomerateSkeletonIds.push(treeNameAndId[1]);
-  }
-
-  // Make the "same" node active as before. Since we deleted
-  // and reloaded the skeleton, it's not the same node identity,
-  // which is why we use the old's node position to select the new node.
-  yield* selectNodeByPosition(activeNodePosition, treeNameAndId);
 
   yield* put(setBusyBlockingInfoAction(false));
 

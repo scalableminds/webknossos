@@ -43,6 +43,7 @@ import api from "oxalis/api/internal_api";
 import {
   getActiveSegmentationTracingLayer,
   getActiveSegmentationTracing,
+  getSegmentsForLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerByName,
@@ -545,7 +546,8 @@ function* handleProofreadMergeOrMinCut(
   if (volumeTracingLayer == null) return;
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
-  const { tracingId: volumeTracingId } = volumeTracing;
+  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
+  if (activeCellId === 0) return;
 
   const preparation = yield* call(
     prepareSplitOrMerge,
@@ -558,26 +560,12 @@ function* handleProofreadMergeOrMinCut(
   }
   const { layerName, agglomerateFileMag, getDataValue } = preparation;
 
-  const sourceNodePosition = V3.floor(action.position);
+  const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
+  const sourceNodePositionMaybe = segments.getNullable(activeCellId)?.somePosition;
+  if (sourceNodePositionMaybe == null) return;
 
-  // Wait for user to select another segment
-  yield* put(setBusyBlockingInfoAction(false));
-
-  const actionDescription = action.type === "PROOFREAD_MERGE" ? "merge" : "split";
-  const toastKey = "proofread-wait-for-action";
-  Toast.info(
-    `Click onto another segment to ${actionDescription} the segments. Close this toast to abort this action.`,
-    {
-      key: toastKey,
-      sticky: true,
-      onClose: () => console.log("Canceling proofreading action..."),
-    },
-  );
-
-  const proofreadAction = yield* take(["PROOFREAD_AT_POSITION"]);
-  const targetNodePosition = V3.floor(proofreadAction.position);
-  Toast.close(toastKey);
-  yield* put(setBusyBlockingInfoAction(true, "Proofreading action"));
+  const sourceNodePosition = V3.floor(sourceNodePositionMaybe);
+  const targetNodePosition = V3.floor(action.position);
 
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,

@@ -43,7 +43,6 @@ import {
   getMaximumBrushSize,
   getRenderableResolutionForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
-  getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -620,15 +619,9 @@ function* ensureSegmentExists(
   }
 
   const layerName = layer.name;
-  const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
   const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
 
-  if (
-    cellId === 0 ||
-    cellId == null ||
-    // If the segment was already registered with a position, don't do anything
-    segments.getNullable(cellId)?.somePosition != null
-  ) {
+  if (cellId === 0 || cellId == null) {
     return;
   }
 
@@ -644,10 +637,14 @@ function* ensureSegmentExists(
       ),
     );
   } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
+    // Update the position even if the cell is already registered with a position.
+    // This way the most up-to-date position of a cell is used to jump to when a
+    // segment is selected in the segment list. Also, the position of the active
+    // cell is used in the proofreading mode.
     const { somePosition } = action;
 
     if (somePosition == null) {
-      // Not all SetActiveCell provide a position (e.g., when simply setting the ID)
+      // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
       // via the UI.
       return;
     }

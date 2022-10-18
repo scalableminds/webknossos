@@ -239,9 +239,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           message={
             <>
               Histogram couldn&apos;t be fetched.{" "}
-              <Button onClick={this.props.reloadHistogram} size="small">
+              <a href="#" onClick={this.props.reloadHistogram}>
                 Retry
-              </Button>
+              </a>
             </>
           }
           showIcon

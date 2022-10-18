@@ -211,7 +211,7 @@ function ShortcutsInfo() {
               Space
             </span>
           </span>{" "}
-          Trace forward +
+          Trace forward
         </span>
         <span key="zoom" className="shortcut-info-element">
           <span

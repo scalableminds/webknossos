@@ -1,8 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
-import java.nio.file.Paths
-import java.util
-import java.util.UUID
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
@@ -21,12 +18,12 @@ import com.scalableminds.webknossos.datastore.services.{
   IsosurfaceService,
   IsosurfaceServiceHolder
 }
-import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   TracingDataStore,
   VersionedKeyValuePair
 }
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
@@ -34,6 +31,9 @@ import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
+import java.nio.file.Paths
+import java.util
+import java.util.UUID
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -75,24 +75,11 @@ object EdgeWithPositions {
   implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
 }
 
-trait FallbackDataHelper {
-  def remoteDatastoreClient: TSRemoteDatastoreClient
-
-  private lazy val fallbackDataCache: AlfuFoxCache[FallbackDataKey, (Array[Byte], List[Int])] =
-    AlfuFoxCache(maxEntries = 3000)
-
-  def getFallbackDataFromDatastore(
-      remoteFallbackLayer: RemoteFallbackLayer,
-      dataRequests: List[WebKnossosDataRequest],
-      userToken: Option[String])(implicit ec: ExecutionContext): Fox[(Array[Byte], List[Int])] =
-    fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, userToken),
-                                k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
-}
-
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
-    val remoteDatastoreClient: TSRemoteDatastoreClient
+    val remoteDatastoreClient: TSRemoteDatastoreClient,
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
@@ -147,10 +134,13 @@ class EditableMappingService @Inject()(
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
 
-  def duplicate(editableMappingIdOpt: Option[String], tracing: VolumeTracing, userToken: Option[String]): Fox[String] =
+  def duplicate(editableMappingIdOpt: Option[String],
+                tracing: VolumeTracing,
+                tracingId: String,
+                userToken: Option[String]): Fox[String] =
     for {
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
-      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
       editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
       newId = generateId
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping.toProto))
@@ -442,11 +432,12 @@ class EditableMappingService @Inject()(
     } yield ()
 
   def volumeData(tracing: VolumeTracing,
+                 tracingId: String,
                  dataRequests: DataRequestCollection,
                  userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
       editableMappingId <- tracing.mappingName.toFox
-      dataLayer = editableMappingLayer(editableMappingId, tracing, userToken)
+      dataLayer = editableMappingLayer(editableMappingId, tracing, tracingId, userToken)
       requests = dataRequests.map(r =>
         DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
@@ -515,8 +506,7 @@ class EditableMappingService @Inject()(
 
       skeleton = SkeletonTracingDefaults.createInstance.copy(
         dataSetName = remoteFallbackLayer.dataSetName,
-        trees = trees,
-        organizationName = Some(remoteFallbackLayer.organizationName)
+        trees = trees
       )
     } yield skeleton.toByteArray
 
@@ -568,6 +558,7 @@ class EditableMappingService @Inject()(
 
   private def editableMappingLayer(mappingName: String,
                                    tracing: VolumeTracing,
+                                   tracingId: String,
                                    userToken: Option[String]): EditableMappingLayer =
     EditableMappingLayer(
       mappingName,
@@ -577,15 +568,17 @@ class EditableMappingService @Inject()(
       elementClass = tracing.elementClass,
       userToken,
       tracing = tracing,
+      tracingId = tracingId,
       editableMappingService = this
     )
 
   def createIsosurface(tracing: VolumeTracing,
+                       tracingId: String,
                        request: WebKnossosIsosurfaceRequest,
                        userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       mappingName <- tracing.mappingName.toFox
-      segmentationLayer = editableMappingLayer(mappingName, tracing, userToken)
+      segmentationLayer = editableMappingLayer(mappingName, tracing, tracingId, userToken)
       isosurfaceRequest = IsosurfaceRequest(
         dataSource = None,
         dataLayer = segmentationLayer,

@@ -505,6 +505,12 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
+export async function assignTaskToUser(taskId: string, userId: string): Promise<APITask> {
+  return Request.receiveJSON(`/api/tasks/${taskId}/assign?userId=${userId}`, {
+    method: "POST",
+  });
+}
+
 // ### Private Links
 
 export function createPrivateLink(
@@ -514,7 +520,10 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: moment().add(initialExpirationPeriodInDays, "days").valueOf(),
+      expirationDateTime: moment()
+        .endOf("day")
+        .add(initialExpirationPeriodInDays, "days")
+        .valueOf(),
     },
   });
 }
@@ -867,6 +876,12 @@ export async function getTracingForAnnotationType(
   // Flow complains since we don't doublecheck that we assign the correct type depending
   // on the tracing's structure.
   tracing.typ = typ;
+
+  // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
+  delete tracing.dataSetName;
+  // @ts-ignore
+  delete tracing.organizationName;
+
   return tracing;
 }
 

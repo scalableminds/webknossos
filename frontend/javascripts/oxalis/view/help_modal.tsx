@@ -14,15 +14,17 @@ function HelpButton() {
   const discardButton = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     // prevent the modal from also being shown
     e.stopPropagation();
-    
-    if (!activeUser) return null;
-    if (activeUser && activeUser.novelUserExperienceInfos.hasDiscardedHelpButton) return null;
-    
+
+    if (!activeUser) return;
+
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       hasDiscardedHelpButton: true,
     });
     dispatch(setActiveUserAction(newUserSync));
   };
+
+  if (!activeUser) return null;
+  if (activeUser && activeUser.novelUserExperienceInfos.hasDiscardedHelpButton) return null;
 
   return (
     <>

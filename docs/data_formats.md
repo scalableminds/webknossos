@@ -242,7 +242,7 @@ webKnossos requires several metadata properties for each dataset to properly dis
     * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g., `1`, `2` or `4`) or a 3-tuple (e.g., `2, 2, 1`) for non-uniform magnifications.
     * `dataLayers.wkwResolutions.cubeLength`: The cube size of the WKW cube files. Usually is `1024`.
 
-  + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16` or `float32`.
+  + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16`, `uint24` (rgb), `uint32`, `uint64`, `float` (32-bit) or `double` (64-bit).
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
   + `dataLayers.dataFormat`: Should be `wkw`.
 

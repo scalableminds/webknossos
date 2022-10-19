@@ -436,7 +436,6 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Stats"
               dataIndex="status"
               key="status"
-              width={120}
               render={(status, task: APITask) => (
                 <div className="nowrap">
                   <span title="Open Instances">

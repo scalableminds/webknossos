@@ -1,8 +1,6 @@
 import _ from "lodash";
-import cwise from "cwise";
 import ops from "ndarray-ops";
 import moments from "ndarray-moments";
-import type { Action } from "oxalis/model/actions/actions";
 import {
   ContourModeEnum,
   OrthoView,

@@ -9,6 +9,7 @@ import com.mohiva.play.silhouette.api.util.Credentials
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.JsonHelper.{parseAndValidateJson, validateJsValue}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 
 import javax.inject.Inject
@@ -83,7 +84,7 @@ class AuthenticationController @Inject()(
           errors ::= Messages("user.lastName.invalid")
           ""
         }
-        multiUserDAO.findOneByEmail(email)(GlobalAccessContext).toFox.futureBox.flatMap {
+        multiUserDAO.findOneByEmail(email)(GlobalAccessContext).futureBox.flatMap {
           case Full(_) =>
             errors ::= Messages("user.email.alreadyInUse")
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
@@ -437,7 +438,12 @@ class AuthenticationController @Inject()(
   lazy val oidcConfig: OpenIdConnectConfig = OpenIdConnectConfig(oidcProviderUrl, oidcClientId)
   lazy val absoluteOidcCallbackURL = "http://localhost:9000/api/auth/oidc/callback"
 
-  case class OpenConnectId(iss: String, sub: String, preferred_username: String, given_name: String, family_name: String, email: String) {
+  case class OpenConnectId(iss: String,
+                           sub: String,
+                           preferred_username: String,
+                           given_name: String,
+                           family_name: String,
+                           email: String) {
     def username: String = preferred_username
   }
 
@@ -449,8 +455,8 @@ class AuthenticationController @Inject()(
     openIdClient.redirectURL(oidcConfig, absoluteOidcCallbackURL).map(url => Redirect(url))
   }
 
-  def loginUser(user: User, loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Future[Result]] = {
-    userService.retrieve(loginInfo).map {
+  def loginUser(user: User, loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
+    userService.retrieve(loginInfo).flatMap {
       case Some(user) if !user.isDeactivated =>
         for {
           authenticator: CombinedAuthenticator <- combinedAuthenticatorService.create(loginInfo)
@@ -463,53 +469,51 @@ class AuthenticationController @Inject()(
         Future.successful(BadRequest(Messages("error.noUser")))
       case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
     }
-  }
 
   // Is called after user was successfully authenticated
-  def loginOrSignupViaOidc(oidc: OpenConnectId): Request[AnyContent] => Future[Future[Result]] = { implicit request: Request[AnyContent] =>
-      userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).toFox.futureBox.flatMap {
+  def loginOrSignupViaOidc(oidc: OpenConnectId): Request[AnyContent] => Future[Result] = {
+    implicit request: Request[AnyContent] =>
+      userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).futureBox.flatMap {
         case Full(user) =>
           val loginInfo = LoginInfo("credentials", user._id.toString)
           loginUser(user, loginInfo)
         case Empty =>
           for {
-            organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None,None)(GlobalAccessContext).toFutureWithEmptyToFailure
-            user: User <- userService.insert(organization._id,
-              oidc.email,
-              oidc.given_name,
-              oidc.family_name,
-              isActive = true,
-              userService.getOIDCPasswordInfo).toFutureWithEmptyToFailure
-            multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).toFutureWithEmptyToFailure
+            organization: Organization <- organizationService
+              .findOneByInviteByNameOrDefault(None, None)(GlobalAccessContext)
+            user: User <- userService
+              .insert(organization._id,
+                      oidc.email,
+                      oidc.given_name,
+                      oidc.family_name,
+                      isActive = true,
+                      userService.getOIDCPasswordInfo)
+            multiUser: MultiUser <- multiUserDAO
+              .findOne(user._multiUser)(GlobalAccessContext)
             _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-           //  brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox // Is this necessary?
-          } yield {
-            if (conf.Features.isDemoInstance) {
+            //  brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox // Is this necessary?
+            _ = if (conf.Features.isDemoInstance) {
               mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
             } else {
               Mailer ! Send(defaultMails.newUserMail(user.name, oidc.email, None, enableAutoVerify = true))
             }
-            Mailer ! Send(
-              defaultMails.registerAdminNotifyerMail(user.name, oidc.email, None , organization, autoActivate = true))
+            _ = Mailer ! Send(
+              defaultMails.registerAdminNotifyerMail(user.name, oidc.email, None, organization, autoActivate = true))
             // After registering, also login
-            val loginInfo = LoginInfo("credentials", user._id.toString)
-            for {
-              loginFuture <- loginUser(user, loginInfo)
-              loginResult <- loginFuture
-            } yield loginResult
-          }
+            loginInfo = LoginInfo("credentials", user._id.toString)
+            loginResult <- loginUser(user, loginInfo)
+          } yield loginResult
       }
   }
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-        code <- openIdClient.getToken(oidcConfig,
+      code <- openIdClient.getToken(oidcConfig,
                                     absoluteOidcCallbackURL,
                                     request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
-                                    oidcClientSecret)
-        oidc = code.validate[OpenConnectId](OpenConnectId.format).get
-        user_result_f <- loginOrSignupViaOidc(oidc)(request)
-        user_result <- user_result_f
+                                    )
+      oidc: OpenConnectId <- validateJsValue[OpenConnectId](code).toFox
+      user_result <- loginOrSignupViaOidc(oidc)(request)
     } yield user_result
   }
 
@@ -532,7 +536,7 @@ class AuthenticationController @Inject()(
               errors ::= Messages("user.lastName.invalid")
               ""
             }
-            multiUserDAO.findOneByEmail(email)(GlobalAccessContext).toFox.futureBox.flatMap {
+            multiUserDAO.findOneByEmail(email)(GlobalAccessContext).futureBox.flatMap {
               case Full(_) =>
                 errors ::= Messages("user.email.alreadyInUse")
                 Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))

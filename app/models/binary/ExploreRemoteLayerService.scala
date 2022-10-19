@@ -157,7 +157,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
   private def parseJsonFromPath[T: Reads](path: Path)(implicit ec: ExecutionContext): Fox[T] =
     for {
       fileAsString <- tryo(new String(Files.readAllBytes(path), StandardCharsets.UTF_8)).toFox ?~> "Failed to read remote file"
-      parsed <- JsonHelper.parseJsonToFox[T](fileAsString) ?~> "Failed to validate json against data schema"
+      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString) ?~> "Failed to validate json against data schema"
     } yield parsed
 
   private def exploreAsNgff(remotePath: Path, credentials: Option[FileSystemCredentials])(

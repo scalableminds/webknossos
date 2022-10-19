@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -13,6 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class MeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
+    binaryDataServiceHolder: BinaryDataServiceHolder
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -55,16 +57,9 @@ class MeshController @Inject()(
                                          organizationName: String,
                                          dataSetName: String,
                                          dataLayerName: String,
-<<<<<<< HEAD
-                                         formatVersion: Int): Action[ListMeshChunksRequest] =
-||||||| parent of 0636f91ff... make failing of some segments possible
-                                         formatVersion: Int,
-                                         mappingName: Option[String]): Action[ListMeshChunksRequest] =
-=======
                                          formatVersion: Int,
                                          mappingName: Option[String],
                                          useMeshFromMappedIds: Boolean = true): Action[ListMeshChunksRequest] =
->>>>>>> 0636f91ff... make failing of some segments possible
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
@@ -72,60 +67,12 @@ class MeshController @Inject()(
         for {
           positions <- formatVersion match {
             case 3 =>
-<<<<<<< HEAD
-<<<<<<< HEAD
               meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
                 "mesh.file.listChunks.failed",
                 request.body.segmentId.toString,
                 request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
-||||||| parent of 734c590d9... add route for mapped segment
-              mappingName match {
-                case Some(mapping) =>
-                  for {
-                    agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-                    agglomerateIds: List[Long] <- agglomerateService
-                      .agglomerateIdsForSegmentIds(
-                        AgglomerateFileKey(
-                          organizationName,
-                          dataSetName,
-                          dataLayerName,
-                          mapping
-                        ),
-                        List(request.body.segmentId)
-                      )
-                      .toFox
-
-                    unmappedChunks <- Fox.serialCombined(agglomerateIds)(segmentId =>
-                      meshFileService.listMeshChunksForSegmentV3(organizationName,
-                                                                 dataSetName,
-                                                                 dataLayerName,
-                                                                 ListMeshChunksRequest(request.body.meshFile,
-                                                                                       segmentId)) ?~> Messages(
-                        "mesh.file.listChunks.failed",
-                        request.body.segmentId.toString,
-                        request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST)
-
-                  } yield unmappedChunks
-                case None =>
-                  meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
-                    "mesh.file.listChunks.failed",
-                    request.body.segmentId.toString,
-                    request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
-              }
-=======
-              mappingName match {
-||||||| parent of 880b31d23... add new function
-              mappingName match {
-=======
               mappingNameDemo match {
-<<<<<<< HEAD
->>>>>>> 880b31d23... add new function
-                case Some(mapping) =>
-||||||| parent of 0636f91ff... make failing of some segments possible
-                case Some(mapping) =>
-=======
                 case Some(mapping) if useMeshFromMappedIds =>
->>>>>>> 0636f91ff... make failing of some segments possible
                   for {
                     agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
                     segmentIds: List[Long] <- agglomerateService
@@ -156,7 +103,6 @@ class MeshController @Inject()(
                     request.body.segmentId.toString,
                     request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
               }
->>>>>>> 734c590d9... add route for mapped segment
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
           }
         } yield Ok(Json.toJson(positions))

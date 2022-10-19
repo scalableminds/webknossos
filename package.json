@@ -195,7 +195,6 @@
     "minisearch": "^5.0.0",
     "mjs": "^1.0.0",
     "moment": "^2.21.0",
-    "n-dimensional-flood-fill": "^1.0.0",
     "nanoevents": "^5.1.8",
     "ndarray": "^1.0.19",
     "ndarray-convolve": "^2.0.0",

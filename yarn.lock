@@ -10003,11 +10003,6 @@ mute-stream@0.0.8:
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.8.tgz#1630c42b2251ff81e2a283de96a5497ea92e5e0d"
   integrity sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==
 
-n-dimensional-flood-fill@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/n-dimensional-flood-fill/-/n-dimensional-flood-fill-1.0.0.tgz#c1b99ed55901f9edcd50e86997ee355109b3601b"
-  integrity sha512-AF6lR0k/7OYDtqyaLVM12WomMhGUIPOm0859bolzMSYHHoY48WxWoOw9GVn+VB98WZw/HHJA2DxtKFxPqJw2gg==
-
 n-gram@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/n-gram/-/n-gram-2.0.1.tgz#055adb9d4e12e16205b95e6213b9b865e611bc81"

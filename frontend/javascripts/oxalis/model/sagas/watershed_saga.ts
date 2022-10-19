@@ -36,7 +36,6 @@ import api from "oxalis/api/internal_api";
 import ndarray, { NdArray } from "ndarray";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import morphology from "ball-morphology";
-import floodFill from "n-dimensional-flood-fill";
 import Toast from "libs/toast";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { EnterAction, EscapeAction } from "../actions/ui_actions";
@@ -47,17 +46,6 @@ import Dimensions from "../dimensions";
 import { take2 } from "libs/utils";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
-
-function takeLatest2(vec4: Vector4): Vector2 {
-  return [vec4[2], vec4[3]];
-}
-
-const thresholdOp = cwise({
-  args: ["array", "scalar"],
-  body: function body(a: number, b: number) {
-    a = a < b ? 1 : 0;
-  },
-});
 
 function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const activeViewport = yield* select(
@@ -114,47 +102,10 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
   const rectCenterBrushExtentUV = V3.floor(V3.scale(inputNdUvw.shape as Vector3, 1 / 10));
 
-  for (
-    let u = centerUV[0] - rectCenterBrushExtentUV[0];
-    u < centerUV[0] + rectCenterBrushExtentUV[0];
-    u++
-  ) {
-    for (
-      let v = centerUV[1] - rectCenterBrushExtentUV[1];
-      v < centerUV[1] + rectCenterBrushExtentUV[1];
-      v++
-    ) {
-      // todo:
-      // inputNdUvw.set(u, v, 0, 255);
-    }
-  }
-
   let output: ndarray.NdArray = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
 
   console.time("floodfill");
-  // floodFill({
-  //   getter: (x: number, y: number, z: number) => {
-  //     if (z != undefined) {
-  //       throw new Error("Third dimension should not be used in floodfill. Is seed 2d?");
-  //     }
-  //     if (x < 0 || y < 0 || x > inputNdUvw.shape[0] || 1 > inputNdUvw.shape[1]) {
-  //       return null;
-  //     }
-  //     return inputNdUvw.get(x, y, 0);
-  //   },
-  //   equals: (a: number, b: number) => {
-  //     if (a == null || b == null) {
-  //       return false;
-  //     }
-  //     return a > 128; // || Math.abs(a - b) / b < 0.1;
-  //   },
-  //   seed: centerUV,
-  //   onFlood: (x: number, y: number) => {
-  //     output.set(x, y, 0, 1);
-  //   },
-  // });
 
-  // NEW TRAVERSAL
   const maxVisitedField = getDistanceField(inputNdUvw, centerUV, "max");
   const minVisitedField = getDistanceField(inputNdUvw, centerUV, "min");
 
@@ -187,7 +138,6 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const subview = inputNdUvw
     .lo(distToCenterRect[0], distToCenterRect[1], 0)
     .hi(distToCenterRect[0], distToCenterRect[1], 1);
-  console.log("subview", subview);
   const [centerMean] = moments(1, subview);
 
   console.table({
@@ -197,20 +147,20 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     centerMean: { value: centerMean },
   });
 
-  const maxHistograms = computeHistogram(maxVisitedField);
+  // const maxHistograms = computeHistogram(maxVisitedField);
   console.group("dark segment");
   console.log("minThresholdAtBorder", minThresholdAtBorder);
   console.log("smallestThresh", smallestThresh);
   console.log("maxEffectiveThresh", maxEffectiveThresh);
-  console.log("computeHistogram", maxHistograms);
+  // console.log("computeHistogram", maxHistograms);
   console.groupEnd();
 
-  const minHistograms = computeHistogram(minVisitedField);
+  // const minHistograms = computeHistogram(minVisitedField);
   console.group("bright segment");
   console.log("maxThresholdAtBorder", maxThresholdAtBorder);
   console.log("largestThresh", largestThresh);
   console.log("minEffectiveThresh", minEffectiveThresh);
-  console.log("computeHistogram", minHistograms);
+  // console.log("computeHistogram", minHistograms);
   console.groupEnd();
 
   let visitedField;

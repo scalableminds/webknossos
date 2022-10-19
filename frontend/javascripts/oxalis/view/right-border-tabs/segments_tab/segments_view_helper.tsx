@@ -1,14 +1,9 @@
 import type { ComponentType } from "react";
 import React from "react";
 import { Modal } from "antd";
-import { getMeshfilesForDatasetLayer } from "admin/admin_rest_api";
-import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import type { APIDataLayer } from "types/api_flow_types";
 import type { ActiveMappingInfo } from "oxalis/store";
 import Store from "oxalis/store";
-import {
-  updateMeshFileListAction,
-  updateCurrentMeshFileAction,
-} from "oxalis/model/actions/annotation_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { waitForCondition } from "libs/utils";
@@ -19,42 +14,6 @@ const { confirm } = Modal;
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
   return segmentationLayer.fallbackLayer || segmentationLayer.name;
-}
-export async function maybeFetchMeshFiles(
-  segmentationLayer: APIDataLayer | null | undefined,
-  dataset: APIDataset,
-  mustRequest: boolean,
-  autoActivate: boolean = true,
-): Promise<Array<APIMeshFile>> {
-  if (!segmentationLayer) {
-    return [];
-  }
-
-  const layerName = segmentationLayer.name;
-  const files = Store.getState().localSegmentationData[layerName].availableMeshFiles;
-
-  // Only send new get request, if it hasn't happened before (files in store are null)
-  // else return the stored files (might be empty array). Or if we force a reload.
-  if (!files || mustRequest) {
-    const availableMeshFiles = await getMeshfilesForDatasetLayer(
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-    );
-    Store.dispatch(updateMeshFileListAction(layerName, availableMeshFiles));
-
-    if (
-      !Store.getState().localSegmentationData[layerName].currentMeshFile &&
-      availableMeshFiles.length > 0 &&
-      autoActivate
-    ) {
-      Store.dispatch(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
-    }
-
-    return availableMeshFiles;
-  }
-
-  return files;
 }
 
 type MappingActivationConfirmationProps<R> = R & {

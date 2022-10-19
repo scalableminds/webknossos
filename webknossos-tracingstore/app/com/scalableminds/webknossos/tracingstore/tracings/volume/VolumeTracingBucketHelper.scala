@@ -3,25 +3,17 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  FossilDBClient,
-  KeyValueStoreImplicits,
-  TemporaryVolumeDataStore,
-  VersionedKey,
-  VersionedKeyValuePair
-}
+import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
-
-import scala.concurrent.duration._
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
-import net.liftweb.common.{Full, Empty, Failure}
+import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 trait VolumeBucketReversionHelper {
   def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
@@ -157,7 +149,8 @@ trait VolumeTracingBucketHelper
       version = None
     )
     for {
-      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(dataLayer.tracing)
+      remoteFallbackLayer <- dataLayer.volumeTracingService
+        .remoteFallbackLayerFromVolumeTracing(dataLayer.tracing, dataLayer.name)
       (unmappedData, indices) <- dataLayer.volumeTracingService.getFallbackDataFromDatastore(remoteFallbackLayer,
                                                                                              List(dataRequest),
                                                                                              dataLayer.userToken)

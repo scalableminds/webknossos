@@ -75,7 +75,9 @@ object Dummies {
                                          1.0,
                                          0,
                                          None,
-                                         Seq())
+                                         Seq.empty,
+                                         Seq.empty,
+                                         Some("testOrganization"))
 
   val volumeTracing: VolumeTracing = VolumeTracing(
     None,

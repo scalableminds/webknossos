@@ -44,7 +44,6 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
                                     organizationDAO: OrganizationDAO,
-                                    annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
@@ -169,18 +168,6 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
     // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
 
-    def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-      val annotationFox = annotationDAO.findOneByTracingId(tracingId)
-      for {
-        annotationBox <- annotationFox.futureBox
-      } yield {
-        annotationBox match {
-          case Full(_) => annotationBox
-          case _       => annotationStore.findCachedByTracingId(tracingId)
-        }
-      }
-    }
-
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
         case AccessMode.read  => restrictions.allowAccess(userBox)
@@ -192,7 +179,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       Fox.successful(UserAccessAnswer(granted = true))
     else {
       for {
-        annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
         annotationAccessByToken <- token
           .map(annotationPrivateLinkDAO.findOneByAccessToken)
           .getOrElse(Fox.empty)

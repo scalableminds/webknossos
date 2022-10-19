@@ -32,6 +32,8 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   def toList: List[Int] = List(x, y, z)
 
+  def toVec3Float: Vec3Float = Vec3Float(x.toFloat, y.toFloat, z.toFloat)
+
   def move(dx: Int, dy: Int, dz: Int): Vec3Int =
     Vec3Int(x + dx, y + dy, z + dz)
 

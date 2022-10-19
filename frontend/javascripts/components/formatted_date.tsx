@@ -19,20 +19,23 @@ export function formatDateInLocalTimeZone(
 export default function FormattedDate({
   timestamp,
   format,
+  tooltipFormat,
 }: {
   timestamp: string | number | Date;
   format?: string;
+  tooltipFormat?: string;
 }) {
   const _moment = moment.utc(timestamp);
 
   const _format = format || defaultTimeFormat;
+  const _tooltipFormat = tooltipFormat || format;
 
   return (
     <Tooltip
       title={
         <span>
           The displayed time refers to your local timezone. In UTC, the time is:{" "}
-          {_moment.format(_format)}
+          {_moment.format(_tooltipFormat)}
         </span>
       }
     >

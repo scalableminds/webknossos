@@ -81,9 +81,9 @@ const defaultState: OxalisState = {
     watershed: {
       showPreview: false,
       threshold: 128,
-      closeValue: 6,
-      erodeValue: 3,
-      dilateValue: 6,
+      closeValue: 3,
+      erodeValue: 1,
+      dilateValue: 2,
     },
   },
   temporaryConfiguration: {

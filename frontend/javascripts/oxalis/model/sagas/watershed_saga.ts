@@ -376,7 +376,7 @@ export default function* listenToMinCut(): Saga<void> {
       try {
         yield* call(performWatershed, action);
       } catch (ex) {
-        Toast.error(ex as Error);
+        Toast.error(JSON.stringify(ex as Error));
         console.error(ex);
       }
     },
@@ -466,8 +466,7 @@ function getDistanceField(
         const newThreshold = Number(inputNdUvw.get(newCoord[0], newCoord[1], 0));
         queue.queue({
           coords: newCoord,
-          // todo: extremeFn necessary here?
-          threshold: extremeFn(newThreshold, extremeThreshold),
+          threshold: newThreshold,
         });
       }
     }

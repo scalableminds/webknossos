@@ -353,7 +353,7 @@ function HelpSubMenu({
       {isAuthenticated ? (
         <>
           <Menu.Item key="get_help" onClick={() => setIsHelpModalOpen(true)}>
-            Get help / Ask a question
+            Ask a question
           </Menu.Item>
           <HelpModal
             isModalOpen={isHelpModalOpen}

@@ -85,7 +85,6 @@ export class RectangleGeometry {
 
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new THREE.MeshLambertMaterial({
-      // color: 0xffff00,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.5,
@@ -106,7 +105,7 @@ export class RectangleGeometry {
 
   reset() {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'color' does not exist on type 'Material ... Remove this comment to see the full error message
-    // this.plane.material.color = this.color;
+    this.plane.material.color = this.color;
   }
 
   rotateToViewport() {
@@ -149,7 +148,7 @@ export class RectangleGeometry {
     // Even though this.plane should have exactly this type, the unpacking is still necessary
     // for TS to understand that material is not an array.
     const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
-    plane.material.map = texture;
+    plane.material.alphaMap = texture;
     plane.material.needsUpdate = true;
   }
 
@@ -157,7 +156,7 @@ export class RectangleGeometry {
     // Even though this.plane should have exactly this type, the unpacking is still necessary
     // for TS to understand that material is not an array.
     const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
-    plane.material.map = null;
+    plane.material.alphaMap = null;
   }
 }
 

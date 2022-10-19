@@ -205,12 +205,9 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   );
   console.log({ seedIntensity });
 
-  const floodfillCopy = copyNdArray(Uint8Array, output);
-
   morphology.close(output, watershedConfig.closeValue);
   morphology.erode(output, watershedConfig.erodeValue);
   morphology.dilate(output, watershedConfig.dilateValue);
-  // // morphology.dilate(output, 1);
   console.timeEnd("floodfill");
 
   const outputRGBA = maskToRGBA(inputNdUvw, visitedField);
@@ -361,21 +358,10 @@ function maskToRGBA(inputNdUvw: ndarray.NdArray<TypedArray>, output: ndarray.NdA
   for (let v = 0; v < inputNdUvw.shape[1]; v++) {
     for (let u = 0; u < inputNdUvw.shape[0]; u++) {
       const val = (255 * (output.get(u, v, 0) - min)) / (max - min);
-      outputRGBA[idx] = 0;
-      outputRGBA[idx + 1] = 0;
-      outputRGBA[idx + 2] = 255;
+      outputRGBA[idx] = val;
+      outputRGBA[idx + 1] = val;
+      outputRGBA[idx + 2] = val;
       outputRGBA[idx + 3] = val;
-      // if (output.get(u, v, 0) > 0) {
-      //   outputRGBA[idx] = 255;
-      //   outputRGBA[idx + 1] = 255;
-      //   outputRGBA[idx + 2] = 255;
-      //   outputRGBA[idx + 3] = 255;
-      // } else {
-      //   outputRGBA[idx] = 0;
-      //   outputRGBA[idx + 1] = 0;
-      //   outputRGBA[idx + 2] = 0;
-      //   outputRGBA[idx + 3] = 0;
-      // }
       idx += channelCount;
     }
   }

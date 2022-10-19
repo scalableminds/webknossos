@@ -8,7 +8,6 @@ import {
   TypedArray,
   Vector2,
   Vector3,
-  Vector4,
 } from "oxalis/constants";
 import PriorityQueue from "js-priority-queue";
 
@@ -28,10 +27,10 @@ import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+// import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import api from "oxalis/api/internal_api";
-import ndarray, { NdArray } from "ndarray";
+import ndarray from "ndarray";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
@@ -44,6 +43,22 @@ import Dimensions from "../dimensions";
 import { take2 } from "libs/utils";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+
+export default function* listenToMinCut(): Saga<void> {
+  // yield* takeEveryUnlessBusy(
+  yield* takeEvery(
+    "COMPUTE_WATERSHED_FOR_RECT",
+    function* guard(action: ComputeWatershedForRectAction) {
+      try {
+        yield* call(performWatershed, action);
+      } catch (ex) {
+        Toast.error(JSON.stringify(ex as Error));
+        console.error(ex);
+      }
+    },
+    // "Watershed is being computed.",
+  );
+}
 
 function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const activeViewport = yield* select(
@@ -366,27 +381,6 @@ function maskToRGBA(inputNdUvw: ndarray.NdArray<TypedArray>, output: ndarray.NdA
   return outputRGBA;
 }
 
-export default function* listenToMinCut(): Saga<void> {
-  // yield* takeEveryUnlessBusy(
-  yield* takeEvery(
-    "COMPUTE_WATERSHED_FOR_RECT",
-    function* guard(action: ComputeWatershedForRectAction) {
-      try {
-        yield* call(performWatershed, action);
-      } catch (ex) {
-        Toast.error(JSON.stringify(ex as Error));
-        console.error(ex);
-      }
-    },
-    // "Watershed is being computed.",
-  );
-}
-
-type PriorityItem = {
-  coords: Vector2;
-  threshold: number;
-};
-
 function computeHistogram(arr: ndarray.NdArray<TypedArray>) {
   const hist: Record<number, number> = {};
   for (let u = 0; u < arr.shape[0]; u++) {
@@ -412,6 +406,11 @@ function computeHistogram(arr: ndarray.NdArray<TypedArray>) {
 
   return { hist, cumsumHistLeft, cumsumHistRight };
 }
+
+type PriorityItem = {
+  coords: Vector2;
+  threshold: number;
+};
 
 function getDistanceField(
   inputNdUvw: ndarray.NdArray<TypedArray>,

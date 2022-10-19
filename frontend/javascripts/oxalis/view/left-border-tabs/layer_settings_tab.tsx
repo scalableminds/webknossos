@@ -72,6 +72,7 @@ import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
   dispatchClipHistogramAsync,
+  reloadHistogramAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
@@ -117,6 +118,7 @@ type DatasetSettingsProps = {
   onSetPosition: (arg0: Vector3) => void;
   onZoomToResolution: (arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
+  reloadHistogram: (layerName: string) => void;
   tracing: Tracing;
   task: Task | null | undefined;
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
@@ -287,20 +289,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
-    let histograms = [];
-
-    if (this.props.histogramData && this.props.histogramData[layerName]) {
-      histograms = this.props.histogramData[layerName];
-    } else {
-      histograms = [
-        {
-          numberOfElements: 0,
-          elementCounts: [],
-          min: defaultIntensityRange[0],
-          max: defaultIntensityRange[1],
-        },
-      ];
-    }
+    const histograms = this.props.histogramData?.[layerName];
 
     return (
       <Histogram
@@ -312,6 +301,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         isInEditMode={isInEditMode}
         layerName={layerName}
         defaultMinMax={defaultIntensityRange}
+        reloadHistogram={() => this.reloadHistogram(layerName)}
       />
     );
   };
@@ -748,9 +738,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
+    this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
+  };
+
+  reloadHistogram = async (layerName: string): Promise<void> => {
+    await clearCache(this.props.dataset, layerName);
+    this.props.reloadHistogram(layerName);
   };
 
   getVolumeMagsToDownsample = (volumeTracing: VolumeTracing | null | undefined): Array<Vector3> => {
@@ -1101,6 +1097,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {
     dispatch(editAnnotationLayerAction(tracingId, layerProperties));
+  },
+
+  reloadHistogram(layerName: string) {
+    dispatch(reloadHistogramAction(layerName));
   },
 });
 

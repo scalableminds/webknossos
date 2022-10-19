@@ -1,4 +1,4 @@
-import { Select, Spin } from "antd";
+import { Select } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import type { APITeam } from "types/api_flow_types";
@@ -96,7 +96,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         value={this.state.selectedTeams.map((t) => t.id)}
         filterOption
         disabled={this.props.disabled ? this.props.disabled : false}
-        notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+        loading={this.state.isFetchingData}
       >
         {this.getAllTeams().map((team) => (
           <Option

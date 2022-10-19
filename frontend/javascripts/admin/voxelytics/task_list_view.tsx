@@ -108,15 +108,53 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           skipped
         </Tag>
       );
-    case VoxelyticsRunState.RUNNING:
-      return (
-        <Tooltip title={<>Begin Time: {formatDateMedium(taskInfo.beginTime)}</>}>
-          <Tag icon={<SyncOutlined spin />} color="processing">
-            running
-          </Tag>
-          started {moment(taskInfo.beginTime).fromNow()} ago
-        </Tooltip>
-      );
+    case VoxelyticsRunState.RUNNING: {
+      const currentDuration = Date.now() - taskInfo.beginTime.getTime();
+      if (taskInfo.chunksFinished > 0) {
+        const estimatedRemainingDuration =
+          (currentDuration / taskInfo.chunksFinished) * taskInfo.chunksTotal - currentDuration;
+        const estimatedEndTime = new Date(Date.now() + estimatedRemainingDuration);
+        return (
+          <Tooltip
+            title={
+              <>
+                Begin Time: {formatDateMedium(taskInfo.beginTime)}
+                <br />
+                Current Duration: {formatDurationStrict(moment.duration(currentDuration))}
+                <br />
+                Estimated Remaining Duration:{" "}
+                {formatDurationStrict(moment.duration(estimatedRemainingDuration))}
+                <br />
+                Estimated End Time: {formatDateMedium(estimatedEndTime)}
+              </>
+            }
+          >
+            <Tag icon={<SyncOutlined spin />} color="processing">
+              running
+            </Tag>
+            started {moment(taskInfo.beginTime).fromNow()}, probably finishes{" "}
+            {moment(estimatedEndTime).fromNow()}
+          </Tooltip>
+        );
+      } else {
+        return (
+          <Tooltip
+            title={
+              <>
+                Begin Time: {formatDateMedium(taskInfo.beginTime)}
+                <br />
+                Current Duration: {formatDurationStrict(moment.duration(currentDuration))}
+              </>
+            }
+          >
+            <Tag icon={<SyncOutlined spin />} color="processing">
+              running
+            </Tag>
+            started {moment(taskInfo.beginTime).fromNow()}
+          </Tooltip>
+        );
+      }
+    }
     case VoxelyticsRunState.STALE:
       return (
         <Tooltip
@@ -131,7 +169,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             timed out
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago, after{" "}
+          {moment(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -149,7 +187,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<ExclamationCircleOutlined />} color="error">
             cancelled
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago, after{" "}
+          {moment(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -167,7 +205,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             failed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago after{" "}
+          {moment(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -185,7 +223,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago in{" "}
+          {moment(taskInfo.endTime).fromNow()},{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );

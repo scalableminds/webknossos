@@ -1161,10 +1161,10 @@ function* watchForSaveConflicts() {
             "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
         } else if (saveQueue.length > 0) {
           msg =
-            "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved, anymore.";
+            "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore.";
         } else {
           msg =
-            "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved, anymore.";
+            "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
         }
         Toast.warning(msg, {
           sticky: true,

@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.binary._
+import models.folder.FolderDAO
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
@@ -15,6 +16,7 @@ import org.joda.time.DateTime
 import oxalis.security._
 import play.api.libs.json.Json
 import utils.{ObjectId, StoreModules, WkConf}
+
 import javax.inject.Inject
 import models.organization.{Organization, OrganizationDAO}
 import play.api.mvc.{Action, AnyContent}
@@ -40,6 +42,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
+                                   folderDAO: FolderDAO,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
                                    tokenDAO: TokenDAO,
@@ -107,6 +110,7 @@ Samplecountry
     for {
       _ <- updateLocalDataStorePublicUri()
       _ <- updateLocalTracingStorePublicUri()
+      _ <- insertRootFolder()
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- assertInitialDataEnabled
@@ -130,6 +134,12 @@ Samplecountry
       organizations <- organizationDAO.findAll
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
+
+  private def insertRootFolder(): Fox[Unit] =
+    folderDAO.getRoot.futureBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _ => folderDAO.insertRoot()
+    }
 
   private def insertDefaultUser(): Fox[Unit] =
     userService

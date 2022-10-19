@@ -99,6 +99,7 @@ CREATE TABLE webknossos.dataSets(
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   _uploader CHAR(24),
+  _folder CHAR(24) NOT NULL,
   inboxSourceHash INT,
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
@@ -542,6 +543,19 @@ CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents (
     PRIMARY KEY (_artifact, path, timestamp)
 );
 
+CREATE TABLE webknossos.folders (
+    _id CHAR(24) PRIMARY KEY,
+    name TEXT NOT NULL,
+    isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE webknossos.folder_paths (
+    _ancestor CHAR(24) NOT NULL,
+    _descendant CHAR(24) NOT NULL,
+    depth INT NOT NULL,
+    PRIMARY KEY(_ancestor, _descendant)
+);
+
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
@@ -666,6 +680,10 @@ ALTER TABLE webknossos.workers
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.annotation_privateLinks
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
+ALTER TABLE webknossos.folder_paths
+  ADD FOREIGN KEY (_ancestor) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.folder_paths
+  ADD FOREIGN KEY (_descendant) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;

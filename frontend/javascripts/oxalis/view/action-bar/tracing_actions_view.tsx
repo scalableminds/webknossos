@@ -675,19 +675,22 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     const menu = <Menu>{elements}</Menu>;
     return (
-      <div>
+      <>
         <div className="antd-legacy-group">
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
           {modals}
+        </div>
+        <div>
           <Dropdown overlay={menu} trigger={["click"]}>
             <ButtonComponent className="narrow">
+              Menu
               <DownOutlined />
             </ButtonComponent>
           </Dropdown>
         </div>
-      </div>
+      </>
     );
   }
 }

@@ -411,10 +411,6 @@ function DashboardSubMenu({ collapse, ...other }: { collapse: boolean } & SubMen
 function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
-  if (!features().isDemoInstance) {
-    return null;
-  }
-
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: new Date().getTime(),

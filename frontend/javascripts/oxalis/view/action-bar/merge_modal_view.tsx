@@ -261,7 +261,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
                   width: 200,
                 }}
                 onChange={this.handleChangeMergeProject}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.projects.map((project) => ({
                   value: project.id,
                   label: project.label,

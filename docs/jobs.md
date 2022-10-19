@@ -8,13 +8,17 @@ Example workflows:
 - [automated analysis](./automated_analysis.md), e.g., nuclei inferral 
 - [mesh file (pre)-computation](./mesh_visualization.md)
 - [applying a merger mode annotation](./volume_annotation.md#proof_reading_and_merging_segments)
-- Tiff export of a bounding box
+- automatic inference of a segmentation layer's large segment ID
+- [dataset & annotation export as Tiff files](./export.md#data-export-through-the-ui)
 - downsampling volume annotations
 
 These workflows are executed in background worker tasks as so-called *processing jobs*. 
 
+!!! info
+    These workflows are exclusive to webKnossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the webKnossos worker or [Voxelytics](https://voxelytics.com)) for the job processing.
+
 ## Listing Processing Jobs
-A list of all past and currently running jobs can be found from the administration menu in the navbar (Administration -> *Processing Jobs*).
+A list of all past and currently running jobs can be found in the administration menu in the navbar (Administration -> *Processing Jobs*).
 
 Depending on the job workflow you may:
 

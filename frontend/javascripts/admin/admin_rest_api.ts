@@ -2315,7 +2315,7 @@ export function getVoxelyticsArtifactChecksums(
   );
 }
 
-// ### Help / Feddback userEmail
+// ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
   return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
     method: "POST",

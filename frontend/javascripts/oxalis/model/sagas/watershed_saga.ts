@@ -1,6 +1,7 @@
 import _ from "lodash";
 import cwise from "cwise";
 import ops from "ndarray-ops";
+import moments from "ndarray-moments";
 import type { Action } from "oxalis/model/actions/actions";
 import {
   ContourModeEnum,
@@ -45,6 +46,7 @@ import { getColorLayers, getResolutionInfo } from "../accessors/dataset_accessor
 import Dimensions from "../dimensions";
 import { take2 } from "libs/utils";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
+import { updateUserSettingAction } from "../actions/settings_actions";
 
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
@@ -127,7 +129,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     }
   }
 
-  let output = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
+  let output: ndarray.NdArray = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
 
   console.time("floodfill");
   // floodFill({
@@ -153,31 +155,97 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   // });
 
   // NEW TRAVERSAL
-  const visitedField = getDistanceField(inputNdUvw, centerUV);
+  const maxVisitedField = getDistanceField(inputNdUvw, centerUV, "max");
+  const minVisitedField = getDistanceField(inputNdUvw, centerUV, "min");
 
-  function getMinAtBorders(arr: ndarray.NdArray<TypedArray>) {
-    return Math.min(
-      ops.inf(arr.pick(null, 0, 0)),
-      ops.inf(arr.pick(null, arr.shape[1] - 1, 0)),
-      ops.inf(arr.pick(0, null, 0)),
-      ops.inf(arr.pick(arr.shape[0] - 1, null, 0)),
+  function getExtremeValueAtBorders(arr: ndarray.NdArray, mode: "min" | "max") {
+    const fn = mode === "min" ? Math.min : Math.max;
+    const opsFn = mode === "min" ? ops.inf : ops.sup;
+    return fn(
+      opsFn(arr.pick(null, 0, 0)),
+      opsFn(arr.pick(null, arr.shape[1] - 1, 0)),
+      opsFn(arr.pick(0, null, 0)),
+      opsFn(arr.pick(arr.shape[0] - 1, null, 0)),
     );
   }
 
-  const minThresholdAtBorder = getMinAtBorders(visitedField);
-  const smallestThresh = ops.inf(visitedField);
-  const effectiveThresh = Math.max(minThresholdAtBorder, smallestThresh + 1);
+  const minThresholdAtBorder = getExtremeValueAtBorders(maxVisitedField, "min");
+  const maxThresholdAtBorder = getExtremeValueAtBorders(minVisitedField, "max");
+  const smallestThresh = ops.inf(maxVisitedField);
+  const largestThresh = ops.sup(minVisitedField);
 
+  const maxEffectiveThresh = Math.max(minThresholdAtBorder, smallestThresh + 1);
+  const minEffectiveThresh = Math.min(maxThresholdAtBorder, largestThresh - 1);
+
+  const [mean] = moments(1, inputNdUvw);
+  const minIntensity = ops.sup(inputNdUvw);
+  const maxIntensity = ops.inf(inputNdUvw);
+
+  const distToCenterRect = V3.floor(
+    V3.sub(V3.scale(inputNdUvw.shape as Vector3, 0.5), rectCenterBrushExtentUV),
+  );
+  const subview = inputNdUvw
+    .lo(distToCenterRect[0], distToCenterRect[1], 0)
+    .hi(distToCenterRect[0], distToCenterRect[1], 1);
+  console.log("subview", subview);
+  const [centerMean] = moments(1, subview);
+
+  console.table({
+    meanMoments: { value: mean },
+    minIntensity: { value: minIntensity },
+    maxIntensity: { value: maxIntensity },
+    centerMean: { value: centerMean },
+  });
+
+  const maxHistograms = computeHistogram(maxVisitedField);
+  console.group("dark segment");
   console.log("minThresholdAtBorder", minThresholdAtBorder);
   console.log("smallestThresh", smallestThresh);
-  console.log("effectiveThresh", effectiveThresh);
+  console.log("maxEffectiveThresh", maxEffectiveThresh);
+  console.log("computeHistogram", maxHistograms);
+  console.groupEnd();
 
-  const unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
-  console.log("visitedField", visitedField);
-  thresholdOp(visitedField, effectiveThresh);
+  const minHistograms = computeHistogram(minVisitedField);
+  console.group("bright segment");
+  console.log("maxThresholdAtBorder", maxThresholdAtBorder);
+  console.log("largestThresh", largestThresh);
+  console.log("minEffectiveThresh", minEffectiveThresh);
+  console.log("computeHistogram", minHistograms);
+  console.groupEnd();
+
+  let visitedField;
+  let unthresholdedCopy;
+  let useMax = centerMean < mean;
+
+  if (useMax && maxEffectiveThresh > minThresholdAtBorder) {
+    console.info("switch from detecting dark segment to detecting bright segment");
+    useMax = false;
+  }
+  if (!useMax && minEffectiveThresh < maxThresholdAtBorder) {
+    console.info("switch from detecting bright segment to detecting dark segment");
+    useMax = true;
+  }
+
+  console.log(useMax ? "Select dark segment" : "Select bright segment");
+  if (useMax) {
+    visitedField = maxVisitedField;
+    unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
+    ops.ltseq(visitedField, maxEffectiveThresh);
+    yield* put(
+      updateUserSettingAction("watershed", { ...watershedConfig, threshold: maxEffectiveThresh }),
+    );
+  } else {
+    visitedField = minVisitedField;
+    unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
+    ops.gtseq(visitedField, minEffectiveThresh);
+    yield* put(
+      updateUserSettingAction("watershed", { ...watershedConfig, threshold: minEffectiveThresh }),
+    );
+  }
   output = visitedField;
-  console.log("output", output);
 
+  console.log("visitedField", visitedField);
+  console.log("output", output);
   // end
 
   const seedIntensity = inputNdUvw.get(
@@ -264,7 +332,11 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     } else if (finetuneAction) {
       newestOutput = copyNdArray(Uint8Array, unthresholdedCopy) as ndarray.NdArray<Uint8Array>;
 
-      thresholdOp(newestOutput, finetuneAction.threshold);
+      if (useMax) {
+        ops.ltseq(newestOutput, finetuneAction.threshold);
+      } else {
+        ops.gtseq(newestOutput, finetuneAction.threshold);
+      }
 
       morphology.close(newestOutput, finetuneAction.closeValue);
       morphology.erode(newestOutput, finetuneAction.erodeValue);
@@ -381,13 +453,44 @@ type PriorityItem = {
   threshold: number;
 };
 
+function computeHistogram(arr: ndarray.NdArray<TypedArray>) {
+  const hist: Record<number, number> = {};
+  for (let u = 0; u < arr.shape[0]; u++) {
+    for (let v = 0; v < arr.shape[1]; v++) {
+      const val = Number(arr.get(u, v, 0));
+      hist[val] = (hist[val] || 0) + 1;
+    }
+  }
+
+  const cumsumHistLeft: Record<number, number> = {};
+  let cumsum = 0;
+  for (let i = 0; i < 256; i++) {
+    cumsum += hist[i] || 0;
+    cumsumHistLeft[i] = cumsum;
+  }
+
+  const cumsumHistRight: Record<number, number> = {};
+  cumsum = 0;
+  for (let i = 255; i >= 0; i--) {
+    cumsum += hist[i] || 0;
+    cumsumHistRight[i] = cumsum;
+  }
+
+  return { hist, cumsumHistLeft, cumsumHistRight };
+}
+
 function getDistanceField(
   inputNdUvw: ndarray.NdArray<TypedArray>,
   centerUV: Vector2,
-): ndarray.NdArray<TypedArray> {
-  const comparator = (b: PriorityItem, a: PriorityItem) => b.threshold - a.threshold;
+  mode: "min" | "max",
+): ndarray.NdArray {
+  const comparator =
+    mode === "max"
+      ? // small priorities take precedence
+        (b: PriorityItem, a: PriorityItem) => b.threshold - a.threshold
+      : // big priorities take precedence
+        (b: PriorityItem, a: PriorityItem) => a.threshold - b.threshold;
   const queue = new PriorityQueue({
-    // small priorities take precedence
     comparator,
   });
 
@@ -400,7 +503,11 @@ function getDistanceField(
     [0, -1],
     [-1, 0],
   ];
-  let maxThreshold = 0;
+
+  // extremeThreshold is either the min or maximum value
+  // found until a given point in time.
+  let extremeThreshold = mode === "max" ? 0 : Infinity;
+  const extremeFn = mode === "max" ? Math.max : Math.min;
   while (queue.length > 0) {
     const { coords, threshold } = queue.dequeue();
 
@@ -408,9 +515,9 @@ function getDistanceField(
       continue;
     }
 
-    maxThreshold = Math.max(threshold, maxThreshold);
+    extremeThreshold = extremeFn(threshold, extremeThreshold);
 
-    visitedField.set(coords[0], coords[1], 0, maxThreshold);
+    visitedField.set(coords[0], coords[1], 0, extremeThreshold);
 
     for (const offset of neighborOffsets) {
       const newCoord = V2.add(coords, offset);
@@ -423,8 +530,8 @@ function getDistanceField(
         const newThreshold = Number(inputNdUvw.get(newCoord[0], newCoord[1], 0));
         queue.queue({
           coords: newCoord,
-          // todo: max necessary?
-          threshold: Math.max(newThreshold, maxThreshold),
+          // todo: extremeFn necessary here?
+          threshold: extremeFn(newThreshold, extremeThreshold),
         });
       }
     }

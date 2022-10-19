@@ -2196,6 +2196,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/ndarray-ops@^1.2.4":
+  version "1.2.4"
+  resolved "https://registry.yarnpkg.com/@types/ndarray-ops/-/ndarray-ops-1.2.4.tgz#64ef0c02870adf585b82240437771d14888b5264"
+  integrity sha512-vobA1pL04LynGY0hkjYUSvqbig26gHKQ/Woi5EuHFP6mh/xUTkUo+O+lpLjPNWOjrA+Vs3kQ6r2Lsvcv4vvonA==
+  dependencies:
+    "@types/ndarray" "*"
+
 "@types/ndarray@*", "@types/ndarray@^1.0.11":
   version "1.0.11"
   resolved "https://registry.yarnpkg.com/@types/ndarray/-/ndarray-1.0.11.tgz#a78730ac1fd10ea01cda6954dba7b3bf4fa126f4"
@@ -4959,7 +4966,7 @@ cwise-parser@~0.0.1:
     esprima "~1.0.3"
     uniq "~0.0.2"
 
-cwise@^1.0.10, cwise@^1.0.4, cwise@^1.0.5, cwise@^1.0.6:
+cwise@^1.0.0, cwise@^1.0.10, cwise@^1.0.4, cwise@^1.0.5, cwise@^1.0.6:
   version "1.0.10"
   resolved "https://registry.yarnpkg.com/cwise/-/cwise-1.0.10.tgz#24eee6072ebdfd6b8c6f5dadb17090b649b12bef"
   integrity sha1-JO7mBy69/WuMb12tsXCQtkmxK+8=
@@ -10079,6 +10086,13 @@ ndarray-fft@^1.0.0:
     ndarray "^1.0.15"
     ndarray-ops "^1.2.2"
     typedarray-pool "^1.0.0"
+
+ndarray-moments@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/ndarray-moments/-/ndarray-moments-1.0.0.tgz#4ec64c0e580d5768da91b4149c83193e4179ed83"
+  integrity sha512-VbUGbPcXo23IzDWCRk6scJcFZYo2ujBVvJQR0VAsHn0xmyuQa8yaTAp+VYHNH50BBq6eVZs5cP21oOTcLh4xug==
+  dependencies:
+    cwise "^1.0.0"
 
 ndarray-ops@^1.1.1, ndarray-ops@^1.2.2:
   version "1.2.2"

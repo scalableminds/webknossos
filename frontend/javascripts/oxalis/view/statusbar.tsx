@@ -194,7 +194,7 @@ function ShortcutsInfo() {
         </span>
         <span key="zoom" className="shortcut-info-element">
           <span
-            key="zoom-i"
+            key="space-forward-i"
             className="keyboard-key-icon-small"
             style={{
               borderColor: lineColor,
@@ -212,6 +212,84 @@ function ShortcutsInfo() {
             </span>
           </span>{" "}
           Trace forward
+        </span>
+        <span key="zoom" className="shortcut-info-element">
+          <span
+            key="ctrl-back-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              CTRL
+            </span>
+          </span>{" "}
+          <span
+            key="space-back-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              Space
+            </span>
+          </span>{" "}
+          Trace backward
+        </span>
+        <span key="zoom" className="shortcut-info-element">
+          <span
+            key="arrow-left-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              ◀
+            </span>
+          </span>{" "}
+          <span
+            key="arrow-right-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              ▶
+            </span>
+          </span>{" "}
+          Rotation
         </span>
         {moreShortcutsLink}
       </React.Fragment>

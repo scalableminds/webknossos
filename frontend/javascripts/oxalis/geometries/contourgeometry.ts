@@ -69,9 +69,9 @@ class ContourGeometry {
 }
 
 const rotations = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
-  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
-  [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
+  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, -(1 / 2) * Math.PI, Math.PI),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler((1 / 2) * Math.PI, 0, 0),
   [OrthoViews.TDView]: null,
 };
 
@@ -109,7 +109,6 @@ export class RectangleGeometry {
   }
 
   rotateToViewport() {
-    return;
     const { activeViewport } = Store.getState().viewModeData.plane;
     const rotation = rotations[activeViewport];
     if (!rotation) {

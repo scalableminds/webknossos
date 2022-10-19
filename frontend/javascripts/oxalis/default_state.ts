@@ -80,6 +80,7 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
     watershed: {
       showPreview: false,
+      threshold: 128,
       closeValue: 6,
       erodeValue: 3,
       dilateValue: 6,

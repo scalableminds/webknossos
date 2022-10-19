@@ -72,6 +72,7 @@ const rotations = {
   [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
   [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
   [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
+  [OrthoViews.TDView]: null,
 };
 
 export class RectangleGeometry {
@@ -105,10 +106,11 @@ export class RectangleGeometry {
 
   reset() {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'color' does not exist on type 'Material ... Remove this comment to see the full error message
-    this.plane.material.color = this.color;
+    // this.plane.material.color = this.color;
   }
 
   rotateToViewport() {
+    return;
     const { activeViewport } = Store.getState().viewModeData.plane;
     const rotation = rotations[activeViewport];
     if (!rotation) {
@@ -147,7 +149,7 @@ export class RectangleGeometry {
     // Even though this.plane should have exactly this type, the unpacking is still necessary
     // for TS to understand that material is not an array.
     const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
-    plane.material.alphaMap = texture;
+    plane.material.map = texture;
     plane.material.needsUpdate = true;
   }
 
@@ -155,7 +157,7 @@ export class RectangleGeometry {
     // Even though this.plane should have exactly this type, the unpacking is still necessary
     // for TS to understand that material is not an array.
     const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
-    plane.material.alphaMap = null;
+    plane.material.map = null;
   }
 }
 

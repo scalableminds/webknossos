@@ -10,31 +10,37 @@ import defaultState from "oxalis/default_state";
 export function WatershedControls() {
   const watershedConfig = useSelector((state: OxalisState) => state.userConfiguration.watershed);
   const dispatch = useDispatch();
-  const { dilateValue, closeValue, erodeValue } = watershedConfig;
+  const { threshold, dilateValue, closeValue, erodeValue } = watershedConfig;
   const onResetValues = () => {
-    const { closeValue, erodeValue, dilateValue } = defaultState.userConfiguration.watershed;
+    const { threshold, closeValue, erodeValue, dilateValue } =
+      defaultState.userConfiguration.watershed;
     dispatch(
       updateUserSettingAction("watershed", {
         showPreview: watershedConfig.showPreview,
+        threshold,
         closeValue,
         erodeValue,
         dilateValue,
       }),
     );
-    dispatch(fineTuneWatershedAction(closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
   };
 
+  const onChangeThreshold = (threshold: number) => {
+    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, threshold }));
+    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
+  };
   const onChangeCloseValue = (closeValue: number) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, closeValue }));
-    dispatch(fineTuneWatershedAction(closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeDilateValue = (dilateValue: number) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, dilateValue }));
-    dispatch(fineTuneWatershedAction(closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeErodeValue = (erodeValue: number) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, erodeValue }));
-    dispatch(fineTuneWatershedAction(closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeShowPreview = (showPreview: boolean) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, showPreview }));
@@ -46,6 +52,14 @@ export function WatershedControls() {
         label="Show Preview"
         value={watershedConfig.showPreview}
         onChange={onChangeShowPreview}
+      />
+      <NumberSliderSetting
+        label={"Threshold"}
+        min={0}
+        value={threshold}
+        max={255}
+        step={1}
+        onChange={onChangeThreshold}
       />
       <NumberSliderSetting
         label={"Close"}

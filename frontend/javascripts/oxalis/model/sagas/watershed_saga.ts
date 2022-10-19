@@ -1,4 +1,6 @@
 import _ from "lodash";
+import cwise from "cwise";
+import ops from "ndarray-ops";
 import type { Action } from "oxalis/model/actions/actions";
 import {
   ContourModeEnum,
@@ -9,6 +11,8 @@ import {
   Vector3,
   Vector4,
 } from "oxalis/constants";
+import PriorityQueue from "js-priority-queue";
+
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -45,6 +49,13 @@ import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
 }
+
+const thresholdOp = cwise({
+  args: ["array", "scalar"],
+  body: function body(a: number, b: number) {
+    a = a < b ? 1 : 0;
+  },
+});
 
 function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const activeViewport = yield* select(
@@ -111,34 +122,63 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       v < centerUV[1] + rectCenterBrushExtentUV[1];
       v++
     ) {
-      inputNdUvw.set(u, v, 0, 255);
+      // todo:
+      // inputNdUvw.set(u, v, 0, 255);
     }
   }
 
-  const output = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
+  let output = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
 
   console.time("floodfill");
-  floodFill({
-    getter: (x: number, y: number, z: number) => {
-      if (z != undefined) {
-        throw new Error("Third dimension should not be used in floodfill. Is seed 2d?");
-      }
-      if (x < 0 || y < 0 || x > inputNdUvw.shape[0] || 1 > inputNdUvw.shape[1]) {
-        return null;
-      }
-      return inputNdUvw.get(x, y, 0);
-    },
-    equals: (a: number, b: number) => {
-      if (a == null || b == null) {
-        return false;
-      }
-      return a > 128; // || Math.abs(a - b) / b < 0.1;
-    },
-    seed: centerUV,
-    onFlood: (x: number, y: number) => {
-      output.set(x, y, 0, 1);
-    },
-  });
+  // floodFill({
+  //   getter: (x: number, y: number, z: number) => {
+  //     if (z != undefined) {
+  //       throw new Error("Third dimension should not be used in floodfill. Is seed 2d?");
+  //     }
+  //     if (x < 0 || y < 0 || x > inputNdUvw.shape[0] || 1 > inputNdUvw.shape[1]) {
+  //       return null;
+  //     }
+  //     return inputNdUvw.get(x, y, 0);
+  //   },
+  //   equals: (a: number, b: number) => {
+  //     if (a == null || b == null) {
+  //       return false;
+  //     }
+  //     return a > 128; // || Math.abs(a - b) / b < 0.1;
+  //   },
+  //   seed: centerUV,
+  //   onFlood: (x: number, y: number) => {
+  //     output.set(x, y, 0, 1);
+  //   },
+  // });
+
+  // NEW TRAVERSAL
+  const visitedField = getDistanceField(inputNdUvw, centerUV);
+
+  function getMinAtBorders(arr: ndarray.NdArray<TypedArray>) {
+    return Math.min(
+      ops.inf(arr.pick(null, 0, 0)),
+      ops.inf(arr.pick(null, arr.shape[1] - 1, 0)),
+      ops.inf(arr.pick(0, null, 0)),
+      ops.inf(arr.pick(arr.shape[0] - 1, null, 0)),
+    );
+  }
+
+  const minThresholdAtBorder = getMinAtBorders(visitedField);
+  const smallestThresh = ops.inf(visitedField);
+  const effectiveThresh = Math.max(minThresholdAtBorder, smallestThresh + 1);
+
+  console.log("minThresholdAtBorder", minThresholdAtBorder);
+  console.log("smallestThresh", smallestThresh);
+  console.log("effectiveThresh", effectiveThresh);
+
+  const unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
+  console.log("visitedField", visitedField);
+  thresholdOp(visitedField, effectiveThresh);
+  output = visitedField;
+  console.log("output", output);
+
+  // end
 
   const seedIntensity = inputNdUvw.get(
     Math.floor(inputNdUvw.shape[0] / 2),
@@ -155,7 +195,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   // // morphology.dilate(output, 1);
   console.timeEnd("floodfill");
 
-  const outputRGBA = maskToRGBA(inputNdUvw, output);
+  const outputRGBA = maskToRGBA(inputNdUvw, visitedField);
   const { rectangleGeometry } = action;
   rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
 
@@ -217,13 +257,14 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
         firstDim,
         secondDim,
         inputNdUvw,
-        output,
+        newestOutput,
         overwriteMode,
         labeledZoomStep,
       );
     } else if (finetuneAction) {
-      console.log("finetuneAction", finetuneAction);
-      newestOutput = copyNdArray(Uint8Array, floodfillCopy) as ndarray.NdArray<Uint8Array>;
+      newestOutput = copyNdArray(Uint8Array, unthresholdedCopy) as ndarray.NdArray<Uint8Array>;
+
+      thresholdOp(newestOutput, finetuneAction.threshold);
 
       morphology.close(newestOutput, finetuneAction.closeValue);
       morphology.erode(newestOutput, finetuneAction.erodeValue);
@@ -291,19 +332,28 @@ function maskToRGBA(inputNdUvw: ndarray.NdArray<TypedArray>, output: ndarray.NdA
   const channelCount = 4;
   const outputRGBA = new Uint8Array(inputNdUvw.size * channelCount);
   let idx = 0;
+
+  const max = ops.sup(output);
+  const min = ops.inf(output);
+
   for (let v = 0; v < inputNdUvw.shape[1]; v++) {
     for (let u = 0; u < inputNdUvw.shape[0]; u++) {
-      if (output.get(u, v, 0) > 0) {
-        outputRGBA[idx] = 255;
-        outputRGBA[idx + 1] = 255;
-        outputRGBA[idx + 2] = 255;
-        outputRGBA[idx + 3] = 255;
-      } else {
-        outputRGBA[idx] = 0;
-        outputRGBA[idx + 1] = 0;
-        outputRGBA[idx + 2] = 0;
-        outputRGBA[idx + 3] = 0;
-      }
+      const val = (255 * (output.get(u, v, 0) - min)) / (max - min);
+      outputRGBA[idx] = 0;
+      outputRGBA[idx + 1] = 0;
+      outputRGBA[idx + 2] = 255;
+      outputRGBA[idx + 3] = val;
+      // if (output.get(u, v, 0) > 0) {
+      //   outputRGBA[idx] = 255;
+      //   outputRGBA[idx + 1] = 255;
+      //   outputRGBA[idx + 2] = 255;
+      //   outputRGBA[idx + 3] = 255;
+      // } else {
+      //   outputRGBA[idx] = 0;
+      //   outputRGBA[idx + 1] = 0;
+      //   outputRGBA[idx + 2] = 0;
+      //   outputRGBA[idx + 3] = 0;
+      // }
       idx += channelCount;
     }
   }
@@ -324,4 +374,60 @@ export default function* listenToMinCut(): Saga<void> {
     },
     // "Watershed is being computed.",
   );
+}
+
+type PriorityItem = {
+  coords: Vector2;
+  threshold: number;
+};
+
+function getDistanceField(
+  inputNdUvw: ndarray.NdArray<TypedArray>,
+  centerUV: Vector2,
+): ndarray.NdArray<TypedArray> {
+  const comparator = (b: PriorityItem, a: PriorityItem) => b.threshold - a.threshold;
+  const queue = new PriorityQueue({
+    // small priorities take precedence
+    comparator,
+  });
+
+  const visitedField = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
+
+  queue.queue({ coords: centerUV, threshold: Number(inputNdUvw.get(centerUV[0], centerUV[1], 0)) });
+  const neighborOffsets = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+  ];
+  let maxThreshold = 0;
+  while (queue.length > 0) {
+    const { coords, threshold } = queue.dequeue();
+
+    if (visitedField.get(coords[0], coords[1], 0) > 0) {
+      continue;
+    }
+
+    maxThreshold = Math.max(threshold, maxThreshold);
+
+    visitedField.set(coords[0], coords[1], 0, maxThreshold);
+
+    for (const offset of neighborOffsets) {
+      const newCoord = V2.add(coords, offset);
+      if (
+        newCoord[0] >= 0 &&
+        newCoord[1] >= 0 &&
+        newCoord[0] < inputNdUvw.shape[0] &&
+        newCoord[1] < inputNdUvw.shape[1]
+      ) {
+        const newThreshold = Number(inputNdUvw.get(newCoord[0], newCoord[1], 0));
+        queue.queue({
+          coords: newCoord,
+          // todo: max necessary?
+          threshold: Math.max(newThreshold, maxThreshold),
+        });
+      }
+    }
+  }
+  return visitedField;
 }

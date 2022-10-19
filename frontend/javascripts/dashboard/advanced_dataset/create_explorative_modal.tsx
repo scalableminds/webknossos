@@ -70,9 +70,8 @@ export function NewVolumeLayerSelection({
             key={segmentationLayer.name}
             value={index}
             disabled={!doesSupportVolumeWithFallback(dataset, segmentationLayer)}
-            style={{ fontStyle: "italic" }}
           >
-            {segmentationLayer.name}
+            “{segmentationLayer.name}” layer
           </Radio>
         ))}
         <Radio key={-1} value={-1}>

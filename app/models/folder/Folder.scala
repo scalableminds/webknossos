@@ -22,8 +22,7 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def parse(r: FoldersRow): Fox[Folder] =
     Fox.successful(Folder(ObjectId(r._Id), r.name))
 
-  def insertRoot(): Fox[Unit] = {
-    val f = Folder(ObjectId.generate, "root")
+  def insertRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =
       sqlu"INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES(${f._id}, ${f._id}, 0)"
     for {
@@ -31,12 +30,10 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def getRoot: Fox[Folder] =
+  def findOne(folderId: ObjectId): Fox[Folder] =
     for {
-      row <- run(sql"""
-             SELECT #$columns FROM webknossos.folders
-        WHERE NOT EXISTS ( SELECT _descendant FROM webknossos.folder_paths WHERE depth > 0)""".as[FoldersRow])
-      parsed <- parseFirst(row, "root")
+      rows <- run(sql"SELECT #$columns FROM webknossos.folders WHERE _id = $folderId".as[FoldersRow])
+      parsed <- parseFirst(rows, "id")
     } yield parsed
 
   def findChildren(folderId: ObjectId): Fox[List[Folder]] =
@@ -64,4 +61,10 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- run(sqlu"update webknossos.folders set name = ${f.name} where _id = ${f._id}")
     } yield ()
 
+// TODO  mkdir -p route
+
+  // set permissions for folder
+  // load full tree (sans datasets)
+  // enforce unique names per layer
+  // Root per organization!
 }

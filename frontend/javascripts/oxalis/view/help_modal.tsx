@@ -24,7 +24,7 @@ function HelpButton() {
   };
 
   if (!activeUser) return null;
-  if (activeUser && activeUser.novelUserExperienceInfos.hasDiscardedHelpButton) return null;
+  if (activeUser.novelUserExperienceInfos.hasDiscardedHelpButton) return null;
 
   return (
     <>

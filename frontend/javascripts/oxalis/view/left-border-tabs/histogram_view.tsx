@@ -211,10 +211,14 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     }
   };
 
-  tipFormatter = (value: number) =>
-    value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
+  tipFormatter = (value: number | undefined) => {
+    if (value == null) {
+      return "invalid";
+    }
+    return value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
       ? value.toExponential()
       : roundTo(value, this.getPrecision()).toString();
+  };
 
   // eslint-disable-next-line react/sort-comp
   updateMinimumDebounced = _.debounce(
@@ -270,8 +274,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string' is not assignable... Remove this comment to see the full error message
-          tipFormatter={this.tipFormatter}
+          tooltip={{ formatter: this.tipFormatter }}
           style={{
             width: canvasWidth,
             margin: 0,

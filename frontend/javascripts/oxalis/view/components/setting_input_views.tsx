@@ -130,7 +130,10 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.exp((value - b) / a);
   }
 
-  formatTooltip = (value: number) => {
+  formatTooltip = (value: number | undefined) => {
+    if (value == null) {
+      return "invalid";
+    }
     const calculatedValue = this.calculateValue(value);
     return calculatedValue >= 10000
       ? calculatedValue.toExponential()
@@ -157,8 +160,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string | number' is not a... Remove this comment to see the full error message
-            tipFormatter={this.formatTooltip}
+            tooltip={{ formatter: this.formatTooltip }}
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
             disabled={disabled}

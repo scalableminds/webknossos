@@ -30,10 +30,18 @@ export function getMeshfileChunksForSegment(
   layerName: string,
   meshFile: string,
   segmentId: number,
+  mappingName: string | null | undefined,
+  useMeshFromMappedIds: boolean,
 ): Promise<SegmentInfo> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    if (mappingName != null) {
+      params.append("mappingName", mappingName);
+    }
+    params.append("useMeshFromMappedIds", useMeshFromMappedIds ? "true" : "false");
+    return Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks?${params}`,
       {
         data: {
           meshFile,
@@ -41,8 +49,8 @@ export function getMeshfileChunksForSegment(
         },
         showErrorToast: false,
       },
-    ),
-  );
+    );
+  });
 }
 
 export function getMeshfileChunkData(

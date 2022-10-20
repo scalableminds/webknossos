@@ -191,6 +191,7 @@ function* loadAdHocIsosurface(
   }
 
   const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
+
   yield* call(
     loadIsosurfaceForSegmentId,
     cellId,
@@ -621,6 +622,10 @@ function* loadPrecomputedMeshForSegmentId(
 
   const version = meshFile.formatVersion;
   try {
+    const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
+    const mappingName = meshFile.mappingName == null ? isosurfaceExtraInfo.mappingName : null;
+    const useMeshFromMappedIds = mappingName != null;
+
     if (version >= 3) {
       const segmentInfo = yield* call(
         meshV3.getMeshfileChunksForSegment,
@@ -629,6 +634,8 @@ function* loadPrecomputedMeshForSegmentId(
         getBaseSegmentationName(segmentationLayer),
         meshFileName,
         id,
+        mappingName,
+        useMeshFromMappedIds,
       );
       scale = [
         segmentInfo.transform[0][0],
@@ -644,6 +651,8 @@ function* loadPrecomputedMeshForSegmentId(
         getBaseSegmentationName(segmentationLayer),
         meshFileName,
         id,
+        mappingName,
+        useMeshFromMappedIds,
       );
     }
   } catch (exception) {

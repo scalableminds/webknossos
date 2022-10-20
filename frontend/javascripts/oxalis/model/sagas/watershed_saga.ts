@@ -6,6 +6,7 @@ import {
   OrthoView,
   OverwriteMode,
   TypedArray,
+  TypedArrayWithoutBigInt,
   Vector2,
   Vector3,
 } from "oxalis/constants";
@@ -118,12 +119,20 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   );
   const size = boundingBoxTarget.getSize();
   const stride = [1, size[0], size[0] * size[1]];
+
+  if (inputData instanceof BigUint64Array) {
+    throw new Error("Color input layer must not be 64-bit.");
+  }
+
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
   const rectCenterBrushExtentUV = V3.floor(V3.scale(inputNdUvw.shape as Vector3, 1 / 10));
 
-  let output: ndarray.NdArray = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
+  let output: ndarray.NdArray<TypedArrayWithoutBigInt> = ndarray(
+    new Uint8Array(inputNdUvw.size),
+    inputNdUvw.shape,
+  );
 
   console.time("floodfill");
 
@@ -326,8 +335,8 @@ function* finalizeWatershed(
   size: Vector3,
   firstDim: number,
   secondDim: number,
-  inputNdUvw: ndarray.NdArray<TypedArray>,
-  output: ndarray.NdArray<Uint8Array>,
+  inputNdUvw: ndarray.NdArray<TypedArrayWithoutBigInt>,
+  output: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ) {
@@ -420,10 +429,10 @@ type PriorityItem = {
 };
 
 function getDistanceField(
-  inputNdUvw: ndarray.NdArray<TypedArray>,
+  inputNdUvw: ndarray.NdArray<TypedArrayWithoutBigInt>,
   centerUV: Vector2,
   mode: "min" | "max",
-): ndarray.NdArray {
+): ndarray.NdArray<TypedArrayWithoutBigInt> {
   const comparator =
     mode === "max"
       ? // small priorities take precedence

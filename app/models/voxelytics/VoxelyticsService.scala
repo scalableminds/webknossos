@@ -44,7 +44,8 @@ object TaskRunEntry {
 
 case class WorkflowEntry(
     name: String,
-    hash: String
+    hash: String,
+    _organization: ObjectId
 )
 
 object WorkflowEntry {

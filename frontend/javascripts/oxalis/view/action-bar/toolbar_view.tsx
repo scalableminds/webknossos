@@ -847,14 +847,6 @@ export default function ToolbarView() {
               opacity: disabledInfosForTools[AnnotationToolEnum.WATERSHED].isDisabled ? 0.5 : 1,
             }}
           />
-
-          {/*          <i
-            className="fas fa-tint"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
-              transform: "scaleX(-1)",
-            }}
-          />*/}
         </RadioButtonWithTooltip>
 
         {hasSkeleton && hasVolume && isAgglomerateMappingEnabled.value ? (

@@ -80,6 +80,8 @@ PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache      
 GET           /datasets/:organizationName/:dataSetName/isValidNewName                   controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
+GET           /folders/root                                                             controllers.FolderController.getRoot
+
 # Datastores
 GET           /datastores                                                               controllers.DataStoreController.list
 PUT           /datastores/:name/datasource                                              controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)

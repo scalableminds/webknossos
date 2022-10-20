@@ -2,6 +2,7 @@ package models.folder
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Folders, _}
+import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
@@ -11,6 +12,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class Folder(_id: ObjectId, name: String)
+
+class FolderService @Inject()()(implicit ec: ExecutionContext) {
+  def publicWrites(folder: Folder): Fox[JsObject] =
+    Fox.successful(Json.obj("id" -> folder._id, "name" -> folder.name))
+}
 
 class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Folder, FoldersRow, Folders](sqlClient) {

@@ -1,7 +1,7 @@
 BEGIN transaction;
 
 -- Cannot alter enum in transaction block, workaround required
-
+DROP VIEW webknossos.multiUsers_;
 ALTER TABLE webknossos.multiusers ALTER COLUMN passwordInfo_hasher TYPE VARCHAR(255);
 DROP TYPE IF EXISTS webknossos.USER_PASSWORDINFO_HASHERS;
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM (
@@ -11,7 +11,7 @@ CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM (
 ALTER TABLE webknossos.multiusers
   ALTER COLUMN passwordInfo_hasher TYPE webknossos.USER_PASSWORDINFO_HASHERS
     USING (passwordInfo_hasher::webknossos.USER_PASSWORDINFO_HASHERS);
-
+CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 UPDATE webknossos.releaseInformation SET schemaVersion = 91;
 
 COMMIT;

@@ -327,6 +327,7 @@ export type UserConfiguration = {
   readonly useLegacyBindings: boolean;
   readonly watershed: {
     showPreview: boolean;
+    segmentMode: "dark" | "light";
     threshold: number;
     closeValue: number;
     erodeValue: number;

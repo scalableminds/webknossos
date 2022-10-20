@@ -271,11 +271,20 @@ export const computeWatershedForRectAction = (
   } as const);
 
 export const fineTuneWatershedAction = (
+  segmentMode: "dark" | "light",
   threshold: number,
   closeValue: number,
   erodeValue: number,
   dilateValue: number,
-) => ({ type: "FINE_TUNE_WATERSHED", threshold, closeValue, erodeValue, dilateValue } as const);
+) =>
+  ({
+    type: "FINE_TUNE_WATERSHED",
+    segmentMode,
+    threshold,
+    closeValue,
+    erodeValue,
+    dilateValue,
+  } as const);
 
 export const cancelWatershedAction = () => ({ type: "CANCEL_WATERSHED" } as const);
 

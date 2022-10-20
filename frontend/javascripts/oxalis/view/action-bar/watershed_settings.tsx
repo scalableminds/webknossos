@@ -11,6 +11,12 @@ import React from "react";
 import ButtonComponent from "../components/button_component";
 import defaultState from "oxalis/default_state";
 import Shortcut from "libs/shortcut_component";
+import { Radio, RadioChangeEvent } from "antd";
+
+const OPTIONS_WITH_DISABLED = [
+  { label: "Dark Segment", value: "dark" },
+  { label: "Light Segment", value: "light" },
+];
 
 export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => void }) {
   const isWatershedActive = useSelector(
@@ -18,9 +24,9 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
   );
   const watershedConfig = useSelector((state: OxalisState) => state.userConfiguration.watershed);
   const dispatch = useDispatch();
-  const { threshold, dilateValue, closeValue, erodeValue } = watershedConfig;
+  const { segmentMode, threshold, dilateValue, closeValue, erodeValue } = watershedConfig;
   const onResetValues = () => {
-    const { threshold, closeValue, erodeValue, dilateValue } =
+    const { segmentMode, threshold, closeValue, erodeValue, dilateValue } =
       defaultState.userConfiguration.watershed;
     dispatch(
       updateUserSettingAction("watershed", {
@@ -31,24 +37,29 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
         dilateValue,
       }),
     );
-    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
 
   const onChangeThreshold = (threshold: number) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, threshold }));
-    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
+  };
+  const onChangeSegmentMode = ({ target: { value } }: RadioChangeEvent) => {
+    const segmentMode: "light" | "dark" = value;
+    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, segmentMode }));
+    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeCloseValue = (closeValue: number) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, closeValue }));
-    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeDilateValue = (dilateValue: number) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, dilateValue }));
-    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeErodeValue = (erodeValue: number) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, erodeValue }));
-    dispatch(fineTuneWatershedAction(threshold, closeValue, erodeValue, dilateValue));
+    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeShowPreview = (showPreview: boolean) => {
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, showPreview }));
@@ -69,6 +80,15 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
         label="Show Preview"
         value={watershedConfig.showPreview}
         onChange={onChangeShowPreview}
+      />
+      <Radio.Group
+        options={OPTIONS_WITH_DISABLED}
+        onChange={onChangeSegmentMode}
+        value={watershedConfig.segmentMode}
+        optionType="button"
+        size="small"
+        buttonStyle="solid"
+        disabled={!isWatershedActive}
       />
       <NumberSliderSetting
         label={"Threshold"}

@@ -80,6 +80,7 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
     watershed: {
       showPreview: false,
+      segmentMode: "light",
       threshold: 128,
       closeValue: 3,
       erodeValue: 1,

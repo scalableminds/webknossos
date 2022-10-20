@@ -186,7 +186,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   console.groupEnd();
 
   // const minHistograms = computeHistogram(minVisitedField);
-  console.group("bright segment");
+  console.group("light segment");
   console.log("maxThresholdAtBorder", maxThresholdAtBorder);
   console.log("largestThresh", largestThresh);
   console.log("minEffectiveThresh", minEffectiveThresh);
@@ -195,31 +195,39 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
 
   let visitedField;
   let unthresholdedCopy;
-  let useMax = centerMean < mean;
+  let initialDetectDarkSegment = centerMean < mean;
 
-  if (useMax && maxEffectiveThresh > minThresholdAtBorder) {
-    console.info("switch from detecting dark segment to detecting bright segment");
-    useMax = false;
+  if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
+    console.info("switch from detecting dark segment to detecting light segment");
+    initialDetectDarkSegment = false;
   }
-  if (!useMax && minEffectiveThresh < maxThresholdAtBorder) {
-    console.info("switch from detecting bright segment to detecting dark segment");
-    useMax = true;
+  if (!initialDetectDarkSegment && minEffectiveThresh < maxThresholdAtBorder) {
+    console.info("switch from detecting light segment to detecting dark segment");
+    initialDetectDarkSegment = true;
   }
 
-  console.log(useMax ? "Select dark segment" : "Select bright segment");
-  if (useMax) {
+  console.log(initialDetectDarkSegment ? "Select dark segment" : "Select light segment");
+  if (initialDetectDarkSegment) {
     visitedField = maxVisitedField;
     unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
     ops.ltseq(visitedField, maxEffectiveThresh);
     yield* put(
-      updateUserSettingAction("watershed", { ...watershedConfig, threshold: maxEffectiveThresh }),
+      updateUserSettingAction("watershed", {
+        ...watershedConfig,
+        segmentMode: "dark",
+        threshold: maxEffectiveThresh,
+      }),
     );
   } else {
     visitedField = minVisitedField;
     unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
     ops.gtseq(visitedField, minEffectiveThresh);
     yield* put(
-      updateUserSettingAction("watershed", { ...watershedConfig, threshold: minEffectiveThresh }),
+      updateUserSettingAction("watershed", {
+        ...watershedConfig,
+        segmentMode: "light",
+        threshold: minEffectiveThresh,
+      }),
     );
   }
   output = visitedField;
@@ -308,7 +316,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     } else if (finetuneAction) {
       newestOutput = copyNdArray(Uint8Array, unthresholdedCopy) as ndarray.NdArray<Uint8Array>;
 
-      if (useMax) {
+      if (finetuneAction.segmentMode === "dark") {
         ops.ltseq(newestOutput, finetuneAction.threshold);
       } else {
         ops.gtseq(newestOutput, finetuneAction.threshold);

@@ -1,4 +1,3 @@
-import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 import {
   cancelWatershedAction,
   confirmWatershedAction,
@@ -8,10 +7,11 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { useDispatch, useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import React from "react";
-import ButtonComponent from "../components/button_component";
 import defaultState from "oxalis/default_state";
 import Shortcut from "libs/shortcut_component";
 import { Radio, RadioChangeEvent } from "antd";
+import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
+import ButtonComponent from "../components/button_component";
 
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
@@ -24,7 +24,7 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
   );
   const watershedConfig = useSelector((state: OxalisState) => state.userConfiguration.watershed);
   const dispatch = useDispatch();
-  const { segmentMode, threshold, dilateValue, closeValue, erodeValue } = watershedConfig;
+
   const onResetValues = () => {
     const { segmentMode, threshold, closeValue, erodeValue, dilateValue } =
       defaultState.userConfiguration.watershed;
@@ -41,23 +41,28 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
   };
 
   const onChangeThreshold = (threshold: number) => {
+    const { segmentMode, dilateValue, closeValue, erodeValue } = watershedConfig;
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, threshold }));
     dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeSegmentMode = ({ target: { value } }: RadioChangeEvent) => {
     const segmentMode: "light" | "dark" = value;
+    const { threshold, dilateValue, closeValue, erodeValue } = watershedConfig;
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, segmentMode }));
     dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeCloseValue = (closeValue: number) => {
+    const { segmentMode, threshold, dilateValue, erodeValue } = watershedConfig;
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, closeValue }));
     dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeDilateValue = (dilateValue: number) => {
+    const { segmentMode, threshold, closeValue, erodeValue } = watershedConfig;
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, dilateValue }));
     dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
   const onChangeErodeValue = (erodeValue: number) => {
+    const { segmentMode, threshold, dilateValue, closeValue } = watershedConfig;
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, erodeValue }));
     dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
@@ -91,34 +96,34 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
         disabled={!isWatershedActive}
       />
       <NumberSliderSetting
-        label={"Threshold"}
+        label="Threshold"
         min={0}
-        value={threshold}
+        value={watershedConfig.threshold}
         max={255}
         step={1}
         onChange={onChangeThreshold}
         disabled={!isWatershedActive}
       />
       <NumberSliderSetting
-        label={"Close"}
+        label="Close"
         min={0}
-        value={closeValue}
+        value={watershedConfig.closeValue}
         max={10}
         step={1}
         onChange={onChangeCloseValue}
       />
       <NumberSliderSetting
-        label={"Erode"}
+        label="Erode"
         min={0}
-        value={erodeValue}
+        value={watershedConfig.erodeValue}
         max={10}
         step={1}
         onChange={onChangeErodeValue}
       />
       <NumberSliderSetting
-        label={"Dilate"}
+        label="Dilate"
         min={0}
-        value={dilateValue}
+        value={watershedConfig.dilateValue}
         max={10}
         step={1}
         onChange={onChangeDilateValue}

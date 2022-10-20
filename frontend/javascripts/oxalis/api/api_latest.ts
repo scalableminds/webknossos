@@ -1380,7 +1380,7 @@ class DataApi {
       bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions[zoomStep], zoomStep);
+    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions[zoomStep]);
   }
 
   async getViewportData(

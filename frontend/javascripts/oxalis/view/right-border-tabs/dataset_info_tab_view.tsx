@@ -1,10 +1,10 @@
 import type { Dispatch } from "redux";
 import { Tooltip, Button, Dropdown, Menu } from "antd";
 import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";

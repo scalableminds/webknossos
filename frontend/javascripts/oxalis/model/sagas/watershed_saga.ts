@@ -1,4 +1,3 @@
-import _ from "lodash";
 import ops from "ndarray-ops";
 import moments from "ndarray-moments";
 import {
@@ -31,20 +30,20 @@ import {
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import api from "oxalis/api/internal_api";
 import ndarray from "ndarray";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
-import { copyNdArray } from "./volume/volume_interpolation_saga";
-import { EnterAction, EscapeAction, setIsWatershedActiveAction } from "../actions/ui_actions";
 import { OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
+import { take2 } from "libs/utils";
+import { copyNdArray } from "./volume/volume_interpolation_saga";
+import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { EnterAction, EscapeAction, setIsWatershedActiveAction } from "../actions/ui_actions";
 import {
   getColorLayers,
   getLayerBoundingBox,
   getResolutionInfo,
 } from "../accessors/dataset_accessor";
 import Dimensions from "../dimensions";
-import { take2 } from "libs/utils";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 
@@ -255,7 +254,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   );
 
   if (!watershedConfig.showPreview) {
-    return yield* finalizeWatershed(
+    yield* finalizeWatershed(
       rectangleGeometry,
       volumeTracing,
       activeViewport,
@@ -270,6 +269,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       overwriteMode,
       labeledZoomStep,
     );
+    return;
   }
   let newestOutput = output;
 
@@ -297,7 +297,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
         return;
       }
 
-      return yield* finalizeWatershed(
+      yield* finalizeWatershed(
         rectangleGeometry,
         volumeTracing,
         activeViewport,
@@ -312,6 +312,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
         overwriteMode,
         labeledZoomStep,
       );
+      return;
     } else if (finetuneAction) {
       if (finetuneAction.segmentMode === "dark") {
         newestOutput = copyNdArray(
@@ -331,9 +332,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       morphology.erode(newestOutput, finetuneAction.erodeValue);
       morphology.dilate(newestOutput, finetuneAction.dilateValue);
 
-      const outputRGBA = maskToRGBA(inputNdUvw, newestOutput);
-      const { rectangleGeometry } = action;
-      rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
+      const newOutputRGBA = maskToRGBA(inputNdUvw, newestOutput);
+      rectangleGeometry.attachData(newOutputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
     }
   }
 }
@@ -386,7 +386,6 @@ function* finalizeWatershed(
   );
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
-  return;
 }
 
 function maskToRGBA(inputNdUvw: ndarray.NdArray<TypedArray>, output: ndarray.NdArray) {

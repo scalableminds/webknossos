@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.binary._
-import models.folder.FolderDAO
+import models.folder.{Folder, FolderDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
@@ -71,7 +71,8 @@ Samplecountry
                  additionalInformation,
                  "/assets/images/oxalis.svg",
                  "Sample Organization",
-                 PricingPlan.Custom)
+                 PricingPlan.Custom,
+                 ObjectId.generate)
   private val organizationTeam =
     Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
   private val userId = ObjectId.generate
@@ -136,9 +137,9 @@ Samplecountry
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
-    folderDAO.getRoot.futureBox.flatMap {
+    folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _       => folderDAO.insertRoot()
+      case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, defaultOrganization.name))
     }
 
   private def insertDefaultUser(): Fox[Unit] =

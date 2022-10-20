@@ -281,6 +281,7 @@ CREATE TABLE webknossos.organizations(
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
+  _rootFolder CHAR(24) NOT NULL,
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
@@ -684,6 +685,8 @@ ALTER TABLE webknossos.folder_paths
   ADD FOREIGN KEY (_ancestor) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.folder_paths
   ADD FOREIGN KEY (_descendant) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organizations
+  ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;

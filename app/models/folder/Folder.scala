@@ -22,7 +22,7 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def parse(r: FoldersRow): Fox[Folder] =
     Fox.successful(Folder(ObjectId(r._Id), r.name))
 
-  def insertRoot(f: Folder): Fox[Unit] = {
+  def insertAsRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =
       sqlu"INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES(${f._id}, ${f._id}, 0)"
     for {
@@ -42,7 +42,7 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(rows)
     } yield parsed
 
-  def insertChild(parentId: ObjectId, f: Folder): Fox[Unit] = {
+  def insertAsChild(parentId: ObjectId, f: Folder): Fox[Unit] = {
     val insertPathQuery =
       sqlu"""INSERT INTO webknossos.folder_paths(_ancestor, descendant, depth)
              SELECT ancestor, ${f._id}, depth + 1 from webknossos.folder_paths WHERE descendant = $parentId -- links to ancestors

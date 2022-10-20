@@ -26,7 +26,7 @@ POST          /auth/changePassword                                              
 POST          /auth/resetPassword                                                       controllers.AuthenticationController.handleResetPassword
 GET           /auth/logout                                                              controllers.AuthenticationController.logout
 GET           /auth/sso                                                                 controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
-GET           /auth/oidc/login                                                          controllers.AuthenticationController.loginViaOIDC
+GET           /auth/oidc/login                                                          controllers.AuthenticationController.loginViaOpenIdConnect
 GET           /auth/oidc/callback                                                       controllers.AuthenticationController.openIdCallback
 POST          /auth/createOrganizationWithAdmin                                         controllers.AuthenticationController.createOrganizationWithAdmin
 

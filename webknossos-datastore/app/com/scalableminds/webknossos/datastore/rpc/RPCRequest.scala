@@ -4,6 +4,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.rpc.RPCRequest.encodeParameters
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
@@ -12,6 +13,8 @@ import play.api.libs.ws._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -89,6 +92,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
   def post(file: File): Fox[WSResponse] = {
     request = request.withBody(file).withMethod("POST")
     performRequest
+  }
+
+  def postFormParseJson[T: Reads](parameters: Map[String, String]): Fox[T] = {
+    request = request.withBody(parameters).withMethod("POST")
+    parseJsonResponse(performRequest)
   }
 
   def postWithJsonResponse[T: Reads]: Fox[T] = {
@@ -281,4 +289,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
       case _ =>
         ""
     }
+}
+
+object RPCRequest {
+  def encodeParameters(params: Seq[(String, String)]): String =
+    params.map(p => p._1 + "=" + URLEncoder.encode(p._2, StandardCharsets.UTF_8.toString)).mkString("&")
 }

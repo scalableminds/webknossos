@@ -194,7 +194,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   console.groupEnd();
 
   let visitedField;
-  let unthresholdedCopy;
+  const unthresholdedDarkCopy = copyNdArray(Uint8Array, maxVisitedField);
+  const unthresholdedLightCopy = copyNdArray(Uint8Array, minVisitedField);
   let initialDetectDarkSegment = centerMean < mean;
 
   if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
@@ -209,7 +210,6 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   console.log(initialDetectDarkSegment ? "Select dark segment" : "Select light segment");
   if (initialDetectDarkSegment) {
     visitedField = maxVisitedField;
-    unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
     ops.ltseq(visitedField, maxEffectiveThresh);
     yield* put(
       updateUserSettingAction("watershed", {
@@ -220,7 +220,6 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     );
   } else {
     visitedField = minVisitedField;
-    unthresholdedCopy = copyNdArray(Uint8Array, visitedField);
     ops.gtseq(visitedField, minEffectiveThresh);
     yield* put(
       updateUserSettingAction("watershed", {
@@ -314,11 +313,17 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
         labeledZoomStep,
       );
     } else if (finetuneAction) {
-      newestOutput = copyNdArray(Uint8Array, unthresholdedCopy) as ndarray.NdArray<Uint8Array>;
-
       if (finetuneAction.segmentMode === "dark") {
+        newestOutput = copyNdArray(
+          Uint8Array,
+          unthresholdedDarkCopy,
+        ) as ndarray.NdArray<Uint8Array>;
         ops.ltseq(newestOutput, finetuneAction.threshold);
       } else {
+        newestOutput = copyNdArray(
+          Uint8Array,
+          unthresholdedLightCopy,
+        ) as ndarray.NdArray<Uint8Array>;
         ops.gtseq(newestOutput, finetuneAction.threshold);
       }
 

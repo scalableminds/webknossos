@@ -1,4 +1,5 @@
 import type { ModifierKeys } from "libs/input";
+import * as THREE from "three";
 import type {
   OrthoView,
   Point2,
@@ -9,7 +10,9 @@ import type {
 import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
   getContourTracingMode,
+  getSegmentColorAsHSL,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   handleAgglomerateSkeletonAtClick,
@@ -644,8 +647,18 @@ export class WatershedTool {
     const { rectangleGeometry } = SceneController;
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        const state = Store.getState();
         rectangleGeometry.rotateToViewport();
-        startPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
+
+        const volumeTracing = getActiveSegmentationTracing(state);
+        if (!volumeTracing) {
+          return;
+        }
+
+        const [h, s, l] = getSegmentColorAsHSL(state, volumeTracing.activeCellId);
+        const activeCellColor = new THREE.Color().setHSL(h, s, l);
+        rectangleGeometry.setColor(activeCellColor);
+        startPos = V3.floor(calculateGlobalPos(state, pos));
         currentPos = startPos;
         isDragging = true;
 

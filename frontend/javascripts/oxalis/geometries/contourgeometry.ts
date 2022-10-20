@@ -77,11 +77,13 @@ const rotations = {
 
 export class RectangleGeometry {
   color: THREE.Color;
+  centerMarkerColor: THREE.Color;
   plane: THREE.Mesh;
   centerMarker: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
+    this.centerMarkerColor = new THREE.Color(0xff00ff);
 
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new THREE.MeshLambertMaterial({
@@ -93,7 +95,7 @@ export class RectangleGeometry {
 
     const centerGeometry = new THREE.PlaneGeometry(2, 2);
     const centerMaterial = new THREE.MeshLambertMaterial({
-      color: 0xff00ff,
+      color: this.centerMarkerColor,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.9,
@@ -106,6 +108,7 @@ export class RectangleGeometry {
   reset() {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'color' does not exist on type 'Material ... Remove this comment to see the full error message
     this.plane.material.color = this.color;
+    this.centerMarker.material.color = this.centerMarkerColor;
   }
 
   rotateToViewport() {
@@ -119,12 +122,21 @@ export class RectangleGeometry {
     this.centerMarker.setRotationFromEuler(rotation);
   }
 
+  setColor(color: THREE.Color) {
+    this.color = color;
+    this.color.offsetHSL(0.0, 0, -0.3);
+    // Copy this.color into this.centerMarkerColor
+    this.centerMarkerColor.copy(this.color);
+    this.centerMarkerColor.offsetHSL(0.5, 0, 0);
+
+    this.reset();
+  }
+
   setCoordinates(startPosition: Vector3, endPosition: Vector3) {
     const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
     const extentXYZ = V3.abs(V3.sub(endPosition, startPosition));
     const { activeViewport } = Store.getState().viewModeData.plane;
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
-    const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
     extentUVW[2] = 2;
 
     this.plane.position.set(...centerPosition);

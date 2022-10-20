@@ -8,6 +8,7 @@ import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_f
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
+
 type OwnProps = {
   data: APIHistogramData | null | undefined;
   layerName: string;
@@ -30,6 +31,7 @@ type HistogramState = {
   currentMin: number;
   currentMax: number;
 };
+
 const uint24Colors = [
   [255, 65, 54],
   [46, 204, 64],
@@ -37,6 +39,7 @@ const uint24Colors = [
 ];
 const canvasHeight = 100;
 const canvasWidth = 318;
+
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
 }
@@ -211,10 +214,13 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     }
   };
 
-  tipFormatter = (value: number) =>
-    value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
-      ? value.toExponential()
-      : roundTo(value, this.getPrecision()).toString();
+  tipFormatter = (value: number | undefined) => {
+    if (value)
+      return value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
+        ? value.toExponential()
+        : roundTo(value, this.getPrecision()).toString();
+    return undefined;
+  };
 
   // eslint-disable-next-line react/sort-comp
   updateMinimumDebounced = _.debounce(
@@ -270,7 +276,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string' is not assignable... Remove this comment to see the full error message
           tipFormatter={this.tipFormatter}
           style={{
             width: canvasWidth,
@@ -280,8 +285,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
         />
         {isInEditMode ? (
           <Row
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; align: ... Remove this comment to see the full error message
-            type="flex"
             align="middle"
             style={{
               marginTop: 6,

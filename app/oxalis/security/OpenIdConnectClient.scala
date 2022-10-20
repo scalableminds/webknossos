@@ -1,0 +1,93 @@
+package oxalis.security
+
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.{jsResult2Fox, try2Fox}
+import com.scalableminds.webknossos.datastore.rpc.RPC
+import play.api.libs.json.{JsObject, Json, OFormat}
+import pdi.jwt.{JwtJson, JwtOptions}
+import play.api.libs.ws._
+import utils.WkConf
+
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
+
+class OpenIDConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionContext: ExecutionContext) {
+
+  /*
+   Build redirect URL to redirect to OIDC provider for auth request (https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
+   */
+  def redirectUrl(openIdClient: OpenIdConnectConfig, redirectUrl: String): Fox[String] =
+    discover(openIdClient).map { serverInfos =>
+      def queryParams: Map[String, String] = Map(
+        "client_id" -> openIdClient.clientId,
+        "redirect_uri" -> redirectUrl,
+        "scope" -> openIdClient.scope,
+        "response_type" -> "code",
+      )
+      serverInfos.authorization_endpoint + "?" +
+        queryParams.map(v => v._1 + "=" + URLEncoder.encode(v._2, StandardCharsets.UTF_8.toString)).mkString("&")
+    }
+
+  /*
+  Create token request (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest), fields described by
+  https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
+   */
+  def getToken(openIdClient: OpenIdConnectConfig, redirectUrl: String, code: String): Fox[JsObject] =
+    for {
+      serverInfos <- discover(openIdClient)
+      tokenResponse <- rpc(serverInfos.token_endpoint).postFormParseJson[OpenIdConnectTokenResponse](
+        Map(
+          "grant_type" -> "authorization_code",
+          "client_id" -> openIdClient.clientId,
+          "redirect_uri" -> redirectUrl,
+          "code" -> code
+        ))
+      new_code <- JwtJson
+        .decodeJson(tokenResponse.access_token, JwtOptions.DEFAULT.copy(signature = false))
+        .toFox ?~> "failed to parse JWT"
+    } yield new_code
+
+  /*
+  Discover endpoints of the provider (https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
+   */
+  def discover(openIdClient: OpenIdConnectConfig): Fox[OpenIdConnectProviderInfo] =
+    for {
+      response: WSResponse <- rpc(openIdClient.discoveryUrl).get
+      serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
+    } yield serverInfo
+
+}
+
+// Fields as specified by https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
+case class OpenIdConnectProviderInfo(
+    authorization_endpoint: String,
+    token_endpoint: String,
+)
+
+object OpenIdConnectProviderInfo {
+  implicit val format: OFormat[OpenIdConnectProviderInfo] = Json.format[OpenIdConnectProviderInfo]
+}
+
+case class OpenIdConnectConfig(
+    baseUrl: String,
+    clientId: String,
+    scope: String = "openid profile"
+) {
+
+  lazy val discoveryUrl: String = baseUrl + ".well-known/openid-configuration"
+}
+
+// Fields as specified by https://www.rfc-editor.org/rfc/rfc6749#section-5.1
+case class OpenIdConnectTokenResponse(
+    access_token: String,
+    token_type: String,
+    expires_in: Option[String],
+    refresh_token: Option[String],
+    scope: Option[String]
+)
+
+object OpenIdConnectTokenResponse {
+  implicit val format: OFormat[OpenIdConnectTokenResponse] = Json.format[OpenIdConnectTokenResponse]
+}

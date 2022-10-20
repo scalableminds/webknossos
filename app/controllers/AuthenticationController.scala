@@ -9,7 +9,7 @@ import com.mohiva.play.silhouette.api.util.Credentials
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.JsonHelper.{parseAndValidateJson, validateJsValue}
+import com.scalableminds.util.tools.JsonHelper.{validateJsValue}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 
 import javax.inject.Inject
@@ -501,6 +501,7 @@ class AuthenticationController @Inject()(
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(user, loginInfo)
           } yield loginResult
+        case _ => Future.successful(InternalServerError)
       }
   }
 

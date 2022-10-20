@@ -19,6 +19,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHelpers {
 
+  protected def defaultErrorCode: Int = BAD_REQUEST
+
   def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = {
     val result = b match {
       case Full(result) =>
@@ -26,9 +28,9 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
       case ParamFailure(msg, _, chain, statusCode: Int) =>
         new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
       case ParamFailure(_, _, _, msgs: JsArray) =>
-        new JsonResult(BAD_REQUEST)(jsonMessages(msgs))
+        new JsonResult(defaultErrorCode)(jsonMessages(msgs))
       case Failure(msg, _, chain) =>
-        new JsonResult(BAD_REQUEST)(Messages(msg), formatChainOpt(chain))
+        new JsonResult(defaultErrorCode)(Messages(msg), formatChainOpt(chain))
       case Empty =>
         new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
     }

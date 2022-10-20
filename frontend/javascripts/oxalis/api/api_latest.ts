@@ -83,7 +83,6 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
-import { maybeFetchMeshFiles } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
@@ -95,6 +94,7 @@ import {
   refreshIsosurfacesAction,
   updateIsosurfaceVisibilityAction,
   removeIsosurfaceAction,
+  dispatchMaybeFetchMeshFilesAsync,
 } from "oxalis/model/actions/annotation_actions";
 import {
   updateUserSettingAction,
@@ -343,7 +343,6 @@ class TracingApi {
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const comment = tree.comments.find((__) => __.nodeId === nodeId);
     return comment != null ? comment.content : null;
   }
@@ -1733,7 +1732,13 @@ class DataApi {
 
     const state = Store.getState();
     const { dataset } = state;
-    const meshFiles = await maybeFetchMeshFiles(effectiveLayer, dataset, true, false);
+    const meshFiles = await dispatchMaybeFetchMeshFilesAsync(
+      Store.dispatch,
+      effectiveLayer,
+      dataset,
+      true,
+      false,
+    );
     return meshFiles.map((meshFile) => meshFile.meshFileName);
   }
 

@@ -27,7 +27,7 @@ import {
 } from "admin/admin_rest_api";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
-import { useFetch } from "libs/react_helpers";
+import { useFetch, useInterval } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import type { OxalisState } from "oxalis/store";
@@ -36,8 +36,12 @@ import * as Utils from "libs/utils";
 import window, { document, location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
+
 const { SubMenu } = Menu;
 const { Header } = Layout;
+
+const HELP_MENU_KEY = "helpMenu";
+
 type OwnProps = {
   isAuthenticated: boolean;
 };
@@ -298,11 +302,13 @@ function getTimeTrackingMenu({ collapse }: { collapse: boolean }) {
 function HelpSubMenu({
   isAdminOrTeamManager,
   version,
+  polledVersion,
   collapse,
   ...other
 }: {
   isAdminOrTeamManager: boolean;
   version: string | null;
+  polledVersion: string | null;
   collapse: boolean;
 } & SubMenuProps) {
   return (
@@ -355,6 +361,9 @@ function HelpSubMenu({
       {version !== "" ? (
         <Menu.Item disabled key="version">
           Version: {version}
+          {polledVersion != null && polledVersion !== version
+            ? ` (Server is currently at ${polledVersion}!)`
+            : null}
         </Menu.Item>
       ) : null}
     </SubMenu>
@@ -384,10 +393,6 @@ function DashboardSubMenu({ collapse, ...other }: { collapse: boolean } & SubMen
 
 function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
-
-  if (!features().isDemoInstance) {
-    return null;
-  }
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
@@ -582,10 +587,12 @@ function AnonymousAvatar() {
   );
 }
 
-async function getAndTrackVersion() {
+async function getAndTrackVersion(dontTrack: boolean = false) {
   const buildInfo = await getBuildInfo();
   const { version } = buildInfo.webknossos;
-  trackVersion(version);
+  if (dontTrack) {
+    trackVersion(version);
+  }
   return version;
 }
 
@@ -601,6 +608,17 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   };
 
   const version = useFetch(getAndTrackVersion, null, []);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const [polledVersion, setPolledVersion] = useState<string | null>(null);
+  useInterval(
+    async () => {
+      if (isHelpMenuOpen) {
+        setPolledVersion(await getAndTrackVersion(true));
+      }
+    },
+    2000,
+    isHelpMenuOpen,
+  );
   const navbarStyle: Record<string, any> = {
     padding: 0,
     overflowX: "auto",
@@ -661,8 +679,9 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
 
   menuItems.push(
     <HelpSubMenu
-      key="helpMenu"
+      key={HELP_MENU_KEY}
       version={version}
+      polledVersion={polledVersion}
       isAdminOrTeamManager={isAdminOrTeamManager}
       collapse={collapseAllNavItems}
     />,
@@ -681,6 +700,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}
+        onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
           lineHeight: "48px",
         }}

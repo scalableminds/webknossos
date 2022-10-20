@@ -2,7 +2,7 @@ import type { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Spin, Button, Input, Modal, Card } from "antd";
+import { Table, Tag, Spin, Button, Input, Modal, Card, Alert } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -13,13 +13,14 @@ import {
   ForkOutlined,
   PlayCircleOutlined,
   PlusOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import React from "react";
 import _ from "lodash";
 import features from "features";
 import { AsyncLink } from "components/async_clickables";
-import type { APITask, APITaskType } from "types/api_flow_types";
-import { deleteTask, getTasks, downloadAnnotation } from "admin/admin_rest_api";
+import type { APITask, APITaskType, APIUser } from "types/api_flow_types";
+import { deleteTask, getTasks, downloadAnnotation, assignTaskToUser } from "admin/admin_rest_api";
 import { formatTuple, formatSeconds } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
@@ -33,6 +34,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import FixedExpandableTable from "components/fixed_expandable_table";
+import UserSelectionComponent from "admin/user/user_selection_component";
 const { Column } = Table;
 const { Search, TextArea } = Input;
 type Props = {
@@ -42,7 +44,9 @@ type Props = {
 type State = {
   isLoading: boolean;
   tasks: Array<APITask>;
+  users: APIUser[];
   searchQuery: string;
+  selectedUserIdForAssignment: string | null;
   isAnonymousTaskLinkModalVisible: boolean;
 };
 const typeHint: Array<APITask> = [];
@@ -57,7 +61,9 @@ class TaskListView extends React.PureComponent<Props, State> {
   state: State = {
     isLoading: false,
     tasks: [],
+    users: [],
     searchQuery: "",
+    selectedUserIdForAssignment: null,
     isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
   };
 
@@ -120,6 +126,45 @@ class TaskListView extends React.PureComponent<Props, State> {
           this.setState({
             isLoading: false,
           });
+        }
+      },
+    });
+  };
+
+  assignTaskToUser = (task: APITask) => {
+    Modal.confirm({
+      title: "Manual Task Assignment",
+      icon: <UserAddOutlined />,
+      width: 500,
+      content: (
+        <>
+          <div>Please, select a user to manually assign this task to:</div>
+          <div style={{ marginTop: 10, marginBottom: 25 }}>
+            <UserSelectionComponent
+              handleSelection={(value) => this.setState({ selectedUserIdForAssignment: value })}
+            />
+          </div>
+          <Alert
+            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other elligibility criteria."
+            type="info"
+          />
+        </>
+      ),
+      onOk: async () => {
+        const userId = this.state.selectedUserIdForAssignment;
+        if (userId != null) {
+          try {
+            const updatedTask = await assignTaskToUser(task.id, userId);
+            this.setState((prevState) => ({
+              tasks: [...prevState.tasks.filter((t) => t.id !== task.id), updatedTask],
+            }));
+
+            Toast.success("A user was successfully assigned to the task.");
+          } catch (error) {
+            handleGenericError(error as Error);
+          } finally {
+            this.setState({ selectedUserIdForAssignment: null });
+          }
         }
       },
     });
@@ -391,7 +436,6 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Stats"
               dataIndex="status"
               key="status"
-              width={120}
               render={(status, task: APITask) => (
                 <div className="nowrap">
                   <span title="Open Instances">
@@ -422,41 +466,54 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={170}
               fixed="right"
               render={(__, task: APITask) => (
-                <span>
+                <>
                   {task.status.finished > 0 ? (
-                    <a
-                      href={`/annotations/CompoundTask/${task.id}`}
-                      title="View all Finished Annotations"
-                    >
-                      <EyeOutlined />
-                      View
+                    <div>
+                      <a
+                        href={`/annotations/CompoundTask/${task.id}`}
+                        title="View all Finished Annotations"
+                      >
+                        <EyeOutlined />
+                        View
+                      </a>
+                    </div>
+                  ) : null}
+                  <div>
+                    <a href={`/tasks/${task.id}/edit`} title="Edit Task">
+                      <EditOutlined />
+                      Edit
                     </a>
+                  </div>
+                  {task.status.open > 0 ? (
+                    <div>
+                      <LinkButton onClick={_.partial(this.assignTaskToUser, task)}>
+                        <UserAddOutlined />
+                        Manually Assign to User
+                      </LinkButton>
+                    </div>
                   ) : null}
-                  <br />
-                  <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                    <EditOutlined />
-                    Edit
-                  </a>
-                  <br />
                   {task.status.finished > 0 ? (
-                    <AsyncLink
-                      href="#"
-                      onClick={() => {
-                        const includesVolumeData = task.type.tracingType !== "skeleton";
-                        return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
-                      }}
-                      title="Download all Finished Annotations"
-                      icon={<DownloadOutlined />}
-                    >
-                      Download
-                    </AsyncLink>
+                    <div>
+                      <AsyncLink
+                        href="#"
+                        onClick={() => {
+                          const includesVolumeData = task.type.tracingType !== "skeleton";
+                          return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
+                        }}
+                        title="Download all Finished Annotations"
+                        icon={<DownloadOutlined />}
+                      >
+                        Download
+                      </AsyncLink>
+                    </div>
                   ) : null}
-                  <br />
-                  <LinkButton onClick={_.partial(this.deleteTask, task)}>
-                    <DeleteOutlined />
-                    Delete
-                  </LinkButton>
-                </span>
+                  <div>
+                    <LinkButton onClick={_.partial(this.deleteTask, task)}>
+                      <DeleteOutlined />
+                      Delete
+                    </LinkButton>
+                  </div>
+                </>
               )}
             />
           </FixedExpandableTable>

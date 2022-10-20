@@ -682,7 +682,7 @@ export default function ToolbarView() {
           */}
             <Tooltip
               title={skeletonToolHint || previousSkeletonToolHint}
-              visible={skeletonToolHint != null}
+              open={skeletonToolHint != null}
             >
               <i
                 style={{

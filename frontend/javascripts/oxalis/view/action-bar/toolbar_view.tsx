@@ -831,19 +831,30 @@ export default function ToolbarView() {
           />
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
-          title="Watershed Tool - ..."
+          title="Quick Select Tool - Draw a rectangle around a segment to automatically detect it"
           disabledTitle={disabledInfosForTools[AnnotationToolEnum.WATERSHED].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.WATERSHED].isDisabled}
           style={narrowButtonStyle}
           value={AnnotationToolEnum.WATERSHED}
         >
-          <i
+          <img
+            src="/assets/images/quick-select-tool.svg"
+            alt="Quick Select Icon"
+            style={{
+              height: 20,
+              width: 20,
+              marginTop: -1,
+              opacity: disabledInfosForTools[AnnotationToolEnum.WATERSHED].isDisabled ? 0.5 : 1,
+            }}
+          />
+
+          {/*          <i
             className="fas fa-tint"
             style={{
               opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
               transform: "scaleX(-1)",
             }}
-          />
+          />*/}
         </RadioButtonWithTooltip>
 
         {hasSkeleton && hasVolume && isAgglomerateMappingEnabled.value ? (

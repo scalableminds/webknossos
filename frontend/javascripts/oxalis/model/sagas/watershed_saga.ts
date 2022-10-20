@@ -38,7 +38,11 @@ import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { EnterAction, EscapeAction } from "../actions/ui_actions";
 import { OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
-import { getColorLayers, getResolutionInfo } from "../accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getLayerBoundingBox,
+  getResolutionInfo,
+} from "../accessors/dataset_accessor";
 import Dimensions from "../dimensions";
 import { take2 } from "libs/utils";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
@@ -67,6 +71,15 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const watershedConfig = yield* select((state) => state.userConfiguration.watershed);
   console.log("starting saga performWatershed");
+  const { rectangleGeometry } = action;
+
+  const colorLayers = yield* select((state: OxalisState) => getColorLayers(state.dataset));
+  if (colorLayers.length === 0) {
+    Toast.warning("No color layer available to use for watershed feature");
+    return;
+  }
+
+  const colorLayer = colorLayers[0];
 
   const { startPosition, endPosition } = action;
   const boundingBoxObj = {
@@ -76,7 +89,10 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     ),
   };
 
-  const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
+  const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
+  const boundingBoxMag1 = new BoundingBox(boundingBoxObj).intersectedWith(layerBBox);
+
+  rectangleGeometry.setCoordinates(boundingBoxMag1.min, boundingBoxMag1.max);
 
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -85,14 +101,6 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     console.log("No volumeTracing available.");
     return;
   }
-
-  const colorLayers = yield* select((state: OxalisState) => getColorLayers(state.dataset));
-  if (colorLayers.length === 0) {
-    Toast.warning("No color layer available to use for watershed feature");
-    return;
-  }
-
-  const colorLayer = colorLayers[0];
 
   const requestedZoomStep = yield* select((store) => getRequestLogZoomStep(store));
   const resolutionInfo = getResolutionInfo(colorLayer.resolutions);
@@ -224,7 +232,6 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   console.timeEnd("floodfill");
 
   const outputRGBA = maskToRGBA(inputNdUvw, visitedField);
-  const { rectangleGeometry } = action;
   rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
 
   const overwriteMode = yield* select(

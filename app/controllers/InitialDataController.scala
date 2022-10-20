@@ -138,7 +138,7 @@ Samplecountry
   private def insertRootFolder(): Fox[Unit] =
     folderDAO.getRoot.futureBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ => folderDAO.insertRoot()
+      case _       => folderDAO.insertRoot()
     }
 
   private def insertDefaultUser(): Fox[Unit] =

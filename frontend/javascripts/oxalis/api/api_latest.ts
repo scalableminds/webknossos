@@ -1479,7 +1479,6 @@ class DataApi {
     bbox: BoundingBoxType,
     elementClass: ElementClass,
     resolution: Vector3,
-    zoomStep: number,
   ): TypedArray {
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution

@@ -410,32 +410,6 @@ function maskToRGBA(inputNdUvw: ndarray.NdArray<TypedArray>, output: ndarray.NdA
   return outputRGBA;
 }
 
-function computeHistogram(arr: ndarray.NdArray<TypedArray>) {
-  const hist: Record<number, number> = {};
-  for (let u = 0; u < arr.shape[0]; u++) {
-    for (let v = 0; v < arr.shape[1]; v++) {
-      const val = Number(arr.get(u, v, 0));
-      hist[val] = (hist[val] || 0) + 1;
-    }
-  }
-
-  const cumsumHistLeft: Record<number, number> = {};
-  let cumsum = 0;
-  for (let i = 0; i < 256; i++) {
-    cumsum += hist[i] || 0;
-    cumsumHistLeft[i] = cumsum;
-  }
-
-  const cumsumHistRight: Record<number, number> = {};
-  cumsum = 0;
-  for (let i = 255; i >= 0; i--) {
-    cumsum += hist[i] || 0;
-    cumsumHistRight[i] = cumsum;
-  }
-
-  return { hist, cumsumHistLeft, cumsumHistRight };
-}
-
 type PriorityItem = {
   coords: Vector2;
   threshold: number;

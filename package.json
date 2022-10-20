@@ -161,7 +161,7 @@
     "@types/file-saver": "^2.0.5",
     "@types/three": "^0.142.0",
     "@use-it/interval": "^1.0.0",
-    "antd": "^4.20.6",
+    "antd": "^4.23.6",
     "backbone-events-standalone": "^0.2.7",
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",

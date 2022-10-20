@@ -944,18 +944,7 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
-      {adaptedActiveTool === "WATERSHED" && (
-        <Popover trigger="click" placement="bottom" content={<WatershedControls />}>
-          <ButtonComponent
-            title="Configure Watershed"
-            tooltipPlacement="right"
-            className="narrow"
-            style={{ marginLeft: 12, marginRight: 12 }}
-          >
-            <SettingOutlined />
-          </ButtonComponent>
-        </Popover>
-      )}
+      {adaptedActiveTool === "WATERSHED" && <WatershedSettingsPopover />}
 
       {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
         <VolumeInterpolationButton />
@@ -974,6 +963,28 @@ function ToolSpecificSettings({
         </ButtonComponent>
       ) : null}
     </>
+  );
+}
+
+function WatershedSettingsPopover() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <Popover
+      trigger="click"
+      placement="bottom"
+      open={isOpen}
+      content={<WatershedControls setIsOpen={setIsOpen} />}
+      onOpenChange={(open: boolean) => setIsOpen(open)}
+    >
+      <ButtonComponent
+        title="Configure Watershed"
+        tooltipPlacement="right"
+        className="narrow"
+        style={{ marginLeft: 12, marginRight: 12 }}
+      >
+        <SettingOutlined />
+      </ButtonComponent>
+    </Popover>
   );
 }
 

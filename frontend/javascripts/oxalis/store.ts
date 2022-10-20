@@ -477,6 +477,7 @@ type UiInformation = {
   readonly borderOpenStatus: BorderOpenStatus;
   readonly theme: Theme;
   readonly busyBlockingInfo: BusyBlockingInfo;
+  readonly isWatershedActive: boolean;
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

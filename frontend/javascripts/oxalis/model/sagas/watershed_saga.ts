@@ -27,7 +27,6 @@ import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
 } from "oxalis/model/actions/volumetracing_actions";
-// import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import api from "oxalis/api/internal_api";
 import ndarray from "ndarray";
@@ -35,7 +34,7 @@ import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
-import { EnterAction, EscapeAction } from "../actions/ui_actions";
+import { EnterAction, EscapeAction, setIsWatershedActiveAction } from "../actions/ui_actions";
 import { OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
 import {
@@ -49,18 +48,19 @@ import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 
 export default function* listenToMinCut(): Saga<void> {
-  // yield* takeEveryUnlessBusy(
   yield* takeEvery(
     "COMPUTE_WATERSHED_FOR_RECT",
     function* guard(action: ComputeWatershedForRectAction) {
       try {
+        yield* put(setIsWatershedActiveAction(true));
         yield* call(performWatershed, action);
       } catch (ex) {
         Toast.error(JSON.stringify(ex as Error));
         console.error(ex);
+      } finally {
+        yield* put(setIsWatershedActiveAction(false));
       }
     },
-    // "Watershed is being computed.",
   );
 }
 

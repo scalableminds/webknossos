@@ -233,6 +233,7 @@ const defaultState: OxalisState = {
     busyBlockingInfo: {
       isBusy: false,
     },
+    isWatershedActive: false,
   },
   localSegmentationData: {},
 };

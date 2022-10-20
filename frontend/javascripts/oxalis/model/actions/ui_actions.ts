@@ -17,6 +17,7 @@ type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
+export type SetIsWatershedActiveAction = ReturnType<typeof setIsWatershedActiveAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -34,7 +35,8 @@ export type UiAction =
   | SetShareModalVisibilityAction
   | SetBusyBlockingInfoAction
   | EnterAction
-  | EscapeAction;
+  | EscapeAction
+  | SetIsWatershedActiveAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -116,4 +118,9 @@ export const enterAction = () =>
 export const escapeAction = () =>
   ({
     type: "ESCAPE",
+  } as const);
+export const setIsWatershedActiveAction = (isActive: boolean) =>
+  ({
+    type: "SET_IS_WATERSHED_ACTIVE",
+    isActive,
   } as const);

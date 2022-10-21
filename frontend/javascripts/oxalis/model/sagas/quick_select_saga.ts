@@ -32,20 +32,22 @@ import api from "oxalis/api/internal_api";
 import ndarray from "ndarray";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
-import { OxalisState, VolumeTracing } from "oxalis/store";
+import { DatasetLayerConfiguration, OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
-import { take2 } from "libs/utils";
+import { clamp, take2 } from "libs/utils";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import { EnterAction, EscapeAction, setIsQuickSelectActiveAction } from "../actions/ui_actions";
 import {
   getColorLayers,
+  getEnabledColorLayers,
   getLayerBoundingBox,
   getResolutionInfo,
 } from "../accessors/dataset_accessor";
 import Dimensions from "../dimensions";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import { APIDataLayer } from "types/api_flow_types";
 
 export default function* listenToMinCut(): Saga<void> {
   yield* takeEvery(
@@ -73,13 +75,18 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   console.log("starting saga performQuickSelect");
   const { rectangleGeometry } = action;
 
-  const colorLayers = yield* select((state: OxalisState) => getColorLayers(state.dataset));
+  const colorLayers = yield* select((state: OxalisState) =>
+    getEnabledColorLayers(state.dataset, state.datasetConfiguration),
+  );
   if (colorLayers.length === 0) {
     Toast.warning("No color layer available to use for quickSelect feature");
     return;
   }
 
   const colorLayer = colorLayers[0];
+  const layerConfiguration = yield* select(
+    (state) => state.datasetConfiguration.layers[colorLayer.name],
+  );
 
   const { startPosition, endPosition } = action;
   const boundingBoxObj = {
@@ -123,16 +130,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     throw new Error("Color input layer must not be 64-bit.");
   }
 
-  let inputData;
-  if (colorLayer.elementClass === "uint24") {
-    inputData = new Uint8Array(inputDataRaw.length / 3);
-    for (let idx = 0; idx < inputDataRaw.length; idx += 3) {
-      inputData[idx / 3] = (inputDataRaw[idx] + inputDataRaw[idx + 1] + inputDataRaw[idx + 2]) / 3;
-    }
-  } else {
-    inputData = inputDataRaw;
-  }
-
+  const inputData = normalizeToUint8(colorLayer, inputDataRaw, layerConfiguration);
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
@@ -346,6 +344,43 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       rectangleGeometry.attachData(newOutputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
     }
   }
+}
+
+function normalizeToUint8(
+  colorLayer: APIDataLayer,
+  inputDataRaw: TypedArrayWithoutBigInt,
+  layerConfiguration: DatasetLayerConfiguration,
+) {
+  if (colorLayer.elementClass === "uint8") {
+    // Leave uint8 data as is
+    return inputDataRaw;
+  }
+
+  if (colorLayer.elementClass === "uint24") {
+    // Convert RGB to grayscale by averaging the channels
+    const inputData = new Uint8Array(inputDataRaw.length / 3);
+    for (let idx = 0; idx < inputDataRaw.length; idx += 3) {
+      inputData[idx / 3] = (inputDataRaw[idx] + inputDataRaw[idx + 1] + inputDataRaw[idx + 2]) / 3;
+    }
+    return inputData;
+  }
+
+  // Convert non uint8 data by scaling the values to uint8 (using the histogram settings)
+  const inputData = new Uint8Array(inputDataRaw.length);
+  const { intensityRange } = layerConfiguration;
+  const [min, max] = intensityRange;
+  // Scale the color value according to the histogram settings.
+  // Note: max == min would cause a division by 0. Thus we add 1 in this case and filter out the whole value below.
+  const is_max_and_min_equal = Number(max === min);
+
+  for (let idx = 0; idx < inputDataRaw.length; idx += 1) {
+    let value = inputDataRaw[idx];
+    value = clamp(min, value, max);
+    value = (256 * (value - min)) / (max - min + is_max_and_min_equal);
+    inputData[idx] = value;
+  }
+
+  return inputData;
 }
 
 function* finalizeQuickSelect(

@@ -813,6 +813,14 @@ export function getEnabledLayers(
   });
 }
 
+export function getEnabledColorLayers(
+  dataset: APIDataset,
+  datasetConfiguration: DatasetConfiguration,
+) {
+  const enabledLayers = getEnabledLayers(dataset, datasetConfiguration);
+  return enabledLayers.filter((layer) => isColorLayer(dataset, layer.name));
+}
+
 /*
   This function returns layers that cannot be rendered (since the current resolution is missing),
   even though they should be rendered (since they are enabled). For each layer, this method

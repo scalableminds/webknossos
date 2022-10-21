@@ -49,14 +49,14 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"):
     # Download the dataset.
     dataset = wk.Dataset.download(
         url="${window.location.origin}",
-        dataset="${dataset.name}"
+        dataset="${dataset.name}",
         organization_id="${dataset.owningOrganization}",
     )
     # Alternatively, directly open the dataset. Image data will be
     # streamed when being accessed.
     remote_dataset = wk.Dataset.open_remote(
         url="${window.location.origin}",
-        dataset="${dataset.name}"
+        dataset="${dataset.name}",
         organization_id="${dataset.owningOrganization}",
     )
 `;

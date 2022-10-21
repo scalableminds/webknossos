@@ -145,7 +145,7 @@ function _getDisabledInfoFromArgs(
       explanation: disabledSkeletonExplanation,
     },
     [AnnotationToolEnum.WATERSHED]: {
-      isDisabled: isZoomStepTooHighForFilling,
+      isDisabled: isZoomStepTooHighForBrushing,
       explanation: zoomInToUseToolMessage,
     },
     [AnnotationToolEnum.PROOFREAD]: {

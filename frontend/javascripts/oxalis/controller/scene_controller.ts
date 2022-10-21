@@ -54,6 +54,7 @@ class SceneController {
   userBoundingBoxGroup: THREE.Group;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxes' has no initializer an... Remove this comment to see the full error message
   userBoundingBoxes: Array<Cube>;
+  helperGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
@@ -370,6 +371,8 @@ class SceneController {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
+    this.helperGeometryGroup = new THREE.Group();
+    this.rootNode.add(this.helperGeometryGroup);
     this.userBoundingBoxes = [];
     const state = Store.getState();
     // Cubes
@@ -387,10 +390,10 @@ class SceneController {
 
     if (state.tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
-      this.contour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      this.contour.getMeshes().forEach((mesh) => this.helperGeometryGroup.add(mesh));
 
       this.rectangleGeometry = new RectangleGeometry();
-      this.rectangleGeometry.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      this.rectangleGeometry.getMeshes().forEach((mesh) => this.helperGeometryGroup.add(mesh));
     }
 
     if (state.tracing.skeleton != null) {
@@ -470,6 +473,7 @@ class SceneController {
     Utils.__guard__(this.taskBoundingBox, (x) => x.updateForCam(id));
 
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
+    this.helperGeometryGroup.visible = id !== OrthoViews.TDView;
 
     if (id !== OrthoViews.TDView) {
       let ind;

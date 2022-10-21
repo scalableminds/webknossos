@@ -136,7 +136,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
   const rectCenterBrushExtentUV = V3.floor(V3.scale(inputNdUvw.shape as Vector3, 1 / 10));
 
-  let output: ndarray.NdArray<TypedArrayWithoutBigInt> = ndarray(
+  let output: ndarray.NdArray<Uint8Array> = ndarray(
     new Uint8Array(inputNdUvw.size),
     inputNdUvw.shape,
   );
@@ -200,7 +200,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   // console.log("computeHistogram", minHistograms);
   console.groupEnd();
 
-  let visitedField;
+  let thresholdField;
   const unthresholdedDarkCopy = copyNdArray(Uint8Array, maxThresholdField);
   const unthresholdedLightCopy = copyNdArray(Uint8Array, minThresholdField);
   let initialDetectDarkSegment = centerMean < mean;
@@ -216,8 +216,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
   console.log(initialDetectDarkSegment ? "Select dark segment" : "Select light segment");
   if (initialDetectDarkSegment) {
-    visitedField = maxThresholdField;
-    ops.ltseq(visitedField, maxEffectiveThresh);
+    thresholdField = maxThresholdField;
+    ops.ltseq(thresholdField, maxEffectiveThresh);
     yield* put(
       updateUserSettingAction("quickSelect", {
         ...quickSelectConfig,
@@ -226,8 +226,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       }),
     );
   } else {
-    visitedField = minThresholdField;
-    ops.gtseq(visitedField, minEffectiveThresh);
+    thresholdField = minThresholdField;
+    ops.gtseq(thresholdField, minEffectiveThresh);
     yield* put(
       updateUserSettingAction("quickSelect", {
         ...quickSelectConfig,
@@ -236,9 +236,9 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       }),
     );
   }
-  output = visitedField;
+  output = thresholdField;
 
-  console.log("visitedField", visitedField);
+  console.log("thresholdField", thresholdField);
   console.log("output", output);
   // end
 
@@ -254,7 +254,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   morphology.dilate(output, quickSelectConfig.dilateValue);
   console.timeEnd("floodfill");
 
-  const outputRGBA = maskToRGBA(inputNdUvw, visitedField);
+  const outputRGBA = maskToRGBA(inputNdUvw, thresholdField);
   rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
 
   const overwriteMode = yield* select(
@@ -350,10 +350,10 @@ function normalizeToUint8(
   colorLayer: APIDataLayer,
   inputDataRaw: TypedArrayWithoutBigInt,
   layerConfiguration: DatasetLayerConfiguration,
-) {
+): Uint8Array {
   if (colorLayer.elementClass === "uint8") {
     // Leave uint8 data as is
-    return inputDataRaw;
+    return inputDataRaw as Uint8Array;
   }
 
   if (colorLayer.elementClass === "uint24") {
@@ -460,10 +460,10 @@ type PriorityItem = {
 };
 
 function getThresholdField(
-  inputNdUvw: ndarray.NdArray<TypedArrayWithoutBigInt>,
+  inputNdUvw: ndarray.NdArray<Uint8Array>,
   centerUV: Vector2,
   mode: "min" | "max",
-): ndarray.NdArray<TypedArrayWithoutBigInt> {
+): ndarray.NdArray<Uint8Array> {
   const comparator =
     mode === "max"
       ? // small priorities take precedence

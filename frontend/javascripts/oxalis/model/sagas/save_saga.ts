@@ -10,8 +10,6 @@ import {
   InitializeVolumeTracingAction,
   InitializeEditableMappingAction,
   cancelQuickSelectAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import {
   VolumeTracingSaveRelevantActions,
   setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -91,10 +89,7 @@ import {
   selectTracing,
 } from "oxalis/model/accessors/tracing_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
-import {
-  setBusyBlockingInfoAction,
-  setIsQuickSelectActiveAction,
-} from "oxalis/model/actions/ui_actions";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";

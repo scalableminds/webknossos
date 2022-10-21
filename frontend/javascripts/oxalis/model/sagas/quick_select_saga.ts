@@ -35,11 +35,11 @@ import Toast from "libs/toast";
 import { DatasetLayerConfiguration, OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
 import { clamp, take2 } from "libs/utils";
+import { APIDataLayer } from "types/api_flow_types";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import { EnterAction, EscapeAction, setIsQuickSelectActiveAction } from "../actions/ui_actions";
 import {
-  getColorLayers,
   getEnabledColorLayers,
   getLayerBoundingBox,
   getResolutionInfo,
@@ -47,7 +47,6 @@ import {
 import Dimensions from "../dimensions";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
-import { APIDataLayer } from "types/api_flow_types";
 
 export default function* listenToMinCut(): Saga<void> {
   yield* takeEvery(
@@ -568,7 +567,7 @@ function fillHoles(arr: ndarray.NdArray<Uint8Array>) {
         newCoord[1] < arr.shape[1]
       ) {
         const neighborValue = arr.get(newCoord[0], newCoord[1], 0);
-        if (neighborValue == 0) {
+        if (neighborValue === 0) {
           queue.push(newCoord);
         }
       }

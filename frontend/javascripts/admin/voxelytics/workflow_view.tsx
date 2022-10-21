@@ -360,10 +360,10 @@ export default function WorkflowView() {
           organizationToSwitchTo: organization ?? undefined,
           error: err as Error,
         });
-      } catch (err1) {
-        console.log(err1);
+      } catch (accessibleBySwitchingError) {
+        console.log(accessibleBySwitchingError);
         Toast.error("Could not load workflow report.");
-        setLoadingState({ status: "FAILED", error: err as Error });
+        setLoadingState({ status: "FAILED", error: accessibleBySwitchingError as Error });
       }
     }
   }

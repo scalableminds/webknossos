@@ -106,6 +106,7 @@
     "listening": "lsof -i:7155,9000,9001,9002",
     "kill-listeners": "kill $(lsof -t -i:7155,9000,9001,9002)",
     "test": "tools/test.sh test --timeout=30s",
+    "test-changed": "tools/test.sh test-changed --timeout=30s",
     "test-verbose": "xvfb-run -s '-ac -screen 0 1280x1024x24' tools/test.sh test --timeout=60s --verbose",
     "test-only": "tools/test.sh test --timeout=30s",
     "test-debug": "tools/test.sh test-debug",

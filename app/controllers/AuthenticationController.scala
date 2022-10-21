@@ -238,9 +238,8 @@ class AuthenticationController @Inject()(
         } yield organization
       case (None, None, None, Some(workflowHash)) =>
         for {
-          workflows <- voxelyticsDAO.findWorkflowOrganizationsByHash(workflowHash)
-          firstWorkflow <- option2Fox(workflows.headOption)
-          organization <- organizationDAO.findOne(firstWorkflow._organization)
+          workflow <- voxelyticsDAO.findWorkflowByHash(workflowHash)
+          organization <- organizationDAO.findOne(workflow._organization)
         } yield organization
       case _ => Fox.failure("Can either test access for dataset or annotation or workflow, not a combination")
     }
@@ -301,7 +300,7 @@ class AuthenticationController @Inject()(
 
   private def canAccessWorkflow(user: User, workflowHash: String): Fox[Boolean] = {
     val foundFox = for {
-      _ <- voxelyticsDAO.findWorkflowByHash(user._organization, workflowHash)
+      _ <- voxelyticsDAO.findWorkflowByHashAndOrganization(user._organization, workflowHash)
     } yield ()
     foundFox.futureBox.map(_.isDefined)
   }

@@ -40,7 +40,8 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
     dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
   };
 
-  const onChangeThreshold = (threshold: number) => {
+  const onChangeThreshold = (thresholdPercent: number) => {
+    const threshold = (thresholdPercent / 100) * 256;
     const { segmentMode, dilateValue, closeValue, erodeValue } = watershedConfig;
     dispatch(updateUserSettingAction("watershed", { ...watershedConfig, threshold }));
     dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
@@ -96,16 +97,16 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
         disabled={!isWatershedActive}
       />
       <NumberSliderSetting
-        label="Threshold"
+        label="Threshold [%]"
         min={0}
-        value={watershedConfig.threshold}
-        max={255}
-        step={1}
+        value={(watershedConfig.threshold / 256) * 100}
+        max={100}
+        step={0.25} // a granular step is important so that all 256 values can be effectively targeted
         onChange={onChangeThreshold}
         disabled={!isWatershedActive}
       />
       <NumberSliderSetting
-        label="Close"
+        label="Close [vx]"
         min={0}
         value={watershedConfig.closeValue}
         max={10}
@@ -113,7 +114,7 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
         onChange={onChangeCloseValue}
       />
       <NumberSliderSetting
-        label="Erode"
+        label="Erode [vx]"
         min={0}
         value={watershedConfig.erodeValue}
         max={10}
@@ -121,7 +122,7 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
         onChange={onChangeErodeValue}
       />
       <NumberSliderSetting
-        label="Dilate"
+        label="Dilate [vx]"
         min={0}
         value={watershedConfig.dilateValue}
         max={10}

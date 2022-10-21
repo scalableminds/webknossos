@@ -52,6 +52,7 @@ function findBreakableCharFromRight(str: string, position: number): number {
   return -1;
 }
 function lineCount(str: string, wrapLength: number): number {
+  // Inspired by https://stackoverflow.com/a/857770
   const trimmedStr = str.trim();
   if (trimmedStr.length <= wrapLength) {
     return 1;

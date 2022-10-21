@@ -166,7 +166,7 @@ class DataCube {
   }
 
   getNullBucket(address: Vector4): Bucket {
-    if (this.boundingBox.containsBucket(address)) {
+    if (this.boundingBox.containsBucket(address, this.resolutionInfo)) {
       return NULL_BUCKET;
     } else {
       return NULL_BUCKET_OUT_OF_BB;
@@ -223,7 +223,7 @@ class DataCube {
       return false;
     }
 
-    return this.boundingBox.containsBucket([x, y, z, zoomStep]);
+    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.resolutionInfo);
   }
 
   getBucketIndex([x, y, z, zoomStep]: Vector4): number | null | undefined {

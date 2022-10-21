@@ -242,7 +242,7 @@ function AddZarrLayer({
 }) {
   const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const datasourceUrl: string | null = Form.useWatch("url", form);
-  const [exploreLog, setExploreLog] = useState<string>("");
+  const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
@@ -385,7 +385,20 @@ function AddZarrLayer({
           </Col>
         </Row>
       ) : null}
-      <FormItem style={{ marginBottom: 0 }}>
+      {exploreLog ? (
+        <Row gutter={8}>
+          <Col span={24}>
+            <Collapse defaultActiveKey="1">
+              <Panel header="Error Log" key="1">
+                <Hint style={{ width: "90%" }}>
+                  <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
+                </Hint>
+              </Panel>
+            </Collapse>
+          </Col>
+        </Row>
+      ) : null}
+      <FormItem style={{ marginBottom: 0, marginTop: 20 }}>
         <Row gutter={8}>
           <Col span={18} />
           <Col span={6}>
@@ -400,13 +413,6 @@ function AddZarrLayer({
           </Col>
         </Row>
       </FormItem>
-      <Collapse collapsible={exploreLog ? "header" : "disabled"} style={{ marginTop: 20 }}>
-        <Panel header="Log" key="1">
-          <Hint style={{ width: "90%" }}>
-            <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
-          </Hint>
-        </Panel>
-      </Collapse>
     </>
   );
 }

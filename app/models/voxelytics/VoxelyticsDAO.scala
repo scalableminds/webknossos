@@ -62,7 +62,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       r.toList.map(row =>
         TaskEntry(ObjectId(row._1), ObjectId(row._2), row._3, row._4, Json.parse(row._5).as[JsObject]))
 
-  def findWorkflowsByHash(organizationId: ObjectId, workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
+  def findWorkflowsByHashAndOrganization(organizationId: ObjectId,
+                                         workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
     for {
       r <- run(sql"""
           SELECT name, hash
@@ -71,7 +72,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           """.as[(String, String)])
     } yield r.toList.map(row => WorkflowEntry(row._1, row._2, organizationId))
 
-  def findWorkflowByHash(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
+  def findWorkflowByHashAndOrganization(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
     for {
       r <- run(sql"""
           SELECT name, hash
@@ -81,14 +82,15 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       (name, hash) <- r.headOption
     } yield WorkflowEntry(name, hash, organizationId)
 
-  def findWorkflowOrganizationsByHash(workflowHash: String): Fox[List[WorkflowEntry]] =
+  def findWorkflowByHash(workflowHash: String): Fox[WorkflowEntry] =
     for {
       r <- run(sql"""
           SELECT name, hash, _organization
           FROM webknossos.voxelytics_workflows
           WHERE hash = $workflowHash
           """.as[(String, String, String)])
-    } yield r.toList.map(row => WorkflowEntry(row._1, row._2, ObjectId(row._3)))
+      (name, hash, organizationId) <- r.headOption // Could have multiple entries; picking the first.
+    } yield WorkflowEntry(name, hash, ObjectId(organizationId))
 
   def findTaskRuns(organizationId: ObjectId, runIds: List[ObjectId], staleTimeout: Duration): Fox[List[TaskRunEntry]] =
     for {

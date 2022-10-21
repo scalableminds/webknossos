@@ -815,22 +815,6 @@ export default function ToolbarView() {
           </React.Fragment>
         ) : null}
         <RadioButtonWithTooltip
-          title="Bounding Box Tool - Create, resize and modify bounding boxes."
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-          style={narrowButtonStyle}
-          value={AnnotationToolEnum.BOUNDING_BOX}
-        >
-          <img
-            src="/assets/images/bounding-box.svg"
-            alt="Bounding Box Icon"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
-              ...imgStyleForSpaceyIcons,
-            }}
-          />
-        </RadioButtonWithTooltip>
-        <RadioButtonWithTooltip
           title="Quick Select Tool - Draw a rectangle around a segment to automatically detect it"
           disabledTitle={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
@@ -845,6 +829,22 @@ export default function ToolbarView() {
               width: 20,
               marginTop: -1,
               opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
+            }}
+          />
+        </RadioButtonWithTooltip>
+        <RadioButtonWithTooltip
+          title="Bounding Box Tool - Create, resize and modify bounding boxes."
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
+          style={narrowButtonStyle}
+          value={AnnotationToolEnum.BOUNDING_BOX}
+        >
+          <img
+            src="/assets/images/bounding-box.svg"
+            alt="Bounding Box Icon"
+            style={{
+              opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
+              ...imgStyleForSpaceyIcons,
             }}
           />
         </RadioButtonWithTooltip>

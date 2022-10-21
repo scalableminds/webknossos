@@ -249,6 +249,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   );
   console.log({ seedIntensity });
 
+  fillHoles(output);
   morphology.close(output, quickSelectConfig.closeValue);
   morphology.erode(output, quickSelectConfig.erodeValue);
   morphology.dilate(output, quickSelectConfig.dilateValue);
@@ -335,6 +336,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         ) as ndarray.NdArray<Uint8Array>;
         ops.gtseq(newestOutput, finetuneAction.threshold);
       }
+
+      fillHoles(newestOutput);
 
       morphology.close(newestOutput, finetuneAction.closeValue);
       morphology.erode(newestOutput, finetuneAction.erodeValue);
@@ -459,6 +462,13 @@ type PriorityItem = {
   threshold: number;
 };
 
+const NEIGHBOR_OFFSETS = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+];
+
 function getThresholdField(
   inputNdUvw: ndarray.NdArray<Uint8Array>,
   centerUV: Vector2,
@@ -479,13 +489,7 @@ function getThresholdField(
   // For each voxel, store the threshold which is necessary to reach that voxel
   const thresholdField = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
 
-  queue.queue({ coords: centerUV, threshold: Number(inputNdUvw.get(centerUV[0], centerUV[1], 0)) });
-  const neighborOffsets = [
-    [0, 1],
-    [1, 0],
-    [0, -1],
-    [-1, 0],
-  ];
+  queue.queue({ coords: centerUV, threshold: inputNdUvw.get(centerUV[0], centerUV[1], 0) });
 
   // extremeThreshold is either the min or maximum value
   // found until a given point in time.
@@ -502,7 +506,7 @@ function getThresholdField(
     extremeThreshold = extremeFn(threshold, extremeThreshold);
     thresholdField.set(coords[0], coords[1], 0, extremeThreshold);
 
-    for (const offset of neighborOffsets) {
+    for (const offset of NEIGHBOR_OFFSETS) {
       const newCoord = V2.add(coords, offset);
       if (
         newCoord[0] >= 0 &&
@@ -510,7 +514,7 @@ function getThresholdField(
         newCoord[0] < inputNdUvw.shape[0] &&
         newCoord[1] < inputNdUvw.shape[1]
       ) {
-        const newThreshold = Number(inputNdUvw.get(newCoord[0], newCoord[1], 0));
+        const newThreshold = inputNdUvw.get(newCoord[0], newCoord[1], 0);
         queue.queue({
           coords: newCoord,
           threshold: newThreshold,
@@ -519,4 +523,60 @@ function getThresholdField(
     }
   }
   return thresholdField;
+}
+
+function fillHoles(arr: ndarray.NdArray<Uint8Array>) {
+  // Execute a flood-fill on the "outside" of the segment
+  // and afterwards, invert the image to get a segment
+  // within which all holes are filled.
+
+  // First, set the four borders to zero so that we know
+  // that the top-left pixel is "outside" of the segment
+  // and can be used as a starting point for the floodfill.
+  // Theoretically, we could remember which voxels were
+  // changed from 1 to 0, but in practice, it doesn't really matter
+  // that the borders are zero'd. The user likely has used a
+  // "safety margin" when drawing the rectangle, anyway.
+  const borders = [
+    arr.pick(null, 0, 0),
+    arr.pick(null, arr.shape[1] - 1, 0),
+    arr.pick(0, null, 0),
+    arr.pick(arr.shape[0] - 1, null, 0),
+  ];
+  for (const border of borders) {
+    ops.assigns(border, 0);
+  }
+
+  // Store the visited voxels in visitedField.
+  const visitedField = ndarray(new Uint8Array(arr.size), arr.shape);
+  const queue: Vector2[] = [[0, 0]];
+
+  while (queue.length > 0) {
+    const coords = queue.pop() as Vector2;
+
+    if (visitedField.get(coords[0], coords[1], 0) > 0) {
+      continue;
+    }
+    visitedField.set(coords[0], coords[1], 0, 1);
+
+    for (const offset of NEIGHBOR_OFFSETS) {
+      const newCoord = V2.add(coords, offset);
+      if (
+        newCoord[0] >= 0 &&
+        newCoord[1] >= 0 &&
+        newCoord[0] < arr.shape[0] &&
+        newCoord[1] < arr.shape[1]
+      ) {
+        const neighborValue = arr.get(newCoord[0], newCoord[1], 0);
+        if (neighborValue == 0) {
+          queue.push(newCoord);
+        }
+      }
+    }
+  }
+
+  // Invert the visitedField and write it to arr.
+  // With numpy, this would be
+  //   arr = visitedField[:] == 0
+  ops.eqs(arr, visitedField, 0);
 }

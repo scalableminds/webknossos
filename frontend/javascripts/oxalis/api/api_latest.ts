@@ -1509,19 +1509,20 @@ class DataApi {
 
         while (y < yMax) {
           const dataOffset =
-            (x % bucketWidth) +
-            (y % bucketWidth) * bucketWidth +
-            (z % bucketWidth) * bucketWidth * bucketWidth;
+            channelCount *
+            ((x % bucketWidth) +
+              (y % bucketWidth) * bucketWidth +
+              (z % bucketWidth) * bucketWidth * bucketWidth);
           const rx = x - topLeft[0];
           const ry = y - topLeft[1];
           const rz = z - topLeft[2];
-          const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
+          const resultOffset = channelCount * (rx + ry * extent[0] + rz * extent[0] * extent[1]);
           // Checking for bucket.type !== "null" is not enough, since the bucket
           // could also be MISSING.
           const data = bucket.hasData()
             ? bucket.getData()
             : new TypedArrayClass(Constants.BUCKET_SIZE);
-          const length = xMax - x;
+          const length = channelCount * (xMax - x);
           // The `set` operation is not problematic, since the BucketDataArray types
           // won't be mixed (either, they are BigInt or they aren't)
           // @ts-ignore

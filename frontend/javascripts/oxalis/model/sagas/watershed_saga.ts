@@ -110,7 +110,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
 
   console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
-  const inputData = yield* call(
+  const inputDataRaw = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     colorLayer.name,
     boundingBoxMag1,
@@ -119,8 +119,18 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const size = boundingBoxTarget.getSize();
   const stride = [1, size[0], size[0] * size[1]];
 
-  if (inputData instanceof BigUint64Array) {
+  if (inputDataRaw instanceof BigUint64Array) {
     throw new Error("Color input layer must not be 64-bit.");
+  }
+
+  let inputData;
+  if (colorLayer.elementClass === "uint24") {
+    inputData = new Uint8Array(inputDataRaw.length / 3);
+    for (let idx = 0; idx < inputDataRaw.length; idx += 3) {
+      inputData[idx / 3] = (inputDataRaw[idx] + inputDataRaw[idx + 1] + inputDataRaw[idx + 2]) / 3;
+    }
+  } else {
+    inputData = inputDataRaw;
   }
 
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
@@ -135,8 +145,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
 
   console.time("floodfill");
 
-  const maxVisitedField = getDistanceField(inputNdUvw, centerUV, "max");
-  const minVisitedField = getDistanceField(inputNdUvw, centerUV, "min");
+  const maxThresholdField = getThresholdField(inputNdUvw, centerUV, "max");
+  const minThresholdField = getThresholdField(inputNdUvw, centerUV, "min");
 
   function getExtremeValueAtBorders(arr: ndarray.NdArray, mode: "min" | "max") {
     const fn = mode === "min" ? Math.min : Math.max;
@@ -149,10 +159,10 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     );
   }
 
-  const minThresholdAtBorder = getExtremeValueAtBorders(maxVisitedField, "min");
-  const maxThresholdAtBorder = getExtremeValueAtBorders(minVisitedField, "max");
-  const smallestThresh = ops.inf(maxVisitedField);
-  const largestThresh = ops.sup(minVisitedField);
+  const minThresholdAtBorder = getExtremeValueAtBorders(maxThresholdField, "min");
+  const maxThresholdAtBorder = getExtremeValueAtBorders(minThresholdField, "max");
+  const smallestThresh = ops.inf(maxThresholdField);
+  const largestThresh = ops.sup(minThresholdField);
 
   const maxEffectiveThresh = Math.max(minThresholdAtBorder, smallestThresh + 1);
   const minEffectiveThresh = Math.min(maxThresholdAtBorder, largestThresh - 1);
@@ -176,7 +186,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     centerMean: { value: centerMean },
   });
 
-  // const maxHistograms = computeHistogram(maxVisitedField);
+  // const maxHistograms = computeHistogram(maxThresholdField);
   console.group("dark segment");
   console.log("minThresholdAtBorder", minThresholdAtBorder);
   console.log("smallestThresh", smallestThresh);
@@ -184,7 +194,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   // console.log("computeHistogram", maxHistograms);
   console.groupEnd();
 
-  // const minHistograms = computeHistogram(minVisitedField);
+  // const minHistograms = computeHistogram(minThresholdField);
   console.group("light segment");
   console.log("maxThresholdAtBorder", maxThresholdAtBorder);
   console.log("largestThresh", largestThresh);
@@ -193,8 +203,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   console.groupEnd();
 
   let visitedField;
-  const unthresholdedDarkCopy = copyNdArray(Uint8Array, maxVisitedField);
-  const unthresholdedLightCopy = copyNdArray(Uint8Array, minVisitedField);
+  const unthresholdedDarkCopy = copyNdArray(Uint8Array, maxThresholdField);
+  const unthresholdedLightCopy = copyNdArray(Uint8Array, minThresholdField);
   let initialDetectDarkSegment = centerMean < mean;
 
   if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
@@ -208,7 +218,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
 
   console.log(initialDetectDarkSegment ? "Select dark segment" : "Select light segment");
   if (initialDetectDarkSegment) {
-    visitedField = maxVisitedField;
+    visitedField = maxThresholdField;
     ops.ltseq(visitedField, maxEffectiveThresh);
     yield* put(
       updateUserSettingAction("watershed", {
@@ -218,7 +228,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       }),
     );
   } else {
-    visitedField = minVisitedField;
+    visitedField = minThresholdField;
     ops.gtseq(visitedField, minEffectiveThresh);
     yield* put(
       updateUserSettingAction("watershed", {
@@ -414,7 +424,7 @@ type PriorityItem = {
   threshold: number;
 };
 
-function getDistanceField(
+function getThresholdField(
   inputNdUvw: ndarray.NdArray<TypedArrayWithoutBigInt>,
   centerUV: Vector2,
   mode: "min" | "max",
@@ -429,7 +439,10 @@ function getDistanceField(
     comparator,
   });
 
+  // For each voxel, store a boolean to denote whether it's been visited
   const visitedField = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
+  // For each voxel, store the threshold which is necessary to reach that voxel
+  const thresholdField = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
 
   queue.queue({ coords: centerUV, threshold: Number(inputNdUvw.get(centerUV[0], centerUV[1], 0)) });
   const neighborOffsets = [
@@ -449,10 +462,10 @@ function getDistanceField(
     if (visitedField.get(coords[0], coords[1], 0) > 0) {
       continue;
     }
+    visitedField.set(coords[0], coords[1], 0, 1);
 
     extremeThreshold = extremeFn(threshold, extremeThreshold);
-
-    visitedField.set(coords[0], coords[1], 0, extremeThreshold);
+    thresholdField.set(coords[0], coords[1], 0, extremeThreshold);
 
     for (const offset of neighborOffsets) {
       const newCoord = V2.add(coords, offset);
@@ -470,5 +483,5 @@ function getDistanceField(
       }
     }
   }
-  return visitedField;
+  return thresholdField;
 }

@@ -37,10 +37,10 @@ export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
-export type ComputeWatershedForRectAction = ReturnType<typeof computeWatershedForRectAction>;
-export type FineTuneWatershedAction = ReturnType<typeof fineTuneWatershedAction>;
-export type CancelWatershedAction = ReturnType<typeof cancelWatershedAction>;
-export type ConfirmWatershedAction = ReturnType<typeof confirmWatershedAction>;
+export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
+export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
+export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
+export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -66,10 +66,10 @@ export type VolumeTracingAction =
   | SetLargestSegmentIdAction
   | SetMappingIsEditableAction
   | InitializeEditableMappingAction
-  | ComputeWatershedForRectAction
-  | FineTuneWatershedAction
-  | CancelWatershedAction
-  | ConfirmWatershedAction;
+  | ComputeQuickSelectForRectAction
+  | FineTuneQuickSelectAction
+  | CancelQuickSelectAction
+  | ConfirmQuickSelectAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -258,19 +258,19 @@ export const setMappingIsEditableAction = () =>
     type: "SET_MAPPING_IS_EDITABLE",
   } as const);
 
-export const computeWatershedForRectAction = (
+export const computeQuickSelectForRectAction = (
   startPosition: Vector3,
   endPosition: Vector3,
   rectangleGeometry: RectangleGeometry,
 ) =>
   ({
-    type: "COMPUTE_WATERSHED_FOR_RECT",
+    type: "COMPUTE_QUICK_SELECT_FOR_RECT",
     startPosition,
     endPosition,
     rectangleGeometry,
   } as const);
 
-export const fineTuneWatershedAction = (
+export const fineTuneQuickSelectAction = (
   segmentMode: "dark" | "light",
   threshold: number,
   closeValue: number,
@@ -278,7 +278,7 @@ export const fineTuneWatershedAction = (
   dilateValue: number,
 ) =>
   ({
-    type: "FINE_TUNE_WATERSHED",
+    type: "FINE_TUNE_QUICK_SELECT",
     segmentMode,
     threshold,
     closeValue,
@@ -286,6 +286,6 @@ export const fineTuneWatershedAction = (
     dilateValue,
   } as const);
 
-export const cancelWatershedAction = () => ({ type: "CANCEL_WATERSHED" } as const);
+export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" } as const);
 
-export const confirmWatershedAction = () => ({ type: "CONFIRM_WATERSHED" } as const);
+export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" } as const);

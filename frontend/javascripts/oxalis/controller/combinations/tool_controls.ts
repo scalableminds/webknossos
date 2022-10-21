@@ -19,8 +19,8 @@ import {
   handleClickSegment,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import {
-  computeWatershedForRectAction,
-  confirmWatershedAction,
+  computeQuickSelectForRectAction,
+  confirmQuickSelectAction,
   hideBrushAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
@@ -634,7 +634,7 @@ export class BoundingBoxTool {
   }
 }
 
-export class WatershedTool {
+export class QuickSelectTool {
   static getPlaneMouseControls(
     planeId: OrthoView,
     planeView: PlaneView,
@@ -662,7 +662,7 @@ export class WatershedTool {
         currentPos = startPos;
         isDragging = true;
 
-        Store.dispatch(confirmWatershedAction());
+        Store.dispatch(confirmQuickSelectAction());
         rectangleGeometry.unattachTexture();
       },
       leftMouseUp: () => {
@@ -673,7 +673,7 @@ export class WatershedTool {
           return;
         }
         if (startPos != null && currentPos != null) {
-          Store.dispatch(computeWatershedForRectAction(startPos, currentPos, rectangleGeometry));
+          Store.dispatch(computeQuickSelectForRectAction(startPos, currentPos, rectangleGeometry));
         }
       },
       leftDownMove: (
@@ -775,7 +775,7 @@ const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
-  [AnnotationToolEnum.WATERSHED]: WatershedTool,
+  [AnnotationToolEnum.QUICK_SELECT]: QuickSelectTool,
   [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,

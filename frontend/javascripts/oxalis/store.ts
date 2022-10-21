@@ -325,7 +325,7 @@ export type UserConfiguration = {
   readonly fillMode: FillMode;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
-  readonly watershed: {
+  readonly quickSelect: {
     showPreview: boolean;
     segmentMode: "dark" | "light";
     threshold: number;
@@ -478,7 +478,7 @@ type UiInformation = {
   readonly borderOpenStatus: BorderOpenStatus;
   readonly theme: Theme;
   readonly busyBlockingInfo: BusyBlockingInfo;
-  readonly isWatershedActive: boolean;
+  readonly isQuickSelectActive: boolean;
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

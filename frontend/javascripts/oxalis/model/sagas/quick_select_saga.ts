@@ -20,10 +20,10 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  CancelWatershedAction,
-  ComputeWatershedForRectAction,
-  ConfirmWatershedAction,
-  FineTuneWatershedAction,
+  CancelQuickSelectAction,
+  ComputeQuickSelectForRectAction,
+  ConfirmQuickSelectAction,
+  FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
   registerLabelPointAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -37,7 +37,7 @@ import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
 import { take2 } from "libs/utils";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import { EnterAction, EscapeAction, setIsWatershedActiveAction } from "../actions/ui_actions";
+import { EnterAction, EscapeAction, setIsQuickSelectActiveAction } from "../actions/ui_actions";
 import {
   getColorLayers,
   getLayerBoundingBox,
@@ -49,33 +49,33 @@ import { updateUserSettingAction } from "../actions/settings_actions";
 
 export default function* listenToMinCut(): Saga<void> {
   yield* takeEvery(
-    "COMPUTE_WATERSHED_FOR_RECT",
-    function* guard(action: ComputeWatershedForRectAction) {
+    "COMPUTE_QUICK_SELECT_FOR_RECT",
+    function* guard(action: ComputeQuickSelectForRectAction) {
       try {
-        yield* put(setIsWatershedActiveAction(true));
-        yield* call(performWatershed, action);
+        yield* put(setIsQuickSelectActiveAction(true));
+        yield* call(performQuickSelect, action);
       } catch (ex) {
         Toast.error(JSON.stringify(ex as Error));
         console.error(ex);
       } finally {
-        yield* put(setIsWatershedActiveAction(false));
+        yield* put(setIsQuickSelectActiveAction(false));
       }
     },
   );
 }
 
-function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
+function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
   const activeViewport = yield* select(
     (state: OxalisState) => state.viewModeData.plane.activeViewport,
   );
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
-  const watershedConfig = yield* select((state) => state.userConfiguration.watershed);
-  console.log("starting saga performWatershed");
+  const quickSelectConfig = yield* select((state) => state.userConfiguration.quickSelect);
+  console.log("starting saga performQuickSelect");
   const { rectangleGeometry } = action;
 
   const colorLayers = yield* select((state: OxalisState) => getColorLayers(state.dataset));
   if (colorLayers.length === 0) {
-    Toast.warning("No color layer available to use for watershed feature");
+    Toast.warning("No color layer available to use for quickSelect feature");
     return;
   }
 
@@ -221,8 +221,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     visitedField = maxThresholdField;
     ops.ltseq(visitedField, maxEffectiveThresh);
     yield* put(
-      updateUserSettingAction("watershed", {
-        ...watershedConfig,
+      updateUserSettingAction("quickSelect", {
+        ...quickSelectConfig,
         segmentMode: "dark",
         threshold: maxEffectiveThresh,
       }),
@@ -231,8 +231,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     visitedField = minThresholdField;
     ops.gtseq(visitedField, minEffectiveThresh);
     yield* put(
-      updateUserSettingAction("watershed", {
-        ...watershedConfig,
+      updateUserSettingAction("quickSelect", {
+        ...quickSelectConfig,
         segmentMode: "light",
         threshold: minEffectiveThresh,
       }),
@@ -251,9 +251,9 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   );
   console.log({ seedIntensity });
 
-  morphology.close(output, watershedConfig.closeValue);
-  morphology.erode(output, watershedConfig.erodeValue);
-  morphology.dilate(output, watershedConfig.dilateValue);
+  morphology.close(output, quickSelectConfig.closeValue);
+  morphology.erode(output, quickSelectConfig.erodeValue);
+  morphology.dilate(output, quickSelectConfig.dilateValue);
   console.timeEnd("floodfill");
 
   const outputRGBA = maskToRGBA(inputNdUvw, visitedField);
@@ -263,8 +263,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
     (state: OxalisState) => state.userConfiguration.overwriteMode,
   );
 
-  if (!watershedConfig.showPreview) {
-    yield* finalizeWatershed(
+  if (!quickSelectConfig.showPreview) {
+    yield* finalizeQuickSelect(
       rectangleGeometry,
       volumeTracing,
       activeViewport,
@@ -284,30 +284,30 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   let newestOutput = output;
 
   while (true) {
-    const { finetuneAction, cancelWatershedAction, escape, enter, confirm } = (yield* race({
-      finetuneAction: take("FINE_TUNE_WATERSHED"),
-      cancelWatershedAction: take("CANCEL_WATERSHED"),
+    const { finetuneAction, cancelQuickSelectAction, escape, enter, confirm } = (yield* race({
+      finetuneAction: take("FINE_TUNE_QUICK_SELECT"),
+      cancelQuickSelectAction: take("CANCEL_QUICK_SELECT"),
       escape: take("ESCAPE"),
       enter: take("ENTER"),
-      confirm: take("CONFIRM_WATERSHED"),
+      confirm: take("CONFIRM_QUICK_SELECT"),
     })) as {
-      finetuneAction: FineTuneWatershedAction;
-      cancelWatershedAction: CancelWatershedAction;
+      finetuneAction: FineTuneQuickSelectAction;
+      cancelQuickSelectAction: CancelQuickSelectAction;
       escape: EscapeAction;
       enter: EnterAction;
-      confirm: ConfirmWatershedAction;
+      confirm: ConfirmQuickSelectAction;
     };
 
-    if (confirm || enter || cancelWatershedAction || escape) {
+    if (confirm || enter || cancelQuickSelectAction || escape) {
       console.log("terminate saga...");
 
-      if (escape || cancelWatershedAction) {
+      if (escape || cancelQuickSelectAction) {
         rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
         console.log("...without brushing");
         return;
       }
 
-      yield* finalizeWatershed(
+      yield* finalizeQuickSelect(
         rectangleGeometry,
         volumeTracing,
         activeViewport,
@@ -348,7 +348,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   }
 }
 
-function* finalizeWatershed(
+function* finalizeQuickSelect(
   rectangleGeometry: RectangleGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,

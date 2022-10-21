@@ -108,9 +108,9 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_IS_WATERSHED_ACTIVE": {
+    case "SET_IS_QUICK_SELECT_ACTIVE": {
       return updateKey(state, "uiInformation", {
-        isWatershedActive: action.isActive,
+        isQuickSelectActive: action.isActive,
       });
     }
 

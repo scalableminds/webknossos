@@ -73,7 +73,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
-import listenToWatershed from "oxalis/model/sagas/watershed_saga";
+import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
@@ -800,7 +800,7 @@ export default [
   maintainSegmentsMap,
   maintainHoveredSegmentId,
   listenToMinCut,
-  listenToWatershed,
+  listenToQuickSelect,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,

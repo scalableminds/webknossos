@@ -78,7 +78,7 @@ const defaultState: OxalisState = {
     fillMode: FillModeEnum._2D,
     interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
-    watershed: {
+    quickSelect: {
       showPreview: false,
       segmentMode: "light",
       threshold: 128,
@@ -234,7 +234,7 @@ const defaultState: OxalisState = {
     busyBlockingInfo: {
       isBusy: false,
     },
-    isWatershedActive: false,
+    isQuickSelectActive: false,
   },
   localSegmentationData: {},
 };

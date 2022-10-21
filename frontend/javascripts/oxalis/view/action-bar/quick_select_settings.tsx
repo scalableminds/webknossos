@@ -1,7 +1,7 @@
 import {
-  cancelWatershedAction,
-  confirmWatershedAction,
-  fineTuneWatershedAction,
+  cancelQuickSelectAction,
+  confirmQuickSelectAction,
+  fineTuneQuickSelectAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,65 +18,79 @@ const OPTIONS_WITH_DISABLED = [
   { label: "Light Segment", value: "light" },
 ];
 
-export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => void }) {
-  const isWatershedActive = useSelector(
-    (state: OxalisState) => state.uiInformation.isWatershedActive,
+export function QuickSelectControls({ setIsOpen }: { setIsOpen: (val: boolean) => void }) {
+  const isQuickSelectActive = useSelector(
+    (state: OxalisState) => state.uiInformation.isQuickSelectActive,
   );
-  const watershedConfig = useSelector((state: OxalisState) => state.userConfiguration.watershed);
+  const quickSelectConfig = useSelector(
+    (state: OxalisState) => state.userConfiguration.quickSelect,
+  );
   const dispatch = useDispatch();
 
   const onResetValues = () => {
     const { segmentMode, threshold, closeValue, erodeValue, dilateValue } =
-      defaultState.userConfiguration.watershed;
+      defaultState.userConfiguration.quickSelect;
     dispatch(
-      updateUserSettingAction("watershed", {
-        showPreview: watershedConfig.showPreview,
+      updateUserSettingAction("quickSelect", {
+        showPreview: quickSelectConfig.showPreview,
         threshold,
         closeValue,
         erodeValue,
         dilateValue,
       }),
     );
-    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
+    dispatch(
+      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
+    );
   };
 
   const onChangeThreshold = (thresholdPercent: number) => {
     const threshold = (thresholdPercent / 100) * 256;
-    const { segmentMode, dilateValue, closeValue, erodeValue } = watershedConfig;
-    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, threshold }));
-    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
+    const { segmentMode, dilateValue, closeValue, erodeValue } = quickSelectConfig;
+    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, threshold }));
+    dispatch(
+      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
+    );
   };
   const onChangeSegmentMode = ({ target: { value } }: RadioChangeEvent) => {
     const segmentMode: "light" | "dark" = value;
-    const { threshold, dilateValue, closeValue, erodeValue } = watershedConfig;
-    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, segmentMode }));
-    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
+    const { threshold, dilateValue, closeValue, erodeValue } = quickSelectConfig;
+    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, segmentMode }));
+    dispatch(
+      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
+    );
   };
   const onChangeCloseValue = (closeValue: number) => {
-    const { segmentMode, threshold, dilateValue, erodeValue } = watershedConfig;
-    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, closeValue }));
-    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
+    const { segmentMode, threshold, dilateValue, erodeValue } = quickSelectConfig;
+    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, closeValue }));
+    dispatch(
+      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
+    );
   };
   const onChangeDilateValue = (dilateValue: number) => {
-    const { segmentMode, threshold, closeValue, erodeValue } = watershedConfig;
-    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, dilateValue }));
-    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
+    const { segmentMode, threshold, closeValue, erodeValue } = quickSelectConfig;
+    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, dilateValue }));
+    dispatch(
+      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
+    );
   };
   const onChangeErodeValue = (erodeValue: number) => {
-    const { segmentMode, threshold, dilateValue, closeValue } = watershedConfig;
-    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, erodeValue }));
-    dispatch(fineTuneWatershedAction(segmentMode, threshold, closeValue, erodeValue, dilateValue));
+    const { segmentMode, threshold, dilateValue, closeValue } = quickSelectConfig;
+    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, erodeValue }));
+    dispatch(
+      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
+    );
   };
   const onChangeShowPreview = (showPreview: boolean) => {
-    dispatch(updateUserSettingAction("watershed", { ...watershedConfig, showPreview }));
+    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, showPreview }));
   };
 
   const onDiscard = () => {
-    dispatch(cancelWatershedAction());
+    dispatch(cancelQuickSelectAction());
     setIsOpen(false);
   };
   const onConfirm = () => {
-    dispatch(confirmWatershedAction());
+    dispatch(confirmQuickSelectAction());
     setIsOpen(false);
   };
 
@@ -84,31 +98,31 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
     <div>
       <SwitchSetting
         label="Show Preview"
-        value={watershedConfig.showPreview}
+        value={quickSelectConfig.showPreview}
         onChange={onChangeShowPreview}
       />
       <Radio.Group
         options={OPTIONS_WITH_DISABLED}
         onChange={onChangeSegmentMode}
-        value={watershedConfig.segmentMode}
+        value={quickSelectConfig.segmentMode}
         optionType="button"
         size="small"
         buttonStyle="solid"
-        disabled={!isWatershedActive}
+        disabled={!isQuickSelectActive}
       />
       <NumberSliderSetting
         label="Threshold [%]"
         min={0}
-        value={(watershedConfig.threshold / 256) * 100}
+        value={(quickSelectConfig.threshold / 256) * 100}
         max={100}
         step={0.25} // a granular step is important so that all 256 values can be effectively targeted
         onChange={onChangeThreshold}
-        disabled={!isWatershedActive}
+        disabled={!isQuickSelectActive}
       />
       <NumberSliderSetting
         label="Close [vx]"
         min={0}
-        value={watershedConfig.closeValue}
+        value={quickSelectConfig.closeValue}
         max={10}
         step={1}
         onChange={onChangeCloseValue}
@@ -116,7 +130,7 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
       <NumberSliderSetting
         label="Erode [vx]"
         min={0}
-        value={watershedConfig.erodeValue}
+        value={quickSelectConfig.erodeValue}
         max={10}
         step={1}
         onChange={onChangeErodeValue}
@@ -124,7 +138,7 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
       <NumberSliderSetting
         label="Dilate [vx]"
         min={0}
-        value={watershedConfig.dilateValue}
+        value={quickSelectConfig.dilateValue}
         max={10}
         step={1}
         onChange={onChangeDilateValue}
@@ -140,7 +154,7 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
           Reset
         </ButtonComponent>
         <ButtonComponent
-          disabled={!isWatershedActive}
+          disabled={!isQuickSelectActive}
           size="small"
           title="Discard Preview (Escape)"
           onClick={onDiscard}
@@ -148,7 +162,7 @@ export function WatershedControls({ setIsOpen }: { setIsOpen: (val: boolean) => 
           Discard
         </ButtonComponent>
         <ButtonComponent
-          disabled={!isWatershedActive}
+          disabled={!isQuickSelectActive}
           size="small"
           type="primary"
           title="Accept Preview (Enter)"

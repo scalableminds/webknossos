@@ -179,7 +179,7 @@ export enum AnnotationToolEnum {
   ERASE_TRACE = "ERASE_TRACE",
   FILL_CELL = "FILL_CELL",
   PICK_CELL = "PICK_CELL",
-  WATERSHED = "WATERSHED",
+  QUICK_SELECT = "QUICK_SELECT",
   BOUNDING_BOX = "BOUNDING_BOX",
   PROOFREAD = "PROOFREAD",
 }
@@ -190,19 +190,19 @@ export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
-  AnnotationToolEnum.WATERSHED,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
-  AnnotationToolEnum.WATERSHED,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
-  AnnotationToolEnum.WATERSHED,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;

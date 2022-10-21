@@ -56,7 +56,7 @@ import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpola
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
-import { WatershedControls } from "./watershed_settings";
+import { QuickSelectControls } from "./quick_select_settings";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -832,10 +832,10 @@ export default function ToolbarView() {
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Quick Select Tool - Draw a rectangle around a segment to automatically detect it"
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.WATERSHED].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.WATERSHED].isDisabled}
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
           style={narrowButtonStyle}
-          value={AnnotationToolEnum.WATERSHED}
+          value={AnnotationToolEnum.QUICK_SELECT}
         >
           <img
             src="/assets/images/quick-select-tool.svg"
@@ -844,7 +844,7 @@ export default function ToolbarView() {
               height: 20,
               width: 20,
               marginTop: -1,
-              opacity: disabledInfosForTools[AnnotationToolEnum.WATERSHED].isDisabled ? 0.5 : 1,
+              opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
             }}
           />
         </RadioButtonWithTooltip>
@@ -947,7 +947,7 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
-      {adaptedActiveTool === "WATERSHED" && <WatershedSettingsPopover />}
+      {adaptedActiveTool === "QUICK_SELECT" && <QuickSelectSettingsPopover />}
 
       {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
         <VolumeInterpolationButton />
@@ -969,18 +969,18 @@ function ToolSpecificSettings({
   );
 }
 
-function WatershedSettingsPopover() {
+function QuickSelectSettingsPopover() {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <Popover
       trigger="click"
       placement="bottom"
       open={isOpen}
-      content={<WatershedControls setIsOpen={setIsOpen} />}
+      content={<QuickSelectControls setIsOpen={setIsOpen} />}
       onOpenChange={(open: boolean) => setIsOpen(open)}
     >
       <ButtonComponent
-        title="Configure Watershed"
+        title="Configure QuickSelect"
         tooltipPlacement="right"
         className="narrow"
         style={{ marginLeft: 12, marginRight: 12 }}

@@ -41,7 +41,7 @@ import {
   PickCellTool,
   FillCellTool,
   BoundingBoxTool,
-  WatershedTool,
+  QuickSelectTool,
   ProofreadTool,
 } from "oxalis/controller/combinations/tool_controls";
 import type {
@@ -319,7 +319,7 @@ class PlaneController extends React.PureComponent<Props> {
       this.planeView,
       this.props.showContextMenuAt,
     );
-    const watershedControls = WatershedTool.getPlaneMouseControls(
+    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(
       planeId,
       this.planeView,
       this.props.showContextMenuAt,
@@ -334,7 +334,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
       Object.keys(boundingBoxControls),
-      Object.keys(watershedControls),
+      Object.keys(quickSelectControls),
       Object.keys(proofreadControls),
     );
 
@@ -352,7 +352,7 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
         [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
-        [AnnotationToolEnum.WATERSHED]: watershedControls[controlKey],
+        [AnnotationToolEnum.QUICK_SELECT]: quickSelectControls[controlKey],
         [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
       });
     }

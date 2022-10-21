@@ -116,7 +116,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
     <React.Fragment>
       <Layout>
         <Content>
-          <Tabs defaultActiveKey="2" className="container">
+          <Tabs defaultActiveKey="1" className="container">
             <TabPane
               tab={
                 <span>

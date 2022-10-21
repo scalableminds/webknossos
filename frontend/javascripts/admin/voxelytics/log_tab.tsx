@@ -15,6 +15,8 @@ import { Result } from "./task_view";
 type LogResult = Result<Array<any>>;
 
 const LOG_LEVELS = ["NOTSET", "DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"];
+
+// These constants need to be in sync with the variables in main.less
 const LOG_FONT = "12px 'RobotoMono', Monaco, 'Courier New', monospace";
 const LOG_LINE_HEIGHT = 19;
 const LOG_LINE_NUMBER_WIDTH = 60;
@@ -51,7 +53,7 @@ function findBreakableCharFromRight(str: string, position: number): number {
   }
   return -1;
 }
-function lineCount(str: string, wrapLength: number): number {
+function getLineCount(str: string, wrapLength: number): number {
   // Inspired by https://stackoverflow.com/a/857770
   const trimmedStr = str.trim();
   if (trimmedStr.length <= wrapLength) {
@@ -61,7 +63,7 @@ function lineCount(str: string, wrapLength: number): number {
     if (splitIdx === -1) {
       splitIdx = wrapLength;
     }
-    return 1 + lineCount(trimmedStr.substring(splitIdx), wrapLength);
+    return 1 + getLineCount(trimmedStr.substring(splitIdx), wrapLength);
   }
 }
 
@@ -87,11 +89,9 @@ function LogContent({
     }
     ctx.font = LOG_FONT;
     const measurement = ctx.measureText("0123456789abcdefghijklmnopqrstuvwxyz");
-    console.log(measurement.width / 36);
     return measurement.width / 36;
   }, []);
 
-  console.time("linecounting");
   const lineCounts = useMemo(
     () =>
       logText.map((line) => {
@@ -99,29 +99,21 @@ function LogContent({
           return 0;
         }
         const strippedLine = stripAnsi(line).trim();
-        const lines = strippedLine
+        const lineCount = strippedLine
           .split("\n")
           .reduce(
-            (r, a) => r + lineCount(a, Math.floor((width - LOG_LINE_NUMBER_WIDTH) / charWidth)),
+            (r, a) => r + getLineCount(a, Math.floor((width - LOG_LINE_NUMBER_WIDTH) / charWidth)),
             0,
           );
-        return lines;
+        return lineCount;
       }),
     [logText, width],
   );
-  console.timeEnd("linecounting");
 
   // eslint-disable-next-line react/no-unused-prop-types
   function renderRow({ index, key, style }: { index: number; key: string; style: CSSProperties }) {
     return (
-      <div
-        className={classnames("log-line", {
-          "log-line-even": index % 2 === 0,
-          "log-line-odd": index % 2 === 1,
-        })}
-        key={key}
-        style={style}
-      >
+      <div className={`log-line log-line-${index % 2 ? "odd" : "even"}`} key={key} style={style}>
         <div className="log-line-number">{index + 1}</div>
         <Ansi linkify>{logText[index]}</Ansi>
       </div>

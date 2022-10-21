@@ -3,9 +3,8 @@ import type { FieldError } from "rc-field-form/es/interface";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import { FormItemProps } from "@ant-design/compatible/lib/form/FormItem";
 import { NamePath } from "antd/lib/form/interface";
-import { Rule } from "antd/lib/form";
+import { FormItemProps, Rule } from "antd/lib/form";
 
 const FormItem = Form.Item;
 

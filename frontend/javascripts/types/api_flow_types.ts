@@ -175,6 +175,7 @@ export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
+  hasDiscardedHelpButton?: boolean;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {

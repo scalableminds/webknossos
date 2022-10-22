@@ -21,10 +21,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Enable "What's New" update information for all instances. [#6563](https://github.com/scalableminds/webknossos/pull/6563)
 - Add context-menu option to delete skeleton root group. [#6553](https://github.com/scalableminds/webknossos/pull/6553)
 - Added remaining task time estimation (ETA) for Voxelytics tasks in workflow reporting. [#6564](https://github.com/scalableminds/webknossos/pull/6564)
+- Added a help button to the UI to send questions and feedbacks to the dev team. [#6560](https://github.com/scalableminds/webknossos/pull/6560)
+
 
 ### Changed
 - Creating tasks in bulk now also supports referencing task types by their summary instead of id. [#6486](https://github.com/scalableminds/webknossos/pull/6486)
 - Navbar changes: Move dropdown menu into separate Menu button. Removed toggle-button (cog icon)for left-hand side bar from navbar. [#6558](https://github.com/scalableminds/webknossos/pull/6558)
+- Upgraded Typescript to v4.8 [#6567](https://github.com/scalableminds/webknossos/pull/6567)
 - When downloading volume annotations with volume data skipped, the nml volume tag is now included anyway (but has no location attribute in this case). [#6566](https://github.com/scalableminds/webknossos/pull/6566)
 
 ### Fixed

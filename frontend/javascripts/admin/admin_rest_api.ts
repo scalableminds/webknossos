@@ -1448,11 +1448,11 @@ export async function exploreRemoteDataset(
   const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
     data: credentials
       ? remoteUris.map((uri) => ({
-          remoteUri: uri,
+          remoteUri: uri.trim(),
           user: credentials.username,
           password: credentials.pass,
         }))
-      : remoteUris.map((uri) => ({ remoteUri: uri })),
+      : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
   });
   if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
     Toast.error("The data could not be accessed. Please verify the credentials!");
@@ -2313,4 +2313,11 @@ export function getVoxelyticsArtifactChecksums(
   return Request.receiveJSON(
     `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,
   );
+}
+
+// ### Help / Feedback userEmail
+export function sendHelpEmail(message: string) {
+  return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
+    method: "POST",
+  });
 }

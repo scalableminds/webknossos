@@ -8,7 +8,7 @@ There are three proofreading workflows supported by webKnossos:
 2. The Merger-Mode tool
 3. Skeleton annotations together with custom scripting
 
-## Proofreading tool
+## Proofreading Tool
 
 The proofreading tool enables users to fix merge and split errors in a segmentation generated from an automated workflow (outside of webKnossos), e.g. from a machine learning system such as [Voxelytics](https://voxelytics.com). Split and merge operations are directly executed on the underlying [super-voxel graph structure](./terminology.md#agglomerates) of a segmentation.
 

@@ -9,7 +9,7 @@ Any dataset uploaded to webKnossos.org will automatically be converted to WKW on
 webKnossos natively supports loading and streaming data in the following formats:
 
 - webKnossos-wrap (WKW)
-- Zarr ([OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/))
+- Zarr ([OME NGFF v0.4+ spec](https://ngff.openmicroscopy.org/latest/))
 - Neuroglancer `Pre-Computed` stored on Google Cloud
 - BossDB
 - N5
@@ -327,7 +327,7 @@ Groups can be freely nested inside each other.
 
 
 ### ID Mapping Files
-webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "mapping" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
+webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings-on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "mapping" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
 
 webKnossos supports two formats for these agglomerates:
 

@@ -667,7 +667,8 @@ export class QuickSelectTool {
       },
       leftMouseUp: () => {
         isDragging = false;
-        // identity equality
+        // Identity equality is enough, since we want to catch the case
+        // in which the user didn't move the mouse at all
         if (startPos === currentPos) {
           // clear rectangle because user didn't drag
           return;
@@ -709,19 +710,12 @@ export class QuickSelectTool {
     _altKey: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Resize Bounding Boxes",
+      leftDrag: "Draw Rectangle",
       rightClick: "Context Menu",
     };
   }
 
-  static onToolDeselected() {
-    const { body } = document;
-
-    if (body == null) {
-      return;
-    }
-    getSceneController().highlightUserBoundingBox(null);
-  }
+  static onToolDeselected() {}
 }
 
 export class ProofreadTool {

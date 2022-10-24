@@ -11,7 +11,8 @@ export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 
 class ContourGeometry {
   color: THREE.Color;
-  line: THREE.Line;
+  line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  vertexBuffer: ResizableBuffer<Float32Array>;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
@@ -26,17 +27,14 @@ class ContourGeometry {
         linewidth: 2,
       }),
     );
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
-    this.line.vertexBuffer = new ResizableBuffer(3, Float32Array);
+    this.vertexBuffer = new ResizableBuffer(3, Float32Array);
     this.reset();
   }
 
   reset() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'color' does not exist on type 'Material ... Remove this comment to see the full error message
     this.line.material.color = this.color;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
-    this.line.vertexBuffer.clear();
-    this.finalizeMesh(this.line);
+    this.vertexBuffer.clear();
+    this.finalizeMesh();
   }
 
   getMeshes() {
@@ -44,26 +42,23 @@ class ContourGeometry {
   }
 
   addEdgePoint(pos: Vector3) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
-    this.line.vertexBuffer.push(pos);
-    this.finalizeMesh(this.line);
+    this.vertexBuffer.push(pos);
+    this.finalizeMesh();
     app.vent.trigger("rerender");
   }
 
-  finalizeMesh(mesh: THREE.Line) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'Buff... Remove this comment to see the full error message
-    if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
+  finalizeMesh() {
+    const mesh = this.line;
+    if (mesh.geometry.attributes.position.array !== this.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
-      const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);
+      const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer.getBuffer(), 3);
       positionAttribute.setUsage(THREE.DynamicDrawUsage);
       mesh.geometry.dispose();
       mesh.geometry.setAttribute("position", positionAttribute);
     }
 
     mesh.geometry.attributes.position.needsUpdate = true;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setDrawRange' does not exist on type 'Bu... Remove this comment to see the full error message
-    mesh.geometry.setDrawRange(0, mesh.vertexBuffer.getLength());
+    mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
     mesh.geometry.computeBoundingSphere();
   }
 }
@@ -78,7 +73,7 @@ const rotations = {
 export class RectangleGeometry {
   color: THREE.Color;
   centerMarkerColor: THREE.Color;
-  plane: THREE.Mesh;
+  rectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
   centerMarker: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
 
   constructor() {
@@ -91,7 +86,7 @@ export class RectangleGeometry {
       transparent: true,
       opacity: 0.5,
     });
-    this.plane = new THREE.Mesh(geometry, material);
+    this.rectangle = new THREE.Mesh(geometry, material);
 
     const centerGeometry = new THREE.PlaneGeometry(2, 2);
     const centerMaterial = new THREE.MeshLambertMaterial({
@@ -106,8 +101,7 @@ export class RectangleGeometry {
   }
 
   reset() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'color' does not exist on type 'Material ... Remove this comment to see the full error message
-    this.plane.material.color = this.color;
+    this.rectangle.material.color = this.color;
     this.centerMarker.material.color = this.centerMarkerColor;
   }
 
@@ -118,7 +112,7 @@ export class RectangleGeometry {
       return;
     }
 
-    this.plane.setRotationFromEuler(rotation);
+    this.rectangle.setRotationFromEuler(rotation);
     this.centerMarker.setRotationFromEuler(rotation);
   }
 
@@ -139,15 +133,15 @@ export class RectangleGeometry {
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
     extentUVW[2] = 2;
 
-    this.plane.position.set(...centerPosition);
-    this.plane.scale.set(...extentUVW);
-    this.plane.geometry.computeBoundingSphere();
+    this.rectangle.position.set(...centerPosition);
+    this.rectangle.scale.set(...extentUVW);
+    this.rectangle.geometry.computeBoundingSphere();
     this.centerMarker.position.set(...centerPosition);
     app.vent.trigger("rerender");
   }
 
   getMeshes() {
-    return [this.plane, this.centerMarker];
+    return [this.rectangle, this.centerMarker];
   }
 
   attachData(ndData: Uint8Array, width: number, height: number) {
@@ -156,18 +150,14 @@ export class RectangleGeometry {
     texture.wrapT = THREE.RepeatWrapping;
     texture.needsUpdate = true;
 
-    // Even though this.plane should have exactly this type, the unpacking is still necessary
-    // for TS to understand that material is not an array.
-    const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
-    plane.material.alphaMap = texture;
-    plane.material.needsUpdate = true;
+    const rectangle = this.rectangle;
+    rectangle.material.alphaMap = texture;
+    rectangle.material.needsUpdate = true;
   }
 
   unattachTexture() {
-    // Even though this.plane should have exactly this type, the unpacking is still necessary
-    // for TS to understand that material is not an array.
-    const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
-    plane.material.alphaMap = null;
+    const rectangle = this.rectangle;
+    rectangle.material.alphaMap = null;
   }
 }
 

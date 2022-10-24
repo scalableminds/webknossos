@@ -11,7 +11,10 @@ import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
 
-import type { TreeNode } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  getGroupByIdWithSubgroups,
+  TreeNode,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import {
   MISSING_GROUP_ID,
   TYPE_GROUP,
@@ -39,6 +42,7 @@ import {
   setTreeGroupAction,
   deleteTreeAction,
   toggleInactiveTreesAction,
+  shuffleAllTreeColorsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -73,6 +77,7 @@ type Props = OwnProps & {
   onUpdateTreeGroups: (arg0: Array<TreeGroup>) => void;
   onBatchActions: (arg0: Array<Action>, arg1: string) => void;
   onToggleHideInactiveTrees: () => void;
+  onShuffleAllTreeColors: () => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -288,17 +293,23 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   shuffleTreeGroupColors(groupId: number) {
     const groupToTreeMap = createGroupToTreesMap(this.props.trees);
-    const shuffleTreeColorActions = groupToTreeMap[groupId].map((tree) =>
-      shuffleTreeColorAction(tree.treeId),
-    );
+    const groupIdWithSubgroups = getGroupByIdWithSubgroups(this.props.treeGroups, groupId);
+    const shuffleTreeColorActions = groupIdWithSubgroups.flatMap((subGroupId) => {
+      if (subGroupId in groupToTreeMap)
+        return groupToTreeMap[subGroupId].map((tree) => shuffleTreeColorAction(tree.treeId));
+      return [];
+    });
     this.props.onBatchActions(shuffleTreeColorActions, "SHUFFLE_TREE_COLOR");
   }
 
   setTreeGroupColor(groupId: number, color: Vector3) {
     const groupToTreeMap = createGroupToTreesMap(this.props.trees);
-    const shuffleTreeColorActions = groupToTreeMap[groupId].map((tree) =>
-      setTreeColorAction(tree.treeId, color),
-    );
+    const groupIdWithSubgroups = getGroupByIdWithSubgroups(this.props.treeGroups, groupId);
+    const shuffleTreeColorActions = groupIdWithSubgroups.flatMap((subGroupId) => {
+      if (subGroupId in groupToTreeMap)
+        return groupToTreeMap[subGroupId].map((tree) => setTreeColorAction(tree.treeId, color));
+      return [];
+    });
     this.props.onBatchActions(shuffleTreeColorActions, "SET_TREE_COLOR");
   }
 
@@ -418,22 +429,25 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         <Menu.Item
           key="shuffleTreeGroupColors"
           onClick={() => {
-            this.shuffleTreeGroupColors(id);
+            if (id === MISSING_GROUP_ID) this.props.onShuffleAllTreeColors();
+            else this.shuffleTreeGroupColors(id);
           }}
           title="Shuffle Tree Colors"
         >
           <i className="fas fa-adjust" /> Shuffle Tree Group Colors
         </Menu.Item>
-        <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
-          <ChangeColorMenuItemContent
-            title="Change Tree Group Color"
-            isDisabled={false}
-            onSetColor={(color) => {
-              this.setTreeGroupColor(id, color);
-            }}
-            rgb={[0.5, 0.5, 0.5]}
-          />
-        </Menu.Item>
+        {id !== MISSING_GROUP_ID ? (
+          <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
+            <ChangeColorMenuItemContent
+              title="Change Tree Group Color"
+              isDisabled={false}
+              onSetColor={(color) => {
+                this.setTreeGroupColor(id, color);
+              }}
+              rgb={[0.5, 0.5, 0.5]}
+            />
+          </Menu.Item>
+        ) : null}
       </Menu>
     );
 
@@ -723,6 +737,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onToggleHideInactiveTrees() {
     dispatch(toggleInactiveTreesAction());
+  },
+
+  onShuffleAllTreeColors() {
+    dispatch(shuffleAllTreeColorsAction());
   },
 });
 

@@ -181,7 +181,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     );
   }
 
-  processBinaryMaskInPlace(thresholdField, quickSelectConfig, rectangleGeometry);
+  processBinaryMaskInPlaceAndAttach(thresholdField, quickSelectConfig, rectangleGeometry);
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,
@@ -206,6 +206,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     return;
   }
 
+  // Start an iterative feedback loop when preview mode is active.
   while (true) {
     const { finetuneAction, cancelQuickSelectAction, escape, enter, confirm } = (yield* race({
       finetuneAction: take("FINE_TUNE_QUICK_SELECT"),
@@ -239,7 +240,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         ops.gtseq(thresholdField, finetuneAction.threshold);
       }
 
-      processBinaryMaskInPlace(thresholdField, finetuneAction, rectangleGeometry);
+      processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, rectangleGeometry);
     } else if (confirm || enter || cancelQuickSelectAction || escape) {
       if (escape || cancelQuickSelectAction) {
         rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
@@ -330,7 +331,7 @@ function determineThresholds(
   return { initialDetectDarkSegment, darkMaxEffectiveThresh, lightMinEffectiveThresh };
 }
 
-function processBinaryMaskInPlace(
+function processBinaryMaskInPlaceAndAttach(
   output: ndarray.NdArray<Uint8Array>,
   quickSelectConfig: {
     segmentMode: "dark" | "light";
@@ -341,7 +342,7 @@ function processBinaryMaskInPlace(
   },
   rectangleGeometry: RectangleGeometry,
 ) {
-  fillHoles(output);
+  fillHolesInPlace(output);
   morphology.close(output, quickSelectConfig.closeValue);
   morphology.erode(output, quickSelectConfig.erodeValue);
   morphology.dilate(output, quickSelectConfig.dilateValue);
@@ -533,7 +534,7 @@ function getThresholdField(
   return thresholdField;
 }
 
-function fillHoles(arr: ndarray.NdArray<Uint8Array>) {
+function fillHolesInPlace(arr: ndarray.NdArray<Uint8Array>) {
   // Execute a flood-fill on the "outside" of the segment
   // and afterwards, invert the image to get a segment
   // within which all holes are filled.

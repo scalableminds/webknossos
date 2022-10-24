@@ -5,7 +5,6 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
-import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -75,7 +74,6 @@ export class RectangleGeometry {
   color: THREE.Color;
   centerMarkerColor: THREE.Color;
   rectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
-  borderRing: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
   centerMarker: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
 
   constructor() {
@@ -99,86 +97,12 @@ export class RectangleGeometry {
     });
     this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
 
-    this.borderRing = this.createBorderMesh();
-
     this.reset();
-  }
-
-  createBorderMesh() {
-    // Inspired by https://jsfiddle.net/felixmariotto/ozds3yxa/16/
-
-    const vertexShader = `
-      precision highp float;
-
-      varying vec4 worldCoord;
-      varying vec4 modelCoord;
-      varying vec2 vUv;
-      varying mat4 savedModelMatrix;
-
-      void main() {
-        vUv = uv;
-        modelCoord = vec4(position, 1.0);
-        savedModelMatrix = modelMatrix;
-        worldCoord = modelMatrix * vec4(position, 1.0);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `;
-
-    const fragmentShader = `
-      varying vec4 vPos;
-      varying vec3 vNormal;
-      varying vec2 vUv;
-
-      uniform float borderWidth;
-      uniform vec2 sizeRaw;
-      uniform vec3 color;
-      uniform vec3 borderColor;
-
-      float getEdgeDist() {
-        vec2 size = vec2(1., 1.);
-        vec2 ndc = vec2( vUv.x * 2.0 - 1.0, vUv.y * 2.0 - 1.0 );
-
-        vec2 planeSpaceCoord = vec2( size.x * 0.5 * ndc.x, size.y * 0.5 * ndc.y );
-        vec2 corner = size * 0.5;
-        vec2 offsetCorner = corner - abs( planeSpaceCoord );
-        float innerRadDist = min( offsetCorner.x, offsetCorner.y ) * -1.0;
-
-        return innerRadDist;
-      }
-
-      void main() {
-        float edgeDist = getEdgeDist() ;
-        if ( edgeDist > 0.0 ) discard;
-        if ( edgeDist * -1.0 >= 4. * fwidth(edgeDist) ) discard;
-        gl_FragColor = vec4( borderColor, 1. );
-      }
-
-    `;
-
-    const rectSize = new THREE.Vector2(1, 1);
-
-    const uniforms = {
-      borderRadius: { value: 0 },
-      size: { value: rectSize },
-      borderColor: { value: new THREE.Color("orange") },
-    };
-
-    const material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      uniforms,
-    });
-    shaderEditor.addMaterial("border", material);
-    material.side = THREE.DoubleSide;
-
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(rectSize.x, rectSize.y), material);
-    return mesh;
   }
 
   reset() {
     this.rectangle.material.color = this.color;
     this.centerMarker.material.color = this.centerMarkerColor;
-    // this.borderRing.material.color = this.centerMarkerColor;
   }
 
   rotateToViewport() {
@@ -190,7 +114,6 @@ export class RectangleGeometry {
 
     this.rectangle.setRotationFromEuler(rotation);
     this.centerMarker.setRotationFromEuler(rotation);
-    this.borderRing.setRotationFromEuler(rotation);
   }
 
   setColor(color: THREE.Color) {
@@ -216,16 +139,11 @@ export class RectangleGeometry {
 
     this.centerMarker.position.set(...centerPosition);
 
-    this.borderRing.position.set(...centerPosition);
-    this.borderRing.scale.set(...extentUVW);
-
-    this.borderRing.material.uniforms.size.value.set(extentUVW[0], extentUVW[1]);
-
     app.vent.trigger("rerender");
   }
 
   getMeshes() {
-    return [this.rectangle, this.centerMarker, this.borderRing];
+    return [this.rectangle, this.centerMarker];
   }
 
   attachData(ndData: Uint8Array, width: number, height: number) {

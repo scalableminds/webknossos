@@ -4,8 +4,14 @@ import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons"
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import React from "react";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tree";
+import {
+  ExtendedNodeData,
+  FullTree,
+  NodeData,
+  OnDragPreviousAndNextLocation,
+  OnMovePreviousAndNextLocation,
+  SortableTreeWithoutDndContext as SortableTree,
+} from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
@@ -46,6 +52,7 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+
 const CHECKBOX_STYLE = {};
 const CHECKBOX_PLACEHOLDER_STYLE = {
   width: 16,
@@ -84,6 +91,12 @@ type State = {
   searchFocusOffset: number;
   activeTreeDropdownId: number | null | undefined;
   activeGroupDropdownId: number | null | undefined;
+};
+
+type GenerateNodePropsType = {
+  title?: JSX.Element;
+  className?: string;
+  style?: React.CSSProperties;
 };
 
 const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
@@ -241,14 +254,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
-  onMoveNode = (params: {
-    nextParentNode: TreeNode;
-    node: TreeNode;
-    treeData: Array<TreeNode>;
-  }) => {
+  onMoveNode = (
+    params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
+  ) => {
     const { nextParentNode, node, treeData } = params;
 
-    if (node.type === TYPE_TREE) {
+    if (node.type === TYPE_TREE && nextParentNode) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
       const moveActions = allTreesToMove.map((treeId) =>
@@ -344,7 +355,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       return "selected-tree-node";
     }
 
-    return null;
+    return undefined;
   };
 
   handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
@@ -495,15 +506,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   };
 
-  generateNodeProps = (params: { node: TreeNode }) => {
+  generateNodeProps = (params: ExtendedNodeData<TreeNode>): GenerateNodePropsType => {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
-    const nodeProps = {};
+    const nodeProps: GenerateNodePropsType = {};
 
     if (node.type === TYPE_GROUP) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'title' does not exist on type '{}'.
       nodeProps.title = this.renderGroupActionsDropdown(node);
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'className' does not exist on type '{}'.
       nodeProps.className = "group-type";
     } else {
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
@@ -562,9 +571,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Menu>
       );
 
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'title' does not exist on type '{}'.
       nodeProps.title = (
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
         <div className={styleClass}>
           <Dropdown
             overlay={createMenu} // The overlay is generated lazily. By default, this would make the overlay
@@ -602,9 +609,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Dropdown>
         </div>
       );
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'className' does not exist on type '{}'.
       nodeProps.className = "tree-type";
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type '{}'.
       nodeProps.style = {
         color: `rgb(${rgbColorString})`,
       };
@@ -633,13 +638,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
-  canDrop = (params: { nextParent: TreeNode }) => {
+  canDrop = (params: OnDragPreviousAndNextLocation<TreeNode> & NodeData<TreeNode>) => {
     const { nextParent } = params;
     return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
   };
 
-  canDrag = (params: { node: TreeNode }) => {
-    const { node } = params;
+  canDrag = (params: ExtendedNodeData): boolean => {
+    const node = params.node as TreeNode;
     return this.props.allowUpdate && node.id !== MISSING_GROUP_ID;
   };
 

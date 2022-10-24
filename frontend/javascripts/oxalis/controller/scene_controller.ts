@@ -20,7 +20,7 @@ import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import ContourGeometry, { RectangleGeometry } from "oxalis/geometries/contourgeometry";
+import { ContourGeometry, RectangleGeometry } from "oxalis/geometries/helper_geometries";
 import Cube from "oxalis/geometries/cube";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";

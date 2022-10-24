@@ -23,7 +23,7 @@ import Constants, {
   Unicode,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 import Model from "oxalis/model";
 import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {

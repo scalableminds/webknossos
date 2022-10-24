@@ -9,7 +9,7 @@ import Dimensions from "oxalis/model/dimensions";
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 
-class ContourGeometry {
+export class ContourGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
@@ -160,5 +160,3 @@ export class RectangleGeometry {
     rectangle.material.alphaMap = null;
   }
 }
-
-export default ContourGeometry;

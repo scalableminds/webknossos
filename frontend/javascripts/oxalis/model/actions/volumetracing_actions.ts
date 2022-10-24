@@ -5,7 +5,7 @@ import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
+import { RectangleGeometry } from "oxalis/geometries/helper_geometries";
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 type CreateCellAction = ReturnType<typeof createCellAction>;

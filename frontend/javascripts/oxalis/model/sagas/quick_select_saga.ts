@@ -30,7 +30,7 @@ import ndarray from "ndarray";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
 import { DatasetLayerConfiguration, OxalisState, VolumeTracing } from "oxalis/store";
-import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
+import { RectangleGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, take2 } from "libs/utils";
 import { APIDataLayer } from "types/api_flow_types";
 import { copyNdArray } from "./volume/volume_interpolation_saga";

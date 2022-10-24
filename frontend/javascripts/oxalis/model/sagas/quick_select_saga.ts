@@ -138,47 +138,45 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
-  const maxThresholdField = getThresholdField(inputNdUvw, centerUV, "max");
-  const minThresholdField = getThresholdField(inputNdUvw, centerUV, "min");
+  // Two fields are computed (one for the dark segment scenario, and one for the light segment)
+  const darkThresholdField = getThresholdField(inputNdUvw, centerUV, "dark");
+  const lightThresholdField = getThresholdField(inputNdUvw, centerUV, "light");
 
   // Copy unthresholded fields so that finetuning is possible
   // without recomputing them. Only necessary if showPreview is true.
   const unthresholdedDarkCopy =
-    quickSelectConfig.showPreview && copyNdArray(Uint8Array, maxThresholdField);
+    quickSelectConfig.showPreview && copyNdArray(Uint8Array, darkThresholdField);
   const unthresholdedLightCopy =
-    quickSelectConfig.showPreview && copyNdArray(Uint8Array, minThresholdField);
+    quickSelectConfig.showPreview && copyNdArray(Uint8Array, lightThresholdField);
 
-  const { initialDetectDarkSegment, maxEffectiveThresh, minEffectiveThresh } = determineThresholds(
-    maxThresholdField,
-    minThresholdField,
-    inputNdUvw,
-  );
+  const { initialDetectDarkSegment, darkMaxEffectiveThresh, lightMinEffectiveThresh } =
+    determineThresholds(darkThresholdField, lightThresholdField, inputNdUvw);
 
   // thresholdField initially stores the threshold values (uint8), but is
   // later processed to a binary mask.
   let thresholdField;
   if (initialDetectDarkSegment) {
-    thresholdField = maxThresholdField;
+    thresholdField = darkThresholdField;
     // In numpy-style this would be:
-    // thresholdField[:] = thresholdField[:] < maxEffectiveThresh
-    ops.ltseq(thresholdField, maxEffectiveThresh);
+    // thresholdField[:] = thresholdField[:] < darkMaxEffectiveThresh
+    ops.ltseq(thresholdField, darkMaxEffectiveThresh);
     yield* put(
       updateUserSettingAction("quickSelect", {
         ...quickSelectConfig,
         segmentMode: "dark",
-        threshold: maxEffectiveThresh,
+        threshold: darkMaxEffectiveThresh,
       }),
     );
   } else {
-    thresholdField = minThresholdField;
+    thresholdField = lightThresholdField;
     // In numpy-style this would be:
-    // thresholdField[:] = thresholdField[:] > maxEffectiveThresh
-    ops.gtseq(thresholdField, minEffectiveThresh);
+    // thresholdField[:] = thresholdField[:] > darkMaxEffectiveThresh
+    ops.gtseq(thresholdField, lightMinEffectiveThresh);
     yield* put(
       updateUserSettingAction("quickSelect", {
         ...quickSelectConfig,
         segmentMode: "light",
-        threshold: minEffectiveThresh,
+        threshold: lightMinEffectiveThresh,
       }),
     );
   }
@@ -281,19 +279,29 @@ function getExtremeValueAtBorders(arr: ndarray.NdArray, mode: "min" | "max") {
 }
 
 function determineThresholds(
-  maxThresholdField: ndarray.NdArray<Uint8Array>,
-  minThresholdField: ndarray.NdArray<Uint8Array>,
+  darkThresholdField: ndarray.NdArray<Uint8Array>,
+  lightThresholdField: ndarray.NdArray<Uint8Array>,
   inputNdUvw: ndarray.NdArray<Uint8Array>,
 ) {
-  const minThresholdAtBorder = getExtremeValueAtBorders(maxThresholdField, "min");
-  const maxThresholdAtBorder = getExtremeValueAtBorders(minThresholdField, "max");
-  const smallestThresh = ops.inf(maxThresholdField);
-  const largestThresh = ops.sup(minThresholdField);
+  // For dark segments, we are interested in the smallest threshold at the border
+  // of the field.
+  // For light segments, it's vice versa.
+  const darkMinThresholdAtBorder = getExtremeValueAtBorders(darkThresholdField, "min");
+  const lightMaxThresholdAtBorder = getExtremeValueAtBorders(lightThresholdField, "max");
+  const darkSmallestThresh = ops.inf(darkThresholdField);
+  const lightLargestThresh = ops.sup(lightThresholdField);
 
-  //
-  const maxEffectiveThresh = Math.max(minThresholdAtBorder, smallestThresh + 1);
-  const minEffectiveThresh = Math.min(maxThresholdAtBorder, largestThresh - 1);
+  // [Explained for the dark scenario]:
+  // If the smallest threshold of the entire field is equal to the smallest threshold
+  // at the border, it means that even the smallest threshold would create a segment
+  // which touches the wall (which we aim to avoid). Using that smallest threshold, anyway,
+  // wouldn't segment anything (because no value exists which is lower than the threshold).
+  // In that rare case, we use that value + 1 so that at least anything is segmented.
+  // If this happens, we likely switch from detecting dark to light segments (see below).
+  const darkMaxEffectiveThresh = Math.max(darkMinThresholdAtBorder, darkSmallestThresh + 1);
+  const lightMinEffectiveThresh = Math.min(lightMaxThresholdAtBorder, lightLargestThresh - 1);
 
+  // Compute the mean intensity for the center rectangle and for the entire image.
   const rectCenterBrushExtentUV = V3.floor(
     V3.scale(inputNdUvw.shape as Vector3, CENTER_RECT_SIZE_PERCENTAGE),
   );
@@ -306,17 +314,20 @@ function determineThresholds(
   const [centerMean] = moments(1, subview);
   const [mean] = moments(1, inputNdUvw);
 
+  // If the center is darker than the entire image, we assume that a dark segment should be
+  // detected.
   let initialDetectDarkSegment = centerMean < mean;
 
-  if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
+  // If the threshold is known to touch the rectangle border, we switch the mode.
+  if (initialDetectDarkSegment && darkMaxEffectiveThresh > darkMinThresholdAtBorder) {
     console.info("Switch from detecting dark segment to detecting light segment");
     initialDetectDarkSegment = false;
   }
-  if (!initialDetectDarkSegment && minEffectiveThresh < maxThresholdAtBorder) {
+  if (!initialDetectDarkSegment && lightMinEffectiveThresh < lightMaxThresholdAtBorder) {
     console.info("Switch from detecting light segment to detecting dark segment");
     initialDetectDarkSegment = true;
   }
-  return { initialDetectDarkSegment, maxEffectiveThresh, minEffectiveThresh };
+  return { initialDetectDarkSegment, darkMaxEffectiveThresh, lightMinEffectiveThresh };
 }
 
 function processBinaryMaskInPlace(
@@ -461,15 +472,18 @@ const NEIGHBOR_OFFSETS = [
 function getThresholdField(
   inputNdUvw: ndarray.NdArray<Uint8Array>,
   centerUV: Vector2,
-  mode: "min" | "max",
+  mode: "light" | "dark",
 ): ndarray.NdArray<Uint8Array> {
   // Computes a threshold field starting from the center
   // so that there is a value for each voxel that indicates
   // which threshold is necessary so that a floodfill operation
   // can arrive at that voxel.
+  // When detecting dark segments (mode == "dark), the floodfill
+  // begins at low intensity values and walks towards higher values in the end.
+  // For light segments, it's vice versa.
 
   const comparator =
-    mode === "max"
+    mode === "dark"
       ? // low priority values take precedence
         (b: PriorityItem, a: PriorityItem) => b.threshold - a.threshold
       : // high priority values take precedence
@@ -487,8 +501,8 @@ function getThresholdField(
 
   // extremeThreshold is either the min or maximum value
   // of all seen values at the current time.
-  let extremeThreshold = mode === "max" ? 0 : Infinity;
-  const extremeFn = mode === "max" ? Math.max : Math.min;
+  let extremeThreshold = mode === "dark" ? 0 : Infinity;
+  const extremeFn = mode === "dark" ? Math.max : Math.min;
   while (queue.length > 0) {
     const { coords, threshold } = queue.dequeue();
 

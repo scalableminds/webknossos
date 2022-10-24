@@ -121,6 +121,11 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
 
+  if (boundingBoxTarget.getVolume() === 0) {
+    Toast.warning("The draw rectangular had a width or height of zero.");
+    return;
+  }
+
   const inputDataRaw = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     colorLayer.name,

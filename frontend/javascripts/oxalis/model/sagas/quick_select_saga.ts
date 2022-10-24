@@ -4,7 +4,6 @@ import {
   ContourModeEnum,
   OrthoView,
   OverwriteMode,
-  TypedArray,
   TypedArrayWithoutBigInt,
   Vector2,
   Vector3,
@@ -16,10 +15,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2, V3 } from "libs/mjs";
-import {
-  getActiveSegmentationTracing,
-  getActiveSegmentationTracingLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   CancelQuickSelectAction,
   ComputeQuickSelectForRectAction,
@@ -140,11 +136,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
   const rectCenterBrushExtentUV = V3.floor(V3.scale(inputNdUvw.shape as Vector3, 1 / 10));
 
-  let output: ndarray.NdArray<Uint8Array> = ndarray(
-    new Uint8Array(inputNdUvw.size),
-    inputNdUvw.shape,
-  );
-
   const maxThresholdField = getThresholdField(inputNdUvw, centerUV, "max");
   const minThresholdField = getThresholdField(inputNdUvw, centerUV, "min");
 
@@ -176,8 +167,13 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     .hi(distToCenterRect[0], distToCenterRect[1], 1);
   const [centerMean] = moments(1, subview);
 
-  const unthresholdedDarkCopy = copyNdArray(Uint8Array, maxThresholdField);
-  const unthresholdedLightCopy = copyNdArray(Uint8Array, minThresholdField);
+  // Copy unthresholded fields so that finetuning is possible
+  // without recomputing them. Only necessary if showPreview is true.
+  const unthresholdedDarkCopy =
+    quickSelectConfig.showPreview && copyNdArray(Uint8Array, maxThresholdField);
+  const unthresholdedLightCopy =
+    quickSelectConfig.showPreview && copyNdArray(Uint8Array, minThresholdField);
+
   let initialDetectDarkSegment = centerMean < mean;
 
   if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
@@ -189,9 +185,13 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     initialDetectDarkSegment = true;
   }
 
+  // thresholdField initially stores the threshold values (uint8), but is
+  // later processed to a binary mask.
   let thresholdField;
   if (initialDetectDarkSegment) {
     thresholdField = maxThresholdField;
+    // In numpy-style this would be:
+    // thresholdField[:] = thresholdField[:] < maxEffectiveThresh
     ops.ltseq(thresholdField, maxEffectiveThresh);
     yield* put(
       updateUserSettingAction("quickSelect", {
@@ -202,6 +202,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     );
   } else {
     thresholdField = minThresholdField;
+    // In numpy-style this would be:
+    // thresholdField[:] = thresholdField[:] > maxEffectiveThresh
     ops.gtseq(thresholdField, minEffectiveThresh);
     yield* put(
       updateUserSettingAction("quickSelect", {
@@ -211,9 +213,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       }),
     );
   }
-  output = thresholdField;
 
-  processThresholdField(output, quickSelectConfig, rectangleGeometry);
+  processBinaryMaskInPlace(thresholdField, quickSelectConfig, rectangleGeometry);
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,
@@ -231,13 +232,12 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       firstDim,
       secondDim,
       inputNdUvw,
-      output,
+      thresholdField,
       overwriteMode,
       labeledZoomStep,
     );
     return;
   }
-  let newestOutput = output;
 
   while (true) {
     const { finetuneAction, cancelQuickSelectAction, escape, enter, confirm } = (yield* race({
@@ -254,7 +254,26 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       confirm: ConfirmQuickSelectAction;
     };
 
-    if (confirm || enter || cancelQuickSelectAction || escape) {
+    if (finetuneAction) {
+      if (!unthresholdedDarkCopy || !unthresholdedLightCopy) {
+        throw new Error("Unthresholded fields are not available");
+      }
+      if (finetuneAction.segmentMode === "dark") {
+        thresholdField = copyNdArray(
+          Uint8Array,
+          unthresholdedDarkCopy,
+        ) as ndarray.NdArray<Uint8Array>;
+        ops.ltseq(thresholdField, finetuneAction.threshold);
+      } else {
+        thresholdField = copyNdArray(
+          Uint8Array,
+          unthresholdedLightCopy,
+        ) as ndarray.NdArray<Uint8Array>;
+        ops.gtseq(thresholdField, finetuneAction.threshold);
+      }
+
+      processBinaryMaskInPlace(thresholdField, finetuneAction, rectangleGeometry);
+    } else if (confirm || enter || cancelQuickSelectAction || escape) {
       if (escape || cancelQuickSelectAction) {
         rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
         return;
@@ -271,32 +290,16 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         firstDim,
         secondDim,
         inputNdUvw,
-        newestOutput,
+        thresholdField,
         overwriteMode,
         labeledZoomStep,
       );
       return;
-    } else if (finetuneAction) {
-      if (finetuneAction.segmentMode === "dark") {
-        newestOutput = copyNdArray(
-          Uint8Array,
-          unthresholdedDarkCopy,
-        ) as ndarray.NdArray<Uint8Array>;
-        ops.ltseq(newestOutput, finetuneAction.threshold);
-      } else {
-        newestOutput = copyNdArray(
-          Uint8Array,
-          unthresholdedLightCopy,
-        ) as ndarray.NdArray<Uint8Array>;
-        ops.gtseq(newestOutput, finetuneAction.threshold);
-      }
-
-      processThresholdField(newestOutput, finetuneAction, rectangleGeometry);
     }
   }
 }
 
-function processThresholdField(
+function processBinaryMaskInPlace(
   output: ndarray.NdArray<Uint8Array>,
   quickSelectConfig: {
     segmentMode: "dark" | "light";

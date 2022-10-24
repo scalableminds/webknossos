@@ -17,7 +17,7 @@ import { call, put, takeEvery, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2, V3 } from "libs/mjs";
 import {
-  enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -107,10 +107,9 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
   rectangleGeometry.setCoordinates(boundingBoxMag1.min, boundingBoxMag1.max);
 
-  const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
-  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  const volumeTracing = yield* select(getActiveSegmentationTracing);
 
-  if (!volumeTracingLayer) {
+  if (!volumeTracing) {
     console.log("No volumeTracing available.");
     return;
   }
@@ -146,8 +145,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     inputNdUvw.shape,
   );
 
-  console.time("floodfill");
-
   const maxThresholdField = getThresholdField(inputNdUvw, centerUV, "max");
   const minThresholdField = getThresholdField(inputNdUvw, centerUV, "min");
 
@@ -171,9 +168,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const minEffectiveThresh = Math.min(maxThresholdAtBorder, largestThresh - 1);
 
   const [mean] = moments(1, inputNdUvw);
-  const minIntensity = ops.sup(inputNdUvw);
-  const maxIntensity = ops.inf(inputNdUvw);
-
   const distToCenterRect = V3.floor(
     V3.sub(V3.scale(inputNdUvw.shape as Vector3, 0.5), rectCenterBrushExtentUV),
   );
@@ -182,27 +176,20 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     .hi(distToCenterRect[0], distToCenterRect[1], 1);
   const [centerMean] = moments(1, subview);
 
-  console.table({
-    meanMoments: { value: mean },
-    minIntensity: { value: minIntensity },
-    maxIntensity: { value: maxIntensity },
-    centerMean: { value: centerMean },
-  });
-
-  let thresholdField;
   const unthresholdedDarkCopy = copyNdArray(Uint8Array, maxThresholdField);
   const unthresholdedLightCopy = copyNdArray(Uint8Array, minThresholdField);
   let initialDetectDarkSegment = centerMean < mean;
 
   if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
-    console.info("switch from detecting dark segment to detecting light segment");
+    console.info("Switch from detecting dark segment to detecting light segment");
     initialDetectDarkSegment = false;
   }
   if (!initialDetectDarkSegment && minEffectiveThresh < maxThresholdAtBorder) {
-    console.info("switch from detecting light segment to detecting dark segment");
+    console.info("Switch from detecting light segment to detecting dark segment");
     initialDetectDarkSegment = true;
   }
 
+  let thresholdField;
   if (initialDetectDarkSegment) {
     thresholdField = maxThresholdField;
     ops.ltseq(thresholdField, maxEffectiveThresh);
@@ -226,14 +213,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   }
   output = thresholdField;
 
-  fillHoles(output);
-  morphology.close(output, quickSelectConfig.closeValue);
-  morphology.erode(output, quickSelectConfig.erodeValue);
-  morphology.dilate(output, quickSelectConfig.dilateValue);
-  console.timeEnd("floodfill");
-
-  const outputRGBA = maskToRGBA(inputNdUvw, thresholdField);
-  rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
+  processThresholdField(output, quickSelectConfig, inputNdUvw, rectangleGeometry);
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,
@@ -314,16 +294,30 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         ops.gtseq(newestOutput, finetuneAction.threshold);
       }
 
-      fillHoles(newestOutput);
-
-      morphology.close(newestOutput, finetuneAction.closeValue);
-      morphology.erode(newestOutput, finetuneAction.erodeValue);
-      morphology.dilate(newestOutput, finetuneAction.dilateValue);
-
-      const newOutputRGBA = maskToRGBA(inputNdUvw, newestOutput);
-      rectangleGeometry.attachData(newOutputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
+      processThresholdField(newestOutput, finetuneAction, inputNdUvw, rectangleGeometry);
     }
   }
+}
+
+function processThresholdField(
+  output: ndarray.NdArray<Uint8Array>,
+  quickSelectConfig: {
+    segmentMode: "dark" | "light";
+    threshold: number;
+    closeValue: number;
+    erodeValue: number;
+    dilateValue: number;
+  },
+  inputNdUvw: ndarray.NdArray<Uint8Array>,
+  rectangleGeometry: RectangleGeometry,
+) {
+  fillHoles(output);
+  morphology.close(output, quickSelectConfig.closeValue);
+  morphology.erode(output, quickSelectConfig.erodeValue);
+  morphology.dilate(output, quickSelectConfig.dilateValue);
+
+  const outputRGBA = maskToRGBA(inputNdUvw, output);
+  rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
 }
 
 function normalizeToUint8(
@@ -451,11 +445,16 @@ function getThresholdField(
   centerUV: Vector2,
   mode: "min" | "max",
 ): ndarray.NdArray<Uint8Array> {
+  // Computes a threshold field starting from the center
+  // so that there is a value for each voxel that indicates
+  // which threshold is necessary so that a floodfill operation
+  // can arrive at that voxel.
+
   const comparator =
     mode === "max"
-      ? // small priorities take precedence
+      ? // low priority values take precedence
         (b: PriorityItem, a: PriorityItem) => b.threshold - a.threshold
-      : // big priorities take precedence
+      : // high priority values take precedence
         (b: PriorityItem, a: PriorityItem) => a.threshold - b.threshold;
   const queue = new PriorityQueue({
     comparator,
@@ -469,7 +468,7 @@ function getThresholdField(
   queue.queue({ coords: centerUV, threshold: inputNdUvw.get(centerUV[0], centerUV[1], 0) });
 
   // extremeThreshold is either the min or maximum value
-  // found until a given point in time.
+  // of all seen values at the current time.
   let extremeThreshold = mode === "max" ? 0 : Infinity;
   const extremeFn = mode === "max" ? Math.max : Math.min;
   while (queue.length > 0) {

@@ -74,7 +74,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const { rectangleGeometry } = action;
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
-    console.log("Ignoring quick select when mouse is in 3D viewport");
+    console.warn("Ignoring quick select when mouse is in 3D viewport");
     rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
     return;
   }
@@ -110,7 +110,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const volumeTracing = yield* select(getActiveSegmentationTracing);
 
   if (!volumeTracing) {
-    console.log("No volumeTracing available.");
+    console.warn("No volumeTracing available.");
     return;
   }
 
@@ -213,7 +213,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   }
   output = thresholdField;
 
-  processThresholdField(output, quickSelectConfig, inputNdUvw, rectangleGeometry);
+  processThresholdField(output, quickSelectConfig, rectangleGeometry);
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,
@@ -255,11 +255,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     };
 
     if (confirm || enter || cancelQuickSelectAction || escape) {
-      console.log("terminate saga...");
-
       if (escape || cancelQuickSelectAction) {
         rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-        console.log("...without brushing");
         return;
       }
 
@@ -294,7 +291,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         ops.gtseq(newestOutput, finetuneAction.threshold);
       }
 
-      processThresholdField(newestOutput, finetuneAction, inputNdUvw, rectangleGeometry);
+      processThresholdField(newestOutput, finetuneAction, rectangleGeometry);
     }
   }
 }
@@ -308,7 +305,6 @@ function processThresholdField(
     erodeValue: number;
     dilateValue: number;
   },
-  inputNdUvw: ndarray.NdArray<Uint8Array>,
   rectangleGeometry: RectangleGeometry,
 ) {
   fillHoles(output);
@@ -316,8 +312,8 @@ function processThresholdField(
   morphology.erode(output, quickSelectConfig.erodeValue);
   morphology.dilate(output, quickSelectConfig.dilateValue);
 
-  const outputRGBA = maskToRGBA(inputNdUvw, output);
-  rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
+  const outputRGBA = maskToRGBA(output);
+  rectangleGeometry.attachData(outputRGBA, output.shape[0], output.shape[1]);
 }
 
 function normalizeToUint8(
@@ -373,7 +369,6 @@ function* finalizeQuickSelect(
   labeledZoomStep: number,
 ) {
   rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-  console.log("...with brushing");
   const volumeLayer = yield* call(
     createVolumeLayer,
     volumeTracing,
@@ -407,16 +402,16 @@ function* finalizeQuickSelect(
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
 }
 
-function maskToRGBA(inputNdUvw: ndarray.NdArray<TypedArray>, output: ndarray.NdArray) {
+function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {
   const channelCount = 4;
-  const outputRGBA = new Uint8Array(inputNdUvw.size * channelCount);
+  const outputRGBA = new Uint8Array(output.size * channelCount);
   let idx = 0;
 
   const max = ops.sup(output);
   const min = ops.inf(output);
 
-  for (let v = 0; v < inputNdUvw.shape[1]; v++) {
-    for (let u = 0; u < inputNdUvw.shape[0]; u++) {
+  for (let v = 0; v < output.shape[1]; v++) {
+    for (let u = 0; u < output.shape[0]; u++) {
       const val = (255 * (output.get(u, v, 0) - min)) / (max - min);
       outputRGBA[idx] = val;
       outputRGBA[idx + 1] = val;

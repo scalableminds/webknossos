@@ -44,43 +44,33 @@ export function QuickSelectControls({ setIsOpen }: { setIsOpen: (val: boolean) =
     );
   };
 
+  const onChangeProperty = (
+    property: keyof typeof quickSelectConfig,
+    value: number | "dark" | "light",
+  ) => {
+    const conf = { ...quickSelectConfig, [property]: value };
+    dispatch(updateUserSettingAction("quickSelect", conf));
+    dispatch(
+      fineTuneQuickSelectAction(
+        conf.segmentMode,
+        conf.threshold,
+        conf.closeValue,
+        conf.erodeValue,
+        conf.dilateValue,
+      ),
+    );
+  };
+
   const onChangeThreshold = (thresholdPercent: number) => {
     const threshold = (thresholdPercent / 100) * 256;
-    const { segmentMode, dilateValue, closeValue, erodeValue } = quickSelectConfig;
-    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, threshold }));
-    dispatch(
-      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
-    );
+    onChangeProperty("threshold", threshold);
   };
-  const onChangeSegmentMode = ({ target: { value } }: RadioChangeEvent) => {
-    const segmentMode: "light" | "dark" = value;
-    const { threshold, dilateValue, closeValue, erodeValue } = quickSelectConfig;
-    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, segmentMode }));
-    dispatch(
-      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
-    );
-  };
-  const onChangeCloseValue = (closeValue: number) => {
-    const { segmentMode, threshold, dilateValue, erodeValue } = quickSelectConfig;
-    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, closeValue }));
-    dispatch(
-      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
-    );
-  };
-  const onChangeDilateValue = (dilateValue: number) => {
-    const { segmentMode, threshold, closeValue, erodeValue } = quickSelectConfig;
-    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, dilateValue }));
-    dispatch(
-      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
-    );
-  };
-  const onChangeErodeValue = (erodeValue: number) => {
-    const { segmentMode, threshold, dilateValue, closeValue } = quickSelectConfig;
-    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, erodeValue }));
-    dispatch(
-      fineTuneQuickSelectAction(segmentMode, threshold, closeValue, erodeValue, dilateValue),
-    );
-  };
+  const onChangeSegmentMode = ({ target: { value } }: RadioChangeEvent) =>
+    onChangeProperty("segmentMode", value as "dark" | "light");
+  const onChangeCloseValue = (value: number) => onChangeProperty("closeValue", value);
+  const onChangeDilateValue = (value: number) => onChangeProperty("dilateValue", value);
+  const onChangeErodeValue = (value: number) => onChangeProperty("erodeValue", value);
+
   const onChangeShowPreview = (showPreview: boolean) => {
     dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, showPreview }));
   };

@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Add context-menu option to delete skeleton root group. [#6553](https://github.com/scalableminds/webknossos/pull/6553)
 - Added remaining task time estimation (ETA) for Voxelytics tasks in workflow reporting. [#6564](https://github.com/scalableminds/webknossos/pull/6564)
 - Added a help button to the UI to send questions and feedbacks to the dev team. [#6560](https://github.com/scalableminds/webknossos/pull/6560)
+- Turned successful dataset conversions into a clickable link. [#6583](https://github.com/scalableminds/webknossos/pull/6583)
 
 
 ### Changed

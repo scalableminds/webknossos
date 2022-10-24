@@ -45,6 +45,10 @@ import Dimensions from "../dimensions";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 
+// How large should the center rectangle be.
+// Used to determine the mean intensity.
+const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
+
 export default function* listenToMinCut(): Saga<void> {
   yield* takeEvery(
     "COMPUTE_QUICK_SELECT_FOR_RECT",
@@ -134,38 +138,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
-  const rectCenterBrushExtentUV = V3.floor(V3.scale(inputNdUvw.shape as Vector3, 1 / 10));
-
   const maxThresholdField = getThresholdField(inputNdUvw, centerUV, "max");
   const minThresholdField = getThresholdField(inputNdUvw, centerUV, "min");
-
-  function getExtremeValueAtBorders(arr: ndarray.NdArray, mode: "min" | "max") {
-    const fn = mode === "min" ? Math.min : Math.max;
-    const opsFn = mode === "min" ? ops.inf : ops.sup;
-    return fn(
-      opsFn(arr.pick(null, 0, 0)),
-      opsFn(arr.pick(null, arr.shape[1] - 1, 0)),
-      opsFn(arr.pick(0, null, 0)),
-      opsFn(arr.pick(arr.shape[0] - 1, null, 0)),
-    );
-  }
-
-  const minThresholdAtBorder = getExtremeValueAtBorders(maxThresholdField, "min");
-  const maxThresholdAtBorder = getExtremeValueAtBorders(minThresholdField, "max");
-  const smallestThresh = ops.inf(maxThresholdField);
-  const largestThresh = ops.sup(minThresholdField);
-
-  const maxEffectiveThresh = Math.max(minThresholdAtBorder, smallestThresh + 1);
-  const minEffectiveThresh = Math.min(maxThresholdAtBorder, largestThresh - 1);
-
-  const [mean] = moments(1, inputNdUvw);
-  const distToCenterRect = V3.floor(
-    V3.sub(V3.scale(inputNdUvw.shape as Vector3, 0.5), rectCenterBrushExtentUV),
-  );
-  const subview = inputNdUvw
-    .lo(distToCenterRect[0], distToCenterRect[1], 0)
-    .hi(distToCenterRect[0], distToCenterRect[1], 1);
-  const [centerMean] = moments(1, subview);
 
   // Copy unthresholded fields so that finetuning is possible
   // without recomputing them. Only necessary if showPreview is true.
@@ -174,16 +148,11 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const unthresholdedLightCopy =
     quickSelectConfig.showPreview && copyNdArray(Uint8Array, minThresholdField);
 
-  let initialDetectDarkSegment = centerMean < mean;
-
-  if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
-    console.info("Switch from detecting dark segment to detecting light segment");
-    initialDetectDarkSegment = false;
-  }
-  if (!initialDetectDarkSegment && minEffectiveThresh < maxThresholdAtBorder) {
-    console.info("Switch from detecting light segment to detecting dark segment");
-    initialDetectDarkSegment = true;
-  }
+  const { initialDetectDarkSegment, maxEffectiveThresh, minEffectiveThresh } = determineThresholds(
+    maxThresholdField,
+    minThresholdField,
+    inputNdUvw,
+  );
 
   // thresholdField initially stores the threshold values (uint8), but is
   // later processed to a binary mask.
@@ -297,6 +266,57 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       return;
     }
   }
+}
+
+function getExtremeValueAtBorders(arr: ndarray.NdArray, mode: "min" | "max") {
+  // Calculates the min or max value at the 4 borders of the array.
+  const fn = mode === "min" ? Math.min : Math.max;
+  const opsFn = mode === "min" ? ops.inf : ops.sup;
+  return fn(
+    opsFn(arr.pick(null, 0, 0)),
+    opsFn(arr.pick(null, arr.shape[1] - 1, 0)),
+    opsFn(arr.pick(0, null, 0)),
+    opsFn(arr.pick(arr.shape[0] - 1, null, 0)),
+  );
+}
+
+function determineThresholds(
+  maxThresholdField: ndarray.NdArray<Uint8Array>,
+  minThresholdField: ndarray.NdArray<Uint8Array>,
+  inputNdUvw: ndarray.NdArray<Uint8Array>,
+) {
+  const minThresholdAtBorder = getExtremeValueAtBorders(maxThresholdField, "min");
+  const maxThresholdAtBorder = getExtremeValueAtBorders(minThresholdField, "max");
+  const smallestThresh = ops.inf(maxThresholdField);
+  const largestThresh = ops.sup(minThresholdField);
+
+  //
+  const maxEffectiveThresh = Math.max(minThresholdAtBorder, smallestThresh + 1);
+  const minEffectiveThresh = Math.min(maxThresholdAtBorder, largestThresh - 1);
+
+  const rectCenterBrushExtentUV = V3.floor(
+    V3.scale(inputNdUvw.shape as Vector3, CENTER_RECT_SIZE_PERCENTAGE),
+  );
+  const distToCenterRect = V3.floor(
+    V3.sub(V3.scale(inputNdUvw.shape as Vector3, 0.5), rectCenterBrushExtentUV),
+  );
+  const subview = inputNdUvw
+    .lo(distToCenterRect[0], distToCenterRect[1], 0)
+    .hi(distToCenterRect[0], distToCenterRect[1], 1);
+  const [centerMean] = moments(1, subview);
+  const [mean] = moments(1, inputNdUvw);
+
+  let initialDetectDarkSegment = centerMean < mean;
+
+  if (initialDetectDarkSegment && maxEffectiveThresh > minThresholdAtBorder) {
+    console.info("Switch from detecting dark segment to detecting light segment");
+    initialDetectDarkSegment = false;
+  }
+  if (!initialDetectDarkSegment && minEffectiveThresh < maxThresholdAtBorder) {
+    console.info("Switch from detecting light segment to detecting dark segment");
+    initialDetectDarkSegment = true;
+  }
+  return { initialDetectDarkSegment, maxEffectiveThresh, minEffectiveThresh };
 }
 
 function processBinaryMaskInPlace(

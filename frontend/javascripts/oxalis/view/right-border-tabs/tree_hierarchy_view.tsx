@@ -80,6 +80,7 @@ type State = {
   groupTree: Array<TreeNode>;
   searchFocusOffset: number;
   activeTreeDropdownId: number | null | undefined;
+  activeGroupDropdownId: number | null | undefined;
 };
 
 const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
@@ -96,6 +97,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     prevProps: null,
     searchFocusOffset: 0,
     activeTreeDropdownId: null,
+    activeGroupDropdownId: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -284,6 +286,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onDeleteGroup(groupId);
   }
 
+  shuffleTreeGroupColors(groupId: number) {
+    const groupToTreeMap = createGroupToTreesMap(this.props.trees);
+    const shuffleTreeColorActions = groupToTreeMap[groupId].map((tree) =>
+      shuffleTreeColorAction(tree.treeId),
+    );
+    this.props.onBatchActions(shuffleTreeColorActions, "SHUFFLE_TREE_COLOR");
+  }
+
+  setTreeGroupColor(groupId: number, color: Vector3) {
+    const groupToTreeMap = createGroupToTreesMap(this.props.trees);
+    const shuffleTreeColorActions = groupToTreeMap[groupId].map((tree) =>
+      setTreeColorAction(tree.treeId, color),
+    );
+    this.props.onBatchActions(shuffleTreeColorActions, "SET_TREE_COLOR");
+  }
+
   handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
     if (isVisible) {
       this.setState({
@@ -294,6 +312,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
     this.setState({
       activeTreeDropdownId: null,
+    });
+  };
+
+  handleGroupDropdownMenuVisibility = (groupId: number, isVisible: boolean) => {
+    if (isVisible) {
+      this.setState({
+        activeGroupDropdownId: groupId,
+      });
+      return;
+    }
+
+    this.setState({
+      activeGroupDropdownId: null,
     });
   };
 
@@ -384,6 +415,25 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         >
           <i className="fas fa-eye" /> Hide/Show all other trees
         </Menu.Item>
+        <Menu.Item
+          key="shuffleTreeGroupColors"
+          onClick={() => {
+            this.shuffleTreeGroupColors(id);
+          }}
+          title="Shuffle Tree Colors"
+        >
+          <i className="fas fa-adjust" /> Shuffle Tree Group Colors
+        </Menu.Item>
+        <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
+          <ChangeColorMenuItemContent
+            title="Change Tree Group Color"
+            isDisabled={false}
+            onSetColor={(color) => {
+              this.setTreeGroupColor(id, color);
+            }}
+            rgb={[0.5, 0.5, 0.5]}
+          />
+        </Menu.Item>
       </Menu>
     );
 
@@ -401,6 +451,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
+          visible={this.state.activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+          onVisibleChange={(isVisible) => this.handleGroupDropdownMenuVisibility(id, isVisible)}
           trigger={["contextMenu"]}
         >
           <span>

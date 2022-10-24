@@ -14,8 +14,6 @@ import type { Vector3 } from "oxalis/constants";
 import {
   getGroupByIdWithSubgroups,
   TreeNode,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import {
   MISSING_GROUP_ID,
   TYPE_GROUP,
   TYPE_TREE,

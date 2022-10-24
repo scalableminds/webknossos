@@ -1889,10 +1889,16 @@ export async function isDatasetAccessibleBySwitching(
   if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
       `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
+      {
+        showErrorToast: false,
+      },
     );
   } else {
     return Request.receiveJSON(
       `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&dataSetName=${commandType.name}`,
+      {
+        showErrorToast: false,
+      },
     );
   }
 }

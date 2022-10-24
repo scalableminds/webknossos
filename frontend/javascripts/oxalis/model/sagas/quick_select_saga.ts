@@ -10,6 +10,7 @@ import {
   Vector3,
 } from "oxalis/constants";
 import PriorityQueue from "js-priority-queue";
+import ErrorHandling from "libs/error_handling";
 
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery, race, take } from "typed-redux-saga";
@@ -56,7 +57,8 @@ export default function* listenToMinCut(): Saga<void> {
         yield* put(setIsQuickSelectActiveAction(true));
         yield* call(performQuickSelect, action);
       } catch (ex) {
-        Toast.error(JSON.stringify(ex as Error));
+        Toast.error((ex as Error).toString());
+        ErrorHandling.notify(ex as Error);
         console.error(ex);
       } finally {
         yield* put(setIsQuickSelectActiveAction(false));
@@ -69,10 +71,16 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const activeViewport = yield* select(
     (state: OxalisState) => state.viewModeData.plane.activeViewport,
   );
+  const { rectangleGeometry } = action;
+  if (activeViewport === "TDView") {
+    // Can happen when the user ends the drag action in the 3D viewport
+    console.log("Ignoring quick select when mouse is in 3D viewport");
+    rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+    return;
+  }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const quickSelectConfig = yield* select((state) => state.userConfiguration.quickSelect);
   console.log("starting saga performQuickSelect");
-  const { rectangleGeometry } = action;
 
   const colorLayers = yield* select((state: OxalisState) =>
     getEnabledColorLayers(state.dataset, state.datasetConfiguration),
@@ -402,15 +410,15 @@ function* finalizeQuickSelect(
 ) {
   rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   console.log("...with brushing");
-  const interpolationLayer = yield* call(
+  const volumeLayer = yield* call(
     createVolumeLayer,
     volumeTracing,
     activeViewport,
     labeledResolution,
     boundingBoxMag1.min[thirdDim],
   );
-  const voxelBuffer2D = interpolationLayer.createVoxelBuffer2D(
-    V2.floor(interpolationLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
+  const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
+    V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
     size[firstDim],
     size[secondDim],
   );

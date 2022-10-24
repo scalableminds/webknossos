@@ -80,7 +80,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const quickSelectConfig = yield* select((state) => state.userConfiguration.quickSelect);
-  console.log("starting saga performQuickSelect");
 
   const colorLayers = yield* select((state: OxalisState) =>
     getEnabledColorLayers(state.dataset, state.datasetConfiguration),
@@ -123,7 +122,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
 
-  console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
   const inputDataRaw = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     colorLayer.name,
@@ -191,22 +189,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     centerMean: { value: centerMean },
   });
 
-  // const maxHistograms = computeHistogram(maxThresholdField);
-  console.group("dark segment");
-  console.log("minThresholdAtBorder", minThresholdAtBorder);
-  console.log("smallestThresh", smallestThresh);
-  console.log("maxEffectiveThresh", maxEffectiveThresh);
-  // console.log("computeHistogram", maxHistograms);
-  console.groupEnd();
-
-  // const minHistograms = computeHistogram(minThresholdField);
-  console.group("light segment");
-  console.log("maxThresholdAtBorder", maxThresholdAtBorder);
-  console.log("largestThresh", largestThresh);
-  console.log("minEffectiveThresh", minEffectiveThresh);
-  // console.log("computeHistogram", minHistograms);
-  console.groupEnd();
-
   let thresholdField;
   const unthresholdedDarkCopy = copyNdArray(Uint8Array, maxThresholdField);
   const unthresholdedLightCopy = copyNdArray(Uint8Array, minThresholdField);
@@ -221,7 +203,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     initialDetectDarkSegment = true;
   }
 
-  console.log(initialDetectDarkSegment ? "Select dark segment" : "Select light segment");
   if (initialDetectDarkSegment) {
     thresholdField = maxThresholdField;
     ops.ltseq(thresholdField, maxEffectiveThresh);
@@ -244,17 +225,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     );
   }
   output = thresholdField;
-
-  console.log("thresholdField", thresholdField);
-  console.log("output", output);
-  // end
-
-  const seedIntensity = inputNdUvw.get(
-    Math.floor(inputNdUvw.shape[0] / 2),
-    Math.floor(inputNdUvw.shape[1] / 2),
-    0,
-  );
-  console.log({ seedIntensity });
 
   fillHoles(output);
   morphology.close(output, quickSelectConfig.closeValue);

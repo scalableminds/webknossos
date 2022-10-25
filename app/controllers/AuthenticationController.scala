@@ -55,7 +55,7 @@ class AuthenticationController @Inject()(
     conf: WkConf,
     annotationDAO: AnnotationDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    openIdClient: OpenIDConnectClient,
+    openIdConnectClient: OpenIdConnectClient,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -431,11 +431,11 @@ class AuthenticationController @Inject()(
     }
   }
 
-  private lazy val oidcClientId = conf.WebKnossos.OIDC.clientId
-  private lazy val oidcProviderUrl = conf.WebKnossos.OIDC.providerURL
+  private lazy val oidcClientId = conf.SingleSignOn.OIDC.clientId
+  private lazy val oidcProviderUrl = conf.SingleSignOn.OIDC.providerUrl
 
   lazy val oidcConfig: OpenIdConnectConfig = OpenIdConnectConfig(oidcProviderUrl, oidcClientId)
-  lazy val absoluteOidcCallbackURL = "http://localhost:9000/api/auth/oidc/callback"
+  lazy val absoluteCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   // Claims from https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
   case class OpenConnectId(iss: String,
@@ -452,7 +452,7 @@ class AuthenticationController @Inject()(
   }
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    openIdClient.redirectUrl(oidcConfig, absoluteOidcCallbackURL).map(url => Redirect(url))
+    openIdConnectClient.redirectUrl(oidcConfig, absoluteCallbackURL).map(url => Redirect(url))
   }
 
   def loginUser(user: User, loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
@@ -486,10 +486,9 @@ class AuthenticationController @Inject()(
                                              oidc.given_name,
                                              oidc.family_name,
                                              isActive = true,
-                                             userService.getOIDCPasswordInfo)
+                                             userService.getOpenIdConnectPasswordInfo)
             multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
             _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-            //  brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox // Is this necessary?
             _ = if (conf.Features.isDemoInstance) {
               mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
             } else {
@@ -507,9 +506,10 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      code <- openIdClient.getToken(oidcConfig,
-                                    absoluteOidcCallbackURL,
-                                    request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
+      code <- openIdConnectClient.getToken(
+        oidcConfig,
+        absoluteCallbackURL,
+        request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       )
       oidc: OpenConnectId <- validateJsValue[OpenConnectId](code).toFox
       user_result <- loginOrSignupViaOidc(oidc)(request)

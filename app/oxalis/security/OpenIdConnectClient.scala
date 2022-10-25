@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class OpenIDConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionContext: ExecutionContext) {
+class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionContext: ExecutionContext) {
 
   /*
    Build redirect URL to redirect to OIDC provider for auth request (https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
@@ -31,8 +31,8 @@ class OpenIDConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
     }
 
   /*
-  Create token request (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest), fields described by
-  https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
+  Fetches token form the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
+  fields described by https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
    */
   def getToken(openIdClient: OpenIdConnectConfig, redirectUrl: String, code: String): Fox[JsObject] =
     for {
@@ -44,10 +44,10 @@ class OpenIDConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
           "redirect_uri" -> redirectUrl,
           "code" -> code
         ))
-      new_code <- JwtJson
+      newToken <- JwtJson
         .decodeJson(tokenResponse.access_token, JwtOptions.DEFAULT.copy(signature = false))
         .toFox ?~> "failed to parse JWT"
-    } yield new_code
+    } yield newToken
 
   /*
   Discover endpoints of the provider (https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)

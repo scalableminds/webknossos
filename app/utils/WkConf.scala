@@ -60,15 +60,15 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val children = List(User)
     }
 
-    object OIDC {
-      val providerURL: String = get[String]("webKnossos.OIDC.providerURL")
-      val callbackURL: String = get[String]("webKnossos.OIDC.callbackURL")
-      val clientId: String = get[String]("webKnossos.OIDC.clientID")
-      val clientSecret: String = get[String]("webKnossos.OIDC.clientSecret")
-    }
-
     val operatorData: String = get[String]("webKnossos.operatorData")
     val children = List(User, Tasks, Cache, SampleOrganization)
+  }
+
+  object SingleSignOn {
+    object OIDC {
+      val providerUrl: String = get[String]("singleSignOn.OIDC.providerURL")
+      val clientId: String = get[String]("singleSignOn.OIDC.clientID")
+    }
   }
 
   object Features {

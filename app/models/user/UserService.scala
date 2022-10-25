@@ -200,7 +200,7 @@ class UserService @Inject()(conf: WkConf,
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo
 
-  def getOIDCPasswordInfo: PasswordInfo =
+  def getOpenIdConnectPasswordInfo: PasswordInfo =
     PasswordInfo("Empty", "")
 
   def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

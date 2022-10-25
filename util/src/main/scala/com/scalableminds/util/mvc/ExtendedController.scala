@@ -177,7 +177,7 @@ trait MimeTypes {
   val xmlMimeType: String = "application/xml"
   val zipMimeType: String = "application/zip"
   val jsonMimeType: String = "application/json"
-  val formUrlEncoded: String = "application/x-www-form-urlencoded"
+  val formUrlEncodedMimeType: String = "application/x-www-form-urlencoded"
 }
 
 trait JsonResults extends JsonResultAttribues {

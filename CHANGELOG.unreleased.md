@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed the positions of precomputed meshes when using a v3 mesh file. [#6588](https://github.com/scalableminds/webknossos/pull/6588)
 
 ### Removed
 

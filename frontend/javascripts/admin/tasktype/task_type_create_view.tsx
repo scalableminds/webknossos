@@ -1,15 +1,4 @@
-import {
-  Button,
-  Card,
-  Checkbox,
-  Form,
-  Input,
-  Radio,
-  Select,
-  InputNumber,
-  Tooltip,
-  Spin,
-} from "antd";
+import { Button, Card, Checkbox, Form, Input, Radio, Select, InputNumber, Tooltip } from "antd";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
 import { InfoCircleOutlined } from "@ant-design/icons";
@@ -256,7 +245,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.teams.map((team: APITeam) => ({
                   value: team.id,
                   label: `${team.name}`,

@@ -56,6 +56,7 @@ import features from "features";
 import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { coalesce } from "libs/utils";
+import HelpButton from "oxalis/view/help_modal";
 const { Content } = Layout;
 
 function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
@@ -182,6 +183,7 @@ class ReactRouter extends React.Component<Props> {
           <DisableGenericDnd />
           <AdaptViewportMetatag isAuthenticated={isAuthenticated} />
           <Navbar isAuthenticated={isAuthenticated} />
+          <HelpButton />
           <Content>
             <Switch>
               <Route

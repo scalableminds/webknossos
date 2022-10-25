@@ -1,4 +1,4 @@
-import { Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
+import { Form, Row, Dropdown, Menu, Col, Button, Input, Select } from "antd";
 import { FormInstance } from "antd/lib/form";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
@@ -222,7 +222,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.taskTypes.map((taskType: APITaskType) => ({
                   value: taskType.id,
                   label: `${taskType.summary}`,
@@ -242,7 +242,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.projects.map((project: APIProject) => ({
                   value: project.id,
                   label: `${project.name}`,
@@ -260,7 +260,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.users
                   .filter((u) => u.isActive)
                   .map((user: APIUser) => ({

@@ -61,11 +61,12 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 Above the the histogram, there are icon buttons to further adjust the histogram or otherwise interact with the layer:
 
     - `pencil`: Manipulate the min/max value of the histogram range. Clips values above/below these limits. 
-    - `vertical line`: Automatically adjust the histogram for best contrast. Contrast estimation is based on the data currently available in your viewport.
+    - `vertical line`: Automatically adjust the histogram for best contrast and brightness. Contrast estimation is based on the data currently available in your viewport. This is especially useful for light microscopy datasets saved as `float` values.
     - `circle arrow`: Reload the data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
     - `scanner`: Navigates the webKnossos camera to a position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually. 
 
-- `Opacity`: Increase / Decrease the opacity of the data layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
+- `Opacity`: Increase / Decrease the opacity of a layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
+- `Gamma Correction`: Increase / Decrease the lumincance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
 - `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggeling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview. 
 Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 

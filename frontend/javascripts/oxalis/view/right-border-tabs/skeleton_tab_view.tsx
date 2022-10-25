@@ -413,10 +413,17 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { treeGroups, trees } = this.props.skeletonTracing;
 
-    const newTreeGroups = _.cloneDeep(treeGroups);
+    let newTreeGroups = _.cloneDeep(treeGroups);
 
     const groupToTreesMap = createGroupToTreesMap(trees);
     let treeIdsToDelete: number[] = [];
+
+    if (groupId === MISSING_GROUP_ID) {
+      // special case: delete Root group and all children (aka everything)
+      treeIdsToDelete = Object.values(this.props.skeletonTracing.trees).map((t) => t.treeId);
+      newTreeGroups = [];
+    }
+
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       // Remove group
@@ -472,6 +479,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const treeGroupToDelete = treeGroups.find((el) => el.groupId === id);
     const groupToTreesMap = createGroupToTreesMap(trees);
     if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id])
+      this.deleteGroup(id);
+    else if (id === MISSING_GROUP_ID)
+      // case: delete Root group
       this.deleteGroup(id);
     else
       this.setState({

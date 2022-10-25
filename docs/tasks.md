@@ -2,6 +2,8 @@
 
 webKnossos includes a powerful task and project management system to efficiently annotate large datasets. Large annotations can be broken down into smaller workpieces and distributed to members of your organization. ("Divide and conquer approach")
 
+The task systems is designed for automated task distribution to a (large) group of annotators based on several criteria, e.g., expierence, access rights, etc. For fine-grained control, manual task assignments are also possible.
+
 ## Concepts
 
 - `Task`: Is an assignment for a small piece of work. A *Team Manager* or *Admin* creates *Tasks* with information about the *Task Type*, the referenced dataset, starting positions, and advanced options. These tasks will be distributed to eligible users. 
@@ -52,6 +54,7 @@ Tasks can also be created in bulk using the advanced CSV text input. Not recomme
 
 After your *Task* is created, other users in your organization can request *Tasks* from their dashboard (*Tasks* tab). 
 If there are no other projects with high priorities, they will eventually get your *Task* assigned.
+Alternatively, you can manually assign a task to individual users (see below).
 Once a user is done working on a task, they can mark the task as `Finished`.
 
 ![Requesting Tasks in the Dashboard](./images/dashboard_tasks.jpeg)
@@ -74,3 +77,27 @@ When users request a new task from their dashboard ("Tasks" tab), a set of crite
 - *Tasks* from paused *Projects* are not assigned at all
 - If there are multiple *Tasks* with the same priority, they will be chosen at random
 
+## Manual Task Assignment
+In contrast to the automated task distribution system, an admin user can also manually assign a task instance to users. 
+Note, manual assignments bypass the assignment criterias enforced by the automated system and allow for fine-grained and direct assignments to individual user.
+
+
+Manual assignments can done by:
+
+1. Navigate to the task list
+2. Search for your task by setting the appropriate filters
+3. Click on "Manual Assign To User"
+4. Select a user for the assignment from the dropdown
+5. Confirm the assignment with "ok"
+
+
+Existing, active and finished task instances can also be transfered to other users, e.g. for proofreading, continued annotation or to change ownership:
+
+1. Navigate to the task list
+2. Search for your task by setting the appropriate filters
+3. Expand the list entry for selected task - plus icon - and locate the respective task instance
+4. From the `Actions` menu on the right-hand side, select "Transfer"
+5. Select a user for the task transferal from the dropdown
+6. Confirm the task transfer with "ok"
+
+![Transfer a task instance to a new user and additional task administration actions.](./images/task_instance_actions.jpg)

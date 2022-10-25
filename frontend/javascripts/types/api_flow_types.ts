@@ -35,6 +35,7 @@ type APIDataLayerBase = {
   readonly boundingBox: BoundingBoxObject;
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
+  readonly dataFormat?: "wkw" | "zarr";
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -174,6 +175,7 @@ export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
+  hasDiscardedHelpButton?: boolean;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {

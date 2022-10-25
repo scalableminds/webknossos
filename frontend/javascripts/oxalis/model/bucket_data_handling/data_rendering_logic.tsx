@@ -5,6 +5,8 @@ import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { ElementClass } from "types/api_flow_types";
 import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
+
 type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
@@ -94,7 +96,9 @@ function guardAgainstMesaLimit(maxSamplers: number, gl: any) {
     if (renderer && renderer.slice(0, 4).toUpperCase() === "MESA") {
       maxSamplers = Math.min(16, maxSamplers);
     }
-  } catch {}
+  } catch (exception) {
+    ErrorHandling.notify(exception as Error, {}, "warning");
+  }
 
   return maxSamplers;
 }

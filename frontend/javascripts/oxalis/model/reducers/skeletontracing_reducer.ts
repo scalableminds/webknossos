@@ -39,6 +39,7 @@ import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
+import { V3 } from "libs/mjs";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -676,6 +677,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 node.id,
                 update(node, {
                   position: {
+                    // Don't round here, since this would make the continous
+                    // movement of a node weird.
                     $set: position,
                   },
                 }),

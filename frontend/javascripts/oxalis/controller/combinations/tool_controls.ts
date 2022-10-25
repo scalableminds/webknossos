@@ -210,6 +210,9 @@ export class SkeletonTool {
         );
       },
       leftMouseUp: () => {
+        if (draggingNodeId != null) {
+          SkeletonHandlers.finishNodeMovement(draggingNodeId);
+        }
         draggingNodeId = null;
       },
       leftDownMove: (

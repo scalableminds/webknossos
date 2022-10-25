@@ -177,6 +177,17 @@ export function moveNode(dx: number, dy: number, nodeId?: number | null | undefi
     }),
   );
 }
+
+export function finishNodeMovement(nodeId: number) {
+  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
+    getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, node]) => {
+      Store.dispatch(
+        setNodePositionAction(V3.round(node.position, [0, 0, 0]), node.id, activeTree.treeId),
+      );
+    }),
+  );
+}
+
 export function setWaypoint(
   position: Vector3,
   activeViewport: OrthoView,

@@ -314,12 +314,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   setTreeGroupColor(groupId: number, color: Vector3) {
     const groupToTreeMap = createGroupToTreesMap(this.props.trees);
     const groupIdWithSubgroups = getGroupByIdWithSubgroups(this.props.treeGroups, groupId);
-    const shuffleTreeColorActions = groupIdWithSubgroups.flatMap((subGroupId) => {
+    const setTreeColorActions = groupIdWithSubgroups.flatMap((subGroupId) => {
       if (subGroupId in groupToTreeMap)
         return groupToTreeMap[subGroupId].map((tree) => setTreeColorAction(tree.treeId, color));
       return [];
     });
-    this.props.onBatchActions(shuffleTreeColorActions, "SET_TREE_COLOR");
+    this.props.onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
+  }
+
+  setAllTreesColor(color: Vector3) {
+    const setTreeColorActions = Object.values(this.props.trees).map((tree) =>
+      setTreeColorAction(tree.treeId, color),
+    );
+    this.props.onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
   }
 
   handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
@@ -445,18 +452,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         >
           <i className="fas fa-adjust" /> Shuffle Tree Group Colors
         </Menu.Item>
-        {id !== MISSING_GROUP_ID ? (
-          <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
-            <ChangeColorMenuItemContent
-              title="Change Tree Group Color"
-              isDisabled={false}
-              onSetColor={(color) => {
-                this.setTreeGroupColor(id, color);
-              }}
-              rgb={[0.5, 0.5, 0.5]}
-            />
-          </Menu.Item>
-        ) : null}
+        <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
+          <ChangeColorMenuItemContent
+            title="Change Tree Group Color"
+            isDisabled={false}
+            onSetColor={(color) => {
+              if (id === MISSING_GROUP_ID) this.setAllTreesColor(color);
+              else this.setTreeGroupColor(id, color);
+            }}
+            rgb={[0.5, 0.5, 0.5]}
+          />
+        </Menu.Item>
       </Menu>
     );
 

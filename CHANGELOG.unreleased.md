@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/22.11.0...HEAD)
 
 ### Added
+- Turned successful dataset conversions into a clickable link. [#6583](https://github.com/scalableminds/webknossos/pull/6583)
 - Added ability to shuffle / set colors for a whole tree group. [#6586](https://github.com/scalableminds/webknossos/pull/6586)
 
 
@@ -18,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a rare crash in newer Firefox versions. [#6561](https://github.com/scalableminds/webknossos/pull/6561)
+- Fixed the positions of precomputed meshes when using a v3 mesh file. [#6588](https://github.com/scalableminds/webknossos/pull/6588)
 
 ### Removed
 

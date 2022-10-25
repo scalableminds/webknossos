@@ -24,11 +24,8 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
     // note that the singleBoundingBox field is deprecated but still supported here to avoid database evolutions
     val singleBoundingBoxes =
       (singleBoundingBoxAOpt ++ singleBoundingBoxBOpt).map(bb => ProtoNamedBoundingBox(0, boundingBox = bb))
-
-    var boundingBoxMap: Map[Any, ProtoNamedBoundingBox] = Map()
-    (userBoundingBoxesA ++ userBoundingBoxesB ++ singleBoundingBoxes).foreach(uBB =>
-      boundingBoxMap += ((uBB.boundingBox, uBB.name, uBB.color, uBB.isVisible) -> uBB))
-    boundingBoxMap.values.zipWithIndex.map(uBB => uBB._1.copy(id = uBB._2)).toSeq
+    val allBoundingBoxes = userBoundingBoxesA ++ userBoundingBoxesB ++ singleBoundingBoxes
+    allBoundingBoxes.map(_.copy(id = 0)).distinct.zipWithIndex.map(uBB => uBB._1.copy(id = uBB._2))
   }
 
 }

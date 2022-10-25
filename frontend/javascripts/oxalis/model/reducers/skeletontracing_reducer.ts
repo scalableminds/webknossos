@@ -39,7 +39,6 @@ import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
-import { V3 } from "libs/mjs";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {

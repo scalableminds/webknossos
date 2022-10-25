@@ -93,6 +93,7 @@ class PlaneMaterialFactory {
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldShaderCode: string | null | undefined;
   unsubscribeSeedsFn: (() => void) | null = null;
+  timeAnimationFrameId: number | null = null;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
@@ -111,6 +112,11 @@ class PlaneMaterialFactory {
   stopListening() {
     this.storePropertyUnsubscribers.forEach((fn) => fn());
     this.storePropertyUnsubscribers = [];
+
+    if (this.timeAnimationFrameId != null) {
+      cancelAnimationFrame(this.timeAnimationFrameId);
+      this.timeAnimationFrameId = null;
+    }
   }
 
   setupUniforms(): void {
@@ -196,6 +202,9 @@ class PlaneMaterialFactory {
       },
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      timeMs: {
+        value: 0.0,
       },
     };
 
@@ -592,6 +601,8 @@ class PlaneMaterialFactory {
           true,
         ),
       );
+
+      this.timeAnimationFrameId = requestAnimationFrame((time: number) => this.updateTime(time));
     }
   }
 
@@ -636,6 +647,12 @@ class PlaneMaterialFactory {
 
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
     this.uniforms[`${name}_gammaCorrectionValue`].value = gammaCorrectionValue;
+  }
+
+  updateTime(time: number) {
+    this.uniforms.timeMs.value = time;
+    window.needsRerender = true;
+    this.timeAnimationFrameId = requestAnimationFrame((t: number) => this.updateTime(t));
   }
 
   getMaterial(): THREE.ShaderMaterial {

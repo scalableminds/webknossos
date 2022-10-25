@@ -116,7 +116,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
     <React.Fragment>
       <Layout>
         <Content>
-          <Tabs defaultActiveKey="2" className="container">
+          <Tabs defaultActiveKey="1" className="container">
             <TabPane
               tab={
                 <span>
@@ -132,7 +132,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
               tab={
                 <span>
                   <DatabaseOutlined />
-                  Add Remote Zarr Dataset
+                  Add Remote Zarr / N5 Dataset
                 </span>
               }
               key="2"

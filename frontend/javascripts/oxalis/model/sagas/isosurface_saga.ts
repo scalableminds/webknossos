@@ -680,10 +680,6 @@ function* loadPrecomputedMeshForSegmentId(
           const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
           // Compute vertex normals to achieve smooth shading
           geometry.computeVertexNormals();
-          // Apply the scale from the segment info, which includes dataset scale and mag
-          if (scale != null) {
-            geometry.scale(...scale);
-          }
 
           yield* call(
             { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
@@ -691,6 +687,8 @@ function* loadPrecomputedMeshForSegmentId(
             id,
             false,
             chunk.position,
+            // Apply the scale from the segment info, which includes dataset scale and mag
+            scale,
           );
         } else {
           // V0

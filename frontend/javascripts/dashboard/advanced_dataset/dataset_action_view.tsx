@@ -189,7 +189,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           }
         >
           <WarningOutlined />
-          View Error
+          Show Error
         </a>
       </div>
     );

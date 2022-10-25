@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed a rare crash in newer Firefox versions. [#6561](https://github.com/scalableminds/webknossos/pull/6561)
 
 ### Removed
 

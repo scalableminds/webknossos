@@ -93,7 +93,6 @@ case class OpenIdConnectConfig(
 case class OpenIdConnectTokenResponse(
     access_token: String,
     token_type: String,
-    expires_in: Option[String],
     refresh_token: Option[String],
     scope: Option[String]
 )

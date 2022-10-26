@@ -331,6 +331,8 @@ function SimpleLayerForm({
         : null,
     findJobPred: (job) =>
       job.type === "find_largest_segment_id" && job.datasetName === datasetId?.name,
+    jobStartedMessage:
+      "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
     successMessage:
       "The computation of the largest segment id for this dataset has finished. Reload the page to see it.",
     failureMessage: "The computation of a mesh file for this dataset didn't finish properly.",
@@ -536,34 +538,36 @@ function SimpleLayerForm({
                     },
                   ]}
                 >
-                  <InputNumber
-                    disabled={isReadOnlyDataset}
-                    // @ts-ignore returning undefined does work without problems
-                    parser={(value: string | undefined) => {
-                      if (value == null || value === "") {
-                        return undefined;
-                      }
-                      return parseInt(value, 10);
-                    }}
-                  />
+                  <DelegatePropsToFirstChild>
+                    <InputNumber
+                      disabled={isReadOnlyDataset}
+                      // @ts-ignore returning undefined does work without problems
+                      parser={(value: string | undefined) => {
+                        if (value == null || value === "") {
+                          return undefined;
+                        }
+                        return parseInt(value, 10);
+                      }}
+                    />
+                    {!isReadOnlyDataset && datasetId && features().jobsEnabled && (
+                      <Button
+                        type="primary"
+                        title={`${
+                          activeJob != null ? "Scanning" : "Scan"
+                        } the data to derive the value automatically`}
+                        style={{ marginLeft: 8 }}
+                        loading={activeJob != null}
+                        disabled={activeJob != null || startJob == null}
+                        onClick={startJob || (() => Promise.resolve())}
+                      >
+                        Detect
+                      </Button>
+                    )}
+                  </DelegatePropsToFirstChild>
                 </FormItemWithInfo>
-                {!isReadOnlyDataset && datasetId && features().jobsEnabled && (
-                  <Button
-                    type="primary"
-                    title={`${
-                      activeJob != null ? "Scanning" : "Scan"
-                    } the data to derive the value automatically`}
-                    style={{ marginBottom: 24 }}
-                    loading={activeJob != null}
-                    disabled={activeJob != null || startJob == null}
-                    onClick={startJob || (() => Promise.resolve())}
-                  >
-                    Detect
-                  </Button>
-                )}
               </div>
               {mostRecentSuccessfulJob && (
-                <div style={{ marginTop: -12 }}>
+                <div style={{ marginTop: -6 }}>
                   Output of most recent job: {mostRecentSuccessfulJob.result}
                 </div>
               )}
@@ -572,5 +576,16 @@ function SimpleLayerForm({
         </Col>
       </Row>
     </div>
+  );
+}
+
+function DelegatePropsToFirstChild({ children, ...props }: { children: React.ReactElement[] }) {
+  // This is a small helper function which allows us to pass two children two FormItemWithInfo
+  // even though antd only demands one. We do this for better layouting.
+  return (
+    <>
+      {React.cloneElement(children[0], props)}
+      {children[1]}
+    </>
   );
 }

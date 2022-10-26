@@ -12,12 +12,14 @@ export function useStartAndPollJob({
   findJobPred,
   successMessage,
   failureMessage,
+  jobStartedMessage,
   interval = 2000,
 }: {
   startJobFn: (() => Promise<APIJob>) | null;
   findJobPred: (job: APIJob) => boolean;
   successMessage: string;
   failureMessage: string;
+  jobStartedMessage: string;
   interval?: number;
 }): {
   startJob: (() => Promise<void>) | null;
@@ -38,6 +40,7 @@ export function useStartAndPollJob({
       ? async () => {
           const job = await startJobFn();
           setActiveJob(job);
+          Toast.info(jobStartedMessage);
         }
       : null;
 

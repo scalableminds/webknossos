@@ -431,27 +431,13 @@ class AuthenticationController @Inject()(
     }
   }
 
-  lazy val oidcConfig: OpenIdConnectConfig = OpenIdConnectConfig(conf.SingleSignOn.OIDC.providerUrl,
-    conf.SingleSignOn.OIDC.clientId)
+  lazy val oidcConfig: OpenIdConnectConfig =
+    OpenIdConnectConfig(conf.SingleSignOn.OIDC.providerUrl, conf.SingleSignOn.OIDC.clientId)
   lazy val absoluteCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
-
-  // Claims from https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
-  case class OpenConnectId(iss: String,
-                           sub: String,
-                           preferred_username: String,
-                           given_name: String,
-                           family_name: String,
-                           email: String) {
-    def username: String = preferred_username
-  }
-
-  object OpenConnectId {
-    implicit val format = Json.format[OpenConnectId]
-  }
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (oidcConfig.isValid) {
-      openIdConnectClient.redirectUrl(oidcConfig, absoluteCallbackURL).map(url => Redirect(url))
+      openIdConnectClient.getRedirectUrl(oidcConfig, absoluteCallbackURL).map(url => Redirect(url))
     } else {
       Fox.successful(BadRequest("OpenIdConnect is not activated"))
     }
@@ -473,7 +459,7 @@ class AuthenticationController @Inject()(
     }
 
   // Is called after user was successfully authenticated
-  def loginOrSignupViaOidc(oidc: OpenConnectId): Request[AnyContent] => Future[Result] = {
+  def loginOrSignupViaOidc(oidc: OpenIdConnectClaimSet): Request[AnyContent] => Future[Result] = {
     implicit request: Request[AnyContent] =>
       userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).futureBox.flatMap {
         case Full(user) =>
@@ -507,14 +493,14 @@ class AuthenticationController @Inject()(
   }
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
-    if(!oidcConfig.isValid) BadRequest("OpenIdConnect is not activated")
+    if (!oidcConfig.isValid) BadRequest("OpenIdConnect is not activated")
     for {
       code <- openIdConnectClient.getToken(
         oidcConfig,
         absoluteCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       )
-      oidc: OpenConnectId <- validateJsValue[OpenConnectId](code).toFox
+      oidc: OpenIdConnectClaimSet <- validateJsValue[OpenIdConnectClaimSet](code).toFox
       user_result <- loginOrSignupViaOidc(oidc)(request)
     } yield user_result
   }

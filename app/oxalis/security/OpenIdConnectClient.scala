@@ -18,7 +18,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
   /*
    Build redirect URL to redirect to OIDC provider for auth request (https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
    */
-  def redirectUrl(openIdClient: OpenIdConnectConfig, redirectUrl: String): Fox[String] =
+  def getRedirectUrl(openIdClient: OpenIdConnectConfig, redirectUrl: String): Fox[String] =
     discover(openIdClient).map { serverInfos =>
       def queryParams: Map[String, String] = Map(
         "client_id" -> openIdClient.clientId,
@@ -78,9 +78,8 @@ case class OpenIdConnectConfig(
 
   lazy val discoveryUrl: String = baseUrl + ".well-known/openid-configuration"
 
-  def isValid: Boolean = {
+  def isValid: Boolean =
     baseUrl.nonEmpty
-  }
 }
 
 // Fields as specified by https://www.rfc-editor.org/rfc/rfc6749#section-5.1
@@ -94,4 +93,18 @@ case class OpenIdConnectTokenResponse(
 
 object OpenIdConnectTokenResponse {
   implicit val format: OFormat[OpenIdConnectTokenResponse] = Json.format[OpenIdConnectTokenResponse]
+}
+
+// Claims from https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
+case class OpenIdConnectClaimSet(iss: String,
+                                 sub: String,
+                                 preferred_username: String,
+                                 given_name: String,
+                                 family_name: String,
+                                 email: String) {
+  def username: String = preferred_username
+}
+
+object OpenIdConnectClaimSet {
+  implicit val format = Json.format[OpenIdConnectClaimSet]
 }

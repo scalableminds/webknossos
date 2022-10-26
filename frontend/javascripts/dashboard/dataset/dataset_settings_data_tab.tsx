@@ -551,7 +551,7 @@ function SimpleLayerForm({
                     />
                     {!isReadOnlyDataset && datasetId && features().jobsEnabled && (
                       <Button
-                        type="primary"
+                        type={mostRecentSuccessfulJob == null ? "primary" : "default"}
                         title={`${
                           activeJob != null ? "Scanning" : "Scan"
                         } the data to derive the value automatically`}

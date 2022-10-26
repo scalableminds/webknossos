@@ -450,7 +450,7 @@ CREATE TABLE webknossos.folder_paths(
 CREATE TABLE webknossos.folder_allowedTeams(
   _folder CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
-  PRIMARY KEY (_dataSet, _team)
+  PRIMARY KEY (_folder, _team)
 );
 
 

@@ -1,7 +1,7 @@
 package oxalis.security
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{jsResult2Fox, try2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, jsResult2Fox, try2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import play.api.libs.json.{JsObject, Json, OFormat}
 import pdi.jwt.{JwtJson, JwtOptions}
@@ -15,32 +15,39 @@ import scala.concurrent.ExecutionContext
 
 class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionContext: ExecutionContext) {
 
+  lazy val oidcConfig: OpenIdConnectConfig =
+    OpenIdConnectConfig(conf.SingleSignOn.OIDC.providerUrl, conf.SingleSignOn.OIDC.clientId)
+
   /*
    Build redirect URL to redirect to OIDC provider for auth request (https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
    */
-  def getRedirectUrl(openIdClient: OpenIdConnectConfig, redirectUrl: String): Fox[String] =
-    discover(openIdClient).map { serverInfos =>
-      def queryParams: Map[String, String] = Map(
-        "client_id" -> openIdClient.clientId,
-        "redirect_uri" -> redirectUrl,
-        "scope" -> openIdClient.scope,
-        "response_type" -> "code",
-      )
-      serverInfos.authorization_endpoint + "?" +
-        queryParams.map(v => v._1 + "=" + URLEncoder.encode(v._2, StandardCharsets.UTF_8.toString)).mkString("&")
-    }
+  def getRedirectUrl(callbackUrl: String): Fox[String] =
+    for {
+      _ <- bool2Fox(oidcConfig.isValid) ?~> "OIDC config invalid"
+      redirectUrl <- discover.map { serverInfos =>
+        def queryParams: Map[String, String] = Map(
+          "client_id" -> oidcConfig.clientId,
+          "redirect_uri" -> callbackUrl,
+          "scope" -> oidcConfig.scope,
+          "response_type" -> "code",
+        )
+        serverInfos.authorization_endpoint + "?" +
+          queryParams.map(v => v._1 + "=" + URLEncoder.encode(v._2, StandardCharsets.UTF_8.toString)).mkString("&")
+      }
+    } yield redirectUrl
 
   /*
   Fetches token form the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
   fields described by https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
    */
-  def getToken(openIdClient: OpenIdConnectConfig, redirectUrl: String, code: String): Fox[JsObject] =
+  def getToken(redirectUrl: String, code: String): Fox[JsObject] =
     for {
-      serverInfos <- discover(openIdClient)
+      _ <- bool2Fox(oidcConfig.isValid) ?~> "OIDC config invalid"
+      serverInfos <- discover
       tokenResponse <- rpc(serverInfos.token_endpoint).postFormParseJson[OpenIdConnectTokenResponse](
         Map(
           "grant_type" -> "authorization_code",
-          "client_id" -> openIdClient.clientId,
+          "client_id" -> oidcConfig.clientId,
           "redirect_uri" -> redirectUrl,
           "code" -> code
         ))
@@ -52,9 +59,9 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
   /*
   Discover endpoints of the provider (https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
    */
-  def discover(openIdClient: OpenIdConnectConfig): Fox[OpenIdConnectProviderInfo] =
+  def discover: Fox[OpenIdConnectProviderInfo] =
     for {
-      response: WSResponse <- rpc(openIdClient.discoveryUrl).get
+      response: WSResponse <- rpc(oidcConfig.discoveryUrl).get
       serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
     } yield serverInfo
 

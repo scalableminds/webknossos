@@ -99,7 +99,14 @@ class AuthenticationController @Inject()(
                   inviteBox.toOption,
                   organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
-                _ <- createUser(organization, email, firstName, lastName, autoActivate, Option(signUpData.password), inviteBox, registerBrainDB = true)
+                _ <- createUser(organization,
+                                email,
+                                firstName,
+                                lastName,
+                                autoActivate,
+                                Option(signUpData.password),
+                                inviteBox,
+                                registerBrainDB = true)
               } yield {
                 Ok
               }
@@ -111,13 +118,13 @@ class AuthenticationController @Inject()(
   }
 
   def createUser(organization: Organization,
-                  email: String,
-                  firstName: String,
-                  lastName: String,
-                  autoActivate: Boolean = true,
-                  password: Option[String],
-                  inviteBox: Box[Invite] = Empty,
-                  registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
+                 email: String,
+                 firstName: String,
+                 lastName: String,
+                 autoActivate: Boolean = true,
+                 password: Option[String],
+                 inviteBox: Box[Invite] = Empty,
+                 registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
     val passwordInfo: PasswordInfo =
       password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
     for {
@@ -131,11 +138,12 @@ class AuthenticationController @Inject()(
         .getOrElse(None)
         .toFox
       _ = if (conf.Features.isDemoInstance) {
-          mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
-        } else {
-          Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
-        }
-      _ = Mailer ! Send (defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
+        mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
+      } else {
+        Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
+      }
+      _ = Mailer ! Send(
+        defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
     } yield {
       user
     }
@@ -445,16 +453,10 @@ class AuthenticationController @Inject()(
     }
   }
 
-  lazy val oidcConfig: OpenIdConnectConfig =
-    OpenIdConnectConfig(conf.SingleSignOn.OIDC.providerUrl, conf.SingleSignOn.OIDC.clientId)
   lazy val absoluteCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    if (oidcConfig.isValid) {
-      openIdConnectClient.getRedirectUrl(oidcConfig, absoluteCallbackURL).map(url => Redirect(url))
-    } else {
-      Fox.successful(BadRequest("OpenIdConnect is not activated"))
-    }
+    openIdConnectClient.getRedirectUrl(absoluteCallbackURL).map(url => Redirect(url))
   }
 
   def loginUser(user: User, loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
@@ -483,7 +485,7 @@ class AuthenticationController @Inject()(
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
               GlobalAccessContext)
-            user <- createUser(organization, oidc.email, oidc.given_name,oidc.family_name, autoActivate=true, None)
+            user <- createUser(organization, oidc.email, oidc.given_name, oidc.family_name, autoActivate = true, None)
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(user, loginInfo)
@@ -493,10 +495,8 @@ class AuthenticationController @Inject()(
   }
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
-    if (!oidcConfig.isValid) BadRequest("OpenIdConnect is not activated")
     for {
       code <- openIdConnectClient.getToken(
-        oidcConfig,
         absoluteCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       )

@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(90);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(91);
 COMMIT TRANSACTION;
 
 
@@ -447,6 +447,12 @@ CREATE TABLE webknossos.folder_paths(
     PRIMARY KEY(_ancestor, _descendant)
 );
 
+CREATE TABLE webknossos.folder_allowedTeams(
+  _folder CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
+  PRIMARY KEY (_dataSet, _team)
+);
+
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
@@ -579,6 +585,7 @@ CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT is
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.annotation_privateLinks WHERE NOT isDeleted;
+CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

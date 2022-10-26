@@ -36,6 +36,7 @@ import * as Utils from "libs/utils";
 import window, { document, location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
+import { HelpModal } from "oxalis/view/help_modal";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -300,17 +301,21 @@ function getTimeTrackingMenu({ collapse }: { collapse: boolean }) {
 }
 
 function HelpSubMenu({
+  isAuthenticated,
   isAdminOrTeamManager,
   version,
   polledVersion,
   collapse,
   ...other
 }: {
+  isAuthenticated: boolean;
   isAdminOrTeamManager: boolean;
   version: string | null;
   polledVersion: string | null;
   collapse: boolean;
 } & SubMenuProps) {
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
   return (
     <SubMenu
       title={
@@ -345,10 +350,22 @@ function HelpSubMenu({
           Keyboard Shortcuts
         </a>
       </Menu.Item>
+      {isAuthenticated ? (
+        <>
+          <Menu.Item key="get_help" onClick={() => setIsHelpModalOpen(true)}>
+            Ask a Question
+          </Menu.Item>
+          <HelpModal
+            isModalOpen={isHelpModalOpen}
+            onCancel={() => setIsHelpModalOpen(false)}
+            centeredLayout
+          />
+        </>
+      ) : null}
       {features().isDemoInstance ? (
         <Menu.Item key="contact">
           <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
-            Contact
+            Email Us
           </a>
         </Menu.Item>
       ) : (
@@ -393,10 +410,6 @@ function DashboardSubMenu({ collapse, ...other }: { collapse: boolean } & SubMen
 
 function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
-
-  if (!features().isDemoInstance) {
-    return null;
-  }
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
@@ -687,6 +700,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       version={version}
       polledVersion={polledVersion}
       isAdminOrTeamManager={isAdminOrTeamManager}
+      isAuthenticated={_isAuthenticated}
       collapse={collapseAllNavItems}
     />,
   );

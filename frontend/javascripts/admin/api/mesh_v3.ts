@@ -1,5 +1,5 @@
 import Request from "libs/request";
-import { Vector3 } from "oxalis/constants";
+import { Vector3, Vector4 } from "oxalis/constants";
 import { APIDatasetId } from "types/api_flow_types";
 import { doWithToken } from "./token";
 
@@ -19,7 +19,7 @@ type MeshSegmentInfo = {
 };
 
 type SegmentInfo = {
-  transform: number[][]; // 3x3 matrix
+  transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
   meshFormat: "draco";
   chunks: MeshSegmentInfo;
 };

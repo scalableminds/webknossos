@@ -35,6 +35,7 @@ type APIDataLayerBase = {
   readonly boundingBox: BoundingBoxObject;
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
+  readonly dataFormat?: "wkw" | "zarr";
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -174,6 +175,7 @@ export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
+  hasDiscardedHelpButton?: boolean;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -291,10 +293,12 @@ type APIProjectTypeBase = {
 export type APIProject = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: APIUserBase;
+  readonly created: number;
 };
 export type APIProjectUpdater = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: string;
+  readonly created: number;
 };
 export type APIProjectCreator = APIProjectTypeBase & {
   readonly owner: string;
@@ -643,7 +647,6 @@ export type ServerTracingBase = {
   userBoundingBoxes: Array<UserBoundingBoxFromServer>;
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
-  dataSetName: string;
   editPosition: Point3;
   editRotation: Point3;
   error?: string;
@@ -659,7 +662,6 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   boundingBox?: ServerBoundingBox;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
-  organizationName?: string;
 };
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the
@@ -677,7 +679,6 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // were added to volume tracings. Also see:
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
-  organizationName?: string;
   mappingName?: string | null | undefined;
   mappingIsEditable?: boolean;
 };

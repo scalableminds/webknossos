@@ -42,8 +42,9 @@ In particular, the following file formats are supported for uploading (and conve
 
 Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
-### Working with Zarr datasets
-webKnossos supports loading and remotely streaming [Zarr](https://zarr.dev) datasets from a remote HTTP server or the cloud. webKnossos supports loading Zarr v2 datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
+### Working with Zarr and N5 datasets
+webKnossos supports loading and remotely streaming [Zarr](https://zarr.dev) and [N5](https://github.com/saalfeldlab/n5) datasets from a remote source, e.g. Cloud storage (S3) or HTTP server. 
+webKnossos supports loading Zarr datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
 
 webKnossos can load several Zarr sources and assemble them into a webKnossos dataset with several layers, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer.
 
@@ -84,9 +85,6 @@ Rather, any data viewed in webKnossos will be streamed read-only and directly fr
 Any other webKnossos feature, e.g., annotations, and access rights, will be stored in webKnossos and do not affect these services. 
 
 Note that data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
-
-### Working with N5 datasets
-We are working on integrating [N5](https://github.com/saalfeldlab/n5) support into webKnossos. If you have datasets in the N5 format and would like to work with us on building, testing, and refining the N5 integration into webKnossos then [please contact us](mailto:hello@webknossos.org).
 
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the webKnossos [Python library](https://github.com/scalableminds/webknossos-libs). It allows you to create, manage and upload datasets as well. 

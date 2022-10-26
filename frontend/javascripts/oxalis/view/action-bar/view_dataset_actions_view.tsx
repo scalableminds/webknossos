@@ -77,7 +77,7 @@ export default function ViewDatasetActionsView(props: Props) {
             padding: "0 10px",
           }}
         >
-          <DownOutlined />
+          Menu <DownOutlined />
         </ButtonComponent>
       </Dropdown>
     </div>

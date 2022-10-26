@@ -80,7 +80,7 @@ function useUpdatePrivateLink(annotationId: string) {
       await queryClient.cancelQueries(mutationKey);
 
       // Snapshot the previous value
-      const previousLinks = queryClient.getQueryData(mutationKey);
+      const previousLink = queryClient.getQueryData(mutationKey);
 
       // Optimistically update to the new value
       queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
@@ -88,13 +88,13 @@ function useUpdatePrivateLink(annotationId: string) {
       );
 
       // Return a context object with the snapshotted value
-      return { previousLinks };
+      return { previousLink };
     },
     // If the mutation fails, use the context returned from onMutate to roll back
     onError: (err, _updatedLinkItem, context) => {
       Toast.error("Could not update link.");
       if (context) {
-        queryClient.setQueryData(mutationKey, context.previousLinks);
+        queryClient.setQueryData(mutationKey, context.previousLink);
       }
     },
   });
@@ -155,13 +155,16 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
         {
           type: "group",
           label: "Select layer to copy URL",
-          children: dataLayers.map((layer) => ({
-            label:
+          children: dataLayers.map((layer) => {
+            const readableLayerName =
               "tracingId" in layer && layer.tracingId != null
                 ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
-                : layer.name,
-            key: layer.name,
-          })),
+                : layer.name;
+            return {
+              label: readableLayerName,
+              key: readableLayerName,
+            };
+          }),
         },
       ]}
     />
@@ -180,12 +183,15 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
         size="small"
         style={{
           width: "90%",
+          background: "transparent",
+          color: "var(--ant-text-secondary)",
         }}
         readOnly
+        disabled
       />
 
       <Dropdown overlay={copyLayerUrlMenu}>
-        <Button size="small" icon={<CopyOutlined />} />
+        <Button size="small" icon={<CopyOutlined />} style={{ background: "transparent" }} />
       </Dropdown>
     </Input.Group>
   );
@@ -195,24 +201,25 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const updateMutation = useUpdatePrivateLink(linkItem.annotation);
 
   const onChange: DatePickerProps["onChange"] = (date) => {
-    updateMutation.mutate({ ...linkItem, expirationDateTime: Number(date) });
+    updateMutation.mutate({ ...linkItem, expirationDateTime: Number(date?.endOf("day")) });
   };
 
   const handleExpirationMenuClick = ({
     key,
   }: {
-    key: "24 hours" | "1 week" | "6 months" | "1 year";
+    key: "1 day" | "1 week" | "6 months" | "1 year";
   }) => {
     const expirationDateTime = (() => {
+      const endOfToday = moment().endOf("day");
       switch (key) {
-        case "24 hours":
-          return moment().add(24, "hours");
+        case "1 day":
+          return endOfToday.add(24, "hours");
         case "1 week":
-          return moment().add(1, "week");
+          return endOfToday.add(1, "week");
         case "6 months":
-          return moment().add(6, "months");
+          return endOfToday.add(6, "months");
         case "1 year":
-          return moment().add(1, "year");
+          return endOfToday.add(1, "year");
         default:
           throw new Error("Unexpected expiration date key");
       }
@@ -226,8 +233,8 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
       onClick={handleExpirationMenuClick}
       items={[
         {
-          label: "24 hours",
-          key: "24 hours",
+          label: "1 day",
+          key: "1 day",
         },
         {
           label: "1 week",
@@ -263,6 +270,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
       </Tooltip>
     ) : null;
 
+  const expirationMoment = moment(linkItem.expirationDateTime);
   return (
     <span>
       <FormattedDate timestamp={linkItem.expirationDateTime} />
@@ -273,7 +281,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
               <DatePicker
                 onChange={onChange}
                 // @ts-ignore
-                defaultValue={moment(linkItem.expirationDateTime)}
+                defaultValue={expirationMoment}
                 allowClear={false}
               />
             </div>
@@ -289,10 +297,25 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
         trigger="click"
       >
         <EditOutlined style={{ marginLeft: 4 }} />
-        {maybeWarning}
+        {maybeWarning || <HumanizedDuration expirationMoment={expirationMoment} />}
       </Popover>
     </span>
   );
+}
+
+function HumanizedDuration({ expirationMoment }: { expirationMoment: moment.Moment }) {
+  const now = moment();
+  const hourDiff = expirationMoment.diff(now, "hours");
+
+  const duration =
+    hourDiff < 24
+      ? now.to(expirationMoment)
+      : // Expiration dates usually end at 23:59 UTC. If now == 1 day before the
+        // expiration date at 08:00, moment.to() would round the duration and
+        // render "2 days" which is confusing if the user selected (in 1 day).
+        // Therefore, we pin the time at each date to 23:59 UTC.
+        now.endOf("day").to(expirationMoment.endOf("day"));
+  return <span style={{ color: "var(--ant-text-secondary)", marginLeft: 4 }}>{duration}</span>;
 }
 
 function PrivateLinksView({ annotationId }: { annotationId: string }) {
@@ -309,6 +332,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
       title: "Base URL",
       key: "name",
       render: (_, linkItem) => <UrlInput linkItem={linkItem} />,
+      width: "60%",
     },
     {
       title: "Expiration Date",

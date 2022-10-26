@@ -270,7 +270,7 @@ class SceneController {
     segmentationId: number,
     passive: boolean = false,
     offset: Vector3 | null = null,
-    useDatasetScale: boolean = false,
+    scale: Vector3 | null = null,
   ): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();
@@ -280,8 +280,8 @@ class SceneController {
       newGroup.cellId = segmentationId;
       // @ts-ignore
       newGroup.passive = passive;
-      if (useDatasetScale) {
-        newGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
+      if (scale != null) {
+        newGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
     const mesh = this.constructIsosurfaceMesh(segmentationId, geometry, passive);

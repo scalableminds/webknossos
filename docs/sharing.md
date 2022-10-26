@@ -10,13 +10,13 @@ When speaking about collaboration and sharing, we imagine three scenarios suppor
 
 Since webKnossos is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
 
-- send collaborators an *email* containing a link to specific, interesting data location or annotations
+- send collaborators an *email* containing a link to specific, interesting data locations or annotations
 - include a link in a *publication* so readers can have direct access to the data to see for themselves
 - share a link through *Slack*, *MS Teams*, or any other messenger service
 - include it in any *lab journal* and *blog* posts
 - link it in a *forum* post
 
-In many ways, the sharing by web link works similarly to products like Google Drive or Dropbox.
+In many ways, sharing by web link works similarly to products like Google Drive or Dropbox.
 
 webKnossos sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
 
@@ -137,8 +137,9 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 ![Get the Annotation Sharing Link](images/sharing_modal_link.jpeg)
 
 #### Sharing Link Format
+By default, webKnossos shortens the web links for ease of use. You can switch to full-length links in the link-sharing UI.
 
-As already indicated, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes. 
+As mentioned above, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes. 
 Anyone who opens a link will have the same webKnossos experience that was captured when copying the link. 
 Alternatively, the link can be crafted manually or programmatically to direct users to specific locations in a dataset. 
 
@@ -202,9 +203,9 @@ The information is JSON-encoded in the URL fragment and has the following format
 
 To avoid having to create annotations in advance when programmatically crafting links, a sandbox annotation can be used. A sandbox annotation is always accessible through the same URL and offers all available annotation features, however, changes are not saved. At any point, users can decide to copy the current state to their account. The sandbox can be accessed at `<webknossos_host>/datasets/<organization>/<dataset>/sandbox/skeleton`.
 
-### Team Sharing
+### Team Sharing & Collaboration
 In addition to sharing your annotation via a link, you can also share your annotations with colleagues and make them available on their dashboard from the `Annotations` tab.
-This is the simplest way to share an annotation with a whole team both for review purposes (read-only) or joint work efforts on the same annotation by several people.
+This is the simplest way to share an annotation with a whole team both for review purposes (read-only) or collaborative work efforts on the same annotation by several people.
 
 To share an annotation with a certain team, follow these steps:
 
@@ -215,8 +216,12 @@ To share an annotation with a certain team, follow these steps:
 ![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
 
 Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.  
-You can allow others to make changes to your annotation by selecting the respective checkbox from the sharing dialog ("Yes, allow editing").
-Note that while webKnossos allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once. webKnossos does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies. Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
 
-**Hint, in addition to the integrated Sharing features, you can also download annotations and send them via email to collaborators.**
+To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Yes, allow editing" from the sharing UI.
 
+Note that while webKnossos allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once. 
+webKnossos does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies. 
+Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
+
+!!! info
+    In addition to the integrated Sharing features, you can also [download annotations](./export.md) and send them via email to collaborators.

@@ -505,6 +505,12 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
+export async function assignTaskToUser(taskId: string, userId: string): Promise<APITask> {
+  return Request.receiveJSON(`/api/tasks/${taskId}/assign?userId=${userId}`, {
+    method: "POST",
+  });
+}
+
 // ### Private Links
 
 export function createPrivateLink(
@@ -514,7 +520,10 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: moment().add(initialExpirationPeriodInDays, "days").valueOf(),
+      expirationDateTime: moment()
+        .endOf("day")
+        .add(initialExpirationPeriodInDays, "days")
+        .valueOf(),
     },
   });
 }
@@ -867,6 +876,12 @@ export async function getTracingForAnnotationType(
   // Flow complains since we don't doublecheck that we assign the correct type depending
   // on the tracing's structure.
   tracing.typ = typ;
+
+  // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
+  delete tracing.dataSetName;
+  // @ts-ignore
+  delete tracing.organizationName;
+
   return tracing;
 }
 
@@ -1446,11 +1461,11 @@ export async function exploreRemoteDataset(
   const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
     data: credentials
       ? remoteUris.map((uri) => ({
-          remoteUri: uri,
+          remoteUri: uri.trim(),
           user: credentials.username,
           password: credentials.pass,
         }))
-      : remoteUris.map((uri) => ({ remoteUri: uri })),
+      : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
   });
   if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
     Toast.error("The data could not be accessed. Please verify the credentials!");
@@ -1636,6 +1651,7 @@ export async function getHistogramForLayer(
   return doWithToken((token) =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/histogram?token=${token}`,
+      { showErrorToast: false },
     ),
   );
 }
@@ -1886,10 +1902,16 @@ export async function isDatasetAccessibleBySwitching(
   if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
       `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
+      {
+        showErrorToast: false,
+      },
     );
   } else {
     return Request.receiveJSON(
       `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&dataSetName=${commandType.name}`,
+      {
+        showErrorToast: false,
+      },
     );
   }
 }
@@ -2310,4 +2332,11 @@ export function getVoxelyticsArtifactChecksums(
   return Request.receiveJSON(
     `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,
   );
+}
+
+// ### Help / Feedback userEmail
+export function sendHelpEmail(message: string) {
+  return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
+    method: "POST",
+  });
 }

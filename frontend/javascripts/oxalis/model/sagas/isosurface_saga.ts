@@ -602,6 +602,7 @@ function* loadPrecomputedMeshForSegmentId(
   const dataset = yield* select((state) => state.dataset);
 
   let availableChunks = null;
+  let scale: Vector3 | null = null;
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -629,6 +630,11 @@ function* loadPrecomputedMeshForSegmentId(
         meshFileName,
         id,
       );
+      scale = [
+        segmentInfo.transform[0][0],
+        segmentInfo.transform[1][1],
+        segmentInfo.transform[2][2],
+      ];
       availableChunks = _.first(segmentInfo.chunks.lods)?.chunks || [];
     } else {
       availableChunks = yield* call(
@@ -681,7 +687,8 @@ function* loadPrecomputedMeshForSegmentId(
             id,
             false,
             chunk.position,
-            true,
+            // Apply the scale from the segment info, which includes dataset scale and mag
+            scale,
           );
         } else {
           // V0

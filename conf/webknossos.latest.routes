@@ -6,6 +6,7 @@ GET           /buildinfo                                                        
 GET           /features                                                                 controllers.Application.features
 GET           /health                                                                   controllers.Application.health
 POST          /analytics/:eventType                                                     controllers.Application.trackAnalyticsEvent(eventType)
+POST          /helpEmail                                                                controllers.Application.helpEmail(message: String)
 POST          /triggers/initialData                                                     controllers.InitialDataController.triggerInsert
 GET           /maintenance                                                              controllers.MaintenanceController.info
 POST          /maintenance                                                              controllers.MaintenanceController.initMaintenance
@@ -99,7 +100,8 @@ GET           /tracingstore                                                     
 POST          /tracingstores/:name/handleTracingUpdateReport                            controllers.WKRemoteTracingStoreController.handleTracingUpdateReport(name: String, key: String)
 POST          /tracingstores/:name/validateUserAccess                                   controllers.UserTokenController.validateAccessViaTracingstore(name: String, key: String, token: Option[String])
 PUT           /tracingstores/:name                                                      controllers.TracingStoreController.update(name: String)
-GET           /tracingstores/:name/dataSource/:dataSetName                              controllers.WKRemoteTracingStoreController.dataSource(name: String, key: String, organizationName: Option[String], dataSetName: String)
+GET           /tracingstores/:name/dataSource                                           controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)
+GET           /tracingstores/:name/dataSourceId                                         controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreURI/:dataSetName                            controllers.WKRemoteTracingStoreController.dataStoreURIForDataSet(name: String, key: String, organizationName: Option[String], dataSetName: String)
 
 # User access tokens for datastore authentification
@@ -167,6 +169,7 @@ GET           /tasks/experienceDomains                                          
 GET           /tasks/:id                                                                controllers.TaskController.read(id: String)
 DELETE        /tasks/:id                                                                controllers.TaskController.delete(id: String)
 PUT           /tasks/:id                                                                controllers.TaskController.update(id: String)
+POST          /tasks/:id/assign                                                         controllers.TaskController.assignOne(id: String, userId: String)
 GET           /tasks/:id/annotations                                                    controllers.AnnotationController.annotationsForTask(id: String)
 
 # TaskTypes

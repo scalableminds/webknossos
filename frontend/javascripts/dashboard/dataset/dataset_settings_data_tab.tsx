@@ -13,6 +13,7 @@ import {
   Space,
   Button,
 } from "antd";
+import features from "features";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
@@ -31,6 +32,7 @@ import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_compo
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
 import { APIDataLayer, APIDatasetId } from "types/api_flow_types";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 
 const FormItem = Form.Item;
 
@@ -321,6 +323,19 @@ function SimpleLayerForm({
     form.validateFields();
   }, [dataLayers]);
 
+  const { startJob, activeJob, mostRecentSuccessfulJob } = useStartAndPollJob({
+    startJobFn:
+      datasetId != null
+        ? () =>
+            startFindLargestSegmentIdJob(datasetId.name, datasetId.owningOrganization, layer.name)
+        : null,
+    findJobPred: (job) =>
+      job.type === "find_largest_segment_id" && job.datasetName === datasetId?.name,
+    successMessage:
+      "The computation of the largest segment id for this dataset has finished. Reload the page to see it.",
+    failureMessage: "The computation of a mesh file for this dataset didn't finish properly.",
+  });
+
   return (
     <div
       style={{
@@ -489,60 +504,68 @@ function SimpleLayerForm({
           {/* The in-condition is only necessary to satisfy TypeScript */}
           {isSegmentation && "largestSegmentId" in layer ? (
             <div>
-              <FormItemWithInfo
-                name={["dataSource", "dataLayers", index, "largestSegmentId"]}
-                label="Largest segment ID"
-                info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-                initialValue={
-                  layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined
-                }
-                rules={[
-                  {
-                    validator: (rule, value) =>
-                      value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
-                        ? Promise.resolve()
-                        : Promise.reject(
-                            new Error(
-                              `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
-                            ),
-                          ),
-                  },
-                  {
-                    warningOnly: true,
-                    validator: (rule, value) =>
-                      value == null || value === ""
-                        ? Promise.reject(
-                            new Error(
-                              "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
-                            ),
-                          )
-                        : Promise.resolve(),
-                  },
-                ]}
-              >
-                <InputNumber
-                  disabled={isReadOnlyDataset}
-                  // @ts-ignore returning undefined does work without problems
-                  parser={(value: string | undefined) => {
-                    if (value == null || value === "") {
-                      return undefined;
-                    }
-                    return parseInt(value, 10);
-                  }}
-                />
-              </FormItemWithInfo>
-              {datasetId && (
-                <Button
-                  onClick={() =>
-                    startFindLargestSegmentIdJob(
-                      datasetId.name,
-                      datasetId.owningOrganization,
-                      layer.name,
-                    )
+              <div style={{ display: "flex", alignItems: "end" }}>
+                <FormItemWithInfo
+                  name={["dataSource", "dataLayers", index, "largestSegmentId"]}
+                  label="Largest segment ID"
+                  info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
+                  initialValue={
+                    layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined
                   }
+                  rules={[
+                    {
+                      validator: (rule, value) =>
+                        value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              new Error(
+                                `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+                              ),
+                            ),
+                    },
+                    {
+                      warningOnly: true,
+                      validator: (rule, value) =>
+                        value == null || value === ""
+                          ? Promise.reject(
+                              new Error(
+                                "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
+                              ),
+                            )
+                          : Promise.resolve(),
+                    },
+                  ]}
                 >
-                  Detect
-                </Button>
+                  <InputNumber
+                    disabled={isReadOnlyDataset}
+                    // @ts-ignore returning undefined does work without problems
+                    parser={(value: string | undefined) => {
+                      if (value == null || value === "") {
+                        return undefined;
+                      }
+                      return parseInt(value, 10);
+                    }}
+                  />
+                </FormItemWithInfo>
+                {!isReadOnlyDataset && datasetId && features().jobsEnabled && (
+                  <Button
+                    type="primary"
+                    title={`${
+                      activeJob != null ? "Scanning" : "Scan"
+                    } the data to derive the value automatically`}
+                    style={{ marginBottom: 24 }}
+                    loading={activeJob != null}
+                    disabled={activeJob != null || startJob == null}
+                    onClick={startJob || (() => Promise.resolve())}
+                  >
+                    Detect
+                  </Button>
+                )}
+              </div>
+              {mostRecentSuccessfulJob && (
+                <div style={{ marginTop: -12 }}>
+                  Output of most recent job: {mostRecentSuccessfulJob.result}
+                </div>
               )}
             </div>
           ) : null}

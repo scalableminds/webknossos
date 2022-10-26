@@ -5,11 +5,11 @@ import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
-import com.mohiva.play.silhouette.api.util.Credentials
+import com.mohiva.play.silhouette.api.util.{Credentials, PasswordInfo}
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.JsonHelper.{validateJsValue}
+import com.scalableminds.util.tools.JsonHelper.validateJsValue
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 
 import javax.inject.Inject
@@ -99,25 +99,8 @@ class AuthenticationController @Inject()(
                   inviteBox.toOption,
                   organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
-                user <- userService.insert(organization._id,
-                                           email,
-                                           firstName,
-                                           lastName,
-                                           autoActivate,
-                                           passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
-                multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-                _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
-                _ <- Fox.runOptional(inviteBox.toOption)(i =>
-                  inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
-                brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
+                _ <- createUser(organization, email, firstName, lastName, autoActivate, Option(signUpData.password), inviteBox, registerBrainDB = true)
               } yield {
-                if (conf.Features.isDemoInstance) {
-                  mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
-                } else {
-                  Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
-                }
-                Mailer ! Send(
-                  defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
                 Ok
               }
             }
@@ -125,6 +108,37 @@ class AuthenticationController @Inject()(
         }
       }
     )
+  }
+
+  def createUser(organization: Organization,
+                  email: String,
+                  firstName: String,
+                  lastName: String,
+                  autoActivate: Boolean = true,
+                  password: Option[String],
+                  inviteBox: Box[Invite] = Empty,
+                  registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
+    val passwordInfo: PasswordInfo =
+      password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
+    for {
+      user <- userService.insert(organization._id, email, firstName, lastName, autoActivate, passwordInfo) ?~> "user.creation.failed"
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
+      _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
+        inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
+      brainDBResult <- Fox
+        .runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.get).toFox)
+        .getOrElse(None)
+        .toFox
+      _ = if (conf.Features.isDemoInstance) {
+          mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
+        } else {
+          Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
+        }
+      _ = Mailer ! Send (defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
+    } yield {
+      user
+    }
   }
 
   def authenticate: Action[AnyContent] = Action.async { implicit request =>
@@ -469,21 +483,7 @@ class AuthenticationController @Inject()(
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
               GlobalAccessContext)
-            user: User <- userService.insert(organization._id,
-                                             oidc.email,
-                                             oidc.given_name,
-                                             oidc.family_name,
-                                             isActive = true,
-                                             userService.getOpenIdConnectPasswordInfo)
-            multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-            _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-            _ = if (conf.Features.isDemoInstance) {
-              mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
-            } else {
-              Mailer ! Send(defaultMails.newUserMail(user.name, oidc.email, None, enableAutoVerify = true))
-            }
-            _ = Mailer ! Send(
-              defaultMails.registerAdminNotifyerMail(user.name, oidc.email, None, organization, autoActivate = true))
+            user <- createUser(organization, oidc.email, oidc.given_name,oidc.family_name, autoActivate=true, None)
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(user, loginInfo)

@@ -434,10 +434,23 @@ CREATE TABLE webknossos.shortLinks(
   longLink Text NOT NULL
 );
 
+CREATE TABLE webknossos.folders(
+    _id CHAR(24) PRIMARY KEY,
+    name TEXT NOT NULL,
+    isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE webknossos.folder_paths(
+    _ancestor CHAR(24) NOT NULL,
+    _descendant CHAR(24) NOT NULL,
+    depth INT NOT NULL,
+    PRIMARY KEY(_ancestor, _descendant)
+);
+
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
-CREATE TABLE webknossos.voxelytics_artifacts (
+CREATE TABLE webknossos.voxelytics_artifacts(
     _id CHAR(24) NOT NULL,
     _task CHAR(24) NOT NULL,
     name VARCHAR(512) NOT NULL,
@@ -451,7 +464,7 @@ CREATE TABLE webknossos.voxelytics_artifacts (
     CONSTRAINT metadataIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_runs (
+CREATE TABLE webknossos.voxelytics_runs(
     _id CHAR(24) NOT NULL,
     _organization CHAR(24) NOT NULL,
     _user CHAR(24) NOT NULL,
@@ -467,7 +480,7 @@ CREATE TABLE webknossos.voxelytics_runs (
     CONSTRAINT workflowConfigIsJsonObject CHECK(jsonb_typeof(workflow_config) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_tasks (
+CREATE TABLE webknossos.voxelytics_tasks(
     _id CHAR(24) NOT NULL,
     _run CHAR(24) NOT NULL,
     name varCHAR(2048) NOT NULL,
@@ -478,7 +491,7 @@ CREATE TABLE webknossos.voxelytics_tasks (
     CONSTRAINT configIsJsonObject CHECK(jsonb_typeof(config) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_chunks (
+CREATE TABLE webknossos.voxelytics_chunks(
     _id CHAR(24) NOT NULL,
     _task CHAR(24) NOT NULL,
     executionId VARCHAR(2048) NOT NULL,
@@ -487,41 +500,41 @@ CREATE TABLE webknossos.voxelytics_chunks (
     UNIQUE (_task, executionId, chunkName)
 );
 
-CREATE TABLE webknossos.voxelytics_workflows (
+CREATE TABLE webknossos.voxelytics_workflows(
     _organization CHAR(24) NOT NULL,
     hash VARCHAR(512) NOT NULL,
     name TEXT NOT NULL,
     PRIMARY KEY (_organization, hash)
 );
 
-CREATE TABLE webknossos.voxelytics_runStateChangeEvents (
+CREATE TABLE webknossos.voxelytics_runStateChangeEvents(
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_run, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_runHeartbeatEvents (
+CREATE TABLE webknossos.voxelytics_runHeartbeatEvents(
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (_run)
 );
 
-CREATE TABLE webknossos.voxelytics_taskStateChangeEvents (
+CREATE TABLE webknossos.voxelytics_taskStateChangeEvents(
     _task CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_task, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents (
+CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents(
     _chunk CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_chunk, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_chunkProfilingEvents (
+CREATE TABLE webknossos.voxelytics_chunkProfilingEvents(
     _chunk CHAR(24) NOT NULL,
     hostname TEXT NOT NULL,
     pid INT8 NOT NULL,
@@ -532,7 +545,7 @@ CREATE TABLE webknossos.voxelytics_chunkProfilingEvents (
     PRIMARY KEY (_chunk, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents (
+CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents(
     _artifact CHAR(24) NOT NULL,
     path TEXT NOT NULL,
     resolvedPath TEXT NOT NULL,
@@ -542,19 +555,6 @@ CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents (
     lastModified TIMESTAMPTZ NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (_artifact, path, timestamp)
-);
-
-CREATE TABLE webknossos.folders (
-    _id CHAR(24) PRIMARY KEY,
-    name TEXT NOT NULL,
-    isDeleted BOOLEAN NOT NULL DEFAULT false
-);
-
-CREATE TABLE webknossos.folder_paths (
-    _ancestor CHAR(24) NOT NULL,
-    _descendant CHAR(24) NOT NULL,
-    depth INT NOT NULL,
-    PRIMARY KEY(_ancestor, _descendant)
 );
 
 

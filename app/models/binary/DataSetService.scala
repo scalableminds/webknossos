@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
+import models.folder.FolderDAO
 
 import javax.inject.Inject
 import models.job.WorkerDAO
@@ -35,6 +36,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
+                               folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
@@ -76,12 +78,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
       organization <- organizationDAO.findOneByName(owningOrganization)
+      orbanizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataSet = DataSet(
         newId,
         dataStore.name,
         organization._id,
         publication,
         None,
+        orbanizationRootFolder._id,
         dataSourceHash,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,

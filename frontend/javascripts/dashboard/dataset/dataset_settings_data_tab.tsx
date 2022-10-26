@@ -30,7 +30,7 @@ import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
-import { APIDataLayer } from "types/api_flow_types";
+import { APIDataLayer, APIDatasetId } from "types/api_flow_types";
 
 const FormItem = Form.Item;
 
@@ -66,6 +66,7 @@ export default function DatasetSettingsDataTab({
   activeDataSourceEditMode,
   onChange,
   additionalAlert,
+  datasetId,
 }: {
   isEditingMode: boolean;
   isReadOnlyDataset: boolean;
@@ -73,6 +74,7 @@ export default function DatasetSettingsDataTab({
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert?: React.ReactNode | null | undefined;
+  datasetId?: APIDatasetId | undefined;
 }) {
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
@@ -126,6 +128,7 @@ export default function DatasetSettingsDataTab({
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
           <SimpleDatasetForm
+            datasetId={datasetId}
             isEditingMode={isEditingMode}
             isReadOnlyDataset={isReadOnlyDataset}
             form={form}
@@ -161,11 +164,13 @@ function SimpleDatasetForm({
   isReadOnlyDataset,
   dataSource,
   form,
+  datasetId,
 }: {
   isEditingMode: boolean;
   isReadOnlyDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
+  datasetId?: APIDatasetId | undefined;
 }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
@@ -264,6 +269,7 @@ function SimpleDatasetForm({
         {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
           <List.Item key={`layer-${layer.name}`}>
             <SimpleLayerForm
+              datasetId={datasetId}
               isReadOnlyDataset={isReadOnlyDataset}
               layer={layer}
               index={idx}
@@ -291,12 +297,14 @@ function SimpleLayerForm({
   index,
   onRemoveLayer,
   form,
+  datasetId,
 }: {
   isReadOnlyDataset: boolean;
   layer: DataLayer;
   index: number;
   onRemoveLayer: (layer: DataLayer) => void;
   form: FormInstance;
+  datasetId?: APIDatasetId | undefined;
 }) {
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
@@ -523,14 +531,19 @@ function SimpleLayerForm({
                   }}
                 />
               </FormItemWithInfo>
-              {/* todo: only expose if dataset is not being imported. dont hardcode */}
-              <Button
-                onClick={() =>
-                  startFindLargestSegmentIdJob("l4_sample", "sample_organization", layer.name)
-                }
-              >
-                Detect
-              </Button>
+              {datasetId && (
+                <Button
+                  onClick={() =>
+                    startFindLargestSegmentIdJob(
+                      datasetId.name,
+                      datasetId.owningOrganization,
+                      layer.name,
+                    )
+                  }
+                >
+                  Detect
+                </Button>
+              )}
             </div>
           ) : null}
         </Col>

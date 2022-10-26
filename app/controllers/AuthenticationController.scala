@@ -431,10 +431,8 @@ class AuthenticationController @Inject()(
     }
   }
 
-  private lazy val oidcClientId = conf.SingleSignOn.OIDC.clientId
-  private lazy val oidcProviderUrl = conf.SingleSignOn.OIDC.providerUrl
-
-  lazy val oidcConfig: OpenIdConnectConfig = OpenIdConnectConfig(oidcProviderUrl, oidcClientId)
+  lazy val oidcConfig: OpenIdConnectConfig = OpenIdConnectConfig(conf.SingleSignOn.OIDC.providerUrl,
+    conf.SingleSignOn.OIDC.clientId)
   lazy val absoluteCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   // Claims from https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
@@ -452,7 +450,11 @@ class AuthenticationController @Inject()(
   }
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    openIdConnectClient.redirectUrl(oidcConfig, absoluteCallbackURL).map(url => Redirect(url))
+    if (oidcConfig.isValid) {
+      openIdConnectClient.redirectUrl(oidcConfig, absoluteCallbackURL).map(url => Redirect(url))
+    } else {
+      Fox.successful(BadRequest("OpenIdConnect is not activated"))
+    }
   }
 
   def loginUser(user: User, loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
@@ -505,6 +507,7 @@ class AuthenticationController @Inject()(
   }
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
+    if(!oidcConfig.isValid) BadRequest("OpenIdConnect is not activated")
     for {
       code <- openIdConnectClient.getToken(
         oidcConfig,

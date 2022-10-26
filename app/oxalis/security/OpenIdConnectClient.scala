@@ -77,6 +77,10 @@ case class OpenIdConnectConfig(
 ) {
 
   lazy val discoveryUrl: String = baseUrl + ".well-known/openid-configuration"
+
+  def isValid: Boolean = {
+    baseUrl.nonEmpty
+  }
 }
 
 // Fields as specified by https://www.rfc-editor.org/rfc/rfc6749#section-5.1

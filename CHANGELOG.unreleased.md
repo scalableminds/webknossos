@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Turned successful dataset conversions into a clickable link. [#6583](https://github.com/scalableminds/webknossos/pull/6583)
 
 ### Changed
+- When merging annotations, bounding boxes are no longer duplicated. [#6576](https://github.com/scalableminds/webknossos/pull/6576)
 
 ### Fixed
 - Fixed a rare crash in newer Firefox versions. [#6561](https://github.com/scalableminds/webknossos/pull/6561)

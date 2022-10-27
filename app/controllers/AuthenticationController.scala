@@ -134,7 +134,7 @@ class AuthenticationController @Inject()(
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
       brainDBResult <- Fox
-        .runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.get).toFox)
+        .runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")).toFox)
         .getOrElse(None)
         .toFox
       _ = if (conf.Features.isDemoInstance) {

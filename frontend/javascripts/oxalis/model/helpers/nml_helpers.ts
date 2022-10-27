@@ -657,9 +657,9 @@ export function parseNml(nmlString: string): Promise<{
             const currentNode = {
               id: nodeId,
               position: [
-                _parseFloat(attr, "x"),
-                _parseFloat(attr, "y"),
-                _parseFloat(attr, "z"),
+                Math.trunc(_parseFloat(attr, "x")),
+                Math.trunc(_parseFloat(attr, "y")),
+                Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),

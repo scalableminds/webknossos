@@ -263,12 +263,10 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       }
 
       processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, rectangleGeometry);
-    } else if (confirm || enter || cancelQuickSelectAction || escape) {
-      if (escape || cancelQuickSelectAction) {
-        rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-        return;
-      }
-
+    } else if (cancelQuickSelectAction || escape) {
+      rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+      return;
+    } else if (confirm || enter) {
       yield* finalizeQuickSelect(
         rectangleGeometry,
         volumeTracing,

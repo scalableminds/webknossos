@@ -676,7 +676,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 node.id,
                 update(node, {
                   position: {
-                    // Don't round here, since this would make the continous
+                    // Don't round here, since this would make the continuous
                     // movement of a node weird.
                     $set: position,
                   },

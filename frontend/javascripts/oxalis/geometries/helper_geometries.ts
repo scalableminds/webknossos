@@ -118,7 +118,6 @@ export class RectangleGeometry {
 
   setColor(color: THREE.Color) {
     this.color = color;
-    // this.color.offsetHSL(0.0, 0, -0.3);
     // Copy this.color into this.centerMarkerColor
     this.centerMarkerColor.copy(this.color);
     this.centerMarkerColor.offsetHSL(0.5, 0, 0);
@@ -146,7 +145,9 @@ export class RectangleGeometry {
     return [this.rectangle, this.centerMarker];
   }
 
-  attachData(ndData: Uint8Array, width: number, height: number) {
+  attachTextureMask(ndData: Uint8Array, width: number, height: number) {
+    // Attach the array as a binary mask so that the rectangle preview
+    // is only rendered where the passed array is 1.
     const texture = new THREE.DataTexture(ndData, width, height, THREE.RGBAFormat);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
@@ -157,7 +158,9 @@ export class RectangleGeometry {
     rectangle.material.needsUpdate = true;
   }
 
-  unattachTexture() {
+  detachTextureMask() {
+    // Detach the texture mask, so that the full rectangle is visible again
+    // (important while drawing the rectangle).
     const rectangle = this.rectangle;
     rectangle.material.alphaMap = null;
   }

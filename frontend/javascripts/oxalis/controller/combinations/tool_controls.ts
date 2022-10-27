@@ -650,6 +650,13 @@ export class QuickSelectTool {
     const { rectangleGeometry } = SceneController;
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        // Potentially confirm earlier quick select actions. That way, the user
+        // can draw multiple rectangles even in preview mode. When starting a new
+        // rectangle, the old one is confirmed. If no quick select rectangle exists,
+        // this is a noop effectively.
+        Store.dispatch(confirmQuickSelectAction());
+        rectangleGeometry.detachTextureMask();
+
         const state = Store.getState();
         rectangleGeometry.rotateToViewport();
 
@@ -664,9 +671,6 @@ export class QuickSelectTool {
         startPos = V3.floor(calculateGlobalPos(state, pos));
         currentPos = startPos;
         isDragging = true;
-
-        Store.dispatch(confirmQuickSelectAction());
-        rectangleGeometry.unattachTexture();
       },
       leftMouseUp: () => {
         isDragging = false;

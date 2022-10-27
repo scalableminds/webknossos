@@ -293,6 +293,16 @@ export type PartialDatasetConfiguration = Partial<
     readonly layers: Record<string, Partial<DatasetLayerConfiguration>>;
   }
 >;
+
+export type QuickSelectConfig = {
+  readonly showPreview: boolean;
+  readonly segmentMode: "dark" | "light";
+  readonly threshold: number;
+  readonly closeValue: number;
+  readonly erodeValue: number;
+  readonly dilateValue: number;
+};
+
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
   readonly brushSize: number;
@@ -325,14 +335,7 @@ export type UserConfiguration = {
   readonly fillMode: FillMode;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
-  readonly quickSelect: {
-    showPreview: boolean;
-    segmentMode: "dark" | "light";
-    threshold: number;
-    closeValue: number;
-    erodeValue: number;
-    dilateValue: number;
-  };
+  readonly quickSelect: QuickSelectConfig;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

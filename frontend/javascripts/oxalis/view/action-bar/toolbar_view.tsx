@@ -980,7 +980,7 @@ function QuickSelectSettingsPopover() {
       onOpenChange={(open: boolean) => setIsOpen(open)}
     >
       <ButtonComponent
-        title="Configure QuickSelect"
+        title="Configure Quick Select"
         tooltipPlacement="right"
         className="narrow"
         style={{ marginLeft: 12, marginRight: 12 }}

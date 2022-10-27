@@ -29,7 +29,12 @@ import api from "oxalis/api/internal_api";
 import ndarray from "ndarray";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
-import { DatasetLayerConfiguration, OxalisState, VolumeTracing } from "oxalis/store";
+import {
+  DatasetLayerConfiguration,
+  OxalisState,
+  QuickSelectConfig,
+  VolumeTracing,
+} from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, take2 } from "libs/utils";
 import { APIDataLayer } from "types/api_flow_types";
@@ -49,7 +54,7 @@ import { updateUserSettingAction } from "../actions/settings_actions";
 // Used to determine the mean intensity.
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 
-export default function* listenToMinCut(): Saga<void> {
+export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
     "COMPUTE_QUICK_SELECT_FOR_RECT",
     function* guard(action: ComputeQuickSelectForRectAction) {
@@ -122,7 +127,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
 
   if (boundingBoxTarget.getVolume() === 0) {
-    Toast.warning("The draw rectangular had a width or height of zero.");
+    Toast.warning("The drawn rectangular had a width or height of zero.");
     return;
   }
 
@@ -338,13 +343,7 @@ function determineThresholds(
 
 function processBinaryMaskInPlaceAndAttach(
   output: ndarray.NdArray<Uint8Array>,
-  quickSelectConfig: {
-    segmentMode: "dark" | "light";
-    threshold: number;
-    closeValue: number;
-    erodeValue: number;
-    dilateValue: number;
-  },
+  quickSelectConfig: QuickSelectConfig,
   rectangleGeometry: RectangleGeometry,
 ) {
   fillHolesInPlace(output);
@@ -353,7 +352,7 @@ function processBinaryMaskInPlaceAndAttach(
   morphology.dilate(output, quickSelectConfig.dilateValue);
 
   const outputRGBA = maskToRGBA(output);
-  rectangleGeometry.attachData(outputRGBA, output.shape[0], output.shape[1]);
+  rectangleGeometry.attachTextureMask(outputRGBA, output.shape[0], output.shape[1]);
 }
 
 function normalizeToUint8(
@@ -380,12 +379,13 @@ function normalizeToUint8(
   const { intensityRange } = layerConfiguration;
   const [min, max] = intensityRange;
   // Scale the color value according to the histogram settings.
-  // Note: max == min would cause a division by 0. Thus we add 1 in this case and filter out the whole value below.
   const is_max_and_min_equal = Number(max === min);
 
   for (let idx = 0; idx < inputDataRaw.length; idx += 1) {
     let value = inputDataRaw[idx];
     value = clamp(min, value, max);
+    // Note: max == min would cause a division by 0. Thus we add 1 to the divisor.
+    // value will be 0 in that case (since value == min due to the clamp operation).
     value = (256 * (value - min)) / (max - min + is_max_and_min_equal);
     inputData[idx] = value;
   }

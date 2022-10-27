@@ -421,7 +421,7 @@ function* maybeInterpretUndoAsDiscardUiAction() {
   // Sometimes the user hits undo because they want to undo something
   // which isn't really undoable yet. For example, the quick select preview
   // can be such a case.
-  // In that case, we re-interpet the undo action accordingly.
+  // In that case, we re-interpret the undo action accordingly.
   // The return value of this function signals whether undo was re-interpreted.
   const isQuickSelectActive = yield* select((state) => state.uiInformation.isQuickSelectActive);
   if (!isQuickSelectActive) {

@@ -1,12 +1,14 @@
 package models.job
 
 import akka.actor.ActorSystem
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import models.binary.DataStoreDAO
+
 import javax.inject.Inject
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
@@ -67,7 +69,7 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   }
 }
 
-class WorkerService @Inject()(conf: WkConf) {
+class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDAO: WorkerDAO) {
 
   def lastHeartBeatIsRecent(worker: Worker): Boolean =
     System.currentTimeMillis() - worker.lastHeartBeat < conf.Jobs.workerLivenessTimeout.toMillis
@@ -80,6 +82,12 @@ class WorkerService @Inject()(conf: WkConf) {
       "lastHeartBeat" -> worker.lastHeartBeat,
       "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)
     )
+
+  def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    for {
+      _ <- dataStoreDAO.findOneByName(dataStoreName)
+      _ <- workerDAO.findOneByDataStore(dataStoreName)
+    } yield true
 
 }
 

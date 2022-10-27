@@ -226,6 +226,26 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
+  def removeAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- annotationService.findLayer(annotation, typ, layerName)
+        _ <- annotationService.removeAnnotationLayer(annotation, typ, layerName)
+      } yield Ok
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def removeAnnotationLayerWithoutType(id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- removeAnnotationLayer(annotation.typ.toString, id, layerName)(request)
+      } yield result
+    }
+
+  @ApiOperation(hidden = true, value = "")
   def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {

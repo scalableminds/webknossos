@@ -144,7 +144,7 @@ export function createNode(
     .getOrElse(Constants.DEFAULT_NODE_RADIUS);
   // Find new node id by increasing the max node id.
   const nextNewId = skeletonTracing.cachedMaxNodeId + 1;
-  const position = V3.floor(positionFloat);
+  const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
     position,

@@ -289,9 +289,9 @@ function serializeNodes(nodes: NodeMap): Array<string> {
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
-      x: position[0],
-      y: position[1],
-      z: position[2],
+      x: Math.trunc(position[0]),
+      y: Math.trunc(position[1]),
+      z: Math.trunc(position[2]),
       rotX: node.rotation[0],
       rotY: node.rotation[1],
       rotZ: node.rotation[2],

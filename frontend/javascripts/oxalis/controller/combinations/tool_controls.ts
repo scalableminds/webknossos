@@ -224,6 +224,9 @@ export class SkeletonTool {
         );
       },
       leftMouseUp: () => {
+        if (draggingNodeId != null) {
+          SkeletonHandlers.finishNodeMovement(draggingNodeId);
+        }
         draggingNodeId = null;
       },
       leftDownMove: (
@@ -239,7 +242,7 @@ export class SkeletonTool {
           tracing.skeleton != null &&
           (draggingNodeId != null || (useLegacyBindings && event.ctrlKey))
         ) {
-          SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId);
+          SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId, true);
         } else {
           MoveHandlers.handleMovePlane(delta);
         }

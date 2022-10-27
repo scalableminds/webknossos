@@ -231,8 +231,8 @@ class AnnotationController @Inject()(
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- annotationService.findLayer(annotation, typ, layerName)
-        _ <- annotationService.removeAnnotationLayer(annotation, typ, layerName)
+        _ <- annotationService.findLayer(annotation, layerName) ?~> "No such layer found"
+        _ <- annotationService.removeAnnotationLayer(annotation, layerName)
       } yield Ok
     }
 

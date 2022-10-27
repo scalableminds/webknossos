@@ -8,16 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.11.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/22.11.1...HEAD)
 
 ### Added
-- Turned successful dataset conversions into a clickable link. [#6583](https://github.com/scalableminds/webknossos/pull/6583)
 
 ### Changed
 
 ### Fixed
-- Fixed a rare crash in newer Firefox versions. [#6561](https://github.com/scalableminds/webknossos/pull/6561)
-- Fixed the positions of precomputed meshes when using a v3 mesh file. [#6588](https://github.com/scalableminds/webknossos/pull/6588)
 
 ### Removed
 

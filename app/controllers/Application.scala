@@ -1,28 +1,38 @@
 package controllers
 
+import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
-import models.user.MultiUserDAO
+import models.user.{MultiUserDAO, UserService}
+import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
 import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
+import oxalis.mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
 class Application @Inject()(multiUserDAO: MultiUserDAO,
+                            actorSystem: ActorSystem,
                             analyticsService: AnalyticsService,
+                            userService: UserService,
                             releaseInformationDAO: ReleaseInformationDAO,
+                            organizationDAO: OrganizationDAO,
                             conf: WkConf,
+                            defaultMails: DefaultMails,
                             storeModules: StoreModules,
                             sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
+
+  private lazy val Mailer =
+    actorSystem.actorSelection("/user/mailActor")
 
   @ApiOperation(value = "Information about the version of webKnossos")
   @ApiResponses(
@@ -62,6 +72,15 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   @ApiOperation(value = "Health endpoint")
   def health: Action[AnyContent] = Action {
     Ok
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def helpEmail(message: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      organization <- organizationDAO.findOne(request.identity._organization)
+      userEmail <- userService.emailFor(request.identity)
+      _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.displayName, message))
+    } yield Ok
   }
 
 }

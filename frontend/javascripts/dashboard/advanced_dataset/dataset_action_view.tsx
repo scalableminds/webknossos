@@ -6,6 +6,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
@@ -18,6 +19,7 @@ import {
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
+import { Modal } from "antd";
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
   color: "var(--ant-disabled)",
@@ -178,7 +180,17 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           Import
         </Link>
         {reloadLink}
-        <div className="text-danger">{dataset.dataSource.status}</div>
+        <a
+          onClick={() =>
+            Modal.error({
+              title: "Cannot load this dataset",
+              content: dataset.dataSource.status,
+            })
+          }
+        >
+          <WarningOutlined />
+          Show Error
+        </a>
       </div>
     );
     return (

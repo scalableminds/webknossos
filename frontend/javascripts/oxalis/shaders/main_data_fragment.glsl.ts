@@ -65,7 +65,6 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
   uniform float segmentationPatternOpacity;
-  uniform float timeMs;
 
   uniform bool isMappingEnabled;
   uniform float mappingSize;
@@ -198,27 +197,24 @@ void main() {
   <% if (hasSegmentation) { %>
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
-    // Color map (<= to fight rounding mistakes)
-    if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
-      // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredCell = hoveredSegmentIdLow == <%= segmentationName%>_id_low
-        && hoveredSegmentIdHigh == <%= segmentationName%>_id_high;
-      bool isActiveCell = activeCellIdLow == <%= segmentationName%>_id_low
-         && activeCellIdHigh == <%= segmentationName%>_id_high;
-      // Use the current time to let the activeCell pulse
-      float timeMultiplier = isActiveCell ? (sin(timeMs / 400.) + 1. ) / 2. : 1.;
-      // Highlight cell only if it's hovered or active
-      // and if segmentation opacity is not zero
-      float hoverAlphaIncrement =
-        (isHoveredCell || isActiveCell) && <%= segmentationName%>_alpha > 0.0 ? 0.2 * timeMultiplier : 0.0;
+     // Color map (<= to fight rounding mistakes)
+     if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
+       // Increase cell opacity when cell is hovered
+       float hoverAlphaIncrement =
+         // Hover cell only if it's the active one
+         // and if segmentation opacity is not zero
+         hoveredSegmentIdLow == <%= segmentationName%>_id_low
+          && hoveredSegmentIdHigh == <%= segmentationName%>_id_high
+          && <%= segmentationName%>_alpha > 0.0
+         ? 0.2 : 0.0;
 
-      gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
-    }
+       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
+     }
 
-    vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
-    gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
-    gl_FragColor.a = 1.0;
+     vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
+     <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
+     gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+     gl_FragColor.a = 1.0;
   <% }) %>
   <% } %>
 }

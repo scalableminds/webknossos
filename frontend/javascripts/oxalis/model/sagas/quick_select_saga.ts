@@ -1,3 +1,4 @@
+import _ from "lodash";
 import ops from "ndarray-ops";
 import moments from "ndarray-moments";
 import {
@@ -72,6 +73,12 @@ export default function* listenToQuickSelect(): Saga<void> {
   );
 }
 
+const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
+  Toast.info(
+    `The quick select tool will use the data of layer ${layerName}. If you want to use another layer, please hide the other non-segmentation layers.`,
+  );
+});
+
 function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
   const activeViewport = yield* select(
     (state: OxalisState) => state.viewModeData.plane.activeViewport,
@@ -90,11 +97,16 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     getEnabledColorLayers(state.dataset, state.datasetConfiguration),
   );
   if (colorLayers.length === 0) {
-    Toast.warning("No color layer available to use for quickSelect feature");
+    Toast.warning("No color layer available to use for quick select feature");
     return;
   }
 
   const colorLayer = colorLayers[0];
+
+  if (colorLayers.length > 1) {
+    warnAboutMultipleColorLayers(colorLayer.name);
+  }
+
   const layerConfiguration = yield* select(
     (state) => state.datasetConfiguration.layers[colorLayer.name],
   );
@@ -443,6 +455,8 @@ function* finalizeQuickSelect(
 }
 
 function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {
+  // Create an RGBA mask from the single-channel input, since this is needed
+  // to create a texture for the rectangle preview.
   const channelCount = 4;
   const outputRGBA = new Uint8Array(output.size * channelCount);
   let idx = 0;

@@ -130,7 +130,8 @@ export class RectangleGeometry {
     const extentXYZ = V3.abs(V3.sub(endPosition, startPosition));
     const { activeViewport } = Store.getState().viewModeData.plane;
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
-    extentUVW[2] = 2;
+    // Set the depth-component of the rectangle to 1
+    extentUVW[2] = 1;
 
     this.rectangle.position.set(...centerPosition);
     this.rectangle.scale.set(...extentUVW);

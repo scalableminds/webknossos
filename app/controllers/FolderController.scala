@@ -6,7 +6,7 @@ import models.folder.{FolderDAO, FolderService}
 import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 class FolderController @Inject()(folderDAO: FolderDAO,
                                  folderService: FolderService,
                                  organizationDAO: OrganizationDAO,
-                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 

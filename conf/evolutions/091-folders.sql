@@ -66,7 +66,7 @@ ALTER TABLE webknossos.organizations ADD COLUMN _rootFolder CHAR(24);
 UPDATE webknossos.organizations SET _rootFolder = webknossos.generate_object_id();
 
 INSERT INTO webknossos.folders SELECT _rootFolder, name, isDeleted from webknossos.organizations;
-INSERT INTO webknossos.folder_paths SELECT _id, _id, 0 from webknossos.folders;
+INSERT INTO webknossos.folder_paths SELECT _id, _id, 0 FROM webknossos.folders;
 UPDATE webknossos.datasets d
   SET _folder = o._rootFolder
   FROM webknossos.organizations o

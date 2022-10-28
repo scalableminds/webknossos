@@ -366,6 +366,11 @@ function processBinaryMaskInPlaceAndAttach(
   quickSelectConfig: Omit<QuickSelectConfig, "showPreview">,
   rectangleGeometry: RectangleGeometry,
 ) {
+  // Fill center so that the watershed essentially starts
+  // from a seed area instead of a single point.
+  const centerAreaSubview = getCenterSubview(output);
+  ops.assigns(centerAreaSubview, 1);
+
   fillHolesInPlace(output);
   morphology.close(output, quickSelectConfig.closeValue);
   morphology.erode(output, quickSelectConfig.erodeValue);

@@ -72,6 +72,7 @@ const rotations = {
 
 export class RectangleGeometry {
   color: THREE.Color;
+  meshGroup: THREE.Group;
   centerMarkerColor: THREE.Color;
   rectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   centerMarker: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
@@ -96,6 +97,10 @@ export class RectangleGeometry {
       opacity: 0.9,
     });
     this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
+
+    this.meshGroup = new THREE.Group();
+    this.meshGroup.add(this.rectangle);
+    this.meshGroup.add(this.centerMarker);
 
     this.reset();
   }
@@ -142,8 +147,16 @@ export class RectangleGeometry {
     app.vent.trigger("rerender");
   }
 
-  getMeshes() {
-    return [this.rectangle, this.centerMarker];
+  adaptVisibilityForRendering(flycamPosition: Vector3, thirdDim: 0 | 1 | 2) {
+    // Only show this geometry when the current viewport is exactly at the
+    // right position (third dimension).
+    this.meshGroup.visible =
+      Math.trunc(flycamPosition[thirdDim]) ==
+      Math.trunc(this.rectangle.position.toArray()[thirdDim]);
+  }
+
+  getMeshGroup() {
+    return this.meshGroup;
   }
 
   attachTextureMask(ndData: Uint8Array, width: number, height: number) {

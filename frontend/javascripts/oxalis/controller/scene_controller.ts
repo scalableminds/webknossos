@@ -397,9 +397,7 @@ class SceneController {
       this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 
       this.rectangleGeometry = new RectangleGeometry();
-      this.rectangleGeometry
-        .getMeshes()
-        .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
+      this.annotationToolsGeometryGroup.add(this.rectangleGeometry.getMeshGroup());
     }
 
     if (state.tracing.skeleton != null) {
@@ -481,12 +479,12 @@ class SceneController {
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
+    const originalPosition = getPosition(Store.getState().flycam);
     if (id !== OrthoViews.TDView) {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
-          const originalPosition = getPosition(Store.getState().flycam);
 
           const pos = _.clone(originalPosition);
 
@@ -495,14 +493,15 @@ class SceneController {
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
+
+          this.rectangleGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
           this.planes[planeId].setVisible(false);
         }
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        const pos = getPosition(Store.getState().flycam);
-        this.planes[planeId].setPosition(pos);
+        this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,

@@ -326,16 +326,8 @@ function determineThresholds(
   const lightMinEffectiveThresh = Math.min(lightMaxThresholdAtBorder, lightLargestThresh - 1);
 
   // Compute the mean intensity for the center rectangle and for the entire image.
-  const rectCenterBrushExtentUV = V3.floor(
-    V3.scale(inputNdUvw.shape as Vector3, CENTER_RECT_SIZE_PERCENTAGE),
-  );
-  const distToCenterRect = V3.floor(
-    V3.sub(V3.scale(inputNdUvw.shape as Vector3, 0.5), rectCenterBrushExtentUV),
-  );
-  const subview = inputNdUvw
-    .lo(distToCenterRect[0], distToCenterRect[1], 0)
-    .hi(distToCenterRect[0], distToCenterRect[1], 1);
-  const [centerMean] = moments(1, subview);
+  const centerAreaSubview = getCenterSubview(inputNdUvw);
+  const [centerMean] = moments(1, centerAreaSubview);
   const [mean] = moments(1, inputNdUvw);
 
   // If the center is darker than the entire image, we assume that a dark segment should be
@@ -352,6 +344,21 @@ function determineThresholds(
     initialDetectDarkSegment = true;
   }
   return { initialDetectDarkSegment, darkMaxEffectiveThresh, lightMinEffectiveThresh };
+}
+
+function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
+  const rectCenterExtentUV = V3.floor(
+    V3.scale(inputNdUvw.shape as Vector3, CENTER_RECT_SIZE_PERCENTAGE),
+  );
+  const distToCenterRect = V3.floor(
+    V3.scale(V3.sub(inputNdUvw.shape as Vector3, rectCenterExtentUV), 0.5),
+  );
+  const centerAreaSubview = inputNdUvw
+    // a.lo(x,y) => a[x:, y:]
+    .lo(distToCenterRect[0], distToCenterRect[1], 0)
+    // a.hi(x,y) => a[:x, :y]
+    .hi(rectCenterExtentUV[0], rectCenterExtentUV[1], 1);
+  return centerAreaSubview;
 }
 
 function processBinaryMaskInPlaceAndAttach(

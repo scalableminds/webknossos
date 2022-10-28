@@ -82,10 +82,10 @@ export const toggleTemporarySettingAction = (propertyName: keyof TemporaryConfig
     propertyName,
   } as const);
 
-export const updateLayerSettingAction = (
+export const updateLayerSettingAction = <Key extends keyof DatasetLayerConfiguration>(
   layerName: string,
-  propertyName: keyof DatasetLayerConfiguration,
-  value: any,
+  propertyName: Key,
+  value: DatasetLayerConfiguration[Key],
 ) =>
   ({
     type: "UPDATE_LAYER_SETTING",

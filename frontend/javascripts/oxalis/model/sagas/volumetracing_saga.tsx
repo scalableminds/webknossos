@@ -52,7 +52,6 @@ import type {
   AddPrecomputedIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import type { UpdateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   updateTemporarySettingAction,
   updateUserSettingAction,

@@ -485,7 +485,13 @@ function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {
 
   for (let v = 0; v < output.shape[1]; v++) {
     for (let u = 0; u < output.shape[0]; u++) {
-      const val = normalize(output.get(u, v, 0));
+      let val = normalize(output.get(u, v, 0));
+      if (u === 0 || v === 0 || u === output.shape[0] - 1 || v === output.shape[1] - 1) {
+        // Make border pixels always visible so that the user can recognize the
+        // preview state better. These pixels are only painted in the preview texture
+        // and won't be annotated when confirming the preview.
+        val = 255;
+      }
       outputRGBA[idx] = val;
       outputRGBA[idx + 1] = val;
       outputRGBA[idx + 2] = val;

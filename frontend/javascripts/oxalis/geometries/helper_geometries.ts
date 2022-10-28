@@ -151,7 +151,7 @@ export class RectangleGeometry {
     // Only show this geometry when the current viewport is exactly at the
     // right position (third dimension).
     this.meshGroup.visible =
-      Math.trunc(flycamPosition[thirdDim]) ==
+      Math.trunc(flycamPosition[thirdDim]) ===
       Math.trunc(this.rectangle.position.toArray()[thirdDim]);
   }
 

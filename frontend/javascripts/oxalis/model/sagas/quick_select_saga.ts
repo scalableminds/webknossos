@@ -465,9 +465,15 @@ function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {
   const max = ops.sup(output);
   const min = ops.inf(output);
 
+  const normalize =
+    max === min
+      ? // Avoid division by zero
+        (val: number) => (val > 0 ? 255 : 0)
+      : (val: number) => (255 * (val - min)) / (max - min);
+
   for (let v = 0; v < output.shape[1]; v++) {
     for (let u = 0; u < output.shape[0]; u++) {
-      const val = (255 * (output.get(u, v, 0) - min)) / (max - min);
+      const val = normalize(output.get(u, v, 0));
       outputRGBA[idx] = val;
       outputRGBA[idx + 1] = val;
       outputRGBA[idx + 2] = val;

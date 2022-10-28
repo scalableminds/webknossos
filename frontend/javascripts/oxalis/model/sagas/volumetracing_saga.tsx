@@ -609,7 +609,6 @@ function* ensureSegmentExists(
     | AddAdHocIsosurfaceAction
     | AddPrecomputedIsosurfaceAction
     | SetActiveCellAction
-    | UpdateTemporarySettingAction
     | ClickSegmentAction,
 ): Saga<void> {
   const layer = yield* select((store) =>
@@ -622,7 +621,7 @@ function* ensureSegmentExists(
 
   const layerName = layer.name;
   const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
-  const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
+  const cellId = action.cellId;
 
   if (
     cellId === 0 ||
@@ -658,22 +657,6 @@ function* ensureSegmentExists(
         cellId,
         {
           somePosition,
-        },
-        layerName,
-      ),
-    );
-  } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
-    const globalMousePosition = yield* call(getGlobalMousePosition);
-
-    if (globalMousePosition == null) {
-      return;
-    }
-
-    yield* put(
-      updateSegmentAction(
-        cellId,
-        {
-          somePosition: globalMousePosition,
         },
         layerName,
       ),

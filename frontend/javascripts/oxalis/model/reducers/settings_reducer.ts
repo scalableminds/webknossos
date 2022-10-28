@@ -93,14 +93,13 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;
       let { value } = action;
-      // @ts-ignore not compatible with the new quickSelect property
-      // since it is nested. todo: should we add support for that?
-      // or remove the properties again? or flatten them?
-      const settingSpec = userSettings[propertyName];
+      // @ts-ignore The in-check should guard against any problems while accessing userSettings
+      const settingSpec = propertyName in userSettings ? userSettings[propertyName] : null;
 
       if (settingSpec != null && settingSpec.type === "number") {
         const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
         const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
+        // @ts-ignore Since settings.type === "number", value will be a number
         value = clamp(min, value, max);
 
         if ("dynamicMaximumFn" in settingSpec) {

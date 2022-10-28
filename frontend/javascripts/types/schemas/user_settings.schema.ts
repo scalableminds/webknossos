@@ -6,6 +6,7 @@ import {
 } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
+
 export const userSettings = {
   clippingDistance: {
     type: "number",

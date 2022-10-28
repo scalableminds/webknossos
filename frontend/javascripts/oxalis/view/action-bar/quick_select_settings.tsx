@@ -33,6 +33,7 @@ export function QuickSelectControls({ setIsOpen }: { setIsOpen: (val: boolean) =
     dispatch(
       updateUserSettingAction("quickSelect", {
         showPreview: quickSelectConfig.showPreview,
+        segmentMode,
         threshold,
         closeValue,
         erodeValue,

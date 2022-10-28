@@ -46,23 +46,29 @@ export type SettingAction =
   | ReloadHistogramAction
   | InitializeGpuSetupAction;
 
-export const updateUserSettingAction = (propertyName: keyof UserConfiguration, value: any) =>
+export const updateUserSettingAction = <Key extends keyof UserConfiguration>(
+  propertyName: Key,
+  value: UserConfiguration[Key],
+) =>
   ({
     type: "UPDATE_USER_SETTING",
     propertyName,
     value,
   } as const);
 
-export const updateDatasetSettingAction = (propertyName: keyof DatasetConfiguration, value: any) =>
+export const updateDatasetSettingAction = <Key extends keyof DatasetConfiguration>(
+  propertyName: Key,
+  value: DatasetConfiguration[Key],
+) =>
   ({
     type: "UPDATE_DATASET_SETTING",
     propertyName,
     value,
   } as const);
 
-export const updateTemporarySettingAction = (
-  propertyName: keyof TemporaryConfiguration,
-  value: any,
+export const updateTemporarySettingAction = <Key extends keyof TemporaryConfiguration>(
+  propertyName: Key,
+  value: TemporaryConfiguration[Key],
 ) =>
   ({
     type: "UPDATE_TEMPORARY_SETTING",

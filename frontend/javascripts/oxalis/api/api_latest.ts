@@ -1380,7 +1380,7 @@ class DataApi {
       bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions[zoomStep]);
+    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions, zoomStep);
   }
 
   async getViewportData(
@@ -1478,8 +1478,10 @@ class DataApi {
     buckets: Array<Bucket>,
     bbox: BoundingBoxType,
     elementClass: ElementClass,
-    resolution: Vector3,
+    resolutions: Array<Vector3>,
+    zoomStep: number,
   ): TypedArray {
+    const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution
     const topLeft = scaleGlobalPositionWithResolution(bbox.min, resolution);

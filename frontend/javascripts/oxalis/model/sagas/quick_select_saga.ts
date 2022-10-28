@@ -230,15 +230,15 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
   // Start an iterative feedback loop when preview mode is active.
   while (true) {
-    const { finetuneAction, cancelQuickSelectAction, escape, enter, confirm } = (yield* race({
+    const { finetuneAction, cancel, escape, enter, confirm } = (yield* race({
       finetuneAction: take("FINE_TUNE_QUICK_SELECT"),
-      cancelQuickSelectAction: take("CANCEL_QUICK_SELECT"),
+      cancel: take("CANCEL_QUICK_SELECT"),
       escape: take("ESCAPE"),
       enter: take("ENTER"),
       confirm: take("CONFIRM_QUICK_SELECT"),
     })) as {
       finetuneAction: FineTuneQuickSelectAction;
-      cancelQuickSelectAction: CancelQuickSelectAction;
+      cancel: CancelQuickSelectAction;
       escape: EscapeAction;
       enter: EnterAction;
       confirm: ConfirmQuickSelectAction;
@@ -263,7 +263,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
       }
 
       processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, rectangleGeometry);
-    } else if (cancelQuickSelectAction || escape) {
+    } else if (cancel || escape) {
       rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
       return;
     } else if (confirm || enter) {

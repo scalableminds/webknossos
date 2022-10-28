@@ -353,7 +353,7 @@ function determineThresholds(
 
 function processBinaryMaskInPlaceAndAttach(
   output: ndarray.NdArray<Uint8Array>,
-  quickSelectConfig: QuickSelectConfig,
+  quickSelectConfig: Omit<QuickSelectConfig, "showPreview">,
   rectangleGeometry: RectangleGeometry,
 ) {
   fillHolesInPlace(output);

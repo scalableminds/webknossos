@@ -37,7 +37,7 @@ export function getMeshfileChunksForSegment(
     const params = new URLSearchParams();
     params.append("token", token);
     if (mappingName != null) {
-      params.append("mappingName", mappingName);
+      params.append("targetMappingName", mappingName);
     }
     params.append("useMeshFromMappedIds", useMeshFromMappedIds ? "true" : "false");
     return Request.sendJSONReceiveJSON(

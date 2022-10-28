@@ -482,8 +482,6 @@ class SceneController {
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
     if (id !== OrthoViews.TDView) {
-      let ind;
-
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
@@ -492,7 +490,7 @@ class SceneController {
 
           const pos = _.clone(originalPosition);
 
-          ind = Dimensions.getIndices(planeId);
+          const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];

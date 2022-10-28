@@ -37,7 +37,7 @@ import {
   VolumeTracing,
 } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/helper_geometries";
-import { clamp, take2 } from "libs/utils";
+import { clamp, map3, take2 } from "libs/utils";
 import { APIDataLayer } from "types/api_flow_types";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
@@ -122,7 +122,10 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
   const boundingBoxMag1 = new BoundingBox(boundingBoxObj).intersectedWith(layerBBox);
 
-  rectangleGeometry.setCoordinates(boundingBoxMag1.min, boundingBoxMag1.max);
+  // Ensure that the third dimension is inclusive (otherwise, the center of the passed
+  // coordinates wouldn't be exactly on the W plane on which the user started this action).
+  const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
+  rectangleGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
 
   const volumeTracing = yield* select(getActiveSegmentationTracing);
 

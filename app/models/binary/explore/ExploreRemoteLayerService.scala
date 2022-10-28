@@ -104,7 +104,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     explorers match {
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>
-        reportMutable += s"Trying to explore $remotePath as ${currentExplorer.name}..."
+        reportMutable += s"\nTrying to explore $remotePath as ${currentExplorer.name}..."
         currentExplorer.explore(remotePath, credentials).futureBox.flatMap {
           case Full(layersWithVoxelSizes) =>
             reportMutable += s"Found ${layersWithVoxelSizes.length} ${currentExplorer.name} layers at $remotePath."

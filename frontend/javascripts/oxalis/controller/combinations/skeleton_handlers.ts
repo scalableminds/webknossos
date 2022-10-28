@@ -152,7 +152,16 @@ export function handleOpenContextMenu(
     activeViewport,
   );
 }
-export function moveNode(dx: number, dy: number, nodeId?: number | null | undefined) {
+export function moveNode(
+  dx: number,
+  dy: number,
+  nodeId?: number | null | undefined,
+  // If useFloat is false, the node will be moved by integer deltas.
+  // If useFloat is true, the caller should ensure that the node position
+  // is changed to integers afterwards (e.g., when dragging a node where
+  // the floats are used temporary for a smooth UX).
+  useFloat: boolean = false,
+) {
   // dx and dy are measured in pixel.
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
@@ -161,10 +170,27 @@ export function moveNode(dx: number, dy: number, nodeId?: number | null | undefi
       const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
       const zoomFactor = state.flycam.zoomStep;
       const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
+
+      const op = (val: number) => {
+        if (useFloat) {
+          return val;
+        }
+        // Zero diffs should stay zero.
+        // Other values should be rounded, but should at least
+        // have an absolute value of 1 (otherwise, the node
+        // wouldn't move).
+        const sign = Math.sign(val);
+        if (sign === 0) {
+          return 0;
+        }
+        const positiveVal = sign * val;
+        return sign * Math.max(1, Math.round(positiveVal));
+      };
+
       const delta = [
-        vector[0] * zoomFactor * scaleFactor[0],
-        vector[1] * zoomFactor * scaleFactor[1],
-        vector[2] * zoomFactor * scaleFactor[2],
+        op(vector[0] * zoomFactor * scaleFactor[0]),
+        op(vector[1] * zoomFactor * scaleFactor[1]),
+        op(vector[2] * zoomFactor * scaleFactor[2]),
       ];
       const [x, y, z] = activeNode.position;
       Store.dispatch(
@@ -177,6 +203,17 @@ export function moveNode(dx: number, dy: number, nodeId?: number | null | undefi
     }),
   );
 }
+
+export function finishNodeMovement(nodeId: number) {
+  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
+    getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, node]) => {
+      Store.dispatch(
+        setNodePositionAction(V3.round(node.position, [0, 0, 0]), node.id, activeTree.treeId),
+      );
+    }),
+  );
+}
+
 export function setWaypoint(
   position: Vector3,
   activeViewport: OrthoView,

@@ -39,6 +39,7 @@ import {
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, map3, take2 } from "libs/utils";
 import { APIDataLayer } from "types/api_flow_types";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import { EnterAction, EscapeAction, setIsQuickSelectActiveAction } from "../actions/ui_actions";
@@ -213,6 +214,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   );
 
   if (!quickSelectConfig.showPreview) {
+    sendAnalyticsEvent("used_quick_select_without_preview");
     yield* finalizeQuickSelect(
       quickSelectGeometry,
       volumeTracing,
@@ -267,9 +269,12 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
       processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, quickSelectGeometry);
     } else if (cancel || escape) {
+      sendAnalyticsEvent("cancelled_quick_select_preview");
       quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
       return;
     } else if (confirm || enter) {
+      sendAnalyticsEvent("confirmed_quick_select_preview");
+
       yield* finalizeQuickSelect(
         quickSelectGeometry,
         volumeTracing,

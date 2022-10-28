@@ -20,7 +20,7 @@ import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import { ContourGeometry, RectangleGeometry } from "oxalis/geometries/helper_geometries";
+import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import Cube from "oxalis/geometries/cube";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
@@ -59,8 +59,8 @@ class SceneController {
   taskBoundingBox: Cube | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rectangleGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  rectangleGeometry: RectangleGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectGeometry' has no initializer and is not d... Remove this comment to see the full error message
+  quickSelectGeometry: QuickSelectGeometry;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
@@ -396,8 +396,8 @@ class SceneController {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 
-      this.rectangleGeometry = new RectangleGeometry();
-      this.annotationToolsGeometryGroup.add(this.rectangleGeometry.getMeshGroup());
+      this.quickSelectGeometry = new QuickSelectGeometry();
+      this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
     }
 
     if (state.tracing.skeleton != null) {
@@ -494,7 +494,7 @@ class SceneController {
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
 
-          this.rectangleGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
+          this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
           this.planes[planeId].setVisible(false);
         }

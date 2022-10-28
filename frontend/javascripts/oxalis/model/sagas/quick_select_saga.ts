@@ -36,7 +36,7 @@ import {
   QuickSelectConfig,
   VolumeTracing,
 } from "oxalis/store";
-import { RectangleGeometry } from "oxalis/geometries/helper_geometries";
+import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, map3, take2 } from "libs/utils";
 import { APIDataLayer } from "types/api_flow_types";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
@@ -83,11 +83,11 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const activeViewport = yield* select(
     (state: OxalisState) => state.viewModeData.plane.activeViewport,
   );
-  const { rectangleGeometry } = action;
+  const { quickSelectGeometry } = action;
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");
-    rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
     return;
   }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
@@ -125,7 +125,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   // Ensure that the third dimension is inclusive (otherwise, the center of the passed
   // coordinates wouldn't be exactly on the W plane on which the user started this action).
   const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
-  rectangleGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
+  quickSelectGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
 
   const volumeTracing = yield* select(getActiveSegmentationTracing);
 
@@ -206,7 +206,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     );
   }
 
-  processBinaryMaskInPlaceAndAttach(thresholdField, quickSelectConfig, rectangleGeometry);
+  processBinaryMaskInPlaceAndAttach(thresholdField, quickSelectConfig, quickSelectGeometry);
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,
@@ -214,7 +214,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
   if (!quickSelectConfig.showPreview) {
     yield* finalizeQuickSelect(
-      rectangleGeometry,
+      quickSelectGeometry,
       volumeTracing,
       activeViewport,
       labeledResolution,
@@ -265,13 +265,13 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         ops.gtseq(thresholdField, finetuneAction.threshold);
       }
 
-      processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, rectangleGeometry);
+      processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, quickSelectGeometry);
     } else if (cancel || escape) {
-      rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+      quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
       return;
     } else if (confirm || enter) {
       yield* finalizeQuickSelect(
-        rectangleGeometry,
+        quickSelectGeometry,
         volumeTracing,
         activeViewport,
         labeledResolution,
@@ -364,7 +364,7 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 function processBinaryMaskInPlaceAndAttach(
   output: ndarray.NdArray<Uint8Array>,
   quickSelectConfig: Omit<QuickSelectConfig, "showPreview">,
-  rectangleGeometry: RectangleGeometry,
+  quickSelectGeometry: QuickSelectGeometry,
 ) {
   // Fill center so that the watershed essentially starts
   // from a seed area instead of a single point.
@@ -377,7 +377,7 @@ function processBinaryMaskInPlaceAndAttach(
   morphology.dilate(output, quickSelectConfig.dilateValue);
 
   const outputRGBA = maskToRGBA(output);
-  rectangleGeometry.attachTextureMask(outputRGBA, output.shape[0], output.shape[1]);
+  quickSelectGeometry.attachTextureMask(outputRGBA, output.shape[0], output.shape[1]);
 }
 
 function normalizeToUint8(
@@ -419,7 +419,7 @@ function normalizeToUint8(
 }
 
 function* finalizeQuickSelect(
-  rectangleGeometry: RectangleGeometry,
+  quickSelectGeometry: QuickSelectGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
   labeledResolution: Vector3,
@@ -433,7 +433,7 @@ function* finalizeQuickSelect(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ) {
-  rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   const volumeLayer = yield* call(
     createVolumeLayer,
     volumeTracing,

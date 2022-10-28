@@ -5,7 +5,7 @@ import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import { RectangleGeometry } from "oxalis/geometries/helper_geometries";
+import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 type CreateCellAction = ReturnType<typeof createCellAction>;
@@ -261,13 +261,13 @@ export const setMappingIsEditableAction = () =>
 export const computeQuickSelectForRectAction = (
   startPosition: Vector3,
   endPosition: Vector3,
-  rectangleGeometry: RectangleGeometry,
+  quickSelectGeometry: QuickSelectGeometry,
 ) =>
   ({
     type: "COMPUTE_QUICK_SELECT_FOR_RECT",
     startPosition,
     endPosition,
-    rectangleGeometry,
+    quickSelectGeometry,
   } as const);
 
 export const fineTuneQuickSelectAction = (

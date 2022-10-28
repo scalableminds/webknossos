@@ -647,7 +647,7 @@ export class QuickSelectTool {
     let currentPos: Vector3 | null = null;
     let isDragging = false;
     const SceneController = getSceneController();
-    const { rectangleGeometry } = SceneController;
+    const { quickSelectGeometry } = SceneController;
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         // Potentially confirm earlier quick select actions. That way, the user
@@ -655,10 +655,10 @@ export class QuickSelectTool {
         // rectangle, the old one is confirmed. If no quick select rectangle exists,
         // this is a noop effectively.
         Store.dispatch(confirmQuickSelectAction());
-        rectangleGeometry.detachTextureMask();
+        quickSelectGeometry.detachTextureMask();
 
         const state = Store.getState();
-        rectangleGeometry.rotateToViewport();
+        quickSelectGeometry.rotateToViewport();
 
         const volumeTracing = getActiveSegmentationTracing(state);
         if (!volumeTracing) {
@@ -667,7 +667,7 @@ export class QuickSelectTool {
 
         const [h, s, l] = getSegmentColorAsHSL(state, volumeTracing.activeCellId);
         const activeCellColor = new THREE.Color().setHSL(h, s, l);
-        rectangleGeometry.setColor(activeCellColor);
+        quickSelectGeometry.setColor(activeCellColor);
         startPos = V3.floor(calculateGlobalPos(state, pos));
         currentPos = startPos;
         isDragging = true;
@@ -681,7 +681,9 @@ export class QuickSelectTool {
           return;
         }
         if (startPos != null && currentPos != null) {
-          Store.dispatch(computeQuickSelectForRectAction(startPos, currentPos, rectangleGeometry));
+          Store.dispatch(
+            computeQuickSelectForRectAction(startPos, currentPos, quickSelectGeometry),
+          );
         }
       },
       leftDownMove: (
@@ -694,7 +696,7 @@ export class QuickSelectTool {
           return;
         }
         currentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
-        rectangleGeometry.setCoordinates(startPos, currentPos);
+        quickSelectGeometry.setCoordinates(startPos, currentPos);
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(

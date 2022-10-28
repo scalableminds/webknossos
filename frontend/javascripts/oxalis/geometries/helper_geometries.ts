@@ -1,10 +1,12 @@
 import * as THREE from "three";
-import { OrthoViews, Vector3 } from "oxalis/constants";
+import { OrthoView, OrthoViews, Vector3 } from "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
-import Dimensions from "oxalis/model/dimensions";
+import Dimensions, { DimensionMap } from "oxalis/model/dimensions";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -75,6 +77,10 @@ export class QuickSelectGeometry {
   meshGroup: THREE.Group;
   centerMarkerColor: THREE.Color;
   rectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  topRectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  bottomRectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  leftRectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  rightRectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   centerMarker: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
 
   constructor() {
@@ -98,15 +104,33 @@ export class QuickSelectGeometry {
     });
     this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
 
+    const borderMaterial = new THREE.MeshBasicMaterial({
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9,
+    });
+
+    this.topRectangle = new THREE.Mesh(geometry, borderMaterial);
+    this.bottomRectangle = new THREE.Mesh(geometry, borderMaterial);
+    this.leftRectangle = new THREE.Mesh(geometry, borderMaterial);
+    this.rightRectangle = new THREE.Mesh(geometry, borderMaterial);
+
     this.meshGroup = new THREE.Group();
-    this.meshGroup.add(this.rectangle);
-    this.meshGroup.add(this.centerMarker);
+    this.meshGroup.add(
+      this.rectangle,
+      this.centerMarker,
+      this.topRectangle,
+      this.bottomRectangle,
+      this.leftRectangle,
+      this.rightRectangle,
+    );
 
     this.reset();
   }
 
   reset() {
     this.rectangle.material.color = this.color;
+    this.topRectangle.material.color = this.color;
     this.centerMarker.material.color = this.centerMarkerColor;
   }
 
@@ -117,8 +141,9 @@ export class QuickSelectGeometry {
       return;
     }
 
-    this.rectangle.setRotationFromEuler(rotation);
-    this.centerMarker.setRotationFromEuler(rotation);
+    for (const child of this.meshGroup.children) {
+      child.setRotationFromEuler(rotation);
+    }
   }
 
   setColor(color: THREE.Color) {
@@ -130,17 +155,87 @@ export class QuickSelectGeometry {
     this.reset();
   }
 
+  getIndices(planeID: OrthoView): DimensionMap {
+    // Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
+    switch (planeID) {
+      case OrthoViews.PLANE_XY:
+        // 0, 1, 0
+        return [0, 1, 0];
+
+      // of each plane. For example, moving along the
+      case OrthoViews.PLANE_YZ:
+        // 2, 1, 0
+        return [2, 1, 0];
+
+      // X-Axis of the YZ-Plane is equivalent to moving
+      case OrthoViews.PLANE_XZ:
+        // ?, 0, 1
+        return [2, 0, 1];
+
+      // along the Z axis in the cube -> ind[0]=2
+      default:
+        return [0, 0, 0];
+    }
+  }
+
   setCoordinates(startPosition: Vector3, endPosition: Vector3) {
     const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
+    const minPosition = V3.min(startPosition, endPosition);
+    const maxPosition = V3.max(startPosition, endPosition);
     const extentXYZ = V3.abs(V3.sub(endPosition, startPosition));
     const { activeViewport } = Store.getState().viewModeData.plane;
+    let [u, v, w] = this.getIndices(activeViewport);
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
     // Set the depth-component of the rectangle to 1
     extentUVW[2] = 1;
 
+    w = window.customW ?? w;
+
     this.rectangle.position.set(...centerPosition);
     this.rectangle.scale.set(...extentUVW);
     this.rectangle.geometry.computeBoundingSphere();
+
+    const borderWidth = 20 * getZoomValue(Store.getState().flycam);
+    // todo divide by scale again ?
+    const topScale = [...extentUVW] as Vector3;
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
+    const borderWidthV = borderWidth * voxelPerNMVector[v];
+    topScale[v] = borderWidthV;
+    const leftScale = [...extentUVW] as Vector3;
+    const borderWidthW = borderWidth * voxelPerNMVector[w];
+    leftScale[u] = borderWidthW;
+
+    {
+      const topPosition = [...centerPosition] as Vector3;
+      topPosition[v] = minPosition[v] - borderWidthV / 2;
+      this.topRectangle.position.set(...topPosition);
+      this.topRectangle.scale.set(...topScale);
+      this.topRectangle.geometry.computeBoundingSphere();
+    }
+
+    {
+      const bottomPosition = [...centerPosition] as Vector3;
+      bottomPosition[v] = maxPosition[v] - borderWidthV / 2;
+      this.bottomRectangle.position.set(...bottomPosition);
+      this.bottomRectangle.scale.set(...topScale);
+      this.bottomRectangle.geometry.computeBoundingSphere();
+    }
+
+    {
+      const leftPosition = [...centerPosition] as Vector3;
+      leftPosition[u] = minPosition[u] - borderWidthW / 2;
+      this.leftRectangle.position.set(...leftPosition);
+      this.leftRectangle.scale.set(...leftScale);
+      this.leftRectangle.geometry.computeBoundingSphere();
+    }
+
+    {
+      const rightPosition = [...centerPosition] as Vector3;
+      rightPosition[u] = maxPosition[u] - borderWidthW / 2;
+      this.rightRectangle.position.set(...rightPosition);
+      this.rightRectangle.scale.set(...leftScale);
+      this.rightRectangle.geometry.computeBoundingSphere();
+    }
 
     this.centerMarker.position.set(...centerPosition);
 

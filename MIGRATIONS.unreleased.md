@@ -6,7 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.11.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/22.11.1...HEAD)
 
 ### Postgres Evolutions:
 - [091-oidc.sql](conf/evolutions/091-oidc.sql)

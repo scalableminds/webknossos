@@ -235,6 +235,7 @@ class AnnotationController @Inject()(
         _ <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
           "annotation.layer.notFound",
           layerName)
+        _ <- bool2Fox(annotation.annotationLayers.length != 1) ?~> "annotation.removeLayer.onlyLayer"
         _ = logger.info(s"Deleting annotation layer $layerName for annotation $id")
         _ <- annotationService.removeAnnotationLayer(annotation, layerName)
       } yield Ok

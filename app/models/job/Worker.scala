@@ -83,11 +83,11 @@ class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDA
       "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)
     )
 
-  def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- dataStoreDAO.findOneByName(dataStoreName)
-      _ <- workerDAO.findOneByDataStore(dataStoreName)
-    } yield true
+      _ <- workerDAO.findOneByDataStore(dataStoreName) ?~> "jobs.noWorkerForDatastore"
+    } yield ()
 
 }
 

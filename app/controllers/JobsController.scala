@@ -82,7 +82,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          _ <- workerService.assertDataStoreHasWorkers(dataStoreName) ?~> "Datastore has no associated workers"
+          _ <- workerService.assertDataStoreHasWorkers(dataStoreName)
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
@@ -114,7 +114,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataSet.notFound",
           dataSetName) ~> NOT_FOUND
-        _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore) ?~> "Datastore has no associated workers"
+        _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore)
         command = "compute_mesh_file"
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -142,7 +142,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore) ?~> "Datastore has no associated workers"
+          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore)
           command = "infer_nuclei"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -171,7 +171,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore) ?~> "Datastore has no associated workers"
+          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore)
           command = "infer_neurons"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -208,7 +208,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore) ?~> "Datastore has no associated workers"
+          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore)
           command = "globalize_floodfills"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -244,7 +244,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
-          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore) ?~> "Datastore has no associated workers"
+          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
           command = "export_tiff"
@@ -287,7 +287,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore) ?~> "Datastore has no associated workers"
+          _ <- workerService.assertDataStoreHasWorkers(dataSet._dataStore)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
           command = "materialize_volume_annotation"

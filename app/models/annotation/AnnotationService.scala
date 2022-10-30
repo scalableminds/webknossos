@@ -193,11 +193,6 @@ class AnnotationService @Inject()(
       _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
-  def findLayer(annotation: Annotation, layerName: String): Fox[AnnotationLayer] =
-    for {
-      layer <- annotationLayersDAO.findOne(annotation._id, layerName)
-    } yield layer
-
   def removeAnnotationLayer(annotation: Annotation, layerName: String): Fox[Unit] =
     for {
       _ <- annotationLayersDAO.deleteOne(annotation._id, layerName)

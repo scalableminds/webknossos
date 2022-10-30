@@ -109,22 +109,11 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
     sqlu"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
             values($annotationId, ${a.tracingId}, '#${a.typ}', ${a.name})"""
 
-  def findOne(annotationId: ObjectId, layerName: String): Fox[AnnotationLayer] =
-    for {
-      rows <- run(
-        sql"select _annotation, tracingId, typ, name from webknossos.annotation_layers where _annotation = $annotationId and name = $layerName"
-          .as[AnnotationLayersRow])
-      parsed <- rows.headOption.toFox.map(parse).flatten
-    } yield parsed
-
   def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
     for {
-      _ <- run(deleteOneQuery(annotationId, layerName))
+      _ <- run(sqlu"""delete from webknossos.annotation_layers where _annotation = $annotationId and
+             name = $layerName""")
     } yield ()
-
-  def deleteOneQuery(annotationId: ObjectId, layerName: String): SqlAction[Int, NoStream, Effect] =
-    sqlu"""delete from webknossos.annotation_layers where _annotation = $annotationId and
-           name = $layerName"""
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {

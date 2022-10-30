@@ -229,9 +229,12 @@ class AnnotationController @Inject()(
   def removeAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.removeLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- annotationService.findLayer(annotation, layerName) ?~> "No such layer found"
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
+          "annotation.layer.notFound",
+          layerName)
         _ <- annotationService.removeAnnotationLayer(annotation, layerName)
       } yield Ok
     }

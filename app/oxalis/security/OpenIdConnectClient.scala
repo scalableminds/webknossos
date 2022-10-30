@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionContext: ExecutionContext) {
 
   lazy val oidcConfig: OpenIdConnectConfig =
-    OpenIdConnectConfig(conf.SingleSignOn.OIDC.providerUrl, conf.SingleSignOn.OIDC.clientId)
+    OpenIdConnectConfig(conf.SingleSignOn.OpenIdConnect.providerUrl, conf.SingleSignOn.OpenIdConnect.clientId)
 
   /*
    Build redirect URL to redirect to OIDC provider for auth request (https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)

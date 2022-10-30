@@ -453,13 +453,13 @@ class AuthenticationController @Inject()(
     }
   }
 
-  lazy val absoluteCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
+  lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    openIdConnectClient.getRedirectUrl(absoluteCallbackURL).map(url => Redirect(url))
+    openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Redirect(url))
   }
 
-  def loginUser(user: User, loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
+  def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
     userService.retrieve(loginInfo).flatMap {
       case Some(user) if !user.isDeactivated =>
         for {
@@ -480,7 +480,7 @@ class AuthenticationController @Inject()(
       userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).futureBox.flatMap {
         case Full(user) =>
           val loginInfo = LoginInfo("credentials", user._id.toString)
-          loginUser(user, loginInfo)
+          loginUser(loginInfo)
         case Empty =>
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
@@ -488,7 +488,7 @@ class AuthenticationController @Inject()(
             user <- createUser(organization, oidc.email, oidc.given_name, oidc.family_name, autoActivate = true, None)
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
-            loginResult <- loginUser(user, loginInfo)
+            loginResult <- loginUser(loginInfo)
           } yield loginResult
         case _ => Future.successful(InternalServerError)
       }
@@ -497,7 +497,7 @@ class AuthenticationController @Inject()(
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
       code <- openIdConnectClient.getToken(
-        absoluteCallbackURL,
+        absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       )
       oidc: OpenIdConnectClaimSet <- validateJsValue[OpenIdConnectClaimSet](code).toFox

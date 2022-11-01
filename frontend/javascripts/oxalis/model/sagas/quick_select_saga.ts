@@ -52,6 +52,8 @@ import Dimensions from "../dimensions";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 
+const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
+
 // How large should the center rectangle be.
 // Used to determine the mean intensity.
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
@@ -234,6 +236,11 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   }
 
   // Start an iterative feedback loop when preview mode is active.
+  yield* call(
+    [Toast, Toast.info],
+    "The quick select tool is currently in preview mode. Use the settings in the toolbar to refine the selection or confirm/cancel the selection (e.g., with Enter/Escape).",
+    { key: TOAST_KEY, sticky: true },
+  );
   while (true) {
     const { finetuneAction, cancel, escape, enter, confirm } = (yield* race({
       finetuneAction: take("FINE_TUNE_QUICK_SELECT"),
@@ -271,6 +278,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     } else if (cancel || escape) {
       sendAnalyticsEvent("cancelled_quick_select_preview");
       quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+      yield* call([Toast, Toast.close], TOAST_KEY);
       return;
     } else if (confirm || enter) {
       sendAnalyticsEvent("confirmed_quick_select_preview");
@@ -290,6 +298,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         overwriteMode,
         labeledZoomStep,
       );
+      yield* call([Toast, Toast.close], TOAST_KEY);
       return;
     }
   }

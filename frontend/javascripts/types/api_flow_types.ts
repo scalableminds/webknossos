@@ -565,6 +565,14 @@ export type APIFeatureToggles = {
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
+export type APIJobType =
+  | "convert_to_wkw"
+  | "export_tiff"
+  | "compute_mesh_file"
+  | "find_largest_segment_id"
+  | "infer_nuclei"
+  | "infer_neurons"
+  | "materialize_volume_annotation";
 export type APIJob = {
   readonly id: string;
   readonly datasetName: string | null | undefined;
@@ -577,7 +585,7 @@ export type APIJob = {
   readonly organizationName: string | null | undefined;
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
-  readonly type: string;
+  readonly type: APIJobType;
   readonly state: string;
   readonly manualState: string;
   readonly result: string | null | undefined;

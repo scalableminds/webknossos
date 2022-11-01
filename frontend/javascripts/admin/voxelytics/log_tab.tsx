@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { debounce } from "lodash";
 import { Button, Select, Switch } from "antd";
-import useResizeObserver from "use-resize-observer";
-import ReactAnsi from "react-ansi";
 import chalk from "chalk";
+import Ansi from "ansi-to-react";
 import classnames from "classnames";
+import stripAnsi from "strip-ansi";
+import { AutoSizer, List } from "react-virtualized";
 import { usePolling } from "libs/react_hooks";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
@@ -13,6 +15,11 @@ import { Result } from "./task_view";
 type LogResult = Result<Array<any>>;
 
 const LOG_LEVELS = ["NOTSET", "DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"];
+
+// These constants need to be in sync with the variables in main.less
+const LOG_FONT = "12px 'RobotoMono', Monaco, 'Courier New', monospace";
+const LOG_LINE_HEIGHT = 19;
+const LOG_LINE_NUMBER_WIDTH = 60;
 
 export function formatLog(
   logEntry: any,
@@ -37,8 +44,98 @@ export function formatLog(
   return parts.join(" ");
 }
 
-function LogContent({ logText, height }: { logText: Array<string>; height: string | number }) {
-  return <ReactAnsi log={logText} logStyle={{ height, fontSize: 12 }} autoScroll />;
+function findBreakableCharFromRight(str: string, position: number): number {
+  for (let i = position; i >= 0; --i) {
+    const char = str[i];
+    if (char.trim() === "" || char === "-") {
+      return i;
+    }
+  }
+  return -1;
+}
+function getLineCount(str: string, wrapLength: number): number {
+  // Inspired by https://stackoverflow.com/a/857770
+  const trimmedStr = str.trim();
+  if (trimmedStr.length <= wrapLength) {
+    return 1;
+  } else {
+    let splitIdx = findBreakableCharFromRight(trimmedStr, wrapLength);
+    if (splitIdx === -1) {
+      splitIdx = wrapLength;
+    }
+    return 1 + getLineCount(trimmedStr.substring(splitIdx), wrapLength);
+  }
+}
+
+function LogContent({
+  logText,
+  width,
+  height,
+}: {
+  logText: Array<string>;
+  width: number;
+  height: number;
+}) {
+  const listRef = useRef<List | null>(null);
+  const debouncedRecomputeRowHeights = useRef(
+    debounce(() => listRef.current?.recomputeRowHeights()),
+  );
+
+  const charWidth = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (ctx == null) {
+      throw new Error("Could not create measuring canvas");
+    }
+    ctx.font = LOG_FONT;
+    const measurement = ctx.measureText("0123456789abcdefghijklmnopqrstuvwxyz");
+    return measurement.width / 36;
+  }, []);
+
+  const lineCounts = useMemo(
+    () =>
+      logText.map((line) => {
+        if (width - LOG_LINE_NUMBER_WIDTH < charWidth) {
+          return 0;
+        }
+        const strippedLine = stripAnsi(line).trim();
+        const lineCount = strippedLine
+          .split("\n")
+          .reduce(
+            (r, a) => r + getLineCount(a, Math.floor((width - LOG_LINE_NUMBER_WIDTH) / charWidth)),
+            0,
+          );
+        return lineCount;
+      }),
+    [logText, width],
+  );
+
+  // eslint-disable-next-line react/no-unused-prop-types
+  function renderRow({ index, key, style }: { index: number; key: string; style: CSSProperties }) {
+    return (
+      <div className={`log-line log-line-${index % 2 ? "odd" : "even"}`} key={key} style={style}>
+        <div className="log-line-number">{index + 1}</div>
+        <Ansi linkify>{logText[index]}</Ansi>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    debouncedRecomputeRowHeights.current();
+  }, [width, logText]);
+
+  return (
+    <List
+      ref={listRef}
+      className="log-content"
+      height={height}
+      width={width}
+      overscanRowCount={50}
+      rowCount={logText.length}
+      rowHeight={({ index }) => lineCounts[index] * LOG_LINE_HEIGHT}
+      rowRenderer={renderRow}
+    />
+  );
 }
 
 export default function LogTab({
@@ -56,8 +153,6 @@ export default function LogTab({
   const [level, setLevel] = useState("DEBUG");
 
   const [logResult, setLogResult] = useState<LogResult>({ type: "LOADING" });
-
-  const { ref: logContainerRef, height: logHeight = 0 } = useResizeObserver<HTMLDivElement>();
 
   async function loadLog() {
     setIsLoading(true);
@@ -132,8 +227,10 @@ export default function LogTab({
           ))}
         </Select>
       </div>
-      <div ref={logContainerRef} className="log-tab-content">
-        {logHeight > 0 && <LogContent logText={logText} height={logHeight} />}
+      <div className="log-tab-content">
+        <AutoSizer>
+          {({ height, width }) => <LogContent logText={logText} height={height} width={width} />}
+        </AutoSizer>
       </div>
     </div>
   );

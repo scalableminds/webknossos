@@ -455,7 +455,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
           <ChangeColorMenuItemContent
             title="Change Tree Group Color"
-            isDisabled={false}
+            isDisabled={isEditingDisabled}
             onSetColor={(color) => {
               if (id === MISSING_GROUP_ID) this.setAllTreesColor(color);
               else this.setTreeGroupColor(id, color);

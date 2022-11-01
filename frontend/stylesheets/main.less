@@ -27,7 +27,6 @@
 @import "_admin.less";
 @import "_google-charts-overwrites.less";
 @import "flex_layout_overwrites.less";
-@import "react_ansi_overwrites.less";
 
 // ----------------------- MAIN STYLES
 @font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -459,6 +458,42 @@ i.without-icon-margin,
       width: 100%;
       height: 500px;
       position: relative;
+    }
+    .log-content {
+      background-color: @component-background;
+    }
+    .log-line {
+      @log-font-family: 'RobotoMono', Monaco, 'Courier New', monospace;
+      @log-font-size: 12px;
+      @log-line-height: 19px;
+      @log-line-number-width: 60px;
+      .log-line-number {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: @log-line-number-width;
+        padding-right: 1em;
+        font-family: @log-font-family;
+        font-size: @log-font-size;
+        line-height: @log-line-height;
+        color: #666;
+        text-align: right;
+        user-select: none;
+      }
+      code {
+        position: absolute;
+        top: 0;
+        left: @log-line-number-width;
+        width: calc(100% - @log-line-number-width);
+        font-family: @log-font-family;
+        font-size: @log-font-size;
+        line-height: @log-line-height;
+        white-space: pre-wrap;
+        color: @text-color;
+      }
+      &:hover {
+        background-color: @dropdown-selected-bg;
+      }
     }
 
     &.log-tab-fullscreen {

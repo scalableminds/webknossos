@@ -46,6 +46,8 @@ type Props = {
   reloadDataset: (arg0: APIDatasetId, arg1: Array<APIMaybeUnimportedDataset>) => Promise<void>;
   updateDataset: (arg0: APIDataset) => Promise<void>;
   addTagToSearch: (tag: string) => void;
+  onSelectDataset?: (dataset: APIDataset | null) => void;
+  selectedDataset?: APIDataset | null | undefined;
 };
 type State = {
   prevSearchQuery: string;
@@ -253,6 +255,26 @@ class DatasetTable extends React.PureComponent<Props, State> {
         locale={{
           emptyText: this.renderEmptyText(),
         }}
+        onRow={(record, rowIndex) => {
+          return {
+            onClick: (event) => {
+              if (this.props.onSelectDataset) {
+                if (this.props.selectedDataset === record) {
+                  this.props.onSelectDataset(null);
+                } else {
+                  this.props.onSelectDataset(record);
+                }
+              }
+            },
+            onDoubleClick: (event) => {
+              console.log("todo: open dataset");
+            },
+          };
+        }}
+        rowSelection={{
+          selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
+          onSelectNone: () => this.props.onSelectDataset && this.props.onSelectDataset(null),
+        }}
       >
         <Column
           title="Name"
@@ -343,26 +365,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             return dataset.allowedTeams.some((team) => team.name === value);
           }}
           render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
-            const permittedTeams = [...teams];
-            if (dataset.isPublic) {
-              permittedTeams.push({ name: "public", id: "", organization: "" });
-            }
-
-            return permittedTeams.map((team) => (
-              <div key={`allowed_teams_${dataset.name}_${team.name}`}>
-                <Tag
-                  style={{
-                    maxWidth: 200,
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                  }}
-                  color={stringToColor(team.name)}
-                >
-                  {team.name}
-                </Tag>
-              </div>
-            ));
+            return <TeamTags dataset={dataset} />;
           }}
         />
         <Column
@@ -406,6 +409,34 @@ class DatasetTable extends React.PureComponent<Props, State> {
       </FixedExpandableTable>
     );
   }
+}
+
+export function TeamTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {
+  const teams = dataset.allowedTeams;
+  const permittedTeams = [...teams];
+  if (dataset.isPublic) {
+    permittedTeams.push({ name: "public", id: "", organization: "" });
+  }
+
+  return (
+    <>
+      {permittedTeams.map((team) => (
+        <div key={`allowed_teams_${dataset.name}_${team.name}`}>
+          <Tag
+            style={{
+              maxWidth: 200,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+            }}
+            color={stringToColor(team.name)}
+          >
+            {team.name}
+          </Tag>
+        </div>
+      ))}
+    </>
+  );
 }
 
 export default DatasetTable;

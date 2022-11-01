@@ -380,11 +380,6 @@ function processBinaryMaskInPlaceAndAttach(
   quickSelectConfig: Omit<QuickSelectConfig, "showPreview">,
   quickSelectGeometry: QuickSelectGeometry,
 ) {
-  // Fill center so that the watershed essentially starts
-  // from a seed area instead of a single point.
-  const centerAreaSubview = getCenterSubview(output);
-  ops.assigns(centerAreaSubview, 1);
-
   fillHolesInPlace(output);
   morphology.close(output, quickSelectConfig.closeValue);
   morphology.erode(output, quickSelectConfig.erodeValue);
@@ -551,6 +546,15 @@ function getThresholdField(
     comparator,
   });
 
+  // Fill center so that the watershed essentially starts
+  // from a seed area instead of a single point.
+  // Note that we mutate the input array in-place. To avoid
+  // this side-effect, we make a copy of the center array
+  // and restore it at the end of this function.
+  const centerAreaSubview = getCenterSubview(inputNdUvw);
+  const centerBackup = copyNdArray(Uint8Array, centerAreaSubview);
+  ops.assigns(centerAreaSubview, mode === "light" ? 255 : 0);
+
   // For each voxel, store a boolean to denote whether it's been visited
   const visitedField = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
   // For each voxel, store the threshold which is necessary to reach that voxel
@@ -589,6 +593,9 @@ function getThresholdField(
       }
     }
   }
+
+  ops.assign(centerAreaSubview, centerBackup);
+
   return thresholdField;
 }
 

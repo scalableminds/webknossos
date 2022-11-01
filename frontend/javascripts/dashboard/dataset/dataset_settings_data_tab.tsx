@@ -335,7 +335,8 @@ function SimpleLayerForm({
       "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
     successMessage:
       "The computation of the largest segment id for this dataset has finished. Reload the page to see it.",
-    failureMessage: "The computation of the largest segment id for this dataset didn't finish properly.",
+    failureMessage:
+      "The computation of the largest segment id for this dataset didn't finish properly.",
   });
 
   return (

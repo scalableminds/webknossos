@@ -50,8 +50,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def insertAsChild(parentId: ObjectId, f: Folder): Fox[Unit] = {
     val insertPathQuery =
-      sqlu"""INSERT INTO webknossos.folder_paths(_ancestor, descendant, depth)
-             SELECT ancestor, ${f._id}, depth + 1 from webknossos.folder_paths WHERE descendant = $parentId -- links to ancestors
+      sqlu"""INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth)
+             SELECT _ancestor, ${f._id}, depth + 1 from webknossos.folder_paths WHERE _descendant = $parentId -- links to ancestors
              UNION ALL SELECT ${f._id}, ${f._id}, 0 -- self link
           """
     for {

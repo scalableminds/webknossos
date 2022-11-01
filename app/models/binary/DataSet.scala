@@ -137,10 +137,12 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+  def findAllByFolderOpt(folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[DatasetsRow])
+      folderPredicate = folderId.map(fId => s"_folder = $fId").getOrElse("true")
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where #$folderPredicate and #$accessQuery".as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
 

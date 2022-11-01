@@ -1903,6 +1903,12 @@ export async function isDatasetAccessibleBySwitching(
   }
 }
 
+export async function isWorkflowAccessibleBySwitching(
+  workflowHash: string,
+): Promise<APIOrganization | null> {
+  return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
+}
+
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
   return Request.receiveJSON("/api/buildinfo", {

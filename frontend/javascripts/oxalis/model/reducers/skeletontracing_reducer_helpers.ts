@@ -39,6 +39,7 @@ import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
+import { V3 } from "libs/mjs";
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
 
@@ -124,7 +125,7 @@ export function createNode(
   state: OxalisState,
   skeletonTracing: SkeletonTracing,
   tree: Tree,
-  position: Vector3,
+  positionFloat: Vector3,
   rotation: Vector3,
   viewport: number,
   resolution: number,
@@ -143,6 +144,7 @@ export function createNode(
     .getOrElse(Constants.DEFAULT_NODE_RADIUS);
   // Find new node id by increasing the max node id.
   const nextNewId = skeletonTracing.cachedMaxNodeId + 1;
+  const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
     position,

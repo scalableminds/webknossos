@@ -116,8 +116,8 @@ function _calculateMaybeGlobalPos(
   switch (planeId) {
     case OrthoViews.PLANE_XY:
       position = [
-        curGlobalPos[0] - diffX * planeRatio[0],
-        curGlobalPos[1] - diffY * planeRatio[1],
+        Math.round(curGlobalPos[0] - diffX * planeRatio[0]),
+        Math.round(curGlobalPos[1] - diffY * planeRatio[1]),
         curGlobalPos[2],
       ];
       break;
@@ -125,16 +125,16 @@ function _calculateMaybeGlobalPos(
     case OrthoViews.PLANE_YZ:
       position = [
         curGlobalPos[0],
-        curGlobalPos[1] - diffY * planeRatio[1],
-        curGlobalPos[2] - diffX * planeRatio[2],
+        Math.round(curGlobalPos[1] - diffY * planeRatio[1]),
+        Math.round(curGlobalPos[2] - diffX * planeRatio[2]),
       ];
       break;
 
     case OrthoViews.PLANE_XZ:
       position = [
-        curGlobalPos[0] - diffX * planeRatio[0],
+        Math.round(curGlobalPos[0] - diffX * planeRatio[0]),
         curGlobalPos[1],
-        curGlobalPos[2] - diffY * planeRatio[2],
+        Math.round(curGlobalPos[2] - diffY * planeRatio[2]),
       ];
       break;
 

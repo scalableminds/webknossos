@@ -82,7 +82,10 @@ GET           /datasets/:organizationName/:dataSetName/isValidNewName           
 GET           /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
 GET           /folders/root                                                             controllers.FolderController.getRoot
-GET           /folders/create                                                           controllers.FolderController.create(parentId: String, name: String)
+GET           /folders/:id                                                              controllers.FolderController.get(id: String)
+PUT           /folders/:id                                                              controllers.FolderController.update(id: String)
+GET           /folders/tree                                                             controllers.FolderController.getTree
+POST          /folders/create                                                           controllers.FolderController.create(parentId: String, name: String)
 
 # Datastores
 GET           /datastores                                                               controllers.DataStoreController.list

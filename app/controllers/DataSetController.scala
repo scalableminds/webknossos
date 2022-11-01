@@ -56,7 +56,8 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'displayName).readNullable[String] and
       (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean] and
-      (__ \ 'tags).read[List[String]]).tupled
+      (__ \ 'tags).read[List[String]] and
+      (__ \ 'folderId).read[ObjectId]).tupled
 
   @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
@@ -341,7 +342,7 @@ Expects:
              @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
-        case (description, displayName, sortingKey, isPublic, tags) =>
+        case (description, displayName, sortingKey, isPublic, tags, folderId) =>
           for {
             dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
               dataSetName) ~> NOT_FOUND
@@ -350,7 +351,8 @@ Expects:
                                          description,
                                          displayName,
                                          sortingKey.getOrElse(dataSet.created),
-                                         isPublic)
+                                         isPublic,
+                                         folderId)
             _ <- dataSetDAO.updateTags(dataSet._id, tags)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))

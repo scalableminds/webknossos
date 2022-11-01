@@ -2,7 +2,7 @@ package models.folder
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Folders, _}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
@@ -12,6 +12,17 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class Folder(_id: ObjectId, name: String)
+
+case class FolderWithParent(_id: ObjectId, name: String, _parent: Option[ObjectId])
+
+object FolderWithParent {
+  implicit val jsonFormat: OFormat[FolderWithParent] = Json.format[FolderWithParent]
+}
+
+case class FolderParameters(name: String)
+object FolderParameters {
+  implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
+}
 
 class FolderService @Inject()()(implicit ec: ExecutionContext) {
   def publicWrites(folder: Folder): Fox[JsObject] =
@@ -28,6 +39,9 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def parse(r: FoldersRow): Fox[Folder] =
     Fox.successful(Folder(ObjectId(r._Id), r.name))
 
+  def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
+    Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
+
   def insertAsRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =
       sqlu"INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES(${f._id}, ${f._id}, 0)"
@@ -42,10 +56,25 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(rows, "id")
     } yield parsed
 
-  def findChildren(folderId: ObjectId): Fox[List[Folder]] =
+  def updateName(folderId: ObjectId, name: String): Fox[Unit] =
     for {
-      rows <- run(sql"SELECT #$columns".as[FoldersRow]) // TODO
-      parsed <- parseAll(rows)
+      _ <- run(sqlu"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId")
+    } yield ()
+
+  def findTreeOf(folderId: ObjectId): Fox[List[FolderWithParent]] =
+    for {
+      rows <- run(sql"""SELECT f._id, f.name, fp._ancestor
+              FROM webknossos.folders_ f
+              JOIN webknossos.folder_paths fp
+              ON f._id = fp._descendant
+              WHERE fp.depth = 1 AND f._id IN
+              (SELECT _descendant
+              FROM webknossos.folder_paths
+              WHERE _ancestor = $folderId)
+              UNION ALL SELECT _id, name, null from webknossos.folders_
+              WHERE _id = $folderId
+              """.as[(String, String, Option[String])])
+      parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 
   def insertAsChild(parentId: ObjectId, f: Folder): Fox[Unit] = {

@@ -145,7 +145,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             />
           </div>
           <Alert
-            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other elligibility criteria."
+            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
             type="info"
           />
         </>
@@ -436,7 +436,6 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Stats"
               dataIndex="status"
               key="status"
-              width={120}
               render={(status, task: APITask) => (
                 <div className="nowrap">
                   <span title="Open Instances">

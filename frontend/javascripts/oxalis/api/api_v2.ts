@@ -192,7 +192,6 @@ class TracingApi {
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const comment = tree.comments.find((__) => __.nodeId === nodeId);
     return comment != null ? comment.content : null;
   }

@@ -9,7 +9,7 @@ Any dataset uploaded to webKnossos.org will automatically be converted to WKW on
 webKnossos natively supports loading and streaming data in the following formats:
 
 - webKnossos-wrap (WKW)
-- Zarr ([OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/))
+- Zarr ([OME NGFF v0.4+ spec](https://ngff.openmicroscopy.org/latest/))
 - Neuroglancer `Pre-Computed` stored on Google Cloud
 - BossDB
 - N5
@@ -242,7 +242,7 @@ webKnossos requires several metadata properties for each dataset to properly dis
     * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g., `1`, `2` or `4`) or a 3-tuple (e.g., `2, 2, 1`) for non-uniform magnifications.
     * `dataLayers.wkwResolutions.cubeLength`: The cube size of the WKW cube files. Usually is `1024`.
 
-  + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16` or `float32`.
+  + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16`, `uint24` (rgb), `uint32`, `uint64`, `float` (32-bit) or `double` (64-bit).
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
   + `dataLayers.dataFormat`: Should be `wkw`.
 
@@ -327,7 +327,7 @@ Groups can be freely nested inside each other.
 
 
 ### ID Mapping Files
-webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "mapping" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
+webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings-on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "mapping" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
 
 webKnossos supports two formats for these agglomerates:
 

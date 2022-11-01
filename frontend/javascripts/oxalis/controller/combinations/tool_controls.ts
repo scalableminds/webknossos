@@ -687,7 +687,7 @@ export class QuickSelectTool {
         }
       },
       leftDownMove: (
-        delta: Point2,
+        _delta: Point2,
         pos: Point2,
         _id: string | null | undefined,
         _event: MouseEvent,
@@ -695,7 +695,21 @@ export class QuickSelectTool {
         if (!isDragging || startPos == null) {
           return;
         }
-        currentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
+        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
+        if (_event.shiftKey) {
+          // If shift is held, the rectangle is resized on topLeft and bottomRight
+          // so that the center is constant.
+          // We don't use the passed _delta variable, because that is given in pixel-space
+          // instead of the physical space.
+          if (currentPos) {
+            const delta3D = V3.sub(newCurrentPos, currentPos);
+            // Pseudo: startPos -= delta3D;
+            V3.sub(startPos, delta3D, startPos);
+          }
+        }
+
+        currentPos = newCurrentPos;
+
         quickSelectGeometry.setCoordinates(startPos, currentPos);
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -714,12 +728,12 @@ export class QuickSelectTool {
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
-    _shiftKey: boolean,
+    shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Draw Rectangle",
+      leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
       rightClick: "Context Menu",
     };
   }

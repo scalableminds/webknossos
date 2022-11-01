@@ -971,6 +971,9 @@ function ToolSpecificSettings({
 
 function QuickSelectSettingsPopover() {
   const [isOpen, setIsOpen] = useState(false);
+  const isQuickSelectActive = useSelector(
+    (state: OxalisState) => state.uiInformation.isQuickSelectActive,
+  );
   return (
     <Popover
       trigger="click"
@@ -983,6 +986,7 @@ function QuickSelectSettingsPopover() {
         title="Configure Quick Select"
         tooltipPlacement="right"
         className="narrow"
+        type={isQuickSelectActive ? "primary" : "default"}
         style={{ marginLeft: 12, marginRight: 12 }}
       >
         <SettingOutlined />

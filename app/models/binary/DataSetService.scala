@@ -344,7 +344,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
       folder <- folderDAO.findOne(dataSet._folder) ?~> "dataset.list.fetchFolderFailed"
-      folderJs <- folderService.publicWrites(folder) ?~> "dataset.list.folderWritesFailed"
+      folderJs <- folderService.publicWrites(folder, requestingUserOpt) ?~> "dataset.list.folderWritesFailed"
       jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {
       Json.obj(

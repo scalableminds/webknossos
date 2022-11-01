@@ -382,23 +382,20 @@ Expects:
                            paramType = "body")))
   def updateTeams(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                             example = "sample_organization") organizationName: String,
-                  @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
-    sil.SecuredAction.async(parse.json) { implicit request =>
-      withJsonBodyAs[List[String]] { teams =>
-        for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
-            dataSetName) ~> NOT_FOUND
-          _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
-          includeMemberOnlyTeams = request.identity.isDatasetManager
-          userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-          oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
-          teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
-          teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
-          _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id,
-                                                                   (teamsWithUpdate ++ teamsWithoutUpdate).distinct)
-        } yield Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.toString)))
-      }
+                  @ApiParam(value = "The name of the dataset") dataSetName: String): Action[List[ObjectId]] =
+    sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
+      for {
+        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+          dataSetName) ~> NOT_FOUND
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        includeMemberOnlyTeams = request.identity.isDatasetManager
+        userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
+        oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
+        teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
+        teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
+        newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
+        _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, newTeams)
+      } yield Ok(Json.toJson(newTeams))
     }
 
   @ApiOperation(value = "Sharing token of a dataset", nickname = "datasetSharingToken")

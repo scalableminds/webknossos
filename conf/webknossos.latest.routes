@@ -81,11 +81,13 @@ PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache      
 GET           /datasets/:organizationName/:dataSetName/isValidNewName                   controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
+# Folders
 GET           /folders/root                                                             controllers.FolderController.getRoot
-GET           /folders/:id                                                              controllers.FolderController.get(id: String)
-PUT           /folders/:id                                                              controllers.FolderController.update(id: String)
 GET           /folders/tree                                                             controllers.FolderController.getTree
 POST          /folders/create                                                           controllers.FolderController.create(parentId: String, name: String)
+GET           /folders/:id                                                              controllers.FolderController.get(id: String)
+PUT           /folders/:id                                                              controllers.FolderController.update(id: String)
+PATCH         /folders/:id/teams                                                        controllers.FolderController.updateTeams(id: String)
 
 # Datastores
 GET           /datastores                                                               controllers.DataStoreController.list

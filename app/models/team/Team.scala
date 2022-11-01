@@ -141,8 +141,17 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"""select #${columnsWithPrefix("t.")} from #$existingCollectionName t
-                     join webknossos.dataSet_allowedTeams at on t._id = at._team
-                     where at._dataSet = $dataSetId and #$accessQuery""".as[TeamsRow])
+                       join webknossos.dataSet_allowedTeams at on t._id = at._team
+                       where at._dataSet = $dataSetId and #$accessQuery""".as[TeamsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def findAllForFolder(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columnsWithPrefix("t.")} from #$existingCollectionName t
+                   join webknossos.folder_allowedTeams at on t._id = at._team
+                   where at._folder = $folderId and #$accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 

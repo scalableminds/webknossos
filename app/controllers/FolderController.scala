@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
+import models.team.TeamDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -15,6 +16,7 @@ import scala.concurrent.ExecutionContext
 class FolderController @Inject()(
     folderDAO: FolderDAO,
     folderService: FolderService,
+    teamDAO: TeamDAO,
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
@@ -24,7 +26,7 @@ class FolderController @Inject()(
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       rootFolder <- folderDAO.findOne(organization._rootFolder)
-      rootFolderJson <- folderService.publicWrites(rootFolder)
+      rootFolderJson <- folderService.publicWrites(rootFolder, Some(request.identity), Some(organization))
     } yield Ok(rootFolderJson)
   }
 
@@ -32,7 +34,8 @@ class FolderController @Inject()(
     for {
       idValidated <- ObjectId.fromString(id)
       folder <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
-      folderJson <- folderService.publicWrites(folder)
+      organization <- organizationDAO.findOne(request.identity._organization)
+      folderJson <- folderService.publicWrites(folder, Some(request.identity), Some(organization))
     } yield Ok(folderJson)
   }
 
@@ -40,12 +43,28 @@ class FolderController @Inject()(
     implicit request =>
       for {
         idValidated <- ObjectId.fromString(id)
+        organization <- organizationDAO.findOne(request.identity._organization)
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         _ <- folderDAO.updateName(idValidated, request.body.name)
         updated <- folderDAO.findOne(idValidated)
-        folderJson <- folderService.publicWrites(updated)
+        folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
       } yield Ok(folderJson)
   }
+
+  def updateTeams(id: String): Action[List[ObjectId]] =
+    sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
+      for {
+        idValidated <- ObjectId.fromString(id)
+        _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+        includeMemberOnlyTeams = request.identity.isDatasetManager
+        userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
+        oldAllowedTeams: List[ObjectId] <- folderDAO.allowedTeamIdsFor(idValidated)
+        teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
+        teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
+        newTeamIds = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
+        _ <- folderDAO.updateAllowedTeamsFor(idValidated, newTeamIds)
+      } yield Ok(Json.toJson(newTeamIds))
+    }
 
   def getTree: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -59,7 +78,8 @@ class FolderController @Inject()(
       parentFolderIdValidated <- ObjectId.fromString(parentId)
       newFolder = Folder(ObjectId.generate, name)
       _ <- folderDAO.insertAsChild(parentFolderIdValidated, newFolder)
-      folderJson <- folderService.publicWrites(newFolder)
+      organization <- organizationDAO.findOne(request.identity._organization)
+      folderJson <- folderService.publicWrites(newFolder, Some(request.identity), Some(organization))
     } yield Ok(folderJson)
   }
 

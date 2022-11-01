@@ -31,9 +31,7 @@ export function useStartAndPollJob({
   const [activeJob, setActiveJob] = useState<APIJob | null>(null);
   const areJobsEnabled = features().jobsEnabled;
   const potentialJobs = (jobs || []).filter(findJobPred);
-  const mostRecentSuccessfulJob = potentialJobs.find(
-    (job) => findJobPred(job) && job.state === "SUCCESS",
-  );
+  const mostRecentSuccessfulJob = potentialJobs.find((job) => job.state === "SUCCESS");
 
   const wrappedStartJobFn =
     startJobFn != null && activeUser != null && areJobsEnabled

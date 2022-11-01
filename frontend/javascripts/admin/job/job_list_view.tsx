@@ -266,7 +266,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (job.type === "find_largest_segment_id") {
-      return <span>{job.result && job.result}</span>;
+      return <span>{job.result}</span>;
     } else if (
       job.type === "infer_nuclei" ||
       job.type === "infer_neurons" ||

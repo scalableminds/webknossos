@@ -15,7 +15,7 @@ Example workflows:
 These workflows are executed in background worker tasks as so-called *processing jobs*. 
 
 !!! info
-    These workflows are exclusive to webKnossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the webKnossos worker or [Voxelytics](https://voxelytics.com)) for the job processing.
+    These workflows are exclusive to webKnossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the webKnossos worker or [Voxelytics](https://voxelytics.com) for the job processing.
 
 ## Listing Processing Jobs
 A list of all past and currently running jobs can be found in the administration menu in the navbar (Administration -> *Processing Jobs*).

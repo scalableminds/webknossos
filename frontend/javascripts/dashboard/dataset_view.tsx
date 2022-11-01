@@ -241,8 +241,12 @@ function DatasetView(props: Props) {
           return (
             <Row key={job.id} gutter={16}>
               <Col span={10}>
-                <Tooltip title={tooltip}>{icon}</Tooltip>
-                {` ${job.datasetName || "UNKNOWN"}`}
+                <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
+                {job.state === "SUCCESS" && job.resultLink ? (
+                  <Link to={job.resultLink}>{job.datasetName}</Link>
+                ) : (
+                  job.datasetName || "UNKNOWN"
+                )}
                 {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
                 <FormattedDate timestamp={job.createdAt} />
                 <span>)</span>

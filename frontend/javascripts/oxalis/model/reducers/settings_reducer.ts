@@ -99,7 +99,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       if (settingSpec != null && settingSpec.type === "number") {
         const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
         const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
-        // @ts-ignore Since settings.type === "number", value will be a number
+        // @ts-ignore Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 
         if ("dynamicMaximumFn" in settingSpec) {

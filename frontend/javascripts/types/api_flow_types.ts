@@ -887,3 +887,8 @@ export type VoxelyticsChunkStatistics = {
   cpuSystem: Statistics | null;
   duration: Statistics | null;
 };
+
+export type Folder = {
+  name: string;
+  _id: string;
+};

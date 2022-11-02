@@ -1,11 +1,38 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFolder, getFolderTree } from "admin/api/folders";
+import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { Component, useState } from "react";
+import React, { useState } from "react";
 import SortableTree from "react-sortable-tree";
+// @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
-import { APIDataset, APIUser } from "types/api_flow_types";
+import { APIDataset, APIUser, Folder } from "types/api_flow_types";
 import { TeamTags } from "./advanced_dataset/dataset_table";
 import DatasetView from "./dataset_view";
+
+function useFolderTreeQuery() {
+  return useQuery(["folders"], getFolderTree, {
+    refetchOnWindowFocus: false,
+  });
+}
+
+function useCreateFolderMutation() {
+  const queryClient = useQueryClient();
+  const mutationKey = ["folders"];
+
+  return useMutation(([parentId, name]: [string, string]) => createFolder(parentId, name), {
+    mutationKey,
+    onSuccess: (newFolder) => {
+      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
+        (oldItems || []).concat([newFolder]),
+      );
+    },
+    onError: (err) => {
+      Toast.error(`Could not create folder. ${err}`);
+    },
+  });
+}
 
 type Props = {
   user: APIUser;
@@ -79,43 +106,49 @@ type State = {
   treeData: FolderItem[];
 };
 
-class FolderSidebar extends Component<{}, State> {
-  constructor(props: {}) {
-    super(props);
+function FolderSidebar() {
+  const [state, setState] = useState<State>({
+    treeData: [
+      {
+        title: "Root",
+        expanded: true,
+        children: [
+          {
+            title: "Folder 1",
+            expanded: true,
+            children: [
+              { title: "Subfolder A.js" },
+              { title: "Subfolder B" },
+              { title: "Subfolder C" },
+            ],
+          },
+          { title: "Folder 2" },
+          { title: "Folder 3" },
+        ],
+      },
+    ],
+  });
 
-    this.state = {
-      treeData: [
-        {
-          title: "Root",
-          expanded: true,
-          children: [
-            {
-              title: "Folder 1",
-              expanded: true,
-              children: [
-                { title: "Subfolder A.js" },
-                { title: "Subfolder B" },
-                { title: "Subfolder C" },
-              ],
-            },
-            { title: "Folder 2" },
-            { title: "Folder 3" },
-          ],
-        },
-      ],
-    };
-  }
+  const { error, data: folderTree, isLoading } = useFolderTreeQuery();
 
-  render() {
-    console.log("FileExplorerTheme", FileExplorerTheme);
-    return (
-      <div style={{ height: 400, width: 250 }}>
-        <SortableTree
-          treeData={this.state.treeData}
-          onChange={(treeData) => this.setState({ treeData })}
-          theme={FileExplorerTheme}
-        />
-      </div>
-    );
-  }
+  const createFolderMutation = useCreateFolderMutation();
+  const createFolder = () => {
+    if (folderTree && folderTree.length > 0) {
+      createFolderMutation.mutateAsync([folderTree[0]._id, "New Folder"]);
+    }
+  };
+
+  console.log("folderTree", folderTree);
+
+  console.log("FileExplorerTheme", FileExplorerTheme);
+  return (
+    <div style={{ height: 400, width: 250 }}>
+      <SortableTree
+        treeData={state.treeData}
+        onChange={(treeData) => setState({ treeData })}
+        theme={FileExplorerTheme}
+      />
+      <button onClick={createFolder}>Create</button>
+    </div>
+  );
 }

@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
-import models.folder.FolderDAO
+import models.folder.{FolderDAO, FolderService}
 
 import javax.inject.Inject
 import models.job.WorkerDAO
@@ -40,6 +40,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
+                               folderService: FolderService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
@@ -342,6 +343,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
+      folder <- folderDAO.findOne(dataSet._folder) ?~> "dataset.list.fetchFolderFailed"
+      folderJs <- folderService.publicWrites(folder, requestingUserOpt) ?~> "dataset.list.folderWritesFailed"
       jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {
       Json.obj(
@@ -363,6 +366,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "jobsEnabled" -> jobsEnabled,
         "tags" -> dataSet.tags,
+        "folder" -> folderJs,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
         "publication" -> None
       )

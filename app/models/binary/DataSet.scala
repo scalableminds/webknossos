@@ -234,12 +234,13 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                    description: Option[String],
                    displayName: Option[String],
                    sortingKey: Long,
-                   isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+                   isPublic: Boolean,
+                   folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield
-      (row.description, row.displayname, row.sortingkey, row.ispublic)
+      (row.description, row.displayname, row.sortingkey, row.ispublic, row._Folder)
     for {
       _ <- assertUpdateAccess(_id)
-      _ <- run(q.update(description, displayName, new java.sql.Timestamp(sortingKey), isPublic))
+      _ <- run(q.update(description, displayName, new java.sql.Timestamp(sortingKey), isPublic, folderId.toString))
     } yield ()
   }
 

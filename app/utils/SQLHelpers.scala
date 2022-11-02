@@ -10,7 +10,7 @@ import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
+import slick.jdbc.{GetResult, PositionedParameters, PositionedResult, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
 import javax.inject.Inject
@@ -30,6 +30,10 @@ trait SQLTypeImplicits {
 
   implicit object SetObjectIdOpt extends SetParameter[Option[ObjectId]] {
     def apply(v: Option[ObjectId], pp: PositionedParameters): Unit = pp.setStringOption(v.map(_.id))
+  }
+
+  implicit object GetObjectId extends GetResult[ObjectId] {
+    override def apply(v1: PositionedResult): ObjectId = ObjectId(v1.<<)
   }
 }
 

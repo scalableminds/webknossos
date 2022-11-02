@@ -1,9 +1,14 @@
 package models.folder
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Folders, _}
-import play.api.libs.json.{JsObject, Json}
+import models.organization.{Organization, OrganizationDAO}
+import models.team.{Team, TeamDAO, TeamService}
+import models.user.User
+import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -13,9 +18,35 @@ import scala.concurrent.ExecutionContext
 
 case class Folder(_id: ObjectId, name: String)
 
-class FolderService @Inject()()(implicit ec: ExecutionContext) {
-  def publicWrites(folder: Folder): Fox[JsObject] =
-    Fox.successful(Json.obj("id" -> folder._id, "name" -> folder.name))
+case class FolderWithParent(_id: ObjectId, name: String, _parent: Option[ObjectId])
+
+object FolderWithParent {
+  implicit val jsonFormat: OFormat[FolderWithParent] = Json.format[FolderWithParent]
+}
+
+case class FolderParameters(name: String)
+object FolderParameters {
+  implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
+}
+
+class FolderService @Inject()(teamDAO: TeamDAO, teamService: TeamService, organizationDAO: OrganizationDAO)(
+    implicit ec: ExecutionContext) {
+  def publicWrites(
+      folder: Folder,
+      requestingUser: Option[User] = None,
+      requestingUserOrganization: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      teams <- allowedTeamsFor(folder._id, requestingUser)
+      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
+    } yield Json.obj("id" -> folder._id, "name" -> folder.name, "teams" -> teamsJs)
+
+  def allowedTeamsFor(folderId: ObjectId, requestingUser: Option[User])(
+      implicit ctx: DBAccessContext): Fox[List[Team]] =
+    for {
+      teams <- teamDAO.findAllForFolder(folderId) ?~> "allowedTeams.notFound"
+      // dont leak team names of other organizations
+      teamsFiltered = teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
+    } yield teamsFiltered
 }
 
 class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -27,6 +58,9 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def parse(r: FoldersRow): Fox[Folder] =
     Fox.successful(Folder(ObjectId(r._Id), r.name))
+
+  def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
+    Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
 
   def insertAsRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =
@@ -42,10 +76,25 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(rows, "id")
     } yield parsed
 
-  def findChildren(folderId: ObjectId): Fox[List[Folder]] =
+  def updateName(folderId: ObjectId, name: String): Fox[Unit] =
     for {
-      rows <- run(sql"SELECT #$columns".as[FoldersRow]) // TODO
-      parsed <- parseAll(rows)
+      _ <- run(sqlu"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId")
+    } yield ()
+
+  def findTreeOf(folderId: ObjectId): Fox[List[FolderWithParent]] =
+    for {
+      rows <- run(sql"""SELECT f._id, f.name, fp._ancestor
+              FROM webknossos.folders_ f
+              JOIN webknossos.folder_paths fp
+              ON f._id = fp._descendant
+              WHERE fp.depth = 1 AND f._id IN
+              (SELECT _descendant
+              FROM webknossos.folder_paths
+              WHERE _ancestor = $folderId)
+              UNION ALL SELECT _id, name, null from webknossos.folders_
+              WHERE _id = $folderId
+              """.as[(String, String, Option[String])])
+      parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 
   def insertAsChild(parentId: ObjectId, f: Folder): Fox[Unit] = {
@@ -67,10 +116,23 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- run(sqlu"update webknossos.folders set name = ${f.name} where _id = ${f._id}")
     } yield ()
 
-// TODO  mkdir -p route
+  def allowedTeamIdsFor(folderId: ObjectId): Fox[List[ObjectId]] =
+    for {
+      rows <- run(sql"selct _team from folder_allowedTeams where _folder = $folderId".as[ObjectId])
+    } yield rows.toList
 
-  // set permissions for folder
-  // load full tree (sans datasets)
-  // enforce unique names per layer
-  // Root per organization!
+  def updateAllowedTeamsFor(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.folder_allowedTeams where _folder = $folderId"
+
+    val insertQueries = allowedTeams.map(teamId => sqlu"""insert into webknossos.folder_allowedTeams(_folder, _team)
+                                                              values($folderId, $teamId)""")
+
+    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
+    for {
+      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
+               retryCount = 50,
+               retryIfErrorContains = List(transactionSerializationError))
+    } yield ()
+  }
+
 }

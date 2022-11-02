@@ -456,7 +456,7 @@ class AuthenticationController @Inject()(
   lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Redirect(url))
+    openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Ok(Json.obj("redirect_url" -> url)))
   }
 
   def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =

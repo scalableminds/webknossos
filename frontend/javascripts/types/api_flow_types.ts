@@ -896,5 +896,6 @@ export type FlatFolderTreeItem = {
 
 export type Folder = {
   name: string;
+  id: string;
   teams: string[];
 };

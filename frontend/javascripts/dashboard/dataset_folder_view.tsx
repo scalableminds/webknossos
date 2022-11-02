@@ -1,9 +1,12 @@
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFolder, getFolderTree } from "admin/api/folders";
+import { createFolder, deleteFolder, getFolderTree } from "admin/api/folders";
+import { Menu, Dropdown } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import React, { useEffect, useState } from "react";
-import SortableTree from "react-sortable-tree";
+import SortableTree, { ExtendedNodeData } from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
@@ -26,6 +29,23 @@ function useCreateFolderMutation() {
     onSuccess: (newFolder) => {
       queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
         (oldItems || []).concat([newFolder]),
+      );
+    },
+    onError: (err) => {
+      Toast.error(`Could not create folder. ${err}`);
+    },
+  });
+}
+
+function useDeleteFolderMutation() {
+  const queryClient = useQueryClient();
+  const mutationKey = ["folders"];
+
+  return useMutation((id: string) => deleteFolder(id), {
+    mutationKey,
+    onSuccess: (deletedId) => {
+      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
+        (oldItems || []).filter((folder: Folder) => folder.id !== deletedId),
       );
     },
     onError: (err) => {
@@ -107,6 +127,59 @@ type State = {
   treeData: FolderItem[];
 };
 
+function generateNodeProps(
+  createFolderMutation: ReturnType<typeof useCreateFolderMutation>,
+  deleteFolderMutation: ReturnType<typeof useDeleteFolderMutation>,
+  params: ExtendedNodeData<FolderItem>,
+): GenerateNodePropsType {
+  const { node } = params;
+  const { id, title } = node;
+  const nodeProps: GenerateNodePropsType = {};
+
+  function createFolder(id: string): void {
+    const folderName = prompt("Please input a name for the new folder");
+    createFolderMutation.mutateAsync([id, folderName || "New folder"]);
+  }
+  function deleteFolder(id: string): void {
+    deleteFolderMutation.mutateAsync(id);
+  }
+
+  const createMenu = () => (
+    <Menu>
+      <Menu.Item key="create" data-group-id={id} onClick={() => createFolder(id)}>
+        <PlusOutlined />
+        New Folder
+      </Menu.Item>
+      <Menu.Item key="delete" data-group-id={id} onClick={() => deleteFolder(id)}>
+        <DeleteOutlined />
+        Delete Folder
+      </Menu.Item>
+    </Menu>
+  );
+
+  nodeProps.title = (
+    <div>
+      <Dropdown
+        overlay={createMenu}
+        placement="bottom"
+        // The overlay is generated lazily. By default, this would make the overlay
+        // re-render on each parent's render() after it was shown for the first time.
+        // The reason for this is that it's not destroyed after closing.
+        // Therefore, autoDestroy is passed.
+        // destroyPopupOnHide should also be an option according to the docs, but
+        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+        autoDestroy
+        trigger={["contextMenu"]}
+      >
+        <span>{title}</span>
+      </Dropdown>
+    </div>
+  );
+
+  return nodeProps;
+}
+
 function FolderSidebar() {
   const [state, setState] = useState<State>({
     treeData: [],
@@ -115,11 +188,14 @@ function FolderSidebar() {
   const { error, data: folderTree, isLoading } = useFolderTreeQuery();
 
   useEffect(() => {
-    const treeData = getFolderHierarchy(folderTree);
-    setState({ treeData });
+    setState((prevState: State) => {
+      const treeData = getFolderHierarchy(folderTree, prevState.treeData);
+      return { treeData: treeData };
+    });
   }, [folderTree]);
 
   const createFolderMutation = useCreateFolderMutation();
+  const deleteFolderMutation = useDeleteFolderMutation();
   const createFolder = () => {
     if (folderTree && folderTree.length > 0) {
       createFolderMutation.mutateAsync([folderTree[0].id, "New Folder"]);
@@ -132,13 +208,19 @@ function FolderSidebar() {
         treeData={state.treeData}
         onChange={(treeData) => setState({ treeData })}
         theme={FileExplorerTheme}
+        generateNodeProps={(params) =>
+          generateNodeProps(createFolderMutation, deleteFolderMutation, params)
+        }
       />
       <button onClick={createFolder}>Create</button>
     </div>
   );
 }
 
-function getFolderHierarchy(folderTree: FlatFolderTreeItem[] | undefined): FolderItem[] {
+function getFolderHierarchy(
+  folderTree: FlatFolderTreeItem[] | undefined,
+  prevFolderItems: FolderItem[] | null,
+): FolderItem[] {
   if (folderTree == null) {
     return [];
   }
@@ -166,5 +248,20 @@ function getFolderHierarchy(folderTree: FlatFolderTreeItem[] | undefined): Folde
     roots[0].expanded = true;
   }
 
+  // Copy the expanded flags from the old state
+  forEachFolderItem(prevFolderItems || [], (item: FolderItem) => {
+    const maybeItem = itemById[item.id];
+    if (maybeItem != null) {
+      maybeItem.expanded = item.expanded;
+    }
+  });
+
   return roots;
+}
+
+function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) {
+  for (const item of roots) {
+    fn(item);
+    forEachFolderItem(item.children, fn);
+  }
 }

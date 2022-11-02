@@ -93,7 +93,7 @@ type State = {
   activeGroupDropdownId: number | null | undefined;
 };
 
-type GenerateNodePropsType = {
+export type GenerateNodePropsType = {
   title?: JSX.Element;
   className?: string;
   style?: React.CSSProperties;

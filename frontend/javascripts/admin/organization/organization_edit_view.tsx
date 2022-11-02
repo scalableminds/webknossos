@@ -1,6 +1,16 @@
 import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Button, Card, Input, Row, FormInstance } from "antd";
-import { MailOutlined, TagOutlined, CopyOutlined, KeyOutlined } from "@ant-design/icons";
+import { Form, Button, Card, Input, Row, FormInstance, Progress, Col, Alert } from "antd";
+import {
+  MailOutlined,
+  TagOutlined,
+  CopyOutlined,
+  KeyOutlined,
+  PlusCircleOutlined,
+  SafetyOutlined,
+  FieldTimeOutlined,
+  SaveOutlined,
+  RocketOutlined,
+} from "@ant-design/icons";
 import React from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
@@ -90,6 +100,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     );
     window.location.replace(`${window.location.origin}/dashboard/`);
   };
+
   handleDeleteButtonClicked = async (): Promise<void> => {
     const isDeleteConfirmed = await confirmAsync({
       title: (
@@ -124,14 +135,113 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         className="container"
         style={{
           paddingTop: 20,
+          margin: "auto",
+          maxWidth: 800,
         }}
       >
+        <Row style={{ color: "#aaa", fontSize: "12" }}>Your Organization</Row>
+        <Row style={{ marginBottom: 20 }}>
+          <h2>{this.state.displayName}</h2>
+        </Row>
+        <Alert
+          showIcon
+          type="warning"
+          message="You are using more XXX than included in your current plan. Upgrade now to avoid your account being blocked."
+          action={
+            <Button size="small" type="primary">
+              Upgrade Now
+            </Button>
+          }
+          style={{ marginBottom: 20 }}
+        />
+        <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
+          <Col>
+            <Card
+              actions={[
+                <span>
+                  <PlusCircleOutlined /> Upgrade
+                </span>,
+              ]}
+            >
+              <Row style={{ padding: 20 }}>
+                <Progress
+                  type="dashboard"
+                  percent={(4 / 5) * 100}
+                  format={(_percent) => "4/5"}
+                  success={{ strokeColor: "#ff4d4f" }}
+                />
+              </Row>
+              <Row justify="center">Users</Row>
+            </Card>
+          </Col>
+          <Col>
+            <Card
+              actions={[
+                <span>
+                  <PlusCircleOutlined /> Upgrade
+                </span>,
+              ]}
+            >
+              <Row style={{ padding: 20 }}>
+                <Progress
+                  type="dashboard"
+                  percent={2.5}
+                  format={(_percent) => `2.5/1TB`}
+                  success={{ strokeColor: "#ff4d4f" }}
+                />
+              </Row>
+              <Row justify="center">Storage</Row>
+            </Card>
+          </Col>
+          <Col>
+            <Card
+              actions={[
+                <a href="https://webknossos.org/pricing" target={"_blank"}>
+                  <SafetyOutlined /> Compare Plans
+                </a>,
+              ]}
+            >
+              <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 35px" }}>
+                <h3>{this.state.pricingPlan}</h3>
+              </Row>
+              <Row justify="center">Current Plan</Row>
+            </Card>
+          </Col>
+        </Row>
+        <Card style={{ marginBottom: 20 }}>
+          <Row gutter={24}>
+            <Col flex="auto">Paid Until December 2022</Col>
+            <Col span={6}>
+              <Button type="primary" icon={<FieldTimeOutlined />}>
+                Extend Now
+              </Button>
+            </Col>
+          </Row>
+        </Card>
         <Card
-          title={<h3>Edit {this.state.displayName} </h3>}
-          style={{
-            margin: "auto",
-            maxWidth: 800,
-          }}
+          title="Upgrade to Power Plan"
+          style={{ marginBottom: 20 }}
+          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+        >
+          <Row gutter={24}>
+            <Col flex="auto">
+              <ul>
+                <li>Advanced segmentation proof-reading tools</li>
+                <li>Unlimited users</li>
+                <li>Custom hosting solutions available</li>
+              </ul>
+            </Col>
+            <Col span={6}>
+              <Button type="primary" icon={<RocketOutlined />}>
+                Upgrade Now
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+        <Card
+          title="Settings"
+          style={{ marginBottom: 20 }}
+          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
         >
           <Form
             onFinish={this.onFinish}
@@ -142,7 +252,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               newUserMailingList: this.state.newUserMailingList,
             }}
           >
-            <FormItem label="ID">
+            <FormItem label="Organization ID">
               <Input.Group compact>
                 <Input
                   prefix={<KeyOutlined />}
@@ -159,7 +269,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               </Input.Group>
             </FormItem>
             <FormItem
-              label="Display Name"
+              label="Organization Name"
               name="displayName"
               rules={[
                 {
@@ -200,40 +310,34 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 placeholder="mail@example.com"
               />
             </FormItem>
-            <FormItem>
-              <div
-                className="ant-form-item-label"
-                style={{
-                  paddingTop: 5,
-                }}
+            <FormItem
+              style={{
+                marginRight: 20,
+              }}
+            >
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={this.state.isFetchingData}
+                icon={<SaveOutlined />}
               >
-                <label
-                  style={{
-                    paddingRight: 20,
-                  }}
-                >
-                  Pricing Plan
-                </label>
-                <span
-                  className="bordered"
-                  style={{
-                    cursor: "default",
-                  }}
-                >
-                  {this.state.pricingPlan}
-                </span>
-              </div>
+                Save
+              </Button>
             </FormItem>
-            <Row justify="center">
-              <FormItem
-                style={{
-                  marginRight: 20,
-                }}
-              >
-                <Button type="primary" htmlType="submit" disabled={this.state.isFetchingData}>
-                  Save
-                </Button>
-              </FormItem>
+          </Form>
+        </Card>
+
+        <Card
+          title="Danger Zone"
+          style={{ marginBottom: 20 }}
+          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+        >
+          <Row>
+            <Col span={18}>
+              Delete this organization including all annotations, uploaded datasets, and associated
+              user accounts. Careful, this action can NOT be undone.
+            </Col>
+            <Col span={6}>
               <Button
                 danger
                 loading={this.state.isDeleting}
@@ -242,8 +346,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               >
                 Delete Organization
               </Button>
-            </Row>
-          </Form>
+            </Col>
+          </Row>
         </Card>
       </div>
     );

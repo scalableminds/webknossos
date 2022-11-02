@@ -49,7 +49,7 @@ function useDeleteFolderMutation() {
       );
     },
     onError: (err) => {
-      Toast.error(`Could not create folder. ${err}`);
+      Toast.error(`Could not delete folder. ${err}`);
     },
   });
 }
@@ -63,12 +63,18 @@ function useUpdateFolderMutation() {
     onSuccess: (updatedFolder) => {
       queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
         (oldItems || []).map((oldFolder: Folder) =>
-          oldFolder.id === updatedFolder.id ? updatedFolder : oldFolder,
+          oldFolder.id === updatedFolder.id
+            ? {
+                ...updatedFolder,
+                // @ts-ignore todo: clean this up
+                parent: oldFolder.parent,
+              }
+            : oldFolder,
         ),
       );
     },
     onError: (err) => {
-      Toast.error(`Could not create folder. ${err}`);
+      Toast.error(`Could not update folder. ${err}`);
     },
   });
 }
@@ -148,6 +154,7 @@ type State = {
 
 function generateNodeProps(
   createFolderMutation: ReturnType<typeof useCreateFolderMutation>,
+  updateFolderMutation: ReturnType<typeof useUpdateFolderMutation>,
   deleteFolderMutation: ReturnType<typeof useDeleteFolderMutation>,
   params: ExtendedNodeData<FolderItem>,
 ): GenerateNodePropsType {
@@ -155,21 +162,33 @@ function generateNodeProps(
   const { id, title } = node;
   const nodeProps: GenerateNodePropsType = {};
 
-  function createFolder(id: string): void {
+  function createFolder(): void {
     const folderName = prompt("Please input a name for the new folder");
     createFolderMutation.mutateAsync([id, folderName || "New folder"]);
   }
-  function deleteFolder(id: string): void {
+  function deleteFolder(): void {
     deleteFolderMutation.mutateAsync(id);
+  }
+  function renameFolder(): void {
+    const folderName = prompt("Please input a new name for the folder");
+    updateFolderMutation.mutateAsync({
+      name: folderName || "New folder",
+      id: node.id,
+      teams: [], // todo
+    });
   }
 
   const createMenu = () => (
     <Menu>
-      <Menu.Item key="create" data-group-id={id} onClick={() => createFolder(id)}>
+      <Menu.Item key="create" data-group-id={id} onClick={createFolder}>
         <PlusOutlined />
         New Folder
       </Menu.Item>
-      <Menu.Item key="delete" data-group-id={id} onClick={() => deleteFolder(id)}>
+      <Menu.Item key="rename" data-group-id={id} onClick={renameFolder}>
+        <PlusOutlined />
+        Rename Folder
+      </Menu.Item>
+      <Menu.Item key="delete" data-group-id={id} onClick={deleteFolder}>
         <DeleteOutlined />
         Delete Folder
       </Menu.Item>
@@ -215,11 +234,7 @@ function FolderSidebar() {
 
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
-  const createFolder = () => {
-    if (folderTree && folderTree.length > 0) {
-      createFolderMutation.mutateAsync([folderTree[0].id, "New Folder"]);
-    }
-  };
+  const updateFolderMutation = useUpdateFolderMutation();
 
   return (
     <div style={{ height: 400, width: 250 }}>
@@ -228,10 +243,14 @@ function FolderSidebar() {
         onChange={(treeData) => setState({ treeData })}
         theme={FileExplorerTheme}
         generateNodeProps={(params) =>
-          generateNodeProps(createFolderMutation, deleteFolderMutation, params)
+          generateNodeProps(
+            createFolderMutation,
+            updateFolderMutation,
+            deleteFolderMutation,
+            params,
+          )
         }
       />
-      <button onClick={createFolder}>Create</button>
     </div>
   );
 }

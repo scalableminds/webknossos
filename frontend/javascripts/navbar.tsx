@@ -527,6 +527,11 @@ function LoggedInAvatar({
         <Menu.Item disabled key="organization">
           {orgDisplayName}
         </Menu.Item>
+        {activeOrganization && Utils.isUserAdmin(activeUser) ? (
+          <Menu.Item key="manage-organization">
+            <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
+          </Menu.Item>
+        ) : null}
         {isMultiMember ? (
           /* The explicit width is a workaround for a layout bug (probably in antd) */
           <Menu.SubMenu

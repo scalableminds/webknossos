@@ -1,17 +1,20 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { updateDataset } from "admin/admin_rest_api";
 import { createFolder, deleteFolder, getFolderTree, updateFolder } from "admin/api/folders";
 import { Menu, Dropdown } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { useDrop } from "react-dnd";
 import SortableTree, { ExtendedNodeData } from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
 import { APIDataset, APIUser, Folder, FlatFolderTreeItem } from "types/api_flow_types";
-import { TeamTags } from "./advanced_dataset/dataset_table";
+import { DraggableType, TeamTags } from "./advanced_dataset/dataset_table";
+import { DatasetCacheContext } from "./dataset/dataset_cache_provider";
 import DatasetView from "./dataset_view";
 
 function useFolderTreeQuery() {
@@ -173,7 +176,7 @@ function generateNodeProps(
     const folderName = prompt("Please input a new name for the folder");
     updateFolderMutation.mutateAsync({
       name: folderName || "New folder",
-      id: node.id,
+      id,
       teams: [], // todo
     });
   }
@@ -210,12 +213,34 @@ function generateNodeProps(
         autoDestroy
         trigger={["contextMenu"]}
       >
-        <span>{title}</span>
+        <DropTarget folderId={id}>{title}</DropTarget>
       </Dropdown>
     </div>
   );
 
   return nodeProps;
+}
+
+function DropTarget(props: { folderId: string; children: React.ReactNode }) {
+  const context = useContext(DatasetCacheContext);
+  const { folderId } = props;
+
+  const [collectedProps, drop] = useDrop({
+    accept: DraggableType,
+    drop: (item) => {
+      console.log(item);
+
+      const dataset = context.datasets.find((dataset) => dataset.name === item.datasetName);
+
+      if (dataset) {
+        updateDataset(dataset, dataset, folderId);
+      }
+
+      console.log("dataset", dataset);
+    },
+  });
+
+  return <div ref={drop}>{props.children}</div>;
 }
 
 function FolderSidebar() {
@@ -242,6 +267,7 @@ function FolderSidebar() {
         treeData={state.treeData}
         onChange={(treeData) => setState({ treeData })}
         theme={FileExplorerTheme}
+        canDrag={false}
         generateNodeProps={(params) =>
           generateNodeProps(
             createFolderMutation,

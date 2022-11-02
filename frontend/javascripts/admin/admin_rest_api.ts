@@ -1304,12 +1304,17 @@ export function getDataset(
   );
 }
 
-export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Promise<APIDataset> {
+export function updateDataset(
+  datasetId: APIDatasetId,
+  dataset: APIDataset,
+  // todo: make mandatory?
+  folderId?: string,
+): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
     {
       method: "PATCH",
-      data: dataset,
+      data: { ...dataset, folderId },
     },
   );
 }

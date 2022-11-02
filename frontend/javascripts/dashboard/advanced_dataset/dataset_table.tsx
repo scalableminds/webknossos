@@ -27,6 +27,8 @@ import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
 import FixedExpandableTable from "components/fixed_expandable_table";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
@@ -52,6 +54,40 @@ type Props = {
 type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
+};
+
+// Adapted from https://ant.design/components/table/
+// (needed adaption to react-dnd 11.1.3). Updating react-dnd
+// wasn't possible due to react-sortable-tree.
+interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+  index: number;
+}
+export const DraggableType = "DraggableDatasetRow";
+
+const DraggableDatasetRow = ({
+  index,
+  className,
+  style,
+  ...restProps
+}: DraggableDatasetRowProps) => {
+  const ref = React.useRef<HTMLTableRowElement>(null);
+  // @ts-ignore
+  const datasetName = restProps["data-row-key"];
+  const [, drag] = useDrag({
+    item: { type: DraggableType, index, datasetName },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+  drag(ref);
+
+  return <tr ref={ref} className={className} style={{ cursor: "move", ...style }} {...restProps} />;
+};
+
+const components = {
+  body: {
+    row: DraggableDatasetRow,
+  },
 };
 
 class DatasetTable extends React.PureComponent<Props, State> {
@@ -245,168 +281,171 @@ class DatasetTable extends React.PureComponent<Props, State> {
     );
 
     return (
-      <FixedExpandableTable
-        dataSource={sortedDataSource}
-        rowKey="name"
-        pagination={{
-          defaultPageSize: 50,
-        }}
-        onChange={this.handleChange}
-        locale={{
-          emptyText: this.renderEmptyText(),
-        }}
-        onRow={(record, rowIndex) => {
-          return {
-            onClick: (event) => {
-              if (this.props.onSelectDataset) {
-                if (this.props.selectedDataset === record) {
-                  this.props.onSelectDataset(null);
-                } else {
-                  this.props.onSelectDataset(record);
+      <DndProvider backend={HTML5Backend}>
+        <FixedExpandableTable
+          dataSource={sortedDataSource}
+          rowKey="name"
+          components={components}
+          pagination={{
+            defaultPageSize: 50,
+          }}
+          onChange={this.handleChange}
+          locale={{
+            emptyText: this.renderEmptyText(),
+          }}
+          onRow={(record, rowIndex) => {
+            return {
+              onClick: (event) => {
+                if (this.props.onSelectDataset) {
+                  if (this.props.selectedDataset === record) {
+                    this.props.onSelectDataset(null);
+                  } else {
+                    this.props.onSelectDataset(record);
+                  }
                 }
-              }
-            },
-            onDoubleClick: (event) => {
-              console.log("todo: open dataset");
-            },
-          };
-        }}
-        rowSelection={{
-          selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
-          onSelectNone: () => this.props.onSelectDataset && this.props.onSelectDataset(null),
-        }}
-      >
-        <Column
-          title="Name"
-          dataIndex="name"
-          key="name"
-          width={280}
-          sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
-          sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-          render={(name: string, dataset: APIMaybeUnimportedDataset) => (
-            <div>
-              <Link
-                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-                title="View Dataset"
-                className="incognito-link"
-              >
-                {dataset.name}
-              </Link>
-              <br />
-              <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
-            </div>
-          )}
-        />
-        <Column
-          title="Tags"
-          dataIndex="tags"
-          key="tags"
-          sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-          render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
-            dataset.isActive ? (
-              <div style={{ maxWidth: 280 }}>
-                {tags.map((tag) => (
-                  <CategorizationLabel
-                    tag={tag}
-                    key={tag}
-                    kind="datasets"
-                    onClick={_.partial(this.props.addTagToSearch, tag)}
-                    /* @ts-ignore */
-                    onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
-                    closable
-                  />
-                ))}
-                <EditableTextIcon
-                  icon={<PlusOutlined />}
-                  onChange={_.partial(this.editTagFromDataset, dataset, true)}
-                />
-              </div>
-            ) : (
-              <Tooltip title="No tags available for inactive datasets">
-                <WarningOutlined
-                  style={{
-                    color: "@disabled-color",
-                  }}
-                />
-              </Tooltip>
-            )
-          }
-        />
-        <Column
-          title="Voxel Size & Extent"
-          dataIndex="scale"
-          key="scale"
-          width={230}
-          render={(__, dataset: APIMaybeUnimportedDataset) =>
-            `${
-              dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
-            }  ${getDatasetExtentAsString(dataset)}`
-          }
-        />
-        <Column
-          width={180}
-          title="Creation Date"
-          dataIndex="created"
-          key="created"
-          sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
-          sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
-          render={(created) => <FormattedDate timestamp={created} />}
-        />
-
-        <Column
-          title="Access Permissions"
-          dataIndex="allowedTeams"
-          key="allowedTeams"
-          filters={accessPermissionFilters}
-          onFilter={(value, dataset) => {
-            if (value === PUBLIC_SYMBOL) {
-              return dataset.isPublic;
-            }
-            return dataset.allowedTeams.some((team) => team.name === value);
+              },
+              onDoubleClick: (event) => {
+                console.log("todo: open dataset");
+              },
+            };
           }}
-          render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
-            return <TeamTags dataset={dataset} />;
+          rowSelection={{
+            selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
+            onSelectNone: () => this.props.onSelectDataset && this.props.onSelectDataset(null),
           }}
-        />
-        <Column
-          title="Data Layers"
-          key="dataLayers"
-          dataIndex="dataSource.dataLayers"
-          filters={dataLayersFilter}
-          onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
-            "dataLayers" in dataset.dataSource
-              ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
-              : false
-          }
-          render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <div style={{ maxWidth: 250 }}>
-              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
-                <Tag
-                  key={layer.name}
-                  style={{
-                    maxWidth: 250,
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                  }}
+        >
+          <Column
+            title="Name"
+            dataIndex="name"
+            key="name"
+            width={280}
+            sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
+            sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
+            render={(name: string, dataset: APIMaybeUnimportedDataset) => (
+              <div>
+                <Link
+                  to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+                  title="View Dataset"
+                  className="incognito-link"
                 >
-                  {layer.name} - {layer.elementClass}
-                </Tag>
-              ))}
-            </div>
-          )}
-        />
+                  {dataset.name}
+                </Link>
+                <br />
+                <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
+              </div>
+            )}
+          />
+          <Column
+            title="Tags"
+            dataIndex="tags"
+            key="tags"
+            sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
+            render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
+              dataset.isActive ? (
+                <div style={{ maxWidth: 280 }}>
+                  {tags.map((tag) => (
+                    <CategorizationLabel
+                      tag={tag}
+                      key={tag}
+                      kind="datasets"
+                      onClick={_.partial(this.props.addTagToSearch, tag)}
+                      /* @ts-ignore */
+                      onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
+                      closable
+                    />
+                  ))}
+                  <EditableTextIcon
+                    icon={<PlusOutlined />}
+                    onChange={_.partial(this.editTagFromDataset, dataset, true)}
+                  />
+                </div>
+              ) : (
+                <Tooltip title="No tags available for inactive datasets">
+                  <WarningOutlined
+                    style={{
+                      color: "@disabled-color",
+                    }}
+                  />
+                </Tooltip>
+              )
+            }
+          />
+          <Column
+            title="Voxel Size & Extent"
+            dataIndex="scale"
+            key="scale"
+            width={230}
+            render={(__, dataset: APIMaybeUnimportedDataset) =>
+              `${
+                dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
+              }  ${getDatasetExtentAsString(dataset)}`
+            }
+          />
+          <Column
+            width={180}
+            title="Creation Date"
+            dataIndex="created"
+            key="created"
+            sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
+            sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
+            render={(created) => <FormattedDate timestamp={created} />}
+          />
 
-        <Column
-          width={200}
-          title="Actions"
-          key="actions"
-          fixed="right"
-          render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
-          )}
-        />
-      </FixedExpandableTable>
+          <Column
+            title="Access Permissions"
+            dataIndex="allowedTeams"
+            key="allowedTeams"
+            filters={accessPermissionFilters}
+            onFilter={(value, dataset) => {
+              if (value === PUBLIC_SYMBOL) {
+                return dataset.isPublic;
+              }
+              return dataset.allowedTeams.some((team) => team.name === value);
+            }}
+            render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
+              return <TeamTags dataset={dataset} />;
+            }}
+          />
+          <Column
+            title="Data Layers"
+            key="dataLayers"
+            dataIndex="dataSource.dataLayers"
+            filters={dataLayersFilter}
+            onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
+              "dataLayers" in dataset.dataSource
+                ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
+                : false
+            }
+            render={(__, dataset: APIMaybeUnimportedDataset) => (
+              <div style={{ maxWidth: 250 }}>
+                {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
+                  <Tag
+                    key={layer.name}
+                    style={{
+                      maxWidth: 250,
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {layer.name} - {layer.elementClass}
+                  </Tag>
+                ))}
+              </div>
+            )}
+          />
+
+          <Column
+            width={200}
+            title="Actions"
+            key="actions"
+            fixed="right"
+            render={(__, dataset: APIMaybeUnimportedDataset) => (
+              <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
+            )}
+          />
+        </FixedExpandableTable>
+      </DndProvider>
     );
   }
 }

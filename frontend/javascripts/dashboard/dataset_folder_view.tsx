@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFolder, getFolderTree } from "admin/api/folders";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SortableTree from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
-import { APIDataset, APIUser, Folder } from "types/api_flow_types";
+import { APIDataset, APIUser, Folder, FlatFolderTreeItem } from "types/api_flow_types";
 import { TeamTags } from "./advanced_dataset/dataset_table";
 import DatasetView from "./dataset_view";
 
@@ -70,7 +70,7 @@ function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDatase
   // tags: Array<string>;
 
   return (
-    <div style={{ width: 300 }}>
+    <div style={{ width: 300, padding: 16 }}>
       {selectedDataset != null ? (
         <>
           <h1>{selectedDataset.displayName || selectedDataset.name}</h1>
@@ -98,8 +98,9 @@ function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDatase
 
 type FolderItem = {
   title: string;
+  id: string;
   expanded?: boolean;
-  children?: FolderItem[];
+  children: FolderItem[];
 };
 
 type State = {
@@ -108,28 +109,15 @@ type State = {
 
 function FolderSidebar() {
   const [state, setState] = useState<State>({
-    treeData: [
-      {
-        title: "Root",
-        expanded: true,
-        children: [
-          {
-            title: "Folder 1",
-            expanded: true,
-            children: [
-              { title: "Subfolder A.js" },
-              { title: "Subfolder B" },
-              { title: "Subfolder C" },
-            ],
-          },
-          { title: "Folder 2" },
-          { title: "Folder 3" },
-        ],
-      },
-    ],
+    treeData: [],
   });
 
   const { error, data: folderTree, isLoading } = useFolderTreeQuery();
+
+  useEffect(() => {
+    const treeData = getFolderHierarchy(folderTree);
+    setState({ treeData });
+  }, [folderTree]);
 
   const createFolderMutation = useCreateFolderMutation();
   const createFolder = () => {
@@ -138,9 +126,6 @@ function FolderSidebar() {
     }
   };
 
-  console.log("folderTree", folderTree);
-
-  console.log("FileExplorerTheme", FileExplorerTheme);
   return (
     <div style={{ height: 400, width: 250 }}>
       <SortableTree
@@ -151,4 +136,35 @@ function FolderSidebar() {
       <button onClick={createFolder}>Create</button>
     </div>
   );
+}
+
+function getFolderHierarchy(folderTree: FlatFolderTreeItem[] | undefined): FolderItem[] {
+  if (folderTree == null) {
+    return [];
+  }
+  const roots: FolderItem[] = [];
+  const itemById: Record<string, FolderItem> = {};
+  for (const folderTreeItem of folderTree) {
+    const treeItem = {
+      id: folderTreeItem.id,
+      title: folderTreeItem.name,
+      children: [],
+    };
+    if (folderTreeItem.parent == null) {
+      roots.push(treeItem);
+    }
+    itemById[folderTreeItem.id] = treeItem;
+  }
+
+  for (const folderTreeItem of folderTree) {
+    if (folderTreeItem.parent != null) {
+      itemById[folderTreeItem.parent].children.push(itemById[folderTreeItem.id]);
+    }
+  }
+
+  if (roots.length === 1) {
+    roots[0].expanded = true;
+  }
+
+  return roots;
 }

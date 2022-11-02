@@ -888,10 +888,10 @@ export type VoxelyticsChunkStatistics = {
   duration: Statistics | null;
 };
 
-export type FolderTreeItem = {
+export type FlatFolderTreeItem = {
   name: string;
   id: string;
-  parentId?: string;
+  parent?: string;
 };
 
 export type Folder = {

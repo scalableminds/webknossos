@@ -888,7 +888,13 @@ export type VoxelyticsChunkStatistics = {
   duration: Statistics | null;
 };
 
+export type FolderTreeItem = {
+  name: string;
+  id: string;
+  parentId?: string;
+};
+
 export type Folder = {
   name: string;
-  _id: string;
+  teams: string[];
 };

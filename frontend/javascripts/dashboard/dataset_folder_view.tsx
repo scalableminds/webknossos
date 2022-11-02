@@ -134,7 +134,7 @@ function FolderSidebar() {
   const createFolderMutation = useCreateFolderMutation();
   const createFolder = () => {
     if (folderTree && folderTree.length > 0) {
-      createFolderMutation.mutateAsync([folderTree[0]._id, "New Folder"]);
+      createFolderMutation.mutateAsync([folderTree[0].id, "New Folder"]);
     }
   };
 

@@ -365,6 +365,7 @@ job.inferNeurons.notAllowed.organization = Currently neuron inferral is only all
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
+jobs.noWorkerFound = Processing jobs are not available for the datastore this dataset belongs to.
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this webKnossos instance.
 voxelytics.runNotFound = Workflow runs not found

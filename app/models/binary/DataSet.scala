@@ -137,14 +137,29 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findAllByFolderOpt(folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+  def findAllByFolderOpt(folderIdOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      folderPredicate = folderId.map(fId => s"_folder = $fId").getOrElse("true")
+      folderPredicate = folderIdOpt.map(folderId => s"_folder = $folderId").getOrElse("true")
       r <- run(
         sql"select #$columns from #$existingCollectionName where #$folderPredicate and #$accessQuery".as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
+
+  def countByFolder(folderId: ObjectId): Fox[Int] =
+    for {
+      rows <- run(sql"SELECT COUNT(*) FROM #$existingCollectionName WHERE _folder = $folderId".as[Int])
+      firstRow <- rows.headOption
+    } yield firstRow
+
+  override def deleteOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val deleteFolderQuery = sqlu"UPDATE webknossos.folders set isDeleted = true where _id = $folderId"
+    val deletePathsQuery =
+      sqlu"DELETE FROM webknossos.folder_paths where _ancestor = $folderId or _descendant = $folderId"
+    for {
+      _ <- run(DBIO.sequence(List(deleteFolderQuery, deletePathsQuery)).transactionally)
+    } yield ()
+  }
 
   def isEmpty: Fox[Boolean] =
     for {

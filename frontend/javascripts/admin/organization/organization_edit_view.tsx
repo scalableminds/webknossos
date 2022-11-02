@@ -192,22 +192,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     return null;
   };
 
-  render() {
-    if (this.state.isFetchingData || !this.state.organization)
-      return (
-        <div
-          className="container"
-          style={{
-            paddingTop: 40,
-            margin: "auto",
-            maxWidth: 800,
-          }}
-        >
-          <Skeleton active />
-        </div>
-      );
-
-    const OrgaNameRegexPattern = new RegExp("^[A-Za-z0-9\\-_\\. ß]+$");
+  renderCurrentPlanCards = (): React.ReactNode => {
     const activeUsers = 6;
     const usedStorageMB = 1000;
 
@@ -215,18 +200,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     const usedStoragePercentage = (usedStorageMB / this.state.organization.includedStorage) * 100;
 
     return (
-      <div
-        className="container"
-        style={{
-          paddingTop: 20,
-          margin: "auto",
-          maxWidth: 800,
-        }}
-      >
-        <Row style={{ color: "#aaa", fontSize: "12" }}>Your Organization</Row>
-        <Row style={{ marginBottom: 20 }}>
-          <h2>{this.state.displayName}</h2>
-        </Row>
+      <>
         {usedStoragePercentage > 100 || usedUsersPercentage > 100 ? (
           <Alert
             showIcon
@@ -300,6 +274,43 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             </Card>
           </Col>
         </Row>
+      </>
+    );
+  };
+
+  render() {
+    if (this.state.isFetchingData || !this.state.organization)
+      return (
+        <div
+          className="container"
+          style={{
+            paddingTop: 40,
+            margin: "auto",
+            maxWidth: 800,
+          }}
+        >
+          <Skeleton active />
+        </div>
+      );
+
+    const OrgaNameRegexPattern = new RegExp("^[A-Za-z0-9\\-_\\. ß]+$");
+
+    return (
+      <div
+        className="container"
+        style={{
+          paddingTop: 20,
+          margin: "auto",
+          maxWidth: 800,
+        }}
+      >
+        <Row style={{ color: "#aaa", fontSize: "12" }}>Your Organization</Row>
+        <Row style={{ marginBottom: 20 }}>
+          <h2>{this.state.displayName}</h2>
+        </Row>
+
+        {this.renderCurrentPlanCards()}
+
         <Card style={{ marginBottom: 20 }}>
           <Row gutter={24}>
             <Col flex="auto">
@@ -312,7 +323,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             </Col>
           </Row>
         </Card>
-        {renderUpgradePlanCard()}
+
+        {this.renderUpgradePlanCard()}
 
         <Card
           title="Settings"

@@ -20,10 +20,6 @@ case class Folder(_id: ObjectId, name: String)
 
 case class FolderWithParent(_id: ObjectId, name: String, _parent: Option[ObjectId])
 
-object FolderWithParent {
-  implicit val jsonFormat: OFormat[FolderWithParent] = Json.format[FolderWithParent]
-}
-
 case class FolderParameters(name: String)
 object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
@@ -31,6 +27,7 @@ object FolderParameters {
 
 class FolderService @Inject()(teamDAO: TeamDAO, teamService: TeamService, organizationDAO: OrganizationDAO)(
     implicit ec: ExecutionContext) {
+
   def publicWrites(
       folder: Folder,
       requestingUser: Option[User] = None,
@@ -39,6 +36,9 @@ class FolderService @Inject()(teamDAO: TeamDAO, teamService: TeamService, organi
       teams <- allowedTeamsFor(folder._id, requestingUser)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
     } yield Json.obj("id" -> folder._id, "name" -> folder.name, "teams" -> teamsJs)
+
+  def publicWritesWithParent(folderWithParent: FolderWithParent): JsObject =
+    Json.obj("id" -> folderWithParent._id, "name" -> folderWithParent.name, "parent" -> folderWithParent._parent)
 
   def allowedTeamsFor(folderId: ObjectId, requestingUser: Option[User])(
       implicit ctx: DBAccessContext): Fox[List[Team]] =

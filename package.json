@@ -237,8 +237,7 @@
     "zip-js-webpack": "^1.0.0"
   },
   "resolutions": {
-    "**/mini-store": "^1.1.0",
-    "**/rc-tabs/rc-util": "^5.16.0"
+    "**/mini-store": "^1.1.0"
   },
   "ava": {
     "files": [

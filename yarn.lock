@@ -11604,10 +11604,10 @@ rc-table@~7.26.0:
     rc-util "^5.22.5"
     shallowequal "^1.1.0"
 
-rc-tabs@~12.2.0:
-  version "12.2.1"
-  resolved "https://registry.yarnpkg.com/rc-tabs/-/rc-tabs-12.2.1.tgz#1dd9b2a61f57a06780ac1929686a2840d4da0e82"
-  integrity sha512-09pVv4kN8VFqp6THceEmxOW8PAShQC08hrroeVYP4Y8YBFaP1PIWdyFL01czcbyz5YZFj9flZ7aljMaAl0jLVg==
+rc-tabs@^12.2.2, rc-tabs@~12.2.0:
+  version "12.2.2"
+  resolved "https://registry.yarnpkg.com/rc-tabs/-/rc-tabs-12.2.2.tgz#2f2f86399778d45c47e6756536e15c13cd064455"
+  integrity sha512-Q26L64pjTiiARL+T59Pi9d4lZsUV2mhC8NQEpVK1a8dxXS9KQPY58tNtlx++o6qHRnZVo/sx22v9BqtM9ZKh7g==
   dependencies:
     "@babel/runtime" "^7.11.2"
     classnames "2.x"
@@ -11615,7 +11615,7 @@ rc-tabs@~12.2.0:
     rc-menu "~9.6.0"
     rc-motion "^2.6.2"
     rc-resize-observer "^1.0.0"
-    rc-util "^5.5.0"
+    rc-util "^5.16.0"
 
 rc-textarea@^0.4.0, rc-textarea@~0.4.5:
   version "0.4.5"

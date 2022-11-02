@@ -1,5 +1,5 @@
 import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Button, Card, Input, Row, FormInstance, Progress, Col, Alert } from "antd";
+import { Form, Button, Card, Input, Row, FormInstance, Progress, Col, Alert, Skeleton } from "antd";
 import {
   MailOutlined,
   TagOutlined,
@@ -16,12 +16,18 @@ import { confirmAsync } from "dashboard/dataset/helper_components";
 import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { coalesce } from "libs/utils";
+import { APIOrganization } from "types/api_flow_types";
+import { useIsFetching } from "@tanstack/react-query";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
+import { formatBytes } from "libs/format_utils";
 
 const FormItem = Form.Item;
 export enum PricingPlanEnum {
-  Basic = "Basic",
-  Premium = "Premium",
-  Pilot = "Pilot",
+  Free = "Free",
+  Team = "Team",
+  Power = "Power",
+  "Team-Trial" = "Team-Trial",
+  "Power-Trial" = "Power-Trial",
   Custom = "Custom",
 }
 export type PricingPlan = keyof typeof PricingPlanEnum;
@@ -34,6 +40,7 @@ type State = {
   pricingPlan: PricingPlan | null | undefined;
   isFetchingData: boolean;
   isDeleting: boolean;
+  organization: APIOrganization | null;
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
@@ -43,6 +50,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     pricingPlan: null,
     isFetchingData: false,
     isDeleting: false,
+    organization: null,
   };
   formRef = React.createRef<FormInstance>();
 
@@ -80,14 +88,14 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingData: true,
     });
-    const { displayName, newUserMailingList, pricingPlan } = await getOrganization(
-      this.props.organizationName,
-    );
+    const organization = await getOrganization(this.props.organizationName);
+    const { displayName, newUserMailingList, pricingPlan } = organization;
     this.setState({
       displayName,
       pricingPlan: coalesce(PricingPlanEnum, pricingPlan),
       newUserMailingList,
       isFetchingData: false,
+      organization: organization,
     });
   }
 
@@ -110,7 +118,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
           Attention: You will be logged out.
         </p>
       ),
-      okText: "Yes, Delete Organization now",
+      okText: "Yes, delete this organization now.",
     });
 
     if (isDeleteConfirmed) {
@@ -129,7 +137,83 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     Toast.success("Organization name copied to clipboard");
   };
 
+  renderUpgradePlanCard = (): React.ReactNode => {
+    if (this.state.pricingPlan === PricingPlanEnum.Free)
+      return (
+        <Card
+          title="Upgrade to Team Plan"
+          style={{ marginBottom: 20 }}
+          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+        >
+          <Row gutter={24}>
+            <Col flex="auto">
+              <ul>
+                <li>TODO</li>
+                <li>TODO</li>
+                <li>TODO</li>
+              </ul>
+            </Col>
+            <Col span={6}>
+              <Button type="primary" icon={<RocketOutlined />}>
+                Upgrade Now
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+      );
+
+    if (
+      this.state.pricingPlan === PricingPlanEnum.Team ||
+      this.state.pricingPlan === PricingPlanEnum["Team-Trial"]
+    )
+      return (
+        <Card
+          title="Upgrade to Power Plan"
+          style={{ marginBottom: 20 }}
+          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+        >
+          <Row gutter={24}>
+            <Col flex="auto">
+              <ul>
+                <li>Advanced segmentation proof-reading tools</li>
+                <li>Unlimited users</li>
+                <li>Custom hosting solutions available</li>
+              </ul>
+            </Col>
+            <Col span={6}>
+              <Button type="primary" icon={<RocketOutlined />}>
+                Upgrade Now
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+      );
+
+    return null;
+  };
+
   render() {
+    if (this.state.isFetchingData || !this.state.organization)
+      return (
+        <div
+          className="container"
+          style={{
+            paddingTop: 40,
+            margin: "auto",
+            maxWidth: 800,
+          }}
+        >
+          <Skeleton active />
+        </div>
+      );
+
+    const OrgaNameRegexPattern = new RegExp("^[A-Za-z0-9\\-_\\. ß]+$");
+    const activeUsers = 6;
+    const usedStorageMB = 1000;
+
+    const usedUsersPercentage = (activeUsers / this.state.organization.includedUsers) * 100;
+    const usedStoragePercentage = (usedStorageMB / this.state.organization.includedStorage) * 100;
+
     return (
       <div
         className="container"
@@ -143,17 +227,19 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         <Row style={{ marginBottom: 20 }}>
           <h2>{this.state.displayName}</h2>
         </Row>
-        <Alert
-          showIcon
-          type="warning"
-          message="You are using more XXX than included in your current plan. Upgrade now to avoid your account being blocked."
-          action={
-            <Button size="small" type="primary">
-              Upgrade Now
-            </Button>
-          }
-          style={{ marginBottom: 20 }}
-        />
+        {usedStoragePercentage > 100 || usedUsersPercentage > 100 ? (
+          <Alert
+            showIcon
+            type="warning"
+            message="Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account being blocked."
+            action={
+              <Button size="small" type="primary">
+                Upgrade Now
+              </Button>
+            }
+            style={{ marginBottom: 20 }}
+          />
+        ) : null}
         <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
           <Col>
             <Card
@@ -166,9 +252,10 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               <Row style={{ padding: 20 }}>
                 <Progress
                   type="dashboard"
-                  percent={(4 / 5) * 100}
-                  format={(_percent) => "4/5"}
-                  success={{ strokeColor: "#ff4d4f" }}
+                  percent={usedUsersPercentage}
+                  format={() => `${activeUsers}/${this.state.organization.includedUsers}`}
+                  success={{ strokeColor: "#ff4d4f !important" }}
+                  style={{ color: usedUsersPercentage > 100 ? "#ff4d4f !important" : "inherit" }}
                 />
               </Row>
               <Row justify="center">Users</Row>
@@ -185,8 +272,13 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               <Row style={{ padding: 20 }}>
                 <Progress
                   type="dashboard"
-                  percent={2.5}
-                  format={(_percent) => `2.5/1TB`}
+                  percent={usedStoragePercentage}
+                  format={() =>
+                    `${formatBytes((usedStorageMB * 1024) ^ 2)} / ${formatBytes(
+                      (this.state.organization.includedStorage * 1024) ^ 2,
+                    )}`
+                  }
+                  style={{ color: usedStoragePercentage > 100 ? "#ff4d4f" : "inherit" }}
                   success={{ strokeColor: "#ff4d4f" }}
                 />
               </Row>
@@ -210,7 +302,9 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         </Row>
         <Card style={{ marginBottom: 20 }}>
           <Row gutter={24}>
-            <Col flex="auto">Paid Until December 2022</Col>
+            <Col flex="auto">
+              Paid Until {formatDateInLocalTimeZone(this.state.organization.paidUntil)}
+            </Col>
             <Col span={6}>
               <Button type="primary" icon={<FieldTimeOutlined />}>
                 Extend Now
@@ -218,26 +312,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             </Col>
           </Row>
         </Card>
-        <Card
-          title="Upgrade to Power Plan"
-          style={{ marginBottom: 20 }}
-          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
-        >
-          <Row gutter={24}>
-            <Col flex="auto">
-              <ul>
-                <li>Advanced segmentation proof-reading tools</li>
-                <li>Unlimited users</li>
-                <li>Custom hosting solutions available</li>
-              </ul>
-            </Col>
-            <Col span={6}>
-              <Button type="primary" icon={<RocketOutlined />}>
-                Upgrade Now
-              </Button>
-            </Col>
-          </Row>
-        </Card>
+        {renderUpgradePlanCard()}
+
         <Card
           title="Settings"
           style={{ marginBottom: 20 }}
@@ -274,10 +350,9 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               rules={[
                 {
                   required: true,
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'RegExp | ... Remove this comment to see the full error message
-                  pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
+                  pattern: OrgaNameRegexPattern,
                   message:
-                    "The organization name must not contain any special characters and can not be empty.",
+                    "Organization names must not contain any special characters and can not be empty.",
                 },
               ]}
             >
@@ -295,6 +370,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 {
                   required: false,
                   type: "email",
+                  message: "Please provide a valid email address.",
                 },
               ]}
             >

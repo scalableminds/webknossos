@@ -511,6 +511,9 @@ export type APIOrganization = {
   readonly pricingPlan: PricingPlan;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
+  readonly paidUntil: string,
+  readonly includedUsers: number,
+  readonly includedStorage: number // megabytes
 };
 export type APIBuildInfo = {
   webknossos: {

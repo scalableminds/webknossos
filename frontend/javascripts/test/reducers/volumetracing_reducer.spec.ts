@@ -157,6 +157,8 @@ test("VolumeTracing should cycle trace/view/brush tool", (t) => {
   newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.PICK_CELL);
   newState = UiReducer(newState, cycleToolAction());
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.QUICK_SELECT);
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BOUNDING_BOX);
   // Cycle tool back to MOVE
   newState = UiReducer(newState, cycleToolAction());

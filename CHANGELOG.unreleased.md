@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/22.11.1...HEAD)
 
 ### Added
+- Added a new Quick-Select tool for volume annotation. This tools allows to draw a rectangle over a segment to annotate it automatically. The tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. If the preview is enabled, the parameters can be fine-tuned while the preview updates instantly. [#6542](https://github.com/scalableminds/webknossos/pull/6542)
 - The largest segment id for a segmentation layer can be computed automatically from the dataset settings page. [#6415](https://github.com/scalableminds/webknossos/pull/6415)
 - Button for switching organizations for Voxelytics workflows. [#6572](https://github.com/scalableminds/webknossos/pull/6572)
 - Added ability to shuffle / set colors for a whole tree group. [#6586](https://github.com/scalableminds/webknossos/pull/6586)

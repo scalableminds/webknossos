@@ -271,7 +271,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getEnableDisableLayerSwitch = (
     isDisabled: boolean,
-    onChange: (arg0: boolean, arg1: MouseEvent) => void,
+    onChange: (arg0: boolean, arg1: React.MouseEvent<HTMLButtonElement>) => void,
   ) => (
     <Tooltip title={isDisabled ? "Show" : "Hide"} placement="top">
       {/* This div is necessary for the tooltip to be displayed */}
@@ -333,7 +333,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
 
-    const onChange = (value: boolean, event: MouseEvent) => {
+    const onChange = (value: boolean, event: React.MouseEvent<HTMLButtonElement>) => {
       if (!event.ctrlKey && !event.altKey && !event.shiftKey) {
         setSingleLayerVisibility(value);
         return;

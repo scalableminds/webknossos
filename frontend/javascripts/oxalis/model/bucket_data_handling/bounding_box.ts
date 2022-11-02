@@ -1,8 +1,7 @@
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import type { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
-import Store from "oxalis/store";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
 
@@ -28,8 +27,7 @@ class BoundingBox {
     }
   }
 
-  getBoxForZoomStep = _.memoize((zoomStep: number): BoundingBoxType => {
-    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
+  getBoxForZoomStep = _.memoize((resolution: Vector3): BoundingBoxType => {
     // No `map` for performance reasons
     const min = [0, 0, 0];
     const max = [0, 0, 0];
@@ -48,8 +46,10 @@ class BoundingBox {
     };
   });
 
-  containsBucket([x, y, z, zoomStep]: Vector4): boolean {
-    const { min, max } = this.getBoxForZoomStep(zoomStep);
+  containsBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: ResolutionInfo): boolean {
+    const { min, max } = this.getBoxForZoomStep(
+      resolutionInfo.getResolutionByIndexOrThrow(zoomStep),
+    );
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 
@@ -59,8 +59,10 @@ class BoundingBox {
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 
-  containsFullBucket([x, y, z, zoomStep]: Vector4): boolean {
-    const { min, max } = this.getBoxForZoomStep(zoomStep);
+  containsFullBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: ResolutionInfo): boolean {
+    const { min, max } = this.getBoxForZoomStep(
+      resolutionInfo.getResolutionByIndexOrThrow(zoomStep),
+    );
     return (
       min[0] < x && x < max[0] - 1 && min[1] < y && y < max[1] - 1 && min[2] < z && z < max[2] - 1
     );
@@ -78,6 +80,10 @@ class BoundingBox {
       min: newMin,
       max: newMax,
     });
+  }
+
+  getCenter(): Vector3 {
+    return V3.floor(V3.add(this.min, V3.scale(this.getSize(), 0.5)));
   }
 
   getSize(): Vector3 {

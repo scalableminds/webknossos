@@ -1,5 +1,5 @@
 import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
-import { ClearOutlined, DownOutlined, ExportOutlined } from "@ant-design/icons";
+import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
@@ -56,6 +56,7 @@ import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpola
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
+import { QuickSelectControls } from "./quick_select_settings";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -681,7 +682,7 @@ export default function ToolbarView() {
           */}
             <Tooltip
               title={skeletonToolHint || previousSkeletonToolHint}
-              visible={skeletonToolHint != null}
+              open={skeletonToolHint != null}
             >
               <i
                 style={{
@@ -814,6 +815,24 @@ export default function ToolbarView() {
           </React.Fragment>
         ) : null}
         <RadioButtonWithTooltip
+          title="Quick Select Tool - Draw a rectangle around a segment to automatically detect it"
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
+          style={narrowButtonStyle}
+          value={AnnotationToolEnum.QUICK_SELECT}
+        >
+          <img
+            src="/assets/images/quick-select-tool.svg"
+            alt="Quick Select Icon"
+            style={{
+              height: 20,
+              width: 20,
+              marginTop: -1,
+              opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
+            }}
+          />
+        </RadioButtonWithTooltip>
+        <RadioButtonWithTooltip
           title="Bounding Box Tool - Create, resize and modify bounding boxes."
           disabledTitle={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
@@ -928,6 +947,8 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
+      {adaptedActiveTool === "QUICK_SELECT" && <QuickSelectSettingsPopover />}
+
       {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
         <VolumeInterpolationButton />
       ) : null}
@@ -945,6 +966,32 @@ function ToolSpecificSettings({
         </ButtonComponent>
       ) : null}
     </>
+  );
+}
+
+function QuickSelectSettingsPopover() {
+  const [isOpen, setIsOpen] = useState(false);
+  const isQuickSelectActive = useSelector(
+    (state: OxalisState) => state.uiInformation.isQuickSelectActive,
+  );
+  return (
+    <Popover
+      trigger="click"
+      placement="bottom"
+      open={isOpen}
+      content={<QuickSelectControls setIsOpen={setIsOpen} />}
+      onOpenChange={(open: boolean) => setIsOpen(open)}
+    >
+      <ButtonComponent
+        title="Configure Quick Select"
+        tooltipPlacement="right"
+        className="narrow"
+        type={isQuickSelectActive ? "primary" : "default"}
+        style={{ marginLeft: 12, marginRight: 12 }}
+      >
+        <SettingOutlined />
+      </ButtonComponent>
+    </Popover>
   );
 }
 

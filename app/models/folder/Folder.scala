@@ -123,6 +123,16 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
+  def moveOne(idValidated: ObjectId, newParentIdValidated: ObjectId): Fox[Unit] = {
+    val deleteObsoletePathsQuery =
+      sqlu"""
+        """
+    val insertNewPathsQuery = sqlu""
+    for {
+      _ <- run(DBIO.sequence(List(deleteObsoletePathsQuery, insertNewPathsQuery)))
+    } yield ()
+  }
+
   override def deleteOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val deleteFolderQuery = sqlu"UPDATE webknossos.folders SET isDeleted = true WHERE _id = $folderId"
     val deletePathsQuery =

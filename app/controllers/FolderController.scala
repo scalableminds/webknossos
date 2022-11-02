@@ -70,7 +70,8 @@ class FolderController @Inject()(
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       foldersWithParents <- folderDAO.findTreeOf(organization._rootFolder)
-    } yield Ok(Json.toJson(foldersWithParents))
+      foldersWithParentsJson = foldersWithParents.map(folderService.publicWritesWithParent)
+    } yield Ok(Json.toJson(foldersWithParentsJson))
   }
 
   def create(parentId: String, name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

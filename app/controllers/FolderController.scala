@@ -2,6 +2,7 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
+import models.binary.DataSetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
 import models.team.TeamDAO
@@ -17,6 +18,7 @@ class FolderController @Inject()(
     folderDAO: FolderDAO,
     folderService: FolderService,
     teamDAO: TeamDAO,
+    dataSetDAO: DataSetDAO,
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
@@ -49,6 +51,22 @@ class FolderController @Inject()(
         updated <- folderDAO.findOne(idValidated)
         folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
       } yield Ok(folderJson)
+  }
+
+  def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      idValidated <- ObjectId.fromString(id)
+      organization <- organizationDAO.findOne(request.identity._organization)
+      _ <- bool2Fox(organization._rootFolder != idValidated) ?~> "folder.delete.root"
+      _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+      childrenCount <- folderDAO.countChildren(idValidated)
+      datasetsCount <- dataSetDAO.countByFolder(idValidated)
+      _ <- bool2Fox(childrenCount == 0) ?~> "folder.delete.notEmpty.children"
+      _ <- bool2Fox(datasetsCount == 0) ?~> "folder.delete.notEmpty.datasets"
+      _ <- folderDAO.deleteOne(idValidated)
+      updated <- folderDAO.findOne(idValidated)
+      folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
+    } yield Ok(folderJson)
   }
 
   def updateTeams(id: String): Action[List[ObjectId]] =

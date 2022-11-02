@@ -62,6 +62,15 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
     Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
 
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    """
+      --is descendant of user organization folder and user is admin or dataset manager
+      true
+      or
+      --is descendant of a folder with allowed teams the user is in
+      true
+      """
+
   def insertAsRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =
       sqlu"INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES(${f._id}, ${f._id}, 0)"
@@ -75,6 +84,12 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       rows <- run(sql"SELECT #$columns FROM webknossos.folders WHERE _id = $folderId".as[FoldersRow])
       parsed <- parseFirst(rows, "id")
     } yield parsed
+
+  def countChildren(folderId: ObjectId): Fox[Int] =
+    for {
+      rows <- run(sql"SELECT COUNT(*) FROM webknossos.folder_paths WHERE _ancestor = $folderId".as[Int])
+      firstRow <- rows.headOption
+    } yield firstRow - 1 // subtract the self-link
 
   def updateName(folderId: ObjectId, name: String): Fox[Unit] =
     for {

@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(90);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(91);
 COMMIT TRANSACTION;
 
 
@@ -273,7 +273,7 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Free', 'Team', 'Power', 'Team-Trial', 'Power-Trial', 'Custom');
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY,
   name VARCHAR(256) NOT NULL UNIQUE,
@@ -284,6 +284,9 @@ CREATE TABLE webknossos.organizations(
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
+  paidUntil TIMESTAMPTZ DEFAULT NULL,
+  includedUsers INTEGER DEFAULT NULL,
+  includedStorage BIGINT DEFAULT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

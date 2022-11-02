@@ -123,24 +123,33 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
+  override def deleteOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val deleteFolderQuery = sqlu"UPDATE webknossos.folders SET isDeleted = true WHERE _id = $folderId"
+    val deletePathsQuery =
+      sqlu"DELETE FROM webknossos.folder_paths WHERE _ancestor = $folderId OR _descendant = $folderId"
+    for {
+      _ <- run(DBIO.sequence(List(deleteFolderQuery, deletePathsQuery)).transactionally)
+    } yield ()
+  }
+
   private def insertFolderQuery(f: Folder): SqlAction[Int, NoStream, Effect] =
-    sqlu"insert into webknossos.folders(_id, name) values (${f._id}, ${f.name})"
+    sqlu"INSERT INTO webknossos.folders(_id, name) VALUES (${f._id}, ${f.name})"
 
   def updateOne(f: Folder): Fox[Unit] =
     for {
-      _ <- run(sqlu"update webknossos.folders set name = ${f.name} where _id = ${f._id}")
+      _ <- run(sqlu"UPDATE webknossos.folders SET name = ${f.name} WHERE _id = ${f._id}")
     } yield ()
 
   def allowedTeamIdsFor(folderId: ObjectId): Fox[List[ObjectId]] =
     for {
-      rows <- run(sql"selct _team from folder_allowedTeams where _folder = $folderId".as[ObjectId])
+      rows <- run(sql"SELECT _team FROM folder_allowedTeams WHERE _folder = $folderId".as[ObjectId])
     } yield rows.toList
 
   def updateAllowedTeamsFor(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.folder_allowedTeams where _folder = $folderId"
+    val clearQuery = sqlu"DELETE FROM webknossos.folder_allowedTeams WHERE _folder = $folderId"
 
-    val insertQueries = allowedTeams.map(teamId => sqlu"""insert into webknossos.folder_allowedTeams(_folder, _team)
-                                                              values($folderId, $teamId)""")
+    val insertQueries = allowedTeams.map(teamId => sqlu"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
+                                                              VALUES($folderId, $teamId)""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {

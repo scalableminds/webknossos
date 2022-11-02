@@ -152,15 +152,6 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       firstRow <- rows.headOption
     } yield firstRow
 
-  override def deleteOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val deleteFolderQuery = sqlu"UPDATE webknossos.folders set isDeleted = true where _id = $folderId"
-    val deletePathsQuery =
-      sqlu"DELETE FROM webknossos.folder_paths where _ancestor = $folderId or _descendant = $folderId"
-    for {
-      _ <- run(DBIO.sequence(List(deleteFolderQuery, deletePathsQuery)).transactionally)
-    } yield ()
-  }
-
   def isEmpty: Fox[Boolean] =
     for {
       r <- run(sql"select count(*) from #$existingCollectionName limit 1".as[Int])

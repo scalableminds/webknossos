@@ -1,6 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFolder, deleteFolder, getFolderTree } from "admin/api/folders";
+import { createFolder, deleteFolder, getFolderTree, updateFolder } from "admin/api/folders";
 import { Menu, Dropdown } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
@@ -46,6 +46,25 @@ function useDeleteFolderMutation() {
     onSuccess: (deletedId) => {
       queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
         (oldItems || []).filter((folder: Folder) => folder.id !== deletedId),
+      );
+    },
+    onError: (err) => {
+      Toast.error(`Could not create folder. ${err}`);
+    },
+  });
+}
+
+function useUpdateFolderMutation() {
+  const queryClient = useQueryClient();
+  const mutationKey = ["folders"];
+
+  return useMutation((folder: Folder) => updateFolder(folder), {
+    mutationKey,
+    onSuccess: (updatedFolder) => {
+      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
+        (oldItems || []).map((oldFolder: Folder) =>
+          oldFolder.id === updatedFolder.id ? updatedFolder : oldFolder,
+        ),
       );
     },
     onError: (err) => {

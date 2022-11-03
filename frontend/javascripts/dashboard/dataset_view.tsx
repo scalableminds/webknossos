@@ -126,69 +126,6 @@ function DatasetView(props: Props) {
     setSearchQuery(event.target.value);
   }
 
-  function renderPlaceholder() {
-    const openPublicDatasetCard = (
-      <OptionCard
-        header="Open Demo Dataset"
-        icon={<RocketOutlined />}
-        action={
-          <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
-            <Button>Open Dataset</Button>
-          </a>
-        }
-        height={350}
-      >
-        Have a look at a public dataset to experience webKnossos in action.
-      </OptionCard>
-    );
-
-    const uploadPlaceholder = (
-      <OptionCard
-        header="Upload Dataset"
-        icon={<CloudUploadOutlined />}
-        action={
-          <Link to="/datasets/upload">
-            <Button>Open Import Dialog</Button>
-          </Link>
-        }
-        height={350}
-      >
-        webKnossos supports a variety of{" "}
-        <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and is
-        also able to convert them when necessary.
-      </OptionCard>
-    );
-
-    const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
-      ? "There are no datasets available yet. Upload one or try a public demo dataset."
-      : "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
-
-    return context.isLoading ? null : (
-      <Row
-        justify="center"
-        style={{
-          padding: "20px 50px 70px",
-        }}
-        align="middle"
-      >
-        <Col span={18}>
-          <Row gutter={16} justify="center" align="bottom">
-            {features().isDemoInstance ? openPublicDatasetCard : null}
-            {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
-          </Row>
-          <div
-            style={{
-              marginTop: 24,
-              textAlign: "center",
-            }}
-          >
-            {emptyListHintText}
-          </div>
-        </Col>
-      </Row>
-    );
-  }
-
   function renderTable() {
     const filteredDatasets = filterDatasetsForUsersOrganization(context.datasets, user);
     return (
@@ -208,90 +145,11 @@ function DatasetView(props: Props) {
     );
   }
 
-  function renderNewJobsAlert() {
-    const now = moment();
-    const newJobs = jobs
-      .filter(
-        (job) =>
-          job.type === "convert_to_wkw" &&
-          moment.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
-      )
-      .sort((a, b) => b.createdAt - a.createdAt);
-
-    if (newJobs.length === 0) {
-      return null;
-    }
-
-    const newJobsHeader = (
-      <React.Fragment>
-        Recent Dataset Conversions{" "}
-        <Tooltip
-          title="The conversion of the displayed datasets were started in the last 3 days."
-          placement="right"
-        >
-          <InfoCircleOutlined />
-        </Tooltip>
-      </React.Fragment>
-    );
-    const newJobsList = (
-      <div
-        style={{
-          paddingTop: 8,
-        }}
-      >
-        {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map((job) => {
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-          const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
-          return (
-            <Row key={job.id} gutter={16}>
-              <Col span={10}>
-                <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
-                {job.state === "SUCCESS" && job.resultLink ? (
-                  <Link to={job.resultLink}>{job.datasetName}</Link>
-                ) : (
-                  job.datasetName || "UNKNOWN"
-                )}
-                {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
-                <FormattedDate timestamp={job.createdAt} />
-                <span>)</span>
-              </Col>
-            </Row>
-          );
-        })}
-        <Row
-          key="overview"
-          style={{
-            marginTop: 12,
-          }}
-        >
-          <Col span={10}>
-            <Link to="/jobs" title="Jobs Overview">
-              See complete list
-            </Link>
-          </Col>
-        </Row>
-      </div>
-    );
-    return (
-      <Alert
-        message={newJobsHeader}
-        description={newJobsList}
-        type="info"
-        style={{
-          marginTop: 20,
-        }}
-        showIcon
-        icon={<HourglassOutlined />}
-      />
-    );
-  }
-
   const margin = {
     marginRight: 5,
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'key' implicitly has an 'any' type.
-  const createFilteringModeRadio = (key, label) => (
+  const createFilteringModeRadio = (key: DatasetFilteringMode, label: string) => (
     <Radio
       onChange={() => {
         setDatasetFilteringMode(key);
@@ -383,7 +241,7 @@ function DatasetView(props: Props) {
   );
   const datasets = filterDatasetsForUsersOrganization(context.datasets, user);
   const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
-  const content = isEmpty ? renderPlaceholder() : renderTable();
+  const content = isEmpty ? renderPlaceholder(context, user) : renderTable();
   return (
     <div>
       {adminHeader}
@@ -398,7 +256,7 @@ function DatasetView(props: Props) {
           margin: "20px 0px",
         }}
       />
-      {renderNewJobsAlert()}
+      <NewJobsAlert jobs={jobs} />
       <div
         className="clearfix"
         style={{
@@ -409,6 +267,147 @@ function DatasetView(props: Props) {
         {content}
       </Spin>
     </div>
+  );
+}
+
+function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
+  const now = moment();
+  const newJobs = jobs
+    .filter(
+      (job) =>
+        job.type === "convert_to_wkw" &&
+        moment.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
+    )
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  if (newJobs.length === 0) {
+    return null;
+  }
+
+  const newJobsHeader = (
+    <React.Fragment>
+      Recent Dataset Conversions{" "}
+      <Tooltip
+        title="The conversion of the displayed datasets were started in the last 3 days."
+        placement="right"
+      >
+        <InfoCircleOutlined />
+      </Tooltip>
+    </React.Fragment>
+  );
+  const newJobsList = (
+    <div
+      style={{
+        paddingTop: 8,
+      }}
+    >
+      {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map((job) => {
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+        const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
+        return (
+          <Row key={job.id} gutter={16}>
+            <Col span={10}>
+              <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
+              {job.state === "SUCCESS" && job.resultLink ? (
+                <Link to={job.resultLink}>{job.datasetName}</Link>
+              ) : (
+                job.datasetName || "UNKNOWN"
+              )}
+              {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
+              <FormattedDate timestamp={job.createdAt} />
+              <span>)</span>
+            </Col>
+          </Row>
+        );
+      })}
+      <Row
+        key="overview"
+        style={{
+          marginTop: 12,
+        }}
+      >
+        <Col span={10}>
+          <Link to="/jobs" title="Jobs Overview">
+            See complete list
+          </Link>
+        </Col>
+      </Row>
+    </div>
+  );
+  return (
+    <Alert
+      message={newJobsHeader}
+      description={newJobsList}
+      type="info"
+      style={{
+        marginTop: 20,
+      }}
+      showIcon
+      icon={<HourglassOutlined />}
+    />
+  );
+}
+
+function renderPlaceholder(context: DatasetCacheContext, user: APIUser) {
+  const openPublicDatasetCard = (
+    <OptionCard
+      header="Open Demo Dataset"
+      icon={<RocketOutlined />}
+      action={
+        <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
+          <Button>Open Dataset</Button>
+        </a>
+      }
+      height={350}
+    >
+      Have a look at a public dataset to experience webKnossos in action.
+    </OptionCard>
+  );
+
+  const uploadPlaceholder = (
+    <OptionCard
+      header="Upload Dataset"
+      icon={<CloudUploadOutlined />}
+      action={
+        <Link to="/datasets/upload">
+          <Button>Open Import Dialog</Button>
+        </Link>
+      }
+      height={350}
+    >
+      webKnossos supports a variety of{" "}
+      <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and is
+      also able to convert them when necessary.
+    </OptionCard>
+  );
+
+  const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+    ? "There are no datasets available yet. Upload one or try a public demo dataset."
+    : "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
+
+  return context.isLoading ? null : (
+    <Row
+      justify="center"
+      style={{
+        padding: "20px 50px 70px",
+      }}
+      align="middle"
+    >
+      <Col span={18}>
+        <Row gutter={16} justify="center" align="bottom">
+          {features().isDemoInstance ? openPublicDatasetCard : null}
+          {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
+        </Row>
+        <div
+          style={{
+            marginTop: 24,
+            textAlign: "center",
+          }}
+        >
+          {emptyListHintText}
+        </div>
+      </Col>
+    </Row>
   );
 }
 

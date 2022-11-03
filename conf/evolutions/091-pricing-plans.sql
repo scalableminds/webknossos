@@ -25,6 +25,9 @@ ALTER TABLE webknossos.organizations
   ALTER COLUMN pricingPlan SET DEFAULT 'Custom'::webknossos.PRICING_PLANS;
 DROP TYPE webknossos.prizing_plans_old;
 
+UPDATE webknossos.organizations SET includedUsers = 3, includedStorage = 5e10 WHERE pricingplan = 'Free'::webknossos.PRICING_PLANS;
+UPDATE webknossos.organizations SET includedUsers = 5, includedStorage = 1e12 WHERE pricingplan = 'Team'::webknossos.PRICING_PLANS;
+
 -- Recreate views
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.userInfos AS

@@ -23,6 +23,12 @@ function useFolderTreeQuery() {
   });
 }
 
+function useDatasetsInFolder(folderId: string) {
+  return useQuery(["datasets", folderId], ({ queryKey }) => getDatasets(false, queryKey[1]), {
+    refetchOnWindowFocus: false,
+  });
+}
+
 function useCreateFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];
@@ -238,16 +244,26 @@ function DropTarget(props: { folderId: string; children: React.ReactNode }) {
 
       console.log("dataset", dataset);
     },
+    collect: (monitor: DropTargetMonitor) => {
+      return {
+        canDrop: monitor.canDrop(),
+        isOver: monitor.isOver(),
+      };
+    },
   });
-
-  return <div ref={drop}>{props.children}</div>;
+  const { canDrop, isOver } = collectedProps;
+  return (
+    <div className={`folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`} ref={drop}>
+      {props.children}
+    </div>
+  );
 }
 
 function FolderSidebar() {
   const [state, setState] = useState<State>({
     treeData: [],
   });
-
+  const [currentFolderId, setCurrentFolderId] = useState("6362711c1d02000d044590dc");
   const { error, data: folderTree, isLoading } = useFolderTreeQuery();
 
   useEffect(() => {

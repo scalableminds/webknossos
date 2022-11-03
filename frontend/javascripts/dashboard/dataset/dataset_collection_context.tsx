@@ -10,7 +10,13 @@ import { getDatasets, getDataset, updateDataset } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFolder, deleteFolder, getFolderTree, updateFolder } from "admin/api/folders";
+import {
+  createFolder,
+  deleteFolder,
+  getFolderTree,
+  moveFolder,
+  updateFolder,
+} from "admin/api/folders";
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
@@ -34,6 +40,7 @@ export type DatasetCollectionContext = {
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
     createFolderMutation: ReturnType<typeof useCreateFolderMutation>;
     updateFolderMutation: ReturnType<typeof useUpdateFolderMutation>;
+    moveFolderMutation: ReturnType<typeof useMoveFolderMutation>;
     deleteFolderMutation: ReturnType<typeof useDeleteFolderMutation>;
     updateDatasetMutation: ReturnType<typeof useUpdateDatasetMutation>;
   };
@@ -62,6 +69,8 @@ export const DatasetCollectionContext = createContext<DatasetCollectionContext>(
     deleteFolderMutation: {},
     // @ts-ignore todo
     updateDatasetMutation: {},
+    // @ts-ignore todo
+    useMoveFolderMutation: {},
   },
 });
 
@@ -141,6 +150,34 @@ function useUpdateFolderMutation() {
   });
 }
 
+function useMoveFolderMutation() {
+  const queryClient = useQueryClient();
+  const mutationKey = ["folders"];
+
+  return useMutation(
+    ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
+    {
+      mutationKey,
+      onSuccess: (updatedFolder, [folderId, newParentId]) => {
+        queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
+          (oldItems || []).map((oldFolder: Folder) =>
+            oldFolder.id === updatedFolder.id
+              ? {
+                  ...updatedFolder,
+                  // @ts-ignore todo: clean this up
+                  parent: newParentId,
+                }
+              : oldFolder,
+          ),
+        );
+      },
+      onError: (err) => {
+        Toast.error(`Could not update folder. ${err}`);
+      },
+    },
+  );
+}
+
 function useUpdateDatasetMutation(folderId: string | null) {
   const queryClient = useQueryClient();
   const mutationKey = ["datasets", folderId];
@@ -208,6 +245,7 @@ export default function DatasetCollectionContextProvider({
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
+  const moveFolderMutation = useMoveFolderMutation();
   const updateDatasetMutation = useUpdateDatasetMutation(activeFolderId);
   const datasets = datasetsInFolderQuery.data || [];
 
@@ -325,6 +363,7 @@ export default function DatasetCollectionContextProvider({
         createFolderMutation,
         deleteFolderMutation,
         updateFolderMutation,
+        moveFolderMutation,
         updateDatasetMutation,
       },
     }),
@@ -341,6 +380,7 @@ export default function DatasetCollectionContextProvider({
       createFolderMutation,
       deleteFolderMutation,
       updateFolderMutation,
+      moveFolderMutation,
       updateDatasetMutation,
     ],
   );

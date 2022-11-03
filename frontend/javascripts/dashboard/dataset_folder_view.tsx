@@ -5,7 +5,11 @@ import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import React, { useContext, useEffect, useState } from "react";
 import { DragObjectWithType, DropTargetMonitor, useDrop } from "react-dnd";
-import SortableTree, { ExtendedNodeData } from "react-sortable-tree";
+import SortableTree, {
+  ExtendedNodeData,
+  NodeData,
+  OnMovePreviousAndNextLocation,
+} from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
@@ -240,6 +244,12 @@ function FolderSidebar() {
       return monitor.canDrop();
     },
   });
+
+  const onMoveNode = (params: NodeData<FolderItem> & OnMovePreviousAndNextLocation<FolderItem>) => {
+    const { nextParentNode: newParent, node: draggedItem } = params;
+    context.queries.moveFolderMutation.mutateAsync([draggedItem.id, newParent.id]);
+  };
+
   return (
     <div
       ref={drop}
@@ -254,9 +264,12 @@ function FolderSidebar() {
     >
       <SortableTree
         treeData={state.treeData}
-        onChange={(treeData) => setState({ treeData })}
+        onChange={(treeData) => {
+          setState({ treeData });
+        }}
+        onMoveNode={onMoveNode}
         theme={FileExplorerTheme}
-        canDrag={false}
+        canDrag={true}
         generateNodeProps={(params) => generateNodeProps(context, params)}
       />
     </div>

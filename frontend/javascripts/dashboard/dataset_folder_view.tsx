@@ -229,9 +229,13 @@ function generateNodeProps(
   return nodeProps;
 }
 
-function FolderItemAsDropTarget(props: { folderId: string; children: React.ReactNode }) {
+function FolderItemAsDropTarget(props: {
+  folderId: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   const context = useContext(DatasetCacheContext);
-  const { folderId, ...restProps } = props;
+  const { folderId, className, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
     accept: DraggableType,
@@ -254,9 +258,10 @@ function FolderItemAsDropTarget(props: { folderId: string; children: React.React
     },
   });
   const { canDrop, isOver } = collectedProps;
+  console.log("collectedProps", collectedProps);
   return (
     <div
-      className={`folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`}
+      className={`${className || ""} folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`}
       ref={drop}
       {...restProps}
     >
@@ -295,7 +300,7 @@ function FolderSidebar() {
   return (
     <div
       ref={drop}
-      className={canDrop ? "highlight-folder-sidebar" : undefined}
+      className={canDrop ? "highlight-folder-sidebar" : ""}
       style={{
         height: 400,
         width: 250,

@@ -168,6 +168,20 @@ function useUpdateDatasetMutation(folderId: string | null) {
               .filter((dataset: APIMaybeUnimportedDataset) => dataset.folder.id === folderId);
           },
         );
+        queryClient.setQueryData(
+          ["datasets", updatedDataset.folder.id],
+          (oldItems: APIMaybeUnimportedDataset[] | undefined) => {
+            if (oldItems == null) {
+              // Don't update the query data, if it doesn't exist, yet.
+              // Otherwise, this would lead to weird intermediate states
+              // (i.e., moving a dataset to folder X and switching to X
+              // will only show the moved dataset and a spinner; when loading
+              // has finished, the page will be complete).
+              return undefined;
+            }
+            return oldItems.concat([updatedDataset]);
+          },
+        );
       },
       onError: (err) => {
         Toast.error(`Could not update dataset. ${err}`);

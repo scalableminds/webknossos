@@ -1,5 +1,4 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { updateDataset } from "admin/admin_rest_api";
 import { Menu, Dropdown, Spin } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";

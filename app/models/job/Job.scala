@@ -264,6 +264,7 @@ class JobService @Inject()(wkConf: WkConf,
                            userDAO: UserDAO,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
+                           workerDAO: WorkerDAO,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
                            dataSetDAO: DataSetDAO,
@@ -360,13 +361,21 @@ class JobService @Inject()(wkConf: WkConf,
       "job_kwargs" -> job.commandArgs
     )
 
-  def submitJob(command: String, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
+  def submitJob(command: String, commandArgs: JsObject, owner: User, dataStoreName: String)(
+      implicit ctx: DBAccessContext): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
+      _ <- assertDataStoreHasWorkers(dataStoreName) ?~> "job.noWorkerForDatastore"
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+
+  def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- dataStoreDAO.findOneByName(dataStoreName)
+      _ <- workerDAO.findOneByDataStore(dataStoreName)
+    } yield ()
 
   def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
     for {

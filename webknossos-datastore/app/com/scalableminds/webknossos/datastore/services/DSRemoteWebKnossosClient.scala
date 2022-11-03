@@ -82,10 +82,10 @@ class DSRemoteWebKnossosClient @Inject()(
       .silent
       .put(dataSources)
 
-  def validateDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
+  def reserveDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "validateDataSourceUpload.noUserToken"
-      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload")
+      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
         .post(info)

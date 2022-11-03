@@ -53,6 +53,19 @@ class FolderController @Inject()(
       } yield Ok(folderJson)
   }
 
+  def move(id: String, newParentId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      idValidated <- ObjectId.fromString(id)
+      newParentIdValidated <- ObjectId.fromString(newParentId)
+      organization <- organizationDAO.findOne(request.identity._organization)
+      _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+      _ <- folderDAO.findOne(newParentIdValidated) ?~> "folder.notFound"
+      //TODO: _ <- folderDAO.moveOne(idValidated, newParentIdValidated)
+      updated <- folderDAO.findOne(idValidated)
+      folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
+    } yield Ok(folderJson)
+  }
+
   def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.fromString(id)

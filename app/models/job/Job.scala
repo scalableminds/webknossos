@@ -371,7 +371,7 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  private def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- dataStoreDAO.findOneByName(dataStoreName)
       _ <- workerDAO.findOneByDataStore(dataStoreName)

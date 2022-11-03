@@ -273,7 +273,7 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Free', 'Team', 'Power', 'Team-Trial', 'Power-Trial', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Free', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY,
   name VARCHAR(256) NOT NULL UNIQUE,

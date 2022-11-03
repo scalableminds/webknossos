@@ -26,9 +26,12 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
+import { DatasetCollectionContext } from "./dataset/dataset_collection_context";
 const { Search, Group: InputGroup } = Input;
+
 type Props = {
   user: APIUser;
+  context?: DatasetCollectionContext;
   onSelectDataset?: (dataset: APIDataset | null) => void;
   selectedDataset?: APIDataset | null | undefined;
 };
@@ -62,7 +65,8 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
 function DatasetView(props: Props) {
   const { user } = props;
   const history = useHistory();
-  const context = useContext(DatasetCacheContext);
+  const datasetCacheContext = useContext(DatasetCacheContext);
+  const context = props.context || datasetCacheContext;
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =

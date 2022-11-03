@@ -2,7 +2,7 @@ import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDatasets, updateDataset } from "admin/admin_rest_api";
 import { createFolder, deleteFolder, getFolderTree, updateFolder } from "admin/api/folders";
-import { Menu, Dropdown } from "antd";
+import { Menu, Dropdown, Spin } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
@@ -14,85 +14,27 @@ import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
 import { APIDataset, APIUser, Folder, FlatFolderTreeItem } from "types/api_flow_types";
 import { DraggableType, TeamTags } from "./advanced_dataset/dataset_table";
-import { DatasetCacheContext } from "./dataset/dataset_cache_provider";
+import DatasetCollectionContextProvider, {
+  DatasetCollectionContext,
+} from "./dataset/dataset_collection_context";
+
 import DatasetView from "./dataset_view";
-
-function useFolderTreeQuery() {
-  return useQuery(["folders"], getFolderTree, {
-    refetchOnWindowFocus: false,
-  });
-}
-
-function useDatasetsInFolder(folderId: string) {
-  return useQuery(["datasets", folderId], ({ queryKey }) => getDatasets(false, queryKey[1]), {
-    refetchOnWindowFocus: false,
-  });
-}
-
-function useCreateFolderMutation() {
-  const queryClient = useQueryClient();
-  const mutationKey = ["folders"];
-
-  return useMutation(([parentId, name]: [string, string]) => createFolder(parentId, name), {
-    mutationKey,
-    onSuccess: (newFolder) => {
-      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
-        (oldItems || []).concat([newFolder]),
-      );
-    },
-    onError: (err) => {
-      Toast.error(`Could not create folder. ${err}`);
-    },
-  });
-}
-
-function useDeleteFolderMutation() {
-  const queryClient = useQueryClient();
-  const mutationKey = ["folders"];
-
-  return useMutation((id: string) => deleteFolder(id), {
-    mutationKey,
-    onSuccess: (deletedId) => {
-      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
-        (oldItems || []).filter((folder: Folder) => folder.id !== deletedId),
-      );
-    },
-    onError: (err) => {
-      Toast.error(`Could not delete folder. ${err}`);
-    },
-  });
-}
-
-function useUpdateFolderMutation() {
-  const queryClient = useQueryClient();
-  const mutationKey = ["folders"];
-
-  return useMutation((folder: Folder) => updateFolder(folder), {
-    mutationKey,
-    onSuccess: (updatedFolder) => {
-      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
-        (oldItems || []).map((oldFolder: Folder) =>
-          oldFolder.id === updatedFolder.id
-            ? {
-                ...updatedFolder,
-                // @ts-ignore todo: clean this up
-                parent: oldFolder.parent,
-              }
-            : oldFolder,
-        ),
-      );
-    },
-    onError: (err) => {
-      Toast.error(`Could not update folder. ${err}`);
-    },
-  });
-}
 
 type Props = {
   user: APIUser;
 };
+
 export function DatasetFolderView(props: Props) {
+  return (
+    <DatasetCollectionContextProvider>
+      <DatasetFolderViewInner {...props} />
+    </DatasetCollectionContextProvider>
+  );
+}
+
+function DatasetFolderViewInner(props: Props) {
   const [selectedDataset, setSelectedDataset] = useState<APIDataset | null>(null);
+  const context = useContext(DatasetCollectionContext);
 
   return (
     <div style={{ display: "grid", gridTemplate: "auto 1fr auto / auto 1fr auto" }}>
@@ -100,11 +42,14 @@ export function DatasetFolderView(props: Props) {
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
-        <DatasetView
-          user={props.user}
-          onSelectDataset={setSelectedDataset}
-          selectedDataset={selectedDataset}
-        />
+        <Spin spinning={context.queries.datasetsInFolderQuery.isFetching}>
+          <DatasetView
+            user={props.user}
+            onSelectDataset={setSelectedDataset}
+            selectedDataset={selectedDataset}
+            context={context}
+          />
+        </Spin>
       </main>
       <div style={{ gridColumn: "3 / 4", overflow: "auto" }}>
         <DatasetDetailsSidebar selectedDataset={selectedDataset} />
@@ -164,9 +109,7 @@ type State = {
 };
 
 function generateNodeProps(
-  createFolderMutation: ReturnType<typeof useCreateFolderMutation>,
-  updateFolderMutation: ReturnType<typeof useUpdateFolderMutation>,
-  deleteFolderMutation: ReturnType<typeof useDeleteFolderMutation>,
+  context: DatasetCollectionContext,
   params: ExtendedNodeData<FolderItem>,
 ): GenerateNodePropsType {
   const { node } = params;
@@ -175,14 +118,14 @@ function generateNodeProps(
 
   function createFolder(): void {
     const folderName = prompt("Please input a name for the new folder");
-    createFolderMutation.mutateAsync([id, folderName || "New folder"]);
+    context.queries.createFolderMutation.mutateAsync([id, folderName || "New folder"]);
   }
   function deleteFolder(): void {
-    deleteFolderMutation.mutateAsync(id);
+    context.queries.deleteFolderMutation.mutateAsync(id);
   }
   function renameFolder(): void {
     const folderName = prompt("Please input a new name for the folder");
-    updateFolderMutation.mutateAsync({
+    context.queries.updateFolderMutation.mutateAsync({
       name: folderName || "New folder",
       id,
       teams: [], // todo
@@ -221,7 +164,9 @@ function generateNodeProps(
         autoDestroy
         trigger={["contextMenu"]}
       >
-        <FolderItemAsDropTarget folderId={id}>{title}</FolderItemAsDropTarget>
+        <FolderItemAsDropTarget onClick={() => context.setActiveFolderId(id)} folderId={id}>
+          {title}
+        </FolderItemAsDropTarget>
       </Dropdown>
     </div>
   );
@@ -233,8 +178,9 @@ function FolderItemAsDropTarget(props: {
   folderId: string;
   children: React.ReactNode;
   className?: string;
+  onClick: () => void;
 }) {
-  const context = useContext(DatasetCacheContext);
+  const context = useContext(DatasetCollectionContext);
   const { folderId, className, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
@@ -272,22 +218,22 @@ function FolderSidebar() {
   const [state, setState] = useState<State>({
     treeData: [],
   });
-  const [currentFolderId, setCurrentFolderId] = useState("63639e2a22020058030597ef");
-  const { error, data: folderTree, isLoading } = useFolderTreeQuery();
+  const context = useContext(DatasetCollectionContext);
+
+  const { error, data: folderTree, isLoading } = context.queries.folderTreeQuery;
 
   useEffect(() => {
     setState((prevState: State) => {
       const treeData = getFolderHierarchy(folderTree, prevState.treeData);
       return { treeData: treeData };
     });
+    if (folderTree) {
+      context.setActiveFolderId(folderTree[0].id);
+    }
   }, [folderTree]);
 
-  const { data: datasets } = useDatasetsInFolder(currentFolderId);
+  const { datasets } = context;
   console.log("datasets", datasets);
-
-  const createFolderMutation = useCreateFolderMutation();
-  const deleteFolderMutation = useDeleteFolderMutation();
-  const updateFolderMutation = useUpdateFolderMutation();
 
   const [canDrop, drop] = useDrop({
     accept: DraggableType,
@@ -312,14 +258,7 @@ function FolderSidebar() {
         onChange={(treeData) => setState({ treeData })}
         theme={FileExplorerTheme}
         canDrag={false}
-        generateNodeProps={(params) =>
-          generateNodeProps(
-            createFolderMutation,
-            updateFolderMutation,
-            deleteFolderMutation,
-            params,
-          )
-        }
+        generateNodeProps={(params) => generateNodeProps(context, params)}
       />
     </div>
   );

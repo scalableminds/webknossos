@@ -100,13 +100,13 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       rows <- run(sql"""SELECT f._id, f.name, fp._ancestor
               FROM webknossos.folders_ f
-              JOIN webknossos.folder_paths fp
+              JOIN webknossos.folder_paths fp -- join to find immediate parent, this will also kick out self
               ON f._id = fp._descendant
               WHERE fp.depth = 1 AND f._id IN
-              (SELECT _descendant
+              (SELECT _descendant  -- find all folder ids that are descendants
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
-              UNION ALL SELECT _id, name, NULL from webknossos.folders_
+              UNION ALL SELECT _id, name, NULL from webknossos.folders_  -- find self again, with no parent
               WHERE _id = $folderId
               """.as[(String, String, Option[String])])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
@@ -123,13 +123,24 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def moveOne(idValidated: ObjectId, newParentIdValidated: ObjectId): Fox[Unit] = {
+  def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId): Fox[Unit] = {
     val deleteObsoletePathsQuery =
       sqlu"""
+         DELETE FROM webknossos.folder_paths
+         WHERE _descendant IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = $idValidated)
+         AND _ancestor NOT IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = $idValidated)
         """
-    val insertNewPathsQuery = sqlu""
+    val insertNewPathsQuery =
+      sqlu"""
+        INSERT INTO webknossos.folder_paths (_ancestor, _descendant, depth)
+        SELECT supertree._ancestor, subtree._descendant, supertree.depth + subtree.depth + 1
+        FROM webknossos.folder_paths supertree
+        CROSS JOIN webknossos.folder_paths subtree
+        WHERE subtree._ancestor = $idValidated
+        AND supertree._descendant = $newParentIdValidated
+          """
     for {
-      _ <- run(DBIO.sequence(List(deleteObsoletePathsQuery, insertNewPathsQuery)))
+      _ <- run(DBIO.sequence(List(deleteObsoletePathsQuery, insertNewPathsQuery)).transactionally)
     } yield ()
   }
 

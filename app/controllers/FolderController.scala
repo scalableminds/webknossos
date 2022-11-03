@@ -60,7 +60,7 @@ class FolderController @Inject()(
       organization <- organizationDAO.findOne(request.identity._organization)
       _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
       _ <- folderDAO.findOne(newParentIdValidated) ?~> "folder.notFound"
-      //TODO: _ <- folderDAO.moveOne(idValidated, newParentIdValidated)
+      _ <- folderDAO.moveSubtree(idValidated, newParentIdValidated)
       updated <- folderDAO.findOne(idValidated)
       folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
     } yield Ok(folderJson)

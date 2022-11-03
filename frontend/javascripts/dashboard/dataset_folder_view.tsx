@@ -7,7 +7,7 @@ import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import React, { useContext, useEffect, useState } from "react";
-import { DropTargetMonitor, useDrop } from "react-dnd";
+import { DragObjectWithType, DropTargetMonitor, useDrop } from "react-dnd";
 import SortableTree, { ExtendedNodeData } from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
@@ -239,16 +239,14 @@ function FolderItemAsDropTarget(props: {
 
   const [collectedProps, drop] = useDrop({
     accept: DraggableType,
-    drop: (item) => {
-      console.log(item);
-
+    drop: (item: DragObjectWithType & { datasetName: string }) => {
       const dataset = context.datasets.find((dataset) => dataset.name === item.datasetName);
 
       if (dataset) {
         updateDataset(dataset, dataset, folderId);
+      } else {
+        Toast.error("Could not move dataset. Please try again.");
       }
-
-      console.log("dataset", dataset);
     },
     collect: (monitor: DropTargetMonitor) => {
       return {

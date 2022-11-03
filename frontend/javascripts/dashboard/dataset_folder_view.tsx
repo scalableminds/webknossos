@@ -296,6 +296,8 @@ function FolderSidebar() {
         height: 400,
         width: 250,
         marginRight: 4,
+        borderRadius: 2,
+        padding: 2,
       }}
     >
       <SortableTree

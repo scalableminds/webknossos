@@ -27,7 +27,10 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
         "newUserMailingList" -> organization.newUserMailingList,
-        "pricingPlan" -> organization.pricingPlan
+        "pricingPlan" -> organization.pricingPlan,
+        "paidUntil" -> organization.paidUntil,
+        "includedUsers" -> organization.includedUsers,
+        "includedStorage" -> organization.includedStorage
       )
     } else Json.obj()
     Fox.successful(
@@ -76,13 +79,19 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
-      initialPricingPlan = if (conf.Features.isDemoInstance) PricingPlan.Basic else PricingPlan.Custom
-      organization = Organization(ObjectId.generate,
-                                  organizationName,
-                                  "",
-                                  "",
-                                  organizationDisplayName,
-                                  initialPricingPlan)
+      initialPricingParameters = if (conf.Features.isDemoInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
+      else (PricingPlan.Custom, None, None)
+      organization = Organization(
+        ObjectId.generate,
+        organizationName,
+        "",
+        "",
+        organizationDisplayName,
+        initialPricingParameters._1,
+        None,
+        initialPricingParameters._2,
+        initialPricingParameters._3
+      )
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)

@@ -231,7 +231,7 @@ function generateNodeProps(
 
 function FolderItemAsDropTarget(props: { folderId: string; children: React.ReactNode }) {
   const context = useContext(DatasetCacheContext);
-  const { folderId } = props;
+  const { folderId, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
     accept: DraggableType,
@@ -255,7 +255,11 @@ function FolderItemAsDropTarget(props: { folderId: string; children: React.React
   });
   const { canDrop, isOver } = collectedProps;
   return (
-    <div className={`folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`} ref={drop}>
+    <div
+      className={`folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`}
+      ref={drop}
+      {...restProps}
+    >
       {props.children}
     </div>
   );
@@ -265,7 +269,7 @@ function FolderSidebar() {
   const [state, setState] = useState<State>({
     treeData: [],
   });
-  const [currentFolderId, setCurrentFolderId] = useState("6362711c1d02000d044590dc");
+  const [currentFolderId, setCurrentFolderId] = useState("63639e2a22020058030597ef");
   const { error, data: folderTree, isLoading } = useFolderTreeQuery();
 
   useEffect(() => {

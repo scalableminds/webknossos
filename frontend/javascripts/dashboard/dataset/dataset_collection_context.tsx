@@ -202,6 +202,7 @@ export default function DatasetCollectionContextProvider({
     Record<string, Promise<APIDataset>>
   >({});
 
+  const queryClient = useQueryClient();
   const folderTreeQuery = useFolderTreeQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
   const createFolderMutation = useCreateFolderMutation();
@@ -211,6 +212,8 @@ export default function DatasetCollectionContextProvider({
   const datasets = datasetsInFolderQuery.data || [];
 
   async function fetchDatasets(options: Options = {}): Promise<void> {
+    queryClient.invalidateQueries({ queryKey: ["datasets", activeFolderId] });
+
     // const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;
     // const datasetFilteringMode = options.datasetFilteringMode || "onlyShowReported";
     // const applyUpdatePredicate = options.applyUpdatePredicate || ((_datasets) => true);

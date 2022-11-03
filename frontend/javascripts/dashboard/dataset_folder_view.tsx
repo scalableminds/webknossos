@@ -121,7 +121,7 @@ function generateNodeProps(
     context.queries.deleteFolderMutation.mutateAsync(id);
   }
   function renameFolder(): void {
-    const folderName = prompt("Please input a new name for the folder");
+    const folderName = prompt("Please input a new name for the folder", title);
     context.queries.updateFolderMutation.mutateAsync({
       name: folderName || "New folder",
       id,
@@ -205,6 +205,7 @@ function FolderItemAsDropTarget(props: {
         context.activeFolderId === folderId ? "active-folder-item" : ""
       }`}
       ref={drop}
+      style={{ userSelect: "none", cursor: "pointer" }}
       {...restProps}
     >
       {props.children}
@@ -223,11 +224,11 @@ function FolderSidebar() {
   useEffect(() => {
     setState((prevState: State) => {
       const treeData = getFolderHierarchy(folderTree, prevState.treeData);
+      if (treeData.length > 0) {
+        context.setActiveFolderId(treeData[0].id);
+      }
       return { treeData: treeData };
     });
-    if (folderTree) {
-      context.setActiveFolderId(folderTree[0].id);
-    }
   }, [folderTree]);
 
   const { datasets } = context;

@@ -101,6 +101,11 @@ const defaultState: OxalisState = {
   task: null,
   dataset: {
     name: "Test Dataset",
+    folder: {
+      id: "dummy-folder-id",
+      name: "dummy-folder-name",
+      teams: [],
+    },
     isUnreported: false,
     created: 123,
     dataSource: {

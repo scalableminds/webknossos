@@ -1,7 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDatasets, updateDataset } from "admin/admin_rest_api";
-import { createFolder, deleteFolder, getFolderTree, updateFolder } from "admin/api/folders";
+import { updateDataset } from "admin/admin_rest_api";
 import { Menu, Dropdown, Spin } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
@@ -189,7 +187,7 @@ function FolderItemAsDropTarget(props: {
       const dataset = context.datasets.find((dataset) => dataset.name === item.datasetName);
 
       if (dataset) {
-        updateDataset(dataset, dataset, folderId);
+        context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
       } else {
         Toast.error("Could not move dataset. Please try again.");
       }
@@ -202,10 +200,11 @@ function FolderItemAsDropTarget(props: {
     },
   });
   const { canDrop, isOver } = collectedProps;
-  console.log("collectedProps", collectedProps);
   return (
     <div
-      className={`${className || ""} folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`}
+      className={`${className || ""} folder-item ${isOver && canDrop ? "valid-drop-target" : ""} ${
+        context.activeFolderId === folderId ? "active-folder-item" : ""
+      }`}
       ref={drop}
       {...restProps}
     >

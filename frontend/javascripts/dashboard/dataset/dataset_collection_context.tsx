@@ -30,11 +30,12 @@ export type DatasetCollectionContext = {
   activeFolderId: string | null;
   setActiveFolderId: (id: string) => void;
   queries: {
+    folderTreeQuery: ReturnType<typeof useFolderTreeQuery>;
+    datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
     createFolderMutation: ReturnType<typeof useCreateFolderMutation>;
     updateFolderMutation: ReturnType<typeof useUpdateFolderMutation>;
     deleteFolderMutation: ReturnType<typeof useDeleteFolderMutation>;
-    folderTreeQuery: ReturnType<typeof useFolderTreeQuery>;
-    datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
+    updateDatasetMutation: ReturnType<typeof useUpdateDatasetMutation>;
   };
 };
 
@@ -49,11 +50,18 @@ export const DatasetCollectionContext = createContext<DatasetCollectionContext>(
   activeFolderId: null,
   setActiveFolderId: () => {},
   queries: {
-    createFolderMutation: {},
-    updateFolderMutation: {},
-    deleteFolderMutation: {},
+    // @ts-ignore todo
     folderTreeQuery: {},
+    // @ts-ignore todo
     datasetsInFolderQuery: {},
+    // @ts-ignore todo
+    createFolderMutation: {},
+    // @ts-ignore todo
+    updateFolderMutation: {},
+    // @ts-ignore todo
+    deleteFolderMutation: {},
+    // @ts-ignore todo
+    updateDatasetMutation: {},
   },
 });
 
@@ -64,8 +72,9 @@ function useFolderTreeQuery() {
 }
 
 function useDatasetsInFolderQuery(folderId: string | null) {
+  const queryKey = ["datasets", folderId];
   return useQuery(
-    ["datasets", folderId],
+    queryKey,
     () => (folderId == null ? Promise.resolve([]) : getDatasets(false, folderId)),
     {
       refetchOnWindowFocus: false,
@@ -132,6 +141,41 @@ function useUpdateFolderMutation() {
   });
 }
 
+function useUpdateDatasetMutation(folderId: string | null) {
+  const queryClient = useQueryClient();
+  const mutationKey = ["datasets", folderId];
+
+  return useMutation(
+    ([dataset, folderId]: [dataset: APIMaybeUnimportedDataset, folderId: string]) =>
+      updateDataset(dataset, dataset, folderId),
+    {
+      mutationKey,
+      onSuccess: (updatedDataset) => {
+        console.log("setQueryData for", mutationKey);
+        queryClient.setQueryData(
+          mutationKey,
+          (oldItems: APIMaybeUnimportedDataset[] | undefined) => {
+            return (oldItems || [])
+              .map((oldDataset: APIMaybeUnimportedDataset) =>
+                oldDataset.name === updatedDataset.name
+                  ? {
+                      ...updatedDataset,
+                      // @ts-ignore todo: clean this up
+                      parent: oldDataset.parent,
+                    }
+                  : oldDataset,
+              )
+              .filter((dataset: APIMaybeUnimportedDataset) => dataset.folder.id === folderId);
+          },
+        );
+      },
+      onError: (err) => {
+        Toast.error(`Could not update dataset. ${err}`);
+      },
+    },
+  );
+}
+
 export default function DatasetCollectionContextProvider({
   children,
 }: {
@@ -144,11 +188,12 @@ export default function DatasetCollectionContextProvider({
     Record<string, Promise<APIDataset>>
   >({});
 
+  const folderTreeQuery = useFolderTreeQuery();
+  const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
-  const folderTreeQuery = useFolderTreeQuery();
-  const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
+  const updateDatasetMutation = useUpdateDatasetMutation(activeFolderId);
   const datasets = datasetsInFolderQuery.data || [];
 
   async function fetchDatasets(options: Options = {}): Promise<void> {
@@ -263,6 +308,7 @@ export default function DatasetCollectionContextProvider({
         createFolderMutation,
         deleteFolderMutation,
         updateFolderMutation,
+        updateDatasetMutation,
       },
     }),
     [
@@ -278,6 +324,7 @@ export default function DatasetCollectionContextProvider({
       createFolderMutation,
       deleteFolderMutation,
       updateFolderMutation,
+      updateDatasetMutation,
     ],
   );
 

@@ -20,7 +20,7 @@ GET           /auth/token                                                       
 DELETE        /auth/token                                                               controllers.AuthenticationController.deleteToken
 GET           /auth/switch                                                              controllers.AuthenticationController.switchMultiUser(to: String)
 POST          /auth/switchOrganization/:organizationName                                controllers.AuthenticationController.switchOrganization(organizationName: String)
-GET           /auth/accessibleBySwitching                                               controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationId: Option[String])
+GET           /auth/accessibleBySwitching                                               controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationId: Option[String], workflowHash: Option[String])
 POST          /auth/sendInvites                                                         controllers.AuthenticationController.sendInvites
 POST          /auth/startResetPassword                                                  controllers.AuthenticationController.handleStartResetPassword
 POST          /auth/changePassword                                                      controllers.AuthenticationController.changePassword
@@ -233,6 +233,7 @@ POST          /jobs/run/inferNuclei/:organizationName/:dataSetName              
 POST          /jobs/run/inferNeurons/:organizationName/:dataSetName                     controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/globalizeFloodfills/:organizationName/:dataSetName              controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, volumeLayerName: Option[String])
 POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:dataSetName      controllers.JobsController.runMaterializeVolumeAnnotationJob(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String])
+POST          /jobs/run/findLargestSegmentId/:organizationName/:dataSetName             controllers.JobsController.runFindLargestSegmentIdJob(organizationName: String, dataSetName: String, layerName: String)
 GET           /jobs/:id                                                                 controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                          controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                          controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

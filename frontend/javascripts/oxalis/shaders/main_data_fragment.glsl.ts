@@ -176,7 +176,8 @@ void main() {
       // Keep the color in bounds of min and max
       color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
       // Scale the color value according to the histogram settings.
-      // Note: max == min would cause a division by 0. Thus we add 1 in this case and filter out the whole value below.
+      // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
+      // via mixing.
       float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
       color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 

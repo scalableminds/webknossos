@@ -93,11 +93,13 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;
       let { value } = action;
-      const settingSpec = userSettings[propertyName];
+      // @ts-ignore The in-check should guard against any problems while accessing userSettings
+      const settingSpec = propertyName in userSettings ? userSettings[propertyName] : null;
 
       if (settingSpec != null && settingSpec.type === "number") {
         const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
         const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
+        // @ts-ignore Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 
         if ("dynamicMaximumFn" in settingSpec) {

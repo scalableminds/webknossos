@@ -5,6 +5,7 @@ import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 type CreateCellAction = ReturnType<typeof createCellAction>;
@@ -36,6 +37,11 @@ export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
+export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
+export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
+export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
+export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
+
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
@@ -59,7 +65,11 @@ export type VolumeTracingAction =
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
   | SetMappingIsEditableAction
-  | InitializeEditableMappingAction;
+  | InitializeEditableMappingAction
+  | ComputeQuickSelectForRectAction
+  | FineTuneQuickSelectAction
+  | CancelQuickSelectAction
+  | ConfirmQuickSelectAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -242,7 +252,40 @@ export const dispatchFloodfillAsync = async (
   dispatch(action);
   await readyDeferred.promise();
 };
+
 export const setMappingIsEditableAction = () =>
   ({
     type: "SET_MAPPING_IS_EDITABLE",
   } as const);
+
+export const computeQuickSelectForRectAction = (
+  startPosition: Vector3,
+  endPosition: Vector3,
+  quickSelectGeometry: QuickSelectGeometry,
+) =>
+  ({
+    type: "COMPUTE_QUICK_SELECT_FOR_RECT",
+    startPosition,
+    endPosition,
+    quickSelectGeometry,
+  } as const);
+
+export const fineTuneQuickSelectAction = (
+  segmentMode: "dark" | "light",
+  threshold: number,
+  closeValue: number,
+  erodeValue: number,
+  dilateValue: number,
+) =>
+  ({
+    type: "FINE_TUNE_QUICK_SELECT",
+    segmentMode,
+    threshold,
+    closeValue,
+    erodeValue,
+    dilateValue,
+  } as const);
+
+export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" } as const);
+
+export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" } as const);

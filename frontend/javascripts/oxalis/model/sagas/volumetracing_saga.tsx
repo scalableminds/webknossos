@@ -23,7 +23,7 @@ import Constants, {
   Unicode,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 import Model from "oxalis/model";
 import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -52,7 +52,6 @@ import type {
   AddPrecomputedIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import type { UpdateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   updateTemporarySettingAction,
   updateUserSettingAction,
@@ -73,6 +72,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
+import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
@@ -608,7 +608,6 @@ function* ensureSegmentExists(
     | AddAdHocIsosurfaceAction
     | AddPrecomputedIsosurfaceAction
     | SetActiveCellAction
-    | UpdateTemporarySettingAction
     | ClickSegmentAction,
 ): Saga<void> {
   const layer = yield* select((store) =>
@@ -621,7 +620,7 @@ function* ensureSegmentExists(
 
   const layerName = layer.name;
   const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
-  const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
+  const cellId = action.cellId;
 
   if (
     cellId === 0 ||
@@ -657,22 +656,6 @@ function* ensureSegmentExists(
         cellId,
         {
           somePosition,
-        },
-        layerName,
-      ),
-    );
-  } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
-    const globalMousePosition = yield* call(getGlobalMousePosition);
-
-    if (globalMousePosition == null) {
-      return;
-    }
-
-    yield* put(
-      updateSegmentAction(
-        cellId,
-        {
-          somePosition: globalMousePosition,
         },
         layerName,
       ),
@@ -799,6 +782,7 @@ export default [
   maintainSegmentsMap,
   maintainHoveredSegmentId,
   listenToMinCut,
+  listenToQuickSelect,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,

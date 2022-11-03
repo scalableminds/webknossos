@@ -59,11 +59,6 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
 
 export class NullBucket {
   type: "null" = "null";
-  isOutOfBoundingBox: boolean;
-
-  constructor(isOutOfBoundingBox: boolean) {
-    this.isOutOfBoundingBox = isOutOfBoundingBox;
-  }
 
   hasData(): boolean {
     return false;
@@ -119,8 +114,7 @@ export const getConstructorForElementClass = (
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);
   }
 };
-export const NULL_BUCKET = new NullBucket(false);
-export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
+export const NULL_BUCKET = new NullBucket();
 // The type is used within the DataBucket class which is why
 // we have to define it here.
 export type Bucket = DataBucket | NullBucket;

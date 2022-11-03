@@ -206,7 +206,10 @@ const assign = cwise({
   },
 });
 
-function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarray.NdArray {
+export function copyNdArray(
+  Constructor: Uint8ArrayConstructor | Float32ArrayConstructor,
+  arr: ndarray.NdArray,
+): ndarray.NdArray {
   const { shape } = arr;
   let stride;
 
@@ -231,8 +234,8 @@ function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarr
  */
 function signedDist(arr: ndarray.NdArray) {
   // Copy the input twice to avoid mutating it
-  arr = copy(Float32Array, arr) as NdArray<Float32Array>;
-  const negatedArr = copy(Float32Array, arr) as NdArray<Float32Array>;
+  arr = copyNdArray(Float32Array, arr) as NdArray<Float32Array>;
+  const negatedArr = copyNdArray(Float32Array, arr) as NdArray<Float32Array>;
 
   // Normal distance transform for arr
   distanceTransform(arr);

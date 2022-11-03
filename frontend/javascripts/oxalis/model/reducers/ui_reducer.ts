@@ -108,6 +108,12 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_IS_QUICK_SELECT_ACTIVE": {
+      return updateKey(state, "uiInformation", {
+        isQuickSelectActive: action.isActive,
+      });
+    }
+
     default:
       return state;
   }

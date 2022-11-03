@@ -4,10 +4,11 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import controllers.InitialDataService
+
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO}
 import models.team.{PricingPlan, Team, TeamDAO}
-import models.user.{Invite, MultiUserDAO, User}
+import models.user.{Invite, MultiUserDAO, User, UserDAO}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -15,6 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     multiUserDAO: MultiUserDAO,
+                                    userDAO: UserDAO,
                                     teamDAO: TeamDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     rpc: RPC,
@@ -110,5 +112,14 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Future.sequence(datastores.map(sendRPCToDataStore))
     } yield ()
   }
+
+  def assertUsersCanBeAdded(organization: Organization, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
+                                                                                  ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- organizationDAO.findOne(organization._id)
+      userCount <- userDAO.countAllForOrganization(organization._id)
+      _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
+        bool2Fox(userCount + usersToAddCount <= includedUsers))
+    } yield ()
 
 }

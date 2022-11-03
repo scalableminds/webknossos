@@ -1,13 +1,13 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { updateDataset } from "admin/admin_rest_api";
+import { getDatasets, updateDataset } from "admin/admin_rest_api";
 import { createFolder, deleteFolder, getFolderTree, updateFolder } from "admin/api/folders";
 import { Menu, Dropdown } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import React, { useContext, useEffect, useState } from "react";
-import { useDrop } from "react-dnd";
+import { DropTargetMonitor, useDrop } from "react-dnd";
 import SortableTree, { ExtendedNodeData } from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
@@ -96,17 +96,17 @@ export function DatasetFolderView(props: Props) {
 
   return (
     <div style={{ display: "grid", gridTemplate: "auto 1fr auto / auto 1fr auto" }}>
-      <div style={{ gridColumn: "1 / 2" }}>
+      <div style={{ gridColumn: "1 / 2", overflow: "auto" }}>
         <FolderSidebar />
       </div>
-      <main style={{ gridColumn: "2 / 2" }}>
+      <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
           selectedDataset={selectedDataset}
         />
       </main>
-      <div style={{ gridColumn: "3 / 4" }}>
+      <div style={{ gridColumn: "3 / 4", overflow: "auto" }}>
         <DatasetDetailsSidebar selectedDataset={selectedDataset} />
       </div>
     </div>
@@ -127,7 +127,9 @@ function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDatase
     <div style={{ width: 300, padding: 16 }}>
       {selectedDataset != null ? (
         <>
-          <h1>{selectedDataset.displayName || selectedDataset.name}</h1>
+          <h1 style={{ wordBreak: "break-all" }}>
+            {selectedDataset.displayName || selectedDataset.name}
+          </h1>
           Description: {selectedDataset.description}
           <div className="info-tab-block">
             <table
@@ -219,7 +221,7 @@ function generateNodeProps(
         autoDestroy
         trigger={["contextMenu"]}
       >
-        <DropTarget folderId={id}>{title}</DropTarget>
+        <FolderItemAsDropTarget folderId={id}>{title}</FolderItemAsDropTarget>
       </Dropdown>
     </div>
   );
@@ -227,7 +229,7 @@ function generateNodeProps(
   return nodeProps;
 }
 
-function DropTarget(props: { folderId: string; children: React.ReactNode }) {
+function FolderItemAsDropTarget(props: { folderId: string; children: React.ReactNode }) {
   const context = useContext(DatasetCacheContext);
   const { folderId } = props;
 
@@ -273,12 +275,29 @@ function FolderSidebar() {
     });
   }, [folderTree]);
 
+  const { data: datasets } = useDatasetsInFolder(currentFolderId);
+  console.log("datasets", datasets);
+
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
 
+  const [canDrop, drop] = useDrop({
+    accept: DraggableType,
+    collect: (monitor: DropTargetMonitor) => {
+      return monitor.canDrop();
+    },
+  });
   return (
-    <div style={{ height: 400, width: 250 }}>
+    <div
+      ref={drop}
+      className={canDrop ? "highlight-folder-sidebar" : undefined}
+      style={{
+        height: 400,
+        width: 250,
+        marginRight: 4,
+      }}
+    >
       <SortableTree
         treeData={state.treeData}
         onChange={(treeData) => setState({ treeData })}

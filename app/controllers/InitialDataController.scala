@@ -68,7 +68,10 @@ Samplecountry
                  additionalInformation,
                  "/assets/images/oxalis.svg",
                  "Sample Organization",
-                 PricingPlan.Custom)
+                 PricingPlan.Custom,
+                 None,
+                 None,
+                 None)
   private val organizationTeam =
     Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
   private val userId = ObjectId.generate

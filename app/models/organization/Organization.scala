@@ -3,6 +3,7 @@ package models.organization
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
@@ -10,6 +11,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import java.sql.Timestamp
 import scala.concurrent.ExecutionContext
 
 case class Organization(
@@ -19,6 +21,9 @@ case class Organization(
     logoUrl: String,
     displayName: String,
     pricingPlan: PricingPlan,
+    paidUntil: Option[Timestamp],
+    includedUsers: Option[Int],
+    includedStorage: Option[Long],
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
@@ -45,6 +50,9 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.logourl,
         r.displayname,
         pricingPlan,
+        r.paiduntil,
+        r.includedusers,
+        r.includedstorage,
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,

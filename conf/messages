@@ -54,6 +54,7 @@ organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=The chosen organization name is invalid.
 organization.name.alreadyInUse=The chosen organization name is already in use.
 organization.alreadyJoined=Your account is already associated with the selected organization.
+organization.users.userLimitReached=Can not add user because it would exceed the limit of included users in this plan.
 
 user.activated={0} has been activated
 user.notFound=User not found

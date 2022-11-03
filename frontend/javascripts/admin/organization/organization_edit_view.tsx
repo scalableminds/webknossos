@@ -20,18 +20,17 @@ export enum PricingPlanEnum {
   Free = "Free",
   Team = "Team",
   Power = "Power",
-  "Team-Trial" = "Team-Trial",
-  "Power-Trial" = "Power-Trial",
+  TeamTrial = "Team_Trial",
+  PowerTrial = "Power_Trial",
   Custom = "Custom",
 }
-export type PricingPlan = keyof typeof PricingPlanEnum;
 type Props = {
   organizationName: string;
 };
 type State = {
   displayName: string;
   newUserMailingList: string;
-  pricingPlan: PricingPlan | null | undefined;
+  pricingPlan: PricingPlanEnum | null | undefined;
   isFetchingData: boolean;
   isDeleting: boolean;
   organization: APIOrganization | null;

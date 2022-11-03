@@ -1874,14 +1874,8 @@ export function sendInvitesForOrganization(
   });
 }
 
-export async function getOrganization(organizationName: string): Promise<APIOrganization> {
-  const orga = await Request.receiveJSON(`/api/organizations/${organizationName}`);
-  return Promise.resolve({
-    ...orga,
-    paidUntil: 1667403046000,
-    includedUsers: 5,
-    includedStorage: 1000000,
-  });
+export function getOrganization(organizationName: string): Promise<APIOrganization> {
+  return Request.receiveJSON(`/api/organizations/${organizationName}`);
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {

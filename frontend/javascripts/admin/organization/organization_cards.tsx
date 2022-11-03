@@ -6,71 +6,62 @@ import {
 } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import { formatBytes } from "libs/format_utils";
 import React from "react";
 import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
+import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 export function PlanUpgradeCard({ organization }: { organization: APIOrganization }) {
-  if (organization.pricingPlan === PricingPlanEnum.Free)
-    return (
-      <Card
-        title="Upgrade to Team Plan"
-        style={{ marginBottom: 20 }}
-        headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
-      >
-        <Row gutter={24}>
-          <Col flex="auto">
-            <ul>
-              <li>TODO</li>
-              <li>TODO</li>
-              <li>TODO</li>
-            </ul>
-          </Col>
-          <Col span={6}>
-            <Button type="primary" icon={<RocketOutlined />}>
-              Upgrade Now
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-    );
+  if (
+    organization.pricingPlan === PricingPlanEnum.Power ||
+    organization.pricingPlan === PricingPlanEnum.PowerTrial ||
+    organization.pricingPlan === PricingPlanEnum.Custom
+  )
+    return null;
+
+  let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
+  let featureDescriptions = ["TODO", "TODO", "TODO"];
+  let onOkCallback = UpgradePricingPlanModal.open;
 
   if (
     organization.pricingPlan === PricingPlanEnum.Team ||
-    organization.pricingPlan === PricingPlanEnum["Team-Trial"]
-  )
-    return (
-      <Card
-        title="Upgrade to Power Plan"
-        style={{ marginBottom: 20 }}
-        headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
-      >
-        <Row gutter={24}>
-          <Col flex="auto">
-            <ul>
-              <li>Advanced segmentation proof-reading tools</li>
-              <li>Unlimited users</li>
-              <li>Custom hosting solutions available</li>
-            </ul>
-          </Col>
-          <Col span={6}>
-            <Button type="primary" icon={<RocketOutlined />}>
-              Upgrade Now
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-    );
+    organization.pricingPlan === PricingPlanEnum.TeamTrial
+  ) {
+    let title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
+    let featureDescriptions = ["TODO", "TODO", "TODO"];
+  }
 
-  return null;
+  return (
+    <Card
+      title={title}
+      style={{ marginBottom: 20 }}
+      headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+    >
+      <Row gutter={24}>
+        <Col flex="auto">
+          <ul>
+            {featureDescriptions.map((feature) => (
+              <li>{feature}</li>
+            ))}
+          </ul>
+        </Col>
+        <Col span={6}>
+          <Button type="primary" icon={<RocketOutlined />} onClick={onOkCallback}>
+            Upgrade Now
+          </Button>
+        </Col>
+      </Row>
+    </Card>
+  );
 }
 
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
   return (
     <Card style={{ marginBottom: 20 }}>
       <Row gutter={24}>
-        <Col flex="auto">Paid Until {formatDateInLocalTimeZone(organization.paidUntil)}</Col>
+        <Col flex="auto">
+          Paid Until {formatDateInLocalTimeZone(organization.paidUntil, "YYYY-MM-DD")}
+        </Col>
         <Col span={6}>
           <Button type="primary" icon={<FieldTimeOutlined />}>
             Extend Now
@@ -82,11 +73,19 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
 }
 
 export function PlanDashboardCard({ organization }: { organization: APIOrganization }) {
-  const activeUsers = 6;
-  const usedStorageMB = 1000;
+  const activeUsers = 3;
+  const usedStorageMB = 900;
 
   const usedUsersPercentage = (activeUsers / organization.includedUsers) * 100;
   const usedStoragePercentage = (usedStorageMB / organization.includedStorage) * 100;
+
+  const usedStorageLabel =
+    organization.pricingPlan == PricingPlanEnum.Free
+      ? `${usedStorageMB / 1000}/${organization.includedStorage / 1000}GB`
+      : `${usedStorageMB / 1000 ** 2}/${organization.includedStorage / 1000 ** 2}TB`;
+
+  const redStrokeColor = "#ff4d4f";
+  const greenStrokeColor = "#52c41a";
 
   return (
     <>
@@ -117,8 +116,8 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
                 type="dashboard"
                 percent={usedUsersPercentage}
                 format={() => `${activeUsers}/${organization.includedUsers}`}
-                success={{ strokeColor: "#ff4d4f !important" }}
-                style={{ color: usedUsersPercentage > 100 ? "#ff4d4f !important" : "inherit" }}
+                strokeColor={usedUsersPercentage > 100 ? redStrokeColor : greenStrokeColor}
+                status={usedUsersPercentage > 100 ? "exception" : "active"}
               />
             </Row>
             <Row justify="center">Users</Row>
@@ -136,13 +135,9 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
               <Progress
                 type="dashboard"
                 percent={usedStoragePercentage}
-                format={() =>
-                  `${formatBytes((usedStorageMB * 1024) ^ 2)} / ${formatBytes(
-                    (organization.includedStorage * 1024) ^ 2,
-                  )}`
-                }
-                style={{ color: usedStoragePercentage > 100 ? "#ff4d4f" : "inherit" }}
-                success={{ strokeColor: "#ff4d4f" }}
+                format={() => usedStorageLabel}
+                strokeColor={usedStoragePercentage > 100 ? redStrokeColor : greenStrokeColor}
+                status={usedStoragePercentage > 100 ? "exception" : "active"}
               />
             </Row>
             <Row justify="center">Storage</Row>

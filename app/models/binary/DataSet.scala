@@ -140,7 +140,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   def findAllByFolderOpt(folderIdOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      folderPredicate = folderIdOpt.map(folderId => s"_folder = $folderId").getOrElse("true")
+      folderPredicate = folderIdOpt.map(folderId => s"_folder = '$folderId'").getOrElse("true")
       r <- run(
         sql"select #$columns from #$existingCollectionName where #$folderPredicate and #$accessQuery".as[DatasetsRow])
       parsed <- parseAll(r)

@@ -106,7 +106,7 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               (SELECT _descendant
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
-              UNION ALL SELECT _id, name, null from webknossos.folders_
+              UNION ALL SELECT _id, name, NULL from webknossos.folders_
               WHERE _id = $folderId
               """.as[(String, String, Option[String])])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))

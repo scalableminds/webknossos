@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
@@ -29,6 +29,8 @@ import { Unicode } from "oxalis/constants";
 const { Search, Group: InputGroup } = Input;
 type Props = {
   user: APIUser;
+  onSelectDataset?: (dataset: APIDataset | null) => void;
+  selectedDataset?: APIDataset | null | undefined;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -192,6 +194,8 @@ function DatasetView(props: Props) {
     return (
       <DatasetTable
         datasets={filteredDatasets}
+        onSelectDataset={props.onSelectDataset}
+        selectedDataset={props.selectedDataset}
         searchQuery={searchQuery}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}

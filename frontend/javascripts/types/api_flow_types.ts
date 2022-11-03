@@ -887,3 +887,15 @@ export type VoxelyticsChunkStatistics = {
   cpuSystem: Statistics | null;
   duration: Statistics | null;
 };
+
+export type FlatFolderTreeItem = {
+  name: string;
+  id: string;
+  parent?: string;
+};
+
+export type Folder = {
+  name: string;
+  id: string;
+  teams: string[];
+};

@@ -20,6 +20,7 @@ import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
+import { DatasetFolderView } from "./dataset_folder_view";
 const { TabPane } = Tabs;
 type OwnProps = {
   userId: string | null | undefined;
@@ -43,6 +44,7 @@ type State = {
 export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
+  datasetsFolders: "datasetsFolders",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
 };
@@ -109,6 +111,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
+      datasetsFolders: true,
     };
   }
 
@@ -126,6 +129,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             <DatasetView user={user} />
           </TabPane>
         ) : null,
+        <TabPane tab="Dataset (Folders)" key="datasetsFolders">
+          <DatasetFolderView user={user} />
+        </TabPane>,
         <TabPane tab="Tasks" key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,

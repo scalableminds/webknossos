@@ -1,4 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { useIsMutating } from "@tanstack/react-query";
 import { Menu, Dropdown, Spin } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
@@ -38,14 +39,15 @@ export function DatasetFolderView(props: Props) {
 function DatasetFolderViewInner(props: Props) {
   const [selectedDataset, setSelectedDataset] = useState<APIDataset | null>(null);
   const context = useContext(DatasetCollectionContext);
+  const isMutating = useIsMutating() > 0;
 
   return (
     <div style={{ display: "grid", gridTemplate: "auto 1fr auto / auto 1fr auto" }}>
-      <div style={{ gridColumn: "1 / 2", overflow: "auto" }}>
+      <div style={{ gridColumn: "1 / 2", overflow: "auto", paddingTop: 100 }}>
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
-        <Spin spinning={false && context.queries.datasetsInFolderQuery.isFetching}>
+        <Spin spinning={isMutating}>
           <DatasetView
             user={props.user}
             onSelectDataset={setSelectedDataset}
@@ -54,7 +56,7 @@ function DatasetFolderViewInner(props: Props) {
           />
         </Spin>
       </main>
-      <div style={{ gridColumn: "3 / 4", overflow: "auto" }}>
+      <div style={{ gridColumn: "3 / 4", overflow: "auto", paddingTop: 80 }}>
         <DatasetDetailsSidebar selectedDataset={selectedDataset} />
       </div>
     </div>
@@ -236,8 +238,6 @@ function FolderSidebar() {
       return { treeData: treeData };
     });
   }, [folderTree]);
-
-  const { datasets } = context;
 
   const [isDraggingDataset, drop] = useDrop({
     accept: DraggableType,

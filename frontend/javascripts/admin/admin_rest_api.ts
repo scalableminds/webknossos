@@ -1314,7 +1314,7 @@ export function getDataset(
 
 export function updateDataset(
   datasetId: APIDatasetId,
-  dataset: APIDataset,
+  dataset: APIMaybeUnimportedDataset,
   // todo: make mandatory?
   folderId?: string,
 ): Promise<APIDataset> {

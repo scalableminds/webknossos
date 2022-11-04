@@ -31,3 +31,12 @@ export function updateFolder(folder: Folder): Promise<Folder> {
     method: "PUT",
   });
 }
+
+export function moveFolder(folderId: string, newParentId: string): Promise<Folder> {
+  const params = new URLSearchParams();
+  params.append("newParentId", newParentId);
+  return Request.sendJSONReceiveJSON(`/api/folders/${folderId}/move?${params}`, {
+    data: {},
+    method: "PUT",
+  });
+}

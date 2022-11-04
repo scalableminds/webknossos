@@ -27,7 +27,7 @@ import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
 import FixedExpandableTable from "components/fixed_expandable_table";
-import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { DndProvider, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
 const { Column } = Table;

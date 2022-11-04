@@ -91,26 +91,6 @@ function useDatasetsInFolderQuery(folderId: string | null) {
   );
 }
 
-// function useDatasetQuery(datasetId: APIDatasetId) {
-//   const queryClient = useQueryClient();
-//   const queryKey = ["datasetById", datasetId.owningOrganization, datasetId.name];
-//   return useQuery(queryKey, () => getDataset(datasetId), {
-//     onSuccess: (updatedDataset) => {
-//       queryClient.setQueryData(
-//         ["datasetsByFolder", updatedDataset.folder.id],
-//         (oldDatasets: APIMaybeUnimportedDataset[] | undefined) => {},
-//       );
-
-//       queryClient.setQueryData(
-//         ["datasetsByFolder", updatedDataset.folder.id],
-//         (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
-//           updateDatasetInQueryData(updatedDataset, folderId, oldItems),
-//       );
-//     },
-//     refetchOnWindowFocus: false,
-//   });
-// }
-
 function useCreateFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];

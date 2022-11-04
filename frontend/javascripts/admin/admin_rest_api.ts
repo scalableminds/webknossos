@@ -1318,6 +1318,7 @@ export function updateDataset(
   // todo: make mandatory?
   folderId?: string,
 ): Promise<APIDataset> {
+  folderId = folderId || dataset.folder.id;
   return Request.sendJSONReceiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
     {

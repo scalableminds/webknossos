@@ -228,7 +228,7 @@ function FolderSidebar() {
   useEffect(() => {
     setState((prevState: State) => {
       const treeData = getFolderHierarchy(folderTree, prevState.treeData);
-      if (treeData.length > 0) {
+      if (treeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(treeData[0].id);
       }
       return { treeData: treeData };

@@ -208,7 +208,6 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             >
               <Input
                 prefix={<TagOutlined />}
-                autoFocus
                 disabled={this.state.isFetchingData}
                 placeholder="Display Name"
               />

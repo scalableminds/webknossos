@@ -9,6 +9,7 @@ import { formatDateInLocalTimeZone } from "components/formatted_date";
 import React from "react";
 import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
+import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 export function PlanUpgradeCard({ organization }: { organization: APIOrganization }) {
@@ -20,33 +21,50 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
     return null;
 
   let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
-  let featureDescriptions = ["TODO", "TODO", "TODO"];
-  let onOkCallback = UpgradePricingPlanModal.open;
+  let featureDescriptions = teamPlanFeatures;
+  let onOkCallback = UpgradePricingPlanModal.upgradePricingPlan;
 
   if (
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
     let title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
-    let featureDescriptions = ["TODO", "TODO", "TODO"];
+    let featureDescriptions = powerPlanFeatures;
   }
 
   return (
     <Card
       title={title}
-      style={{ marginBottom: 20 }}
+      style={{
+        marginBottom: 20,
+        background:
+          "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/background_neuron_meshes.webp) 53.75% 15.25% / cover no-repeat",
+        color: "white",
+      }}
       headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
     >
       <Row gutter={24}>
-        <Col flex="auto">
-          <ul>
-            {featureDescriptions.map((feature) => (
-              <li>{feature}</li>
-            ))}
-          </ul>
+        <Col span={18}>
+          <p>
+            Upgrading your webKnossos plan will unlock more advanced features and increase your user
+            and storage quotas.
+          </p>
+          <p>
+            Upgrade Highlights include:
+            <ul>
+              {featureDescriptions.map((feature) => (
+                <li key={feature.slice(0, 10)}>{feature}</li>
+              ))}
+            </ul>
+          </p>
         </Col>
         <Col span={6}>
-          <Button type="primary" icon={<RocketOutlined />} onClick={onOkCallback}>
+          <Button
+            type="primary"
+            icon={<RocketOutlined />}
+            onClick={onOkCallback}
+            style={{ borderColor: "white" }}
+          >
             Upgrade Now
           </Button>
         </Col>
@@ -60,10 +78,15 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
     <Card style={{ marginBottom: 20 }}>
       <Row gutter={24}>
         <Col flex="auto">
-          Paid Until {formatDateInLocalTimeZone(organization.paidUntil, "YYYY-MM-DD")}
+          Your current plan is paid until{" "}
+          {formatDateInLocalTimeZone(organization.paidUntil, "YYYY-MM-DD")}
         </Col>
         <Col span={6}>
-          <Button type="primary" icon={<FieldTimeOutlined />}>
+          <Button
+            type="primary"
+            icon={<FieldTimeOutlined />}
+            onClick={UpgradePricingPlanModal.extendPricingPlan}
+          >
             Extend Now
           </Button>
         </Col>
@@ -95,7 +118,11 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
           type="warning"
           message="Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account being blocked."
           action={
-            <Button size="small" type="primary">
+            <Button
+              size="small"
+              type="primary"
+              onClick={UpgradePricingPlanModal.upgradePricingPlan}
+            >
               Upgrade Now
             </Button>
           }
@@ -106,7 +133,7 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
         <Col>
           <Card
             actions={[
-              <span>
+              <span onClick={UpgradePricingPlanModal.upgradeUserQuota}>
                 <PlusCircleOutlined /> Upgrade
               </span>,
             ]}
@@ -126,7 +153,7 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
         <Col>
           <Card
             actions={[
-              <span>
+              <span onClick={UpgradePricingPlanModal.upgradeStorageQuota}>
                 <PlusCircleOutlined /> Upgrade
               </span>,
             ]}

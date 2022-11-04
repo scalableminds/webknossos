@@ -7,7 +7,9 @@ import React, { useContext, useEffect, useState } from "react";
 import { DragObjectWithType, DropTargetMonitor, useDrop } from "react-dnd";
 import SortableTree, {
   ExtendedNodeData,
+  FullTree,
   NodeData,
+  OnDragPreviousAndNextLocation,
   OnMovePreviousAndNextLocation,
 } from "react-sortable-tree";
 // @ts-ignore
@@ -236,24 +238,31 @@ function FolderSidebar() {
   }, [folderTree]);
 
   const { datasets } = context;
-  console.log("datasets", datasets);
 
-  const [canDrop, drop] = useDrop({
+  const [isDraggingDataset, drop] = useDrop({
     accept: DraggableType,
     collect: (monitor: DropTargetMonitor) => {
       return monitor.canDrop();
     },
   });
 
-  const onMoveNode = (params: NodeData<FolderItem> & OnMovePreviousAndNextLocation<FolderItem>) => {
+  const onMoveNode = (
+    params: NodeData<FolderItem> & FullTree<FolderItem> & OnMovePreviousAndNextLocation<FolderItem>,
+  ) => {
     const { nextParentNode: newParent, node: draggedItem } = params;
-    context.queries.moveFolderMutation.mutateAsync([draggedItem.id, newParent.id]);
+    if (newParent != null) {
+      context.queries.moveFolderMutation.mutateAsync([draggedItem.id, newParent.id]);
+    }
+  };
+
+  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean => {
+    return params.nextParent != null;
   };
 
   return (
     <div
       ref={drop}
-      className={canDrop ? "highlight-folder-sidebar" : ""}
+      className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
       style={{
         height: 400,
         width: 250,
@@ -270,6 +279,7 @@ function FolderSidebar() {
         onMoveNode={onMoveNode}
         theme={FileExplorerTheme}
         canDrag={true}
+        canDrop={canDropFolder}
         generateNodeProps={(params) => generateNodeProps(context, params)}
       />
     </div>
@@ -303,8 +313,16 @@ function getFolderHierarchy(
     }
   }
 
+  for (const folderTreeItem of folderTree) {
+    if (folderTreeItem.parent != null) {
+      itemById[folderTreeItem.parent].children.sort((a, b) => a.title.localeCompare(b.title));
+    }
+  }
+
   if (roots.length === 1) {
     roots[0].expanded = true;
+  } else {
+    throw new Error("Multiple folder roots found");
   }
 
   // Copy the expanded flags from the old state

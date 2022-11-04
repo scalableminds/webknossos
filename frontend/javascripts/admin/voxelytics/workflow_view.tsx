@@ -1,7 +1,9 @@
 import _ from "lodash";
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
+  APIOrganization,
   VoxelyticsRunInfo,
   VoxelyticsRunState,
   VoxelyticsTaskConfig,
@@ -15,10 +17,18 @@ import {
 } from "types/api_flow_types";
 import { useSearchParams, usePolling } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { getVoxelyticsWorkflow } from "admin/admin_rest_api";
+import { OxalisState } from "oxalis/store";
+import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
+import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import TaskListView from "./task_list_view";
 
 export const VX_POLLING_INTERVAL = 30 * 1000; // 30s
+
+type LoadingState =
+  | { status: "PENDING" }
+  | { status: "READY" }
+  | { status: "LOADING" }
+  | { status: "FAILED"; error: Error; organizationToSwitchTo?: APIOrganization };
 
 function lexicographicalTopologicalSort(
   nodes: Array<VoxelyticsWorkflowDagNode>,
@@ -304,8 +314,9 @@ function shouldCollapseId(id: string, expandedKeys: Record<string, boolean>): [s
 export default function WorkflowView() {
   const { workflowName } = useParams<{ workflowName: string }>();
   const { runId, metatask } = useSearchParams();
+  const user = useSelector((state: OxalisState) => state.activeUser);
 
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadingState, setLoadingState] = useState<LoadingState>({ status: "PENDING" });
   const [report, setReport] = useState<VoxelyticsWorkflowReport | null>(null);
   // expandedMetaTaskKeys holds the meta tasks which should be expanded
   // in the left-side DAG. The right-side task listing will always show
@@ -330,7 +341,7 @@ export default function WorkflowView() {
 
   async function loadData() {
     try {
-      setIsLoading(true);
+      setLoadingState({ status: "LOADING" });
       let _report = parseReport(await getVoxelyticsWorkflow(workflowName, runId));
       if (metatask != null) {
         // If a meta task is passed via a GET parameter,
@@ -339,11 +350,21 @@ export default function WorkflowView() {
         _report = selectMetaTask(_report, metatask);
       }
       setReport(_report);
+      setLoadingState({ status: "READY" });
     } catch (err) {
-      console.error(err);
-      Toast.error("Could not load workflow report.");
-    } finally {
-      setIsLoading(false);
+      try {
+        const organization =
+          user != null ? await isWorkflowAccessibleBySwitching(workflowName) : null;
+        setLoadingState({
+          status: "FAILED",
+          organizationToSwitchTo: organization ?? undefined,
+          error: err as Error,
+        });
+      } catch (accessibleBySwitchingError) {
+        console.log(accessibleBySwitchingError);
+        Toast.error("Could not load workflow report.");
+        setLoadingState({ status: "FAILED", error: accessibleBySwitchingError as Error });
+      }
     }
   }
 
@@ -373,8 +394,17 @@ export default function WorkflowView() {
     report == null || report.run.state === VoxelyticsRunState.RUNNING ? VX_POLLING_INTERVAL : null,
   );
 
+  if (loadingState.status === "FAILED" && user != null) {
+    return (
+      <BrainSpinnerWithError
+        gotUnhandledError={false}
+        organizationToSwitchTo={loadingState.organizationToSwitchTo}
+        entity="workflow"
+      />
+    );
+  }
   if (report == null || collapsedReport == null || tasksWithHierarchy == null) {
-    return <div style={{ textAlign: "center" }}>Loading...</div>;
+    return <BrainSpinner />;
   }
 
   return (
@@ -386,7 +416,7 @@ export default function WorkflowView() {
         onToggleExpandedMetaTaskKey={handleToggleExpandedMetaTaskKey}
         openMetatask={metatask}
         onReload={loadData}
-        isLoading={isLoading}
+        isLoading={loadingState.status === "LOADING"}
       />
     </div>
   );

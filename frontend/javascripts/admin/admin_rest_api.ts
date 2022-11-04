@@ -1016,26 +1016,32 @@ export async function getDatasets(
 export async function getJobs(): Promise<APIJob[]> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'job' implicitly has an 'any' type.
-  return jobs.map((job) => ({
-    id: job.id,
-    type: job.command,
-    datasetName: job.commandArgs.dataset_name,
-    organizationName: job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-    annotationLayerName: job.commandArgs.annotation_layer_name,
-    boundingBox: job.commandArgs.bbox,
-    exportFileName: job.commandArgs.export_file_name,
-    tracingId: job.commandArgs.volume_tracing_id,
-    annotationId: job.commandArgs.annotation_id,
-    annotationType: job.commandArgs.annotation_type,
-    mergeSegments: job.commandArgs.merge_segments,
-    state: adaptJobState(job.command, job.state, job.manualState),
-    manualState: job.manualState,
-    result: job.returnValue,
-    resultLink: job.resultLink,
-    createdAt: job.created,
-  }));
+  return (
+    jobs
+      .map(
+        (job: any): APIJob => ({
+          id: job.id,
+          type: job.command,
+          datasetName: job.commandArgs.dataset_name,
+          organizationName: job.commandArgs.organization_name,
+          layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
+          annotationLayerName: job.commandArgs.annotation_layer_name,
+          boundingBox: job.commandArgs.bbox,
+          exportFileName: job.commandArgs.export_file_name,
+          tracingId: job.commandArgs.volume_tracing_id,
+          annotationId: job.commandArgs.annotation_id,
+          annotationType: job.commandArgs.annotation_type,
+          mergeSegments: job.commandArgs.merge_segments,
+          state: adaptJobState(job.command, job.state, job.manualState),
+          manualState: job.manualState,
+          result: job.returnValue,
+          resultLink: job.resultLink,
+          createdAt: job.created,
+        }),
+      )
+      // Newest jobs should be first
+      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
+  );
 }
 
 function adaptJobState(
@@ -1056,7 +1062,7 @@ function isManualPassJobType(command: string) {
   return ["convert_to_wkw"].includes(command);
 }
 
-export async function cancelJob(jobId: string): Promise<Array<APIJob>> {
+export async function cancelJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/cancel`, {
     method: "PATCH",
   });
@@ -1067,9 +1073,22 @@ export async function startConvertToWkwJob(
   organizationName: string,
   scale: Vector3,
   datastoreName: string,
-): Promise<Array<APIJob>> {
+): Promise<APIJob> {
   return Request.receiveJSON(
     `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&dataStoreName=${datastoreName}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function startFindLargestSegmentIdJob(
+  datasetName: string,
+  organizationName: string,
+  layerName: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/findLargestSegmentId/${organizationName}/${datasetName}?layerName=${layerName}`,
     {
       method: "POST",
     },
@@ -1087,7 +1106,7 @@ export async function startExportTiffJob(
   mappingName: string | null | undefined,
   mappingType: string | null | undefined,
   hideUnmappedIds: boolean | null | undefined,
-): Promise<Array<APIJob>> {
+): Promise<APIJob> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
   const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
   const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
@@ -1901,6 +1920,12 @@ export async function isDatasetAccessibleBySwitching(
       },
     );
   }
+}
+
+export async function isWorkflowAccessibleBySwitching(
+  workflowHash: string,
+): Promise<APIOrganization | null> {
+  return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
 }
 
 // ### BuildInfo webknossos

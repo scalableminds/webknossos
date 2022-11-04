@@ -1,7 +1,7 @@
 import { Task } from "redux-saga";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import type { Action } from "oxalis/model/actions/actions";
-import type {
+import {
   AddBucketToUndoAction,
   FinishAnnotationStrokeAction,
   ImportVolumeTracingAction,
@@ -9,8 +9,7 @@ import type {
   UpdateSegmentAction,
   InitializeVolumeTracingAction,
   InitializeEditableMappingAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import {
+  cancelQuickSelectAction,
   VolumeTracingSaveRelevantActions,
   setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -200,11 +199,10 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   throw new Error("Could not unpack redux action from channel");
 }
 
-export function* collectUndoStates(): Saga<void> {
+export function* collectUndoStates(): Saga<never> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
-  // This variable must be any (no Action) as otherwise cyclic dependencies are created which flow cannot handle.
-  let previousAction: any | null | undefined = null;
+  let previousAction: Action | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   let pendingCompressions: Array<Task> = [];
@@ -362,15 +360,18 @@ export function* collectUndoStates(): Saga<void> {
         reason: messages["undo.import_volume_tracing"],
       } as WarnUndoState);
     } else if (undo) {
-      previousAction = null;
-      yield* call(
-        applyStateOfStack,
-        undoStack,
-        redoStack,
-        prevSkeletonTracingOrNull,
-        prevUserBoundingBoxes,
-        "undo",
-      );
+      const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
+      if (!wasInterpreted) {
+        previousAction = null;
+        yield* call(
+          applyStateOfStack,
+          undoStack,
+          redoStack,
+          prevSkeletonTracingOrNull,
+          prevUserBoundingBoxes,
+          "undo",
+        );
+      }
 
       if (undo.callback != null) {
         undo.callback();
@@ -414,6 +415,20 @@ export function* collectUndoStates(): Saga<void> {
     prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
     prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   }
+}
+
+function* maybeInterpretUndoAsDiscardUiAction() {
+  // Sometimes the user hits undo because they want to undo something
+  // which isn't really undoable yet. For example, the quick select preview
+  // can be such a case.
+  // In that case, we re-interpret the undo action accordingly.
+  // The return value of this function signals whether undo was re-interpreted.
+  const isQuickSelectActive = yield* select((state) => state.uiInformation.isQuickSelectActive);
+  if (!isQuickSelectActive) {
+    return false;
+  }
+  yield* put(cancelQuickSelectAction());
+  return true;
 }
 
 function* getSkeletonTracingToUndoState(

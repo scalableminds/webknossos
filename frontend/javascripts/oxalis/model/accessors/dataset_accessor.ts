@@ -26,6 +26,7 @@ import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils"
 import messages from "messages";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { DataLayer } from "types/schemas/datasource.types";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
   smaller: boolean;
@@ -507,13 +508,21 @@ export type Boundary = {
 export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
   const lowerBoundary = topLeft;
-  const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
+  const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth] as Vector3;
   return {
     lowerBoundary,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     upperBoundary,
   };
 }
+
+export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {
+  const { lowerBoundary, upperBoundary } = getLayerBoundaries(dataset, layerName);
+  return new BoundingBox({
+    min: lowerBoundary,
+    max: upperBoundary,
+  });
+}
+
 export function getBoundaries(dataset: APIDataset): Boundary {
   const lowerBoundary = [Infinity, Infinity, Infinity];
   const upperBoundary = [-Infinity, -Infinity, -Infinity];
@@ -802,6 +811,14 @@ export function getEnabledLayers(
 
     return settings.isDisabled === Boolean(options.invert);
   });
+}
+
+export function getEnabledColorLayers(
+  dataset: APIDataset,
+  datasetConfiguration: DatasetConfiguration,
+) {
+  const enabledLayers = getEnabledLayers(dataset, datasetConfiguration);
+  return enabledLayers.filter((layer) => isColorLayer(dataset, layer.name));
 }
 
 /*

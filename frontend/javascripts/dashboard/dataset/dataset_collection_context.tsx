@@ -81,7 +81,7 @@ function useFolderTreeQuery() {
 }
 
 function useDatasetsInFolderQuery(folderId: string | null) {
-  const queryKey = ["datasets", folderId];
+  const queryKey = ["datasetsByFolder", folderId];
   return useQuery(
     queryKey,
     () => (folderId == null ? Promise.resolve([]) : getDatasets(false, folderId)),
@@ -90,6 +90,26 @@ function useDatasetsInFolderQuery(folderId: string | null) {
     },
   );
 }
+
+// function useDatasetQuery(datasetId: APIDatasetId) {
+//   const queryClient = useQueryClient();
+//   const queryKey = ["datasetById", datasetId.owningOrganization, datasetId.name];
+//   return useQuery(queryKey, () => getDataset(datasetId), {
+//     onSuccess: (updatedDataset) => {
+//       queryClient.setQueryData(
+//         ["datasetsByFolder", updatedDataset.folder.id],
+//         (oldDatasets: APIMaybeUnimportedDataset[] | undefined) => {},
+//       );
+
+//       queryClient.setQueryData(
+//         ["datasetsByFolder", updatedDataset.folder.id],
+//         (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
+//           updateDatasetInQueryData(updatedDataset, folderId, oldItems),
+//       );
+//     },
+//     refetchOnWindowFocus: false,
+//   });
+// }
 
 function useCreateFolderMutation() {
   const queryClient = useQueryClient();
@@ -180,36 +200,29 @@ function useMoveFolderMutation() {
 
 function useUpdateDatasetMutation(folderId: string | null) {
   const queryClient = useQueryClient();
-  const mutationKey = ["datasets", folderId];
+  const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    ([dataset, folderId]: [dataset: APIMaybeUnimportedDataset, folderId: string]) =>
-      updateDataset(dataset, dataset, folderId),
+    (params: [APIMaybeUnimportedDataset, string] | APIDatasetId) => {
+      if ("owningOrganization" in params) {
+        const datasetId = params;
+        return getDataset(datasetId);
+      }
+      const [dataset, folderId] = params;
+      return updateDataset(dataset, dataset, folderId);
+    },
     {
       mutationKey,
       onSuccess: (updatedDataset) => {
         console.log("setQueryData for", mutationKey);
-        queryClient.setQueryData(
-          mutationKey,
-          (oldItems: APIMaybeUnimportedDataset[] | undefined) => {
-            return (oldItems || [])
-              .map((oldDataset: APIMaybeUnimportedDataset) =>
-                oldDataset.name === updatedDataset.name
-                  ? {
-                      ...updatedDataset,
-                      // @ts-ignore todo: clean this up
-                      parent: oldDataset.parent,
-                    }
-                  : oldDataset,
-              )
-              .filter((dataset: APIMaybeUnimportedDataset) => dataset.folder.id === folderId);
-          },
+        queryClient.setQueryData(mutationKey, (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
+          updateDatasetInQueryData(updatedDataset, folderId, oldItems),
         );
         const targetFolderId = updatedDataset.folder.id;
         if (targetFolderId != folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
           queryClient.setQueryData(
-            ["datasets", targetFolderId],
+            ["datasetsByFolder", targetFolderId],
             (oldItems: APIMaybeUnimportedDataset[] | undefined) => {
               if (oldItems == null) {
                 // Don't update the query data, if it doesn't exist, yet.
@@ -231,16 +244,30 @@ function useUpdateDatasetMutation(folderId: string | null) {
   );
 }
 
+function updateDatasetInQueryData(
+  updatedDataset: APIDataset,
+  activeFolderId: string | null,
+  oldItems: APIMaybeUnimportedDataset[] | undefined,
+) {
+  return (oldItems || [])
+    .map((oldDataset: APIMaybeUnimportedDataset) =>
+      oldDataset.name === updatedDataset.name
+        ? {
+            ...updatedDataset,
+            // @ts-ignore todo: clean this up
+            parent: oldDataset.parent,
+          }
+        : oldDataset,
+    )
+    .filter((dataset: APIMaybeUnimportedDataset) => dataset.folder.id === activeFolderId);
+}
+
 export default function DatasetCollectionContextProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // const [datasets, setDatasets] = useState<APIMaybeUnimportedDataset[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-  const [pendingDatasetUpdates, setPendingDatasetUpdates] = useState<
-    Record<string, Promise<APIDataset>>
-  >({});
 
   const queryClient = useQueryClient();
   const folderTreeQuery = useFolderTreeQuery();
@@ -253,7 +280,7 @@ export default function DatasetCollectionContextProvider({
   const datasets = datasetsInFolderQuery.data || [];
 
   async function fetchDatasets(options: Options = {}): Promise<void> {
-    queryClient.invalidateQueries({ queryKey: ["datasets", activeFolderId] });
+    queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", activeFolderId] });
 
     // const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;
     // const datasetFilteringMode = options.datasetFilteringMode || "onlyShowReported";
@@ -283,72 +310,11 @@ export default function DatasetCollectionContextProvider({
     datasetId: APIDatasetId,
     datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
   ) {
-    // if (isLoading) return;
-    // try {
-    //   setIsLoading(true);
-    //   const updatedDataset = await getDataset(datasetId);
-    //   if (datasetsToUpdate) {
-    //     const newDatasets: Array<APIMaybeUnimportedDataset> = datasetsToUpdate.map((dataset) => {
-    //       if (
-    //         dataset.name === datasetId.name &&
-    //         dataset.owningOrganization === datasetId.owningOrganization
-    //       ) {
-    //         const { lastUsedByUser } = dataset;
-    //         return { ...updatedDataset, lastUsedByUser };
-    //       } else {
-    //         return dataset;
-    //       }
-    //     });
-    //     setDatasets(newDatasets);
-    //   }
-    //   const newInternalDatasets = datasets.map((dataset) => {
-    //     if (
-    //       dataset.name === datasetId.name &&
-    //       dataset.owningOrganization === datasetId.owningOrganization
-    //     ) {
-    //       return updatedDataset;
-    //     } else {
-    //       return dataset;
-    //     }
-    //   });
-    //   if (!datasetsToUpdate) setDatasets(newInternalDatasets);
-    // } catch (error) {
-    //   handleGenericError(error as Error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
+    updateDatasetMutation.mutateAsync(datasetId);
   }
 
   async function updateCachedDataset(dataset: APIDataset) {
     updateDatasetMutation.mutateAsync([dataset, dataset.folder.id]);
-
-    // setIsLoading(true);
-    // const updatedDatasets = datasets.map((currentDataset) => {
-    //   if (
-    //     dataset.name === currentDataset.name &&
-    //     dataset.owningOrganization === currentDataset.owningOrganization
-    //   ) {
-    //     return dataset;
-    //   } else {
-    //     return currentDataset;
-    //   }
-    // });
-    // setDatasets(updatedDatasets);
-    // try {
-    //   const previousDatasetUpdatePromise = pendingDatasetUpdates[dataset.name] || Promise.resolve();
-    //   const newDatasetUpdatePromise = previousDatasetUpdatePromise.then(() =>
-    //     updateDataset(dataset, dataset),
-    //   );
-    //   setPendingDatasetUpdates({
-    //     ...pendingDatasetUpdates,
-    //     [dataset.name]: newDatasetUpdatePromise,
-    //   });
-    //   await newDatasetUpdatePromise;
-    // } catch (error) {
-    //   handleGenericError(error as Error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
   }
 
   const isLoading = datasetsInFolderQuery.isFetching;

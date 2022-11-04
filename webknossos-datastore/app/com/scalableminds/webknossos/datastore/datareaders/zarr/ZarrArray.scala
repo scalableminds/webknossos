@@ -16,7 +16,7 @@ import play.api.libs.json.{JsError, JsSuccess, Json}
 
 object ZarrArray extends LazyLogging {
   @throws[IOException]
-  def open(path: Path, axisOrderOpt: Option[AxisOrder]): ZarrArray = {
+  def open(path: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): ZarrArray = {
     val store = new FileSystemStore(path)
     val rootPath = new DatasetPath("")
     val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
@@ -36,12 +36,12 @@ object ZarrArray extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this Zarr Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
     }
-    new ZarrArray(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
+    new ZarrArray(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
   }
 
 }
 
-class ZarrArray(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder)
+class ZarrArray(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder, channelIndex: Option[Int])
     extends DatasetArray(relativePath, store, header, axisOrder)
     with LazyLogging {
 

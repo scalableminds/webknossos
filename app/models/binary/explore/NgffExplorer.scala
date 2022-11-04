@@ -25,12 +25,13 @@ class NgffExplorer extends RemoteLayerExplorer {
     for {
       zattrsPath <- Fox.successful(remotePath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS))
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      layers <- Fox.serialCombined(ngffHeader.multiscales)(layerFromNgffMultiscale(_, remotePath, credentials))
+      layers <- Fox.serialCombined(ngffHeader.multiscales)(layerFromNgffMultiscale(_, remotePath, credentials, None))
     } yield layers
 
   private def layerFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                       remotePath: Path,
-                                      credentials: Option[FileSystemCredentials]): Fox[(ZarrLayer, Vec3Double)] =
+                                      credentials: Option[FileSystemCredentials],
+                                      channelIndex: Option[Int]): Fox[(ZarrLayer, Vec3Double)] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
@@ -38,7 +39,7 @@ class NgffExplorer extends RemoteLayerExplorer {
         multiscale.datasets.map(_.coordinateTransformations),
         axisOrder) ?~> "Could not extract voxel size from scale transforms"
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
-        zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials))
+        zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials, channelIndex))
       _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
@@ -54,7 +55,8 @@ class NgffExplorer extends RemoteLayerExplorer {
                                      layerPath: Path,
                                      voxelSizeInAxisUnits: Vec3Double,
                                      axisOrder: AxisOrder,
-                                     credentials: Option[FileSystemCredentials]): Fox[MagWithAttributes] =
+                                     credentials: Option[FileSystemCredentials],
+                                     channelIndex: Option[Int]): Fox[MagWithAttributes] =
     for {
       mag <- magFromTransforms(ngffDataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
       magPath = layerPath.resolve(ngffDataset.path)
@@ -63,7 +65,7 @@ class NgffExplorer extends RemoteLayerExplorer {
       elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
       boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toString), credentials, Some(axisOrder)),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toString), credentials, Some(axisOrder), channelIndex),
                         magPath,
                         elementClass,
                         boundingBox)

@@ -1878,7 +1878,8 @@ export async function getOrganization(organizationName: string): Promise<APIOrga
   const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
   return Promise.resolve({
     ...organization,
-    included
+    includedStorage: organization.includedStorage ?? Number.MAX_SAFE_INTEGER,
+    includedUsers: organization.includedUsers ?? Number.MAX_SAFE_INTEGER
   }); 
 }
 

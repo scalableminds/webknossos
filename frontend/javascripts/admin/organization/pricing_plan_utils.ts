@@ -1,3 +1,5 @@
+import { APIUser } from "types/api_flow_types";
+
 export const teamPlanFeatures = [
   "Collaborative Annotation",
   "Project Management",
@@ -13,3 +15,7 @@ export const powerPlanFeatures = [
   "Integration with your HPC and storage servers",
   "Everything from Team and Free Tier",
 ];
+
+export function getActiveUserCount(users: APIUser[]): number {
+  return users.filter((user) => user.isActive && !user.isSuperUser).length;
+}

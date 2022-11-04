@@ -25,7 +25,7 @@ import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import LinkButton from "components/link_button";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
+import { getEditableUsers, getOrganization, updateUser } from "admin/admin_rest_api";
 import { stringToColor } from "libs/format_utils";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import ExperienceModalView from "admin/user/experience_modal_view";
@@ -34,6 +34,7 @@ import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
 
@@ -57,6 +58,7 @@ type State = {
   activationFilter: Array<"true" | "false">;
   searchQuery: string;
   domainToEdit: string | null | undefined;
+  maxUsersPerOrganization: number;
 };
 const persistence = new Persistence<Pick<State, "searchQuery" | "activationFilter">>(
   {
@@ -78,6 +80,7 @@ class UserListView extends React.PureComponent<Props, State> {
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
+    maxUsersPerOrganization: Number.POSITIVE_INFINITY,
   };
 
   componentDidMount() {
@@ -100,10 +103,15 @@ class UserListView extends React.PureComponent<Props, State> {
     this.setState({
       isLoading: true,
     });
-    const users = await getEditableUsers();
+    const [users, organization] = await Promise.all([
+      getEditableUsers(),
+      getOrganization(this.props.activeUser.organization),
+    ]);
+
     this.setState({
       isLoading: false,
       users,
+      maxUsersPerOrganization: organization.includedUsers,
     });
   }
 
@@ -236,19 +244,15 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   renderPlaceholder() {
+    const inviteUsersCallback = () =>
+      this.setState({
+        isInviteModalVisible: true,
+      });
+
     const noUsersMessage = (
       <React.Fragment>
-        {"You can "}
-        <a
-          onClick={() =>
-            this.setState({
-              isInviteModalVisible: true,
-            })
-          }
-        >
-          invite more users
-        </a>
-        {" to join your organization. After the users joined, you need to activate them manually."}
+        <a onClick={inviteUsersCallback}>Invite colleagues and collaboration partners</a>
+        {" to join your organization. Share datasets and collaboratively work on anntotiatons."}
       </React.Fragment>
     );
     return this.state.isLoading ? null : (
@@ -260,6 +264,32 @@ class UserListView extends React.PureComponent<Props, State> {
         style={{
           marginTop: 20,
         }}
+        action={
+          <Button type="primary" onClick={inviteUsersCallback}>
+            Invite Users
+          </Button>
+        }
+      />
+    );
+  }
+
+  renderUpgradePlanAlert() {
+    return (
+      <Alert
+        message="Exceeding the number of users included in your plan"
+        description={`You organization currently has more active users than included in your current plan. Consider upgrading your webKnossos plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
+          this.state.users,
+        )} active users of ${this.state.maxUsersPerOrganization} allowed by your plan.`}
+        type="error"
+        showIcon
+        style={{
+          marginTop: 20,
+        }}
+        action={
+          <Link to={`/organizations/${this.props.activeUser.organization}`}>
+            <Button type="primary">Upgrade Plan</Button>
+          </Link>
+        }
       />
     );
   }
@@ -311,6 +341,9 @@ class UserListView extends React.PureComponent<Props, State> {
       marginRight: 20,
     };
     const noOtherUsers = this.state.users.length < 2;
+    const isUserInvitesDisabled =
+      getActiveUserCount(this.state.users) > this.state.maxUsersPerOrganization;
+
     return (
       <div className="container test-UserListView">
         <h3>Users</h3>
@@ -349,6 +382,7 @@ class UserListView extends React.PureComponent<Props, State> {
           </Button>
           <Button
             icon={<UserAddOutlined />}
+            disabled={isUserInvitesDisabled}
             style={marginRight}
             onClick={() =>
               this.setState({
@@ -359,8 +393,6 @@ class UserListView extends React.PureComponent<Props, State> {
             Invite Users
           </Button>
           <InviteUsersModal
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-            organizationName={this.props.activeUser.organization}
             visible={this.state.isInviteModalVisible}
             handleVisibleChange={(visible) => {
               this.setState({
@@ -387,6 +419,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <div className="clearfix" />
         </div>
 
+        {isUserInvitesDisabled ? this.renderUpgradePlanAlert() : null}
         {noOtherUsers ? this.renderPlaceholder() : null}
         {this.renderNewUsersAlert()}
 

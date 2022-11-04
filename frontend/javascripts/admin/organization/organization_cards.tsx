@@ -107,7 +107,10 @@ export function PlanDashboardCard({
   const usedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Free
       ? `${(usedStorageMB / 1000).toFixed(1)}/${(organization.includedStorage / 1000).toFixed(1)}GB`
-      : `${(usedStorageMB / 1000 ** 2).toFixed(1)}/${(organization.includedStorage / 1000 ** 2).toFixed(1)}TB`;
+      : `${(usedStorageMB / 1000 ** 2).toFixed(1)}/${(
+          organization.includedStorage /
+          1000 ** 2
+        ).toFixed(1)}TB`;
 
   const redStrokeColor = "#ff4d4f";
   const greenStrokeColor = "#52c41a";

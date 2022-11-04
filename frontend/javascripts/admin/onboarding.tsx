@@ -229,7 +229,7 @@ export class InviteUsersModal extends React.Component<
     inviteesString: "",
   };
   sendInvite = async () => {
-    const addresses = this.state.inviteesString.split(/[,\s]+/);
+    const addresses = this.state.inviteesString.split(/[,\s]+/).map((a) => a.trim());
     const incorrectAddresses = addresses.filter((address) => !address.includes("@"));
 
     if (incorrectAddresses.length > 0) {
@@ -251,8 +251,8 @@ export class InviteUsersModal extends React.Component<
   getContent() {
     return (
       <React.Fragment>
-        Send invites to the following email addresses. Multiple addresses should be separated with a
-        comma, a space or a new line:
+        Send email invites to the following email addresses. Multiple addresses should be separated
+        with a comma, a space or a new line:
         <Input.TextArea
           spellCheck={false}
           autoSize={{
@@ -278,7 +278,7 @@ export class InviteUsersModal extends React.Component<
         width={600}
         footer={
           <Button onClick={this.sendInvite} type="primary">
-            Send Invites
+            Send Invite Emails
           </Button>
         }
         onCancel={() => {

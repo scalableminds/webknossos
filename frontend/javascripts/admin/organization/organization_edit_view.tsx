@@ -9,11 +9,17 @@ import {
 } from "@ant-design/icons";
 import React from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import { getOrganization, deleteOrganization, updateOrganization, getUsers } from "admin/admin_rest_api";
+import {
+  getOrganization,
+  deleteOrganization,
+  updateOrganization,
+  getUsers,
+} from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { coalesce } from "libs/utils";
 import { APIOrganization } from "types/api_flow_types";
 import { PlanDashboardCard, PlanExpirationCard, PlanUpgradeCard } from "./organization_cards";
+import { getActiveUserCount } from "./pricing_plan_utils";
 
 const FormItem = Form.Item;
 export enum PricingPlanEnum {
@@ -34,7 +40,7 @@ type State = {
   isFetchingData: boolean;
   isDeleting: boolean;
   organization: APIOrganization | null;
-  activeUsersCount: number
+  activeUsersCount: number;
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
@@ -94,7 +100,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       newUserMailingList,
       isFetchingData: false,
       organization,
-      activeUsersCount: users.filter(u => u.isActive && !u.isSuperUser).length,
+      activeUsersCount: getActiveUserCount(users),
     });
   }
 

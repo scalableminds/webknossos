@@ -220,8 +220,6 @@ class ReactRouter extends React.Component<Props> {
               />
 
               <Route
-                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-                isAuthenticated={isAuthenticated}
                 path="/dashboard"
                 render={() => {
                   if (isAuthenticated) {

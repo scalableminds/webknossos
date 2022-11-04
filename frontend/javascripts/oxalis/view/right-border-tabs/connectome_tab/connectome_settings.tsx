@@ -155,8 +155,6 @@ class ConnectomeFilters extends React.Component<Props> {
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
               step={0.1}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              roundTo={1}
               value={particleSize}
               onChange={this.updateParticleSize}
             />

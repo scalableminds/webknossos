@@ -233,7 +233,6 @@ export default function DatasetCollectionContextProvider({
   children: React.ReactNode;
 }) {
   // const [datasets, setDatasets] = useState<APIMaybeUnimportedDataset[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [pendingDatasetUpdates, setPendingDatasetUpdates] = useState<
     Record<string, Promise<APIDataset>>
@@ -346,6 +345,7 @@ export default function DatasetCollectionContextProvider({
     // }
   }
 
+  const isLoading = datasetsInFolderQuery.isFetching;
   const value: DatasetCollectionContext = useMemo(
     () => ({
       datasets,

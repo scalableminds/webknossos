@@ -43,7 +43,7 @@ function DatasetFolderViewInner(props: Props) {
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
-        <Spin spinning={context.queries.datasetsInFolderQuery.isFetching}>
+        <Spin spinning={false && context.queries.datasetsInFolderQuery.isFetching}>
           <DatasetView
             user={props.user}
             onSelectDataset={setSelectedDataset}

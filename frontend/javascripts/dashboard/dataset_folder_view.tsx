@@ -41,13 +41,15 @@ function DatasetFolderViewInner(props: Props) {
   const context = useContext(DatasetCollectionContext);
   const isMutating = useIsMutating() > 0;
 
+  console.log("context.datasets", context.datasets);
+
   return (
     <div style={{ display: "grid", gridTemplate: "auto 1fr auto / auto 1fr auto" }}>
       <div style={{ gridColumn: "1 / 2", overflow: "auto", paddingTop: 100 }}>
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
-        <Spin spinning={isMutating}>
+        <Spin spinning={context.isLoading || isMutating}>
           <DatasetView
             user={props.user}
             onSelectDataset={setSelectedDataset}
@@ -227,7 +229,7 @@ function FolderSidebar() {
   });
   const context = useContext(DatasetCollectionContext);
 
-  const { error, data: folderTree, isLoading } = context.queries.folderTreeQuery;
+  const { data: folderTree } = context.queries.folderTreeQuery;
 
   useEffect(() => {
     setState((prevState: State) => {

@@ -308,7 +308,12 @@ export default function DatasetCollectionContextProvider({
     updateDatasetMutation.mutateAsync([dataset, dataset.folder.id]);
   }
 
-  const isLoading = datasetsInFolderQuery.isFetching;
+  const isLoading = datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
+
+  console.log("datasetsInFolderQuery.isLoading", datasetsInFolderQuery.isLoading);
+  console.log("datasetsInFolderQuery.isFetching", datasetsInFolderQuery.isFetching);
+  console.log("datasetsInFolderQuery.isRefetching", datasetsInFolderQuery.isRefetching);
+
   const value: DatasetCollectionContext = useMemo(
     () => ({
       datasets,

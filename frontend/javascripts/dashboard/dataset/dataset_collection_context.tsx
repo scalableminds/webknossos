@@ -1,4 +1,4 @@
-import React, { createContext, useMemo, useState } from "react";
+import React, { createContext, useEffect, useMemo, useState } from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import type {
   APIMaybeUnimportedDataset,
@@ -17,6 +17,7 @@ import {
   moveFolder,
   updateFolder,
 } from "admin/api/folders";
+import UserLocalStorage from "libs/user_local_storage";
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
@@ -242,12 +243,16 @@ function updateDatasetInQueryData(
     .filter((dataset: APIMaybeUnimportedDataset) => dataset.folder.id === activeFolderId);
 }
 
+const ACTIVE_FOLDER_ID_STORAGE_KEY = "activeFolderId";
+
 export default function DatasetCollectionContextProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(
+    UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
+  );
 
   const queryClient = useQueryClient();
   const folderTreeQuery = useFolderTreeQuery();
@@ -258,6 +263,12 @@ export default function DatasetCollectionContextProvider({
   const moveFolderMutation = useMoveFolderMutation();
   const updateDatasetMutation = useUpdateDatasetMutation(activeFolderId);
   const datasets = datasetsInFolderQuery.data || [];
+
+  useEffect(() => {
+    if (activeFolderId != null) {
+      UserLocalStorage.setItem(ACTIVE_FOLDER_ID_STORAGE_KEY, activeFolderId);
+    }
+  }, [activeFolderId]);
 
   async function fetchDatasets(options: Options = {}): Promise<void> {
     queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", activeFolderId] });

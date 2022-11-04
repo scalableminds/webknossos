@@ -9,7 +9,7 @@ import {
 } from "@ant-design/icons";
 import React from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
+import { getOrganization, deleteOrganization, updateOrganization, getUsers } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { coalesce } from "libs/utils";
 import { APIOrganization } from "types/api_flow_types";
@@ -34,6 +34,7 @@ type State = {
   isFetchingData: boolean;
   isDeleting: boolean;
   organization: APIOrganization | null;
+  activeUsersCount: number
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
@@ -44,6 +45,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     isFetchingData: false,
     isDeleting: false,
     organization: null,
+    activeUsersCount: 1,
   };
   formRef = React.createRef<FormInstance>();
 
@@ -81,14 +83,18 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingData: true,
     });
-    const organization = await getOrganization(this.props.organizationName);
+    const [organization, users] = await Promise.all([
+      getOrganization(this.props.organizationName),
+      getUsers(),
+    ]);
     const { displayName, newUserMailingList, pricingPlan } = organization;
     this.setState({
       displayName,
       pricingPlan: coalesce(PricingPlanEnum, pricingPlan),
       newUserMailingList,
       isFetchingData: false,
-      organization: organization,
+      organization,
+      activeUsersCount: users.filter(u => u.isActive && !u.isSuperUser).length,
     });
   }
 
@@ -99,7 +105,6 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       formValues.displayName,
       formValues.newUserMailingList,
     );
-    window.location.replace(`${window.location.origin}/dashboard/`);
   };
 
   handleDeleteButtonClicked = async (): Promise<void> => {
@@ -146,7 +151,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         </div>
       );
 
-    const OrgaNameRegexPattern = new RegExp("^[A-Za-z0-9\\-_\\. ß]+$");
+    const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
 
     return (
       <div
@@ -161,7 +166,10 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         <Row style={{ marginBottom: 20 }}>
           <h2>{this.state.displayName}</h2>
         </Row>
-        <PlanDashboardCard organization={this.state.organization} />
+        <PlanDashboardCard
+          organization={this.state.organization}
+          activeUsersCount={this.state.activeUsersCount}
+        />
         <PlanExpirationCard organization={this.state.organization} />
         <PlanUpgradeCard organization={this.state.organization} />
         <Card

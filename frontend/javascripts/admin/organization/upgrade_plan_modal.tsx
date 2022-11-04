@@ -7,7 +7,6 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { teamPlanFeatures } from "./pricing_plan_utils";
-import _ from "lodash";
 
 function handlePlanUpgrade() {
   // TODO
@@ -60,7 +59,7 @@ function upgradeUserQuota() {
         <p>TODO</p>
         <Divider style={{ marginTop: 40 }} />
         <p style={{ color: "#aaa", fontSize: 12 }}>
-          Requesting an upgrade to your organization's user quota will send an email to the
+          Requesting an upgrade to your organization&apos;s user quota will send an email to the
           webKnossos sales team to upgrade your current plan. We typically respond within one
           business day. See our <a href="https://webknossos.org/faq">FAQ</a> for more information.
         </p>
@@ -80,7 +79,7 @@ function upgradeStorageQuota() {
         <p>TODO</p>
         <Divider style={{ marginTop: 40 }} />
         <p style={{ color: "#aaa", fontSize: 12 }}>
-          Requesting an upgrade to your organization's storage quota will send an email to the
+          Requesting an upgrade to your organization&apos;s storage quota will send an email to the
           webKnossos sales team to upgrade your current plan. We typically respond within one
           business day. See our <a href="https://webknossos.org/faq">FAQ</a> for more information.
         </p>
@@ -96,7 +95,7 @@ function upgradePricingPlan() {
   const featureDescriptions = teamPlanFeatures;
 
   Modal.confirm({
-    title: title,
+    title,
     okText: "Request Upgrade",
     onOk: handlePlanUpgrade,
     icon: <RocketOutlined style={{ color: "var(--ant-primary-color)" }} />,
@@ -104,14 +103,12 @@ function upgradePricingPlan() {
     content: (
       <div>
         <p>{introSentence}</p>
-        <p>
-          Upgrade Highlights include:
-          <ul>
-            {featureDescriptions.map((feature) => (
-              <li key={feature.slice(0, 10)}>{feature}</li>
-            ))}
-          </ul>
-        </p>
+        <p>Upgrade Highlights include:</p>
+        <ul>
+          {featureDescriptions.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
         <Divider style={{ marginTop: 40 }} />
         <p style={{ color: "#aaa", fontSize: 12 }}>
           Requesting an upgrade will send an email to the webKnossos sales team to upgrade your

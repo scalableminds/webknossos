@@ -22,14 +22,13 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
 
   let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
   let featureDescriptions = teamPlanFeatures;
-  let onOkCallback = UpgradePricingPlanModal.upgradePricingPlan;
 
   if (
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
-    let title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
-    let featureDescriptions = powerPlanFeatures;
+    title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
+    featureDescriptions = powerPlanFeatures;
   }
 
   return (
@@ -49,20 +48,18 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
             Upgrading your webKnossos plan will unlock more advanced features and increase your user
             and storage quotas.
           </p>
-          <p>
-            Upgrade Highlights include:
-            <ul>
-              {featureDescriptions.map((feature) => (
-                <li key={feature.slice(0, 10)}>{feature}</li>
-              ))}
-            </ul>
-          </p>
+          <p>Upgrade Highlights include:</p>
+          <ul>
+            {featureDescriptions.map((feature) => (
+              <li key={feature.slice(0, 10)}>{feature}</li>
+            ))}
+          </ul>
         </Col>
         <Col span={6}>
           <Button
             type="primary"
             icon={<RocketOutlined />}
-            onClick={onOkCallback}
+            onClick={UpgradePricingPlanModal.upgradePricingPlan}
             style={{ borderColor: "white" }}
           >
             Upgrade Now
@@ -95,20 +92,58 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
   );
 }
 
-export function PlanDashboardCard({ organization }: { organization: APIOrganization }) {
-  const activeUsers = 3;
+export function PlanDashboardCard({
+  organization,
+  activeUsersCount,
+}: {
+  organization: APIOrganization;
+  activeUsersCount: number;
+}) {
   const usedStorageMB = 900;
 
-  const usedUsersPercentage = (activeUsers / organization.includedUsers) * 100;
+  const usedUsersPercentage = (activeUsersCount / organization.includedUsers) * 100;
   const usedStoragePercentage = (usedStorageMB / organization.includedStorage) * 100;
 
   const usedStorageLabel =
-    organization.pricingPlan == PricingPlanEnum.Free
-      ? `${usedStorageMB / 1000}/${organization.includedStorage / 1000}GB`
-      : `${usedStorageMB / 1000 ** 2}/${organization.includedStorage / 1000 ** 2}TB`;
+    organization.pricingPlan === PricingPlanEnum.Free
+      ? `${(usedStorageMB / 1000).toFixed(1)}/${(organization.includedStorage / 1000).toFixed(1)}GB`
+      : `${(usedStorageMB / 1000 ** 2).toFixed(1)}/${(organization.includedStorage / 1000 ** 2).toFixed(1)}TB`;
 
   const redStrokeColor = "#ff4d4f";
   const greenStrokeColor = "#52c41a";
+
+  let upgradeUsersAction: React.ReactNode[] = [];
+  let upgradeStorageAction: React.ReactNode[] = [];
+  if (
+    organization.pricingPlan === PricingPlanEnum.Free ||
+    organization.pricingPlan === PricingPlanEnum.Team ||
+    organization.pricingPlan === PricingPlanEnum.TeamTrial
+  ) {
+    upgradeUsersAction = [
+      <span
+        key="upgradeUsersAction"
+        onClick={
+          organization.pricingPlan === PricingPlanEnum.Free
+            ? UpgradePricingPlanModal.upgradePricingPlan
+            : UpgradePricingPlanModal.upgradeUserQuota
+        }
+      >
+        <PlusCircleOutlined /> Upgrade
+      </span>,
+    ];
+    upgradeStorageAction = [
+      <span
+        key="upgradeStorageAction"
+        onClick={
+          organization.pricingPlan === PricingPlanEnum.Free
+            ? UpgradePricingPlanModal.upgradePricingPlan
+            : UpgradePricingPlanModal.upgradeStorageQuota
+        }
+      >
+        <PlusCircleOutlined /> Upgrade
+      </span>,
+    ];
+  }
 
   return (
     <>
@@ -131,18 +166,12 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
       ) : null}
       <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
         <Col>
-          <Card
-            actions={[
-              <span onClick={UpgradePricingPlanModal.upgradeUserQuota}>
-                <PlusCircleOutlined /> Upgrade
-              </span>,
-            ]}
-          >
+          <Card actions={upgradeUsersAction}>
             <Row style={{ padding: 20 }}>
               <Progress
                 type="dashboard"
                 percent={usedUsersPercentage}
-                format={() => `${activeUsers}/${organization.includedUsers}`}
+                format={() => `${activeUsersCount}/${organization.includedUsers}`}
                 strokeColor={usedUsersPercentage > 100 ? redStrokeColor : greenStrokeColor}
                 status={usedUsersPercentage > 100 ? "exception" : "active"}
               />
@@ -151,13 +180,7 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
           </Card>
         </Col>
         <Col>
-          <Card
-            actions={[
-              <span onClick={UpgradePricingPlanModal.upgradeStorageQuota}>
-                <PlusCircleOutlined /> Upgrade
-              </span>,
-            ]}
-          >
+          <Card actions={upgradeStorageAction}>
             <Row style={{ padding: 20 }}>
               <Progress
                 type="dashboard"
@@ -173,7 +196,12 @@ export function PlanDashboardCard({ organization }: { organization: APIOrganizat
         <Col>
           <Card
             actions={[
-              <a href="https://webknossos.org/pricing" target={"_blank"}>
+              <a
+                href="https://webknossos.org/pricing"
+                target="_blank"
+                rel="noreferrer"
+                key="comparePlanAction"
+              >
                 <SafetyOutlined /> Compare Plans
               </a>,
             ]}

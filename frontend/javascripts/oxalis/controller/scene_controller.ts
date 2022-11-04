@@ -392,13 +392,11 @@ class SceneController {
     const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (state.tracing.volumes.length > 0) {
-      this.contour = new ContourGeometry();
-      this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
+    this.contour = new ContourGeometry();
+    this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 
-      this.quickSelectGeometry = new QuickSelectGeometry();
-      this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
-    }
+    this.quickSelectGeometry = new QuickSelectGeometry();
+    this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
 
     if (state.tracing.skeleton != null) {
       this.addSkeleton((_state) => getSkeletonTracing(_state.tracing), true);

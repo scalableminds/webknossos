@@ -63,6 +63,7 @@ import type {
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
   ShortLink,
+  APIOrganizationStorageInfo,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -1878,9 +1879,9 @@ export async function getOrganization(organizationName: string): Promise<APIOrga
   const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
   return Promise.resolve({
     ...organization,
-    includedStorage: organization.includedStorage ?? Number.MAX_SAFE_INTEGER,
-    includedUsers: organization.includedUsers ?? Number.MAX_SAFE_INTEGER
-  }); 
+    includedStorage: organization.includedStorage ?? Number.POSITIVE_INFINITY,
+    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+  });
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {
@@ -1931,6 +1932,14 @@ export async function isWorkflowAccessibleBySwitching(
   workflowHash: string,
 ): Promise<APIOrganization | null> {
   return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
+}
+
+export async function getOrganizationStorageSpace(
+  organizationName: string,
+): Promise<APIOrganizationStorageInfo> {
+  // TODO switch to a real API
+  const usedStorageMB = 900;
+  return Promise.resolve({ usedStorageSpace: usedStorageMB });
 }
 
 // ### BuildInfo webknossos

@@ -4,8 +4,10 @@ import {
   RocketOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
+import { getOrganizationStorageSpace } from "admin/admin_rest_api";
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
+import { useFetch } from "libs/react_helpers";
 import React from "react";
 import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
@@ -99,18 +101,32 @@ export function PlanDashboardCard({
   organization: APIOrganization;
   activeUsersCount: number;
 }) {
-  const usedStorageMB = 900;
+  const usedStorageSpace = useFetch(
+    () => getOrganizationStorageSpace(organization.name),
+    { usedStorageSpace: 0 },
+    [],
+  );
+  const usedStorageMB = usedStorageSpace.usedStorageSpace;
 
   const usedUsersPercentage = (activeUsersCount / organization.includedUsers) * 100;
   const usedStoragePercentage = (usedStorageMB / organization.includedStorage) * 100;
 
+  const maxUsersCountLabel =
+    organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
+
+  let includedStorageLabel =
+    organization.pricingPlan === PricingPlanEnum.Free
+      ? `${(organization.includedStorage / 1000).toFixed(1)}GB`
+      : `${(organization.includedStorage / 1000 ** 2).toFixed(1)}TB`;
+  includedStorageLabel =
+    organization.includedStorage === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
+
   const usedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Free
-      ? `${(usedStorageMB / 1000).toFixed(1)}/${(organization.includedStorage / 1000).toFixed(1)}GB`
-      : `${(usedStorageMB / 1000 ** 2).toFixed(1)}/${(
-          organization.includedStorage /
-          1000 ** 2
-        ).toFixed(1)}TB`;
+      ? `${(usedStorageMB / 1000).toFixed(1)}`
+      : `${(usedStorageMB / 1000 ** 2).toFixed(1)}`;
+
+  const storageLabel = `${usedStorageLabel}/${includedStorageLabel}`;
 
   const redStrokeColor = "#ff4d4f";
   const greenStrokeColor = "#52c41a";
@@ -174,7 +190,7 @@ export function PlanDashboardCard({
               <Progress
                 type="dashboard"
                 percent={usedUsersPercentage}
-                format={() => `${activeUsersCount}/${organization.includedUsers}`}
+                format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
                 strokeColor={usedUsersPercentage > 100 ? redStrokeColor : greenStrokeColor}
                 status={usedUsersPercentage > 100 ? "exception" : "active"}
               />
@@ -188,7 +204,7 @@ export function PlanDashboardCard({
               <Progress
                 type="dashboard"
                 percent={usedStoragePercentage}
-                format={() => usedStorageLabel}
+                format={() => storageLabel}
                 strokeColor={usedStoragePercentage > 100 ? redStrokeColor : greenStrokeColor}
                 status={usedStoragePercentage > 100 ? "exception" : "active"}
               />

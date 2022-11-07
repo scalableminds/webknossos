@@ -515,6 +515,10 @@ export type APIOrganization = {
   readonly includedUsers: number;
   readonly includedStorage: number; // megabytes
 };
+export type APIOrganizationStorageInfo = {
+  readonly usedStorageSpace: number;
+};
+
 export type APIBuildInfo = {
   webknossos: {
     name: string;

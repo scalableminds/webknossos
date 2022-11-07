@@ -1,4 +1,4 @@
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
 import { Menu, Dropdown, Spin } from "antd";
 import Toast from "libs/toast";
@@ -181,7 +181,7 @@ function generateNodeProps(
         New Folder
       </Menu.Item>
       <Menu.Item key="rename" data-group-id={id} onClick={renameFolder}>
-        <PlusOutlined />
+        <EditOutlined />
         Rename Folder
       </Menu.Item>
       <Menu.Item key="delete" data-group-id={id} onClick={deleteFolder}>

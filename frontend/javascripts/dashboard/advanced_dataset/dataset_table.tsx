@@ -1,6 +1,6 @@
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Table, Tag, Tooltip } from "antd";
+import { Dropdown, Menu, Table, Tag, Tooltip } from "antd";
 import type {
   FilterValue,
   SorterResult,
@@ -29,6 +29,8 @@ import * as Utils from "libs/utils";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import { DndProvider, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
+import Shortcut from "libs/shortcut_component";
 
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
@@ -55,7 +57,69 @@ type Props = {
 type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
+  contextMenuPosition: [number, number] | null | undefined;
 };
+
+type ContextMenuProps = {
+  contextMenuPosition: [number, number] | null | undefined;
+  hideContextMenu: () => void;
+};
+
+function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
+  const inputRef = React.useContext(ContextMenuContext);
+  const { ...props } = propsWithInputRef;
+  const { contextMenuPosition, hideContextMenu } = props;
+  let overlay = <div />;
+
+  if (contextMenuPosition != null) {
+    overlay = (
+      <Menu
+        onClick={hideContextMenu}
+        style={{
+          borderRadius: 6,
+        }}
+        mode="vertical"
+      >
+        <Menu.Item key="set-node-active" onClick={() => {}}>
+          Click me
+        </Menu.Item>
+      </Menu>
+    );
+  }
+
+  if (inputRef == null || inputRef.current == null) return null;
+  const refContent = inputRef.current;
+
+  return (
+    <React.Fragment>
+      <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+      <Dropdown
+        overlay={overlay}
+        overlayClassName="dropdown-overlay-container-for-context-menu"
+        visible={contextMenuPosition != null}
+        getPopupContainer={() => refContent}
+        // @ts-ignore
+        destroyPopupOnHide
+      >
+        <div />
+      </Dropdown>
+    </React.Fragment>
+  );
+}
+
+function ContextMenuContainer(props: ContextMenuProps) {
+  return (
+    /* Sticky positioning doesn't work for this container for some reason.
+     * The y position is always off by a certain amount.
+     * Maybe because the container doesn't cover the entire screen?
+     * Use absolute positioning for now. This forgoes the "stay-in-container"
+     * behavior, but that's not critical for the context menu right now.
+     */
+    <GenericContextMenuContainer positionAbsolute {...props}>
+      <ContextMenuInner {...props} />
+    </GenericContextMenuContainer>
+  );
+}
 
 // Adapted from https://ant.design/components/table/
 // (needed adaption to react-dnd 11.1.3). Updating react-dnd
@@ -98,6 +162,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       order: "descend",
     },
     prevSearchQuery: "",
+    contextMenuPosition: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
@@ -187,6 +252,20 @@ class DatasetTable extends React.PureComponent<Props, State> {
     );
   }
 
+  showContextMenuAt = (xPos: number, yPos: number) => {
+    // On Windows the right click to open the context menu is also triggered for the overlay
+    // of the context menu. This causes the context menu to instantly close after opening.
+    // Therefore delay the state update to delay that the context menu is rendered.
+    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    setTimeout(
+      () =>
+        this.setState({
+          contextMenuPosition: [xPos, yPos],
+        }),
+      0,
+    );
+  };
+
   render() {
     const filteredDataSource = this.getFilteredDatasets();
     const { sortedInfo } = this.state;
@@ -246,6 +325,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
     return (
       <DndProvider backend={HTML5Backend}>
+        <ContextMenuContainer
+          hideContextMenu={() => {
+            this.setState({ contextMenuPosition: null });
+          }}
+          contextMenuPosition={this.state.contextMenuPosition}
+        />
         <FixedExpandableTable
           dataSource={sortedDataSource}
           rowKey="name"
@@ -267,6 +352,23 @@ class DatasetTable extends React.PureComponent<Props, State> {
                     this.props.onSelectDataset(record);
                   }
                 }
+              },
+              onContextMenu: (event) => {
+                event.preventDefault();
+
+                const parents = document.getElementsByClassName("node-context-menu-overlay");
+                if (parents.length === 0) {
+                  return;
+                }
+                const parent = parents[0].parentElement;
+                if (parent == null) {
+                  return;
+                }
+                const bounds = parent.getBoundingClientRect();
+                const x = event.clientX - bounds.left;
+                const y = event.clientY - bounds.top;
+
+                this.showContextMenuAt(x, y);
               },
               onDoubleClick: (event) => {
                 console.log("todo: open dataset");

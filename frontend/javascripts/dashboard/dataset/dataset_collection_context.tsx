@@ -7,7 +7,6 @@ import type {
   Folder,
 } from "types/api_flow_types";
 import { getDatasets, getDataset, updateDataset } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {

@@ -69,8 +69,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           -- is descendant of user organization folder and user is admin or dataset manager
           ${prefix}_id IN (
             SELECT fp._descendant
-            FROM webknossos.folder_paths
-            WHERE _ancestor IN (
+            FROM webknossos.folder_paths fp
+            WHERE fp._ancestor IN (
                SELECT o._rootFolder
                FROM webknossos.organizations_ o
                JOIN webknossos.users_ u ON u._organization = o._id
@@ -86,12 +86,12 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           -- is descendant of a folder with allowed teams the user is in
           ${prefix}_id IN (
             SELECT fp._descendant
-            FROM webknossos.folder_paths
-            WHERE _ancestor IN (
+            FROM webknossos.folder_paths fp
+            WHERE fp._ancestor IN (
               SELECT at._folder
               FROM webknossos.folder_allowedTeams at
               JOIN webknossos.user_team_roles tr ON at._team = tr._team
-              WHERE tr._user = $requestingUserId
+              WHERE tr._user = '$requestingUserId'
             )
           )
         )
@@ -103,8 +103,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         -- is descendant of user organization folder and user is admin or dataset manager
         _id IN (
           SELECT fp._descendant
-          FROM webknossos.folder_paths
-          WHERE _ancestor IN (
+          FROM webknossos.folder_paths fp
+          WHERE fp._ancestor IN (
              SELECT o._rootFolder
              FROM webknossos.organizations_ o
              JOIN webknossos.users_ u ON u._organization = o._id
@@ -120,12 +120,12 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         -- is descendant of a folder with allowed teams the user is TEAM MANAGER of
         _id IN (
           SELECT fp._descendant
-          FROM webknossos.folder_paths
-          WHERE _ancestor IN (
+          FROM webknossos.folder_paths fp
+          WHERE fp._ancestor IN (
             SELECT at._folder
             FROM webknossos.folder_allowedTeams at
             JOIN webknossos.user_team_roles tr ON at._team = tr._team
-            WHERE tr._user = $requestingUserId
+            WHERE tr._user = '$requestingUserId'
             AND tr.isTeamManager
           )
         )

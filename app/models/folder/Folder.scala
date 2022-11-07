@@ -85,6 +85,29 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(rows, "id")
     } yield parsed
 
+  def findParentId(folderId: ObjectId): Fox[ObjectId] =
+    for {
+      rows <- run(sql"""SELECT _ancestor
+                        FROM webknossos.folder_paths
+                        WHERE _descendant = $folderId
+                        AND depth = 1
+                        """.as[ObjectId])
+      parsed <- rows.headOption
+    } yield parsed
+
+  def nameExistsInLevel(name: String, parentFolderId: ObjectId): Fox[Boolean] =
+    for {
+      rows <- run(sql"""SELECT EXISTS(
+                SELECT 1 FROM
+                webknossos.folders_ f
+                JOIN webknossos.folder_paths fp ON fp._descendant = f._id
+                WHERE f.name = $name
+                AND fp._ancestor = $parentFolderId
+                AND fp.depth = 1
+              )""".as[Boolean])
+      result <- rows.headOption
+    } yield result
+
   def countChildren(folderId: ObjectId): Fox[Int] =
     for {
       rows <- run(sql"SELECT COUNT(*) FROM webknossos.folder_paths WHERE _ancestor = $folderId".as[Int])

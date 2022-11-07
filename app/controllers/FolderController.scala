@@ -1,7 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.DataSetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
@@ -46,6 +46,8 @@ class FolderController @Inject()(
       for {
         idValidated <- ObjectId.fromString(id)
         organization <- organizationDAO.findOne(request.identity._organization)
+        _ <- Fox.runIf(organization._rootFolder != idValidated)(
+          assertUniqueNameInItsLevel(request.body.name, idValidated))
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         _ <- folderDAO.updateName(idValidated, request.body.name)
         updated <- folderDAO.findOne(idValidated)
@@ -53,13 +55,22 @@ class FolderController @Inject()(
       } yield Ok(folderJson)
   }
 
+  private def assertUniqueNameInItsLevel(newName: String, folderId: ObjectId): Fox[Unit] =
+    for {
+      parentId <- folderDAO.findParentId(folderId) ?~> "folder.notFound"
+      _ <- Fox.assertFalse(folderDAO.nameExistsInLevel(newName, parentId)) ?~> "folder.name.notUniqueInFolder"
+    } yield ()
+
   def move(id: String, newParentId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.fromString(id)
       newParentIdValidated <- ObjectId.fromString(newParentId)
       organization <- organizationDAO.findOne(request.identity._organization)
-      _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+      _ <- bool2Fox(organization._rootFolder != idValidated) ?~> "folder.move.root"
+      folderToMove <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
       _ <- folderDAO.findOne(newParentIdValidated) ?~> "folder.notFound"
+      _ <- Fox
+        .assertFalse(folderDAO.nameExistsInLevel(folderToMove.name, newParentIdValidated)) ?~> "folder.name.notUniqueInFolder"
       _ <- folderDAO.moveSubtree(idValidated, newParentIdValidated)
       updated <- folderDAO.findOne(idValidated)
       folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
@@ -107,9 +118,10 @@ class FolderController @Inject()(
 
   def create(parentId: String, name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      parentFolderIdValidated <- ObjectId.fromString(parentId)
+      parentIdValidated <- ObjectId.fromString(parentId)
+      _ <- Fox.assertFalse(folderDAO.nameExistsInLevel(name, parentIdValidated)) ?~> "folder.name.notUniqueInFolder"
       newFolder = Folder(ObjectId.generate, name)
-      _ <- folderDAO.insertAsChild(parentFolderIdValidated, newFolder)
+      _ <- folderDAO.insertAsChild(parentIdValidated, newFolder)
       organization <- organizationDAO.findOne(request.identity._organization)
       folderJson <- folderService.publicWrites(newFolder, Some(request.identity), Some(organization))
     } yield Ok(folderJson)

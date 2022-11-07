@@ -14,8 +14,7 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { Link, RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -28,7 +27,6 @@ import RegistrationForm from "admin/auth/registration_form";
 import CreditsFooter from "components/credits_footer";
 import Toast from "libs/toast";
 import features from "features";
-import { ConsoleMessage } from "puppeteer";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -239,8 +237,10 @@ export class InviteUsersModal extends React.Component<
   };
 
   extractEmailAddresses(): string[] {
-    const lines = this.state.inviteesString.split(/[,\s]+/).map((a) => a.trim());
-    return lines.filter((lines) => lines.includes("@"));
+    return this.state.inviteesString
+      .split(/[,\s]+/)
+      .map((a) => a.trim())
+      .filter((lines) => lines.includes("@"));
   }
 
   sendInvite = async () => {

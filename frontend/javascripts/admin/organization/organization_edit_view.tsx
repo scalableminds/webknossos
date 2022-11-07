@@ -181,7 +181,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         <Card
           title="Settings"
           style={{ marginBottom: 20 }}
-          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+          headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
         >
           <Form
             onFinish={this.onFinish}
@@ -262,7 +262,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         <Card
           title="Danger Zone"
           style={{ marginBottom: 20 }}
-          headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+          headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
         >
           <Row>
             <Col span={18}>

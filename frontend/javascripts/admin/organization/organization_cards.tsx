@@ -42,7 +42,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
           "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/background_neuron_meshes.webp) 53.75% 15.25% / cover no-repeat",
         color: "white",
       }}
-      headStyle={{ backgroundColor: "rgb(245, 245, 245" }}
+      headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
     >
       <Row gutter={24}>
         <Col span={18}>

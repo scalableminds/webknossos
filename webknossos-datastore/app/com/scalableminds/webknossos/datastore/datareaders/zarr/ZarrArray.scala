@@ -41,7 +41,11 @@ object ZarrArray extends LazyLogging {
 
 }
 
-class ZarrArray(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder, channelIndex: Option[Int])
+class ZarrArray(relativePath: DatasetPath,
+                store: FileSystemStore,
+                header: DatasetHeader,
+                axisOrder: AxisOrder,
+                channelIndex: Option[Int])
     extends DatasetArray(relativePath, store, header, axisOrder)
     with LazyLogging {
 

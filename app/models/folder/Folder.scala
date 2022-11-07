@@ -63,12 +63,12 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   override def readAccessQ(requestingUserId: ObjectId): String =
     """
-      --is descendant of user organization folder and user is admin or dataset manager
-      true
-      or
-      --is descendant of a folder with allowed teams the user is in
-      true
-      """
+        --is descendant of user organization folder and user is admin or dataset manager
+        true
+        or
+        --is descendant of a folder with allowed teams the user is in
+        true
+        """
 
   def insertAsRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =

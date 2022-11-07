@@ -1,11 +1,13 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.DataSetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
-import models.organization.OrganizationDAO
-import models.team.{TeamDAO, TeamService}
+import models.organization.{Organization, OrganizationDAO}
+import models.team.{TeamDAO, TeamMembership, TeamService}
+import models.user.{User, UserService}
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -18,6 +20,7 @@ class FolderController @Inject()(
     folderDAO: FolderDAO,
     folderService: FolderService,
     teamDAO: TeamDAO,
+    userService: UserService,
     teamService: TeamService,
     dataSetDAO: DataSetDAO,
     organizationDAO: OrganizationDAO,
@@ -127,5 +130,20 @@ class FolderController @Inject()(
       folderJson <- folderService.publicWrites(newFolder, Some(request.identity), Some(organization))
     } yield Ok(folderJson)
   }
+
+  def assertReadAccess(folderId: ObjectId, userOrganizationOpt: Option[Organization])(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    (ctx.data match {
+      case Some(user: User) =>
+        for {
+          userOrganization <- Fox.fillOption(userOrganizationOpt)(organizationDAO.findOne(user._organization))
+          isMatchingAdminOrDatasetManager = userOrganization._rootFolder == folderId && (user.isAdmin || user.isDatasetManager)
+          folderAllowedTeamIds <- teamService.allowedTeamIdsForFolder(folderId, cumulative = true)
+          userTeamMemberships: Seq[TeamMembership] <- userService.teamMembershipsFor(user._id)
+          isMatchingTeamMember = userTeamMemberships.map(_.teamId).intersect(folderAllowedTeamIds).nonEmpty
+          _ <- bool2Fox(isMatchingAdminOrDatasetManager || isMatchingTeamMember)
+        } yield ()
+      case None => Fox.failure("notAuthorized")
+    }) ~> FORBIDDEN
 
 }

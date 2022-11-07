@@ -123,11 +123,11 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""isPublic
-        or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
+        or _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin)
         or _id in (select _dataSet
-          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))
-        or ('${requestingUserId.id}' in (select _id from webknossos.users where isDatasetManager and _id = '${requestingUserId.id}')
-            and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"""
+          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '$requestingUserId') ut on dt._team = ut._team))
+        or ('$requestingUserId' in (select _id from webknossos.users where isDatasetManager and _id = '$requestingUserId')
+            and _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId'))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {

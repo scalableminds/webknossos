@@ -26,7 +26,6 @@ import type {
   MutableAPIDataSource,
   APIDatasetId,
   APIMessage,
-  APIMaybeUnimportedDataset,
   APIUnimportedDatasource,
 } from "types/api_flow_types";
 import { Unicode, Vector3 } from "oxalis/constants";

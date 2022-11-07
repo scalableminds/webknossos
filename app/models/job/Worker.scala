@@ -1,15 +1,13 @@
 package models.job
 
 import akka.actor.ActorSystem
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.DataStoreDAO
-
-import javax.inject.Inject
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
@@ -17,6 +15,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -82,12 +81,6 @@ class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDA
       "lastHeartBeat" -> worker.lastHeartBeat,
       "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)
     )
-
-  def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- dataStoreDAO.findOneByName(dataStoreName)
-      _ <- workerDAO.findOneByDataStore(dataStoreName) ?~> "jobs.noWorkerForDatastore"
-    } yield ()
 
 }
 

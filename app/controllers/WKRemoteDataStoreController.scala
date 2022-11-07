@@ -45,7 +45,7 @@ class WKRemoteDataStoreController @Inject()(
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def validateDataSetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
+  def reserveDataSetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         val uploadInfo = request.body

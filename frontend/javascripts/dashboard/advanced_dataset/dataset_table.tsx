@@ -22,7 +22,9 @@ import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accesso
 import { stringToColor, formatScale } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
-import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
+import DatasetActionView, {
+  getDatasetActionMenu,
+} from "dashboard/advanced_dataset/dataset_action_view";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
@@ -47,7 +49,7 @@ type Props = {
   isUserAdmin: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (arg0: APIDatasetId, arg1: Array<APIMaybeUnimportedDataset>) => Promise<void>;
+  reloadDataset: (arg0: APIDatasetId, arg1?: Array<APIMaybeUnimportedDataset>) => Promise<void>;
   updateDataset: (arg0: APIDataset) => Promise<void>;
   addTagToSearch: (tag: string) => void;
   onSelectDataset?: (dataset: APIDataset | null) => void;
@@ -58,33 +60,30 @@ type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
   contextMenuPosition: [number, number] | null | undefined;
+  datasetForContextMenu: APIMaybeUnimportedDataset | null;
 };
 
 type ContextMenuProps = {
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
+  dataset: APIMaybeUnimportedDataset | null;
+  reloadDataset: Props["reloadDataset"];
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
-  const { ...props } = propsWithInputRef;
+  const { dataset, reloadDataset, ...props } = propsWithInputRef;
   const { contextMenuPosition, hideContextMenu } = props;
   let overlay = <div />;
 
-  if (contextMenuPosition != null) {
-    overlay = (
-      <Menu
-        onClick={hideContextMenu}
-        style={{
-          borderRadius: 6,
-        }}
-        mode="vertical"
-      >
-        <Menu.Item key="set-node-active" onClick={() => {}}>
-          Click me
-        </Menu.Item>
-      </Menu>
-    );
+  if (contextMenuPosition != null && dataset != null) {
+    // getDatasetActionMenu should not be turned into <DatasetActionMenu />
+    // as this breaks antd's styling of the menu within the dropdown.
+    overlay = getDatasetActionMenu({
+      hideContextMenu,
+      dataset: dataset,
+      reloadDataset,
+    });
   }
 
   if (inputRef == null || inputRef.current == null) return null;
@@ -163,6 +162,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     },
     prevSearchQuery: "",
     contextMenuPosition: null,
+    datasetForContextMenu: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
@@ -329,6 +329,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
           hideContextMenu={() => {
             this.setState({ contextMenuPosition: null });
           }}
+          dataset={this.state.datasetForContextMenu}
+          reloadDataset={this.props.reloadDataset}
           contextMenuPosition={this.state.contextMenuPosition}
         />
         <FixedExpandableTable
@@ -369,6 +371,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 const y = event.clientY - bounds.top;
 
                 this.showContextMenuAt(x, y);
+                this.setState({ datasetForContextMenu: record });
               },
               onDoubleClick: (event) => {
                 console.log("todo: open dataset");

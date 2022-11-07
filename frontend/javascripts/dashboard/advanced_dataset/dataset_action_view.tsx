@@ -42,8 +42,6 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal: () => void;
   onCloseCreateExplorativeModal: () => void;
 }) {
-  if (isReloading) return null;
-
   const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
   const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
     ? "true"
@@ -57,11 +55,9 @@ function NewAnnotationLink({
     <div>
       <LinkWithDisabled
         to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
-        style={
-          {
-            display: "inline-block",
-          } as React.CSSProperties
-        }
+        style={{
+          display: "inline-block",
+        }}
         title="New Annotation (Skeleton + Volume)"
         disabled={isReloading}
       >
@@ -80,7 +76,7 @@ function NewAnnotationLink({
       <a
         title="New Annotation With Custom Properties"
         className="ant-dropdown-link"
-        onClick={() => onShowCreateExplorativeModal()}
+        onClick={() => !isReloading && onShowCreateExplorativeModal()}
       >
         <EllipsisOutlined
           style={{

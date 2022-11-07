@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When downloading volume annotations with volume data skipped, the nml volume tag is now included anyway (but has no location attribute in this case). [#6566](https://github.com/scalableminds/webknossos/pull/6566)
 
 ### Fixed
+- Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 
 ### Removed
 

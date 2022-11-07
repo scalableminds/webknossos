@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete } from "antd";
+import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete, Alert } from "antd";
 import {
   CloudUploadOutlined,
   TeamOutlined,
@@ -12,8 +12,9 @@ import {
   CodeOutlined,
   CustomerServiceOutlined,
   PlusOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
+import { Link, RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
@@ -27,6 +28,7 @@ import RegistrationForm from "admin/auth/registration_form";
 import CreditsFooter from "components/credits_footer";
 import Toast from "libs/toast";
 import features from "features";
+import { ConsoleMessage } from "puppeteer";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -222,22 +224,35 @@ export class InviteUsersModal extends React.Component<
     visible?: boolean;
     handleVisibleChange?: (...args: Array<any>) => any;
     destroy?: (...args: Array<any>) => any;
+    currentUserCount: number;
+    maxUserCountPerOrganization: number;
   },
   InviteUsersModalState
 > {
   state: InviteUsersModalState = {
     inviteesString: "",
   };
-  sendInvite = async () => {
-    const addresses = this.state.inviteesString.split(/[,\s]+/).map((a) => a.trim());
-    const incorrectAddresses = addresses.filter((address) => !address.includes("@"));
 
-    if (incorrectAddresses.length > 0) {
-      Toast.error(
-        `Couldn't recognize this email address: ${incorrectAddresses[0]}. No emails were sent.`,
-      );
-      return;
-    }
+  static defaultProps = {
+    currentUserCount: 1,
+    maxUserCountPerOrganization: 3, // default for Free Plan
+  };
+
+  extractEmailAddresses(): string[] {
+    const lines = this.state.inviteesString.split(/[,\s]+/).map((a) => a.trim());
+    return lines.filter((lines) => lines.includes("@"));
+  }
+
+  sendInvite = async () => {
+    const addresses = this.extractEmailAddresses();
+    // const incorrectAddresses = addresses.filter((address) => !address.includes("@"));
+
+    // if (incorrectAddresses.length > 0) {
+    //   Toast.error(
+    //     `Couldn't recognize this email address: ${incorrectAddresses[0]}. No emails were sent.`,
+    //   );
+    //   return;
+    // }
 
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
@@ -248,11 +263,23 @@ export class InviteUsersModal extends React.Component<
     if (this.props.destroy != null) this.props.destroy();
   };
 
-  getContent() {
+  getContent(isInvitesDisabled: boolean) {
     return (
       <React.Fragment>
-        Send email invites to the following email addresses. Multiple addresses should be separated
-        with a comma, a space or a new line:
+        <p>
+          Send an email to invite your colleagues and collaboration partners to your organization.
+          Share dataset, collaboratively work on annotations, and organize complex analysis
+          projects.
+        </p>
+        <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>
+        {isInvitesDisabled ? (
+          <Alert
+            showIcon
+            type="warning"
+            description="Inviting more users will exceed your organization's user limit. Consider upgrading your webKnossos plan."
+            style={{ marginBottom: 10 }}
+          />
+        ) : null}
         <Input.TextArea
           spellCheck={false}
           autoSize={{
@@ -271,13 +298,21 @@ export class InviteUsersModal extends React.Component<
   }
 
   render() {
+    const isInvitesDisabled =
+      this.props.currentUserCount + this.extractEmailAddresses().length >=
+      this.props.maxUserCountPerOrganization;
+
     return (
       <Modal
         visible={this.props.visible == null ? true : this.props.visible}
-        title="Invite Users"
+        title={
+          <>
+            <UserAddOutlined /> Invite Users
+          </>
+        }
         width={600}
         footer={
-          <Button onClick={this.sendInvite} type="primary">
+          <Button onClick={this.sendInvite} type="primary" disabled={isInvitesDisabled}>
             Send Invite Emails
           </Button>
         }
@@ -286,7 +321,7 @@ export class InviteUsersModal extends React.Component<
           if (this.props.destroy != null) this.props.destroy();
         }}
       >
-        {this.getContent()}
+        {this.getContent(isInvitesDisabled)}
       </Modal>
     );
   }
@@ -563,7 +598,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
               })
             }
           >
-            Invite users
+            Invite users to work collaboratively
           </LinkButton>{" "}
           <InviteUsersModal
             visible={this.state.isInviteModalVisible}

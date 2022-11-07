@@ -17,7 +17,12 @@ import SortableTree, {
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
 import { APIDataset, APIUser, Folder, FlatFolderTreeItem } from "types/api_flow_types";
-import { DraggableType, TeamTags } from "./advanced_dataset/dataset_table";
+import {
+  DatasetLayerTags,
+  DatasetTags,
+  DraggableType,
+  TeamTags,
+} from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
   DatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
@@ -55,6 +60,7 @@ function DatasetFolderViewInner(props: Props) {
             onSelectDataset={setSelectedDataset}
             selectedDataset={selectedDataset}
             context={context}
+            hideDetailsColumns
           />
         </Spin>
       </main>
@@ -66,6 +72,8 @@ function DatasetFolderViewInner(props: Props) {
 }
 
 function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDataset | null }) {
+  const context = useContext(DatasetCollectionContext);
+
   // allowedTeams: Array<APITeam>;
   // created: number;
   // description: string | null | undefined;
@@ -96,6 +104,14 @@ function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDatase
           </div>
           Access Permissions:
           <TeamTags dataset={selectedDataset} />
+          Layers:
+          <DatasetLayerTags dataset={selectedDataset} />
+          {selectedDataset.isActive ? (
+            <>
+              Tags:
+              <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+            </>
+          ) : null}
         </>
       ) : (
         "No dataset selected"

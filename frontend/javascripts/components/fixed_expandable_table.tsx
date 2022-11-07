@@ -1,7 +1,7 @@
 import { Table, TableProps } from "antd";
 import * as React from "react";
 type Props<RecordType extends object = any> = TableProps<RecordType> & {
-  children: Array<React.ReactElement<typeof Table.Column>>;
+  children: Array<React.ReactElement<typeof Table.Column> | null>;
 };
 
 type State = {
@@ -24,14 +24,17 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
     // Don't use React.Children.map here, since this adds .$ prefixes
     // to the keys. However, the keys are needed when managing the sorters
     // of the table.
-    const columnsWithAdjustedFixedProp = children.map((child) => {
-      // @ts-ignore
-      const columnFixed: boolean = expandedColumns.length > 0 ? false : child.props.fixed;
-      return React.cloneElement(child, {
+    const columnsWithAdjustedFixedProp = children
+      .filter((el) => el)
+      // @ts-ignore The previous filter removes null
+      .map((child: React.ReactElement<typeof Table.Column>) => {
         // @ts-ignore
-        fixed: columnFixed,
+        const columnFixed: boolean = expandedColumns.length > 0 ? false : child.props.fixed;
+        return React.cloneElement(child, {
+          // @ts-ignore
+          fixed: columnFixed,
+        });
       });
-    });
     return (
       <Table
         {...restProps}

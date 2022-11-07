@@ -34,6 +34,7 @@ type Props = {
   context?: DatasetCollectionContext;
   onSelectDataset?: (dataset: APIDataset | null) => void;
   selectedDataset?: APIDataset | null | undefined;
+  hideDetailsColumns: boolean;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -145,6 +146,7 @@ function DatasetView(props: Props) {
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
+        hideDetailsColumns={props.hideDetailsColumns}
       />
     );
   }

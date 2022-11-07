@@ -50,6 +50,7 @@ type Props = {
   addTagToSearch: (tag: string) => void;
   onSelectDataset?: (dataset: APIDataset | null) => void;
   selectedDataset?: APIDataset | null | undefined;
+  hideDetailsColumns?: boolean;
 };
 type State = {
   prevSearchQuery: string;
@@ -167,43 +168,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
     return filterByQuery(filteredByTags(filterByMode(filterByHasLayers(this.props.datasets))));
   }
-
-  editTagFromDataset = (
-    dataset: APIMaybeUnimportedDataset,
-    shouldAddTag: boolean,
-    tag: string,
-    event: React.SyntheticEvent,
-  ): void => {
-    event.stopPropagation(); // prevent the onClick event
-
-    if (!dataset.isActive) {
-      console.error(`Tags can only be added to active datasets. ${dataset.name} is not active.`);
-      return;
-    }
-
-    let updatedDataset = dataset;
-
-    if (shouldAddTag) {
-      if (!dataset.tags.includes(tag)) {
-        updatedDataset = update(dataset, {
-          tags: {
-            $push: [tag],
-          },
-        });
-      }
-    } else {
-      const newTags = _.without(dataset.tags, tag);
-
-      updatedDataset = update(dataset, {
-        tags: {
-          $set: newTags,
-        },
-      });
-    }
-
-    trackAction("Edit dataset tag");
-    this.props.updateDataset(updatedDataset);
-  };
 
   renderEmptyText() {
     const maybeWarning =
@@ -342,23 +306,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
             render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
               dataset.isActive ? (
-                <div style={{ maxWidth: 280 }}>
-                  {tags.map((tag) => (
-                    <CategorizationLabel
-                      tag={tag}
-                      key={tag}
-                      kind="datasets"
-                      onClick={_.partial(this.props.addTagToSearch, tag)}
-                      /* @ts-ignore */
-                      onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
-                      closable
-                    />
-                  ))}
-                  <EditableTextIcon
-                    icon={<PlusOutlined />}
-                    onChange={_.partial(this.editTagFromDataset, dataset, true)}
-                  />
-                </div>
+                <DatasetTags
+                  dataset={dataset}
+                  onClickTag={this.props.addTagToSearch}
+                  updateDataset={this.props.updateDataset}
+                />
               ) : (
                 <Tooltip title="No tags available for inactive datasets">
                   <WarningOutlined
@@ -370,17 +322,19 @@ class DatasetTable extends React.PureComponent<Props, State> {
               )
             }
           />
-          <Column
-            title="Voxel Size & Extent"
-            dataIndex="scale"
-            key="scale"
-            width={230}
-            render={(__, dataset: APIMaybeUnimportedDataset) =>
-              `${
-                dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
-              }  ${getDatasetExtentAsString(dataset)}`
-            }
-          />
+          {!this.props.hideDetailsColumns ? (
+            <Column
+              title="Voxel Size & Extent"
+              dataIndex="scale"
+              key="scale"
+              width={230}
+              render={(__, dataset: APIMaybeUnimportedDataset) =>
+                `${
+                  dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
+                }  ${getDatasetExtentAsString(dataset)}`
+              }
+            />
+          ) : null}
           <Column
             width={180}
             title="Creation Date"
@@ -391,63 +345,142 @@ class DatasetTable extends React.PureComponent<Props, State> {
             render={(created) => <FormattedDate timestamp={created} />}
           />
 
-          <Column
-            title="Access Permissions"
-            dataIndex="allowedTeams"
-            key="allowedTeams"
-            filters={accessPermissionFilters}
-            onFilter={(value, dataset) => {
-              if (value === PUBLIC_SYMBOL) {
-                return dataset.isPublic;
+          {!this.props.hideDetailsColumns ? (
+            <Column
+              title="Access Permissions"
+              dataIndex="allowedTeams"
+              key="allowedTeams"
+              filters={accessPermissionFilters}
+              onFilter={(value, dataset) => {
+                if (value === PUBLIC_SYMBOL) {
+                  return dataset.isPublic;
+                }
+                return dataset.allowedTeams.some((team) => team.name === value);
+              }}
+              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
+                return <TeamTags dataset={dataset} />;
+              }}
+            />
+          ) : null}
+          {!this.props.hideDetailsColumns ? (
+            <Column
+              title="Data Layers"
+              key="dataLayers"
+              dataIndex="dataSource.dataLayers"
+              filters={dataLayersFilter}
+              onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
+                "dataLayers" in dataset.dataSource
+                  ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
+                  : false
               }
-              return dataset.allowedTeams.some((team) => team.name === value);
-            }}
-            render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
-              return <TeamTags dataset={dataset} />;
-            }}
-          />
-          <Column
-            title="Data Layers"
-            key="dataLayers"
-            dataIndex="dataSource.dataLayers"
-            filters={dataLayersFilter}
-            onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
-              "dataLayers" in dataset.dataSource
-                ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
-                : false
-            }
-            render={(__, dataset: APIMaybeUnimportedDataset) => (
-              <div style={{ maxWidth: 250 }}>
-                {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
-                  <Tag
-                    key={layer.name}
-                    style={{
-                      maxWidth: 250,
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {layer.name} - {layer.elementClass}
-                  </Tag>
-                ))}
-              </div>
-            )}
-          />
+              render={(__, dataset: APIMaybeUnimportedDataset) => (
+                <DatasetLayerTags dataset={dataset} />
+              )}
+            />
+          ) : null}
 
-          <Column
-            width={200}
-            title="Actions"
-            key="actions"
-            fixed="right"
-            render={(__, dataset: APIMaybeUnimportedDataset) => (
-              <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
-            )}
-          />
+          {!this.props.hideDetailsColumns ? (
+            <Column
+              width={200}
+              title="Actions"
+              key="actions"
+              fixed="right"
+              render={(__, dataset: APIMaybeUnimportedDataset) => (
+                <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
+              )}
+            />
+          ) : null}
         </FixedExpandableTable>
       </DndProvider>
     );
   }
+}
+
+export function DatasetTags({
+  dataset,
+  onClickTag,
+  updateDataset,
+}: {
+  dataset: APIDataset;
+  onClickTag?: (t: string) => void;
+  updateDataset: (d: APIDataset) => void;
+}) {
+  const editTagFromDataset = (
+    dataset: APIMaybeUnimportedDataset,
+    shouldAddTag: boolean,
+    tag: string,
+    event: React.SyntheticEvent,
+  ): void => {
+    event.stopPropagation(); // prevent the onClick event
+
+    if (!dataset.isActive) {
+      console.error(`Tags can only be added to active datasets. ${dataset.name} is not active.`);
+      return;
+    }
+
+    let updatedDataset = dataset;
+
+    if (shouldAddTag) {
+      if (!dataset.tags.includes(tag)) {
+        updatedDataset = update(dataset, {
+          tags: {
+            $push: [tag],
+          },
+        });
+      }
+    } else {
+      const newTags = _.without(dataset.tags, tag);
+
+      updatedDataset = update(dataset, {
+        tags: {
+          $set: newTags,
+        },
+      });
+    }
+
+    trackAction("Edit dataset tag");
+    updateDataset(updatedDataset);
+  };
+
+  return (
+    <div style={{ maxWidth: 280 }}>
+      {dataset.tags.map((tag) => (
+        <CategorizationLabel
+          tag={tag}
+          key={tag}
+          kind="datasets"
+          onClick={_.partial(onClickTag || _.noop, tag)}
+          /* @ts-ignore */
+          onClose={_.partial(editTagFromDataset, dataset, false, tag)}
+          closable
+        />
+      ))}
+      <EditableTextIcon
+        icon={<PlusOutlined />}
+        onChange={_.partial(editTagFromDataset, dataset, true)}
+      />
+    </div>
+  );
+}
+
+export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {
+  return (
+    <div style={{ maxWidth: 250 }}>
+      {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
+        <Tag
+          key={layer.name}
+          style={{
+            maxWidth: 250,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {layer.name} - {layer.elementClass}
+        </Tag>
+      ))}
+    </div>
+  );
 }
 
 export function TeamTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {

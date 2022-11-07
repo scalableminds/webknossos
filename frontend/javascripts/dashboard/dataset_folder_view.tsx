@@ -49,8 +49,20 @@ function DatasetFolderViewInner(props: Props) {
   console.log("context.datasets", context.datasets);
 
   return (
-    <div style={{ display: "grid", gridTemplate: "auto 1fr auto / auto 1fr auto" }}>
-      <div style={{ gridColumn: "1 / 2", overflow: "auto" }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplate: "auto 1fr auto / auto 1fr auto",
+      }}
+    >
+      <div
+        style={{
+          gridColumn: "1 / 2",
+          overflow: "auto",
+          borderRight: "1px solid var(--ant-border-base)",
+          marginRight: 4,
+        }}
+      >
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
@@ -64,7 +76,14 @@ function DatasetFolderViewInner(props: Props) {
           />
         </Spin>
       </main>
-      <div style={{ gridColumn: "3 / 4", overflow: "auto" }}>
+      <div
+        style={{
+          gridColumn: "3 / 4",
+          overflow: "auto",
+          borderLeft: "1px solid var(--ant-border-base)",
+          marginLeft: 4,
+        }}
+      >
         <DatasetDetailsSidebar selectedDataset={selectedDataset} />
       </div>
     </div>

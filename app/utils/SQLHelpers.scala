@@ -184,7 +184,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
         resultList <- run(
           sql"select _id from #$existingCollectionName where _id = ${id.id} and #${updateAccessQ(userId)}"
             .as[String]) ?~> "Failed to check write access. Does the object exist?"
-        _ <- resultList.headOption.toFox ?~> "Access denied."
+        _ <- resultList.headOption.toFox ?~> "No update access."
       } yield ()
     }
 
@@ -196,7 +196,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
         resultList <- run(
           sql"select _id from #$existingCollectionName where _id = ${id.id} and #${deleteAccessQ(userId)}"
             .as[String]) ?~> "Failed to check delete access. Does the object exist?"
-        _ <- resultList.headOption.toFox ?~> "Access denied."
+        _ <- resultList.headOption.toFox ?~> "No delete access."
       } yield ()
     }
 
@@ -208,14 +208,15 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       case _ => Fox.failure("Access denied.")
     }
 
-  def accessQueryFromAccessQ(accessQ: ObjectId => String)(implicit ctx: DBAccessContext): Fox[String] =
+  def accessQueryFromAccessQ(accessQ: (ObjectId, String) => String, prefix: String = "")(
+      implicit ctx: DBAccessContext): Fox[String] =
     if (ctx.globalAccess) Fox.successful("true")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
       } yield {
         userIdBox match {
-          case Full(userId) => "(" + accessQ(userId) + ")"
+          case Full(userId) => "(" + accessQ(userId, prefix) + ")"
           case _            => "(false)"
         }
       }

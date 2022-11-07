@@ -61,14 +61,76 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
     Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
-    """
-        --is descendant of user organization folder and user is admin or dataset manager
-        true
-        or
-        --is descendant of a folder with allowed teams the user is in
-        true
+  override def readAccessQ(requestingUserId: ObjectId): String = readAccessQueryWithPrefix(requestingUserId, "")
+
+  def readAccessQueryWithPrefix(requestingUserId: ObjectId, prefix: String): String =
+    s"""
+        (
+          -- is descendant of user organization folder and user is admin or dataset manager
+          ${prefix}_id IN (
+            SELECT fp._descendant
+            FROM webknossos.folder_paths
+            WHERE _ancestor IN (
+               SELECT o._rootFolder
+               FROM webknossos.organizations_ o
+               JOIN webknossos.users_ u ON u._organization = o._id
+               WHERE u._id = '$requestingUserId'
+               AND (
+                 u.isAdmin
+                 OR u.isDatasetManager
+               )
+            )
+          )
+        )
+        OR (
+          -- is descendant of a folder with allowed teams the user is in
+          ${prefix}_id IN (
+            SELECT fp._descendant
+            FROM webknossos.folder_paths
+            WHERE _ancestor IN (
+              SELECT at._folder
+              FROM webknossos.folder_allowedTeams at
+              JOIN webknossos.user_team_roles tr ON at._team = tr._team
+              WHERE tr._user = $requestingUserId
+            )
+          )
+        )
         """
+
+  override def updateAccessQ(requestingUserId: ObjectId): String =
+    s"""
+      (
+        -- is descendant of user organization folder and user is admin or dataset manager
+        _id IN (
+          SELECT fp._descendant
+          FROM webknossos.folder_paths
+          WHERE _ancestor IN (
+             SELECT o._rootFolder
+             FROM webknossos.organizations_ o
+             JOIN webknossos.users_ u ON u._organization = o._id
+             WHERE u._id = '$requestingUserId'
+             AND (
+               u.isAdmin
+               OR u.isDatasetManager
+             )
+          )
+        )
+      )
+      OR (
+        -- is descendant of a folder with allowed teams the user is TEAM MANAGER of
+        _id IN (
+          SELECT fp._descendant
+          FROM webknossos.folder_paths
+          WHERE _ancestor IN (
+            SELECT at._folder
+            FROM webknossos.folder_allowedTeams at
+            JOIN webknossos.user_team_roles tr ON at._team = tr._team
+            WHERE tr._user = $requestingUserId
+            AND tr.isTeamManager
+          )
+        )
+      )
+      """
 
   def insertAsRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =
@@ -78,9 +140,10 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def findOne(folderId: ObjectId): Fox[Folder] =
+  override def findOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Folder] =
     for {
-      rows <- run(sql"SELECT #$columns FROM webknossos.folders WHERE _id = $folderId".as[FoldersRow])
+      accessQuery <- readAccessQuery
+      rows <- run(sql"SELECT #$columns FROM webknossos.folders WHERE _id = $folderId and #$accessQuery".as[FoldersRow])
       parsed <- parseFirst(rows, "id")
     } yield parsed
 
@@ -113,13 +176,16 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       firstRow <- rows.headOption
     } yield firstRow - 1 // subtract the self-link
 
-  def updateName(folderId: ObjectId, name: String): Fox[Unit] =
+  def updateName(folderId: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(folderId)
       _ <- run(sqlu"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId")
     } yield ()
 
-  def findTreeOf(folderId: ObjectId): Fox[List[FolderWithParent]] =
+  def findTreeOf(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[FolderWithParent]] =
     for {
+      accessQueryWithPrefix <- accessQueryFromAccessQ(readAccessQueryWithPrefix, prefix = "f.")
+      accessQuery <- readAccessQuery
       rows <- run(sql"""SELECT f._id, f.name, fp._ancestor
               FROM webknossos.folders_ f
               JOIN webknossos.folder_paths fp -- join to find immediate parent, this will also kick out self
@@ -128,24 +194,27 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               (SELECT _descendant  -- find all folder ids that are descendants
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
+              AND #$accessQueryWithPrefix
               UNION ALL SELECT _id, name, NULL from webknossos.folders_  -- find self again, with no parent
               WHERE _id = $folderId
+              AND #$accessQuery
               """.as[(String, String, Option[String])])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 
-  def insertAsChild(parentId: ObjectId, f: Folder): Fox[Unit] = {
+  def insertAsChild(parentId: ObjectId, f: Folder)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val insertPathQuery =
       sqlu"""INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth)
              SELECT _ancestor, ${f._id}, depth + 1 from webknossos.folder_paths WHERE _descendant = $parentId -- links to ancestors
              UNION ALL SELECT ${f._id}, ${f._id}, 0 -- self link
           """
     for {
+      _ <- assertUpdateAccess(parentId)
       _ <- run(DBIO.sequence(List(insertFolderQuery(f), insertPathQuery)))
     } yield ()
   }
 
-  def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId): Fox[Unit] = {
+  def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val deleteObsoletePathsQuery =
       sqlu"""
          DELETE FROM webknossos.folder_paths
@@ -162,6 +231,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         AND supertree._descendant = $newParentIdValidated
           """
     for {
+      _ <- assertUpdateAccess(idValidated)
+      _ <- assertUpdateAccess(newParentIdValidated)
       _ <- run(DBIO.sequence(List(deleteObsoletePathsQuery, insertNewPathsQuery)).transactionally)
     } yield ()
   }
@@ -171,6 +242,7 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     val deletePathsQuery =
       sqlu"DELETE FROM webknossos.folder_paths WHERE _ancestor = $folderId OR _descendant = $folderId"
     for {
+      _ <- assertDeleteAccess(folderId)
       _ <- run(DBIO.sequence(List(deleteFolderQuery, deletePathsQuery)).transactionally)
     } yield ()
   }
@@ -178,8 +250,9 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   private def insertFolderQuery(f: Folder): SqlAction[Int, NoStream, Effect] =
     sqlu"INSERT INTO webknossos.folders(_id, name) VALUES (${f._id}, ${f.name})"
 
-  def updateOne(f: Folder): Fox[Unit] =
+  def updateOne(f: Folder)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(f._id)
       _ <- run(sqlu"UPDATE webknossos.folders SET name = ${f.name} WHERE _id = ${f._id}")
     } yield ()
 

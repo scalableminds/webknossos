@@ -143,7 +143,7 @@ class FolderController @Inject()(
           isMatchingTeamMember = userTeamMemberships.map(_.teamId).intersect(folderAllowedTeamIds).nonEmpty
           _ <- bool2Fox(isMatchingAdminOrDatasetManager || isMatchingTeamMember)
         } yield ()
-      case None => Fox.failure("notAuthorized")
+      case _ => Fox.failure("notAuthorized")
     }) ~> FORBIDDEN
 
 }

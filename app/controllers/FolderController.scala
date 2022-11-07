@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.DataSetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
-import models.team.TeamDAO
+import models.team.{TeamDAO, TeamService}
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -18,6 +18,7 @@ class FolderController @Inject()(
     folderDAO: FolderDAO,
     folderService: FolderService,
     teamDAO: TeamDAO,
+    teamService: TeamService,
     dataSetDAO: DataSetDAO,
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
@@ -100,11 +101,11 @@ class FolderController @Inject()(
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-        oldAllowedTeams: List[ObjectId] <- folderDAO.allowedTeamIdsFor(idValidated)
+        oldAllowedTeams: List[ObjectId] <- teamService.allowedTeamIdsForFolder(idValidated, cumulative = false)
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeamIds = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- folderDAO.updateAllowedTeamsFor(idValidated, newTeamIds)
+        _ <- teamDAO.updateAllowedTeamsForFolder(idValidated, newTeamIds)
       } yield Ok(Json.toJson(newTeamIds))
     }
 

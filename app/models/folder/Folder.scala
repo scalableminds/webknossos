@@ -4,11 +4,10 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Folders, _}
 import models.organization.{Organization, OrganizationDAO}
-import models.team.{Team, TeamDAO, TeamService}
+import models.team.{TeamDAO, TeamService}
 import models.user.User
 import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -33,20 +32,20 @@ class FolderService @Inject()(teamDAO: TeamDAO, teamService: TeamService, organi
       requestingUser: Option[User] = None,
       requestingUserOrganization: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      teams <- allowedTeamsFor(folder._id, requestingUser)
+      teams <- teamService.allowedTeamsForFolder(folder._id, cumulative = false, requestingUser)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
-    } yield Json.obj("id" -> folder._id, "name" -> folder.name, "teams" -> teamsJs)
+      teamsCumulative <- teamService.allowedTeamsForFolder(folder._id, cumulative = true, requestingUser)
+      teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t =>
+        teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
+    } yield
+      Json.obj("id" -> folder._id,
+               "name" -> folder.name,
+               "allowedTeams" -> teamsJs,
+               "allowedTeamsCumulative" -> teamsCumulativeJs)
 
   def publicWritesWithParent(folderWithParent: FolderWithParent): JsObject =
     Json.obj("id" -> folderWithParent._id, "name" -> folderWithParent.name, "parent" -> folderWithParent._parent)
 
-  def allowedTeamsFor(folderId: ObjectId, requestingUser: Option[User])(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teams <- teamDAO.findAllForFolder(folderId) ?~> "allowedTeams.notFound"
-      // dont leak team names of other organizations
-      teamsFiltered = teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
-    } yield teamsFiltered
 }
 
 class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -183,24 +182,5 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(sqlu"UPDATE webknossos.folders SET name = ${f.name} WHERE _id = ${f._id}")
     } yield ()
-
-  def allowedTeamIdsFor(folderId: ObjectId): Fox[List[ObjectId]] =
-    for {
-      rows <- run(sql"SELECT _team FROM folder_allowedTeams WHERE _folder = $folderId".as[ObjectId])
-    } yield rows.toList
-
-  def updateAllowedTeamsFor(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
-    val clearQuery = sqlu"DELETE FROM webknossos.folder_allowedTeams WHERE _folder = $folderId"
-
-    val insertQueries = allowedTeams.map(teamId => sqlu"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
-                                                              VALUES($folderId, $teamId)""")
-
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
-    for {
-      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
-    } yield ()
-  }
 
 }

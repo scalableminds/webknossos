@@ -505,38 +505,6 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
   }
 }
 
-class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient) {
-
-  def findAllForDataSet(dataSetId: ObjectId): Fox[List[ObjectId]] = {
-    val query = for {
-      (_, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams on (_._Team === _._Id)
-    } yield team._Id
-
-    run(query.result).flatMap(rows => Fox.serialCombined(rows.toList)(ObjectId.fromString(_)))
-  }
-
-  def updateAllowedTeamsForDataSet(dataSetId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.dataSet_allowedTeams where _dataSet = $dataSetId"
-
-    val insertQueries = allowedTeams.map(teamId => sqlu"""insert into webknossos.dataSet_allowedTeams(_dataSet, _team)
-                                                              values($dataSetId, $teamId)""")
-
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
-    for {
-      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
-    } yield ()
-  }
-
-  def removeTeamFromAllDatasets(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(sqlu"delete from webknossos.dataSet_allowedTeams where _team = $teamId")
-    } yield ()
-
-}
-
 class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Long] =

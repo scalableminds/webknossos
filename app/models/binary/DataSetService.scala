@@ -41,7 +41,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                userService: UserService,
                                folderService: FolderService,
-                               dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
                                conf: WkConf)(implicit ec: ExecutionContext)
@@ -103,7 +102,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       )
       _ <- dataSetDAO.insertOne(dataSet)
       _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
-      _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
+      _ <- teamDAO.updateAllowedTeamsForDataset(newId, List())
     } yield dataSet
   }
 
@@ -267,17 +266,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(0L)
     }
 
-  def allowedTeamIdsFor(_dataSet: ObjectId): Fox[List[ObjectId]] =
-    dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet) ?~> "allowedTeams.notFound"
-
-  def allowedTeamsFor(_dataSet: ObjectId, requestingUser: Option[User])(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teams <- teamDAO.findAllForDataSet(_dataSet) ?~> "allowedTeams.notFound"
-      // dont leak team names of other organizations
-      teamsFiltered = teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
-    } yield teamsFiltered
-
   def allLayersFor(dataSet: DataSet): Fox[List[DataLayer]] =
     for {
       dataSource <- dataSourceFor(dataSet)
@@ -290,7 +278,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     userOpt match {
       case Some(user) =>
         for {
-          dataSetAllowedTeams <- dataSetAllowedTeamsDAO.findAllForDataSet(dataSet._id)
+          dataSetAllowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true)
           teamManagerMemberships <- Fox.fillOption(userTeamManagerMemberships)(
             userService.teamManagerMembershipsFor(user._id))
         } yield
@@ -305,14 +293,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
+      previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = false) ?~> "allowedTeams.notFound"
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable
       userTeamIds = userTeams.map(_._id)
       teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
       _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- dataSetDAO.assertUpdateAccess(dataSet._id) ?~> "dataset.initialTeams.forbidden"
-      _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
+      _ <- teamDAO.updateAllowedTeamsForDataset(dataSet._id, teamIdsValidated)
     } yield ()
 
   def addUploader(dataSet: DataSet, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -335,8 +323,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore <- Fox.fillOption(dataStore) {
         dataStoreFor(dataSet)
       }
-      teams <- allowedTeamsFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
+      teams <- teamService.allowedTeamsForDataset(dataSet, cumulative = false, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
+      teamsCumulative <- teamService.allowedTeamsForDataset(dataSet, cumulative = true, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
+      teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
       logoUrl <- logoUrlFor(dataSet, Some(organization)) ?~> "dataset.list.fetchLogoUrlFailed"
       isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
@@ -353,6 +343,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization.name,
         "allowedTeams" -> teamsJs,
+        "allowedTeamsCumulative" -> teamsCumulativeJs,
         "isActive" -> dataSet.isUsable,
         "isPublic" -> dataSet.isPublic,
         "description" -> dataSet.description,

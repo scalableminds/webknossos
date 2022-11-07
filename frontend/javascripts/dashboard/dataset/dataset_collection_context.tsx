@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import type {
   APIMaybeUnimportedDataset,
@@ -18,6 +18,8 @@ import {
   updateFolder,
 } from "admin/api/folders";
 import UserLocalStorage from "libs/user_local_storage";
+import * as Utils from "libs/utils";
+
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
@@ -83,13 +85,86 @@ function useFolderTreeQuery() {
 
 function useDatasetsInFolderQuery(folderId: string | null) {
   const queryKey = ["datasetsByFolder", folderId];
-  return useQuery(
+  const fetchedDatasetsRef = useRef<APIMaybeUnimportedDataset[] | null>(null);
+
+  // console.log("[p] hook runs for", folderId);
+
+  const queryData = useQuery(
     queryKey,
-    () => (folderId == null ? Promise.resolve([]) : getDatasets(false, folderId)),
+    () => {
+      if (folderId == null) {
+        // There should always be a folderId, but since hooks cannot
+        // be used within conditionals, we allow folderId to be null.
+        return Promise.resolve([]);
+      }
+
+      if (fetchedDatasetsRef.current != null) {
+        // console.log(
+        //   "[p] folderId",
+        //   folderId,
+        //   "using existing fetchedDatasetsRef.current",
+        //   fetchedDatasetsRef.current,
+        // );
+        return fetchedDatasetsRef.current;
+      }
+
+      // console.log("[p] folderId", folderId, "getDatasets without prefetching");
+      return getDatasets(false, folderId);
+    },
     {
       refetchOnWindowFocus: false,
+      enabled: false,
     },
   );
+
+  useEffect(() => {
+    if (queryData.data == null) {
+      // No data exists in the cache. Allow the query to fetch.
+      // console.log("[p] refetch");
+      queryData.refetch();
+      return;
+    }
+
+    let ignoreFetchResult = false;
+    // console.log("[p] prefetch datasets");
+    getDatasets(false, folderId).then((newDatasets) => {
+      if (ignoreFetchResult) {
+        // console.log("[p] ignore received datasets for", folderId);
+        return;
+      }
+      Toast.info(
+        <>
+          There are new datasets.{" "}
+          <a
+            href="#"
+            onClick={() => {
+              if (ignoreFetchResult) {
+                // console.log("[p] ignore sleep for", folderId);
+                return;
+              }
+              // console.log("[p] setFetchedDatasets", newDatasets);
+              fetchedDatasetsRef.current = newDatasets;
+              Toast.close(`new-datasets-are-available-${folderId || null}`);
+              queryData.refetch();
+            }}
+          >
+            Click here to update.
+          </a>{" "}
+          (todo: only show actual updates)
+        </>,
+        { key: `new-datasets-are-available-${folderId || null}` },
+      );
+    });
+
+    return () => {
+      // console.log("[p] clear effect for", folderId);
+      fetchedDatasetsRef.current = null;
+      ignoreFetchResult = true;
+      Toast.close(`new-datasets-are-available-${folderId || null}`);
+    };
+  }, [folderId]);
+
+  return queryData;
 }
 
 function useCreateFolderMutation() {

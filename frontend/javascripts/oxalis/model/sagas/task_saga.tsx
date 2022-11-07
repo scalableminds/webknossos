@@ -96,17 +96,16 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   if (confirmed) {
     for (const key of Object.keys(recommendedConfiguration)) {
       if (key === "zoom") {
-        // @ts-ignore
-        yield* put(setZoomStepAction(recommendedConfiguration[key]));
+        const newZoom = recommendedConfiguration[key];
+        if (newZoom != null) {
+          yield* put(setZoomStepAction(newZoom));
+        }
       } else if (key === "segmentationOpacity") {
-        for (const segmentationLayer of segmentationLayers) {
-          yield* put(
-            updateLayerSettingAction(
-              segmentationLayer.name,
-              "alpha",
-              recommendedConfiguration[key],
-            ),
-          );
+        const alphaValue = recommendedConfiguration[key];
+        if (alphaValue != null) {
+          for (const segmentationLayer of segmentationLayers) {
+            yield* put(updateLayerSettingAction(segmentationLayer.name, "alpha", alphaValue));
+          }
         }
       } else if (key in userConfiguration) {
         // @ts-ignore

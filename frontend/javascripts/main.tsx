@@ -16,16 +16,21 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import UserLocalStorage from "libs/user_local_storage";
+import { compress, decompress } from "lz-string";
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      cacheTime: 1000 * 60 * 60 * 24, // 24 hours
+      cacheTime: Infinity,
     },
   },
 });
 
-const localStoragePersister = createSyncStoragePersister({ storage: UserLocalStorage });
+const localStoragePersister = createSyncStoragePersister({
+  storage: UserLocalStorage,
+  serialize: (data) => compress(JSON.stringify(data)),
+  deserialize: (data) => JSON.parse(decompress(data) || "{}"),
+});
 
 async function loadActiveUser() {
   // Try to retreive the currently active user if logged in

@@ -58,7 +58,7 @@ type State = {
   activationFilter: Array<"true" | "false">;
   searchQuery: string;
   domainToEdit: string | null | undefined;
-  maxUsersPerOrganization: number;
+  maxUserCountPerOrganization: number;
 };
 const persistence = new Persistence<Pick<State, "searchQuery" | "activationFilter">>(
   {
@@ -80,7 +80,7 @@ class UserListView extends React.PureComponent<Props, State> {
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
-    maxUsersPerOrganization: Number.POSITIVE_INFINITY,
+    maxUserCountPerOrganization: Number.POSITIVE_INFINITY,
   };
 
   componentDidMount() {
@@ -111,7 +111,7 @@ class UserListView extends React.PureComponent<Props, State> {
     this.setState({
       isLoading: false,
       users,
-      maxUsersPerOrganization: organization.includedUsers,
+      maxUserCountPerOrganization: organization.includedUsers,
     });
   }
 
@@ -243,7 +243,7 @@ class UserListView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
-  renderPlaceholder() {
+  renderInviteUsersAlert() {
     const inviteUsersCallback = () =>
       this.setState({
         isInviteModalVisible: true,
@@ -276,10 +276,10 @@ class UserListView extends React.PureComponent<Props, State> {
   renderUpgradePlanAlert() {
     return (
       <Alert
-        message="Exceeding the number of users included in your plan"
-        description={`You organization currently has more active users than included in your current plan. Consider upgrading your webKnossos plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
+        message="You reached the maximum number of users"
+        description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your webKnossos plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
           this.state.users,
-        )} active users of ${this.state.maxUsersPerOrganization} allowed by your plan.`}
+        )} active users of ${this.state.maxUserCountPerOrganization} allowed by your plan.`}
         type="error"
         showIcon
         style={{
@@ -342,7 +342,7 @@ class UserListView extends React.PureComponent<Props, State> {
     };
     const noOtherUsers = this.state.users.length < 2;
     const isUserInvitesDisabled =
-      getActiveUserCount(this.state.users) > this.state.maxUsersPerOrganization;
+      getActiveUserCount(this.state.users) >= this.state.maxUserCountPerOrganization;
 
     return (
       <div className="container test-UserListView">
@@ -393,6 +393,8 @@ class UserListView extends React.PureComponent<Props, State> {
             Invite Users
           </Button>
           <InviteUsersModal
+            currentUserCount={getActiveUserCount(this.state.users)}
+            maxUserCountPerOrganization={this.state.maxUserCountPerOrganization}
             visible={this.state.isInviteModalVisible}
             handleVisibleChange={(visible) => {
               this.setState({
@@ -420,7 +422,7 @@ class UserListView extends React.PureComponent<Props, State> {
         </div>
 
         {isUserInvitesDisabled ? this.renderUpgradePlanAlert() : null}
-        {noOtherUsers ? this.renderPlaceholder() : null}
+        {noOtherUsers && !isUserInvitesDisabled ? this.renderInviteUsersAlert() : null}
         {this.renderNewUsersAlert()}
 
         <Spin size="large" spinning={this.state.isLoading}>

@@ -9,6 +9,7 @@ import {
 import { getHistogramForLayer } from "admin/admin_rest_api";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
+import { Vector2 } from "oxalis/constants";
 
 export default function* loadHistogramDataSaga(): Saga<void> {
   yield* take("WK_READY");
@@ -52,7 +53,7 @@ function* loadHistogramForLayer(layerName: string): Saga<void> {
   const allMaxValues = histogram.map((currentHistogramData) => currentHistogramData.max);
   const minimumInHistogramData = Math.min(...allMinValues);
   const maximumInHistogramData = Math.max(...allMaxValues);
-  let newIntensityRange = [];
+  let newIntensityRange: Vector2 = [0, 0];
 
   if (currentLayerConfig) {
     // The intensityRange is the range where the color value will be clamped to

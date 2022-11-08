@@ -1,8 +1,10 @@
 import { Button, ButtonProps, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
+import { TooltipPlacement } from "antd/lib/tooltip";
 type ButtonComponentProp = ButtonProps & {
   faIcon?: string;
+  tooltipPlacement?: TooltipPlacement | undefined;
 };
 /*
  * A lightweight wrapper around <Button> to automatically blur the button
@@ -25,7 +27,7 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
   };
 
   render() {
-    const { children, faIcon, title, ...restProps } = this.props;
+    const { children, faIcon, title, tooltipPlacement, ...restProps } = this.props;
     const iconEl = faIcon != null && !this.props.loading ? <i className={faIcon} /> : null;
     const button =
       // Differentiate via children != null, since antd uses a different styling for buttons
@@ -40,7 +42,13 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
           {iconEl}
         </Button>
       );
-    return title != null ? <Tooltip title={title}>{button}</Tooltip> : button;
+    return title != null ? (
+      <Tooltip title={title} placement={tooltipPlacement}>
+        {button}
+      </Tooltip>
+    ) : (
+      button
+    );
   }
 }
 

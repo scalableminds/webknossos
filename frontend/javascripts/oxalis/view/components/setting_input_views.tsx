@@ -37,13 +37,13 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     disabled: false,
   };
 
-  _onChange = (_value: number) => {
-    if (this.isValueValid(_value)) {
+  _onChange = (_value: number | null) => {
+    if (_value != null && this.isValueValid(_value)) {
       this.props.onChange(_value);
     }
   };
 
-  isValueValid = (_value: number) =>
+  isValueValid = (_value: number | null) =>
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
   render() {
@@ -106,7 +106,10 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     roundTo: 3,
   };
 
-  onChangeInput = (value: number) => {
+  onChangeInput = (value: number | null) => {
+    if (value == null) {
+      return;
+    }
     if (this.props.min <= value && value <= this.props.max) {
       this.props.onChange(value);
     } else {
@@ -127,7 +130,10 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.exp((value - b) / a);
   }
 
-  formatTooltip = (value: number) => {
+  formatTooltip = (value: number | undefined) => {
+    if (value == null) {
+      return "invalid";
+    }
     const calculatedValue = this.calculateValue(value);
     return calculatedValue >= 10000
       ? calculatedValue.toExponential()
@@ -154,8 +160,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string | number' is not a... Remove this comment to see the full error message
-            tipFormatter={this.formatTooltip}
+            tooltip={{ formatter: this.formatTooltip }}
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
             disabled={disabled}
@@ -230,7 +235,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   }
 }
 type NumberInputSettingProps = {
-  onChange: (value: number) => void;
+  onChange: (value: number | null) => void;
   value: number | "";
   label: string;
   max?: number;
@@ -282,6 +287,11 @@ type NumberInputPopoverSettingProps = {
 export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
   const { min, max, onChange, step, value, label, detailedLabel } = props;
   const placement = props.placement || "top";
+  const onChangeGuarded = (val: number | null) => {
+    if (val != null) {
+      onChange(val);
+    }
+  };
   const numberInput = (
     <div>
       <div
@@ -299,8 +309,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
         }}
         min={min}
         max={max}
-        onChange={onChange}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | null | undefined' is not assignable... Remove this comment to see the full error message
+        onChange={onChangeGuarded}
         value={value}
         step={step}
         size="small"

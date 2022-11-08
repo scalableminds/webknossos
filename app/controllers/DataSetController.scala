@@ -11,7 +11,7 @@ import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatas
 import models.binary._
 import models.binary.explore.{ExploreRemoteDatasetParameters, ExploreRemoteLayerService}
 import models.organization.OrganizationDAO
-import models.team.TeamDAO
+import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
@@ -31,12 +31,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class DataSetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   dataSetService: DataSetService,
-                                  dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                   dataSetDataLayerDAO: DataSetDataLayerDAO,
                                   dataStoreDAO: DataStoreDAO,
                                   dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
+                                  teamService: TeamService,
                                   dataSetDAO: DataSetDAO,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -252,7 +252,7 @@ class DataSetController @Inject()(userService: UserService,
         organization <- organizationDAO.findOneByName(organizationName)
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
+        allowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true) ?~> "allowedTeams.notFound"
         usersByTeams <- userDAO.findAllByTeams(allowedTeams)
         adminsAndDatasetManagers <- userDAO.findAdminsAndDatasetManagersByOrg(organization._id)
         usersFiltered = (usersByTeams ++ adminsAndDatasetManagers).distinct.filter(!_.isUnlisted)
@@ -339,7 +339,9 @@ Expects:
                            paramType = "body")))
   def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                        example = "sample_organization") organizationName: String,
-             @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
+             @ApiParam(value = "The name of the dataset") dataSetName: String,
+             @ApiParam(value = "If true, the resolutions of the dataset layers in the returned json are skipped")
+             skipResolutions: Option[Boolean]): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags, folderId) =>
@@ -358,7 +360,11 @@ Expects:
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
             dataStore <- dataSetService.dataStoreFor(updated)
-            js <- dataSetService.publicWrites(updated, Some(request.identity), Some(organization), Some(dataStore))
+            js <- dataSetService.publicWrites(updated,
+                                              Some(request.identity),
+                                              Some(organization),
+                                              Some(dataStore),
+                                              skipResolutions.getOrElse(false))
           } yield Ok(Json.toJson(js))
       }
     }
@@ -390,11 +396,11 @@ Expects:
         _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-        oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
+        oldAllowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = false) ?~> "allowedTeams.notFound"
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, newTeams)
+        _ <- teamDAO.updateAllowedTeamsForDataset(dataSet._id, newTeams)
       } yield Ok(Json.toJson(newTeams))
     }
 

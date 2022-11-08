@@ -87,6 +87,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationToolEnum.TRACE]: disabledInfo,
     [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
     [AnnotationToolEnum.FILL_CELL]: disabledInfo,
+    [AnnotationToolEnum.QUICK_SELECT]: disabledInfo,
     [AnnotationToolEnum.PICK_CELL]: disabledInfo,
     [AnnotationToolEnum.BOUNDING_BOX]: notDisabledInfo,
     [AnnotationToolEnum.PROOFREAD]: {
@@ -142,6 +143,10 @@ function _getDisabledInfoFromArgs(
     [AnnotationToolEnum.BOUNDING_BOX]: {
       isDisabled: false,
       explanation: disabledSkeletonExplanation,
+    },
+    [AnnotationToolEnum.QUICK_SELECT]: {
+      isDisabled: isZoomStepTooHighForFilling,
+      explanation: zoomInToUseToolMessage,
     },
     [AnnotationToolEnum.PROOFREAD]: {
       isDisabled: !hasSkeleton || !hasAgglomerateMappings,
@@ -231,7 +236,8 @@ export function adaptActiveToolToShortcuts(
   if (
     activeTool === AnnotationToolEnum.MOVE ||
     activeTool === AnnotationToolEnum.ERASE_BRUSH ||
-    activeTool === AnnotationToolEnum.ERASE_TRACE
+    activeTool === AnnotationToolEnum.ERASE_TRACE ||
+    activeTool === AnnotationToolEnum.QUICK_SELECT
   ) {
     // These tools do not have any modifier-related behavior currently (except for ALT
     // which is already handled below)

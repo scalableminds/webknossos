@@ -204,7 +204,7 @@ class SynapseTree extends React.Component<Props, State> {
   };
 
   setHoveredSegmentId(agglomerateId: number | null | undefined) {
-    Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", agglomerateId));
+    Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", agglomerateId || null));
   }
 
   createSegmentDropdownMenu = (agglomerateId: number) => (

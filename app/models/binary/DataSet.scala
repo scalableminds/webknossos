@@ -114,20 +114,46 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     }
 
   override def anonymousReadAccessQ(token: Option[String]): String =
-    "isPublic" + token.map(t => s""" or sharingToken = '$t'
-               or _id in
-                 (select ans._dataset
-                 from webknossos.annotation_privateLinks_ apl
-                 join webknossos.annotations_ ans ON apl._annotation = ans._id
-                 where apl.accessToken = '$t')""").getOrElse("")
+    // token can either be a dataset sharingToken or a matching annotation’s private link token
+    "isPublic" + token.map(t => s""" OR sharingToken = '$t'
+          OR _id in (
+            SELECT a._dataset
+            FROM webknossos.annotation_privateLinks_ apl
+            JOIN webknossos.annotations_ a ON apl._annotation = a._id
+            WHERE apl.accessToken = '$t'
+          )""").getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""isPublic
-        or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
-        or _id in (select _dataSet
-          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))
-        or ('${requestingUserId.id}' in (select _id from webknossos.users where isDatasetManager and _id = '${requestingUserId.id}')
-            and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"""
+        OR ( -- user is matching orga admin or dataset manager
+          _organization IN (
+            SELECT _organization
+            FROM webknossos.users_
+            WHERE _id = '$requestingUserId'
+            AND (isAdmin OR isDatasetManager)
+          )
+        )
+        OR ( -- user is in a team that is allowed for the dataset
+          _id IN (
+            SELECT _dataSet
+            FROM webknossos.dataSet_allowedTeams dt
+            JOIN webknossos.user_team_roles ut ON dt._team = ut._team
+            WHERE ut._user = '$requestingUserId'
+          )
+        )
+        OR ( -- user is in a team that is allowed for the folder or its ancestors
+          _folder IN (
+            SELECT fp._descendant
+            FROM webknossos.folder_paths fp
+            WHERE fp._ancestor IN (
+              SELECT at._folder
+              FROM webknossos.folder_allowedTeams at
+              JOIN webknossos.user_team_roles tr ON at._team = tr._team
+              WHERE tr._user = '$requestingUserId'
+            )
+          )
+        )
+        """
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
@@ -254,7 +280,6 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       _ <- assertUpdateAccess(id)
       query = writeArrayTuple(tags)
-      _ = logger.info(s"updating tags, setting to ${tags.mkString(",")} with sql set tags = '$query'")
       _ <- run(sqlu"update webknossos.datasets set tags = '#$query' where _id = $id")
     } yield ()
 
@@ -503,38 +528,6 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
             where _dataSet = $dataSetId and name = $layerName"""
     run(q).map(_ => ())
   }
-}
-
-class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient) {
-
-  def findAllForDataSet(dataSetId: ObjectId): Fox[List[ObjectId]] = {
-    val query = for {
-      (_, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams on (_._Team === _._Id)
-    } yield team._Id
-
-    run(query.result).flatMap(rows => Fox.serialCombined(rows.toList)(ObjectId.fromString(_)))
-  }
-
-  def updateAllowedTeamsForDataSet(dataSetId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.dataSet_allowedTeams where _dataSet = $dataSetId"
-
-    val insertQueries = allowedTeams.map(teamId => sqlu"""insert into webknossos.dataSet_allowedTeams(_dataSet, _team)
-                                                              values($dataSetId, $teamId)""")
-
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
-    for {
-      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
-    } yield ()
-  }
-
-  def removeTeamFromAllDatasets(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(sqlu"delete from webknossos.dataSet_allowedTeams where _team = $teamId")
-    } yield ()
-
 }
 
 class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

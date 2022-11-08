@@ -75,16 +75,17 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
-  def runConvertToWkwJob(organizationName: String,
-                         dataSetName: String,
-                         scale: String,
-                         dataStoreName: String): Action[AnyContent] =
+  // Note that the dataset has to be registered by reserveUpload via the datastore first.
+  def runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
           command = "convert_to_wkw"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -92,8 +93,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "scale" -> scale,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken
           )
-
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataStoreName) ?~> "job.couldNotRunCubing"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

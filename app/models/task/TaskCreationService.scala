@@ -1,7 +1,6 @@
 package models.task
 
 import java.io.File
-
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,12 +9,13 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.{Project, ProjectDAO}
-import models.team.{Team, TeamDAO}
+import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserExperiencesDAO, UserService, UserTeamRolesDAO}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.telemetry.SlackNotificationService
@@ -32,6 +32,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     taskService: TaskService,
                                     userService: UserService,
                                     teamDAO: TeamDAO,
+                                    teamService: TeamService,
                                     userTeamRolesDAO: UserTeamRolesDAO,
                                     slackNotificationService: SlackNotificationService,
                                     projectDAO: ProjectDAO,
@@ -491,10 +492,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(
         projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> "project.notFound"
-      dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
-      noAccessTeamIds = projects.map(_._team).diff(dataSetTeams.map(_._id))
+      dataSetTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true)
+      noAccessTeamIds = projects.map(_._team).diff(dataSetTeamIds)
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
-        filterOutTransitiveSubteam(id, dataSetTeams.map(_._id)))
+        filterOutTransitiveSubteam(id, dataSetTeamIds))
       noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIdsTransitive.flatten)(id => teamDAO.findOne(id))
       warnings = noAccessTeams.map(team =>
         s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")

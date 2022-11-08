@@ -595,11 +595,21 @@ export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDatas
   );
 }
 
-export function TeamTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {
+export function TeamTags({
+  dataset,
+  emptyValue,
+}: {
+  dataset: APIMaybeUnimportedDataset;
+  emptyValue?: React.ReactNode;
+}) {
   const teams = dataset.allowedTeams;
   const permittedTeams = [...teams];
   if (dataset.isPublic) {
     permittedTeams.push({ name: "public", id: "", organization: "" });
+  }
+
+  if (permittedTeams.length === 0 && emptyValue != null) {
+    return <>{emptyValue}</>;
   }
 
   return (

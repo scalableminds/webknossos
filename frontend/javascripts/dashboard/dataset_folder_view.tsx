@@ -127,15 +127,17 @@ function DatasetDetailsSidebar({
               </table>
             </div>
           )}
-          Access Permissions:
-          <TeamTags dataset={selectedDataset} />
-          Layers:
-          <DatasetLayerTags dataset={selectedDataset} />
+          <div>
+            Access Permissions: <TeamTags dataset={selectedDataset} emptyValue="default" />
+          </div>
+          <div>
+            Layers: <DatasetLayerTags dataset={selectedDataset} />
+          </div>
           {selectedDataset.isActive ? (
-            <>
+            <div>
               Tags:
               <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
-            </>
+            </div>
           ) : null}
         </>
       ) : (

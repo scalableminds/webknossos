@@ -422,7 +422,9 @@ export default function DatasetCollectionContextProvider({
       activeFolderId,
       setActiveFolderId,
       isChecking: false,
-      checkDatasets: async () => {},
+      checkDatasets: async () => {
+        datasetsInFolderQuery.refetch();
+      },
       queries: {
         folderTreeQuery,
         datasetsInFolderQuery,

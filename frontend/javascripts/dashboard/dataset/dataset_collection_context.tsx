@@ -84,6 +84,7 @@ function useFolderTreeQuery() {
   });
 }
 
+const LIST_REQUEST_DURATION_THRESHOLD = 1000;
 function useDatasetsInFolderQuery(folderId: string | null) {
   const queryClient = useQueryClient();
   const queryKey = ["datasetsByFolder", folderId];
@@ -120,7 +121,7 @@ function useDatasetsInFolderQuery(folderId: string | null) {
   );
 
   useEffect(() => {
-    if (queryData.data == null) {
+    if (queryData.data == null || queryData.data.length === 0) {
       // No data exists in the cache. Allow the query to fetch.
       // console.log("[p] refetch");
       queryData.refetch();
@@ -129,11 +130,34 @@ function useDatasetsInFolderQuery(folderId: string | null) {
 
     let ignoreFetchResult = false;
     // console.log("[p] prefetch datasets");
+    const startTime = performance.now();
     getDatasets(false, folderId).then((newDatasets) => {
       if (ignoreFetchResult) {
         // console.log("[p] ignore received datasets for", folderId);
         return;
       }
+      const requestDuration = performance.now() - startTime;
+
+      const acceptNewDatasets = () => {
+        if (ignoreFetchResult) {
+          // console.log("[p] ignore sleep for", folderId);
+          return;
+        }
+        // console.log("[p] setFetchedDatasets", newDatasets);
+        fetchedDatasetsRef.current = newDatasets;
+        Toast.close(`new-datasets-are-available-${folderId || null}`);
+        queryData.refetch();
+      };
+
+      // If the request was relatively fast, accept it without asking.
+      // Otherwise, ask the user whether they want to accept the new results
+      // since it would otherwise mean that the table content can change
+      // suddenly which is quite annoying.
+      if (requestDuration < LIST_REQUEST_DURATION_THRESHOLD) {
+        acceptNewDatasets();
+        return;
+      }
+
       const oldDatasets = queryClient.getQueryData<APIDataset[]>(queryKey);
       const diff = diffDatasets(oldDatasets, newDatasets);
       if (diff.changed === 0 && diff.onlyInOld === 0 && diff.onlyInNew === 0) {
@@ -165,19 +189,7 @@ function useDatasetsInFolderQuery(folderId: string | null) {
         <>
           {maybeNewAndChangedSentence}
           {removedStr}{" "}
-          <a
-            href="#"
-            onClick={() => {
-              if (ignoreFetchResult) {
-                // console.log("[p] ignore sleep for", folderId);
-                return;
-              }
-              // console.log("[p] setFetchedDatasets", newDatasets);
-              fetchedDatasetsRef.current = newDatasets;
-              Toast.close(`new-datasets-are-available-${folderId || null}`);
-              queryData.refetch();
-            }}
-          >
+          <a href="#" onClick={acceptNewDatasets}>
             Show updated list.
           </a>
         </>,

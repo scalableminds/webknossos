@@ -7,10 +7,15 @@ import React, { PureComponent } from "react";
 import _ from "lodash";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { WhatsNextHeader } from "admin/welcome_ui";
-import type { APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIOrganizationStorageInfo, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getUser, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import {
+  getOrganization,
+  getOrganizationStorageSpace,
+  getUser,
+  updateNovelUserExperienceInfos,
+} from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
 import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
@@ -20,6 +25,8 @@ import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
+import { PlanAboutToExceedWarning } from "admin/organization/organization_cards";
+
 const { TabPane } = Tabs;
 type OwnProps = {
   userId: string | null | undefined;
@@ -39,7 +46,10 @@ type PropsWithRouter = Props & {
 type State = {
   activeTabKey: string;
   user: APIUser | null | undefined;
+  organization: APIOrganization | null;
+  storageSpaceInfo: APIOrganizationStorageInfo | null;
 };
+
 export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
@@ -66,14 +76,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       (initialTabKey && initialTabKey in validTabKeys && initialTabKey) ||
       (lastUsedTabKey && lastUsedTabKey in validTabKeys && lastUsedTabKey) ||
       defaultTabKey;
+
     this.state = {
       activeTabKey,
       user: null,
+      organization: null,
+      storageSpaceInfo: null,
     };
   }
 
   componentDidMount() {
-    this.fetchUser();
+    this.fetchData();
   }
 
   componentDidUpdate(prevProps: PropsWithRouter) {
@@ -84,11 +97,19 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     }
   }
 
-  async fetchUser(): Promise<void> {
+  async fetchData(): Promise<void> {
     const user =
       this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
+
+    const [organization, storageSpaceInfo] = await Promise.all([
+      getOrganization(user.organization),
+      getOrganizationStorageSpace(user.organization),
+    ]);
+
     this.setState({
       user,
+      organization,
+      storageSpaceInfo,
     });
   }
 
@@ -190,15 +211,26 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         User: {user.firstName} {user.lastName}
       </h3>
     ) : null;
+
     const whatsNextBanner =
       !this.props.isAdminView &&
       !activeUser.novelUserExperienceInfos.hasSeenDashboardWelcomeBanner ? (
         <WhatsNextHeader activeUser={activeUser} onDismiss={this.onDismissWelcomeBanner} />
       ) : null;
+
+    const pricingPlanWarnings =
+      user.isAdmin && this.state.organization && this.state.storageSpaceInfo ? (
+        <PlanAboutToExceedWarning
+          organization={this.state.organization}
+          usedStorageSpace={this.state.storageSpaceInfo.usedStorageSpace}
+        />
+      ) : null;
+
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         {whatsNextBanner}
         <div className="container">
+          {pricingPlanWarnings}
           {userHeader}
           <DatasetCacheProvider>
             <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>

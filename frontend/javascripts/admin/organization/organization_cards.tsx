@@ -270,7 +270,7 @@ function PlanExceededAlert({ organization }: { organization: APIOrganization }) 
   );
 }
 
-function PlanAboutToExceedWarning({
+export function PlanAboutToExceedWarning({
   organization,
   usedStorageSpace,
 }: {

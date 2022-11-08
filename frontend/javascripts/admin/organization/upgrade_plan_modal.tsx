@@ -48,8 +48,10 @@ function extendPricingPlan(organization: APIOrganization) {
         }}
       >
         <p style={{ marginRight: "30%" }}>
-          webKnossos plans are billed annually. Extend your plan now for uninterrupted access to
-          webKnossos.
+          Extend your plan now for uninterrupted access to webKnossos. Expired plans will be
+          downgrade to the Free plan and you might lose access to some webKnossos features and see
+          restrictions on the number of permitted user accounts and your included storage space
+          quota.
         </p>
         <p>
           Your current plan is paid until:{" "}
@@ -59,8 +61,8 @@ function extendPricingPlan(organization: APIOrganization) {
         <Divider style={{ marginTop: 40 }} />
         <p style={{ color: "#aaa", fontSize: 12 }}>
           Requesting an extension will send an email to the webKnossos sales team to extend your
-          current plan. We typically respond within one business day. See our{" "}
-          <a href="https://webknossos.org/faq">FAQ</a> for more information.
+          current plan. We typically respond within one business day. webKnossos plans are billed
+          annually. See our <a href="https://webknossos.org/faq">FAQ</a> for more information.
         </p>
       </div>
     ),

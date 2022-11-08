@@ -280,7 +280,6 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       _ <- assertUpdateAccess(id)
       query = writeArrayTuple(tags)
-      _ = logger.info(s"updating tags, setting to ${tags.mkString(",")} with sql set tags = '$query'")
       _ <- run(sqlu"update webknossos.datasets set tags = '#$query' where _id = $id")
     } yield ()
 

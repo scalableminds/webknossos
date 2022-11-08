@@ -71,19 +71,37 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: String): String = {
     val writeAccessPredicate = if (write) "AND tr.isTeamManager" else ""
-    val breadCrumbsAccess = if (write) "" else
-      s"""
-         UNION ALL
-         SELECT fp._ancestor
-         FROM webknossos.folder_paths fp
-         WHERE fp._descendant IN (
-           SELECT at._folder
-           FROM webknossos.folder_allowedTeams at
-           JOIN webknossos.user_team_roles tr ON at._team = tr._team
-           WHERE tr._user = '$requestingUserId'
-         )
-         """
-    // TODO: do you get to see the breadcrumbs if you only have access to the dataset?
+    val breadCrumbsAccessForFolder =
+      if (write) ""
+      else
+        s"""
+       -- only for read access: you may read the ancestors of a folder you can access
+       UNION ALL
+       SELECT fp._ancestor
+       FROM webknossos.folder_paths fp
+       WHERE fp._descendant IN (
+         SELECT at._folder
+         FROM webknossos.folder_allowedTeams at
+         JOIN webknossos.user_team_roles tr ON at._team = tr._team
+         WHERE tr._user = '$requestingUserId'
+       )
+       """
+    val breadCrumbsAccessForDataset =
+      if (write) ""
+      else
+        s"""
+       -- only for read access: you may read the ancestors of a dataset you can access
+       UNION ALL
+       SELECT fp._ancestor
+       FROM webknossos.folder_paths fp
+       WHERE fp._descendant IN (
+         SELECT d._folder
+         FROM webknossos.dataSets_ d
+         JOIN webknossos.dataSet_allowedTeams dt ON dt._dataSet = d._id
+         JOIN webknossos.user_team_roles ut ON dt._team = ut._team
+         WHERE ut._user = '$requestingUserId'
+       )
+       """
     s"""
         (
           -- is descendant of user organization folder and user is admin or dataset manager
@@ -114,7 +132,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               WHERE tr._user = '$requestingUserId'
               $writeAccessPredicate
             )
-            $breadCrumbsAccess -- only for read access: you may read the ancestors of a folder you can access
+            $breadCrumbsAccessForFolder
+            $breadCrumbsAccessForDataset
           )
         )
         """

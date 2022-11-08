@@ -504,8 +504,7 @@ function SimpleLayerForm({
             </Select>
           </Form.Item>
 
-          {/* The in-condition is only necessary to satisfy TypeScript */}
-          {isSegmentation && "largestSegmentId" in layer ? (
+          {isSegmentation ? (
             <div>
               <div style={{ display: "flex", alignItems: "end" }}>
                 <FormItemWithInfo
@@ -513,7 +512,9 @@ function SimpleLayerForm({
                   label="Largest segment ID"
                   info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
                   initialValue={
-                    layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined
+                    "largestSegmentId" in layer && layer.largestSegmentId != null
+                      ? `${layer.largestSegmentId}`
+                      : undefined
                   }
                   rules={[
                     {

@@ -22,7 +22,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When merging annotations, bounding boxes are no longer duplicated. [#6576](https://github.com/scalableminds/webknossos/pull/6576)
 - Jobs can no longer be started on datastores without workers. [#6595](https://github.com/scalableminds/webknossos/pull/6595)
 - When downloading volume annotations with volume data skipped, the nml volume tag is now included anyway (but has no location attribute in this case). [#6566](https://github.com/scalableminds/webknossos/pull/6566)
-
+- Re-phrased some backend (error) messages to improve clarity and provide helping hints. [#6616](https://github.com/scalableminds/webknossos/pull/6616)
+ 
 ### Fixed
 - Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 

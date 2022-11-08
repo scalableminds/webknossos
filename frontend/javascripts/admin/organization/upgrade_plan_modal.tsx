@@ -141,7 +141,7 @@ function upgradeStorageQuota() {
 function upgradePricingPlan(organization: APIOrganization) {
   const introSentence =
     "Upgrading your webKnossos plan will unlock more advanced features and increase your user and storage quotas.";
-  
+
   let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
   let featureDescriptions = teamPlanFeatures;
 

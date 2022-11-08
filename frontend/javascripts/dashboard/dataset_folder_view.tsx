@@ -16,7 +16,7 @@ import SortableTree, {
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
-import { APIDataset, APIUser, Folder, FlatFolderTreeItem } from "types/api_flow_types";
+import { APIUser, FlatFolderTreeItem, APIMaybeUnimportedDataset } from "types/api_flow_types";
 import {
   DatasetLayerTags,
   DatasetTags,
@@ -42,7 +42,7 @@ export function DatasetFolderView(props: Props) {
 }
 
 function DatasetFolderViewInner(props: Props) {
-  const [selectedDataset, setSelectedDataset] = useState<APIDataset | null>(null);
+  const [selectedDataset, setSelectedDataset] = useState<APIMaybeUnimportedDataset | null>(null);
   const context = useContext(DatasetCollectionContext);
   const isMutating = useIsMutating() > 0;
 
@@ -90,7 +90,11 @@ function DatasetFolderViewInner(props: Props) {
   );
 }
 
-function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDataset | null }) {
+function DatasetDetailsSidebar({
+  selectedDataset,
+}: {
+  selectedDataset: APIMaybeUnimportedDataset | null;
+}) {
   const context = useContext(DatasetCollectionContext);
 
   // allowedTeams: Array<APITeam>;
@@ -110,17 +114,19 @@ function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDatase
             {selectedDataset.displayName || selectedDataset.name}
           </h1>
           Description: {selectedDataset.description}
-          <div className="info-tab-block">
-            <table
-              style={{
-                fontSize: 14,
-              }}
-            >
-              <tbody>
-                <DatasetExtentRow dataset={selectedDataset} />
-              </tbody>
-            </table>
-          </div>
+          {selectedDataset.isActive && (
+            <div className="info-tab-block">
+              <table
+                style={{
+                  fontSize: 14,
+                }}
+              >
+                <tbody>
+                  <DatasetExtentRow dataset={selectedDataset} />
+                </tbody>
+              </table>
+            </div>
+          )}
           Access Permissions:
           <TeamTags dataset={selectedDataset} />
           Layers:

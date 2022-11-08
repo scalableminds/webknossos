@@ -52,8 +52,8 @@ type Props = {
   reloadDataset: (arg0: APIDatasetId, arg1?: Array<APIMaybeUnimportedDataset>) => Promise<void>;
   updateDataset: (arg0: APIDataset) => Promise<void>;
   addTagToSearch: (tag: string) => void;
-  onSelectDataset?: (dataset: APIDataset | null) => void;
-  selectedDataset?: APIDataset | null | undefined;
+  onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
+  selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns?: boolean;
 };
 type State = {
@@ -344,7 +344,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           locale={{
             emptyText: this.renderEmptyText(),
           }}
-          onRow={(record, rowIndex) => {
+          onRow={(record: APIMaybeUnimportedDataset) => {
             return {
               onClick: (event) => {
                 if (this.props.onSelectDataset) {
@@ -381,7 +381,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 this.setState({ datasetForContextMenu: record });
               },
               onDoubleClick: (event) => {
-                console.log("todo: open dataset");
+                window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
               },
             };
           }}

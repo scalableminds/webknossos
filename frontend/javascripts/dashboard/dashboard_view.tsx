@@ -126,7 +126,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         ) : null,
         validTabKeys.datasets ? (
           <TabPane tab="Datasets" key="datasets">
-            <DatasetView user={user} />
+            <DatasetView user={user} hideDetailsColumns={false} />
           </TabPane>
         ) : null,
         <TabPane tab="Dataset (Folders)" key="datasetsFolders">

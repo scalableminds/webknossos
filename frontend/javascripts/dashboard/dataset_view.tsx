@@ -32,8 +32,8 @@ const { Search, Group: InputGroup } = Input;
 type Props = {
   user: APIUser;
   context?: DatasetCollectionContext;
-  onSelectDataset?: (dataset: APIDataset | null) => void;
-  selectedDataset?: APIDataset | null | undefined;
+  onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
+  selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns: boolean;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";

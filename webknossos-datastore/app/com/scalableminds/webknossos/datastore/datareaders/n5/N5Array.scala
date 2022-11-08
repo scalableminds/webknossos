@@ -42,7 +42,7 @@ object N5Array extends LazyLogging {
 }
 
 class N5Array(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder)
-    extends DatasetArray(relativePath, store, header, axisOrder)
+    extends DatasetArray(relativePath, store, header, axisOrder, None)
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =

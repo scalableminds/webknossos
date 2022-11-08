@@ -46,7 +46,7 @@ class ZarrArray(relativePath: DatasetPath,
                 header: DatasetHeader,
                 axisOrder: AxisOrder,
                 channelIndex: Option[Int])
-    extends DatasetArray(relativePath, store, header, axisOrder)
+    extends DatasetArray(relativePath, store, header, axisOrder, channelIndex)
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =

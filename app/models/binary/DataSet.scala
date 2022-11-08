@@ -114,20 +114,36 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     }
 
   override def anonymousReadAccessQ(token: Option[String]): String =
-    "isPublic" + token.map(t => s""" or sharingToken = '$t'
-               or _id in
-                 (select ans._dataset
-                 from webknossos.annotation_privateLinks_ apl
-                 join webknossos.annotations_ ans ON apl._annotation = ans._id
-                 where apl.accessToken = '$t')""").getOrElse("")
+    // token can either be a dataset sharingToken or a matching annotation’s private link token
+    "isPublic" + token.map(t => s""" OR sharingToken = '$t'
+          OR _id in (
+            SELECT a._dataset
+            FROM webknossos.annotation_privateLinks_ apl
+            JOIN webknossos.annotations_ a ON apl._annotation = a._id
+            WHERE apl.accessToken = '$t')""").getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""isPublic
-        or _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin)
-        or _id in (select _dataSet
-          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '$requestingUserId') ut on dt._team = ut._team))
-        or ('$requestingUserId' in (select _id from webknossos.users where isDatasetManager and _id = '$requestingUserId')
-            and _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId'))"""
+        OR ( -- user is matching orga admin or dataset manager
+          _organization IN (
+            SELECT _organization
+            FROM webknossos.users_
+            WHERE _id = '$requestingUserId'
+            AND (isAdmin OR isDatasetManager)
+          )
+        )
+        OR ( -- user is in a team that is allowed for the dataset
+          _id IN (
+            SELECT _dataSet
+            FROM webknossos.dataSet_allowedTeams dt
+            JOIN webknossos.user_team_roles ut ON dt._team = ut._team
+            WHERE ut._user = '$requestingUserId'
+          )
+        )
+        OR ( -- user is in a team that is allowed for the folder
+          false -- TODO
+        )
+        """
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {

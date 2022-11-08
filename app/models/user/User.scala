@@ -93,7 +93,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"_organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin)"
 
-  def listAccessQ(requestingUserId: ObjectId, prefix: String) =
+  def listAccessQ(requestingUserId: ObjectId) =
     s"""(${readAccessQ(requestingUserId)})
         and
         (

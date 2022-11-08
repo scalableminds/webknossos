@@ -61,9 +61,16 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
     Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
 
-  override def readAccessQ(requestingUserId: ObjectId): String = readAccessQueryWithPrefix(requestingUserId, "")
+  override def readAccessQ(requestingUserId: ObjectId): String = readAccessQWithPrefix(requestingUserId, "")
 
-  def readAccessQueryWithPrefix(requestingUserId: ObjectId, prefix: String): String =
+  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: String): String =
+    rawAccessQ(write = false, requestingUserId, prefix)
+
+  override def updateAccessQ(requestingUserId: ObjectId): String =
+    rawAccessQ(write = true, requestingUserId, prefix = "")
+
+  private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: String): String = {
+    val writeAccessPredicate = if (write) "AND tr.isTeamManager" else ""
     s"""
         (
           -- is descendant of user organization folder and user is admin or dataset manager
@@ -92,45 +99,12 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               FROM webknossos.folder_allowedTeams at
               JOIN webknossos.user_team_roles tr ON at._team = tr._team
               WHERE tr._user = '$requestingUserId'
+              $writeAccessPredicate
             )
           )
         )
         """
-
-  override def updateAccessQ(requestingUserId: ObjectId): String =
-    s"""
-      (
-        -- is descendant of user organization folder and user is admin or dataset manager
-        _id IN (
-          SELECT fp._descendant
-          FROM webknossos.folder_paths fp
-          WHERE fp._ancestor IN (
-             SELECT o._rootFolder
-             FROM webknossos.organizations_ o
-             JOIN webknossos.users_ u ON u._organization = o._id
-             WHERE u._id = '$requestingUserId'
-             AND (
-               u.isAdmin
-               OR u.isDatasetManager
-             )
-          )
-        )
-      )
-      OR (
-        -- is descendant of a folder with allowed teams the user is TEAM MANAGER of
-        _id IN (
-          SELECT fp._descendant
-          FROM webknossos.folder_paths fp
-          WHERE fp._ancestor IN (
-            SELECT at._folder
-            FROM webknossos.folder_allowedTeams at
-            JOIN webknossos.user_team_roles tr ON at._team = tr._team
-            WHERE tr._user = '$requestingUserId'
-            AND tr.isTeamManager
-          )
-        )
-      )
-      """
+  }
 
   def insertAsRoot(f: Folder): Fox[Unit] = {
     val insertPathQuery =
@@ -184,7 +158,7 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findTreeOf(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[FolderWithParent]] =
     for {
-      accessQueryWithPrefix <- accessQueryFromAccessQ(readAccessQueryWithPrefix, prefix = "f.")
+      accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = "f.")
       accessQuery <- readAccessQuery
       rows <- run(sql"""SELECT f._id, f.name, fp._ancestor
               FROM webknossos.folders_ f

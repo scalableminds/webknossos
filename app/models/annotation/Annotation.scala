@@ -174,7 +174,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
 
   override def anonymousReadAccessQ(sharingToken: Option[String]) = s"visibility = '${AnnotationVisibility.Public}'"
 
-  private def listAccessQ(requestingUserId: ObjectId, prefix: String = ""): String =
+  private def listAccessQ(requestingUserId: ObjectId): String =
     s"""
         (
           _user = '$requestingUserId'

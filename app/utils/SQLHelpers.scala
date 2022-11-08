@@ -208,7 +208,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       case _ => Fox.failure("Access denied.")
     }
 
-  def accessQueryFromAccessQ(accessQ: (ObjectId, String) => String, prefix: String = "")(
+  def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, String) => String, prefix: String)(
       implicit ctx: DBAccessContext): Fox[String] =
     if (ctx.globalAccess) Fox.successful("true")
     else {
@@ -217,6 +217,19 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       } yield {
         userIdBox match {
           case Full(userId) => "(" + accessQ(userId, prefix) + ")"
+          case _            => "(false)"
+        }
+      }
+    }
+
+  def accessQueryFromAccessQ(accessQ: ObjectId => String)(implicit ctx: DBAccessContext): Fox[String] =
+    if (ctx.globalAccess) Fox.successful("true")
+    else {
+      for {
+        userIdBox <- userIdFromCtx.futureBox
+      } yield {
+        userIdBox match {
+          case Full(userId) => "(" + accessQ(userId) + ")"
           case _            => "(false)"
         }
       }

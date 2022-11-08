@@ -893,10 +893,13 @@ export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent?: string;
+  isEditable: boolean;
 };
 
 export type Folder = {
   name: string;
   id: string;
-  teams: string[];
+  allowedTeams: string[];
+  allowedTeamsCumulative: string[];
+  isEditable: boolean;
 };

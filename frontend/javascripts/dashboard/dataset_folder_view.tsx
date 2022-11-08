@@ -318,14 +318,17 @@ function FolderSidebar() {
     >
       <SortableTree
         treeData={state.treeData}
-        onChange={(treeData) => {
+        onChange={(treeData: FolderItem[]) => {
           setState({ treeData });
         }}
         onMoveNode={onMoveNode}
         theme={FileExplorerTheme}
         canDrag={true}
         canDrop={canDropFolder}
-        generateNodeProps={(params) => generateNodeProps(context, params)}
+        generateNodeProps={(params) =>
+          // @ts-ignore
+          generateNodeProps(context, params as ExtendedNodeData<FolderItem>)
+        }
       />
     </div>
   );
@@ -344,6 +347,7 @@ function getFolderHierarchy(
     const treeItem = {
       id: folderTreeItem.id,
       title: folderTreeItem.name,
+      isEditable: folderTreeItem.isEditable,
       children: [],
     };
     if (folderTreeItem.parent == null) {

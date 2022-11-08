@@ -116,7 +116,9 @@ class FolderController @Inject()(
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       foldersWithParents <- folderDAO.findTreeOf(organization._rootFolder)
-      foldersWithParentsJson = foldersWithParents.map(folderService.publicWritesWithParent)
+      allEditableIds <- folderDAO.findAllEditableIds
+      foldersWithParentsJson = foldersWithParents.map(f =>
+        folderService.publicWritesWithParent(f, allEditableIds.toSet))
     } yield Ok(Json.toJson(foldersWithParentsJson))
   }
 

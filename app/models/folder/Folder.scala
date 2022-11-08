@@ -24,8 +24,10 @@ object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
 }
 
-class FolderService @Inject()(teamDAO: TeamDAO, teamService: TeamService, organizationDAO: OrganizationDAO)(
-    implicit ec: ExecutionContext) {
+class FolderService @Inject()(teamDAO: TeamDAO,
+                              teamService: TeamService,
+                              folderDAO: FolderDAO,
+                              organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext) {
 
   def publicWrites(
       folder: Folder,
@@ -37,14 +39,21 @@ class FolderService @Inject()(teamDAO: TeamDAO, teamService: TeamService, organi
       teamsCumulative <- teamService.allowedTeamsForFolder(folder._id, cumulative = true, requestingUser)
       teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t =>
         teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
+      isEditable <- folderDAO.isEditable(folder._id)
     } yield
       Json.obj("id" -> folder._id,
                "name" -> folder.name,
                "allowedTeams" -> teamsJs,
-               "allowedTeamsCumulative" -> teamsCumulativeJs)
+               "allowedTeamsCumulative" -> teamsCumulativeJs,
+               "isEditable" -> isEditable)
 
-  def publicWritesWithParent(folderWithParent: FolderWithParent): JsObject =
-    Json.obj("id" -> folderWithParent._id, "name" -> folderWithParent.name, "parent" -> folderWithParent._parent)
+  def publicWritesWithParent(folderWithParent: FolderWithParent, allEditableIds: Set[ObjectId]): JsObject =
+    Json.obj(
+      "id" -> folderWithParent._id,
+      "name" -> folderWithParent.name,
+      "parent" -> folderWithParent._parent,
+      "isEditable" -> allEditableIds.contains(folderWithParent._id)
+    )
 
 }
 
@@ -188,6 +197,25 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- assertUpdateAccess(folderId)
       _ <- run(sqlu"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId")
     } yield ()
+
+  def findAllEditableIds(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+    for {
+      updateAccessQuery <- accessQueryFromAccessQ(updateAccessQ)
+      rows <- run(sql"SELECT _id FROM webknossos.folders_ WHERE #$updateAccessQuery".as[ObjectId])
+    } yield rows.toList
+
+  def isEditable(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    for {
+      updateAccessQuery <- accessQueryFromAccessQ(updateAccessQ)
+      rows <- run(sql"""SELECT EXISTS(
+                SELECT 1 FROM
+                webknossos.folders_
+                WHERE _id = $folderId
+                AND #$updateAccessQuery
+              )
+           """.as[Boolean])
+      result <- rows.headOption
+    } yield result
 
   def findTreeOf(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[FolderWithParent]] =
     for {

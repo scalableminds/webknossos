@@ -1,6 +1,6 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
-import { Menu, Dropdown, Spin } from "antd";
+import { Menu, Dropdown, Spin, Modal, Input, Form } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
@@ -25,7 +25,10 @@ import {
 } from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
   DatasetCollectionContext,
+  useFolderQuery,
 } from "./dataset/dataset_collection_context";
+import { FormItemWithInfo } from "./dataset/helper_components";
+import TeamSelectionComponent from "./dataset/team_selection_component";
 
 import DatasetView from "./dataset_view";
 
@@ -154,13 +157,10 @@ type FolderItem = {
   children: FolderItem[];
 };
 
-type State = {
-  treeData: FolderItem[];
-};
-
 function generateNodeProps(
   context: DatasetCollectionContext,
   params: ExtendedNodeData<FolderItem>,
+  setFolderIdForEditModal: (folderId: string) => void,
 ): GenerateNodePropsType {
   const { node } = params;
   const { id, title } = node;
@@ -175,11 +175,16 @@ function generateNodeProps(
   }
   function renameFolder(): void {
     const folderName = prompt("Please input a new name for the folder", title);
-    context.queries.updateFolderMutation.mutateAsync({
-      name: folderName || "New folder",
-      id,
-      teams: [], // todo
-    });
+    // context.queries.updateFolderMutation.mutateAsync({
+    //   name: folderName || "New folder",
+    //   id,
+    //   allowedTeams: node.allowedTeams,
+    //   allowedTeamsCumulative: node.allowedTeamsCumulative,
+    // });
+  }
+
+  function editFolder(): void {
+    setFolderIdForEditModal(id);
   }
 
   const createMenu = () => (
@@ -192,6 +197,11 @@ function generateNodeProps(
         <EditOutlined />
         Rename Folder
       </Menu.Item>
+      <Menu.Item key="edit" data-group-id={id} onClick={editFolder}>
+        <EditOutlined />
+        Edit Folder
+      </Menu.Item>
+
       <Menu.Item key="delete" data-group-id={id} onClick={deleteFolder}>
         <DeleteOutlined />
         Delete Folder
@@ -244,12 +254,10 @@ function FolderItemAsDropTarget(props: {
         Toast.error("Could not move dataset. Please try again.");
       }
     },
-    collect: (monitor: DropTargetMonitor) => {
-      return {
-        canDrop: monitor.canDrop(),
-        isOver: monitor.isOver(),
-      };
-    },
+    collect: (monitor: DropTargetMonitor) => ({
+      canDrop: monitor.canDrop(),
+      isOver: monitor.isOver(),
+    }),
   });
   const { canDrop, isOver } = collectedProps;
   return (
@@ -267,28 +275,25 @@ function FolderItemAsDropTarget(props: {
 }
 
 function FolderSidebar() {
-  const [state, setState] = useState<State>({
-    treeData: [],
-  });
+  const [treeData, setTreeData] = useState<FolderItem[]>([]);
+  const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
   const context = useContext(DatasetCollectionContext);
 
   const { data: folderTree } = context.queries.folderTreeQuery;
 
   useEffect(() => {
-    setState((prevState: State) => {
-      const treeData = getFolderHierarchy(folderTree, prevState.treeData);
+    setTreeData((prevState) => {
+      const treeData = getFolderHierarchy(folderTree, prevState);
       if (treeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(treeData[0].id);
       }
-      return { treeData: treeData };
+      return treeData;
     });
   }, [folderTree]);
 
   const [isDraggingDataset, drop] = useDrop({
     accept: DraggableType,
-    collect: (monitor: DropTargetMonitor) => {
-      return monitor.canDrop();
-    },
+    collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
 
   const onMoveNode = (
@@ -300,9 +305,8 @@ function FolderSidebar() {
     }
   };
 
-  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean => {
-    return params.nextParent != null;
-  };
+  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean =>
+    params.nextParent != null;
 
   return (
     <div
@@ -316,18 +320,28 @@ function FolderSidebar() {
         padding: 2,
       }}
     >
+      {folderIdForEditModal != null && (
+        <EditFolderModal
+          onClose={() => setFolderIdForEditModal(null)}
+          folderId={folderIdForEditModal}
+        />
+      )}
       <SortableTree
-        treeData={state.treeData}
-        onChange={(treeData: FolderItem[]) => {
-          setState({ treeData });
+        treeData={treeData}
+        onChange={(newTreeData: FolderItem[]) => {
+          setTreeData(newTreeData);
         }}
         onMoveNode={onMoveNode}
         theme={FileExplorerTheme}
-        canDrag={true}
+        canDrag
         canDrop={canDropFolder}
         generateNodeProps={(params) =>
-          // @ts-ignore
-          generateNodeProps(context, params as ExtendedNodeData<FolderItem>)
+          generateNodeProps(
+            context,
+            // @ts-ignore
+            params as ExtendedNodeData<FolderItem>,
+            setFolderIdForEditModal,
+          )
         }
       />
     </div>
@@ -390,4 +404,58 @@ function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) 
     fn(item);
     forEachFolderItem(item.children, fn);
   }
+}
+
+function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () => void }) {
+  const { data: folder } = useFolderQuery(folderId);
+  const [form] = Form.useForm();
+  const context = useContext(DatasetCollectionContext);
+
+  const onSave = async () => {
+    const name = form.getFieldValue("name");
+    const allowedTeams = form.getFieldValue("allowedTeams");
+
+    if (folder == null) {
+      return;
+    }
+
+    await context.queries.updateFolderMutation.mutateAsync({
+      ...folder,
+      id: folderId,
+      name,
+      allowedTeams,
+    });
+
+    onClose();
+  };
+
+  const content =
+    folder != null ? (
+      <div>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ name: folder.name, allowedTeams: folder.allowedTeams }}
+        >
+          <FormItemWithInfo name="name" label="Name" info="Name of the folder">
+            <Input value={folder.name} />
+          </FormItemWithInfo>
+          <FormItemWithInfo
+            name="allowedTeams"
+            label="Allowed Teams"
+            info="Teams which may access this folder"
+          >
+            <TeamSelectionComponent mode="multiple" allowNonEditableTeams />
+          </FormItemWithInfo>
+        </Form>
+      </div>
+    ) : (
+      <Spin spinning />
+    );
+
+  return (
+    <Modal title="Edit Folder" visible onOk={onSave} onCancel={onClose}>
+      {content}
+    </Modal>
+  );
 }

@@ -81,7 +81,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
     // as this breaks antd's styling of the menu within the dropdown.
     overlay = getDatasetActionMenu({
       hideContextMenu,
-      dataset: dataset,
+      dataset,
       reloadDataset,
     });
   }
@@ -344,8 +344,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           locale={{
             emptyText: this.renderEmptyText(),
           }}
-          onRow={(record: APIMaybeUnimportedDataset) => {
-            return {
+          onRow={(record: APIMaybeUnimportedDataset) => ({
               onClick: (event) => {
                 if (this.props.onSelectDataset) {
                   if (this.props.selectedDataset === record) {
@@ -383,8 +382,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               onDoubleClick: (event) => {
                 window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
               },
-            };
-          }}
+            })}
           rowSelection={{
             selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
             onSelectNone: () => this.props.onSelectDataset && this.props.onSelectDataset(null),
@@ -469,9 +467,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 }
                 return dataset.allowedTeams.some((team) => team.name === value);
               }}
-              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
-                return <TeamTags dataset={dataset} />;
-              }}
+              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => <TeamTags dataset={dataset} />}
             />
           ) : null}
           {!this.props.hideDetailsColumns ? (

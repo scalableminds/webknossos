@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
+  getFolder,
   getFolderTree,
   moveFolder,
   updateFolder,
@@ -62,6 +63,8 @@ export const DatasetCollectionContext = createContext<DatasetCollectionContext>(
   setActiveFolderId: () => {},
   queries: {
     // @ts-ignore todo
+    folderQuery: {},
+    // @ts-ignore todo
     folderTreeQuery: {},
     // @ts-ignore todo
     datasetsInFolderQuery: {},
@@ -74,9 +77,16 @@ export const DatasetCollectionContext = createContext<DatasetCollectionContext>(
     // @ts-ignore todo
     updateDatasetMutation: {},
     // @ts-ignore todo
-    useMoveFolderMutation: {},
+    moveFolderMutation: {},
   },
 });
+
+export function useFolderQuery(folderId: string) {
+  const queryKey = ["folders", folderId];
+  return useQuery(queryKey, () => getFolder(folderId), {
+    refetchOnWindowFocus: false,
+  });
+}
 
 function useFolderTreeQuery() {
   return useQuery(["folders"], getFolderTree, {
@@ -259,6 +269,7 @@ function useUpdateFolderMutation() {
             : oldFolder,
         ),
       );
+      queryClient.setQueryData(["folders", updatedFolder.id], undefined);
     },
     onError: (err) => {
       Toast.error(`Could not update folder. ${err}`);

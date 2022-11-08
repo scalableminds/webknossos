@@ -899,7 +899,7 @@ export type FlatFolderTreeItem = {
 export type Folder = {
   name: string;
   id: string;
-  allowedTeams: string[];
-  allowedTeamsCumulative: string[];
+  allowedTeams: APITeam[];
+  allowedTeamsCumulative: APITeam[];
   isEditable: boolean;
 };

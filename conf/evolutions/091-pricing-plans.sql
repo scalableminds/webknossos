@@ -12,7 +12,7 @@ DROP VIEW webknossos.organizations_;
 
 -- Edit pricing plans enum
 ALTER TYPE webknossos.PRICING_PLANS RENAME TO prizing_plans_old;
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Free', 'Team', 'Power', 'Team-Trial', 'Power-Trial', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Free', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 ALTER TABLE webknossos.organizations
   ALTER COLUMN pricingPLan DROP DEFAULT,
   ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING

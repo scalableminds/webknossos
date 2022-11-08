@@ -1316,10 +1316,17 @@ export function updateDataset(
   dataset: APIMaybeUnimportedDataset,
   // todo: make mandatory?
   folderId?: string,
+  skipResolutions?: boolean,
 ): Promise<APIDataset> {
-  folderId = folderId || dataset.folder.id;
+  folderId = folderId || dataset.folderId;
+
+  const params = new URLSearchParams();
+  if (skipResolutions) {
+    params.append("skipResolutions", "true");
+  }
+
   return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}?${params}`,
     {
       method: "PATCH",
       data: { ...dataset, folderId },

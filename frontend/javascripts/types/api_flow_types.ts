@@ -116,7 +116,7 @@ export type APIDatasetDetails = {
 };
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
-  folder: Folder;
+  folderId: string;
   allowedTeams: Array<APITeam>;
   created: number;
   dataStore: APIDataStore;

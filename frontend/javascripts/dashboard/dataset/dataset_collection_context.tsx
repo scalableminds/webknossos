@@ -306,7 +306,7 @@ function useUpdateDatasetMutation(folderId: string | null) {
         return getDataset(datasetId);
       }
       const [dataset, folderId] = params;
-      return updateDataset(dataset, dataset, folderId);
+      return updateDataset(dataset, dataset, folderId, true);
     },
     {
       mutationKey,
@@ -315,7 +315,7 @@ function useUpdateDatasetMutation(folderId: string | null) {
         queryClient.setQueryData(mutationKey, (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
           updateDatasetInQueryData(updatedDataset, folderId, oldItems),
         );
-        const targetFolderId = updatedDataset.folder.id;
+        const targetFolderId = updatedDataset.folderId;
         if (targetFolderId != folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
           queryClient.setQueryData(
@@ -350,7 +350,7 @@ function updateDatasetInQueryData(
     .map((oldDataset: APIMaybeUnimportedDataset) =>
       oldDataset.name === updatedDataset.name ? updatedDataset : oldDataset,
     )
-    .filter((dataset: APIMaybeUnimportedDataset) => dataset.folder.id === activeFolderId);
+    .filter((dataset: APIMaybeUnimportedDataset) => dataset.folderId === activeFolderId);
 }
 
 const ACTIVE_FOLDER_ID_STORAGE_KEY = "activeFolderId";
@@ -415,7 +415,7 @@ export default function DatasetCollectionContextProvider({
   }
 
   async function updateCachedDataset(dataset: APIDataset) {
-    updateDatasetMutation.mutateAsync([dataset, dataset.folder.id]);
+    updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
   const isLoading = datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
@@ -503,10 +503,7 @@ function diffDatasets(
     .filter((newDataset) => {
       const oldDataset = oldDatasetsDict[newDataset.name];
       return !_.isEqualWith(oldDataset, newDataset, (_objValue, _otherValue, key) => {
-        // todo: ignoring dataSource shouldnt be necessary anymore
-        // as soon as skipExisting is used for the updateDataset route
-        // when moving a dataset.
-        if (key === "lastUsedByUser" || key === "dataSource") {
+        if (key === "lastUsedByUser") {
           // Ignore the lastUsedByUser timestamp when diffing datasets.
           return true;
         }

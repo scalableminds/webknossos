@@ -25,6 +25,7 @@ import {
 } from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
   DatasetCollectionContext,
+  DatasetCollectionContextValue,
   useFolderQuery,
 } from "./dataset/dataset_collection_context";
 import { FormItemWithInfo } from "./dataset/helper_components";
@@ -158,7 +159,7 @@ type FolderItem = {
 };
 
 function generateNodeProps(
-  context: DatasetCollectionContext,
+  context: DatasetCollectionContextValue,
   params: ExtendedNodeData<FolderItem>,
   setFolderIdForEditModal: (folderId: string) => void,
 ): GenerateNodePropsType {
@@ -174,7 +175,7 @@ function generateNodeProps(
     context.queries.deleteFolderMutation.mutateAsync(id);
   }
   function renameFolder(): void {
-    const folderName = prompt("Please input a new name for the folder", title);
+    // const folderName = prompt("Please input a new name for the folder", title);
     // context.queries.updateFolderMutation.mutateAsync({
     //   name: folderName || "New folder",
     //   id,
@@ -246,7 +247,7 @@ function FolderItemAsDropTarget(props: {
   const [collectedProps, drop] = useDrop({
     accept: DraggableType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
-      const dataset = context.datasets.find((dataset) => dataset.name === item.datasetName);
+      const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
       if (dataset) {
         context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
@@ -283,11 +284,11 @@ function FolderSidebar() {
 
   useEffect(() => {
     setTreeData((prevState) => {
-      const treeData = getFolderHierarchy(folderTree, prevState);
-      if (treeData.length > 0 && context.activeFolderId == null) {
-        context.setActiveFolderId(treeData[0].id);
+      const newTreeData = getFolderHierarchy(folderTree, prevState);
+      if (newTreeData.length > 0 && context.activeFolderId == null) {
+        context.setActiveFolderId(newTreeData[0].id);
       }
-      return treeData;
+      return newTreeData;
     });
   }, [folderTree]);
 

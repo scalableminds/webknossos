@@ -1,6 +1,6 @@
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Dropdown, Menu, Table, Tag, Tooltip } from "antd";
+import { Dropdown, Table, Tag, Tooltip } from "antd";
 import type {
   FilterValue,
   SorterResult,
@@ -345,44 +345,44 @@ class DatasetTable extends React.PureComponent<Props, State> {
             emptyText: this.renderEmptyText(),
           }}
           onRow={(record: APIMaybeUnimportedDataset) => ({
-              onClick: (event) => {
-                if (this.props.onSelectDataset) {
-                  if (this.props.selectedDataset === record) {
-                    this.props.onSelectDataset(null);
-                  } else {
-                    this.props.onSelectDataset(record);
+            onClick: () => {
+              if (this.props.onSelectDataset) {
+                if (this.props.selectedDataset === record) {
+                  this.props.onSelectDataset(null);
+                } else {
+                  this.props.onSelectDataset(record);
+                }
+              }
+            },
+            onContextMenu: (event) => {
+              event.preventDefault();
+
+              const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
+
+              const referenceDiv = Array.from(overlayDivs)
+                .map((p) => p.parentElement)
+                .find((potentialParent) => {
+                  if (potentialParent == null) {
+                    return false;
                   }
-                }
-              },
-              onContextMenu: (event) => {
-                event.preventDefault();
+                  const bounds = potentialParent.getBoundingClientRect();
+                  return bounds.width > 0;
+                });
 
-                const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
+              if (referenceDiv == null) {
+                return;
+              }
+              const bounds = referenceDiv.getBoundingClientRect();
+              const x = event.clientX - bounds.left;
+              const y = event.clientY - bounds.top;
 
-                const referenceDiv = Array.from(overlayDivs)
-                  .map((p) => p.parentElement)
-                  .find((potentialParent) => {
-                    if (potentialParent == null) {
-                      return false;
-                    }
-                    const bounds = potentialParent.getBoundingClientRect();
-                    return bounds.width > 0;
-                  });
-
-                if (referenceDiv == null) {
-                  return;
-                }
-                const bounds = referenceDiv.getBoundingClientRect();
-                const x = event.clientX - bounds.left;
-                const y = event.clientY - bounds.top;
-
-                this.showContextMenuAt(x, y);
-                this.setState({ datasetForContextMenu: record });
-              },
-              onDoubleClick: (event) => {
-                window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
-              },
-            })}
+              this.showContextMenuAt(x, y);
+              this.setState({ datasetForContextMenu: record });
+            },
+            onDoubleClick: () => {
+              window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
+            },
+          })}
           rowSelection={{
             selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
             onSelectNone: () => this.props.onSelectDataset && this.props.onSelectDataset(null),
@@ -467,7 +467,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 }
                 return dataset.allowedTeams.some((team) => team.name === value);
               }}
-              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => <TeamTags dataset={dataset} />}
+              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => (
+                <TeamTags dataset={dataset} />
+              )}
             />
           ) : null}
           {!this.props.hideDetailsColumns ? (
@@ -514,19 +516,19 @@ export function DatasetTags({
   updateDataset: (d: APIDataset) => void;
 }) {
   const editTagFromDataset = (
-    dataset: APIMaybeUnimportedDataset,
+    updatedDataset: APIMaybeUnimportedDataset,
     shouldAddTag: boolean,
     tag: string,
     event: React.SyntheticEvent,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
 
-    if (!dataset.isActive) {
-      console.error(`Tags can only be added to active datasets. ${dataset.name} is not active.`);
+    if (!updatedDataset.isActive) {
+      console.error(
+        `Tags can only be added to active datasets. ${updatedDataset.name} is not active.`,
+      );
       return;
     }
-
-    let updatedDataset = dataset;
 
     if (shouldAddTag) {
       if (!dataset.tags.includes(tag)) {
@@ -605,7 +607,7 @@ export function TeamTags({
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {
-    return <>{emptyValue}</>;
+    return <div>emptyValue</div>;
   }
 
   return (

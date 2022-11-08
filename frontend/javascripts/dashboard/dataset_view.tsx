@@ -13,10 +13,13 @@ import {
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIDataset, APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
+import type { APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
-import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
+import {
+  DatasetCacheContext,
+  DatasetCacheContextValue,
+} from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";
@@ -26,12 +29,12 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
-import { DatasetCollectionContext } from "./dataset/dataset_collection_context";
+
 const { Search, Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
-  context?: DatasetCollectionContext;
+  context?: DatasetCacheContextValue;
   onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
   selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns: boolean;
@@ -354,7 +357,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   );
 }
 
-function renderPlaceholder(context: DatasetCacheContext, user: APIUser) {
+function renderPlaceholder(context: DatasetCacheContextValue, user: APIUser) {
   const openPublicDatasetCard = (
     <OptionCard
       header="Open Demo Dataset"

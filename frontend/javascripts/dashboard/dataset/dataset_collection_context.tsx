@@ -27,7 +27,7 @@ type Options = {
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
   isCalledFromCheckDatasets?: boolean;
 };
-export type DatasetCollectionContext = {
+export type DatasetCollectionContextValue = {
   datasets: Array<APIMaybeUnimportedDataset>;
   isLoading: boolean;
   isChecking: boolean;
@@ -51,7 +51,7 @@ export type DatasetCollectionContext = {
   };
 };
 
-export const DatasetCollectionContext = createContext<DatasetCollectionContext>({
+export const DatasetCollectionContext = createContext<DatasetCollectionContextValue>({
   datasets: [],
   isLoading: false,
   isChecking: false,
@@ -135,7 +135,7 @@ function useDatasetsInFolderQuery(folderId: string | null) {
       // No data exists in the cache. Allow the query to fetch.
       // console.log("[p] refetch");
       queryData.refetch();
-      return;
+      return undefined;
     }
 
     let ignoreFetchResult = false;
@@ -285,7 +285,7 @@ function useMoveFolderMutation() {
     ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
     {
       mutationKey,
-      onSuccess: (updatedFolder, [folderId, newParentId]) => {
+      onSuccess: (updatedFolder, [_folderId, newParentId]) => {
         queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
           (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
             oldFolder.id === updatedFolder.id
@@ -316,8 +316,8 @@ function useUpdateDatasetMutation(folderId: string | null) {
         const datasetId = params;
         return getDataset(datasetId);
       }
-      const [dataset, folderId] = params;
-      return updateDataset(dataset, dataset, folderId, true);
+      const [dataset, newFolderId] = params;
+      return updateDataset(dataset, dataset, newFolderId, true);
     },
     {
       mutationKey,
@@ -327,7 +327,7 @@ function useUpdateDatasetMutation(folderId: string | null) {
           updateDatasetInQueryData(updatedDataset, folderId, oldItems),
         );
         const targetFolderId = updatedDataset.folderId;
-        if (targetFolderId != folderId) {
+        if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
           queryClient.setQueryData(
             ["datasetsByFolder", targetFolderId],
@@ -391,7 +391,7 @@ export default function DatasetCollectionContextProvider({
     }
   }, [activeFolderId]);
 
-  async function fetchDatasets(options: Options = {}): Promise<void> {
+  async function fetchDatasets(_options: Options = {}): Promise<void> {
     queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", activeFolderId] });
 
     // const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;
@@ -420,7 +420,7 @@ export default function DatasetCollectionContextProvider({
 
   async function reloadDataset(
     datasetId: APIDatasetId,
-    datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
+    _datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
   ) {
     updateDatasetMutation.mutateAsync(datasetId);
   }
@@ -435,7 +435,7 @@ export default function DatasetCollectionContextProvider({
   console.log("datasetsInFolderQuery.isFetching", datasetsInFolderQuery.isFetching);
   console.log("datasetsInFolderQuery.isRefetching", datasetsInFolderQuery.isRefetching);
 
-  const value: DatasetCollectionContext = useMemo(
+  const value: DatasetCollectionContextValue = useMemo(
     () => ({
       datasets,
       isLoading,

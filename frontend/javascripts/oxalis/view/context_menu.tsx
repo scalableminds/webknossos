@@ -134,9 +134,7 @@ type StateProps = {
   allowUpdate: boolean;
 };
 type Props = OwnProps & StateProps & DispatchProps;
-type PropsWithRef = Props & {
-  inputRef: React.MutableRefObject<HTMLElement | null>;
-};
+
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
   clickedNodeId: number;

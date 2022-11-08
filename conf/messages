@@ -40,7 +40,7 @@ organization.alreadyJoined=Your account is already associated with the selected 
 
 user.notFound=User not found
 user.noAdmin=Access denied. Only admin users can execute this operation.
-user.deactivated=Your account has not been activated by an admin yet. Please contact your organisation's admin for help.
+user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.
 user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.
 user.lastAdmin=Your account is the last remaining admin in your organzation. You cannot remove admin privileges from your account.
 

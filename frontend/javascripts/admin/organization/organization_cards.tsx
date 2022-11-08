@@ -8,6 +8,7 @@ import { getOrganizationStorageSpace } from "admin/admin_rest_api";
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import { useFetch } from "libs/react_helpers";
+import moment from "moment";
 import React from "react";
 import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
@@ -74,7 +75,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
 
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
   if (organization.pricingPlan === PricingPlanEnum.Free) return null;
-  
+
   return (
     <Card style={{ marginBottom: 20 }}>
       <Row gutter={24}>
@@ -113,6 +114,10 @@ export function PlanDashboardCard({
   const usedUsersPercentage = (activeUsersCount / organization.includedUsers) * 100;
   const usedStoragePercentage = (usedStorageMB / organization.includedStorage) * 100;
 
+  const hasExceededUserLimit = usedUsersPercentage > 100;
+  const hasExceededStorageLimit = usedStoragePercentage > 100;
+  const hasPlanExpired = Date.now() > organization.paidUntil;
+
   const maxUsersCountLabel =
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
 
@@ -129,6 +134,8 @@ export function PlanDashboardCard({
       : `${(usedStorageMB / 1000 ** 2).toFixed(1)}`;
 
   const storageLabel = `${usedStorageLabel}/${includedStorageLabel}`;
+
+  const hasPlanExceeded = hasExceededStorageLimit || hasExceededUserLimit || hasPlanExpired;
 
   const redStrokeColor = "#ff4d4f";
   const greenStrokeColor = "#52c41a";
@@ -182,9 +189,14 @@ export function PlanDashboardCard({
 
   return (
     <>
-      {usedStoragePercentage > 100 || usedUsersPercentage > 100 ? (
-       <PlanExceededAlert organization={organization}/>
-      ) : null}
+      {hasPlanExceeded ? (
+        <PlanExceededAlert organization={organization} />
+      ) : (
+        <PlanAboutToExceedWarning
+          organization={organization}
+          usedStorageSpace={usedStorageSpace.usedStorageSpace}
+        />
+      )}
       <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
         <Col>
           <Card actions={upgradeUsersAction}>
@@ -193,8 +205,8 @@ export function PlanDashboardCard({
                 type="dashboard"
                 percent={usedUsersPercentage}
                 format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
-                strokeColor={usedUsersPercentage > 100 ? redStrokeColor : greenStrokeColor}
-                status={usedUsersPercentage > 100 ? "exception" : "active"}
+                strokeColor={hasExceededUserLimit ? redStrokeColor : greenStrokeColor}
+                status={hasExceededUserLimit ? "exception" : "active"}
               />
             </Row>
             <Row justify="center">Users</Row>
@@ -207,17 +219,15 @@ export function PlanDashboardCard({
                 type="dashboard"
                 percent={usedStoragePercentage}
                 format={() => storageLabel}
-                strokeColor={usedStoragePercentage > 100 ? redStrokeColor : greenStrokeColor}
-                status={usedStoragePercentage > 100 ? "exception" : "active"}
+                strokeColor={hasExceededStorageLimit ? redStrokeColor : greenStrokeColor}
+                status={hasExceededStorageLimit ? "exception" : "active"}
               />
             </Row>
             <Row justify="center">Storage</Row>
           </Card>
         </Col>
         <Col>
-          <Card
-            actions={upgradePlanAction}
-          >
+          <Card actions={upgradePlanAction}>
             <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 35px" }}>
               <h3>{organization.pricingPlan}</h3>
             </Row>
@@ -233,8 +243,8 @@ function PlanExceededAlert({ organization }: { organization: APIOrganization }) 
   const hasPlanExpired = Date.now() > organization.paidUntil;
 
   const message = hasPlanExpired
-    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded and loose access to features and prevent users from being blocked."
-    : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account being blocked.";
+    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded and lose access to features and prevent users from being blocked."
+    : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account from being blocked.";
   const actionButton = hasPlanExpired ? (
     <Button
       size="small"
@@ -260,33 +270,61 @@ function PlanExceededAlert({ organization }: { organization: APIOrganization }) 
   );
 }
 
-function PlanAboutToExceedWarning(organization: APIOrganization) {
-  const hasPlanExpired = false;
+function PlanAboutToExceedWarning({
+  organization,
+  usedStorageSpace,
+}: {
+  organization: APIOrganization;
+  usedStorageSpace: number;
+}) {
+  const alerts = [];
+  const isAboutToExpire =
+    moment.duration(moment(organization.paidUntil).diff(moment())).asWeeks() <= 6;
 
-  const message = hasPlanExpired
-    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded and loose access to features and prevent users from being blocked."
-    : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account being blocked.";
-  const actionButton = hasPlanExpired ? (
-    <Button
-      size="small"
-      type="primary"
-      onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
-    >
-      Extend Plan Now
-    </Button>
-  ) : (
-    <Button size="small" type="primary" onClick={UpgradePricingPlanModal.upgradePricingPlan}>
-      Upgrade Now
-    </Button>
-  );
+  const storageWarningThresholdMB = PricingPlanEnum.Free ? 5000 : 10000;
+  const isAboutToExceedStorage =
+    usedStorageSpace >= organization.includedStorage - storageWarningThresholdMB;
+
+  if (isAboutToExpire)
+    alerts.push({
+      message:
+        "Your webKnossos plan is about to expire soon. Renew your plan now to avoid being downgraded and lose access to features and prevent users from being blocked.",
+      actionButton: (
+        <Button
+          size="small"
+          type="primary"
+          onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+        >
+          Extend Plan Now
+        </Button>
+      ),
+    });
+
+  if (isAboutToExceedStorage)
+    alerts.push({
+      message:
+        "Your organization is about to exceed the storage space included in your current plan. Upgrade now to avoid your account from being blocked.",
+      actionButton: (
+        <Button size="small" type="primary" onClick={UpgradePricingPlanModal.upgradePricingPlan}>
+          Upgrade Now
+        </Button>
+      ),
+    });
+
+  if (!isAboutToExpire && !isAboutToExceedStorage) return null;
 
   return (
-    <Alert
-      showIcon
-      type="error"
-      message={message}
-      action={actionButton}
-      style={{ marginBottom: 20 }}
-    />
+    <>
+      {alerts.map((alert) => (
+        <Alert
+          key={alert.message.slice(0, 10)}
+          showIcon
+          type="warning"
+          message={alert.message}
+          action={alert.actionButton}
+          style={{ marginBottom: 20 }}
+        />
+      ))}
+    </>
   );
 }

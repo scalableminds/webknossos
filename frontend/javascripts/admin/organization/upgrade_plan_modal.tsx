@@ -1,15 +1,15 @@
 import React from "react";
-import { Divider, InputNumber, Modal} from "antd";
+import { Divider, InputNumber, Modal } from "antd";
+import moment from "moment";
 import {
   DatabaseOutlined,
   FieldTimeOutlined,
   RocketOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { teamPlanFeatures } from "./pricing_plan_utils";
 import { APIOrganization } from "types/api_flow_types";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import moment from "moment";
+import { teamPlanFeatures } from "./pricing_plan_utils";
 
 function handlePlanUpgrade() {
   // TODO
@@ -32,7 +32,7 @@ function handleStorageUpgrade() {
 }
 
 function extendPricingPlan(organization: APIOrganization) {
-  const extendedDate = moment(organization.paidUntil).add(1, "year")
+  const extendedDate = moment(organization.paidUntil).add(1, "year");
 
   Modal.confirm({
     title: "Extend Current Plan",
@@ -48,7 +48,8 @@ function extendPricingPlan(organization: APIOrganization) {
         }}
       >
         <p style={{ marginRight: "30%" }}>
-          webKnossos plans are billed annually. Extend your plan now for uninterrupted access to webKnossos. 
+          webKnossos plans are billed annually. Extend your plan now for uninterrupted access to
+          webKnossos.
         </p>
         <p>
           Your current plan is paid until:{" "}
@@ -82,7 +83,7 @@ function upgradeUserQuota() {
       >
         <p style={{ marginRight: "30%" }}>
           You can increase the number of users allowed to join your organization by either buying
-          single user upgrades or by upgrading your webKnossos plan to 'Power' for unlimited users.
+          single user upgrades or by upgrading your webKnossos plan to “Power” for unlimited users.
         </p>
         <div>Add additional user accounts:</div>
         <div>
@@ -116,7 +117,7 @@ function upgradeStorageQuota() {
       >
         <p style={{ marginRight: "30%" }}>
           You can increase your storage limit for your organization by either buying additional
-          storage upgrades or by upgrading your webKnossos plan to 'Power' for custom dataset
+          storage upgrades or by upgrading your webKnossos plan to “Power” for custom dataset
           hosting solution, e.g. streaming data from your storage server / the cloud.
         </p>
         <div>Add additional storage (in Terabyte):</div>

@@ -1935,7 +1935,7 @@ export async function isWorkflowAccessibleBySwitching(
 }
 
 export async function getOrganizationStorageSpace(
-  organizationName: string,
+  _organizationName: string,
 ): Promise<APIOrganizationStorageInfo> {
   // TODO switch to a real API
   const usedStorageMB = 900;

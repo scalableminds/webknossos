@@ -9,7 +9,8 @@ import {
 } from "@ant-design/icons";
 import { APIOrganization } from "types/api_flow_types";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import { teamPlanFeatures } from "./pricing_plan_utils";
+import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
+import { PricingPlanEnum } from "./organization_edit_view";
 
 function handlePlanUpgrade() {
   // TODO
@@ -137,11 +138,20 @@ function upgradeStorageQuota() {
   });
 }
 
-function upgradePricingPlan() {
-  const title = "Upgrade to Team Plan";
+function upgradePricingPlan(organization: APIOrganization) {
   const introSentence =
     "Upgrading your webKnossos plan will unlock more advanced features and increase your user and storage quotas.";
-  const featureDescriptions = teamPlanFeatures;
+  
+  let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
+  let featureDescriptions = teamPlanFeatures;
+
+  if (
+    organization.pricingPlan === PricingPlanEnum.Team ||
+    organization.pricingPlan === PricingPlanEnum.TeamTrial
+  ) {
+    title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
+    featureDescriptions = powerPlanFeatures;
+  }
 
   Modal.confirm({
     title,

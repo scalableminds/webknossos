@@ -6,14 +6,14 @@ export const teamPlanFeatures = [
   "Dataset Management and Access Control",
   "5 Users / 1TB Storage",
   "Priority Email Support",
-  "Everything from Free Tier",
+  "Everything from Free plan",
 ];
 export const powerPlanFeatures = [
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Unlimited Users",
   "Integration with your HPC and storage servers",
-  "Everything from Team and Free Tier",
+  "Everything from Team and Free plans",
 ];
 
 export function getActiveUserCount(users: APIUser[]): number {

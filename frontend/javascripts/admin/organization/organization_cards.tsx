@@ -62,7 +62,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
           <Button
             type="primary"
             icon={<RocketOutlined />}
-            onClick={UpgradePricingPlanModal.upgradePricingPlan}
+            onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
             style={{ borderColor: "white" }}
           >
             Upgrade Now
@@ -154,7 +154,7 @@ export function PlanDashboardCard({
         key="upgradeUsersAction"
         onClick={
           organization.pricingPlan === PricingPlanEnum.Free
-            ? UpgradePricingPlanModal.upgradePricingPlan
+            ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeUserQuota
         }
       >
@@ -166,7 +166,7 @@ export function PlanDashboardCard({
         key="upgradeStorageAction"
         onClick={
           organization.pricingPlan === PricingPlanEnum.Free
-            ? UpgradePricingPlanModal.upgradePricingPlan
+            ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeStorageQuota
         }
       >
@@ -254,7 +254,11 @@ function PlanExceededAlert({ organization }: { organization: APIOrganization }) 
       Extend Plan Now
     </Button>
   ) : (
-    <Button size="small" type="primary" onClick={UpgradePricingPlanModal.upgradePricingPlan}>
+    <Button
+      size="small"
+      type="primary"
+      onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+    >
       Upgrade Now
     </Button>
   );
@@ -305,7 +309,11 @@ export function PlanAboutToExceedWarning({
       message:
         "Your organization is about to exceed the storage space included in your current plan. Upgrade now to avoid your account from being blocked.",
       actionButton: (
-        <Button size="small" type="primary" onClick={UpgradePricingPlanModal.upgradePricingPlan}>
+        <Button
+          size="small"
+          type="primary"
+          onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+        >
           Upgrade Now
         </Button>
       ),

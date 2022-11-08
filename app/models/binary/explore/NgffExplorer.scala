@@ -26,23 +26,11 @@ class NgffExplorer extends RemoteLayerExplorer {
       zattrsPath <- Fox.successful(remotePath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS))
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
 
-      // Check if any mag (dataset) has a channel shape != 1 -> then multiple layers are extracted from mags
       layerLists: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiScale => {
-        val channelCount = for {
+        for {
           channelCount: Int <- getNgffMultiScaleChannelCount(multiScale, remotePath)
-        } yield channelCount
-        if (channelCount == 1) {
-          for {
-            layer: (ZarrLayer, Vec3Double) <- layerFromNgffMultiscale(multiScale, remotePath, credentials)
-            layerList: List[(ZarrLayer, Vec3Double)] = List(layer)
-          } yield layerList
-        } else {
-          for {
-            layers: List[(ZarrLayer, Vec3Double)] <- layersFromMultiChannelNgffMultiscale(multiScale,
-                                                                                          remotePath,
-                                                                                          credentials)
-          } yield layers
-        }
+          layers <- layersFromNgffMultiscale(multiScale, remotePath, credentials, channelCount)
+        } yield layers
       })
       layers: List[(ZarrLayer, Vec3Double)] = layerLists.flatten
     } yield layers
@@ -57,39 +45,39 @@ class NgffExplorer extends RemoteLayerExplorer {
       channelAxisIndex <- axisOrder.c.toFox
     } yield zarrHeader.shape(channelAxisIndex)
 
-  private def layerFromNgffMultiscale(multiscale: NgffMultiscalesItem,
-                                      remotePath: Path,
-                                      credentials: Option[FileSystemCredentials]): Fox[(ZarrLayer, Vec3Double)] =
+  private def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
+                                       remotePath: Path,
+                                       credentials: Option[FileSystemCredentials],
+                                       channelCount: Int): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
       voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
         multiscale.datasets.map(_.coordinateTransformations),
         axisOrder) ?~> "Could not extract voxel size from scale transforms"
-      magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
-        zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials, None))
-      _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
-      elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
-      boundingBox = boundingBoxFromMags(magsWithAttributes)
+      voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
       nameFromPath <- guessNameFromPath(remotePath)
       name = multiscale.name.getOrElse(nameFromPath)
-      voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
-      layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
-      } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
-    } yield (layer, voxelSizeNanometers)
-
-  private def layersFromMultiChannelNgffMultiscale(
-      multiscale: NgffMultiscalesItem,
-      remotePath: Path,
-      credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
-    for {
-      axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
-      axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
-      voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
-        multiscale.datasets.map(_.coordinateTransformations),
-        axisOrder) ?~> "Could not extract voxel size from scale transforms"
-    } yield ???
+      layerTuples <- Fox.combined(
+        (0 until channelCount)
+          .map(channelIndex => {
+            for {
+              magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
+                zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials, Some(channelIndex)))
+              _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+              elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
+              boundingBox = boundingBoxFromMags(magsWithAttributes)
+              layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
+                ZarrSegmentationLayer(name,
+                                      boundingBox,
+                                      elementClass,
+                                      magsWithAttributes.map(_.mag),
+                                      largestSegmentId = None)
+              } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
+            } yield (layer, voxelSizeNanometers)
+          })
+          .toList)
+    } yield layerTuples
 
   private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,
                                      layerPath: Path,

@@ -71,6 +71,19 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: String): String = {
     val writeAccessPredicate = if (write) "AND tr.isTeamManager" else ""
+    val breadCrumbsAccess = if (write) "" else
+      s"""
+         UNION ALL
+         SELECT fp._ancestor
+         FROM webknossos.folder_paths fp
+         WHERE fp._descendant IN (
+           SELECT at._folder
+           FROM webknossos.folder_allowedTeams at
+           JOIN webknossos.user_team_roles tr ON at._team = tr._team
+           WHERE tr._user = '$requestingUserId'
+         )
+         """
+    // TODO: do you get to see the breadcrumbs if you only have access to the dataset?
     s"""
         (
           -- is descendant of user organization folder and user is admin or dataset manager
@@ -101,6 +114,7 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               WHERE tr._user = '$requestingUserId'
               $writeAccessPredicate
             )
+            $breadCrumbsAccess -- only for read access: you may read the ancestors of a folder you can access
           )
         )
         """

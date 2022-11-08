@@ -120,7 +120,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
             SELECT a._dataset
             FROM webknossos.annotation_privateLinks_ apl
             JOIN webknossos.annotations_ a ON apl._annotation = a._id
-            WHERE apl.accessToken = '$t')""").getOrElse("")
+            WHERE apl.accessToken = '$t'
+          )""").getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""isPublic
@@ -140,8 +141,17 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
             WHERE ut._user = '$requestingUserId'
           )
         )
-        OR ( -- user is in a team that is allowed for the folder
-          false -- TODO
+        OR ( -- user is in a team that is allowed for the folder or its ancestors
+          _folder IN (
+            SELECT fp._descendant
+            FROM webknossos.folder_paths fp
+            WHERE fp._ancestor IN (
+              SELECT at._folder
+              FROM webknossos.folder_allowedTeams at
+              JOIN webknossos.user_team_roles tr ON at._team = tr._team
+              WHERE tr._user = '$requestingUserId'
+            )
+          )
         )
         """
 

@@ -358,15 +358,22 @@ class DatasetTable extends React.PureComponent<Props, State> {
               onContextMenu: (event) => {
                 event.preventDefault();
 
-                const parents = document.getElementsByClassName("node-context-menu-overlay");
-                if (parents.length === 0) {
+                const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
+
+                const referenceDiv = Array.from(overlayDivs)
+                  .map((p) => p.parentElement)
+                  .find((potentialParent) => {
+                    if (potentialParent == null) {
+                      return false;
+                    }
+                    const bounds = potentialParent.getBoundingClientRect();
+                    return bounds.width > 0;
+                  });
+
+                if (referenceDiv == null) {
                   return;
                 }
-                const parent = parents[0].parentElement;
-                if (parent == null) {
-                  return;
-                }
-                const bounds = parent.getBoundingClientRect();
+                const bounds = referenceDiv.getBoundingClientRect();
                 const x = event.clientX - bounds.left;
                 const y = event.clientY - bounds.top;
 

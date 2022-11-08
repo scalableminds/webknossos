@@ -1013,3 +1013,17 @@ export function pluralize(str: string, count: number, optPluralForm: string | nu
   }
   return `${str}s`;
 }
+
+export function conjugate(
+  verbStr: string,
+  count: number,
+  optThirdForm: string | null = null,
+): string {
+  if (count >= 2) {
+    return verbStr;
+  }
+  if (optThirdForm != null) {
+    return optThirdForm;
+  }
+  return `${verbStr}s`;
+}

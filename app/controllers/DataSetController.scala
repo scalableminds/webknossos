@@ -440,7 +440,7 @@ Expects:
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- dataSetService.assertValidDataSetName(dataSetName) ?~> "dataSet.name.invalid"
+        _ <- dataSetService.assertValidDataSetName(dataSetName)
         _ <- dataSetService.assertNewDataSetName(dataSetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
     }

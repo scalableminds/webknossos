@@ -47,9 +47,15 @@ class BoundingBox {
   });
 
   containsBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: ResolutionInfo): boolean {
-    const { min, max } = this.getBoxForZoomStep(
-      resolutionInfo.getResolutionByIndexOrThrow(zoomStep),
-    );
+    /* Checks whether a bucket is contained in the active bounding box.
+     * If the passed resolutionInfo does not contain the passed zoomStep, this method
+     * returns false.
+     */
+    const resolutionIndex = resolutionInfo.getResolutionByIndex(zoomStep);
+    if (resolutionIndex == null) {
+      return false;
+    }
+    const { min, max } = this.getBoxForZoomStep(resolutionIndex);
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 
@@ -57,15 +63,6 @@ class BoundingBox {
     const [x, y, z] = vec3;
     const { min, max } = this;
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
-  }
-
-  containsFullBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: ResolutionInfo): boolean {
-    const { min, max } = this.getBoxForZoomStep(
-      resolutionInfo.getResolutionByIndexOrThrow(zoomStep),
-    );
-    return (
-      min[0] < x && x < max[0] - 1 && min[1] < y && y < max[1] - 1 && min[2] < z && z < max[2] - 1
-    );
   }
 
   intersectedWith(other: BoundingBox): BoundingBox {

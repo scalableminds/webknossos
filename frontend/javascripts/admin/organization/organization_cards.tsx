@@ -39,7 +39,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       style={{
         marginBottom: 20,
         background:
-          "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/background_neuron_meshes.webp) 53.75% 15.25% / cover no-repeat",
+          "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/pricing/background_neuron_meshes.png) 10% center / 120% no-repeat",
         color: "white",
       }}
       headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
@@ -73,6 +73,8 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
 }
 
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
+  if (organization.pricingPlan === PricingPlanEnum.Free) return null;
+  
   return (
     <Card style={{ marginBottom: 20 }}>
       <Row gutter={24}>
@@ -84,7 +86,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
           <Button
             type="primary"
             icon={<FieldTimeOutlined />}
-            onClick={UpgradePricingPlanModal.extendPricingPlan}
+            onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
           >
             Extend Now
           </Button>
@@ -133,6 +135,8 @@ export function PlanDashboardCard({
 
   let upgradeUsersAction: React.ReactNode[] = [];
   let upgradeStorageAction: React.ReactNode[] = [];
+  let upgradePlanAction: React.ReactNode[] = [];
+
   if (
     organization.pricingPlan === PricingPlanEnum.Free ||
     organization.pricingPlan === PricingPlanEnum.Team ||
@@ -162,26 +166,24 @@ export function PlanDashboardCard({
         <PlusCircleOutlined /> Upgrade
       </span>,
     ];
+    upgradePlanAction = [
+      [
+        <a
+          href="https://webknossos.org/pricing"
+          target="_blank"
+          rel="noreferrer"
+          key="comparePlanAction"
+        >
+          <SafetyOutlined /> Compare Plans
+        </a>,
+      ],
+    ];
   }
 
   return (
     <>
       {usedStoragePercentage > 100 || usedUsersPercentage > 100 ? (
-        <Alert
-          showIcon
-          type="warning"
-          message="Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account being blocked."
-          action={
-            <Button
-              size="small"
-              type="primary"
-              onClick={UpgradePricingPlanModal.upgradePricingPlan}
-            >
-              Upgrade Now
-            </Button>
-          }
-          style={{ marginBottom: 20 }}
-        />
+       <PlanExceededAlert organization={organization}/>
       ) : null}
       <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
         <Col>
@@ -214,16 +216,7 @@ export function PlanDashboardCard({
         </Col>
         <Col>
           <Card
-            actions={[
-              <a
-                href="https://webknossos.org/pricing"
-                target="_blank"
-                rel="noreferrer"
-                key="comparePlanAction"
-              >
-                <SafetyOutlined /> Compare Plans
-              </a>,
-            ]}
+            actions={upgradePlanAction}
           >
             <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 35px" }}>
               <h3>{organization.pricingPlan}</h3>
@@ -233,5 +226,67 @@ export function PlanDashboardCard({
         </Col>
       </Row>
     </>
+  );
+}
+
+function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
+  const hasPlanExpired = Date.now() > organization.paidUntil;
+
+  const message = hasPlanExpired
+    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded and loose access to features and prevent users from being blocked."
+    : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account being blocked.";
+  const actionButton = hasPlanExpired ? (
+    <Button
+      size="small"
+      type="primary"
+      onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+    >
+      Extend Plan Now
+    </Button>
+  ) : (
+    <Button size="small" type="primary" onClick={UpgradePricingPlanModal.upgradePricingPlan}>
+      Upgrade Now
+    </Button>
+  );
+
+  return (
+    <Alert
+      showIcon
+      type="error"
+      message={message}
+      action={actionButton}
+      style={{ marginBottom: 20 }}
+    />
+  );
+}
+
+function PlanAboutToExceedWarning(organization: APIOrganization) {
+  const hasPlanExpired = false;
+
+  const message = hasPlanExpired
+    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded and loose access to features and prevent users from being blocked."
+    : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account being blocked.";
+  const actionButton = hasPlanExpired ? (
+    <Button
+      size="small"
+      type="primary"
+      onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+    >
+      Extend Plan Now
+    </Button>
+  ) : (
+    <Button size="small" type="primary" onClick={UpgradePricingPlanModal.upgradePricingPlan}>
+      Upgrade Now
+    </Button>
+  );
+
+  return (
+    <Alert
+      showIcon
+      type="error"
+      message={message}
+      action={actionButton}
+      style={{ marginBottom: 20 }}
+    />
   );
 }

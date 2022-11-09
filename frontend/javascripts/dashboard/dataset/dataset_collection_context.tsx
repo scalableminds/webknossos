@@ -286,7 +286,25 @@ function useMoveFolderMutation() {
     ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
     {
       mutationKey,
-      onSuccess: (updatedFolder, [_folderId, newParentId]) => {
+      onMutate: ([folderId, newParentId]) => {
+        // Optimistically update the folder with the new parent.
+        const previousFolders = queryClient.getQueryData(mutationKey);
+        queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
+          (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
+            oldFolder.id === folderId
+              ? {
+                  ...oldFolder,
+                  parent: newParentId,
+                }
+              : oldFolder,
+          ),
+        );
+        return {
+          previousFolders,
+        };
+      },
+      onSuccess: (updatedFolder, [folderId, newParentId]) => {
+        // Use the returned updatedFolder to update the query data
         queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
           (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
             oldFolder.id === updatedFolder.id
@@ -297,9 +315,17 @@ function useMoveFolderMutation() {
               : oldFolder,
           ),
         );
+        queryClient.setQueryData(["folders", folderId], () => updatedFolder);
       },
-      onError: (err) => {
+      onError: (err, _params, context) => {
+        // Restore the old folder tree. Note that without the optimistic update
+        // and the data reversion here, the sidebar would still show the (incorrectly)
+        // moved folder, because the <SortableTree /> component does its own kind of
+        // optimistic mutation by updating its state immediately when dragging a folder.
         Toast.error(`Could not update folder. ${err}`);
+        if (context) {
+          queryClient.setQueryData(mutationKey, context.previousFolders);
+        }
       },
     },
   );

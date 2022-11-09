@@ -142,7 +142,7 @@ function useDatasetsInFolderQuery(folderId: string | null) {
     let ignoreFetchResult = false;
     // console.log("[p] prefetch datasets");
     const startTime = performance.now();
-    getDatasets(false, folderId).then((newDatasets) => {
+    getDatasets(null, folderId).then((newDatasets) => {
       if (ignoreFetchResult) {
         // console.log("[p] ignore received datasets for", folderId);
         return;

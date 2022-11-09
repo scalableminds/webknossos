@@ -454,7 +454,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
             sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
             render={(created) => <FormattedDate timestamp={created} />}
           />
-
           {!this.props.hideDetailsColumns ? (
             <Column
               title="Access Permissions"

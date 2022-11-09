@@ -318,10 +318,8 @@ function FolderSidebar() {
     return sourceAllowed && targetAllowed;
   };
 
-  const canDragFolder = (params: ExtendedNodeData): boolean => {
-    return (params.node as FolderItem).isEditable;
-  };
-
+  const canDragFolder = (params: ExtendedNodeData): boolean =>
+    (params.node as FolderItem).isEditable;
   return (
     <div
       ref={drop}

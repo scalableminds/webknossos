@@ -64,6 +64,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform vec4 activeCellIdLow;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
+  uniform bool isProofreading;
   uniform float segmentationPatternOpacity;
 
   uniform bool isMappingEnabled;
@@ -81,6 +82,7 @@ uniform vec3 bboxMin;
 uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
+uniform vec3 activeSegmentPosition;
 uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
@@ -198,24 +200,48 @@ void main() {
   <% if (hasSegmentation) { %>
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
-     // Color map (<= to fight rounding mistakes)
-     if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
-       // Increase cell opacity when cell is hovered
-       float hoverAlphaIncrement =
-         // Hover cell only if it's the active one
-         // and if segmentation opacity is not zero
-         hoveredSegmentIdLow == <%= segmentationName%>_id_low
-          && hoveredSegmentIdHigh == <%= segmentationName%>_id_high
-          && <%= segmentationName%>_alpha > 0.0
-         ? 0.2 : 0.0;
+    // Color map (<= to fight rounding mistakes)
+    if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
+      // Increase cell opacity when cell is hovered or if it is the active activeCell
+      bool isHoveredCell = hoveredSegmentIdLow == <%= segmentationName%>_id_low
+        && hoveredSegmentIdHigh == <%= segmentationName%>_id_high;
+      bool isActiveCell = activeCellIdLow == <%= segmentationName%>_id_low
+         && activeCellIdHigh == <%= segmentationName%>_id_high;
+      // Highlight cell only if it's hovered or active during proofreading
+      // and if segmentation opacity is not zero
+      float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
+      float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
+      gl_FragColor = vec4(mix(
+        data_color,
+        convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low),
+        <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
+      ), 1.0);
+    }
+    vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
+    <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
+    gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+    gl_FragColor.a = 1.0;
 
-       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
-     }
+    vec3 flooredGlobalPosUVW = transDim(floor(globalPosition));
+    vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
+    vec3 datasetScaleUVW = transDim(datasetScale);
+    // Compute the distance in screen coordinate space to show a zoom-independent cross hair
+    vec2 distanceVector = (worldCoordUVW.xy - activeSegmentPosUVW.xy) * datasetScaleUVW.xy / zoomValue;
 
-     vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-     <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
-     gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
-     gl_FragColor.a = 1.0;
+    vec4 crossHairColor = vec4(1.0, 1.0, 1.0, 0.5);
+    gl_FragColor = mix(gl_FragColor, crossHairColor, float(
+      // Only show the cross hair in proofreading mode ...
+      isProofreading &&
+      // ... on the exact w-slice ...
+      flooredGlobalPosUVW.z == floor(activeSegmentPosUVW.z) &&
+      // ... with this extent ...
+      max(abs(distanceVector.x), abs(distanceVector.y)) < 120.0 &&
+      // ... with this thickness ...
+      (abs(distanceVector.x) < 18.0 || abs(distanceVector.y) < 18.0) &&
+      // ... leaving some free space in the middle.
+      max(abs(distanceVector.x), abs(distanceVector.y)) > 40.0
+    ));
+
   <% }) %>
   <% } %>
 }

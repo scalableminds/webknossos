@@ -361,7 +361,7 @@ function NodeContextMenuOptions({
   allowUpdate,
 }: NodeContextMenuOptionsProps): JSX.Element {
   const isProofreadingActive = useSelector(
-    (state: OxalisState) => state.uiInformation.activeTool === "PROOFREAD",
+    (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
   );
   const dispatch = useDispatch();
 
@@ -677,7 +677,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
 
   const isProofreadingActive = useSelector(
-    (state: OxalisState) => state.uiInformation.activeTool === "PROOFREAD",
+    (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
   );
 
   useEffect(() => {

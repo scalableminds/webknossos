@@ -6,6 +6,7 @@ import type {
   APIDataset,
   Folder,
   FlatFolderTreeItem,
+  FolderUpdater,
 } from "types/api_flow_types";
 import { getDatasets, getDataset, updateDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
@@ -256,7 +257,7 @@ function useUpdateFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];
 
-  return useMutation((folder: Folder) => updateFolder(folder), {
+  return useMutation((folder: FolderUpdater) => updateFolder(folder), {
     mutationKey,
     onSuccess: (updatedFolder) => {
       queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>

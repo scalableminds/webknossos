@@ -29,7 +29,7 @@ export async function deleteFolder(id: string): Promise<string> {
   return id;
 }
 
-export function updateFolder(folder: Folder): Promise<Folder> {
+export function updateFolder(folder: FolderUpdater): Promise<Folder> {
   return Request.sendJSONReceiveJSON(`/api/folders/${folder.id}`, {
     data: folder,
     method: "PUT",

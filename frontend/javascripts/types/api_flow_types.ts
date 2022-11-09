@@ -903,3 +903,5 @@ export type Folder = {
   allowedTeamsCumulative: APITeam[];
   isEditable: boolean;
 };
+
+export type FolderUpdater = Omit<Folder, "allowedTeams"> & { allowedTeams: string[] };

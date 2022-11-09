@@ -16,7 +16,12 @@ import SortableTree, {
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
-import { APIUser, FlatFolderTreeItem, APIMaybeUnimportedDataset } from "types/api_flow_types";
+import {
+  APIUser,
+  FlatFolderTreeItem,
+  APIMaybeUnimportedDataset,
+  APITeam,
+} from "types/api_flow_types";
 import {
   DatasetLayerTags,
   DatasetTags,
@@ -414,7 +419,7 @@ function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () 
 
   const onSave = async () => {
     const name = form.getFieldValue("name");
-    const allowedTeams = form.getFieldValue("allowedTeams");
+    const allowedTeams = form.getFieldValue("allowedTeams") as APITeam[];
 
     if (folder == null) {
       return;
@@ -424,7 +429,7 @@ function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () 
       ...folder,
       id: folderId,
       name,
-      allowedTeams,
+      allowedTeams: allowedTeams.map((t) => t.id),
     });
 
     onClose();

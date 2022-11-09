@@ -904,4 +904,8 @@ export type Folder = {
   isEditable: boolean;
 };
 
-export type FolderUpdater = Omit<Folder, "allowedTeams"> & { allowedTeams: string[] };
+export type FolderUpdater = {
+  id: string;
+  name: string;
+  allowedTeams: string[];
+};

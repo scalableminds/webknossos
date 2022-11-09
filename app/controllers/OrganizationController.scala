@@ -117,40 +117,49 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     ((__ \ 'displayName).read[String] and
       (__ \ 'newUserMailingList).read[String]).tupled
 
-  def sendExtendPricingPlanEmail(organizationName: String): Action[AnyContent] = sil.SecuredAction.async { implicit request => 
-    for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                      organizationName) ~> NOT_FOUND
-          userEmail <- userService.emailFor(request.identity)
-          _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail, organization.displayName))
-        } yield Ok
+  def sendExtendPricingPlanEmail(organizationName: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName) ~> NOT_FOUND
+        userEmail <- userService.emailFor(request.identity)
+        _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail, organization.displayName))
+      } yield Ok
+  }
+
+  def sendUpgradePricingPlanEmail(organizationName: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName) ~> NOT_FOUND
+        userEmail <- userService.emailFor(request.identity)
+        _ = Mailer ! Send(
+          defaultMails.upgradePricingPlanToTeamMail(request.identity, userEmail, organization.displayName))
+      } yield Ok
+  }
+
+  def sendUpgradePricingPlanUsersEmail(organizationName: String, requestedUsers: Int): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName) ~> NOT_FOUND
+        userEmail <- userService.emailFor(request.identity)
+        _ = Mailer ! Send(
+          defaultMails
+            .upgradePricingPlanUsersMail(request.identity, userEmail, organization.displayName, requestedUsers))
+      } yield Ok
     }
 
-  def sendUpgradePricingPlanEmail(organizationName: String): Action[AnyContent] = sil.SecuredAction.async { implicit request => 
-    for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                      organizationName) ~> NOT_FOUND
-          userEmail <- userService.emailFor(request.identity)
-          _ = Mailer ! Send(defaultMails.upgradePricingPlanToTeamMail(request.identity, userEmail, organization.displayName))
-        } yield Ok
-    }
-  
-  def sendUpgradePricingPlanUsersEmail(organizationName: String, requestedUsers: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request => 
-    for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                      organizationName) ~> NOT_FOUND
-          userEmail <- userService.emailFor(request.identity)
-          _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, organization.displayName, requestedUsers))
-        } yield Ok
-    }
-
-  def sendUpgradePricingPlanStorageEmail(organizationName: String, requestedStorage: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request => 
-    for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                      organizationName) ~> NOT_FOUND
-          userEmail <- userService.emailFor(request.identity)
-          _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, organization.displayName, requestedStorage))
-        } yield Ok
+  def sendUpgradePricingPlanStorageEmail(organizationName: String, requestedStorage: Int): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName) ~> NOT_FOUND
+        userEmail <- userService.emailFor(request.identity)
+        _ = Mailer ! Send(
+          defaultMails
+            .upgradePricingPlanStorageMail(request.identity, userEmail, organization.displayName, requestedStorage))
+      } yield Ok
     }
 
 }

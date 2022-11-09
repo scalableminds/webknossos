@@ -55,6 +55,7 @@ organization.name.invalid=The chosen organization name is invalid.
 organization.name.alreadyInUse=The chosen organization name is already in use.
 organization.alreadyJoined=Your account is already associated with the selected organization.
 organization.users.userLimitReached=Can not add user because it would exceed the limit of included users in this plan.
+organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization webKnossos plan. Please ask the organization owner for permission.
 
 user.activated={0} has been activated
 user.notFound=User not found

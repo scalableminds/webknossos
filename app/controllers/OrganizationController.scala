@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
+import models.team.{PricingPlan}
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
@@ -105,7 +106,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                    organizationName) ~> NOT_FOUND
       _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
-      _ = logger.info(s"Deleting organizaion ${organization._id}")
+      _ = logger.info(s"Deleting organization ${organization._id}")
       _ <- organizationDAO.deleteOne(organization._id)
       _ <- userDAO.deleteAllWithOrganization(organization._id)
       _ <- multiUserDAO.removeLastLoggedInIdentitiesWithOrga(organization._id)
@@ -117,32 +118,36 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     ((__ \ 'displayName).read[String] and
       (__ \ 'newUserMailingList).read[String]).tupled
 
-  def sendExtendPricingPlanEmail(organizationName: String): Action[AnyContent] = sil.SecuredAction.async {
+  def sendExtendPricingPlanEmail(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+      organization <- organizationDAO
+        .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
+      userEmail <- userService.emailFor(request.identity)
+      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail, organization.displayName))
+    } yield Ok
+  }
+
+  def sendUpgradePricingPlanEmail(requestedPlan: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName) ~> NOT_FOUND
+        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+        organization <- organizationDAO
+          .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
-        _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail, organization.displayName))
+        requestedPlan <- PricingPlan.fromString(requestedPlan)
+        mail = if (requestedPlan == PricingPlan.Team) { defaultMails.upgradePricingPlanToTeamMail _ } else {
+          defaultMails.upgradePricingPlanToTeamMail _
+        }
+        _ = Mailer ! Send(mail(request.identity, userEmail, organization.displayName))
       } yield Ok
   }
 
-  def sendUpgradePricingPlanEmail(organizationName: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName) ~> NOT_FOUND
-        userEmail <- userService.emailFor(request.identity)
-        _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanToTeamMail(request.identity, userEmail, organization.displayName))
-      } yield Ok
-  }
-
-  def sendUpgradePricingPlanUsersEmail(organizationName: String, requestedUsers: Int): Action[AnyContent] =
+  def sendUpgradePricingPlanUsersEmail(requestedUsers: Int): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName) ~> NOT_FOUND
+        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+        organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
         _ = Mailer ! Send(
           defaultMails
@@ -150,11 +155,11 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       } yield Ok
     }
 
-  def sendUpgradePricingPlanStorageEmail(organizationName: String, requestedStorage: Int): Action[AnyContent] =
+  def sendUpgradePricingPlanStorageEmail(requestedStorage: Int): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName) ~> NOT_FOUND
+        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+        organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
         _ = Mailer ! Send(
           defaultMails

@@ -1941,6 +1941,31 @@ export async function getOrganizationStorageSpace(
   return Promise.resolve({ usedStorageSpace: usedStorageMB });
 }
 
+export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestUpgrade?requestedPlan=${requestedPlan}`, {
+    method: "POST",
+  });
+}
+
+export async function sendExtendPricingPlanEmail(): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestExtension`, {
+    method: "POST",
+  });
+}
+
+export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestUsers?requestedUsers=${requestedUsers}`, {
+    method: "POST",
+  });
+}
+
+export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}  `, {
+    method: "POST",
+  });
+}
+
+
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
   return Request.receiveJSON("/api/buildinfo", {

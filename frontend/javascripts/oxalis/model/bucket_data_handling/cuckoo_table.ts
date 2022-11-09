@@ -50,6 +50,8 @@ export class CuckooTable {
     );
 
     this.initializeTableArray();
+    // Initialize the texture once to avoid undefined behavior
+    this.flushTableToTexture();
   }
 
   static fromCapacity(requestedCapacity: number): CuckooTable {
@@ -118,8 +120,7 @@ export class CuckooTable {
     };
   }
 
-  clearAll() {
-    this.table.fill(EMPTY_KEY);
+  flushTableToTexture() {
     this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
@@ -177,7 +178,7 @@ export class CuckooTable {
 
     // Since a rehash was performed, the incremental texture updates were
     // skipped. Update the entire texture:
-    this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
+    this.flushTableToTexture();
   }
 
   unset(key: number) {

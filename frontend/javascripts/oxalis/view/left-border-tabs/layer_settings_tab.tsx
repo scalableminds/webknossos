@@ -325,7 +325,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const maybeVolumeTracing =
       maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
     const maybeFallbackLayer =
-      maybeVolumeTracing != null && maybeVolumeTracing.fallbackLayer != null
+      maybeVolumeTracing?.fallbackLayer != null
         ? maybeVolumeTracing.fallbackLayer
         : null;
 

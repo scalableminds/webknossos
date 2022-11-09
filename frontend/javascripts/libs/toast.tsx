@@ -21,7 +21,7 @@ export type ToastConfig = {
 const Toast = {
   messages(messages: Message[]): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
-    const errorChainString: string | null | undefined = errorChainObject && errorChainObject.chain;
+    const errorChainString: string | null | undefined = errorChainObject?.chain;
     messages.forEach((singleMessage) => {
       if (singleMessage.success != null) {
         this.success(singleMessage.success);

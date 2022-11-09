@@ -237,7 +237,7 @@ function SimpleDatasetForm({
                   {
                     validator: syncValidator(
                       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
-                      (value) => value && value.every((el) => el > 0),
+                      (value) => value?.every((el) => el > 0),
                       "Each component of the scale must be greater than 0",
                     ),
                   },

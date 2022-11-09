@@ -79,7 +79,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   async applyDefaults() {
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
     const hasRecommendedConfiguration =
-      taskType != null && taskType.recommendedConfiguration != null;
+      taskType?.recommendedConfiguration != null;
     const defaultValues = {
       settings: {
         somaClickingAllowed: true,
@@ -130,7 +130,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
     form.setFieldsValue(formValues);
 
-    if (taskType != null && taskType.recommendedConfiguration != null) {
+    if (taskType?.recommendedConfiguration != null) {
       // Only "activate" the recommended configuration checkbox if the existing task type contained one
       this.setState({
         useRecommendedConfiguration: true,

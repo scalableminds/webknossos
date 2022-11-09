@@ -196,7 +196,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     // script assigned to the task
     const { task } = Store.getState();
 
-    if (task != null && task.script != null) {
+    if (task?.script != null) {
       const { script } = task;
       const content = await fetchGistContent(script.gist, script.name);
 

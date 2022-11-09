@@ -228,7 +228,7 @@ const defaultState: OxalisState = {
       left: false,
     },
     theme:
-      primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
+      primaryStylesheetElement?.href.includes("dark.css")
         ? "dark"
         : "light",
     busyBlockingInfo: {

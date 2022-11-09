@@ -95,7 +95,7 @@ type StateProps = {
 type Props = OwnProps & StateProps;
 
 function maybeGetActiveNodeFromProps(props: Props) {
-  return props.tracing && props.tracing.skeleton && props.tracing.skeleton.activeNodeId != null
+  return props.tracing?.skeleton?.activeNodeId != null
     ? props.tracing.skeleton.activeNodeId
     : INVALID_ACTIVE_NODE_ID;
 }
@@ -186,8 +186,7 @@ class TDController extends React.PureComponent<Props> {
 
   getTDViewMouseControls(): Record<string, any> {
     const skeletonControls =
-      this.props.tracing != null &&
-      this.props.tracing.skeleton != null &&
+      this.props.tracing?.skeleton != null &&
       this.props.planeView != null
         ? getTDViewMouseControlsSkeleton(this.props.planeView)
         : null;

@@ -57,7 +57,6 @@ class SecuredRoute extends React.PureComponent<Props, State> {
             if (Component != null) {
               return <Component />;
             } else if (render != null) {
-              // rome-ignore: lint(correctness/noRenderReturnValue): false positive by rome
               return render(props);
             } else {
               throw Error("Specified neither component nor render function.");

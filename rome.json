@@ -28,7 +28,9 @@
       },
       "correctness": {
         "noDelete": "off",
-        "noShadowRestrictedNames": "off"
+        "noShadowRestrictedNames": "off",
+        "noRenderReturnValue": "off",
+        "noAsyncPromiseExecutor": "off"
       }
     }
   }

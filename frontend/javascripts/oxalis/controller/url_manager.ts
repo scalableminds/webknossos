@@ -91,8 +91,7 @@ class UrlManager {
     this.initialState = this.parseUrlHash();
   }
 
-  // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-  reset(keepUrlState?: boolean = false): void {
+  reset(keepUrlState: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message

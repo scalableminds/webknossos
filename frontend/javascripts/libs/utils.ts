@@ -142,7 +142,6 @@ export function asAbortable<T>(
   signal: AbortSignal,
   abortError: Error,
 ): Promise<T> {
-  // rome-ignore: lint(correctness/noAsyncPromiseExecutor)
   // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
     const abort = () => reject(abortError);

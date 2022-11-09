@@ -489,17 +489,15 @@ class DatasetTable extends React.PureComponent<Props, State> {
             />
           ) : null}
 
-          {!this.props.hideDetailsColumns ? (
-            <Column
-              width={200}
-              title="Actions"
-              key="actions"
-              fixed="right"
-              render={(__, dataset: APIMaybeUnimportedDataset) => (
-                <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
-              )}
-            />
-          ) : null}
+          <Column
+            width={200}
+            title="Actions"
+            key="actions"
+            fixed="right"
+            render={(__, dataset: APIMaybeUnimportedDataset) => (
+              <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
+            )}
+          />
         </FixedExpandableTable>
       </DndProvider>
     );

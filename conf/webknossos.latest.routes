@@ -89,7 +89,6 @@ GET           /folders/:id                                                      
 PUT           /folders/:id                                                              controllers.FolderController.update(id: String)
 PUT           /folders/:id/move                                                         controllers.FolderController.move(id: String, newParentId: String)
 DELETE        /folders/:id                                                              controllers.FolderController.delete(id: String)
-PATCH         /folders/:id/teams                                                        controllers.FolderController.updateTeams(id: String)
 
 # Datastores
 GET           /datastores                                                               controllers.DataStoreController.list

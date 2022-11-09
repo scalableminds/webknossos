@@ -19,7 +19,7 @@ case class Folder(_id: ObjectId, name: String)
 
 case class FolderWithParent(_id: ObjectId, name: String, _parent: Option[ObjectId])
 
-case class FolderParameters(name: String)
+case class FolderParameters(name: String, allowedTeams: List[ObjectId])
 object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
 }
@@ -54,6 +54,19 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       "parent" -> folderWithParent._parent,
       "isEditable" -> allEditableIds.contains(folderWithParent._id)
     )
+
+  def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- folderDAO.findOne(folderId) ?~> "folder.notFound"
+      includeMemberOnlyTeams = requestingUser.isDatasetManager
+      userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
+      oldAllowedTeams: List[ObjectId] <- teamService.allowedTeamIdsForFolder(folderId, cumulative = false)
+      teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
+      teamsWithUpdate = teams.filter(t => userTeams.exists(_._id == t))
+      newTeamIds = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
+      _ <- teamDAO.updateAllowedTeamsForFolder(folderId, newTeamIds)
+    } yield ()
 
 }
 

@@ -1,13 +1,12 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.DataSetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
-import models.organization.{Organization, OrganizationDAO}
-import models.team.{TeamDAO, TeamMembership, TeamService}
-import models.user.{User, UserService}
+import models.organization.OrganizationDAO
+import models.team.{TeamDAO, TeamService}
+import models.user.UserService
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -49,21 +48,17 @@ class FolderController @Inject()(
     implicit request =>
       for {
         idValidated <- ObjectId.fromString(id)
+        params = request.body
         organization <- organizationDAO.findOne(request.identity._organization)
-        _ <- Fox.runIf(organization._rootFolder != idValidated)(
-          assertUniqueNameInItsLevel(request.body.name, idValidated))
-        _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
-        _ <- folderDAO.updateName(idValidated, request.body.name)
+        oldFolder <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+        _ <- Fox
+          .runIf(oldFolder.name != params.name)(folderDAO.updateName(idValidated, params.name)) ?~> "folder.update.name.failed"
+        _ <- folderService
+          .updateAllowedTeams(idValidated, params.allowedTeams, request.identity) ?~> "folder.update.teams.failed"
         updated <- folderDAO.findOne(idValidated)
         folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
       } yield Ok(folderJson)
   }
-
-  private def assertUniqueNameInItsLevel(newName: String, folderId: ObjectId): Fox[Unit] =
-    for {
-      parentId <- folderDAO.findParentId(folderId) ?~> "folder.notFound"
-      _ <- Fox.assertFalse(folderDAO.nameExistsInLevel(newName, parentId)) ?~> "folder.name.notUniqueInFolder"
-    } yield ()
 
   def move(id: String, newParentId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -73,8 +68,6 @@ class FolderController @Inject()(
       _ <- bool2Fox(organization._rootFolder != idValidated) ?~> "folder.move.root"
       folderToMove <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
       _ <- folderDAO.findOne(newParentIdValidated) ?~> "folder.notFound"
-      _ <- Fox
-        .assertFalse(folderDAO.nameExistsInLevel(folderToMove.name, newParentIdValidated)) ?~> "folder.name.notUniqueInFolder"
       _ <- folderDAO.moveSubtree(idValidated, newParentIdValidated)
       updated <- folderDAO.findOne(idValidated)
       folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
@@ -97,21 +90,6 @@ class FolderController @Inject()(
     } yield Ok(folderJson)
   }
 
-  def updateTeams(id: String): Action[List[ObjectId]] =
-    sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
-      for {
-        idValidated <- ObjectId.fromString(id)
-        _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
-        includeMemberOnlyTeams = request.identity.isDatasetManager
-        userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-        oldAllowedTeams: List[ObjectId] <- teamService.allowedTeamIdsForFolder(idValidated, cumulative = false)
-        teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
-        teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
-        newTeamIds = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- teamDAO.updateAllowedTeamsForFolder(idValidated, newTeamIds)
-      } yield Ok(Json.toJson(newTeamIds))
-    }
-
   def getTree: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
@@ -125,27 +103,11 @@ class FolderController @Inject()(
   def create(parentId: String, name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
-      _ <- Fox.assertFalse(folderDAO.nameExistsInLevel(name, parentIdValidated)) ?~> "folder.name.notUniqueInFolder"
       newFolder = Folder(ObjectId.generate, name)
       _ <- folderDAO.insertAsChild(parentIdValidated, newFolder)
       organization <- organizationDAO.findOne(request.identity._organization)
       folderJson <- folderService.publicWrites(newFolder, Some(request.identity), Some(organization))
     } yield Ok(folderJson)
   }
-
-  def assertReadAccess(folderId: ObjectId, userOrganizationOpt: Option[Organization])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    (ctx.data match {
-      case Some(user: User) =>
-        for {
-          userOrganization <- Fox.fillOption(userOrganizationOpt)(organizationDAO.findOne(user._organization))
-          isMatchingAdminOrDatasetManager = userOrganization._rootFolder == folderId && (user.isAdmin || user.isDatasetManager)
-          folderAllowedTeamIds <- teamService.allowedTeamIdsForFolder(folderId, cumulative = true)
-          userTeamMemberships: Seq[TeamMembership] <- userService.teamMembershipsFor(user._id)
-          isMatchingTeamMember = userTeamMemberships.map(_.teamId).intersect(folderAllowedTeamIds).nonEmpty
-          _ <- bool2Fox(isMatchingAdminOrDatasetManager || isMatchingTeamMember)
-        } yield ()
-      case _ => Fox.failure("notAuthorized")
-    }) ~> FORBIDDEN
 
 }

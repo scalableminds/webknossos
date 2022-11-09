@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Re-phrased some backend (error) messages to improve clarity and provide helping hints. [#6616](https://github.com/scalableminds/webknossos/pull/6616)
  
 ### Fixed
+- Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 
 ### Removed
 

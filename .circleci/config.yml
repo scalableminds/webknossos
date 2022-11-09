@@ -292,6 +292,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+      # TODO: Revert before merging
+      - nightly
   circleci_nightly:
     jobs:
       - nightly

@@ -5,27 +5,29 @@ import type {
   APIDatasetId,
   APIDataset,
   Folder,
+  FlatFolderTreeItem,
 } from "types/api_flow_types";
 import { getDatasets, getDataset, updateDataset } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
+  getFolder,
   getFolderTree,
   moveFolder,
   updateFolder,
 } from "admin/api/folders";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
   isCalledFromCheckDatasets?: boolean;
 };
-export type DatasetCollectionContext = {
+export type DatasetCollectionContextValue = {
   datasets: Array<APIMaybeUnimportedDataset>;
   isLoading: boolean;
   isChecking: boolean;
@@ -49,7 +51,7 @@ export type DatasetCollectionContext = {
   };
 };
 
-export const DatasetCollectionContext = createContext<DatasetCollectionContext>({
+export const DatasetCollectionContext = createContext<DatasetCollectionContextValue>({
   datasets: [],
   isLoading: false,
   isChecking: false,
@@ -60,6 +62,8 @@ export const DatasetCollectionContext = createContext<DatasetCollectionContext>(
   activeFolderId: null,
   setActiveFolderId: () => {},
   queries: {
+    // @ts-ignore todo
+    folderQuery: {},
     // @ts-ignore todo
     folderTreeQuery: {},
     // @ts-ignore todo
@@ -73,9 +77,16 @@ export const DatasetCollectionContext = createContext<DatasetCollectionContext>(
     // @ts-ignore todo
     updateDatasetMutation: {},
     // @ts-ignore todo
-    useMoveFolderMutation: {},
+    moveFolderMutation: {},
   },
 });
+
+export function useFolderQuery(folderId: string) {
+  const queryKey = ["folders", folderId];
+  return useQuery(queryKey, () => getFolder(folderId), {
+    refetchOnWindowFocus: false,
+  });
+}
 
 function useFolderTreeQuery() {
   return useQuery(["folders"], getFolderTree, {
@@ -83,7 +94,9 @@ function useFolderTreeQuery() {
   });
 }
 
+const LIST_REQUEST_DURATION_THRESHOLD = 1000;
 function useDatasetsInFolderQuery(folderId: string | null) {
+  const queryClient = useQueryClient();
   const queryKey = ["datasetsByFolder", folderId];
   const fetchedDatasetsRef = useRef<APIMaybeUnimportedDataset[] | null>(null);
 
@@ -118,39 +131,77 @@ function useDatasetsInFolderQuery(folderId: string | null) {
   );
 
   useEffect(() => {
-    if (queryData.data == null) {
+    if (queryData.data == null || queryData.data.length === 0) {
       // No data exists in the cache. Allow the query to fetch.
       // console.log("[p] refetch");
       queryData.refetch();
-      return;
+      return undefined;
     }
 
     let ignoreFetchResult = false;
     // console.log("[p] prefetch datasets");
+    const startTime = performance.now();
     getDatasets(false, folderId).then((newDatasets) => {
       if (ignoreFetchResult) {
         // console.log("[p] ignore received datasets for", folderId);
         return;
       }
+      const requestDuration = performance.now() - startTime;
+
+      const acceptNewDatasets = () => {
+        if (ignoreFetchResult) {
+          // console.log("[p] ignore sleep for", folderId);
+          return;
+        }
+        // console.log("[p] setFetchedDatasets", newDatasets);
+        fetchedDatasetsRef.current = newDatasets;
+        Toast.close(`new-datasets-are-available-${folderId || null}`);
+        queryData.refetch();
+      };
+
+      // If the request was relatively fast, accept it without asking.
+      // Otherwise, ask the user whether they want to accept the new results
+      // since it would otherwise mean that the table content can change
+      // suddenly which is quite annoying.
+      if (requestDuration < LIST_REQUEST_DURATION_THRESHOLD) {
+        acceptNewDatasets();
+        return;
+      }
+
+      const oldDatasets = queryClient.getQueryData<APIDataset[]>(queryKey);
+      const diff = diffDatasets(oldDatasets, newDatasets);
+      if (diff.changed === 0 && diff.onlyInOld === 0 && diff.onlyInNew === 0) {
+        // Nothing changed
+        return;
+      }
+
+      const newOrChangedCount = diff.onlyInNew + diff.changed;
+      const newStr = diff.onlyInNew > 0 ? `${diff.onlyInNew} new ` : "";
+      const changedStr = diff.changed > 0 ? `${diff.changed} changed ` : "";
+      const maybeAnd = changedStr && newStr ? "and " : "";
+      const maybeAlso = newOrChangedCount ? "Also, " : "";
+      const removedStr =
+        diff.onlyInOld > 0
+          ? `${maybeAlso}${diff.onlyInOld} ${Utils.pluralize(
+              "dataset",
+              diff.onlyInOld,
+            )} no longer ${Utils.conjugate("exist", diff.onlyInOld)} in this folder.`
+          : "";
+      const maybeNewAndChangedSentence = newOrChangedCount
+        ? `There ${Utils.conjugate(
+            "are",
+            newOrChangedCount,
+            "is",
+          )} ${newStr}${maybeAnd}${changedStr}${Utils.pluralize("dataset", newOrChangedCount)}.`
+        : "";
+
       Toast.info(
         <>
-          There are new datasets.{" "}
-          <a
-            href="#"
-            onClick={() => {
-              if (ignoreFetchResult) {
-                // console.log("[p] ignore sleep for", folderId);
-                return;
-              }
-              // console.log("[p] setFetchedDatasets", newDatasets);
-              fetchedDatasetsRef.current = newDatasets;
-              Toast.close(`new-datasets-are-available-${folderId || null}`);
-              queryData.refetch();
-            }}
-          >
-            Click here to update.
-          </a>{" "}
-          (todo: only show actual updates)
+          {maybeNewAndChangedSentence}
+          {removedStr}{" "}
+          <a href="#" onClick={acceptNewDatasets}>
+            Show updated list.
+          </a>
         </>,
         { key: `new-datasets-are-available-${folderId || null}` },
       );
@@ -208,17 +259,17 @@ function useUpdateFolderMutation() {
   return useMutation((folder: Folder) => updateFolder(folder), {
     mutationKey,
     onSuccess: (updatedFolder) => {
-      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
-        (oldItems || []).map((oldFolder: Folder) =>
+      queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
+        (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
           oldFolder.id === updatedFolder.id
             ? {
                 ...updatedFolder,
-                // @ts-ignore todo: clean this up
                 parent: oldFolder.parent,
               }
             : oldFolder,
         ),
       );
+      queryClient.setQueryData(["folders", updatedFolder.id], undefined);
     },
     onError: (err) => {
       Toast.error(`Could not update folder. ${err}`);
@@ -234,13 +285,12 @@ function useMoveFolderMutation() {
     ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
     {
       mutationKey,
-      onSuccess: (updatedFolder, [folderId, newParentId]) => {
-        queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
-          (oldItems || []).map((oldFolder: Folder) =>
+      onSuccess: (updatedFolder, [_folderId, newParentId]) => {
+        queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
+          (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
             oldFolder.id === updatedFolder.id
               ? {
                   ...updatedFolder,
-                  // @ts-ignore todo: clean this up
                   parent: newParentId,
                 }
               : oldFolder,
@@ -260,12 +310,14 @@ function useUpdateDatasetMutation(folderId: string | null) {
 
   return useMutation(
     (params: [APIMaybeUnimportedDataset, string] | APIDatasetId) => {
+      // If a APIDatasetId is provided, simply refetch the dataset
+      // without any mutation so that it gets reloaded effectively.
       if ("owningOrganization" in params) {
         const datasetId = params;
         return getDataset(datasetId);
       }
-      const [dataset, folderId] = params;
-      return updateDataset(dataset, dataset, folderId);
+      const [dataset, newFolderId] = params;
+      return updateDataset(dataset, dataset, newFolderId, true);
     },
     {
       mutationKey,
@@ -274,8 +326,8 @@ function useUpdateDatasetMutation(folderId: string | null) {
         queryClient.setQueryData(mutationKey, (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
           updateDatasetInQueryData(updatedDataset, folderId, oldItems),
         );
-        const targetFolderId = updatedDataset.folder.id;
-        if (targetFolderId != folderId) {
+        const targetFolderId = updatedDataset.folderId;
+        if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
           queryClient.setQueryData(
             ["datasetsByFolder", targetFolderId],
@@ -307,15 +359,9 @@ function updateDatasetInQueryData(
 ) {
   return (oldItems || [])
     .map((oldDataset: APIMaybeUnimportedDataset) =>
-      oldDataset.name === updatedDataset.name
-        ? {
-            ...updatedDataset,
-            // @ts-ignore todo: clean this up
-            parent: oldDataset.parent,
-          }
-        : oldDataset,
+      oldDataset.name === updatedDataset.name ? updatedDataset : oldDataset,
     )
-    .filter((dataset: APIMaybeUnimportedDataset) => dataset.folder.id === activeFolderId);
+    .filter((dataset: APIMaybeUnimportedDataset) => dataset.folderId === activeFolderId);
 }
 
 const ACTIVE_FOLDER_ID_STORAGE_KEY = "activeFolderId";
@@ -345,7 +391,7 @@ export default function DatasetCollectionContextProvider({
     }
   }, [activeFolderId]);
 
-  async function fetchDatasets(options: Options = {}): Promise<void> {
+  async function fetchDatasets(_options: Options = {}): Promise<void> {
     queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", activeFolderId] });
 
     // const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;
@@ -374,13 +420,13 @@ export default function DatasetCollectionContextProvider({
 
   async function reloadDataset(
     datasetId: APIDatasetId,
-    datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
+    _datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
   ) {
     updateDatasetMutation.mutateAsync(datasetId);
   }
 
   async function updateCachedDataset(dataset: APIDataset) {
-    updateDatasetMutation.mutateAsync([dataset, dataset.folder.id]);
+    updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
   const isLoading = datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
@@ -389,7 +435,7 @@ export default function DatasetCollectionContextProvider({
   console.log("datasetsInFolderQuery.isFetching", datasetsInFolderQuery.isFetching);
   console.log("datasetsInFolderQuery.isRefetching", datasetsInFolderQuery.isRefetching);
 
-  const value: DatasetCollectionContext = useMemo(
+  const value: DatasetCollectionContextValue = useMemo(
     () => ({
       datasets,
       isLoading,
@@ -399,7 +445,9 @@ export default function DatasetCollectionContextProvider({
       activeFolderId,
       setActiveFolderId,
       isChecking: false,
-      checkDatasets: async () => {},
+      checkDatasets: async () => {
+        datasetsInFolderQuery.refetch();
+      },
       queries: {
         folderTreeQuery,
         datasetsInFolderQuery,
@@ -431,4 +479,53 @@ export default function DatasetCollectionContextProvider({
   return (
     <DatasetCollectionContext.Provider value={value}>{children}</DatasetCollectionContext.Provider>
   );
+}
+
+function diffDatasets(
+  oldDatasets: APIMaybeUnimportedDataset[] | undefined,
+  newDatasets: APIMaybeUnimportedDataset[],
+): {
+  changed: number;
+  onlyInOld: number;
+  onlyInNew: number;
+} {
+  if (oldDatasets == null) {
+    return {
+      changed: 0,
+      onlyInOld: 0,
+      onlyInNew: newDatasets.length,
+    };
+  }
+
+  const {
+    onlyA: onlyInOld,
+    onlyB: onlyInNew,
+    both,
+  } = Utils.diffArrays(
+    oldDatasets.map((ds) => ds.name),
+    newDatasets.map((ds) => ds.name),
+  );
+
+  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.name);
+  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.name);
+
+  const changedDatasets = both
+    .map((name) => newDatasetsDict[name])
+    .filter((newDataset) => {
+      const oldDataset = oldDatasetsDict[newDataset.name];
+      return !_.isEqualWith(oldDataset, newDataset, (_objValue, _otherValue, key) => {
+        if (key === "lastUsedByUser") {
+          // Ignore the lastUsedByUser timestamp when diffing datasets.
+          return true;
+        }
+        // Fallback to lodash's isEqual check.
+        return undefined;
+      });
+    });
+
+  return {
+    changed: changedDatasets.length,
+    onlyInOld: onlyInOld.length,
+    onlyInNew: onlyInNew.length,
+  };
 }

@@ -2,7 +2,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input, MenuItemProps } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
-import React, { useEffect } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -88,6 +88,9 @@ import {
 } from "oxalis/model/actions/proofread_actions";
 const { SubMenu } = Menu;
 
+type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
+export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
+
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {
@@ -131,9 +134,7 @@ type StateProps = {
   allowUpdate: boolean;
 };
 type Props = OwnProps & StateProps & DispatchProps;
-type PropsWithRef = Props & {
-  inputRef: React.MutableRefObject<HTMLElement | null>;
-};
+
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
   clickedNodeId: number;
@@ -890,7 +891,12 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   );
 }
 
-function ContextMenuContainer(props: Props) {
+export function GenericContextMenuContainer(props: {
+  contextMenuPosition: [number, number] | null | undefined;
+  hideContextMenu: () => void;
+  children: React.ReactElement;
+  positionAbsolute?: boolean;
+}) {
   /*
    * This container for the context menu is *always* rendered.
    * An input ref is stored for the actual container which is
@@ -940,7 +946,7 @@ function ContextMenuContainer(props: Props) {
       >
         <div
           style={{
-            position: "sticky",
+            position: props.positionAbsolute ? "absolute" : "sticky",
             left: contextMenuPosition != null ? contextMenuPosition[0] : 0,
             top: contextMenuPosition != null ? contextMenuPosition[1] : 0,
             width: "fit-content",
@@ -951,9 +957,17 @@ function ContextMenuContainer(props: Props) {
           // @ts-ignore
           ref={inputRef}
         />
-        <ContextMenuInner {...props} inputRef={inputRef} />
+        <ContextMenuContext.Provider value={inputRef}>{props.children}</ContextMenuContext.Provider>
       </div>
     </React.Fragment>
+  );
+}
+
+function ContextMenuContainer(props: Props) {
+  return (
+    <GenericContextMenuContainer {...props}>
+      <ContextMenuInner {...props} />
+    </GenericContextMenuContainer>
   );
 }
 
@@ -972,8 +986,9 @@ function InfoMenuItem(propsWithEventKey: MenuItemProps) {
   return <div className="node-context-menu-item">{children}</div>;
 }
 
-function ContextMenuInner(propsWithInputRef: PropsWithRef) {
-  const { inputRef, ...props } = propsWithInputRef;
+function ContextMenuInner(propsWithInputRef: Props) {
+  const inputRef = useContext(ContextMenuContext);
+  const { ...props } = propsWithInputRef;
   const {
     skeletonTracing,
     maybeClickedNodeId,

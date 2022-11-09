@@ -1,6 +1,10 @@
 import Request from "libs/request";
 import { Folder, FlatFolderTreeItem } from "types/api_flow_types";
 
+export function getFolder(folderId: string): Promise<Folder> {
+  return Request.receiveJSON(`/api/folders/${folderId}`);
+}
+
 export function getFolderTree(): Promise<FlatFolderTreeItem[]> {
   return Request.receiveJSON("/api/folders/tree");
 }

@@ -16,7 +16,7 @@ type Options = {
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
   isCalledFromCheckDatasets?: boolean;
 };
-export type DatasetCacheContext = {
+export type DatasetCacheContextValue = {
   datasets: Array<APIMaybeUnimportedDataset>;
   isLoading: boolean;
   isChecking: boolean;
@@ -48,7 +48,7 @@ export const datasetCache = {
     UserLocalStorage.removeItem(wkDatasetsCacheKey);
   },
 };
-export const DatasetCacheContext = createContext<DatasetCacheContext>({
+export const DatasetCacheContext = createContext<DatasetCacheContextValue>({
   datasets: [],
   isLoading: false,
   isChecking: false,

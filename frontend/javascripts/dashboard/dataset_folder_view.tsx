@@ -1,6 +1,6 @@
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
-import { Menu, Dropdown, Spin } from "antd";
+import { Menu, Dropdown, Spin, Modal, Input, Form } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
@@ -16,11 +16,20 @@ import SortableTree, {
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 
-import { APIDataset, APIUser, Folder, FlatFolderTreeItem } from "types/api_flow_types";
-import { DraggableType, TeamTags } from "./advanced_dataset/dataset_table";
+import { APIUser, FlatFolderTreeItem, APIMaybeUnimportedDataset } from "types/api_flow_types";
+import {
+  DatasetLayerTags,
+  DatasetTags,
+  DraggableType,
+  TeamTags,
+} from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
   DatasetCollectionContext,
+  DatasetCollectionContextValue,
+  useFolderQuery,
 } from "./dataset/dataset_collection_context";
+import { FormItemWithInfo } from "./dataset/helper_components";
+import TeamSelectionComponent from "./dataset/team_selection_component";
 
 import DatasetView from "./dataset_view";
 
@@ -37,15 +46,27 @@ export function DatasetFolderView(props: Props) {
 }
 
 function DatasetFolderViewInner(props: Props) {
-  const [selectedDataset, setSelectedDataset] = useState<APIDataset | null>(null);
+  const [selectedDataset, setSelectedDataset] = useState<APIMaybeUnimportedDataset | null>(null);
   const context = useContext(DatasetCollectionContext);
   const isMutating = useIsMutating() > 0;
 
   console.log("context.datasets", context.datasets);
 
   return (
-    <div style={{ display: "grid", gridTemplate: "auto 1fr auto / auto 1fr auto" }}>
-      <div style={{ gridColumn: "1 / 2", overflow: "auto" }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplate: "auto 1fr auto / auto 1fr auto",
+      }}
+    >
+      <div
+        style={{
+          gridColumn: "1 / 2",
+          overflow: "auto",
+          borderRight: "1px solid var(--ant-border-base)",
+          marginRight: 4,
+        }}
+      >
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
@@ -55,17 +76,31 @@ function DatasetFolderViewInner(props: Props) {
             onSelectDataset={setSelectedDataset}
             selectedDataset={selectedDataset}
             context={context}
+            hideDetailsColumns
           />
         </Spin>
       </main>
-      <div style={{ gridColumn: "3 / 4", overflow: "auto" }}>
+      <div
+        style={{
+          gridColumn: "3 / 4",
+          overflow: "auto",
+          borderLeft: "1px solid var(--ant-border-base)",
+          marginLeft: 4,
+        }}
+      >
         <DatasetDetailsSidebar selectedDataset={selectedDataset} />
       </div>
     </div>
   );
 }
 
-function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDataset | null }) {
+function DatasetDetailsSidebar({
+  selectedDataset,
+}: {
+  selectedDataset: APIMaybeUnimportedDataset | null;
+}) {
+  const context = useContext(DatasetCollectionContext);
+
   // allowedTeams: Array<APITeam>;
   // created: number;
   // description: string | null | undefined;
@@ -83,19 +118,31 @@ function DatasetDetailsSidebar({ selectedDataset }: { selectedDataset: APIDatase
             {selectedDataset.displayName || selectedDataset.name}
           </h1>
           Description: {selectedDataset.description}
-          <div className="info-tab-block">
-            <table
-              style={{
-                fontSize: 14,
-              }}
-            >
-              <tbody>
-                <DatasetExtentRow dataset={selectedDataset} />
-              </tbody>
-            </table>
+          {selectedDataset.isActive && (
+            <div className="info-tab-block">
+              <table
+                style={{
+                  fontSize: 14,
+                }}
+              >
+                <tbody>
+                  <DatasetExtentRow dataset={selectedDataset} />
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div>
+            Access Permissions: <TeamTags dataset={selectedDataset} emptyValue="default" />
           </div>
-          Access Permissions:
-          <TeamTags dataset={selectedDataset} />
+          <div>
+            Layers: <DatasetLayerTags dataset={selectedDataset} />
+          </div>
+          {selectedDataset.isActive ? (
+            <div>
+              Tags:
+              <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+            </div>
+          ) : null}
         </>
       ) : (
         "No dataset selected"
@@ -111,13 +158,10 @@ type FolderItem = {
   children: FolderItem[];
 };
 
-type State = {
-  treeData: FolderItem[];
-};
-
 function generateNodeProps(
-  context: DatasetCollectionContext,
+  context: DatasetCollectionContextValue,
   params: ExtendedNodeData<FolderItem>,
+  setFolderIdForEditModal: (folderId: string) => void,
 ): GenerateNodePropsType {
   const { node } = params;
   const { id, title } = node;
@@ -131,12 +175,17 @@ function generateNodeProps(
     context.queries.deleteFolderMutation.mutateAsync(id);
   }
   function renameFolder(): void {
-    const folderName = prompt("Please input a new name for the folder", title);
-    context.queries.updateFolderMutation.mutateAsync({
-      name: folderName || "New folder",
-      id,
-      teams: [], // todo
-    });
+    // const folderName = prompt("Please input a new name for the folder", title);
+    // context.queries.updateFolderMutation.mutateAsync({
+    //   name: folderName || "New folder",
+    //   id,
+    //   allowedTeams: node.allowedTeams,
+    //   allowedTeamsCumulative: node.allowedTeamsCumulative,
+    // });
+  }
+
+  function editFolder(): void {
+    setFolderIdForEditModal(id);
   }
 
   const createMenu = () => (
@@ -146,9 +195,14 @@ function generateNodeProps(
         New Folder
       </Menu.Item>
       <Menu.Item key="rename" data-group-id={id} onClick={renameFolder}>
-        <PlusOutlined />
+        <EditOutlined />
         Rename Folder
       </Menu.Item>
+      <Menu.Item key="edit" data-group-id={id} onClick={editFolder}>
+        <EditOutlined />
+        Edit Folder
+      </Menu.Item>
+
       <Menu.Item key="delete" data-group-id={id} onClick={deleteFolder}>
         <DeleteOutlined />
         Delete Folder
@@ -193,7 +247,7 @@ function FolderItemAsDropTarget(props: {
   const [collectedProps, drop] = useDrop({
     accept: DraggableType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
-      const dataset = context.datasets.find((dataset) => dataset.name === item.datasetName);
+      const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
       if (dataset) {
         context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
@@ -201,12 +255,10 @@ function FolderItemAsDropTarget(props: {
         Toast.error("Could not move dataset. Please try again.");
       }
     },
-    collect: (monitor: DropTargetMonitor) => {
-      return {
-        canDrop: monitor.canDrop(),
-        isOver: monitor.isOver(),
-      };
-    },
+    collect: (monitor: DropTargetMonitor) => ({
+      canDrop: monitor.canDrop(),
+      isOver: monitor.isOver(),
+    }),
   });
   const { canDrop, isOver } = collectedProps;
   return (
@@ -224,28 +276,25 @@ function FolderItemAsDropTarget(props: {
 }
 
 function FolderSidebar() {
-  const [state, setState] = useState<State>({
-    treeData: [],
-  });
+  const [treeData, setTreeData] = useState<FolderItem[]>([]);
+  const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
   const context = useContext(DatasetCollectionContext);
 
   const { data: folderTree } = context.queries.folderTreeQuery;
 
   useEffect(() => {
-    setState((prevState: State) => {
-      const treeData = getFolderHierarchy(folderTree, prevState.treeData);
-      if (treeData.length > 0 && context.activeFolderId == null) {
-        context.setActiveFolderId(treeData[0].id);
+    setTreeData((prevState) => {
+      const newTreeData = getFolderHierarchy(folderTree, prevState);
+      if (newTreeData.length > 0 && context.activeFolderId == null) {
+        context.setActiveFolderId(newTreeData[0].id);
       }
-      return { treeData: treeData };
+      return newTreeData;
     });
   }, [folderTree]);
 
   const [isDraggingDataset, drop] = useDrop({
     accept: DraggableType,
-    collect: (monitor: DropTargetMonitor) => {
-      return monitor.canDrop();
-    },
+    collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
 
   const onMoveNode = (
@@ -257,9 +306,8 @@ function FolderSidebar() {
     }
   };
 
-  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean => {
-    return params.nextParent != null;
-  };
+  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean =>
+    params.nextParent != null;
 
   return (
     <div
@@ -273,16 +321,29 @@ function FolderSidebar() {
         padding: 2,
       }}
     >
+      {folderIdForEditModal != null && (
+        <EditFolderModal
+          onClose={() => setFolderIdForEditModal(null)}
+          folderId={folderIdForEditModal}
+        />
+      )}
       <SortableTree
-        treeData={state.treeData}
-        onChange={(treeData) => {
-          setState({ treeData });
+        treeData={treeData}
+        onChange={(newTreeData: FolderItem[]) => {
+          setTreeData(newTreeData);
         }}
         onMoveNode={onMoveNode}
         theme={FileExplorerTheme}
-        canDrag={true}
+        canDrag
         canDrop={canDropFolder}
-        generateNodeProps={(params) => generateNodeProps(context, params)}
+        generateNodeProps={(params) =>
+          generateNodeProps(
+            context,
+            // @ts-ignore
+            params as ExtendedNodeData<FolderItem>,
+            setFolderIdForEditModal,
+          )
+        }
       />
     </div>
   );
@@ -301,6 +362,7 @@ function getFolderHierarchy(
     const treeItem = {
       id: folderTreeItem.id,
       title: folderTreeItem.name,
+      isEditable: folderTreeItem.isEditable,
       children: [],
     };
     if (folderTreeItem.parent == null) {
@@ -343,4 +405,58 @@ function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) 
     fn(item);
     forEachFolderItem(item.children, fn);
   }
+}
+
+function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () => void }) {
+  const { data: folder } = useFolderQuery(folderId);
+  const [form] = Form.useForm();
+  const context = useContext(DatasetCollectionContext);
+
+  const onSave = async () => {
+    const name = form.getFieldValue("name");
+    const allowedTeams = form.getFieldValue("allowedTeams");
+
+    if (folder == null) {
+      return;
+    }
+
+    await context.queries.updateFolderMutation.mutateAsync({
+      ...folder,
+      id: folderId,
+      name,
+      allowedTeams,
+    });
+
+    onClose();
+  };
+
+  const content =
+    folder != null ? (
+      <div>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ name: folder.name, allowedTeams: folder.allowedTeams }}
+        >
+          <FormItemWithInfo name="name" label="Name" info="Name of the folder">
+            <Input value={folder.name} />
+          </FormItemWithInfo>
+          <FormItemWithInfo
+            name="allowedTeams"
+            label="Allowed Teams"
+            info="Teams which may access this folder"
+          >
+            <TeamSelectionComponent mode="multiple" allowNonEditableTeams />
+          </FormItemWithInfo>
+        </Form>
+      </div>
+    ) : (
+      <Spin spinning />
+    );
+
+  return (
+    <Modal title="Edit Folder" visible onOk={onSave} onCancel={onClose}>
+      {content}
+    </Modal>
+  );
 }

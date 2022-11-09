@@ -116,7 +116,7 @@ export type APIDatasetDetails = {
 };
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
-  folder: Folder;
+  folderId: string;
   allowedTeams: Array<APITeam>;
   created: number;
   dataStore: APIDataStore;
@@ -893,10 +893,13 @@ export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent?: string;
+  isEditable: boolean;
 };
 
 export type Folder = {
   name: string;
   id: string;
-  teams: string[];
+  allowedTeams: APITeam[];
+  allowedTeamsCumulative: APITeam[];
+  isEditable: boolean;
 };

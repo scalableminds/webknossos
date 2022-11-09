@@ -37,7 +37,8 @@ class DatasetArray(relativePath: DatasetPath,
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val paddingDimensionsCount = header.rank - 3
     val offsetArray = channelIndex match {
-      case Some(c) if header.rank >= 4 =>  Array.fill(paddingDimensionsCount - 1)(0) :+ c :+ offset.x :+ offset.y :+ offset.z
+      case Some(c) if header.rank >= 4 =>
+        Array.fill(paddingDimensionsCount - 1)(0) :+ c :+ offset.x :+ offset.y :+ offset.z
       case _ => Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
     }
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z

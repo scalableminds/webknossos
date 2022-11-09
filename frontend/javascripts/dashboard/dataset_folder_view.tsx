@@ -161,6 +161,7 @@ type FolderItem = {
   id: string;
   expanded?: boolean;
   children: FolderItem[];
+  isEditable: boolean;
 };
 
 function generateNodeProps(
@@ -311,8 +312,15 @@ function FolderSidebar() {
     }
   };
 
-  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean =>
-    params.nextParent != null;
+  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean => {
+    const sourceAllowed = (params.prevParent as FolderItem | null)?.isEditable ?? false;
+    const targetAllowed = (params.nextParent as FolderItem | null)?.isEditable ?? false;
+    return sourceAllowed && targetAllowed;
+  };
+
+  const canDragFolder = (params: ExtendedNodeData): boolean => {
+    return (params.node as FolderItem).isEditable;
+  };
 
   return (
     <div
@@ -339,7 +347,7 @@ function FolderSidebar() {
         }}
         onMoveNode={onMoveNode}
         theme={FileExplorerTheme}
-        canDrag
+        canDrag={canDragFolder}
         canDrop={canDropFolder}
         generateNodeProps={(params) =>
           generateNodeProps(

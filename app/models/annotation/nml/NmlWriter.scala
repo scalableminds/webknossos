@@ -206,21 +206,21 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                         isSingle: Boolean,
                         volumeFilename: Option[String],
                         skipVolumeData: Boolean)(implicit writer: XMLStreamWriter): Unit =
-    if (skipVolumeData) {
-      writer.writeComment(
-        f"A volume layer named ${volumeLayer.name} (id = $index) was omitted here while downloading this annotation without volume data.")
-    } else {
-      Xml.withinElementSync("volume") {
-        writer.writeAttribute("id", index.toString)
+    Xml.withinElementSync("volume") {
+      writer.writeAttribute("id", index.toString)
+      writer.writeAttribute("name", volumeLayer.name)
+      if (!skipVolumeData) {
         writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
-        writer.writeAttribute("name", volumeLayer.name)
-        volumeLayer.tracing match {
-          case Right(volumeTracing) =>
-            volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
-            volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
-            writeVolumeSegmentMetadata(volumeTracing.segments)
-          case _ => ()
-        }
+      }
+      volumeLayer.tracing match {
+        case Right(volumeTracing) =>
+          volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
+          volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
+          if (skipVolumeData) {
+            writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
+          }
+          writeVolumeSegmentMetadata(volumeTracing.segments)
+        case _ => ()
       }
     }
 

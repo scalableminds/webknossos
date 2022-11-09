@@ -6,10 +6,7 @@ import Toast from "libs/toast";
 import {
   deleteEdgeAction,
   DeleteEdgeAction,
-  deleteTreeAction,
-  loadAgglomerateSkeletonAction,
   MergeTreesAction,
-  setActiveNodeAction,
   setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
@@ -24,9 +21,7 @@ import type {
 } from "oxalis/model/actions/proofread_actions";
 import {
   enforceSkeletonTracing,
-  findTreeByName,
   findTreeByNodeId,
-  getTree,
   getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -56,7 +51,6 @@ import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/vol
 import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
-import { loadAgglomerateSkeletonWithId } from "oxalis/model/sagas/skeletontracing_saga";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
@@ -70,8 +64,7 @@ export default function* proofreadRootSaga(): Saga<void> {
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE"],
     splitOrMergeOrMinCutAgglomerate,
   );
-  // TODO: Disabled for now to avoid interferring with the segment merge/split
-  // yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
+  yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
   yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
   yield* takeEvery(
     ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
@@ -86,24 +79,11 @@ function proofreadCoarseResolutionIndex(): number {
       window.__proofreadCoarseResolutionIndex
     : 3;
 }
-function proofreadFineResolutionIndex(): number {
-  // @ts-ignore
-  return window.__proofreadFineResolutionIndex != null
-    ? // @ts-ignore
-      window.__proofreadFineResolutionIndex
-    : 2;
-}
 function proofreadUsingMeshes(): boolean {
   // @ts-ignore
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }
-// The default of 0 effectively disables the loading of the high-quality meshes of
-// the oversegmentation by default
-function proofreadSegmentProximityNm(): number {
-  // @ts-ignore
-  return window.__proofreadProximityNm != null ? window.__proofreadProximityNm : 0;
-}
-let oldSegmentIdsInProximity: number[] | null = null;
+
 let coarselyLoadedSegmentIds: number[] = [];
 
 function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
@@ -125,8 +105,6 @@ function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Ve
   coarselyLoadedSegmentIds.push(segmentId);
 }
 
-let loadedAgglomerateSkeletonIds: number[] = [];
-
 function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const { position } = action;
 
@@ -141,97 +119,10 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
-  /* Load agglomerate skeleton of the agglomerate at the click position */
-
-  const treeNameAndId = yield* call(
-    loadAgglomerateSkeletonWithId,
-    loadAgglomerateSkeletonAction(layerName, volumeTracing.mappingName, segmentId),
-  );
-
   if (!proofreadUsingMeshes()) return;
 
   /* Load a coarse ad hoc mesh of the agglomerate at the click position */
-
   yield* call(loadCoarseAdHocMesh, layerName, segmentId, position);
-
-  if (treeNameAndId == null) return;
-  const [treeName] = treeNameAndId;
-
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
-  const { trees } = skeletonTracing;
-  const tree = findTreeByName(trees, treeName).getOrElse(null);
-  if (tree == null) return;
-
-  loadedAgglomerateSkeletonIds.push(tree.treeId);
-
-  yield* call(loadFineAdHocMeshesInProximity, layerName, volumeTracingLayer, tree, position);
-}
-
-function* loadFineAdHocMeshesInProximity(
-  layerName: string,
-  volumeTracingLayer: APISegmentationLayer,
-  tree: Tree,
-  position: Vector3,
-): Saga<void> {
-  /* Find all segments (nodes) of the agglomerate skeleton within proofreadSegmentProximityNm (graph distance)
-     and request the segment IDs in the oversegmentation at the node positions */
-
-  if (proofreadSegmentProximityNm() <= 0) return;
-
-  const nodePositions = tree.nodes.map((node) => node.position);
-  const proximityDistanceSquared = proofreadSegmentProximityNm() ** 2;
-  const scale = yield* select((state) => state.dataset.dataSource.scale);
-
-  const nodePositionsInProximity = nodePositions.filter(
-    (nodePosition) =>
-      V3.scaledSquaredDist(nodePosition, position, scale) <= proximityDistanceSquared,
-  );
-
-  const getUnmappedDataValue = yield* call(createGetUnmappedDataValueFn, volumeTracingLayer);
-  if (!getUnmappedDataValue) {
-    return;
-  }
-
-  // Request unmapped segmentation ids
-  const segmentIdsInProximity = yield* all(
-    nodePositionsInProximity.map((nodePosition) => call(getUnmappedDataValue, nodePosition)),
-  );
-
-  if (oldSegmentIdsInProximity != null) {
-    const segmentIdsInProximitySet = new Set(segmentIdsInProximity);
-    // Remove old meshes in oversegmentation
-    yield* all(
-      oldSegmentIdsInProximity.map((nodeSegmentId) =>
-        // Only remove meshes that are not part of the new proximity set
-        segmentIdsInProximitySet.has(nodeSegmentId)
-          ? null
-          : put(removeIsosurfaceAction(layerName, nodeSegmentId)),
-      ),
-    );
-  }
-
-  oldSegmentIdsInProximity = [...segmentIdsInProximity];
-
-  /* Load fine ad hoc meshes of the segments in the oversegmentation in the proximity of the click position */
-
-  const noMappingInfo = {
-    mappingName: null,
-    mappingType: null,
-    useDataStore: true,
-    preferredQuality: proofreadFineResolutionIndex(),
-  };
-  yield* all(
-    segmentIdsInProximity.map((nodeSegmentId, index) =>
-      put(
-        loadAdHocMeshAction(
-          nodeSegmentId,
-          nodePositionsInProximity[index],
-          noMappingInfo,
-          layerName,
-        ),
-      ),
-    ),
-  );
 }
 
 function* createEditableMapping(): Saga<void> {
@@ -520,12 +411,6 @@ function* performMinCut(
 }
 
 function* clearProofreadingByproducts() {
-  for (const treeId of loadedAgglomerateSkeletonIds) {
-    yield* put(deleteTreeAction(treeId, true));
-  }
-
-  loadedAgglomerateSkeletonIds = [];
-
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
   const layerName = volumeTracingLayer.tracingId;
@@ -757,17 +642,6 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
   targetNodePosition: Vector3,
 ) {
   if (proofreadUsingMeshes()) {
-    // Remove old over segmentation meshes
-    if (oldSegmentIdsInProximity != null) {
-      // Remove old meshes in oversegmentation
-      yield* all(
-        oldSegmentIdsInProximity.map((nodeSegmentId) =>
-          put(removeIsosurfaceAction(layerName, nodeSegmentId)),
-        ),
-      );
-      oldSegmentIdsInProximity = null;
-    }
-
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     yield* put(removeIsosurfaceAction(layerName, sourceAgglomerateId));
     if (targetAgglomerateId !== sourceAgglomerateId) {
@@ -806,33 +680,4 @@ function* createGetUnmappedDataValueFn(
 
     return Number(new TypedArrayClass(buffer)[0]);
   };
-}
-
-function* selectNodeByPosition(
-  activeNodePosition: Vector3 | undefined,
-  treeNameAndId: [string, number] | null,
-) {
-  if (!activeNodePosition || !treeNameAndId) {
-    return;
-  }
-
-  const newTree = yield* select((state) => {
-    if (!state.tracing.skeleton) {
-      return null;
-    }
-    return getTree(state.tracing.skeleton, treeNameAndId[1]).getOrElse(null);
-  });
-  if (!newTree) {
-    return;
-  }
-  let nodeToActivate = null;
-  for (const node of newTree.nodes.values()) {
-    if (_.isEqual(node.position, activeNodePosition)) {
-      nodeToActivate = node.id;
-      break;
-    }
-  }
-  if (nodeToActivate) {
-    yield* put(setActiveNodeAction(nodeToActivate, false, true));
-  }
 }

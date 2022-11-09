@@ -129,7 +129,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setHoveredSegmentId(segmentId: number | null | undefined) {
-    dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
+    dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
   loadAdHocMesh(cellId: number, seedPosition: Vector3) {

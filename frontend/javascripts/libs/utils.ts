@@ -37,6 +37,9 @@ export function map3<A, B>(fn: (arg0: A, arg1: 0 | 1 | 2) => B, tuple: [A, A, A]
   const [x, y, z] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
 }
+export function take2<A>(tuple: [A, A, A] | [A, A, A, A]): [A, A] {
+  return [tuple[0], tuple[1]];
+}
 export function take3<A>(tuple: [A, A, A, A]): [A, A, A] {
   return [tuple[0], tuple[1], tuple[2]];
 }

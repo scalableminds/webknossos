@@ -4,16 +4,15 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import models.annotation.AnnotationSettings.skeletonModes
 import play.api.libs.json._
 
 object TracingMode extends ExtendedEnumeration {
   type TracingMode = Value
-  val orthogonal, oblique, flight, volume = Value
+  val orthogonal, oblique, flight = Value
 }
 
 case class AnnotationSettings(
-    allowedModes: List[TracingMode.Value] = skeletonModes,
+    allowedModes: List[TracingMode.Value],
     preferredMode: Option[String] = None,
     branchPointsAllowed: Boolean = true,
     somaClickingAllowed: Boolean = true,
@@ -23,17 +22,11 @@ case class AnnotationSettings(
 )
 
 object AnnotationSettings {
-  private val skeletonModes = List(TracingMode.orthogonal, TracingMode.oblique, TracingMode.flight)
-  private val volumeModes = List(TracingMode.volume)
-  private val allModes = skeletonModes ::: volumeModes
-
   def defaultFor(tracingType: TracingType): AnnotationSettings = tracingType match {
-    case TracingType.skeleton =>
-      AnnotationSettings(allowedModes = skeletonModes)
     case TracingType.volume =>
-      AnnotationSettings(allowedModes = volumeModes)
-    case TracingType.hybrid =>
-      AnnotationSettings(allowedModes = allModes)
+      AnnotationSettings(allowedModes = List(TracingMode.orthogonal))
+    case TracingType.skeleton | TracingType.hybrid =>
+      AnnotationSettings(allowedModes = List(TracingMode.orthogonal, TracingMode.oblique, TracingMode.flight))
   }
 
   implicit val jsonFormat: OFormat[AnnotationSettings] = Json.format[AnnotationSettings]

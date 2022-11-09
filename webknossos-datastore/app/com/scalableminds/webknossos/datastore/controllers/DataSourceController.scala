@@ -97,7 +97,7 @@ Expects:
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (remoteWebKnossosClient.validateDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataSet.upload.validation.failed")
+            (remoteWebKnossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataSet.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
         } yield Ok

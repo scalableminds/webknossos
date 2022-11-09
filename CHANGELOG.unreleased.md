@@ -27,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
  
 ### Fixed
 - Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
+- Fixed importing NGFF Zarr datasets with translation transforms. [#6621](https://github.com/scalableminds/webknossos/pull/6621)
 
 ### Removed
 

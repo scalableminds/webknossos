@@ -164,9 +164,7 @@ class MappingSettingsView extends React.Component<Props, State> {
 
   render() {
     const availableMappings =
-      this.props.segmentationLayer?.mappings != null
-        ? this.props.segmentationLayer.mappings
-        : [];
+      this.props.segmentationLayer?.mappings != null ? this.props.segmentationLayer.mappings : [];
     const availableAgglomerates =
       this.props.segmentationLayer?.agglomerates != null
         ? this.props.segmentationLayer.agglomerates

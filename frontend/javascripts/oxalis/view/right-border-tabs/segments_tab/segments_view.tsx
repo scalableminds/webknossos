@@ -321,10 +321,9 @@ class SegmentsView extends React.Component<Props, State> {
       title =
         "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
     } else if (this.props.hasVolumeTracing) {
-      title =
-        this.props.visibleSegmentationLayer?.fallbackLayer
-          ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
-          : "Meshes cannot be precomputed for volume annotations.";
+      title = this.props.visibleSegmentationLayer?.fallbackLayer
+        ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
+        : "Meshes cannot be precomputed for volume annotations.";
     } else if (this.props.visibleSegmentationLayer == null) {
       title = "There is no segmentation layer for which meshes could be precomputed.";
     } else {

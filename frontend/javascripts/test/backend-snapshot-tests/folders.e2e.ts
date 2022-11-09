@@ -7,13 +7,17 @@ import {
   resetDatabase,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
+import * as foldersApi from "admin/api/folders";
 import test from "ava";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
 });
 test("getFolderTree", async (t) => {
-  const folderTree = _.sortBy(await Request.receiveJSON("/api/folders/tree"), (folderWithParent) => folderWithParent.name);
+  const folderTree = _.sortBy(
+    await foldersApi.getFolderTree(),
+    (folderWithParent) => folderWithParent.name,
+  );
 
   writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
     isArray: true,
@@ -24,7 +28,7 @@ test("getFolderTree", async (t) => {
 });
 const organizationXRootFolderId = "570b9f4e4bb848d0885ea917";
 test("getFolder", async (t) => {
-  const folder = await Request.receiveJSON(`/api/folders/${organizationXRootFolderId}`);
+  const folder = await foldersApi.getFolder(organizationXRootFolderId);
 
   writeTypeCheckingFile(folder, "folder", "Folder", {
     isArray: true,
@@ -35,13 +39,10 @@ test("getFolder", async (t) => {
 });
 test("updateFolder", async (t) => {
   const newName = "renamed organization x root folder";
-  const updatedFolder = await Request.sendJSONReceiveJSON(`/api/folders/${organizationXRootFolderId}`,
-    {
-    data: {
-      allowedTeams: [],
-      name: newName
-    },
-    method: "PUT",
+  const updatedFolder = await foldersApi.updateFolder({
+    id: organizationXRootFolderId,
+    allowedTeams: [],
+    name: newName,
   });
   t.is(updatedFolder.name, newName);
 
@@ -56,13 +57,10 @@ test("addAllowedTeamToFolder", async (t) => {
 
   await Request.receiveJSON(`/api/folders/${subFolderId}`);
 
-  const updatedFolderWithTeam = await Request.sendJSONReceiveJSON(`/api/folders/${subFolderId}`,
-    {
-    data: {
-      allowedTeams: [teamId],
-      name: "A subfolder!"
-    },
-    method: "PUT",
+  const updatedFolderWithTeam = await foldersApi.updateFolder({
+    id: subFolderId,
+    allowedTeams: [teamId],
+    name: "A subfolder!",
   });
 
   t.snapshot(updatedFolderWithTeam, {
@@ -75,12 +73,11 @@ test("addAllowedTeamToFolder", async (t) => {
    * we expect that they can see the subfolder we add the team to, but not the other.
    */
 
-  const subFolderSeenByUserC = await Request.receiveJSON(`/api/folders/${subFolderId}`);
+  const subFolderSeenByUserC = await foldersApi.getFolder(subFolderId);
 
   t.snapshot(subFolderSeenByUserC, {
     id: "folders-folderAfterUpdateTeamsSeenByUserC",
   });
 
   // await t.throwsAsync(() => Request.receiveJSON(`/api/folders/${anotherSubFolderId}`));
-
 });

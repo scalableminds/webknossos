@@ -5,6 +5,7 @@ import {
   tokenUserC,
   setCurrToken,
   resetDatabase,
+  replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as foldersApi from "admin/api/folders";
@@ -55,13 +56,13 @@ test("createFolder", async (t) => {
   const folder = await foldersApi.createFolder(organizationXRootFolderId, newName);
   t.is(folder.name, newName);
 
-  t.snapshot(folder, {
+  t.snapshot(replaceVolatileValues(folder), {
     id: "folders-createFolder()",
   });
 });
 test("addAllowedTeamToFolder", async (t) => {
   const subFolderId = "570b9f4e4bb848d08880712a";
-  //const anotherSubFolderId = "570b9f4e4bb848d08880712b";
+  const anotherSubFolderId = "570b9f4e4bb848d08880712b";
   const teamId = "570b9f4b2a7c0e3b008da6ec";
 
   await Request.receiveJSON(`/api/folders/${subFolderId}`);
@@ -88,5 +89,11 @@ test("addAllowedTeamToFolder", async (t) => {
     id: "folders-folderAfterUpdateTeamsSeenByUserC",
   });
 
-  // await t.throwsAsync(() => Request.receiveJSON(`/api/folders/${anotherSubFolderId}`));
+  await t.throwsAsync(async () => {
+    try {
+      await Request.receiveJSON(`/api/folders/${anotherSubFolderId}`);
+    } catch {
+      throw new Error("request failed");
+    }
+  });
 });

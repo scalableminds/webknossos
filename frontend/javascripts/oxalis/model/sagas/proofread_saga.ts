@@ -337,7 +337,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   if (!partnerInfos) {
     return;
   }
-  const { sourceNodeAgglomerateId, targetNodeAgglomerateId, volumeTracingWithEditableMapping } =
+  const { sourceAgglomerateId, targetAgglomerateId, volumeTracingWithEditableMapping } =
     partnerInfos;
 
   const editableMappingId = volumeTracingWithEditableMapping.mappingName;
@@ -347,29 +347,29 @@ function* splitOrMergeOrMinCutAgglomerate(
 
   const items: UpdateAction[] = [];
   if (action.type === "MERGE_TREES") {
-    if (sourceNodeAgglomerateId === targetNodeAgglomerateId) {
+    if (sourceAgglomerateId === targetAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     items.push(
       mergeAgglomerate(
-        sourceNodeAgglomerateId,
-        targetNodeAgglomerateId,
+        sourceAgglomerateId,
+        targetAgglomerateId,
         sourceNodePosition,
         targetNodePosition,
         agglomerateFileMag,
       ),
     );
   } else if (action.type === "DELETE_EDGE") {
-    if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
+    if (sourceAgglomerateId !== targetAgglomerateId) {
       Toast.error("Segments that should be split need to be in the same agglomerate.");
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     items.push(
       splitAgglomerate(
-        sourceNodeAgglomerateId,
+        sourceAgglomerateId,
         sourceNodePosition,
         targetNodePosition,
         agglomerateFileMag,
@@ -378,8 +378,8 @@ function* splitOrMergeOrMinCutAgglomerate(
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     const shouldReturn = yield* call(
       performMinCut,
-      sourceNodeAgglomerateId,
-      targetNodeAgglomerateId,
+      sourceAgglomerateId,
+      targetAgglomerateId,
       sourceNodePosition,
       targetNodePosition,
       agglomerateFileMag,
@@ -405,7 +405,7 @@ function* splitOrMergeOrMinCutAgglomerate(
 
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
-  const [newSourceNodeAgglomerateId, newTargetNodeAgglomerateId] = yield* all([
+  const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourceNodePosition),
     call(getDataValue, targetNodePosition),
   ]);
@@ -415,7 +415,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   yield* put(
     setTreeNameAction(
       getTreeNameForAgglomerateSkeleton(
-        newSourceNodeAgglomerateId,
+        newSourceAgglomerateId,
         volumeTracingWithEditableMapping.mappingName,
       ),
       sourceTree.treeId,
@@ -425,7 +425,7 @@ function* splitOrMergeOrMinCutAgglomerate(
     yield* put(
       setTreeNameAction(
         getTreeNameForAgglomerateSkeleton(
-          newTargetNodeAgglomerateId,
+          newTargetAgglomerateId,
           volumeTracingWithEditableMapping.mappingName,
         ),
         targetTree.treeId,
@@ -437,27 +437,27 @@ function* splitOrMergeOrMinCutAgglomerate(
 
   yield* removeOldMeshesAndLoadUpdatedMeshes(
     layerName,
-    sourceNodeAgglomerateId,
-    targetNodeAgglomerateId,
-    newSourceNodeAgglomerateId,
+    sourceAgglomerateId,
+    targetAgglomerateId,
+    newSourceAgglomerateId,
     sourceNodePosition,
-    newTargetNodeAgglomerateId,
+    newTargetAgglomerateId,
     targetNodePosition,
   );
 }
 
 function* performMinCut(
-  sourceNodeAgglomerateId: number,
-  targetNodeAgglomerateId: number,
-  sourceNodePosition: Vector3,
-  targetNodePosition: Vector3,
+  sourceAgglomerateId: number,
+  targetAgglomerateId: number,
+  sourcePosition: Vector3,
+  targetPosition: Vector3,
   agglomerateFileMag: Vector3,
   editableMappingId: string,
   volumeTracingId: string,
   sourceTree: Tree | null,
   items: UpdateAction[],
 ): Saga<boolean> {
-  if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
+  if (sourceAgglomerateId !== targetAgglomerateId) {
     Toast.error(
       "Segments need to be in the same agglomerate to perform a min-cut splitting operation.",
     );
@@ -468,10 +468,10 @@ function* performMinCut(
   currentlyPerformingMinCut = true;
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   const segmentsInfo = {
-    segmentPosition1: sourceNodePosition,
-    segmentPosition2: targetNodePosition,
+    segmentPosition1: sourcePosition,
+    segmentPosition2: targetPosition,
     mag: agglomerateFileMag,
-    agglomerateId: sourceNodeAgglomerateId,
+    agglomerateId: sourceAgglomerateId,
     editableMappingId,
   };
 
@@ -511,7 +511,7 @@ function* performMinCut(
     }
 
     items.push(
-      splitAgglomerate(sourceNodeAgglomerateId, edge.position1, edge.position2, agglomerateFileMag),
+      splitAgglomerate(sourceAgglomerateId, edge.position1, edge.position2, agglomerateFileMag),
     );
   }
   currentlyPerformingMinCut = false;
@@ -561,23 +561,23 @@ function* handleProofreadMergeOrMinCut(
   const { layerName, agglomerateFileMag, getDataValue } = preparation;
 
   const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
-  const sourceNodePositionMaybe = segments.getNullable(activeCellId)?.somePosition;
-  if (sourceNodePositionMaybe == null) return;
+  const sourcePositionMaybe = segments.getNullable(activeCellId)?.somePosition;
+  if (sourcePositionMaybe == null) return;
 
-  const sourceNodePosition = V3.floor(sourceNodePositionMaybe);
-  const targetNodePosition = V3.floor(action.position);
+  const sourcePosition = V3.floor(sourcePositionMaybe);
+  const targetPosition = V3.floor(action.position);
 
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,
     volumeTracingLayer,
     getDataValue,
-    sourceNodePosition,
-    targetNodePosition,
+    sourcePosition,
+    targetPosition,
   );
   if (!partnerInfos) {
     return;
   }
-  const { sourceNodeAgglomerateId, targetNodeAgglomerateId, volumeTracingWithEditableMapping } =
+  const { sourceAgglomerateId, targetAgglomerateId, volumeTracingWithEditableMapping } =
     partnerInfos;
   const editableMappingId = volumeTracingWithEditableMapping.mappingName;
 
@@ -587,17 +587,17 @@ function* handleProofreadMergeOrMinCut(
   const items: UpdateAction[] = [];
 
   if (action.type === "PROOFREAD_MERGE") {
-    if (sourceNodeAgglomerateId === targetNodeAgglomerateId) {
+    if (sourceAgglomerateId === targetAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     items.push(
       mergeAgglomerate(
-        sourceNodeAgglomerateId,
-        targetNodeAgglomerateId,
-        sourceNodePosition,
-        targetNodePosition,
+        sourceAgglomerateId,
+        targetAgglomerateId,
+        sourcePosition,
+        targetPosition,
         agglomerateFileMag,
       ),
     );
@@ -611,10 +611,10 @@ function* handleProofreadMergeOrMinCut(
     }
     const shouldReturn = yield* call(
       performMinCut,
-      sourceNodeAgglomerateId,
-      targetNodeAgglomerateId,
-      sourceNodePosition,
-      targetNodePosition,
+      sourceAgglomerateId,
+      targetAgglomerateId,
+      sourcePosition,
+      targetPosition,
       agglomerateFileMag,
       editableMappingId,
       volumeTracingId,
@@ -638,9 +638,9 @@ function* handleProofreadMergeOrMinCut(
 
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
-  const [newSourceNodeAgglomerateId, newTargetNodeAgglomerateId] = yield* all([
-    call(getDataValue, sourceNodePosition),
-    call(getDataValue, targetNodePosition),
+  const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
+    call(getDataValue, sourcePosition),
+    call(getDataValue, targetPosition),
   ]);
 
   /* Reload agglomerate skeleton */
@@ -650,12 +650,12 @@ function* handleProofreadMergeOrMinCut(
 
   yield* removeOldMeshesAndLoadUpdatedMeshes(
     layerName,
-    sourceNodeAgglomerateId,
-    targetNodeAgglomerateId,
-    newSourceNodeAgglomerateId,
-    sourceNodePosition,
-    newTargetNodeAgglomerateId,
-    targetNodePosition,
+    sourceAgglomerateId,
+    targetAgglomerateId,
+    newSourceAgglomerateId,
+    sourcePosition,
+    newTargetAgglomerateId,
+    targetPosition,
   );
 }
 
@@ -694,14 +694,13 @@ function* prepareSplitOrMerge(
     }
   }
 
-  /* Find out the agglomerate IDs at the two node positions */
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   // The mag the agglomerate skeleton corresponds to should be the finest available mag of the volume tracing layer
   const agglomerateFileMag = resolutionInfo.getLowestResolution();
   const agglomerateFileZoomstep = resolutionInfo.getLowestResolutionIndex();
 
-  const getDataValue = (nodePosition: Vector3) =>
-    api.data.getDataValue(layerName, nodePosition, agglomerateFileZoomstep);
+  const getDataValue = (position: Vector3) =>
+    api.data.getDataValue(layerName, position, agglomerateFileZoomstep);
 
   return { layerName, agglomerateFileMag, getDataValue };
 }
@@ -709,12 +708,12 @@ function* prepareSplitOrMerge(
 function* getPartnerAgglomerateIds(
   volumeTracingLayer: APISegmentationLayer,
   getDataValue: (position: Vector3) => Promise<number>,
-  sourceNodePosition: Vector3,
-  targetNodePosition: Vector3,
+  sourcePosition: Vector3,
+  targetPosition: Vector3,
 ): Saga<{
   volumeTracingWithEditableMapping: VolumeTracing & { mappingName: string };
-  sourceNodeAgglomerateId: number;
-  targetNodeAgglomerateId: number;
+  sourceAgglomerateId: number;
+  targetAgglomerateId: number;
   unmappedSourceId: number;
   unmappedTargetId: number;
 } | null> {
@@ -722,13 +721,14 @@ function* getPartnerAgglomerateIds(
   if (!getUnmappedDataValue) {
     return null;
   }
-  const [sourceNodeAgglomerateId, targetNodeAgglomerateId, unmappedSourceId, unmappedTargetId] =
-    yield* all([
-      call(getDataValue, sourceNodePosition),
-      call(getDataValue, targetNodePosition),
-      call(getUnmappedDataValue, sourceNodePosition),
-      call(getUnmappedDataValue, targetNodePosition),
-    ]);
+  const [sourceAgglomerateId, targetAgglomerateId, unmappedSourceId, unmappedTargetId] = yield* all(
+    [
+      call(getDataValue, sourcePosition),
+      call(getDataValue, targetPosition),
+      call(getUnmappedDataValue, sourcePosition),
+      call(getUnmappedDataValue, targetPosition),
+    ],
+  );
 
   const volumeTracingWithEditableMapping = yield* select((state) =>
     getActiveSegmentationTracing(state),
@@ -740,8 +740,8 @@ function* getPartnerAgglomerateIds(
   }
   return {
     volumeTracingWithEditableMapping: { ...volumeTracingWithEditableMapping, mappingName },
-    sourceNodeAgglomerateId,
-    targetNodeAgglomerateId,
+    sourceAgglomerateId,
+    targetAgglomerateId,
     unmappedSourceId,
     unmappedTargetId,
   };
@@ -749,11 +749,11 @@ function* getPartnerAgglomerateIds(
 
 function* removeOldMeshesAndLoadUpdatedMeshes(
   layerName: string,
-  sourceNodeAgglomerateId: number,
-  targetNodeAgglomerateId: number,
-  newSourceNodeAgglomerateId: number,
+  sourceAgglomerateId: number,
+  targetAgglomerateId: number,
+  newSourceAgglomerateId: number,
   sourceNodePosition: Vector3,
-  newTargetNodeAgglomerateId: number,
+  newTargetAgglomerateId: number,
   targetNodePosition: Vector3,
 ) {
   if (proofreadUsingMeshes()) {
@@ -769,14 +769,14 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
     }
 
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
-    yield* put(removeIsosurfaceAction(layerName, sourceNodeAgglomerateId));
-    if (targetNodeAgglomerateId !== sourceNodeAgglomerateId) {
-      yield* put(removeIsosurfaceAction(layerName, targetNodeAgglomerateId));
+    yield* put(removeIsosurfaceAction(layerName, sourceAgglomerateId));
+    if (targetAgglomerateId !== sourceAgglomerateId) {
+      yield* put(removeIsosurfaceAction(layerName, targetAgglomerateId));
     }
 
-    yield* call(loadCoarseAdHocMesh, layerName, newSourceNodeAgglomerateId, sourceNodePosition);
-    if (newTargetNodeAgglomerateId !== newSourceNodeAgglomerateId) {
-      yield* call(loadCoarseAdHocMesh, layerName, newTargetNodeAgglomerateId, targetNodePosition);
+    yield* call(loadCoarseAdHocMesh, layerName, newSourceAgglomerateId, sourceNodePosition);
+    if (newTargetAgglomerateId !== newSourceAgglomerateId) {
+      yield* call(loadCoarseAdHocMesh, layerName, newTargetAgglomerateId, targetNodePosition);
     }
   }
 }

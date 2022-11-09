@@ -50,6 +50,15 @@ test("updateFolder", async (t) => {
     id: "folders-updatedFolder()",
   });
 });
+test("createFolder", async (t) => {
+  const newName = "a newly created folder!";
+  const folder = await foldersApi.createFolder(organizationXRootFolderId, newName);
+  t.is(folder.name, newName);
+
+  t.snapshot(folder, {
+    id: "folders-createFolder()",
+  });
+});
 test("addAllowedTeamToFolder", async (t) => {
   const subFolderId = "570b9f4e4bb848d08880712a";
   //const anotherSubFolderId = "570b9f4e4bb848d08880712b";

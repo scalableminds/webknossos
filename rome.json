@@ -33,5 +33,10 @@
         "noAsyncPromiseExecutor": "off"
       }
     }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100
   }
 }

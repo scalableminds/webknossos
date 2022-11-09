@@ -10,7 +10,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/helpers/deep_update"' has no... Remove this comment to see the full error message
 import type { StateShape1 } from "oxalis/model/helpers/deep_update";
-import { updateKey, updateKey3 } from "oxalis/model/helpers/deep_update";
+import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
 import { userSettings } from "types/schemas/user_settings.schema";
 import {
   hasEditableMapping,
@@ -93,11 +93,13 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;
       let { value } = action;
-      const settingSpec = userSettings[propertyName];
+      // @ts-ignore The in-check should guard against any problems while accessing userSettings
+      const settingSpec = propertyName in userSettings ? userSettings[propertyName] : null;
 
       if (settingSpec != null && settingSpec.type === "number") {
         const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
         const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
+        // @ts-ignore Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 
         if ("dynamicMaximumFn" in settingSpec) {
@@ -182,9 +184,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       }
     }
 
-    case "SET_HISTOGRAM_DATA": {
-      return updateTemporaryConfig(state, {
-        histogramData: action.histogramData,
+    case "SET_HISTOGRAM_DATA_FOR_LAYER": {
+      return updateKey2(state, "temporaryConfiguration", "histogramData", {
+        [action.layerName]: action.histogramData,
       });
     }
 

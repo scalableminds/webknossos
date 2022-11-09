@@ -141,7 +141,7 @@ function DatasetAddZarrView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
-      <CardContainer title="Add Remote Zarr Dataset">
+      <CardContainer title="Add Remote Zarr / N5 Dataset">
         <Form form={form} layout="vertical">
           <Modal
             title="Add Layer"
@@ -169,8 +169,8 @@ function DatasetAddZarrView(props: Props) {
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
-              isEditingMode={false}
               isReadOnlyDataset={false}
+              allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
               onChange={(activeEditMode) => {
@@ -242,7 +242,7 @@ function AddZarrLayer({
 }) {
   const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const datasourceUrl: string | null = Form.useWatch("url", form);
-  const [exploreLog, setExploreLog] = useState<string>("");
+  const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
@@ -279,7 +279,9 @@ function AddZarrLayer({
           });
     setExploreLog(report);
     if (!newDataSource) {
-      Toast.error("Exploring this remote dataset did not return a datasource.");
+      Toast.error(
+        "Exploring this remote dataset did not return a datasource. Please check the Log.",
+      );
       return;
     }
     ensureLargestSegmentIdsInPlace(newDataSource);
@@ -292,7 +294,7 @@ function AddZarrLayer({
       existingDatasource = JSON.parse(datasourceConfigStr);
     } catch (e) {
       Toast.error(
-        "The current datasource config contains invalid JSON. Cannot add the new Zarr data.",
+        "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
       );
       return;
     }
@@ -312,10 +314,10 @@ function AddZarrLayer({
 
   return (
     <>
-      Please enter a URL that points to the Zarr data you would like to import. If necessary,
-      specify the credentials for the dataset. More layers can be added to the datasource
-      specification below using the Add button. Once you have approved of the resulting datasource
-      you can import it.
+      Please enter a URL that points to the Zarr or N5 data you would like to import. If necessary,
+      specify the credentials for the dataset. For datasets with multiple layers, e.g. raw
+      microscopy and segmentattion data, please add them separately with the ”Add Layer” button
+      below. Once you have approved of the resulting datasource you can import it.
       <FormItem
         style={{ marginTop: 16 }}
         name="url"
@@ -383,7 +385,20 @@ function AddZarrLayer({
           </Col>
         </Row>
       ) : null}
-      <FormItem style={{ marginBottom: 0 }}>
+      {exploreLog ? (
+        <Row gutter={8}>
+          <Col span={24}>
+            <Collapse defaultActiveKey="1">
+              <Panel header="Error Log" key="1">
+                <Hint style={{ width: "90%" }}>
+                  <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
+                </Hint>
+              </Panel>
+            </Collapse>
+          </Col>
+        </Row>
+      ) : null}
+      <FormItem style={{ marginBottom: 0, marginTop: 20 }}>
         <Row gutter={8}>
           <Col span={18} />
           <Col span={6}>
@@ -398,13 +413,6 @@ function AddZarrLayer({
           </Col>
         </Row>
       </FormItem>
-      <Collapse bordered={false} collapsible={exploreLog ? "header" : "disabled"}>
-        <Panel header="Log" key="1">
-          <Hint style={{ width: "90%" }}>
-            <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
-          </Hint>
-        </Panel>
-      </Collapse>
     </>
   );
 }

@@ -293,6 +293,16 @@ export type PartialDatasetConfiguration = Partial<
     readonly layers: Record<string, Partial<DatasetLayerConfiguration>>;
   }
 >;
+
+export type QuickSelectConfig = {
+  readonly showPreview: boolean;
+  readonly segmentMode: "dark" | "light";
+  readonly threshold: number;
+  readonly closeValue: number;
+  readonly erodeValue: number;
+  readonly dilateValue: number;
+};
+
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
   readonly brushSize: number;
@@ -325,6 +335,7 @@ export type UserConfiguration = {
   readonly fillMode: FillMode;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
+  readonly quickSelect: QuickSelectConfig;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -333,7 +344,9 @@ export type RecommendedConfiguration = Partial<
       segmentationOpacity: number;
     }
 >;
-export type HistogramDataForAllLayers = Record<string, APIHistogramData>;
+// A histogram value of undefined indicates that the histogram hasn't been fetched yet
+// whereas a value of null indicates that the histogram couldn't be fetched
+export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
 export type Mapping = Record<number, number>;
 export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
@@ -468,6 +481,7 @@ type UiInformation = {
   readonly borderOpenStatus: BorderOpenStatus;
   readonly theme: Theme;
   readonly busyBlockingInfo: BusyBlockingInfo;
+  readonly isQuickSelectActive: boolean;
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

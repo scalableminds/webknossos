@@ -165,7 +165,7 @@ class Plane {
 
   // In case the plane's position was offset to make geometries
   // on the plane visible (by moving the plane to the back), one can
-  // additionall pass the originalPosition (which is necessary for the
+  // additionally pass the originalPosition (which is necessary for the
   // shader)
   setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
     const [x, y, z] = pos;

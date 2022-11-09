@@ -343,7 +343,6 @@ class TracingApi {
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const comment = tree.comments.find((__) => __.nodeId === nodeId);
     return comment != null ? comment.content : null;
   }
@@ -1355,7 +1354,7 @@ class DataApi {
    */
   async getDataForBoundingBox(
     layerName: string,
-    bbox: BoundingBoxType,
+    mag1Bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
@@ -1369,7 +1368,7 @@ class DataApi {
     }
 
     const resolutions = resolutionInfo.getDenseResolutions();
-    const bucketAddresses = this.getBucketAddressesInCuboid(bbox, resolutions, zoomStep);
+    const bucketAddresses = this.getBucketAddressesInCuboid(mag1Bbox, resolutions, zoomStep);
 
     if (bucketAddresses.length > 15000) {
       console.warn(
@@ -1381,7 +1380,7 @@ class DataApi {
       bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
+    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions, zoomStep);
   }
 
   async getViewportData(
@@ -1512,19 +1511,20 @@ class DataApi {
 
         while (y < yMax) {
           const dataOffset =
-            (x % bucketWidth) +
-            (y % bucketWidth) * bucketWidth +
-            (z % bucketWidth) * bucketWidth * bucketWidth;
+            channelCount *
+            ((x % bucketWidth) +
+              (y % bucketWidth) * bucketWidth +
+              (z % bucketWidth) * bucketWidth * bucketWidth);
           const rx = x - topLeft[0];
           const ry = y - topLeft[1];
           const rz = z - topLeft[2];
-          const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
+          const resultOffset = channelCount * (rx + ry * extent[0] + rz * extent[0] * extent[1]);
           // Checking for bucket.type !== "null" is not enough, since the bucket
           // could also be MISSING.
           const data = bucket.hasData()
             ? bucket.getData()
             : new TypedArrayClass(Constants.BUCKET_SIZE);
-          const length = xMax - x;
+          const length = channelCount * (xMax - x);
           // The `set` operation is not problematic, since the BucketDataArray types
           // won't be mixed (either, they are BigInt or they aren't)
           // @ts-ignore

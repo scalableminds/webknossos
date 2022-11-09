@@ -289,9 +289,9 @@ function serializeNodes(nodes: NodeMap): Array<string> {
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
-      x: position[0],
-      y: position[1],
-      z: position[2],
+      x: Math.trunc(position[0]),
+      y: Math.trunc(position[1]),
+      z: Math.trunc(position[2]),
       rotX: node.rotation[0],
       rotY: node.rotation[1],
       rotZ: node.rotation[2],
@@ -657,9 +657,9 @@ export function parseNml(nmlString: string): Promise<{
             const currentNode = {
               id: nodeId,
               position: [
-                _parseFloat(attr, "x"),
-                _parseFloat(attr, "y"),
-                _parseFloat(attr, "z"),
+                Math.trunc(_parseFloat(attr, "x")),
+                Math.trunc(_parseFloat(attr, "y")),
+                Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),

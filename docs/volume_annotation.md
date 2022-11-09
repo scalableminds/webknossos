@@ -13,8 +13,9 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 - `Trace`: Draw outlines around the voxel you would like to label.
 - `Brush`: Draw over the voxels you would like to label. Adjust the brush size with *SHIFT + Mousewheel*.
 - `Erase (Trace/Brush)`: Draw over the voxels you would like to erase. Adjust the brush size with *SHIFT + Mousewheel*.
-- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill whole in a segment or to relabel a segment with a different ID/color.
+- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill a hole in a segment or to relabel a segment with a different ID/color.
 - `Segment Picker`: Click on any segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
+- `Quick Select`: Draw a rectangle over a segment to annotate it automatically. The tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. If the preview is enabled, the parameters can be fine-tuned while the preview updates instantly.
 
 When using the trace or brush tool, a label can be added with *Left Mouse Drag*.
 Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left Mouse Drag*.
@@ -25,7 +26,7 @@ The following interactions and modifiers are available when working with the vol
 - `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID. Read the explanation for the largest segment id [here](datasets.md#configuring-datasets) to understand how new IDs are generated.
 - `Change Brush Size`: Changes the size of the brushing tool. 
 - `Overwrite Everything`: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
-- `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush/trace tool to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
+- `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
 - `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
@@ -44,7 +45,8 @@ The following functionality is available for each segment:
 
 - jumping to the segment (via left-click; this uses the position at which the segment was initially registered)
 - naming the segment
-- loading meshes for the segments (ad-hoc and precomputed if available)
+- loading [3D meshes](./mesh_visualization.md) for the segments (ad-hoc and precomputed if available)
+- download of 3D meshes
 - changing the color of the segment
 - activating the segment id (so that you can annotate with that id)
 
@@ -61,7 +63,7 @@ This button opens up a modal that starts a long-running job which will materiali
 
 ### Proof-Reading and Merging Segments
 
-See section on [proofreading](./proof_reading.md).
+See the section on [proofreading](./proof_reading.md).
 
 ### Volume Flood Fills
 webKnossos supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, webKnossos can do this for you. This operation allows you to fix both split and merge errors:
@@ -78,7 +80,7 @@ When using the brush or trace tool, you can use the `Volume Interpolation` featu
 Simply label a segment in one slice (e.g., z=10), move forward by a few slices (e.g., z=14) and label the segment there.
 Now, you can click the "Interpolate" button (or use the shortcut V) to interpolate the segment between the annotated slices (e.g., z=11, z=12, z=13).
 
-Note that it is recommended to proofread the interpolated slices afterwards since the interpolation is a heuristic.
+Note that it is recommended to proofread the interpolated slices afterward since the interpolation is a heuristic.
 
 ![Video: Volume Interpolation](https://www.youtube.com/watch?v=QqU72vHRR2I)
 

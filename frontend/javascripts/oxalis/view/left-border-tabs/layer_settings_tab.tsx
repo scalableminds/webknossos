@@ -14,7 +14,6 @@ import {
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-
 import classnames from "classnames";
 import {
   APIAnnotationTypeEnum,
@@ -45,6 +44,7 @@ import {
   clearCache,
   findDataPositionForVolumeTracing,
   convertToHybridTracing,
+  deleteAnnotationLayer,
 } from "admin/admin_rest_api";
 import {
   getDefaultIntensityRangeOfLayer,
@@ -72,6 +72,7 @@ import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
   dispatchClipHistogramAsync,
+  reloadHistogramAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
@@ -99,6 +100,7 @@ import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_vol
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
+import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -117,6 +119,7 @@ type DatasetSettingsProps = {
   onSetPosition: (arg0: Vector3) => void;
   onZoomToResolution: (arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
+  reloadHistogram: (layerName: string) => void;
   tracing: Tracing;
   task: Task | null | undefined;
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
@@ -232,6 +235,52 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Tooltip>
   );
 
+  getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
+    <Tooltip title="Delete this annotation layer.">
+      <i
+        onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+        className="fas fa-trash"
+        style={{
+          cursor: "pointer",
+          opacity: 0.7,
+        }}
+      />
+    </Tooltip>
+  );
+
+  deleteAnnotationLayerIfConfirmed = async (
+    readableAnnoationLayerName: string,
+    layer?: APIDataLayer,
+  ) => {
+    const fallbackLayerNote =
+      layer && layer.category === "segmentation" && layer.fallbackLayer
+        ? "Changes to the original segmentation layer will be discarded and the original state will be displayed again. "
+        : "";
+    const shouldDelete = await confirmAsync({
+      title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
+      okText: `Yes, delete annotation layer “${readableAnnoationLayerName}”`,
+      cancelText: "Cancel",
+      maskClosable: true,
+      closable: true,
+      okButtonProps: {
+        danger: true,
+        block: true,
+        style: { whiteSpace: "normal", height: "auto", margin: "10px 0 0 0" },
+      },
+      cancelButtonProps: {
+        block: true,
+      },
+    });
+    if (!shouldDelete) return;
+    await Model.ensureSavedState();
+    await deleteAnnotationLayer(
+      this.props.tracing.annotationId,
+      this.props.tracing.annotationType,
+      readableAnnoationLayerName,
+    );
+    location.reload();
+  };
+
   getClipButton = (layerName: string, isInEditMode: boolean) => {
     const editModeAddendum = isInEditMode
       ? "In Edit Mode, the histogram's range will be adjusted, too."
@@ -269,7 +318,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getEnableDisableLayerSwitch = (
     isDisabled: boolean,
-    onChange: (arg0: boolean, arg1: MouseEvent) => void,
+    onChange: (arg0: boolean, arg1: React.MouseEvent<HTMLButtonElement>) => void,
   ) => (
     <Tooltip title={isDisabled ? "Show" : "Hide"} placement="top">
       {/* This div is necessary for the tooltip to be displayed */}
@@ -287,20 +336,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
-    let histograms = [];
-
-    if (this.props.histogramData && this.props.histogramData[layerName]) {
-      histograms = this.props.histogramData[layerName];
-    } else {
-      histograms = [
-        {
-          numberOfElements: 0,
-          elementCounts: [],
-          min: defaultIntensityRange[0],
-          max: defaultIntensityRange[1],
-        },
-      ];
-    }
+    const histograms = this.props.histogramData?.[layerName];
 
     return (
       <Histogram
@@ -312,6 +348,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         isInEditMode={isInEditMode}
         layerName={layerName}
         defaultMinMax={defaultIntensityRange}
+        reloadHistogram={() => this.reloadHistogram(layerName)}
       />
     );
   };
@@ -331,6 +368,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const canBeMadeEditable =
       isSegmentation && layer.tracingId == null && this.props.controlMode === "TRACE";
     const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
+    const isAnnotationLayer = isSegmentation && layer.tracingId != null;
+    const isOnlyAnnotationLayer =
+      isAnnotationLayer && tracing && tracing.annotationLayers.length === 1;
     const maybeTracingId = isSegmentation ? layer.tracingId : null;
     const maybeVolumeTracing =
       maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
@@ -343,7 +383,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
 
-    const onChange = (value: boolean, event: MouseEvent) => {
+    const onChange = (value: boolean, event: React.MouseEvent<HTMLButtonElement>) => {
       if (!event.ctrlKey && !event.altKey && !event.shiftKey) {
         setSingleLayerVisibility(value);
         return;
@@ -550,6 +590,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
           </div>
           <div className="flex-item">{this.getReloadDataButton(layerName)}</div>
+          <div className="flex-item">
+            {isAnnotationLayer && !isOnlyAnnotationLayer
+              ? this.getDeleteAnnotationLayerButton(readableName, layer)
+              : null}
+          </div>
         </div>
       </div>
     );
@@ -748,9 +793,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
+    this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
+  };
+
+  reloadHistogram = async (layerName: string): Promise<void> => {
+    await clearCache(this.props.dataset, layerName);
+    this.props.reloadHistogram(layerName);
   };
 
   getVolumeMagsToDownsample = (volumeTracing: VolumeTracing | null | undefined): Array<Vector3> => {
@@ -828,39 +879,56 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       return null;
     }
 
+    const readableName = "Skeleton";
     const skeletonTracing = enforceSkeletonTracing(tracing);
+    const isOnlyAnnotationLayer = tracing.annotationLayers.length === 1;
     const { showSkeletons } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)
       .map((activeNode) => activeNode.radius)
       .getOrElse(0);
     return (
       <React.Fragment>
-        <Tooltip
-          title={showSkeletons ? "Hide skeleton layer" : "Show skeleton layer"}
-          placement="top"
+        <div
+          className="flex-container"
+          style={{
+            paddingRight: 1,
+          }}
         >
-          {/* This div is necessary for the tooltip to be displayed */}
           <div
+            className="flex-item"
             style={{
-              display: "inline-block",
               marginRight: 8,
             }}
           >
-            <Switch
-              size="small"
-              onChange={() => onChangeShowSkeletons(!showSkeletons)}
-              checked={showSkeletons}
-            />
+            <Tooltip
+              title={showSkeletons ? "Hide skeleton layer" : "Show skeleton layer"}
+              placement="top"
+            >
+              {/* This div is necessary for the tooltip to be displayed */}
+              <div
+                style={{
+                  display: "inline-block",
+                  marginRight: 8,
+                }}
+              >
+                <Switch
+                  size="small"
+                  onChange={() => onChangeShowSkeletons(!showSkeletons)}
+                  checked={showSkeletons}
+                />
+              </div>
+            </Tooltip>
+            <span
+              style={{
+                fontWeight: 700,
+                wordWrap: "break-word",
+              }}
+            >
+              {readableName}
+            </span>
           </div>
-        </Tooltip>
-        <span
-          style={{
-            fontWeight: 700,
-            wordWrap: "break-word",
-          }}
-        >
-          Skeleton
-        </span>
+          {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
+        </div>
         {showSkeletons ? (
           <div
             style={{
@@ -1101,6 +1169,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {
     dispatch(editAnnotationLayerAction(tracingId, layerProperties));
+  },
+
+  reloadHistogram(layerName: string) {
+    dispatch(reloadHistogramAction(layerName));
   },
 });
 

@@ -9,14 +9,14 @@ import {
 } from "@ant-design/icons";
 import { APIOrganization } from "types/api_flow_types";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
+import {
+  sendExtendPricingPlanEmail,
+  sendUpgradePricingPlanEmail,
+  sendUpgradePricingPlanStorageEmail,
+  sendUpgradePricingPlanUserEmail,
+} from "admin/admin_rest_api";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./organization_edit_view";
-import { sendExtendPricingPlanEmail, sendUpgradePricingPlanEmail, sendUpgradePricingPlanStorageEmail, sendUpgradePricingPlanUserEmail } from "admin/admin_rest_api";
-
-
-
-
-
 
 function extendPricingPlan(organization: APIOrganization) {
   const extendedDate = moment(organization.paidUntil).add(1, "year");
@@ -58,7 +58,7 @@ function extendPricingPlan(organization: APIOrganization) {
 
 function upgradeUserQuota() {
   const userInputRef = useRef<HTMLInputElement | null>(null);
-  
+
   function handleUserUpgrade() {
     const requestedUsers = userInputRef.current?.value;
     sendUpgradePricingPlanUserEmail(requestedUsers);
@@ -83,7 +83,7 @@ function upgradeUserQuota() {
         </p>
         <div>Add additional user accounts:</div>
         <div>
-          <InputNumber min={1} defaultValue={1} ref={userInputRef}/>
+          <InputNumber min={1} defaultValue={1} ref={userInputRef} />
         </div>
 
         <Divider style={{ marginTop: 40 }} />
@@ -101,12 +101,11 @@ function upgradeStorageQuota() {
   const storageInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleStorageUpgrade = () => {
-    debugger
     if (storageInputRef.current) {
       const requestedStorage = parseInt(storageInputRef.current.value);
       sendUpgradePricingPlanStorageEmail(requestedStorage);
     }
-  }
+  };
 
   Modal.confirm({
     title: "Upgrade Storage Space",
@@ -128,7 +127,7 @@ function upgradeStorageQuota() {
         </p>
         <div>Add additional storage (in Terabyte):</div>
         <div>
-          <InputNumber min={1} defaultValue={1} ref={storageInputRef}/>
+          <InputNumber min={1} defaultValue={1} ref={storageInputRef} />
         </div>
         <Divider style={{ marginTop: 40 }} />
         <p style={{ color: "#aaa", fontSize: 12 }}>
@@ -157,7 +156,7 @@ function upgradePricingPlan(organization: APIOrganization) {
     featureDescriptions = powerPlanFeatures;
     callback = () => sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
   }
-  
+
   Modal.confirm({
     title,
     okText: "Request Upgrade",
@@ -192,6 +191,6 @@ function upgradePricingPlan(organization: APIOrganization) {
 export default {
   upgradePricingPlan,
   extendPricingPlan,
-  upgradeUserQuota,
+  UpgradeUserQuota: upgradeUserQuota,
   upgradeStorageQuota,
 };

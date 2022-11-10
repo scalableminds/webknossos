@@ -1948,7 +1948,7 @@ export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promis
 }
 
 export async function sendExtendPricingPlanEmail(): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestExtension`, {
+  return Request.receiveJSON("/api/pricing/requestExtension", {
     method: "POST",
   });
 }
@@ -1964,7 +1964,6 @@ export async function sendUpgradePricingPlanStorageEmail(requestedStorage: numbe
     method: "POST",
   });
 }
-
 
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {

@@ -25,7 +25,7 @@ import {
 import {
   DatasetLayerTags,
   DatasetTags,
-  DraggableType,
+  DraggableDatasetType,
   TeamTags,
 } from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
@@ -170,7 +170,7 @@ function generateNodeProps(
   setFolderIdForEditModal: (folderId: string) => void,
 ): GenerateNodePropsType {
   const { node } = params;
-  const { id, title } = node;
+  const { id, title, isEditable } = node;
   const nodeProps: GenerateNodePropsType = {};
 
   function createFolder(): void {
@@ -218,7 +218,11 @@ function generateNodeProps(
         autoDestroy
         trigger={["contextMenu"]}
       >
-        <FolderItemAsDropTarget onClick={() => context.setActiveFolderId(id)} folderId={id}>
+        <FolderItemAsDropTarget
+          onClick={() => context.setActiveFolderId(id)}
+          folderId={id}
+          isEditable={isEditable}
+        >
           {title}
         </FolderItemAsDropTarget>
       </Dropdown>
@@ -233,12 +237,13 @@ function FolderItemAsDropTarget(props: {
   children: React.ReactNode;
   className?: string;
   onClick: () => void;
+  isEditable: boolean;
 }) {
   const context = useContext(DatasetCollectionContext);
   const { folderId, className, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
-    accept: DraggableType,
+    accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
       const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
@@ -248,6 +253,10 @@ function FolderItemAsDropTarget(props: {
         Toast.error("Could not move dataset. Please try again.");
       }
     },
+    canDrop: (item) => {
+      return props.isEditable;
+    },
+
     collect: (monitor: DropTargetMonitor) => ({
       canDrop: monitor.canDrop(),
       isOver: monitor.isOver(),
@@ -285,8 +294,13 @@ function FolderSidebar() {
     });
   }, [folderTree]);
 
+  // This useDrop is only used to highlight the sidebar when
+  // a dataset is dragged. This helps the user to understand that
+  // the dataset should be dragged to folders in the sidebar.
+  // The actual dnd operation is handled by the individual folder
+  // entries (see FolderItemAsDropTarget), though.
   const [isDraggingDataset, drop] = useDrop({
-    accept: DraggableType,
+    accept: DraggableDatasetType,
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
 

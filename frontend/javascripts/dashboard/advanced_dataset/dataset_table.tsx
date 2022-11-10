@@ -126,7 +126,7 @@ function ContextMenuContainer(props: ContextMenuProps) {
 interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
   index: number;
 }
-export const DraggableType = "DraggableDatasetRow";
+export const DraggableDatasetType = "DraggableDatasetRow";
 
 const DraggableDatasetRow = ({
   index,
@@ -138,7 +138,7 @@ const DraggableDatasetRow = ({
   // @ts-ignore
   const datasetName = restProps["data-row-key"];
   const [, drag] = useDrag({
-    item: { type: DraggableType, index, datasetName },
+    item: { type: DraggableDatasetType, index, datasetName },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),

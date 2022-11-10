@@ -113,7 +113,7 @@
     "remove-snapshots": "rm -rf frontend/javascripts/test/snapshots/public-test/test-bundle/test/backend-snapshot-tests/ && rm -rf frontend/javascripts/test/snapshots/public-test/test-bundle/test/enzyme/",
     "remove-snapshots-all": "rm -rf frontend/javascripts/test/snapshots/",
     "refresh-snapshots": "yarn remove-snapshots && docker-compose down && docker-compose up e2e-tests",
-    "lint": "node_modules/.bin/eslint --cache --quiet --ext .ts,.tsx frontend/javascripts/",
+    "lint": "yarn run rome check frontend && node_modules/.bin/eslint --cache --quiet --ext .ts,.tsx frontend/javascripts/",
     "lintd": "node_modules/.bin/eslint_d --cache --quiet --ext .ts,.tsx frontend/javascripts/ # lintd uses a daemon for better speed (especially useful for hooking up to editors)",
     "lint-no-cache": "node_modules/.bin/eslint --quiet --ext .ts,.tsx frontend/javascripts/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",

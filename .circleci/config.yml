@@ -126,13 +126,9 @@ jobs:
           command: docker-compose build --pull webknossos-tracingstore
 
       - run:
-          name: Lint frontend code and check formatting
+          name: Lint frontend code (rome and eslint) and check formatting
           command: |
             .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
-      - run:
-          name: Lint frontend code with rome
-          command: |
-            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run rome check frontend"
       - run:
           name: Run frontend tests
           command: |

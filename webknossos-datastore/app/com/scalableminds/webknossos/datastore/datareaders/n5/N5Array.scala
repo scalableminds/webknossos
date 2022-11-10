@@ -37,12 +37,16 @@ object N5Array extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this N5 Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
     }
-    new N5Array(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
+    new N5Array(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), None)
   }
 }
 
-class N5Array(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder)
-    extends DatasetArray(relativePath, store, header, axisOrder, None)
+class N5Array(relativePath: DatasetPath,
+              store: FileSystemStore,
+              header: DatasetHeader,
+              axisOrder: AxisOrder,
+              channelIndex: Option[Int])
+    extends DatasetArray(relativePath, store, header, axisOrder, channelIndex)
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =

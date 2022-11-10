@@ -57,6 +57,15 @@ function DatasetFolderViewInner(props: Props) {
 
   console.log("context.datasets", context.datasets);
 
+  useEffect(() => {
+    if (!selectedDataset || !context.datasets) {
+      return;
+    }
+    // If the cache changed (e.g., because a dataset was updated), we need to update
+    // the selectedDataset instance, too, to avoid that it refers to stale data.
+    setSelectedDataset(context.datasets.find((ds) => ds.name === selectedDataset.name) ?? null);
+  }, [context.datasets]);
+
   return (
     <div
       style={{
@@ -93,7 +102,10 @@ function DatasetFolderViewInner(props: Props) {
           marginLeft: 16,
         }}
       >
-        <DatasetDetailsSidebar selectedDataset={selectedDataset} />
+        <DatasetDetailsSidebar
+          selectedDataset={selectedDataset}
+          setSelectedDataset={setSelectedDataset}
+        />
       </div>
     </div>
   );
@@ -101,19 +113,23 @@ function DatasetFolderViewInner(props: Props) {
 
 function DatasetDetailsSidebar({
   selectedDataset,
+  setSelectedDataset,
 }: {
   selectedDataset: APIMaybeUnimportedDataset | null;
+  setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
 }) {
   const context = useContext(DatasetCollectionContext);
 
-  // allowedTeams: Array<APITeam>;
-  // created: number;
-  // description: string | null | undefined;
-  // isPublic: boolean;
-
-  // owningOrganization: string;
-  // publication: null | undefined;
-  // tags: Array<string>;
+  useEffect(() => {
+    if (selectedDataset == null || !("folderId" in selectedDataset)) {
+      return;
+    }
+    if (selectedDataset.folderId !== context.activeFolderId) {
+      // Ensure that the selected dataset is in the active folder. If not,
+      // clear the sidebar
+      setSelectedDataset(null);
+    }
+  }, [selectedDataset, context.activeFolderId]);
 
   return (
     <div style={{ width: 300, padding: 16 }}>

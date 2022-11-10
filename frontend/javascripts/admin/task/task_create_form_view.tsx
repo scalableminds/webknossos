@@ -612,7 +612,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               <Row gutter={8} align="middle" wrap={false}>
                 <Col flex="auto">
                   <FormItem
-                    name="taskTypeIdOrSummary"
+                    name="taskTypeId"
                     label="Task Type"
                     hasFeedback
                     rules={[

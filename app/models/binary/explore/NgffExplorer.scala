@@ -148,9 +148,10 @@ class NgffExplorer extends RemoteLayerExplorer {
   private def extractAndCombineScaleTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
                                                axisOrder: AxisOrder): Vec3Double = {
     val filtered = coordinateTransforms.filter(_.`type` == "scale")
-    val xFactors = filtered.map(_.scale(axisOrder.x))
-    val yFactors = filtered.map(_.scale(axisOrder.y))
-    val zFactors = filtered.map(_.scale(axisOrder.z))
+    val scalesFromTransforms = filtered.flatMap(_.scale)
+    val xFactors = scalesFromTransforms.map(_(axisOrder.x))
+    val yFactors = scalesFromTransforms.map(_(axisOrder.y))
+    val zFactors = scalesFromTransforms.map(_(axisOrder.z))
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 }

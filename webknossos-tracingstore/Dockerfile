@@ -1,4 +1,4 @@
-FROM openjdk:8-jre
+FROM eclipse-temurin:14 
 
 RUN mkdir -p /webknossos-tracingstore \
   && groupadd -g 1000 -r webknossos \

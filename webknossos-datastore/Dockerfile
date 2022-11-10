@@ -1,4 +1,4 @@
-FROM openjdk:8-jre
+FROM eclipse-temurin:14
 RUN apt-get update \
   && apt-get -y install libblosc1 \
   && rm -rf /var/lib/apt/lists/*

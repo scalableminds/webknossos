@@ -57,9 +57,6 @@ export const navbarHeight = 48;
 const subMenuCloseDelay = 10;
 
 function useOlvy() {
-  if (Math.random() > 0.5) {
-    return;
-  }
   const [isInitialized, setIsInitialized] = useState(false);
   // Initialize Olvy after mounting
   useEffect(() => {

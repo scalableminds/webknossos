@@ -175,6 +175,7 @@ function DatasetDetailsSidebar({
 type FolderItem = {
   title: string;
   id: string;
+  parent: string | null | undefined;
   expanded?: boolean;
   children: FolderItem[];
   isEditable: boolean;
@@ -299,7 +300,7 @@ function FolderSidebar() {
 
   useEffect(() => {
     setTreeData((prevState) => {
-      const newTreeData = getFolderHierarchy(folderTree, prevState);
+      const newTreeData = getFolderHierarchy(folderTree, prevState, context.activeFolderId);
       if (newTreeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(newTreeData[0].id);
       }
@@ -377,6 +378,7 @@ function FolderSidebar() {
 function getFolderHierarchy(
   folderTree: FlatFolderTreeItem[] | undefined,
   prevFolderItems: FolderItem[] | null,
+  activeFolderId: string | null,
 ): FolderItem[] {
   if (folderTree == null) {
     return [];
@@ -388,6 +390,8 @@ function getFolderHierarchy(
       id: folderTreeItem.id,
       title: folderTreeItem.name,
       isEditable: folderTreeItem.isEditable,
+      parent: folderTreeItem.parent,
+      expanded: false,
       children: [],
     };
     if (folderTreeItem.parent == null) {
@@ -412,6 +416,15 @@ function getFolderHierarchy(
     roots[0].expanded = true;
   } else {
     throw new Error("Multiple folder roots found");
+  }
+
+  // Expand the parent chain of the active folder.
+  if (activeFolderId != null) {
+    let currentFolder = itemById[activeFolderId];
+    while (currentFolder.parent != null) {
+      currentFolder = itemById[currentFolder.parent];
+      currentFolder.expanded = true;
+    }
   }
 
   // Copy the expanded flags from the old state

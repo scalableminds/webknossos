@@ -386,7 +386,9 @@ function updateDatasetInQueryData(
 ) {
   return (oldItems || [])
     .map((oldDataset: APIMaybeUnimportedDataset) =>
-      oldDataset.name === updatedDataset.name ? updatedDataset : oldDataset,
+      oldDataset.name === updatedDataset.name
+        ? { ...updatedDataset, lastUsedByUser: oldDataset.lastUsedByUser }
+        : oldDataset,
     )
     .filter((dataset: APIMaybeUnimportedDataset) => dataset.folderId === activeFolderId);
 }

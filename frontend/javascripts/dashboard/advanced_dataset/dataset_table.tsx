@@ -604,7 +604,7 @@ export function TeamTags({
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {
-    return <div>emptyValue</div>;
+    return <div>{emptyValue}</div>;
   }
 
   return (

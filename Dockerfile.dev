@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install apt-transport-https
 # https://github.com/nodesource/distributions/issues/1266#issuecomment-931467582
 # https://github.com/nodesource/distributions/issues/1266#issuecomment-931481002
 # https://github.com/nodesource/distributions/issues/1266#issuecomment-933102213
-RUN apt-get install openssl ca-certificates libgnutls30 && rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt && update-ca-certificates
+RUN apt-get install openssl ca-certificates libgnutls30 && update-ca-certificates
 
 # add node package source
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -

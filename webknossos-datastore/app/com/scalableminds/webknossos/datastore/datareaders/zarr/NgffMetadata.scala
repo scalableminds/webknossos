@@ -6,7 +6,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
-case class NgffCoordinateTransformation(`type`: String = "scale", scale: List[Double])
+case class NgffCoordinateTransformation(`type`: String = "scale", scale: Option[List[Double]])
 
 object NgffCoordinateTransformation {
   implicit val jsonFormat: OFormat[NgffCoordinateTransformation] = Json.format[NgffCoordinateTransformation]
@@ -90,9 +90,9 @@ object NgffMetadata {
   def fromNameScaleAndMags(dataLayerName: String, dataSourceScale: Vec3Double, mags: List[Vec3Int]): NgffMetadata = {
     val datasets = mags.map(
       mag =>
-        NgffDataset(
-          path = mag.toMagLiteral(allowScalar = true),
-          List(NgffCoordinateTransformation(scale = List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList))))
+        NgffDataset(path = mag.toMagLiteral(allowScalar = true),
+                    List(NgffCoordinateTransformation(
+                      scale = Some(List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList)))))
     NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)))
   }
 

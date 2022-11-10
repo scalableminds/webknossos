@@ -12,7 +12,8 @@ import java.net.URI
 case class MagLocator(mag: Vec3Int,
                       path: Option[String],
                       credentials: Option[FileSystemCredentials],
-                      axisOrder: Option[AxisOrder]) {
+                      axisOrder: Option[AxisOrder],
+                      channelIndex: Option[Int]) {
 
   lazy val pathWithFallback: String = path.getOrElse(mag.toMagLiteral(allowScalar = true))
   private lazy val uri: URI = new URI(pathWithFallback)

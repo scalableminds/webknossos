@@ -102,7 +102,7 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
   },
   settings: {
-    allowedModes: ["volume"],
+    allowedModes: ["orthogonal"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,

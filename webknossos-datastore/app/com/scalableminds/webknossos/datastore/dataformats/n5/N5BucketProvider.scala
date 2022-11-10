@@ -46,7 +46,8 @@ class N5BucketProvider(layer: N5Layer) extends BucketProvider with LazyLogging w
         magPathOpt match {
           case None => Empty
           case Some(magPath) =>
-            tryo(onError = e => logError(e))(N5Array.open(magPath, n5Mag.axisOrder)).map(new N5CubeHandle(_))
+            tryo(onError = e => logError(e))(N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex))
+              .map(new N5CubeHandle(_))
         }
     }
 

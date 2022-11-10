@@ -14,7 +14,11 @@ import java.nio.ByteOrder
 import java.util
 import scala.concurrent.{ExecutionContext, Future}
 
-class DatasetArray(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder)
+class DatasetArray(relativePath: DatasetPath,
+                   store: FileSystemStore,
+                   header: DatasetHeader,
+                   axisOrder: AxisOrder,
+                   channelIndex: Option[Int])
     extends LazyLogging {
 
   protected val chunkReader: ChunkReader =
@@ -32,7 +36,11 @@ class DatasetArray(relativePath: DatasetPath, store: FileSystemStore, header: Da
   @throws[InvalidRangeException]
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val paddingDimensionsCount = header.rank - 3
-    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
+    val offsetArray = channelIndex match {
+      case Some(c) if header.rank >= 4 =>
+        Array.fill(paddingDimensionsCount - 1)(0) :+ c :+ offset.x :+ offset.y :+ offset.z
+      case _ => Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
+    }
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
     readBytes(shapeArray, offsetArray)

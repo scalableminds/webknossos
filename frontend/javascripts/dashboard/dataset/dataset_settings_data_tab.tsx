@@ -477,7 +477,6 @@ function SimpleLayerForm({
             </Select>
           </Form.Item>
 
-          {/* The in-condition is only necessary to satisfy TypeScript */}
           {isSegmentation ? (
             <FormItemWithInfo
               name={["dataSource", "dataLayers", index, "largestSegmentId"]}

@@ -340,6 +340,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           pagination={{
             defaultPageSize: 50,
           }}
+          className="hide-checkbox-selection"
           onChange={this.handleChange}
           locale={{
             emptyText: this.renderEmptyText(),

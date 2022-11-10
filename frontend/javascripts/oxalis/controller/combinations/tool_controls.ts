@@ -754,21 +754,21 @@ export class ProofreadTool {
     planeView: PlaneView,
     pos: Point2,
     plane: OrthoView,
-    event: MouseEvent,
-    _isTouch: boolean,
+    _event: MouseEvent,
+    isTouch: boolean,
   ) {
+    SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+
     if (plane === OrthoViews.TDView) {
       // The click position cannot be mapped to a 3D coordinate in the
-      // 3D viewport.
+      // 3D viewport (unless a node was clicked which is already handled above).
       return;
     }
 
-    if (event.shiftKey) {
-      const globalPosition = calculateGlobalPos(Store.getState(), pos);
-      Store.dispatch(proofreadAtPosition(globalPosition));
-    } else {
-      VolumeHandlers.handlePickCell(pos);
-    }
+    const globalPosition = calculateGlobalPos(Store.getState(), pos);
+    Store.dispatch(proofreadAtPosition(globalPosition));
+
+    VolumeHandlers.handlePickCell(pos);
   }
 
   static getActionDescriptors(

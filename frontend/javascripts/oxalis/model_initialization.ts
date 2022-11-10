@@ -56,6 +56,7 @@ import {
   setControlModeAction,
   setViewModeAction,
   setMappingAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   initializeEditableMappingAction,
@@ -65,6 +66,7 @@ import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
   loadAgglomerateSkeletonAction,
+  setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -661,6 +663,12 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
     let effectiveLayerName;
 
     const { dataset } = Store.getState();
+
+    if (layerName === "Skeleton" && layerState.isDisabled != null) {
+      Store.dispatch(setShowSkeletonsAction(!layerState.isDisabled));
+      return;
+    }
+
     try {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
       effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
@@ -675,6 +683,12 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         urlLayerState: stateByLayer,
       });
       continue;
+    }
+
+    if (layerState.isDisabled != null) {
+      Store.dispatch(
+        updateLayerSettingAction(effectiveLayerName, "isDisabled", layerState.isDisabled),
+      );
     }
 
     if (layerState.mappingInfo != null) {

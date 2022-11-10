@@ -269,7 +269,9 @@ function SimpleDatasetForm({
         }
       >
         {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
-          <List.Item key={`layer-${layer.name}`}>
+          // the layer name may change in this view, the order does not, so idx is the right key choice here
+          // eslint-disable-next-line react/no-array-index-key
+          <List.Item key={`layer-${idx}`}>
             <SimpleLayerForm
               datasetId={datasetId}
               isReadOnlyDataset={isReadOnlyDataset}

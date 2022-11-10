@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Button for switching organizations for Voxelytics workflows. [#6572](https://github.com/scalableminds/webknossos/pull/6572)
 - Added ability to shuffle / set colors for a whole tree group. [#6586](https://github.com/scalableminds/webknossos/pull/6586)
 - Annotation layers can now be removed. [#6593](https://github.com/scalableminds/webknossos/pull/6593)
+- When adding remote Zarr datasets with multiple channels, channels are converted into layers. [#6609](https://github.com/scalableminds/webknossos/pull/6609)
 
 ### Changed
 - The log viewer in the Voxelytics workflow reporting now uses a virtualized list. [#6579](https://github.com/scalableminds/webknossos/pull/6579)
@@ -27,7 +28,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
  
 ### Fixed
 - Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
-- Fixed importing NGFF Zarr datasets with translation transforms. [#6621](https://github.com/scalableminds/webknossos/pull/6621)
+- Fixed a bug in the dataset import view, where the layer name text field would lose focus after each key press. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
+- Fixed importing NGFF Zarr datasets with non-scale transforms. [#6621](https://github.com/scalableminds/webknossos/pull/6621)
 
 ### Removed
 

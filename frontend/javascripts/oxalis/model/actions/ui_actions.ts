@@ -15,6 +15,9 @@ type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibi
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
+export type EnterAction = ReturnType<typeof enterAction>;
+export type EscapeAction = ReturnType<typeof escapeAction>;
+export type SetIsQuickSelectActiveAction = ReturnType<typeof setIsQuickSelectActiveAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -30,7 +33,10 @@ export type UiAction =
   | SetDownloadModalVisibilityAction
   | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
-  | SetBusyBlockingInfoAction;
+  | SetBusyBlockingInfoAction
+  | EnterAction
+  | EscapeAction
+  | SetIsQuickSelectActiveAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -104,4 +110,17 @@ export const setPythonClientModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_PYTHON_MODAL_VISIBILITY",
     visible,
+  } as const);
+export const enterAction = () =>
+  ({
+    type: "ENTER",
+  } as const);
+export const escapeAction = () =>
+  ({
+    type: "ESCAPE",
+  } as const);
+export const setIsQuickSelectActiveAction = (isActive: boolean) =>
+  ({
+    type: "SET_IS_QUICK_SELECT_ACTIVE",
+    isActive,
   } as const);

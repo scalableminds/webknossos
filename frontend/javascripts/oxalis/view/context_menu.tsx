@@ -1109,7 +1109,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
       <Dropdown
         overlay={overlay}
         overlayClassName="dropdown-overlay-container-for-context-menu"
-        visible={contextMenuPosition != null}
+        open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
         // @ts-ignore
         destroyPopupOnHide

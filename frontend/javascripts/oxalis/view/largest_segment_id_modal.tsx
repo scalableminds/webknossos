@@ -47,13 +47,13 @@ export default function EnterLargestSegmentIdModal({
   segmentationLayer: APISegmentationLayer;
   destroy: (...args: Array<any>) => any;
 }) {
-  const [largestSegmentId, setLargestSegmentId] = React.useState(0);
+  const [largestSegmentId, setLargestSegmentId] = React.useState<number | null>(0);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
   const dispatch = useDispatch();
   const handleOk = () => {
-    if (largestSegmentId < 1) {
+    if (largestSegmentId == null || largestSegmentId < 1) {
       Toast.warning("Please enter a segment id greater than 0.");
       return;
     }

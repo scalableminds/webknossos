@@ -1,4 +1,4 @@
-export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"] as ViewMode[];
+export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,
@@ -6,7 +6,7 @@ export const ViewModeValuesIndices = {
   Oblique: 2,
   Volume: 3,
 };
-export type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
+export type ViewMode = "orthogonal" | "oblique" | "flight";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -179,6 +179,7 @@ export enum AnnotationToolEnum {
   ERASE_TRACE = "ERASE_TRACE",
   FILL_CELL = "FILL_CELL",
   PICK_CELL = "PICK_CELL",
+  QUICK_SELECT = "QUICK_SELECT",
   BOUNDING_BOX = "BOUNDING_BOX",
   PROOFREAD = "PROOFREAD",
 }
@@ -189,16 +190,19 @@ export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;

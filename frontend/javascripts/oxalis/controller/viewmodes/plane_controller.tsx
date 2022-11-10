@@ -32,7 +32,7 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { cycleToolAction } from "oxalis/model/actions/ui_actions";
+import { cycleToolAction, enterAction, escapeAction } from "oxalis/model/actions/ui_actions";
 import {
   MoveTool,
   SkeletonTool,
@@ -41,6 +41,7 @@ import {
   PickCellTool,
   FillCellTool,
   BoundingBoxTool,
+  QuickSelectTool,
   ProofreadTool,
 } from "oxalis/controller/combinations/tool_controls";
 import type {
@@ -318,6 +319,11 @@ class PlaneController extends React.PureComponent<Props> {
       this.planeView,
       this.props.showContextMenuAt,
     );
+    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showContextMenuAt,
+    );
     const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
 
     const allControlKeys = _.union(
@@ -328,6 +334,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
       Object.keys(boundingBoxControls),
+      Object.keys(quickSelectControls),
       Object.keys(proofreadControls),
     );
 
@@ -345,6 +352,7 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
         [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
+        [AnnotationToolEnum.QUICK_SELECT]: quickSelectControls[controlKey],
         [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
       });
     }
@@ -381,6 +389,8 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + d": createDelayAwareMoveHandler(-5),
         "shift + space": createDelayAwareMoveHandler(-1),
         "ctrl + space": createDelayAwareMoveHandler(-1),
+        enter: () => Store.dispatch(enterAction()),
+        esc: () => Store.dispatch(escapeAction()),
         space: createDelayAwareMoveHandler(1),
         f: createDelayAwareMoveHandler(1),
         d: createDelayAwareMoveHandler(-1),

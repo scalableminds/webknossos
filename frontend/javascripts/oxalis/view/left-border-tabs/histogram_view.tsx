@@ -215,11 +215,12 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   };
 
   tipFormatter = (value: number | undefined) => {
-    if (value)
-      return value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
-        ? value.toExponential()
-        : roundTo(value, this.getPrecision()).toString();
-    return undefined;
+    if (value == null) {
+      return "invalid";
+    }
+    return value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
+      ? value.toExponential()
+      : roundTo(value, this.getPrecision()).toString();
   };
 
   // eslint-disable-next-line react/sort-comp
@@ -276,7 +277,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
-          tipFormatter={this.tipFormatter}
+          tooltip={{ formatter: this.tipFormatter }}
           style={{
             width: canvasWidth,
             margin: 0,

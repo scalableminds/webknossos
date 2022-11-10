@@ -13,6 +13,7 @@ import {
   Space,
   Button,
 } from "antd";
+import features from "features";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
@@ -24,12 +25,14 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
+import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { jsonStringify, parseAsMaybe } from "libs/utils";
 import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
-import { APIDataLayer } from "types/api_flow_types";
+import { APIDataLayer, APIDatasetId } from "types/api_flow_types";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import { Vector3 } from "oxalis/constants";
 
 const FormItem = Form.Item;
@@ -66,6 +69,7 @@ export default function DatasetSettingsDataTab({
   activeDataSourceEditMode,
   onChange,
   additionalAlert,
+  datasetId,
 }: {
   allowRenamingDataset: boolean;
   isReadOnlyDataset: boolean;
@@ -73,6 +77,7 @@ export default function DatasetSettingsDataTab({
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert?: React.ReactNode | null | undefined;
+  datasetId?: APIDatasetId | undefined;
 }) {
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
@@ -126,6 +131,7 @@ export default function DatasetSettingsDataTab({
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
           <SimpleDatasetForm
+            datasetId={datasetId}
             allowRenamingDataset={allowRenamingDataset}
             isReadOnlyDataset={isReadOnlyDataset}
             form={form}
@@ -161,11 +167,13 @@ function SimpleDatasetForm({
   isReadOnlyDataset,
   dataSource,
   form,
+  datasetId,
 }: {
   allowRenamingDataset: boolean;
   isReadOnlyDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
+  datasetId?: APIDatasetId | undefined;
 }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
@@ -261,8 +269,11 @@ function SimpleDatasetForm({
         }
       >
         {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
-          <List.Item key={`layer-${layer.name}`}>
+          // the layer name may change in this view, the order does not, so idx is the right key choice here
+          // eslint-disable-next-line react/no-array-index-key
+          <List.Item key={`layer-${idx}`}>
             <SimpleLayerForm
+              datasetId={datasetId}
               isReadOnlyDataset={isReadOnlyDataset}
               layer={layer}
               index={idx}
@@ -290,12 +301,14 @@ function SimpleLayerForm({
   index,
   onRemoveLayer,
   form,
+  datasetId,
 }: {
   isReadOnlyDataset: boolean;
   layer: DataLayer;
   index: number;
   onRemoveLayer: (layer: DataLayer) => void;
   form: FormInstance;
+  datasetId?: APIDatasetId | undefined;
 }) {
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
@@ -311,6 +324,22 @@ function SimpleLayerForm({
     // FormItemWithInfo doesn't work for some reason.
     form.validateFields();
   }, [dataLayers]);
+
+  const { startJob, activeJob, mostRecentSuccessfulJob } = useStartAndPollJob({
+    startJobFn:
+      datasetId != null
+        ? () =>
+            startFindLargestSegmentIdJob(datasetId.name, datasetId.owningOrganization, layer.name)
+        : null,
+    findJobPred: (job) =>
+      job.type === "find_largest_segment_id" && job.datasetName === datasetId?.name,
+    jobStartedMessage:
+      "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
+    successMessage:
+      "The computation of the largest segment id for this dataset has finished. Reload the page to see it.",
+    failureMessage:
+      "The computation of the largest segment id for this dataset didn't finish properly.",
+  });
 
   return (
     <div
@@ -478,53 +507,89 @@ function SimpleLayerForm({
           </Form.Item>
 
           {isSegmentation ? (
-            <FormItemWithInfo
-              name={["dataSource", "dataLayers", index, "largestSegmentId"]}
-              label="Largest segment ID"
-              info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-              initialValue={
-                "largestSegmentId" in layer && layer.largestSegmentId != null
-                  ? `${layer.largestSegmentId}`
-                  : undefined
-              }
-              rules={[
-                {
-                  validator: (rule, value) =>
-                    value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
-                      ? Promise.resolve()
-                      : Promise.reject(
-                          new Error(
-                            `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
-                          ),
-                        ),
-                },
-                {
-                  warningOnly: true,
-                  validator: (rule, value) =>
-                    value == null || value === ""
-                      ? Promise.reject(
-                          new Error(
-                            "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
-                          ),
-                        )
-                      : Promise.resolve(),
-                },
-              ]}
-            >
-              <InputNumber
-                disabled={isReadOnlyDataset}
-                // @ts-ignore returning undefined does work without problems
-                parser={(value: string | undefined) => {
-                  if (value == null || value === "") {
-                    return undefined;
+            <div>
+              <div style={{ display: "flex", alignItems: "end" }}>
+                <FormItemWithInfo
+                  name={["dataSource", "dataLayers", index, "largestSegmentId"]}
+                  label="Largest segment ID"
+                  info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
+                  initialValue={
+                    "largestSegmentId" in layer && layer.largestSegmentId != null
+                      ? `${layer.largestSegmentId}`
+                      : undefined
                   }
-                  return parseInt(value, 10);
-                }}
-              />
-            </FormItemWithInfo>
+                  rules={[
+                    {
+                      validator: (rule, value) =>
+                        value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              new Error(
+                                `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+                              ),
+                            ),
+                    },
+                    {
+                      warningOnly: true,
+                      validator: (rule, value) =>
+                        value == null || value === ""
+                          ? Promise.reject(
+                              new Error(
+                                "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
+                              ),
+                            )
+                          : Promise.resolve(),
+                    },
+                  ]}
+                >
+                  <DelegatePropsToFirstChild>
+                    <InputNumber
+                      disabled={isReadOnlyDataset}
+                      // @ts-ignore returning undefined does work without problems
+                      parser={(value: string | undefined) => {
+                        if (value == null || value === "") {
+                          return undefined;
+                        }
+                        return parseInt(value, 10);
+                      }}
+                    />
+                    {!isReadOnlyDataset && datasetId && features().jobsEnabled && (
+                      <Button
+                        type={mostRecentSuccessfulJob == null ? "primary" : "default"}
+                        title={`${
+                          activeJob != null ? "Scanning" : "Scan"
+                        } the data to derive the value automatically`}
+                        style={{ marginLeft: 8 }}
+                        loading={activeJob != null}
+                        disabled={activeJob != null || startJob == null}
+                        onClick={startJob || (() => Promise.resolve())}
+                      >
+                        Detect
+                      </Button>
+                    )}
+                  </DelegatePropsToFirstChild>
+                </FormItemWithInfo>
+              </div>
+              {mostRecentSuccessfulJob && (
+                <div style={{ marginTop: -6 }}>
+                  Output of most recent job: {mostRecentSuccessfulJob.result}
+                </div>
+              )}
+            </div>
           ) : null}
         </Col>
       </Row>
     </div>
+  );
+}
+
+function DelegatePropsToFirstChild({ children, ...props }: { children: React.ReactElement[] }) {
+  // This is a small helper function which allows us to pass two children two FormItemWithInfo
+  // even though antd only demands one. We do this for better layouting.
+  return (
+    <>
+      {React.cloneElement(children[0], props)}
+      {children[1]}
+    </>
   );
 }

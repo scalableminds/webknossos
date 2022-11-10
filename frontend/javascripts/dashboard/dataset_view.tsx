@@ -391,8 +391,8 @@ function renderPlaceholder(context: DatasetCacheContextValue, user: APIUser) {
   );
 
   const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
-    ? "There are no datasets available yet. Upload one or try a public demo dataset."
-    : "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
+    ? "There are no datasets in this folder. Upload one or try a public demo dataset."
+    : "There are no datasets in this folder. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
 
   return context.isLoading ? null : (
     <Row

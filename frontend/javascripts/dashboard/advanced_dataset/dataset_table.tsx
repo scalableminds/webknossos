@@ -346,7 +346,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
             emptyText: this.renderEmptyText(),
           }}
           onRow={(record: APIMaybeUnimportedDataset) => ({
-            onClick: () => {
+            onClick: (event) => {
+              // @ts-expect-error
+              if (event.target?.tagName !== "TD") {
+                // Don't (de)select when another element within the row was clicked
+                // (e.g., a link). Otherwise, clicking such elements would cause two actions
+                // (e.g., the link action and a (de)selection).
+                return;
+              }
               if (this.props.onSelectDataset) {
                 if (this.props.selectedDataset === record) {
                   this.props.onSelectDataset(null);
@@ -397,7 +404,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
             render={(name: string, dataset: APIMaybeUnimportedDataset) => (
-              <div>
+              <>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
                   title="View Dataset"
@@ -407,7 +414,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 </Link>
                 <br />
                 <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
-              </div>
+              </>
             )}
           />
           <Column

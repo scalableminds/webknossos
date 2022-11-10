@@ -136,6 +136,7 @@ const defaultState: OxalisState = {
     description: null,
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
+    allowedTeamsCumulative: [],
     logoUrl: null,
     lastUsedByUser: 0,
     jobsEnabled: false,

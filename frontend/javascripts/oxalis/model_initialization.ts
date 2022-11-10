@@ -329,18 +329,11 @@ function initializeTracing(
     }
   }
 
-  // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+  // Initialize 'flight', 'oblique' or 'orthogonal' mode
   if (allowedModes.length === 0) {
     Toast.error(messages["tracing.no_allowed_mode"]);
   } else {
     const maybeUrlViewMode = UrlManager.initialState.mode;
-    // todo: refactor MODE_VOLUME away or make this logic compatible
-    // const isHybridTracing = serverTracings.skeleton != null && serverTracings.volume != null;
-    // let maybeUrlViewMode = UrlManager.initialState.mode;
-    // if (isHybridTracing && UrlManager.initialState.mode === constants.MODE_VOLUME) {
-    //   // Here we avoid going into volume mode in hybrid tracings.
-    //   maybeUrlViewMode = constants.MODE_PLANE_TRACING;
-    // }
     const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }

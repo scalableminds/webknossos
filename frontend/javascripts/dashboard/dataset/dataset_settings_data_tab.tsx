@@ -33,6 +33,7 @@ import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
 import { APIDataLayer, APIDatasetId } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { Vector3 } from "oxalis/constants";
 
 const FormItem = Form.Item;
 
@@ -62,7 +63,7 @@ export const syncDataSourceFields = (
 };
 
 export default function DatasetSettingsDataTab({
-  isEditingMode,
+  allowRenamingDataset,
   isReadOnlyDataset,
   form,
   activeDataSourceEditMode,
@@ -70,7 +71,7 @@ export default function DatasetSettingsDataTab({
   additionalAlert,
   datasetId,
 }: {
-  isEditingMode: boolean;
+  allowRenamingDataset: boolean;
   isReadOnlyDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
@@ -131,7 +132,7 @@ export default function DatasetSettingsDataTab({
         <RetryingErrorBoundary>
           <SimpleDatasetForm
             datasetId={datasetId}
-            isEditingMode={isEditingMode}
+            allowRenamingDataset={allowRenamingDataset}
             isReadOnlyDataset={isReadOnlyDataset}
             form={form}
             dataSource={dataSource}
@@ -162,13 +163,13 @@ export default function DatasetSettingsDataTab({
 }
 
 function SimpleDatasetForm({
-  isEditingMode,
+  allowRenamingDataset,
   isReadOnlyDataset,
   dataSource,
   form,
   datasetId,
 }: {
-  isEditingMode: boolean;
+  allowRenamingDataset: boolean;
   isReadOnlyDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
@@ -213,11 +214,11 @@ function SimpleDatasetForm({
                 label="Name"
                 info="The name of the dataset"
                 validateFirst
-                rules={getDatasetNameRules(activeUser, isEditingMode)}
+                rules={getDatasetNameRules(activeUser, allowRenamingDataset)}
               >
                 <Input
                   // Renaming an existing DS is not supported right now
-                  disabled={isReadOnlyDataset || isEditingMode}
+                  disabled={isReadOnlyDataset || !allowRenamingDataset}
                   style={{
                     width: 400,
                   }}
@@ -236,8 +237,7 @@ function SimpleDatasetForm({
                   },
                   {
                     validator: syncValidator(
-                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
-                      (value) => value?.every((el) => el > 0),
+                      (value: Vector3) => value?.every((el) => el > 0),
                       "Each component of the scale must be greater than 0",
                     ),
                   },
@@ -269,7 +269,9 @@ function SimpleDatasetForm({
         }
       >
         {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
-          <List.Item key={`layer-${layer.name}`}>
+          // the layer name may change in this view, the order does not, so idx is the right key choice here
+          // eslint-disable-next-line react/no-array-index-key
+          <List.Item key={`layer-${idx}`}>
             <SimpleLayerForm
               datasetId={datasetId}
               isReadOnlyDataset={isReadOnlyDataset}
@@ -504,8 +506,7 @@ function SimpleLayerForm({
             </Select>
           </Form.Item>
 
-          {/* The in-condition is only necessary to satisfy TypeScript */}
-          {isSegmentation && "largestSegmentId" in layer ? (
+          {isSegmentation ? (
             <div>
               <div style={{ display: "flex", alignItems: "end" }}>
                 <FormItemWithInfo
@@ -513,7 +514,9 @@ function SimpleLayerForm({
                   label="Largest segment ID"
                   info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
                   initialValue={
-                    layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined
+                    "largestSegmentId" in layer && layer.largestSegmentId != null
+                      ? `${layer.largestSegmentId}`
+                      : undefined
                   }
                   rules={[
                     {

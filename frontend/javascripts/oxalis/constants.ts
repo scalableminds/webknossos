@@ -1,4 +1,4 @@
-export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"] as ViewMode[];
+export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,
@@ -6,7 +6,7 @@ export const ViewModeValuesIndices = {
   Oblique: 2,
   Volume: 3,
 };
-export type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
+export type ViewMode = "orthogonal" | "oblique" | "flight";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];

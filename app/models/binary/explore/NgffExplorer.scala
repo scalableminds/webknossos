@@ -28,14 +28,14 @@ class NgffExplorer extends RemoteLayerExplorer {
 
       layerLists: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiScale => {
         for {
-          channelCount: Int <- getNgffMultiScaleChannelCount(multiScale, remotePath)
+          channelCount: Int <- getNgffMultiscaleChannelCount(multiScale, remotePath)
           layers <- layersFromNgffMultiscale(multiScale, remotePath, credentials, channelCount)
         } yield layers
       })
       layers: List[(ZarrLayer, Vec3Double)] = layerLists.flatten
     } yield layers
 
-  private def getNgffMultiScaleChannelCount(multiscale: NgffMultiscalesItem, remotePath: Path): Fox[Int] =
+  private def getNgffMultiscaleChannelCount(multiscale: NgffMultiscalesItem, remotePath: Path): Fox[Int] =
     for {
       firstDataset <- multiscale.datasets.headOption.toFox
       magPath = remotePath.resolve(firstDataset.path)
@@ -58,25 +58,22 @@ class NgffExplorer extends RemoteLayerExplorer {
       voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
       nameFromPath <- guessNameFromPath(remotePath)
       name = multiscale.name.getOrElse(nameFromPath)
-      layerTuples <- Fox.combined(
-        (0 until channelCount)
-          .map(channelIndex => {
-            for {
-              magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
-                zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials, Some(channelIndex)))
-              _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
-              elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
-              boundingBox = boundingBoxFromMags(magsWithAttributes)
-              layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-                ZarrSegmentationLayer(name,
-                                      boundingBox,
-                                      elementClass,
-                                      magsWithAttributes.map(_.mag),
-                                      largestSegmentId = None)
-              } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
-            } yield (layer, voxelSizeNanometers)
-          })
-          .toList)
+      layerTuples <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
+        for {
+          magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
+            zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials, Some(channelIndex)))
+          _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+          elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
+          boundingBox = boundingBoxFromMags(magsWithAttributes)
+          layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
+            ZarrSegmentationLayer(name,
+                                  boundingBox,
+                                  elementClass,
+                                  magsWithAttributes.map(_.mag),
+                                  largestSegmentId = None)
+          } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
+        } yield (layer, voxelSizeNanometers)
+      })
     } yield layerTuples
 
   private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,

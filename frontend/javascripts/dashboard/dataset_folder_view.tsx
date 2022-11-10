@@ -180,15 +180,6 @@ function generateNodeProps(
   function deleteFolder(): void {
     context.queries.deleteFolderMutation.mutateAsync(id);
   }
-  function renameFolder(): void {
-    // const folderName = prompt("Please input a new name for the folder", title);
-    // context.queries.updateFolderMutation.mutateAsync({
-    //   name: folderName || "New folder",
-    //   id,
-    //   allowedTeams: node.allowedTeams,
-    //   allowedTeamsCumulative: node.allowedTeamsCumulative,
-    // });
-  }
 
   function editFolder(): void {
     setFolderIdForEditModal(id);
@@ -199,10 +190,6 @@ function generateNodeProps(
       <Menu.Item key="create" data-group-id={id} onClick={createFolder}>
         <PlusOutlined />
         New Folder
-      </Menu.Item>
-      <Menu.Item key="rename" data-group-id={id} onClick={renameFolder}>
-        <EditOutlined />
-        Rename Folder
       </Menu.Item>
       <Menu.Item key="edit" data-group-id={id} onClick={editFolder}>
         <EditOutlined />

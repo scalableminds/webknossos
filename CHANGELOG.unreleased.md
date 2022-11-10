@@ -30,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 - Fixed a bug in the dataset import view, where the layer name text field would lose focus after each key press. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 - Fixed importing NGFF Zarr datasets with non-scale transforms. [#6621](https://github.com/scalableminds/webknossos/pull/6621)
+- Fixed broken creation of task using a base NML. [#6633](https://github.com/scalableminds/webknossos/pull/6633)
 
 ### Removed
 

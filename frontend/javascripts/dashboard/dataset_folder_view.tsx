@@ -253,10 +253,7 @@ function FolderItemAsDropTarget(props: {
         Toast.error("Could not move dataset. Please try again.");
       }
     },
-    canDrop: (item) => {
-      return props.isEditable;
-    },
-
+    canDrop: () => props.isEditable,
     collect: (monitor: DropTargetMonitor) => ({
       canDrop: monitor.canDrop(),
       isOver: monitor.isOver(),

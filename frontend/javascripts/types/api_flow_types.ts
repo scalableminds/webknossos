@@ -118,6 +118,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
   folderId: string;
   allowedTeams: Array<APITeam>;
+  allowedTeamsCumulative: Array<APITeam>;
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
@@ -892,7 +893,7 @@ export type VoxelyticsChunkStatistics = {
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
-  parent?: string;
+  parent?: string | null;
   isEditable: boolean;
 };
 

@@ -31,9 +31,7 @@ const organizationXRootFolderId = "570b9f4e4bb848d0885ea917";
 test("getFolder", async (t) => {
   const folder = await foldersApi.getFolder(organizationXRootFolderId);
 
-  writeTypeCheckingFile(folder, "folder", "Folder", {
-    isArray: true,
-  });
+  writeTypeCheckingFile(folder, "folder", "Folder");
   t.snapshot(folder, {
     id: "folders-getFolder()",
   });

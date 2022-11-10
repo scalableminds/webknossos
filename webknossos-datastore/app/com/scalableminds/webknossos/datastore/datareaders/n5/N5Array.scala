@@ -17,7 +17,7 @@ import java.nio.file.Path
 
 object N5Array extends LazyLogging {
   @throws[IOException]
-  def open(path: Path, axisOrderOpt: Option[AxisOrder]): N5Array = {
+  def open(path: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): N5Array = {
     val store = new FileSystemStore(path)
     val rootPath = new DatasetPath("")
     val headerPath = rootPath.resolve(N5Header.FILENAME_ATTRIBUTES_JSON)
@@ -37,7 +37,7 @@ object N5Array extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this N5 Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
     }
-    new N5Array(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), None)
+    new N5Array(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
   }
 }
 

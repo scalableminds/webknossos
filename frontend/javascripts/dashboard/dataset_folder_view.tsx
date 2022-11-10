@@ -69,7 +69,7 @@ function DatasetFolderViewInner(props: Props) {
           gridColumn: "1 / 2",
           overflow: "auto",
           borderRight: "1px solid var(--ant-border-base)",
-          marginRight: 4,
+          marginRight: 16,
         }}
       >
         <FolderSidebar />
@@ -90,7 +90,7 @@ function DatasetFolderViewInner(props: Props) {
           gridColumn: "3 / 4",
           overflow: "auto",
           borderLeft: "1px solid var(--ant-border-base)",
-          marginLeft: 4,
+          marginLeft: 16,
         }}
       >
         <DatasetDetailsSidebar selectedDataset={selectedDataset} />
@@ -150,7 +150,7 @@ function DatasetDetailsSidebar({
           ) : null}
         </>
       ) : (
-        "No dataset selected"
+        <div style={{ textAlign: "center" }}>No dataset selected</div>
       )}
     </div>
   );
@@ -327,7 +327,7 @@ function FolderSidebar() {
       className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
       style={{
         height: 400,
-        width: 250,
+        width: 350,
         marginRight: 4,
         borderRadius: 2,
         padding: 2,

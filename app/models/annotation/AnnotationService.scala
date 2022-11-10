@@ -193,6 +193,11 @@ class AnnotationService @Inject()(
       _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
+  def deleteAnnotationLayer(annotation: Annotation, layerName: String): Fox[Unit] =
+    for {
+      _ <- annotationLayersDAO.deleteOne(annotation._id, layerName)
+    } yield ()
+
   private def createTracingsForExplorational(dataSet: DataSet,
                                              dataSource: DataSource,
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],

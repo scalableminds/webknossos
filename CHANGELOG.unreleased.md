@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The largest segment id for a segmentation layer can be computed automatically from the dataset settings page. [#6415](https://github.com/scalableminds/webknossos/pull/6415)
 - Button for switching organizations for Voxelytics workflows. [#6572](https://github.com/scalableminds/webknossos/pull/6572)
 - Added ability to shuffle / set colors for a whole tree group. [#6586](https://github.com/scalableminds/webknossos/pull/6586)
+- Annotation layers can now be removed. [#6593](https://github.com/scalableminds/webknossos/pull/6593)
 - When adding remote Zarr datasets with multiple channels, channels are converted into layers. [#6609](https://github.com/scalableminds/webknossos/pull/6609)
 
 ### Changed
@@ -26,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Re-phrased some backend (error) messages to improve clarity and provide helping hints. [#6616](https://github.com/scalableminds/webknossos/pull/6616)
  
 ### Fixed
+- Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 
 ### Removed
 

@@ -200,6 +200,9 @@ annotation.multiLayers.skeleton.notImplemented=This feature is not implemented f
 annotation.multiLayers.volume.notImplemented=This feature is not implemented for annotations with more than one volume layer
 annotation.noMappingSet=No mapping is pinned for this annotation, cannot generate agglomerate skeleton.
 annotation.volumeBucketsNotEmpty=Cannot make mapping editable in an annotation with mutated volume data
+annotation.deleteLayer.explorationalsOnly=Could not delete a layer because it is only allowed for explorational annotations.
+annotation.deleteLayer.onlyLayer=Could not delete layer because it is the only layer in this annotation.
+annotation.layer.notFound=Layer could not be found.
 
 mesh.notFound=Mesh could not be found
 mesh.write.failed=Failed to convert mesh info to json

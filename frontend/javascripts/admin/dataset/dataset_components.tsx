@@ -52,7 +52,7 @@ export const layerNameRules = [
 
 export const getDatasetNameRules = (
   activeUser: APIUser | null | undefined,
-  isEditing: boolean = false,
+  allowRenaming: boolean = true,
 ) => [
   {
     required: true,
@@ -61,7 +61,8 @@ export const getDatasetNameRules = (
   ...layerNameRules,
   {
     validator: async (_rule: any, value: string) => {
-      if (isEditing) {
+      if (!allowRenaming) {
+        // Renaming is not allowed. No need to validate the (existing) name then.
         return Promise.resolve();
       }
       if (!activeUser) throw new Error("Can't do operation if no user is logged in.");

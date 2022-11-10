@@ -419,7 +419,7 @@ function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) 
 }
 
 function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () => void }) {
-  const { data: folder } = useFolderQuery(folderId);
+  const { data: folder, isFetching } = useFolderQuery(folderId);
   const [form] = Form.useForm();
   const context = useContext(DatasetCollectionContext);
 
@@ -442,7 +442,9 @@ function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () 
   };
 
   const content =
-    folder != null ? (
+    // Don't initialize form when isFetching==true, because
+    // this would populate the form with outdated initial values.
+    folder != null && !isFetching ? (
       <div>
         <Form
           form={form}

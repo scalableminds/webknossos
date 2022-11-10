@@ -324,7 +324,7 @@ function FolderSidebar() {
       className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
       style={{
         height: 400,
-        width: 350,
+        width: 250,
         marginRight: 4,
         borderRadius: 2,
         padding: 2,

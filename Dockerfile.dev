@@ -2,6 +2,7 @@ FROM scalableminds/sbt:master__3437035799
 ARG VERSION_NODE="16.x"
 
 ENV DEBIAN_FRONTEND noninteractive
+ENV SBT_OPTS "-XX:MaxMetaspaceSize=512m -Xms1024m -Xmx1024m"
 
 # Fixes "The method driver /usr/lib/apt/methods/https could not be found."
 # See https://unix.stackexchange.com/a/478009

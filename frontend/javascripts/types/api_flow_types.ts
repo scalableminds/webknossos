@@ -65,7 +65,7 @@ type MutableAPIDataSourceBase = {
   status?: string;
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
-type APIUnimportedDatasource = APIDataSourceBase;
+export type APIUnimportedDatasource = APIDataSourceBase;
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
   scale: Vector3;
@@ -148,7 +148,7 @@ type APIUnimportedDataset = APIDatasetBase & {
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
 export type APIDataSourceWithMessages = {
   readonly dataSource?: APIDataSource;
-  readonly previousDataSource?: APIDataSource;
+  readonly previousDataSource?: APIDataSource | APIUnimportedDatasource;
   readonly messages: Array<APIMessage>;
 };
 export type APITeamMembership = {
@@ -214,7 +214,7 @@ export type APIRestrictions = {
   // allowSave might be false even though allowUpdate is true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
-export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";
+export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
 export type APIResolutionRestrictions = {
   min?: number;
   max?: number;

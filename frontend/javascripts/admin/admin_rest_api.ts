@@ -1960,7 +1960,7 @@ export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): P
 }
 
 export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}  `, {
+  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage} `, {
     method: "POST",
   });
 }

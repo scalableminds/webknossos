@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource.Category
-import play.api.libs.Files.logger
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global

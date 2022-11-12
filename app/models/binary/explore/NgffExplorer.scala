@@ -42,8 +42,11 @@ class NgffExplorer extends RemoteLayerExplorer {
       zarrayPath = magPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
-      channelAxisIndex <- axisOrder.c.toFox
-    } yield zarrHeader.shape(channelAxisIndex)
+      channelCount = axisOrder.c match {
+        case Some(channeAxislIndex) => zarrHeader.shape(channeAxislIndex)
+        case _                      => 1
+      }
+    } yield channelCount
 
   private def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                        remotePath: Path,

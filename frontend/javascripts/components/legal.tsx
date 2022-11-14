@@ -58,9 +58,8 @@ export class Imprint extends LegalBase {
               />
             </Card>
             <p />
-            {this.state.defaultOrganization != null &&
-            // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-            this.state.defaultOrganization.additionalInformation ? (
+            {/* @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'. */}
+            {this.state.defaultOrganization?.additionalInformation ? (
               <Card>
                 <Markdown
                   // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.

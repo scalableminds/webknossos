@@ -265,7 +265,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       </Menu.Item>,
     ];
 
-    if (this.props.activeUser != null && this.props.activeUser.isSuperUser) {
+    if (this.props.activeUser?.isSuperUser) {
       jobMenuItems.push(
         <Menu.Item
           key="start_neuron_inferral"

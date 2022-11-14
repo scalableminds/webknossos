@@ -211,7 +211,7 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
     startedExports.length > 0 ? (
       <p>
         Go to{" "}
-        <a href="/jobs" target="_blank">
+        <a href="/jobs" target="_blank" rel="noreferrer">
           Jobs Overview Page
         </a>{" "}
         to see running exports and to download the results.

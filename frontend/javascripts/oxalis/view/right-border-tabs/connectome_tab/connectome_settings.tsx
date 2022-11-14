@@ -126,7 +126,7 @@ class ConnectomeFilters extends React.Component<Props> {
                   width: "100%",
                 }}
               >
-                {availableConnectomeFiles != null && availableConnectomeFiles.length ? (
+                {availableConnectomeFiles?.length ? (
                   availableConnectomeFiles.map((connectomeFile) => (
                     <Option
                       key={connectomeFile.connectomeFileName}

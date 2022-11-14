@@ -265,11 +265,11 @@ function DAGView({
     >
       <MiniMap
         nodeStrokeColor={(n) => {
-          if (n.style && n.style.borderColor) return n.style.borderColor;
+          if (n.style?.borderColor) return n.style.borderColor;
           return "#eee";
         }}
         nodeColor={(n) => {
-          if (n.style && n.style.borderColor) return n.style.borderColor;
+          if (n.style?.borderColor) return n.style.borderColor;
           return "#fff";
         }}
         nodeBorderRadius={2}

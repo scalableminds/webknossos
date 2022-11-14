@@ -1138,8 +1138,7 @@ class DataApi {
   setMapping(
     layerName: string,
     mapping: Mapping,
-    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-    options?: {
+    options: {
       colors?: Array<number>;
       hideUnmappedIds?: boolean;
       showLoadingIndicator?: boolean;

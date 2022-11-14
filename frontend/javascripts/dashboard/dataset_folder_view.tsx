@@ -25,7 +25,7 @@ import {
 import {
   DatasetLayerTags,
   DatasetTags,
-  DraggableType,
+  DraggableDatasetType,
   TeamTags,
 } from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
@@ -57,6 +57,15 @@ function DatasetFolderViewInner(props: Props) {
 
   console.log("context.datasets", context.datasets);
 
+  useEffect(() => {
+    if (!selectedDataset || !context.datasets) {
+      return;
+    }
+    // If the cache changed (e.g., because a dataset was updated), we need to update
+    // the selectedDataset instance, too, to avoid that it refers to stale data.
+    setSelectedDataset(context.datasets.find((ds) => ds.name === selectedDataset.name) ?? null);
+  }, [context.datasets]);
+
   return (
     <div
       style={{
@@ -69,7 +78,7 @@ function DatasetFolderViewInner(props: Props) {
           gridColumn: "1 / 2",
           overflow: "auto",
           borderRight: "1px solid var(--ant-border-base)",
-          marginRight: 4,
+          marginRight: 16,
         }}
       >
         <FolderSidebar />
@@ -90,10 +99,13 @@ function DatasetFolderViewInner(props: Props) {
           gridColumn: "3 / 4",
           overflow: "auto",
           borderLeft: "1px solid var(--ant-border-base)",
-          marginLeft: 4,
+          marginLeft: 16,
         }}
       >
-        <DatasetDetailsSidebar selectedDataset={selectedDataset} />
+        <DatasetDetailsSidebar
+          selectedDataset={selectedDataset}
+          setSelectedDataset={setSelectedDataset}
+        />
       </div>
     </div>
   );
@@ -101,19 +113,23 @@ function DatasetFolderViewInner(props: Props) {
 
 function DatasetDetailsSidebar({
   selectedDataset,
+  setSelectedDataset,
 }: {
   selectedDataset: APIMaybeUnimportedDataset | null;
+  setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
 }) {
   const context = useContext(DatasetCollectionContext);
 
-  // allowedTeams: Array<APITeam>;
-  // created: number;
-  // description: string | null | undefined;
-  // isPublic: boolean;
-
-  // owningOrganization: string;
-  // publication: null | undefined;
-  // tags: Array<string>;
+  useEffect(() => {
+    if (selectedDataset == null || !("folderId" in selectedDataset)) {
+      return;
+    }
+    if (selectedDataset.folderId !== context.activeFolderId) {
+      // Ensure that the selected dataset is in the active folder. If not,
+      // clear the sidebar
+      setSelectedDataset(null);
+    }
+  }, [selectedDataset, context.activeFolderId]);
 
   return (
     <div style={{ width: 300, padding: 16 }}>
@@ -150,7 +166,7 @@ function DatasetDetailsSidebar({
           ) : null}
         </>
       ) : (
-        "No dataset selected"
+        <div style={{ textAlign: "center" }}>No dataset selected</div>
       )}
     </div>
   );
@@ -159,6 +175,7 @@ function DatasetDetailsSidebar({
 type FolderItem = {
   title: string;
   id: string;
+  parent: string | null | undefined;
   expanded?: boolean;
   children: FolderItem[];
   isEditable: boolean;
@@ -170,7 +187,7 @@ function generateNodeProps(
   setFolderIdForEditModal: (folderId: string) => void,
 ): GenerateNodePropsType {
   const { node } = params;
-  const { id, title } = node;
+  const { id, title, isEditable } = node;
   const nodeProps: GenerateNodePropsType = {};
 
   function createFolder(): void {
@@ -179,15 +196,6 @@ function generateNodeProps(
   }
   function deleteFolder(): void {
     context.queries.deleteFolderMutation.mutateAsync(id);
-  }
-  function renameFolder(): void {
-    // const folderName = prompt("Please input a new name for the folder", title);
-    // context.queries.updateFolderMutation.mutateAsync({
-    //   name: folderName || "New folder",
-    //   id,
-    //   allowedTeams: node.allowedTeams,
-    //   allowedTeamsCumulative: node.allowedTeamsCumulative,
-    // });
   }
 
   function editFolder(): void {
@@ -199,10 +207,6 @@ function generateNodeProps(
       <Menu.Item key="create" data-group-id={id} onClick={createFolder}>
         <PlusOutlined />
         New Folder
-      </Menu.Item>
-      <Menu.Item key="rename" data-group-id={id} onClick={renameFolder}>
-        <EditOutlined />
-        Rename Folder
       </Menu.Item>
       <Menu.Item key="edit" data-group-id={id} onClick={editFolder}>
         <EditOutlined />
@@ -231,7 +235,11 @@ function generateNodeProps(
         autoDestroy
         trigger={["contextMenu"]}
       >
-        <FolderItemAsDropTarget onClick={() => context.setActiveFolderId(id)} folderId={id}>
+        <FolderItemAsDropTarget
+          onClick={() => context.setActiveFolderId(id)}
+          folderId={id}
+          isEditable={isEditable}
+        >
           {title}
         </FolderItemAsDropTarget>
       </Dropdown>
@@ -246,12 +254,13 @@ function FolderItemAsDropTarget(props: {
   children: React.ReactNode;
   className?: string;
   onClick: () => void;
+  isEditable: boolean;
 }) {
   const context = useContext(DatasetCollectionContext);
   const { folderId, className, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
-    accept: DraggableType,
+    accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
       const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
@@ -261,6 +270,7 @@ function FolderItemAsDropTarget(props: {
         Toast.error("Could not move dataset. Please try again.");
       }
     },
+    canDrop: () => props.isEditable,
     collect: (monitor: DropTargetMonitor) => ({
       canDrop: monitor.canDrop(),
       isOver: monitor.isOver(),
@@ -290,7 +300,7 @@ function FolderSidebar() {
 
   useEffect(() => {
     setTreeData((prevState) => {
-      const newTreeData = getFolderHierarchy(folderTree, prevState);
+      const newTreeData = getFolderHierarchy(folderTree, prevState, context.activeFolderId);
       if (newTreeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(newTreeData[0].id);
       }
@@ -298,8 +308,13 @@ function FolderSidebar() {
     });
   }, [folderTree]);
 
+  // This useDrop is only used to highlight the sidebar when
+  // a dataset is dragged. This helps the user to understand that
+  // the dataset should be dragged to folders in the sidebar.
+  // The actual dnd operation is handled by the individual folder
+  // entries (see FolderItemAsDropTarget), though.
   const [isDraggingDataset, drop] = useDrop({
-    accept: DraggableType,
+    accept: DraggableDatasetType,
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
 
@@ -363,6 +378,7 @@ function FolderSidebar() {
 function getFolderHierarchy(
   folderTree: FlatFolderTreeItem[] | undefined,
   prevFolderItems: FolderItem[] | null,
+  activeFolderId: string | null,
 ): FolderItem[] {
   if (folderTree == null) {
     return [];
@@ -374,6 +390,8 @@ function getFolderHierarchy(
       id: folderTreeItem.id,
       title: folderTreeItem.name,
       isEditable: folderTreeItem.isEditable,
+      parent: folderTreeItem.parent,
+      expanded: false,
       children: [],
     };
     if (folderTreeItem.parent == null) {
@@ -400,6 +418,15 @@ function getFolderHierarchy(
     throw new Error("Multiple folder roots found");
   }
 
+  // Expand the parent chain of the active folder.
+  if (activeFolderId != null) {
+    let currentFolder = itemById[activeFolderId];
+    while (currentFolder != null && currentFolder.parent != null) {
+      currentFolder = itemById[currentFolder.parent];
+      currentFolder.expanded = true;
+    }
+  }
+
   // Copy the expanded flags from the old state
   forEachFolderItem(prevFolderItems || [], (item: FolderItem) => {
     const maybeItem = itemById[item.id];
@@ -419,7 +446,7 @@ function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) 
 }
 
 function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () => void }) {
-  const { data: folder } = useFolderQuery(folderId);
+  const { data: folder, isFetching } = useFolderQuery(folderId);
   const [form] = Form.useForm();
   const context = useContext(DatasetCollectionContext);
 
@@ -442,7 +469,9 @@ function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () 
   };
 
   const content =
-    folder != null ? (
+    // Don't initialize form when isFetching==true, because
+    // this would populate the form with outdated initial values.
+    folder != null && !isFetching ? (
       <div>
         <Form
           form={form}

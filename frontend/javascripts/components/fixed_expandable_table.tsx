@@ -6,6 +6,7 @@ type Props<RecordType extends object = any> = TableProps<RecordType> & {
 
 type State = {
   expandedColumns: Array<string>;
+  className?: string;
 };
 /** This is a wrapper for large tables that have fixed columns and support expanded rows.
  *  This wrapper ensures that when columns are expanded no column is fixed as this creates rendering bugs.
@@ -20,7 +21,7 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
 
   render() {
     const { expandedColumns } = this.state;
-    const { children, ...restProps } = this.props;
+    const { children, className, ...restProps } = this.props;
     // Don't use React.Children.map here, since this adds .$ prefixes
     // to the keys. However, the keys are needed when managing the sorters
     // of the table.
@@ -42,7 +43,7 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
         scroll={{
           x: "max-content",
         }}
-        className="large-table"
+        className={`large-table ${className}`}
         onExpandedRowsChange={(selectedRows: Array<string | number>) => {
           this.setState({
             expandedColumns: selectedRows as string[],

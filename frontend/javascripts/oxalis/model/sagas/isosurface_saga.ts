@@ -681,7 +681,6 @@ function* loadPrecomputedMeshForSegmentId(
             { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
             geometry,
             id,
-            false,
             chunk.position,
             // Apply the scale from the segment info, which includes dataset scale and mag
             scale,
@@ -711,7 +710,6 @@ function* loadPrecomputedMeshForSegmentId(
             { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
             geometry,
             id,
-            false,
           );
         }
       },

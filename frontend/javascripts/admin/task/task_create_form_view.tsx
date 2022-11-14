@@ -473,7 +473,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                         }),
                       ));
 
-                    if (annotationResponse != null && annotationResponse.dataSetName != null) {
+                    if (annotationResponse?.dataSetName != null) {
                       newestForm.setFieldsValue({
                         dataSet: annotationResponse.dataSetName,
                       });
@@ -487,8 +487,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     );
 
                     if (
-                      taskResponse != null &&
-                      taskResponse.dataSet != null &&
+                      taskResponse?.dataSet != null &&
                       _.isEqual(taskResponse.status, {
                         open: 0,
                         active: 0,

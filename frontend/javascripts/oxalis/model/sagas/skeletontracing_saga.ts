@@ -163,8 +163,7 @@ function* watchTracingConsistency(): Saga<void> {
   const state = yield* select((_state) => _state);
   const invalidTreeDetails = [];
 
-  // @ts-expect-error ts-migrate(2483) FIXME: The left-hand side of a 'for...of' statement canno... Remove this comment to see the full error message
-  for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     const edgeCount = tree.edges.size();
     const nodeCount = tree.nodes.size();
 
@@ -195,8 +194,7 @@ export function* watchTreeNames(): Saga<void> {
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
-  // @ts-expect-error ts-migrate(2483) FIXME: The left-hand side of a 'for...of' statement canno... Remove this comment to see the full error message
-  for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));

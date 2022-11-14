@@ -261,7 +261,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       val parsedNmlTracingBoundingBox = params._1.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
       val bbox = if (nmlFormParams.boundingBox.isDefined) nmlFormParams.boundingBox else parsedNmlTracingBoundingBox
       TaskParameters(
-        nmlFormParams.taskTypeId,
+        nmlFormParams.taskTypeIdOrSummary,
         nmlFormParams.neededExperience,
         nmlFormParams.openInstances,
         nmlFormParams.projectName,

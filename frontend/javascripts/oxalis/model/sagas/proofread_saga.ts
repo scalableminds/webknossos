@@ -98,7 +98,6 @@ function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Ve
     loadAdHocMeshAction(segmentId, position, {
       mappingName,
       mappingType,
-      passive: true,
       preferredQuality,
     }),
   );

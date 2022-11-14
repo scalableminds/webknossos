@@ -402,11 +402,7 @@ function* maybeLoadIsosurface(
         getSceneController().removeIsosurfaceById(segmentId);
       }
 
-      getSceneController().addIsosurfaceFromVertices(
-        vertices,
-        segmentId,
-        isosurfaceExtraInfo.passive || false,
-      );
+      getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;

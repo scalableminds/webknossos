@@ -118,9 +118,9 @@ export const convertCellIdToRGB: ShaderModule = {
       vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
 
       float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
-      worldCoordUVW.x = worldCoordUVW.x * datasetScaleUVW.x;
-      worldCoordUVW.y = worldCoordUVW.y * datasetScaleUVW.y;
+      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      worldCoordUVW.x = worldCoordUVW.x * anisotropyFactorUVW.x;
+      worldCoordUVW.y = worldCoordUVW.y * anisotropyFactorUVW.y;
 
       float angleCount = 17.;
       float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 3.0);
@@ -209,10 +209,13 @@ export const getBrushOverlay: ShaderModule = {
         return brushOverlayColor;
       }
       vec3 flooredMousePos = floor(globalMousePosition);
-      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
 
-      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
+      // Compute the anisotropy of the dataset so that the brush looks the same in
+      // each viewport
+      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
+      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+
+      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);
 
       float radius = round(brushSizeInPixel / 2.0);
       if (radius > dist) {
@@ -223,6 +226,40 @@ export const getBrushOverlay: ShaderModule = {
     }
   `,
 };
+
+export const getCrossHairOverlay: ShaderModule = {
+  code: `
+    vec4 getCrossHairOverlay(vec3 worldCoordUVW) {
+      vec3 flooredGlobalPosUVW = transDim(floor(globalPosition));
+      vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
+
+      // Compute the anisotropy of the dataset so that the cross hair looks the same in
+      // each viewport
+      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
+      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+
+      // Compute the distance in screen coordinate space to show a zoom-independent cross hair
+      vec2 distanceVector = (worldCoordUVW.xy - activeSegmentPosUVW.xy) * anisotropyFactorUVW.xy / zoomValue;
+
+      vec4 crossHairColor = vec4(1.0, 1.0, 1.0, 0.5);
+      crossHairColor.a = float(
+        // Only show the cross hair in proofreading mode ...
+        isProofreading &&
+        // ... on the exact w-slice ...
+        flooredGlobalPosUVW.z == floor(activeSegmentPosUVW.z) &&
+        // ... with this extent ...
+        max(abs(distanceVector.x), abs(distanceVector.y)) < 12.0 &&
+        // ... with this thickness ...
+        (abs(distanceVector.x) < 2.0 || abs(distanceVector.y) < 2.0) &&
+        // ... leaving some free space in the middle.
+        max(abs(distanceVector.x), abs(distanceVector.y)) > 4.0
+      );
+
+      return crossHairColor;
+    }
+  `,
+};
+
 export const getSegmentationId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `

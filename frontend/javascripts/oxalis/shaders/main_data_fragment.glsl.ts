@@ -2,7 +2,12 @@ import _ from "lodash";
 import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import type { Vector3 } from "oxalis/constants";
 import constants, { ViewModeValuesIndices, OrthoViewIndices } from "oxalis/constants";
-import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
+import {
+  convertCellIdToRGB,
+  getBrushOverlay,
+  getCrossHairOverlay,
+  getSegmentationId,
+} from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
@@ -124,6 +129,7 @@ ${compileShader(
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentationId : null,
+  hasSegmentation ? getCrossHairOverlay : null,
 )}
 
 void main() {
@@ -222,27 +228,13 @@ void main() {
     gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
     gl_FragColor.a = 1.0;
 
-    vec3 flooredGlobalPosUVW = transDim(floor(globalPosition));
-    vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
-    vec3 datasetScaleUVW = transDim(datasetScale);
-    // Compute the distance in screen coordinate space to show a zoom-independent cross hair
-    vec2 distanceVector = (worldCoordUVW.xy - activeSegmentPosUVW.xy) * datasetScaleUVW.xy / zoomValue;
-
-    vec4 crossHairColor = vec4(1.0, 1.0, 1.0, 0.5);
-    gl_FragColor = mix(gl_FragColor, crossHairColor, float(
-      // Only show the cross hair in proofreading mode ...
-      isProofreading &&
-      // ... on the exact w-slice ...
-      flooredGlobalPosUVW.z == floor(activeSegmentPosUVW.z) &&
-      // ... with this extent ...
-      max(abs(distanceVector.x), abs(distanceVector.y)) < 120.0 &&
-      // ... with this thickness ...
-      (abs(distanceVector.x) < 18.0 || abs(distanceVector.y) < 18.0) &&
-      // ... leaving some free space in the middle.
-      max(abs(distanceVector.x), abs(distanceVector.y)) > 40.0
-    ));
-
   <% }) %>
+
+  // This will only have an effect in proofreading mode
+  vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
+  gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
+  gl_FragColor.a = 1.0;
+
   <% } %>
 }
 

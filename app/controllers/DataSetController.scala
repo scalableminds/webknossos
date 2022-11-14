@@ -177,7 +177,9 @@ class DataSetController @Inject()(userService: UserService,
       @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
       uploaderId: Option[String],
       @ApiParam(value = "Optional filtering: List only datasets in the folder with this id")
-      folderId: Option[String]
+      folderId: Option[String],
+      @ApiParam(value = "Optional filtering: List only datasets with names matching this search query")
+      searchQuery: Option[String]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter(isActive, (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
@@ -206,7 +208,7 @@ class DataSetController @Inject()(userService: UserService,
     ) { filter =>
       for {
         folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-        dataSets <- dataSetDAO.findAllByFolderOpt(folderIdValidated) ?~> "dataSet.list.failed"
+        dataSets <- dataSetDAO.findAllWithSearch(folderIdValidated, searchQuery) ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
         js <- listGrouped(filtered, request.identity) ?~> "dataSet.list.failed"
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))

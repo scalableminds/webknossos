@@ -163,14 +163,29 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findAllByFolderOpt(folderIdOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+  def findAllWithSearch(folderIdOpt: Option[ObjectId], searchQuery: Option[String])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt.map(folderId => s"_folder = '$folderId'").getOrElse("true")
+      searchPredicate = buildSearchPredicate(searchQuery)
       r <- run(
-        sql"select #$columns from #$existingCollectionName where #$folderPredicate and #$accessQuery".as[DatasetsRow])
+        sql"""SELECT #$columns
+              FROM #$existingCollectionName
+              WHERE #$folderPredicate
+              AND (#$searchPredicate)
+              AND #$accessQuery""".as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
+
+  private def buildSearchPredicate(searchQueryOpt: Option[String]): String = {
+    searchQueryOpt match {
+      case None => "true"
+      case Some(searchQuery) =>
+        val searchQueryFiltered = searchQuery.replaceAll("[^A-Za-z0-9_\\-. ]", "")
+        val segments = searchQueryFiltered.split(" ")
+        segments.map(queryToken => s" name LIKE '%$queryToken%' ").mkString(" AND ")
+    }
+  }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =
     for {

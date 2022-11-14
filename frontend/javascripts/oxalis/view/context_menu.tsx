@@ -734,13 +734,13 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
             disabled={!isAgglomerateMappingEnabled.value}
             onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
           >
-            {isAgglomerateMappingEnabled.value ? (
+            <Tooltip
+              title={
+                isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
+              }
+            >
               <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
-            ) : (
-              <Tooltip title={isAgglomerateMappingEnabled.reason}>
-                <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
-              </Tooltip>
-            )}
+            </Tooltip>
           </Menu.Item>,
           isAgglomerateMappingEnabled.value ? (
             <Menu.Item
@@ -748,13 +748,15 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
               disabled={!isProofreadingActive}
               onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
             >
-              {isProofreadingActive ? (
-                <span>Merge with active segment</span>
-              ) : (
-                <Tooltip title="Cannot merge because the proofreading tool is not active.">
-                  <span>Merge with active segment</span>
-                </Tooltip>
-              )}
+              <Tooltip
+                title={
+                  isProofreadingActive
+                    ? undefined
+                    : "Cannot merge because the proofreading tool is not active."
+                }
+              >
+                <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
+              </Tooltip>
             </Menu.Item>
           ) : null,
           isAgglomerateMappingEnabled.value ? (
@@ -763,13 +765,15 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
               disabled={!isProofreadingActive}
               onClick={() => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition))}
             >
-              {isProofreadingActive ? (
-                <span>Split from active segment (Min-Cut)</span>
-              ) : (
-                <Tooltip title="Cannot merge because the proofreading tool is not active.">
-                  <span>Split from active segment (Min-Cut)</span>
-                </Tooltip>
-              )}
+              <Tooltip
+                title={
+                  isProofreadingActive
+                    ? undefined
+                    : "Cannot merge because the proofreading tool is not active."
+                }
+              >
+                <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+              </Tooltip>
             </Menu.Item>
           ) : null,
         ]

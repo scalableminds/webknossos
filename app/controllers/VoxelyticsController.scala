@@ -61,7 +61,7 @@ class VoxelyticsController @Inject()(
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         // Auth is implemented in `voxelyticsDAO.findRuns`
-        runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout)
+        runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout, allowUnlisted = false)
         result <- if (runs.nonEmpty) {
           listWorkflowsWithRuns(request, runs)
         } else {
@@ -113,9 +113,15 @@ class VoxelyticsController @Inject()(
         // If all runs are fetched, a combined version of the workflow report
         // will be returned that contains the information of the most recent task runs
         runs <- runIdValidatedOpt
-          .map(runIdValidated =>
-            voxelyticsDAO.findRuns(request.identity, Some(List(runIdValidated)), Some(workflowHash), conf.staleTimeout))
-          .getOrElse(voxelyticsDAO.findRuns(request.identity, None, Some(workflowHash), conf.staleTimeout))
+          .map(
+            runIdValidated =>
+              voxelyticsDAO.findRuns(request.identity,
+                                     Some(List(runIdValidated)),
+                                     Some(workflowHash),
+                                     conf.staleTimeout,
+                                     allowUnlisted = true))
+          .getOrElse(
+            voxelyticsDAO.findRuns(request.identity, None, Some(workflowHash), conf.staleTimeout, allowUnlisted = true))
         _ <- bool2Fox(runs.nonEmpty) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
         sortedRuns = runs.sortBy(_.beginTime).reverse
         // All workflows have at least one run, because they are created at the same time

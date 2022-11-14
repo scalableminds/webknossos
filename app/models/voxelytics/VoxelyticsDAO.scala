@@ -195,9 +195,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def findRuns(currentUser: User,
                runIds: Option[List[ObjectId]],
                workflowHash: Option[String],
-               staleTimeout: Duration): Fox[List[RunEntry]] = {
+               staleTimeout: Duration,
+               allowUnlisted: Boolean): Fox[List[RunEntry]] = {
     val organizationId = currentUser._organization
-    val readAccessQ = if (currentUser.isAdmin) { "" } else { s" AND (r._user = ${escapeLiteral(currentUser._id.id)})" }
+    val readAccessQ =
+      if (currentUser.isAdmin || allowUnlisted) "" else { s" AND (r._user = ${escapeLiteral(currentUser._id.id)})" }
     val runIdsQ = runIds.map(runIds => s" AND r._id IN ${writeEscapedTuple(runIds.map(_.id))}").getOrElse("")
     val workflowHashQ =
       workflowHash.map(workflowHash => s" AND r.workflow_hash = ${escapeLiteral(workflowHash)}").getOrElse("")

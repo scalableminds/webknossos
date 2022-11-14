@@ -102,8 +102,8 @@ class FolderController @Inject()(
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
       newFolder = Folder(ObjectId.generate, name)
-      _ <- folderDAO.insertAsChild(parentIdValidated, newFolder)
-      organization <- organizationDAO.findOne(request.identity._organization)
+      _ <- folderDAO.insertAsChild(parentIdValidated, newFolder) ?~> "folder.create.failed"
+      organization <- organizationDAO.findOne(request.identity._organization) ?~> "folder.notFound"
       folderJson <- folderService.publicWrites(newFolder, Some(request.identity), Some(organization))
     } yield Ok(folderJson)
   }

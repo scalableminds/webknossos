@@ -28,7 +28,7 @@ import {
   isElementClassSupported,
   isSegmentationLayer,
   getSegmentationLayers,
-  getSegmentationLayerByNameOrFallbackName,
+  getLayerByNameOrFallbackName,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -666,12 +666,13 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 
     if (layerName === "Skeleton" && layerState.isDisabled != null) {
       Store.dispatch(setShowSkeletonsAction(!layerState.isDisabled));
-      return;
+      // The remaining options are only valid for data layers
+      continue;
     }
 
     try {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-      effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+      effectiveLayerName = getLayerByNameOrFallbackName(dataset, layerName).name;
     } catch (e) {
       console.error(e);
       Toast.error(
@@ -689,6 +690,11 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       Store.dispatch(
         updateLayerSettingAction(effectiveLayerName, "isDisabled", layerState.isDisabled),
       );
+    }
+
+    if (!isSegmentationLayer(dataset, effectiveLayerName)) {
+      // The remaining options are only valid for segmentation layers
+      continue;
     }
 
     if (layerState.mappingInfo != null) {

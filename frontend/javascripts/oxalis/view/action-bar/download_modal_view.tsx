@@ -394,7 +394,7 @@ with wk.webknossos_context(
               }}
             >
               {messages["annotation.export"]}
-              <a href="/jobs" target="_blank">
+              <a href="/jobs" target="_blank" rel="noreferrer">
                 Jobs Overview Page
               </a>
               .

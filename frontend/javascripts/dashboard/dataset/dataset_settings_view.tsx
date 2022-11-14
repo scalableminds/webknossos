@@ -312,7 +312,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         throw new Error("No datasource received from server.");
       }
 
-      if (dataset.dataSource.status != null && dataset.dataSource.status.includes("Error")) {
+      if (dataset.dataSource.status?.includes("Error")) {
         // If the datasource-properties.json could not be parsed due to schema errors,
         // we replace it with the version that is at least parsable.
         const datasetClone = _.cloneDeep(dataset) as any as MutableAPIDataset;
@@ -870,9 +870,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                         key="SimpleAdvancedDataForm"
                         datasetId={this.props.datasetId}
                         allowRenamingDataset={false}
-                        isReadOnlyDataset={
-                          this.state.dataset != null && this.state.dataset.dataStore.isConnector
-                        }
+                        isReadOnlyDataset={this.state.dataset?.dataStore.isConnector ?? false}
                         form={form}
                         activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                         onChange={(activeEditMode) => {
@@ -960,7 +958,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
+  isUserAdmin: state.activeUser?.isAdmin || false,
 });
 
 const connector = connect(mapStateToProps);

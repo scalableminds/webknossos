@@ -608,7 +608,7 @@ export function determineAllowedModes(
     : ViewModeValues;
   let preferredMode = null;
 
-  if (settings && settings.preferredMode != null) {
+  if (settings?.preferredMode != null) {
     const modeId = settings.preferredMode;
 
     if (allowedModes.includes(modeId)) {

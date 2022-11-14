@@ -15,8 +15,7 @@ export function CardContainer({
   title: string;
 }) {
   if (withoutCard) {
-    // eslint-disable-next-line react/jsx-no-useless-fragment
-    return <React.Fragment>{children}</React.Fragment>;
+    return <>{children}</>;
   } else {
     return (
       <Card

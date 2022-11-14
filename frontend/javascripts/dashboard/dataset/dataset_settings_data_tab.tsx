@@ -237,7 +237,7 @@ function SimpleDatasetForm({
                   },
                   {
                     validator: syncValidator(
-                      (value: Vector3) => value && value.every((el) => el > 0),
+                      (value: Vector3) => value?.every((el) => el > 0),
                       "Each component of the scale must be greater than 0",
                     ),
                   },
@@ -270,7 +270,6 @@ function SimpleDatasetForm({
       >
         {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
           // the layer name may change in this view, the order does not, so idx is the right key choice here
-          // eslint-disable-next-line react/no-array-index-key
           <List.Item key={`layer-${idx}`}>
             <SimpleLayerForm
               datasetId={datasetId}

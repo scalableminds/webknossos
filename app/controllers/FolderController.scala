@@ -85,9 +85,7 @@ class FolderController @Inject()(
       _ <- bool2Fox(childrenCount == 0) ?~> "folder.delete.notEmpty.children"
       _ <- bool2Fox(datasetsCount == 0) ?~> "folder.delete.notEmpty.datasets"
       _ <- folderDAO.deleteOne(idValidated)
-      updated <- folderDAO.findOne(idValidated)
-      folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
-    } yield Ok(folderJson)
+    } yield Ok
   }
 
   def getTree: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

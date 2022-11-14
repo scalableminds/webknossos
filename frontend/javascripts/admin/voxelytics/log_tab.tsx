@@ -110,7 +110,6 @@ function LogContent({
     [logText, width],
   );
 
-  // eslint-disable-next-line react/no-unused-prop-types
   function renderRow({ index, key, style }: { index: number; key: string; style: CSSProperties }) {
     return (
       <div className={`log-line log-line-${index % 2 ? "odd" : "even"}`} key={key} style={style}>

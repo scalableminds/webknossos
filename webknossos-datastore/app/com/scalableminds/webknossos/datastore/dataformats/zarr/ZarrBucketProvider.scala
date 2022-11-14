@@ -45,7 +45,8 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
         magPathOpt match {
           case None => Empty
           case Some(magPath) =>
-            tryo(onError = e => logError(e))(ZarrArray.open(magPath, zarrMag.axisOrder)).map(new ZarrCubeHandle(_))
+            tryo(onError = e => logError(e))(ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex))
+              .map(new ZarrCubeHandle(_))
         }
       }
     }

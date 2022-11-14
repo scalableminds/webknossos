@@ -24,11 +24,11 @@ class DatasetArray(relativePath: DatasetPath,
   protected val chunkReader: ChunkReader =
     ChunkReader.create(store, header)
 
-  // cache currently limited to 100 MB per array
+  // cache currently limited to 1 GB per array
   private lazy val chunkContentsCache: Cache[String, MultiArray] = {
-    val maxSizeBytes = 1000 * 1000 * 100
+    val maxSizeBytes = 1000L * 1000 * 1000
     val maxEntries = maxSizeBytes / header.bytesPerChunk
-    AlfuCache(maxEntries)
+    AlfuCache(maxEntries.toInt)
   }
 
   // @return Byte array in fortran-order with little-endian values

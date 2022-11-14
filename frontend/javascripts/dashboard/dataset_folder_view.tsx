@@ -421,7 +421,7 @@ function getFolderHierarchy(
   // Expand the parent chain of the active folder.
   if (activeFolderId != null) {
     let currentFolder = itemById[activeFolderId];
-    while (currentFolder.parent != null) {
+    while (currentFolder != null && currentFolder.parent != null) {
       currentFolder = itemById[currentFolder.parent];
       currentFolder.expanded = true;
     }

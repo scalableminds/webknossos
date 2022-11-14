@@ -89,6 +89,7 @@ Samplecountry
     Json.obj(),
     userService.createLoginInfo(userId),
     isAdmin = true,
+    isOrganizationOwner = true,
     isDatasetManager = true,
     isUnlisted = false,
     isDeactivated = false,

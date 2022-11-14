@@ -60,6 +60,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val children = List(User)
     }
 
+    object TermsOfService {
+      val enabled: Boolean = get[Boolean]("webKnossos.termsOfService.enabled")
+      val content: String = get[String]("webKnossos.termsOfService.content")
+      val version: Int = get[Int]("webKnossos.termsOfService.version")
+    }
+
     val operatorData: String = get[String]("webKnossos.operatorData")
     val children = List(User, Tasks, Cache, SampleOrganization)
   }

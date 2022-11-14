@@ -22,6 +22,8 @@ case class Organization(
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
+    lastTermsOfServiceAcceptanceTime: Option[Long] = None,
+    lastTermsOfServiceAcceptanceVersion: Int = 0,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -48,6 +50,8 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
+        r.lasttermsofserviceacceptancetime.map(_.getTime),
+        r.lasttermsofserviceacceptanceversion,
         r.created.getTime,
         r.isdeleted
       )
@@ -79,10 +83,18 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def insertOne(o: Organization): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${new java.sql.Timestamp(
-          o.created)}, ${o.isDeleted})
+      _ <- run(sqlu"""INSERT INTO webknossos.organizations(
+                        _id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList,
+                        enableAutoVerify, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion,
+                        created, isDeleted
+                      )
+                      VALUES(
+                        ${o._id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName},
+                        ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
+                        ${o.lastTermsOfServiceAcceptanceTime.map(new java.sql.Timestamp(_))},
+                        ${o.lastTermsOfServiceAcceptanceVersion},
+                        ${new java.sql.Timestamp(o.created)}, ${o.isDeleted}
+                      )
             """)
     } yield ()
 
@@ -110,6 +122,18 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       _ <- run(sqlu"""update webknossos.organizations
                       set displayName = $displayName, newUserMailingList = $newUserMailingList
                       where _id = $organizationId""")
+    } yield ()
+
+  def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Long)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(organizationId)
+      _ <- run(sqlu"""UPDATE webknossos.organizations
+                      SET
+                        lastTermsOfServiceAcceptanceTime = ${new java.sql.Timestamp(timestamp)},
+                        lastTermsOfServiceAcceptanceVersion = $version
+                      WHERE _id = $organizationId
+                   """)
     } yield ()
 
 }

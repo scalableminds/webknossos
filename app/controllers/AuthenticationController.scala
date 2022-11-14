@@ -103,7 +103,9 @@ class AuthenticationController @Inject()(
                                            firstName,
                                            lastName,
                                            autoActivate,
-                                           passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
+                                           passwordHasher.hash(signUpData.password),
+                                           isAdmin = false,
+                                           isOrganizationOwner = false) ?~> "user.creation.failed"
                 multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
                 _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
                 _ <- Fox.runOptional(inviteBox.toOption)(i =>
@@ -495,7 +497,8 @@ class AuthenticationController @Inject()(
                                                lastName,
                                                isActive = true,
                                                passwordHasher.hash(signUpData.password),
-                                               isAdmin = true) ?~> "user.creation.failed"
+                                               isAdmin = true,
+                                               isOrganizationOwner = true) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)
                     dataStoreToken <- bearerTokenAuthenticatorService

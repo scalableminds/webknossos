@@ -80,6 +80,24 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     Ok(Json.toJson(conf.WebKnossos.operatorData))
   }
 
+  def getTermsOfService: Action[AnyContent] = Action {
+    Ok(
+      Json.obj(
+        "version" -> conf.WebKnossos.TermsOfService.version,
+        "enabled" -> conf.WebKnossos.TermsOfService.enabled,
+        "content" -> conf.WebKnossos.TermsOfService.content
+      ))
+  }
+
+  def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"
+      _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      _ <- bool2Fox(version == conf.WebKnossos.TermsOfService.version) ?~> "termsOfService.versionMismatch"
+      _ <- organizationDAO.acceptTermsOfService(request.identity._organization, version, System.currentTimeMillis())
+    } yield Ok
+  }
+
   def update(organizationName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(organizationUpdateReads) {
       case (displayName, newUserMailingList) =>

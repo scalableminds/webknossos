@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{
 }
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
-import com.scalableminds.webknossos.datastore.models.datasource.Category
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -68,7 +68,9 @@ class NgffExplorer extends RemoteLayerExplorer {
           magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
             zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials, Some(channelIndex)))
           _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
-          elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
+          elementClassRaw <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
+          elementClass = if (isSegmentation) ensureElementClassForSegmentationLayer(elementClassRaw)
+          else elementClassRaw
           boundingBox = boundingBoxFromMags(magsWithAttributes)
           layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass) || isSegmentation) {
             ZarrSegmentationLayer(name,
@@ -102,6 +104,15 @@ class NgffExplorer extends RemoteLayerExplorer {
       }
 
     } yield layerTuples.flatten
+
+  private def ensureElementClassForSegmentationLayer(e: ElementClass.Value) =
+    e match {
+      case ElementClass.int8  => ElementClass.uint8
+      case ElementClass.int16 => ElementClass.uint16
+      case ElementClass.int32 => ElementClass.uint32
+      case ElementClass.int64 => ElementClass.uint64
+      case _                  => e
+    }
 
   private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,
                                      layerPath: Path,

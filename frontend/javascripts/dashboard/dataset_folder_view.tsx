@@ -135,10 +135,9 @@ function DatasetDetailsSidebar({
     <div style={{ width: 300, padding: 16 }}>
       {selectedDataset != null ? (
         <>
-          <h1 style={{ wordBreak: "break-all" }}>
+          <h2 style={{ wordBreak: "break-all" }}>
             {selectedDataset.displayName || selectedDataset.name}
-          </h1>
-          Description: {selectedDataset.description}
+          </h2>
           {selectedDataset.isActive && (
             <div className="info-tab-block">
               <table
@@ -152,11 +151,17 @@ function DatasetDetailsSidebar({
               </table>
             </div>
           )}
+          {selectedDataset.description && (
+            <div style={{ marginBottom: 12 }}>Description: {selectedDataset.description}</div>
+          )}
           <div>
-            Access Permissions: <TeamTags dataset={selectedDataset} emptyValue="default" />
+            Access Permissions:
+            <br />
+            <TeamTags dataset={selectedDataset} emptyValue="default" />
           </div>
           <div>
-            Layers: <DatasetLayerTags dataset={selectedDataset} />
+            Layers:
+            <br /> <DatasetLayerTags dataset={selectedDataset} />
           </div>
           {selectedDataset.isActive ? (
             <div>

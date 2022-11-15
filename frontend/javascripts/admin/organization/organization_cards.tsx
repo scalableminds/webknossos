@@ -12,7 +12,11 @@ import moment from "moment";
 import React from "react";
 import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
-import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
+import {
+  powerPlanFeatures,
+  storageWarningThresholdMB,
+  teamPlanFeatures,
+} from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 export function PlanUpgradeCard({ organization }: { organization: APIOrganization }) {
@@ -39,6 +43,8 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       title={title}
       style={{
         marginBottom: 20,
+      }}
+      bodyStyle={{
         background:
           "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/pricing/background_neuron_meshes.jpeg) 10% center / 120% no-repeat",
         color: "white",
@@ -200,7 +206,7 @@ export function PlanDashboardCard({
       <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
         <Col>
           <Card actions={upgradeUsersAction}>
-            <Row style={{ padding: 20 }}>
+            <Row style={{ padding: "20px 35px" }}>
               <Progress
                 type="dashboard"
                 percent={usedUsersPercentage}
@@ -214,7 +220,7 @@ export function PlanDashboardCard({
         </Col>
         <Col>
           <Card actions={upgradeStorageAction}>
-            <Row style={{ padding: 20 }}>
+            <Row style={{ padding: "20px 35px" }}>
               <Progress
                 type="dashboard"
                 percent={usedStoragePercentage}
@@ -228,7 +234,7 @@ export function PlanDashboardCard({
         </Col>
         <Col>
           <Card actions={upgradePlanAction}>
-            <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 35px" }}>
+            <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 65px" }}>
               <h3>{organization.pricingPlan}</h3>
             </Row>
             <Row justify="center">Current Plan</Row>
@@ -285,7 +291,6 @@ export function PlanAboutToExceedWarning({
   const isAboutToExpire =
     moment.duration(moment(organization.paidUntil).diff(moment())).asWeeks() <= 6;
 
-  const storageWarningThresholdMB = PricingPlanEnum.Free ? 5000 : 10000;
   const isAboutToExceedStorage =
     usedStorageSpace >= organization.includedStorage - storageWarningThresholdMB;
 

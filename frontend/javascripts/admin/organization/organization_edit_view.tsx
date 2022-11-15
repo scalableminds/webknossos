@@ -4,8 +4,8 @@ import {
   MailOutlined,
   TagOutlined,
   CopyOutlined,
-  KeyOutlined,
   SaveOutlined,
+  IdcardOutlined,
 } from "@ant-design/icons";
 import React from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -111,6 +111,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       formValues.displayName,
       formValues.newUserMailingList,
     );
+    Toast.success("Organization settings were saved successfully.");
   };
 
   handleDeleteButtonClicked = async (): Promise<void> => {
@@ -139,7 +140,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
 
   handleCopyNameButtonClicked = async (): Promise<void> => {
     await navigator.clipboard.writeText(this.props.organizationName);
-    Toast.success("Organization name copied to clipboard");
+    Toast.success("Copied organization name to the clipboard.");
   };
 
   render() {
@@ -195,7 +196,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             <FormItem label="Organization ID">
               <Input.Group compact>
                 <Input
-                  prefix={<KeyOutlined />}
+                  prefix={<IdcardOutlined />}
                   value={this.props.organizationName}
                   style={{
                     width: "calc(100% - 31px)",

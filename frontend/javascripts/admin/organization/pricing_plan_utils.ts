@@ -1,4 +1,5 @@
 import { APIUser } from "types/api_flow_types";
+import { PricingPlanEnum } from "./organization_edit_view";
 
 export const teamPlanFeatures = [
   "Collaborative Annotation",
@@ -17,6 +18,7 @@ export const powerPlanFeatures = [
 ];
 
 export const maxInludedUsersInFreePlan = 3;
+export const storageWarningThresholdMB = PricingPlanEnum.Free ? 5000 : 10000;
 
 export function getActiveUserCount(users: APIUser[]): number {
   return users.filter((user) => user.isActive && !user.isSuperUser).length;

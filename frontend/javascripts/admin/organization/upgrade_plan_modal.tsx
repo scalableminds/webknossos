@@ -191,6 +191,6 @@ function upgradePricingPlan(organization: APIOrganization) {
 export default {
   upgradePricingPlan,
   extendPricingPlan,
-  UpgradeUserQuota: upgradeUserQuota,
+  upgradeUserQuota,
   upgradeStorageQuota,
 };

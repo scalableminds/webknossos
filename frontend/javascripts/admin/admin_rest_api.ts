@@ -1020,6 +1020,7 @@ export async function downsampleSegmentation(
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
+  searchQuery: string | null = null,
 ): Promise<Array<APIMaybeUnimportedDataset>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
@@ -1027,6 +1028,9 @@ export async function getDatasets(
   }
   if (folderId != null) {
     params.append("folderId", folderId);
+  }
+  if (searchQuery != null) {
+    params.append("searchQuery", searchQuery);
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);

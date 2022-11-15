@@ -324,20 +324,20 @@ function HelpSubMenu({
       {...other}
     >
       <Menu.Item key="user-documentation">
-        <a target="_blank" href="https://docs.webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="https://docs.webknossos.org" rel="noreferrer noopener">
           User Documentation
         </a>
       </Menu.Item>
       {(!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
       features().discussionBoard !== false ? (
         <Menu.Item key="discussion-board">
-          <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
+          <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
             Community Support
           </a>
         </Menu.Item>
       ) : null}
       <Menu.Item key="frontend-api">
-        <a target="_blank" href="/assets/docs/frontend-api/index.html">
+        <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
           Frontend API Documentation
         </a>
       </Menu.Item>

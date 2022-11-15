@@ -217,7 +217,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             })}
           </tbody>
         </table>
-        {this.state.currentAnnotation && this.state.currentAnnotation.owner ? (
+        {this.state.currentAnnotation?.owner ? (
           <TransferTaskModal
             visible={this.state.isTransferModalVisible}
             annotationId={this.state.currentAnnotation.id}

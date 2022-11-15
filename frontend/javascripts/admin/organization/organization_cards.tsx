@@ -9,6 +9,7 @@ import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import { useFetch } from "libs/react_helpers";
 import moment from "moment";
+import Constants from "oxalis/constants";
 import React from "react";
 import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
@@ -80,7 +81,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
 }
 
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
-  if (organization.pricingPlan === PricingPlanEnum.Free) return null;
+  if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
 
   return (
     <Card style={{ marginBottom: 20 }}>
@@ -129,8 +130,8 @@ export function PlanDashboardCard({
 
   let includedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Free
-      ? `${(organization.includedStorage / 1000).toFixed(1)}GB`
-      : `${(organization.includedStorage / 1000 ** 2).toFixed(1)}TB`;
+      ? `${(organization.includedStorage / 1000).toFixed(0)}GB`
+      : `${(organization.includedStorage / 1000 ** 2).toFixed(0)}TB`;
   includedStorageLabel =
     organization.includedStorage === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
 
@@ -234,7 +235,7 @@ export function PlanDashboardCard({
         </Col>
         <Col>
           <Card actions={upgradePlanAction}>
-            <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 35px" }}>
+            <Row justify="center" align="middle" style={{ minHeight: 160, width: 188 }}>
               <h3>{organization.pricingPlan}</h3>
             </Row>
             <Row justify="center">Current Plan</Row>

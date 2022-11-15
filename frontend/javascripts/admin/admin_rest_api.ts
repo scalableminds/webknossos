@@ -67,7 +67,7 @@ import type {
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
-import { ControlModeEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   PartialDatasetConfiguration,
@@ -1891,6 +1891,7 @@ export async function getOrganization(organizationName: string): Promise<APIOrga
   const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
   return {
     ...organization,
+    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
     includedStorage: organization.includedStorage ?? Number.POSITIVE_INFINITY,
     includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
   };
@@ -1949,8 +1950,8 @@ export async function isWorkflowAccessibleBySwitching(
 export async function getOrganizationStorageSpace(
   _organizationName: string,
 ): Promise<APIOrganizationStorageInfo> {
-  // TODO switch to a real API
-  const usedStorageMB = 900;
+  // TODO switch to a real API. See PR #6614
+  const usedStorageMB = 0;
   return Promise.resolve({ usedStorageSpace: usedStorageMB });
 }
 

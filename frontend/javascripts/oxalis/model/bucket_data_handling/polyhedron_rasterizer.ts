@@ -311,13 +311,15 @@ class PolyhedronRasterizer {
       x += incX;
 
       switch (mode) {
-        case 0:
+        case 0: {
           drawFunction(x, y, z, buffer, shiftZ);
           break;
+        }
 
-        case 1:
+        case 1: {
           drawFunction(y, x, z, buffer, shiftZ);
           break;
+        }
 
         default:
           drawFunction(z, y, x, buffer, shiftZ);

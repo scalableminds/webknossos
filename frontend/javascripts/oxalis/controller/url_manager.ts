@@ -2,7 +2,11 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getSkeletonTracing,
+  getActiveNode,
+  enforceSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState, MappingType, IsosurfaceInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
@@ -46,6 +50,7 @@ export type UrlStateByLayer = Record<
       connectomeName: string;
       agglomerateIdsToImport?: Array<number>;
     };
+    isDisabled?: boolean;
   }
 >;
 
@@ -69,7 +74,7 @@ function mapIsosurfaceInfoToUrlMeshDescriptor(
 
 // If the type of UrlManagerState changes, the following files need to be updated:
 // docs/sharing.md#sharing-link-format
-// frontend/javascripts/types/schemas/url_state.schema.js
+// frontend/javascripts/types/schemas/url_state.schema.ts
 export type UrlManagerState = {
   position?: Vector3;
   mode?: ViewMode;
@@ -91,8 +96,7 @@ class UrlManager {
     this.initialState = this.parseUrlHash();
   }
 
-  // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-  reset(keepUrlState?: boolean = false): void {
+  reset(keepUrlState: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
@@ -254,6 +258,29 @@ class UrlManager {
           },
         };
       }
+    }
+
+    for (const layerName of Object.keys(state.datasetConfiguration.layers)) {
+      const layerConfiguration = state.datasetConfiguration.layers[layerName];
+
+      if (layerConfiguration != null) {
+        stateByLayer[layerName] = {
+          ...stateByLayer[layerName],
+          isDisabled: layerConfiguration.isDisabled,
+        };
+      }
+    }
+
+    const tracing = state.tracing;
+    if (tracing.skeleton != null) {
+      const skeletonTracing = enforceSkeletonTracing(tracing);
+      const { showSkeletons } = skeletonTracing;
+      const layerName = "Skeleton";
+
+      stateByLayer[layerName] = {
+        ...stateByLayer[layerName],
+        isDisabled: !showSkeletons,
+      };
     }
 
     const stateByLayerOptional =

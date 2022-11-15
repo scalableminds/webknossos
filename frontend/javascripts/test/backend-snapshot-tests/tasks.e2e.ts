@@ -78,9 +78,9 @@ test.serial("transferTask()", async (t) => {
   const userId = "570b9f4d2a7c0e4d008da6ef";
   const newUserId = "670b9f4d2a7c0e4d008da6ef";
   const transferredAnnotation = await api.transferTask(taskAnnotationId, newUserId);
-  t.is(transferredAnnotation.owner && transferredAnnotation.owner.id, newUserId);
+  t.is(transferredAnnotation.owner?.id, newUserId);
   const revertedTask = await api.transferTask(transferredAnnotation.id, userId);
-  t.is(revertedTask.owner && revertedTask.owner.id, userId);
+  t.is(revertedTask.owner?.id, userId);
 });
 const newTask = {
   boundingBox: null,

@@ -91,7 +91,6 @@ const { SubMenu } = Menu;
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
 
-/* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {
   contextMenuPosition: [number, number] | null | undefined;
@@ -141,7 +140,6 @@ type NodeContextMenuOptionsProps = Props & {
   infoRows: Array<React.ReactNode>;
 };
 
-/* eslint-enable react/no-unused-prop-types */
 type NoNodeContextMenuProps = Props & {
   viewport: OrthoView;
   segmentIdAtPosition: number;

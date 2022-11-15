@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { take } from "typed-redux-saga";

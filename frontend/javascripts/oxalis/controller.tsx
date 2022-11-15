@@ -53,7 +53,6 @@ type State = {
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
-  // eslint-disable-next-line react/no-unused-class-component-methods
   keyboardNoLoop: InputKeyboardNoLoop;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isMounted' has no initializer and is not... Remove this comment to see the full error message
   isMounted: boolean;
@@ -196,7 +195,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     // script assigned to the task
     const { task } = Store.getState();
 
-    if (task != null && task.script != null) {
+    if (task?.script != null) {
       const { script } = task;
       const content = await fetchGistContent(script.gist, script.name);
 
@@ -305,7 +304,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       },
     });
 
-    // eslint-disable-next-line react/no-unused-class-component-methods
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 

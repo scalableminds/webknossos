@@ -16,7 +16,7 @@ class Persistence<T extends Record<string, any>> {
   load(history: RouteComponentProps["history"]): Partial<T> {
     const locationState = history.location.state as Record<string, T>;
 
-    if (locationState != null && locationState[this.name] != null) {
+    if (locationState?.[this.name] != null) {
       console.log(
         "Try to restore persisted history state of component with this.name:",
         this.name,

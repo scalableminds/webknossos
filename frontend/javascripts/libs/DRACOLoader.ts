@@ -1,5 +1,4 @@
 // @ts-nocheck
-/* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
 // Copied from node_modules/three/examples/jsm/loaders/DRACOLoader.js to fix ERR_REQUIRE_ESM error.
 import { BufferAttribute, BufferGeometry, FileLoader, Loader } from "three";

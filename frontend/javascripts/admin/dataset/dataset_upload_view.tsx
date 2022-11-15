@@ -718,7 +718,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   },
                   {
                     validator: syncValidator(
-                      (value: Vector3) => value && value.every((el) => el > 0),
+                      (value: Vector3) => value?.every((el) => el > 0),
                       "Each component of the scale must be larger than 0.",
                     ),
                   },

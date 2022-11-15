@@ -607,7 +607,7 @@ export function filterWithSearchQueryOR<
 
         if (value != null && (typeof value === "string" || value instanceof Object)) {
           const recursiveValues = getRecursiveValues(value);
-          return _.some(recursiveValues, (v) => v != null && v.toString().match(regexp));
+          return _.some(recursiveValues, (v) => v?.toString().match(regexp));
         } else {
           return false;
         }
@@ -642,7 +642,7 @@ export function filterWithSearchQueryAND<
 
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
             const recursiveValues = getRecursiveValues(value);
-            return _.some(recursiveValues, (v) => v != null && v.toString().match(pattern));
+            return _.some(recursiveValues, (v) => v?.toString().match(pattern));
           } else {
             return false;
           }

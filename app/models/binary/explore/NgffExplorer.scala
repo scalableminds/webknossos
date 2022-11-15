@@ -83,29 +83,33 @@ class NgffExplorer extends RemoteLayerExplorer {
       })
     } yield layerTuples
 
-  def exploreLabelLayers(remotePath: Path,
-                         credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  private def exploreLabelLayers(remotePath: Path,
+                                 credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       labelDescriptionPath <- Fox.successful(remotePath.resolve(NgffLabelsGroup.LABEL_PATH))
       labelGroup <- parseJsonFromPath[NgffLabelsGroup](labelDescriptionPath)
       layerTuples <- Fox.serialCombined(labelGroup.labels) { labelPath =>
-        for {
-          fullLabelPath <- Fox.successful(remotePath.resolve("labels").resolve(labelPath))
-          zattrsPath <- Fox.successful(fullLabelPath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS))
-          ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-          layers: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(
-            multiscale =>
-              layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
-                                       fullLabelPath,
-                                       credentials,
-                                       1,
-                                       isSegmentation = true))
-        } yield layers.flatten
+        layersForLabel(remotePath, labelPath, credentials)
       }
-
     } yield layerTuples.flatten
 
-  private def ensureElementClassForSegmentationLayer(e: ElementClass.Value) =
+  private def layersForLabel(remotePath: Path,
+                                labelPath: String,
+                                credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
+    for {
+      fullLabelPath <- Fox.successful(remotePath.resolve("labels").resolve(labelPath))
+      zattrsPath = fullLabelPath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS)
+      ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
+      layers: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(
+        multiscale =>
+          layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
+                                   fullLabelPath,
+                                   credentials,
+                                   1,
+                                   isSegmentation = true))
+    } yield layers.flatten
+
+  private def ensureElementClassForSegmentationLayer(e: ElementClass.Value): ElementClass.Value =
     e match {
       case ElementClass.int8  => ElementClass.uint8
       case ElementClass.int16 => ElementClass.uint16

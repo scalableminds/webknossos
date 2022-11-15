@@ -243,7 +243,7 @@ function PlanExceededAlert({ organization }: { organization: APIOrganization }) 
   const hasPlanExpired = Date.now() > organization.paidUntil;
 
   const message = hasPlanExpired
-    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded and lose access to features and prevent users from being blocked."
+    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
     : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account from being blocked.";
   const actionButton = hasPlanExpired ? (
     <Button

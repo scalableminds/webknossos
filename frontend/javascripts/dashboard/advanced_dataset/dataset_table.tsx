@@ -139,9 +139,6 @@ const DraggableDatasetRow = ({
   const datasetName = restProps["data-row-key"];
   const [, drag] = useDrag({
     item: { type: DraggableDatasetType, index, datasetName },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
   });
   drag(ref);
 

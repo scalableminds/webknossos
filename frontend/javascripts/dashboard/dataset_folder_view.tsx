@@ -488,7 +488,7 @@ function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () 
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"
-            label="Allowed Teams"
+            label="Access Permissions"
             info="Teams which may access this folder"
           >
             <TeamSelectionComponent mode="multiple" allowNonEditableTeams />

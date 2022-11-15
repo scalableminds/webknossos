@@ -372,7 +372,7 @@ function renderPlaceholder(context: DatasetCacheContextValue, user: APIUser) {
 
   const uploadPlaceholder = (
     <OptionCard
-      header="Upload Dataset"
+      header="Import Dataset"
       icon={<CloudUploadOutlined />}
       action={
         <Link to="/datasets/upload">
@@ -381,15 +381,15 @@ function renderPlaceholder(context: DatasetCacheContextValue, user: APIUser) {
       }
       height={350}
     >
-      webKnossos supports a variety of{" "}
+      webKnossos supports a variety of (remote){" "}
       <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and is
       also able to convert them when necessary.
     </OptionCard>
   );
 
   const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
-    ? "There are no datasets in this folder. Upload one or try a public demo dataset."
-    : "There are no datasets in this folder. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
+    ? "There are no datasets in this folder. Import one or try a public demo dataset."
+    : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets.";
 
   return context.isLoading ? null : (
     <Row

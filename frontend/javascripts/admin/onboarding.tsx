@@ -247,15 +247,7 @@ export class InviteUsersModal extends React.Component<
 
   sendInvite = async () => {
     const addresses = this.extractEmailAddresses();
-    // const incorrectAddresses = addresses.filter((address) => !address.includes("@"));
-
-    // if (incorrectAddresses.length > 0) {
-    //   Toast.error(
-    //     `Couldn't recognize this email address: ${incorrectAddresses[0]}. No emails were sent.`,
-    //   );
-    //   return;
-    // }
-
+   
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
     this.setState({

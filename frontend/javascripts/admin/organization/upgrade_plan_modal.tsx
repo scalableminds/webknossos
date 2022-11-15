@@ -37,10 +37,12 @@ function extendPricingPlan(organization: APIOrganization) {
         }}
       >
         <p style={{ marginRight: "30%" }}>
-          Extend your plan now for uninterrupted access to webKnossos. Expired plans will be
-          downgraded to the Free plan and you might lose access to some webKnossos features and see
-          restrictions on the number of permitted user accounts and your included storage space
-          quota.
+          Extend your plan now for uninterrupted access to webKnossos.
+        </p>
+        <p style={{ marginRight: "30%" }}>
+          Expired plans will be downgraded to the Free plan and you might lose access to some
+          webKnossos features and see restrictions on the number of permitted user accounts and your
+          included storage space quota.
         </p>
         <p>
           Your current plan is paid until:{" "}
@@ -65,15 +67,15 @@ function upgradeUserQuota() {
 function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<HTMLInputElement | null>(null);
 
-  function handleUserUpgrade() {
+  const handleUserUpgrade = async () => {
     if (userInputRef.current) {
       const requestedUsers = parseInt(userInputRef.current.value);
-      sendUpgradePricingPlanUserEmail(requestedUsers);
+      await sendUpgradePricingPlanUserEmail(requestedUsers);
       Toast.success("An email with your request has been send to the webKnossos team.");
     }
 
     destroy();
-  }
+  };
 
   return (
     <Modal
@@ -120,10 +122,10 @@ function upgradeStorageQuota() {
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
   const storageInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleStorageUpgrade = () => {
+  const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
       const requestedStorage = parseInt(storageInputRef.current.value);
-      sendUpgradePricingPlanStorageEmail(requestedStorage);
+      await sendUpgradePricingPlanStorageEmail(requestedStorage);
       Toast.success("An email with your request has been send to the webKnossos team.");
     }
 

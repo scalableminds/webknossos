@@ -286,7 +286,7 @@ export class InviteUsersModal extends React.Component<
       <React.Fragment>
         <p>
           Send an email to invite your colleagues and collaboration partners to your organization.
-          Share dataset, collaboratively work on annotations, and organize complex analysis
+          Share datasets, collaboratively work on annotations, and organize complex analysis
           projects.
         </p>
         <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>

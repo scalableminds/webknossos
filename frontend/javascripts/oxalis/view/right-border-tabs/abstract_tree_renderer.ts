@@ -48,8 +48,7 @@ class AbstractTreeRenderer {
     canvas: HTMLCanvasElement,
     tree: Tree | null | undefined,
     activeNodeId: number | null | undefined,
-    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-    size?: Vector2 = [450, 600],
+    size: Vector2 = [450, 600],
   ) {
     const renderer = new AbstractTreeRenderer(canvas);
 

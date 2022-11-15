@@ -234,7 +234,7 @@ export function PlanDashboardCard({
         </Col>
         <Col>
           <Card actions={upgradePlanAction}>
-            <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 65px" }}>
+            <Row justify="center" align="middle" style={{ minHeight: 160, padding: "25px 35px" }}>
               <h3>{organization.pricingPlan}</h3>
             </Row>
             <Row justify="center">Current Plan</Row>

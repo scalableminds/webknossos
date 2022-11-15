@@ -17,6 +17,8 @@ import {
 } from "admin/admin_rest_api";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./organization_edit_view";
+import renderIndependently from "libs/render_independently";
+import Toast from "libs/toast";
 
 function extendPricingPlan(organization: APIOrganization) {
   const extendedDate = moment(organization.paidUntil).add(1, "year");
@@ -57,24 +59,39 @@ function extendPricingPlan(organization: APIOrganization) {
 }
 
 function upgradeUserQuota() {
+  renderIndependently((destroyCallback) => <UpgradeUserQuotaModal destroy={destroyCallback} />);
+}
+
+function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<HTMLInputElement | null>(null);
 
   function handleUserUpgrade() {
-    const requestedUsers = userInputRef.current?.value;
-    sendUpgradePricingPlanUserEmail(requestedUsers);
+    if (userInputRef.current) {
+      const requestedUsers = parseInt(userInputRef.current.value);
+      sendUpgradePricingPlanUserEmail(requestedUsers);
+      Toast.success("An email with your request has been send to the webKnossos team.");
+    }
+
+    destroy();
   }
 
-  Modal.confirm({
-    title: "Upgrade User Quota",
-    okText: "Request More Users",
-    onOk: handleUserUpgrade,
-    icon: <UserAddOutlined style={{ color: "var(--ant-primary-color)" }} />,
-    width: 1000,
-    content: (
+  return (
+    <Modal
+      title={
+        <>
+          <UserAddOutlined style={{ color: "var(--ant-primary-color)" }} /> Upgrade User Quota
+        </>
+      }
+      okText={"Request More Users"}
+      onOk={handleUserUpgrade}
+      onCancel={destroy}
+      width={800}
+      visible
+    >
       <div
         style={{
           background:
-            "right -50px / 35% no-repeat url(/assets/images/pricing/background_users.jpeg)",
+            "right -40px / 35% no-repeat url(/assets/images/pricing/background_users.jpeg)",
         }}
       >
         <p style={{ marginRight: "30%" }}>
@@ -93,27 +110,39 @@ function upgradeUserQuota() {
           <a href="https://webknossos.org/faq">FAQ</a> for more information.
         </p>
       </div>
-    ),
-  });
+    </Modal>
+  );
 }
 
 function upgradeStorageQuota() {
+  renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
+}
+function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
   const storageInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleStorageUpgrade = () => {
     if (storageInputRef.current) {
       const requestedStorage = parseInt(storageInputRef.current.value);
       sendUpgradePricingPlanStorageEmail(requestedStorage);
+      Toast.success("An email with your request has been send to the webKnossos team.");
     }
+
+    destroy();
   };
 
-  Modal.confirm({
-    title: "Upgrade Storage Space",
-    okText: "Request More Storage Space",
-    onOk: handleStorageUpgrade,
-    icon: <DatabaseOutlined style={{ color: "var(--ant-primary-color)" }} />,
-    width: 1000,
-    content: (
+  return (
+    <Modal
+      title={
+        <>
+          <DatabaseOutlined style={{ color: "var(--ant-primary-color)" }} /> Upgrade Storage Space
+        </>
+      }
+      okText={"Request More Storage Space"}
+      onOk={handleStorageUpgrade}
+      onCancel={destroy}
+      width={800}
+      visible
+    >
       <div
         style={{
           background:
@@ -136,8 +165,8 @@ function upgradeStorageQuota() {
           <a href="https://webknossos.org/faq">FAQ</a> for more information.
         </p>
       </div>
-    ),
-  });
+    </Modal>
+  );
 }
 
 function upgradePricingPlan(organization: APIOrganization) {

@@ -1001,7 +1001,7 @@ export function diffObjects(
 }
 
 export function coalesce<T>(obj: { [key: string]: T }, field: T): T | null {
-  if (obj && typeof obj === "object" && (field in obj || field in Object.values(obj))) {
+  if (obj && typeof obj === "object" && (field in obj || Object.values(obj).includes(field))) {
     return field;
   }
   return null;

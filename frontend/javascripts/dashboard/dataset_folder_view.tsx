@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
 import { Menu, Dropdown, Spin, Modal, Input, Form } from "antd";
 import Toast from "libs/toast";
@@ -245,6 +245,7 @@ function generateNodeProps(
           folderId={id}
           isEditable={isEditable}
         >
+          <FolderOutlined />
           {title}
         </FolderItemAsDropTarget>
       </Dropdown>

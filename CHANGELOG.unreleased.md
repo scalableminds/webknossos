@@ -27,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Re-phrased some backend (error) messages to improve clarity and provide helping hints. [#6616](https://github.com/scalableminds/webknossos/pull/6616)
 - The layer visibility is now encoded in the sharing link. The user opening the link will see the same layers that were visible when copying the link. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
 - Voxelytics workflows can now be viewed by anyone with the link who is in the right organization. [#6622](https://github.com/scalableminds/webknossos/pull/6622)
+- Reworked the proofreading mode so that agglomerate skeletons are no longer needed (nor automatically loaded). Instead, segments can be selected by left-clicking onto them, indicated by a small white cross. To merge or split agglomerates, then either use the shortcuts `Shift + Leftclick`/`Ctrl + Leftclick` or use the context menu. [#6625](https://github.com/scalableminds/webknossos/pull/6625)
  
 ### Fixed
 - Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)

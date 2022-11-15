@@ -94,14 +94,15 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(request.identity._organization)
       needsAcceptance = conf.WebKnossos.TermsOfService.enabled &&
         organization.lastTermsOfServiceAcceptanceVersion < conf.WebKnossos.TermsOfService.version
-    } yield Ok(Json.toJson(needsAcceptance))
+    } yield Ok(Json.obj("acceptanceNeeded" -> needsAcceptance))
   }
 
   def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"
       _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
-      _ <- bool2Fox(version == conf.WebKnossos.TermsOfService.version) ?~> "termsOfService.versionMismatch"
+      requiredVersion = conf.WebKnossos.TermsOfService.version
+      _ <- bool2Fox(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
       _ <- organizationDAO.acceptTermsOfService(request.identity._organization, version, System.currentTimeMillis())
     } yield Ok
   }

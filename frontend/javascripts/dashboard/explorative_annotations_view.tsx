@@ -49,6 +49,8 @@ import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import TextWithDescription from "components/text_with_description";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -755,44 +757,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const marginRight = {
-      marginRight: 8,
-    };
-    const search = (
-      <Search
-        style={{
-          width: 200,
-          float: "right",
-        }}
-        onPressEnter={this.handleSearchPressEnter}
-        onChange={this.handleSearch}
-        value={this.state.searchQuery}
-      />
-    );
     return (
       <div className="TestExplorativeAnnotationsView">
-        {this.props.isAdminView ? (
-          search
-        ) : (
-          <div className="pull-right">
-            <Button
-              icon={<UploadOutlined />}
-              style={marginRight}
-              onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
-            >
-              Upload Annotation(s)
-            </Button>
-            <Button onClick={this.toggleShowArchived} style={marginRight}>
-              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
-            </Button>
-            {!this.state.shouldShowArchivedTracings ? (
-              <Button onClick={this.archiveAll} style={marginRight}>
-                Archive All
-              </Button>
-            ) : null}
-            {search}
-          </div>
-        )}
+        <TopBar
+          isAdminView={this.props.isAdminView}
+          handleSearchPressEnter={this.handleSearchPressEnter}
+          handleSearch={this.handleSearch}
+          searchQuery={this.state.searchQuery}
+          toggleShowArchived={this.toggleShowArchived}
+          shouldShowArchivedTracings={this.state.shouldShowArchivedTracings}
+          archiveAll={this.archiveAll}
+        />
         {this.renderSearchTags()}
         <div
           className="clearfix"
@@ -820,6 +795,73 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       </div>
     );
   }
+}
+
+function TopBar({
+  isAdminView,
+  handleSearchPressEnter,
+  handleSearch,
+  searchQuery,
+  toggleShowArchived,
+  shouldShowArchivedTracings,
+  archiveAll,
+}: {
+  isAdminView: boolean;
+  handleSearchPressEnter: (event: React.SyntheticEvent) => void;
+  handleSearch: (event: React.SyntheticEvent) => void;
+  searchQuery: string;
+  toggleShowArchived: () => void;
+  shouldShowArchivedTracings: boolean;
+  archiveAll: () => void;
+}) {
+  const activeTab = React.useContext(ActiveTabContext);
+  const renderingTab = React.useContext(RenderingTabContext);
+
+  if (activeTab !== renderingTab) {
+    return null;
+  }
+
+  const marginRight = {
+    marginRight: 8,
+  };
+  const search = (
+    <Search
+      style={{
+        width: 200,
+        float: "right",
+      }}
+      onPressEnter={handleSearchPressEnter}
+      onChange={handleSearch}
+      value={searchQuery}
+    />
+  );
+
+  return (
+    <RenderToPortal portalId={"dashboard-TabBarExtraContent"}>
+      {isAdminView ? (
+        search
+      ) : (
+        <div className="pull-right">
+          <Button
+            icon={<UploadOutlined />}
+            style={marginRight}
+            onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
+          >
+            Upload Annotation(s)
+          </Button>
+          <Button onClick={toggleShowArchived} style={marginRight}>
+            Show {shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
+          </Button>
+          {!shouldShowArchivedTracings ? (
+            <Button onClick={archiveAll} style={marginRight}>
+              Archive All
+            </Button>
+          ) : null}
+          {search}
+        </div>
+      )}
+    </RenderToPortal>
+  );
 }
 
 export default withRouter<RouteComponentProps & Props, any>(ExplorativeAnnotationsView);

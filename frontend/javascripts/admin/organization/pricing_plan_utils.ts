@@ -16,6 +16,8 @@ export const powerPlanFeatures = [
   "Everything from Team and Free plans",
 ];
 
+export const maxInludedUsersInFreePlan = 3;
+
 export function getActiveUserCount(users: APIUser[]): number {
   return users.filter((user) => user.isActive && !user.isSuperUser).length;
 }

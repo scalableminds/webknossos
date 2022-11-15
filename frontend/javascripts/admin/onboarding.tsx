@@ -14,7 +14,7 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { RouteComponentProps, withRouter } from "react-router-dom";
+import { Link, RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -27,6 +27,7 @@ import RegistrationForm from "admin/auth/registration_form";
 import CreditsFooter from "components/credits_footer";
 import Toast from "libs/toast";
 import features from "features";
+import { maxInludedUsersInFreePlan } from "./organization/pricing_plan_utils";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -222,6 +223,7 @@ export class InviteUsersModal extends React.Component<
     visible?: boolean;
     handleVisibleChange?: (...args: Array<any>) => any;
     destroy?: (...args: Array<any>) => any;
+    organizationName: string;
     currentUserCount: number;
     maxUserCountPerOrganization: number;
   },
@@ -233,7 +235,7 @@ export class InviteUsersModal extends React.Component<
 
   static defaultProps = {
     currentUserCount: 1,
-    maxUserCountPerOrganization: 3, // default for Free Plan
+    maxUserCountPerOrganization: maxInludedUsersInFreePlan, // default for Free Plan
   };
 
   extractEmailAddresses(): string[] {
@@ -264,6 +266,22 @@ export class InviteUsersModal extends React.Component<
   };
 
   getContent(isInvitesDisabled: boolean) {
+    const exceedingUserLimitAlert = isInvitesDisabled ? (
+      <Alert
+        showIcon
+        type="warning"
+        description="Inviting more users will exceed your organization's user limit. Consider upgrading your webKnossos plan."
+        style={{ marginBottom: 10 }}
+        action={
+          <Link to={`/organizations/${this.props.organizationName}`}>
+            <Button size="small" type="primary">
+              Upgrade Now
+            </Button>
+          </Link>
+        }
+      />
+    ) : null;
+
     return (
       <React.Fragment>
         <p>
@@ -272,14 +290,7 @@ export class InviteUsersModal extends React.Component<
           projects.
         </p>
         <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>
-        {isInvitesDisabled ? (
-          <Alert
-            showIcon
-            type="warning"
-            description="Inviting more users will exceed your organization's user limit. Consider upgrading your webKnossos plan."
-            style={{ marginBottom: 10 }}
-          />
-        ) : null}
+        {exceedingUserLimitAlert}
         <Input.TextArea
           spellCheck={false}
           autoSize={{
@@ -601,6 +612,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             Invite users to work collaboratively
           </LinkButton>{" "}
           <InviteUsersModal
+            organizationName={this.state.organizationName}
             visible={this.state.isInviteModalVisible}
             handleVisibleChange={(isInviteModalVisible) =>
               this.setState({

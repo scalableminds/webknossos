@@ -40,7 +40,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       style={{
         marginBottom: 20,
         background:
-          "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/pricing/background_neuron_meshes.png) 10% center / 120% no-repeat",
+          "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/pricing/background_neuron_meshes.jpeg) 10% center / 120% no-repeat",
         color: "white",
       }}
       headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}

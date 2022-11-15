@@ -31,7 +31,7 @@ function extendPricingPlan(organization: APIOrganization) {
       <div
         style={{
           background:
-            "right -150px / 50% no-repeat url(/assets/images/pricing/background_neurons.png)",
+            "right -150px / 50% no-repeat url(/assets/images/pricing/background_neurons.jpeg)",
         }}
       >
         <p style={{ marginRight: "30%" }}>
@@ -74,7 +74,7 @@ function upgradeUserQuota() {
       <div
         style={{
           background:
-            "right -50px / 35% no-repeat url(/assets/images/pricing/background_users.png)",
+            "right -50px / 35% no-repeat url(/assets/images/pricing/background_users.jpeg)",
         }}
       >
         <p style={{ marginRight: "30%" }}>
@@ -117,7 +117,7 @@ function upgradeStorageQuota() {
       <div
         style={{
           background:
-            "right -30px / 35% no-repeat url(/assets/images/pricing/background_evaluation.png)",
+            "right -30px / 35% no-repeat url(/assets/images/pricing/background_evaluation.jpeg)",
         }}
       >
         <p style={{ marginRight: "30%" }}>

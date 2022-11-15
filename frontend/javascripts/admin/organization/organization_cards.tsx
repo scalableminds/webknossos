@@ -292,7 +292,7 @@ export function PlanAboutToExceedWarning({
   if (isAboutToExpire)
     alerts.push({
       message:
-        "Your webKnossos plan is about to expire soon. Renew your plan now to avoid being downgraded and lose access to features and prevent users from being blocked.",
+        "Your webKnossos plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features.",
       actionButton: (
         <Button
           size="small"

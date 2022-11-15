@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api._
 import com.mohiva.play.silhouette.api.crypto.{Base64AuthenticatorEncoder, Signer}
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
+import com.mohiva.play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
 import com.mohiva.play.silhouette.impl.authenticators._
 import models.user.UserService
 import play.api.mvc._
@@ -42,9 +43,11 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     extends AuthenticatorService[CombinedAuthenticator]
     with Logger {
 
+  private val cookieSigner = new JcaSigner(JcaSignerSettings(conf.Silhouette.CookieAuthenticator.signerSecret))
+
   val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings,
                                                                   None,
-                                                                  new IdentityCookieSigner,
+                                                                  cookieSigner,
                                                                   cookieHeaderEncoding,
                                                                   new Base64AuthenticatorEncoder,
                                                                   fingerprintGenerator,

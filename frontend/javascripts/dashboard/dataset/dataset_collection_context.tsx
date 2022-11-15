@@ -22,6 +22,7 @@ import {
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import { handleGenericError } from "libs/error_handling";
 
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
@@ -230,8 +231,8 @@ function useCreateFolderMutation() {
         (oldItems || []).concat([newFolder]),
       );
     },
-    onError: (err) => {
-      Toast.error(`Could not create folder. ${err}`);
+    onError: (err: any) => {
+      handleGenericError(err, "Could not create folder. Check the console for details");
     },
   });
 }
@@ -247,8 +248,8 @@ function useDeleteFolderMutation() {
         (oldItems || []).filter((folder: Folder) => folder.id !== deletedId),
       );
     },
-    onError: (err) => {
-      Toast.error(`Could not delete folder. ${err}`);
+    onError: (err: any) => {
+      handleGenericError(err, "Could not delete folder. Check the console for details");
     },
   });
 }
@@ -272,8 +273,8 @@ function useUpdateFolderMutation() {
       );
       queryClient.setQueryData(["folders", updatedFolder.id], undefined);
     },
-    onError: (err) => {
-      Toast.error(`Could not update folder. ${err}`);
+    onError: (err: any) => {
+      handleGenericError(err, "Could not update folder. Check the console for details");
     },
   });
 }
@@ -317,12 +318,13 @@ function useMoveFolderMutation() {
         );
         queryClient.setQueryData(["folders", folderId], () => updatedFolder);
       },
-      onError: (err, _params, context) => {
+      onError: (err: any, _params, context) => {
         // Restore the old folder tree. Note that without the optimistic update
         // and the data reversion here, the sidebar would still show the (incorrectly)
         // moved folder, because the <SortableTree /> component does its own kind of
         // optimistic mutation by updating its state immediately when dragging a folder.
-        Toast.error(`Could not update folder. ${err}`);
+        handleGenericError(err, "Could not update folder. Check the console for details");
+
         if (context) {
           queryClient.setQueryData(mutationKey, context.previousFolders);
         }

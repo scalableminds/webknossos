@@ -21,7 +21,9 @@ import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 import { DatasetFolderView } from "./dataset_folder_view";
-const { TabPane } = Tabs;
+import { PortalTarget } from "oxalis/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+
 type OwnProps = {
   userId: string | null | undefined;
   isAdminView: boolean;
@@ -47,6 +49,25 @@ export const urlTokenToTabKeyMap = {
   datasetsFolders: "datasetsFolders",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
+};
+
+function TabBarExtraContent({ activeTabKey }: { activeTabKey: string }) {
+  // console.log("portal constr", `dashboard-TabBarExtraContent-${activeTabKey}`);
+  return (
+    <PortalTarget
+      portalId={"dashboard-TabBarExtraContent"}
+      style={{
+        flex: 1,
+        display: "flex",
+      }}
+    />
+  );
+}
+
+type Tab = {
+  label: string;
+  key: string;
+  children: React.ReactElement;
 };
 
 class DashboardView extends PureComponent<PropsWithRouter, State> {
@@ -115,36 +136,71 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     };
   }
 
-  getTabs(user: APIUser) {
+  getTabs(user: APIUser): Tab[] {
     if (this.props.activeUser) {
       const validTabKeys = this.getValidTabKeys();
-      return [
-        validTabKeys.publications ? (
-          <TabPane tab="Featured Publications" key="publications">
-            <PublicationViewWithHeader />
-          </TabPane>
-        ) : null,
-        validTabKeys.datasets ? (
-          <TabPane tab="Datasets" key="datasets">
-            <DatasetView user={user} hideDetailsColumns={false} />
-          </TabPane>
-        ) : null,
-        <TabPane tab="Dataset (Folders)" key="datasetsFolders">
-          <DatasetFolderView user={user} />
-        </TabPane>,
-        <TabPane tab="Tasks" key="tasks">
-          <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
-        </TabPane>,
-        <TabPane tab="Annotations" key="explorativeAnnotations">
-          <ExplorativeAnnotationsView
-            isAdminView={this.props.isAdminView}
-            userId={this.props.userId}
-            activeUser={this.props.activeUser}
-          />
-        </TabPane>,
+      const tabs = [
+        validTabKeys.publications
+          ? {
+              label: "Featured Publications",
+              key: "publications",
+              children: (
+                <RenderingTabContext.Provider value="publications">
+                  <PublicationViewWithHeader />
+                </RenderingTabContext.Provider>
+              ),
+            }
+          : null,
+        validTabKeys.datasets
+          ? {
+              label: "Datasets",
+              key: "datasets",
+              children: (
+                <RenderingTabContext.Provider value="datasets">
+                  <DatasetView user={user} hideDetailsColumns={false} />
+                </RenderingTabContext.Provider>
+              ),
+            }
+          : null,
+        {
+          label: "Dataset (Folders)",
+          key: "datasetsFolders",
+          children: (
+            <RenderingTabContext.Provider value="datasetsFolders">
+              <DatasetFolderView user={user} />
+            </RenderingTabContext.Provider>
+          ),
+        },
+        {
+          label: "Tasks",
+          key: "tasks",
+          children: (
+            <RenderingTabContext.Provider value="tasks">
+              <DashboardTaskListView
+                isAdminView={this.props.isAdminView}
+                userId={this.props.userId}
+              />
+            </RenderingTabContext.Provider>
+          ),
+        },
+        {
+          label: "Annotations",
+          key: "explorativeAnnotations",
+          children: (
+            <RenderingTabContext.Provider value={this.state.activeTabKey}>
+              <ExplorativeAnnotationsView
+                isAdminView={this.props.isAdminView}
+                userId={this.props.userId}
+                activeUser={this.props.activeUser}
+              />
+            </RenderingTabContext.Provider>
+          ),
+        },
       ];
+
+      return tabs.filter((el) => el != null) as Tab[];
     } else {
-      return null;
+      return [];
     }
   }
 
@@ -207,9 +263,19 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         <div className="container">
           {userHeader}
           <DatasetCacheProvider>
-            <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
-              {this.getTabs(user)}
-            </Tabs>
+            <ActiveTabContext.Provider value={this.state.activeTabKey}>
+              <Tabs
+                activeKey={this.state.activeTabKey}
+                onChange={onTabChange}
+                items={this.getTabs(user)}
+                tabBarExtraContent={
+                  <TabBarExtraContent
+                    key={this.state.activeTabKey}
+                    activeTabKey={this.state.activeTabKey}
+                  />
+                }
+              />
+            </ActiveTabContext.Provider>
           </DatasetCacheProvider>
         </div>
       </NmlUploadZoneContainer>

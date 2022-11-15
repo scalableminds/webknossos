@@ -262,7 +262,7 @@ function FolderItemAsDropTarget(props: {
   isEditable: boolean;
 }) {
   const context = useContext(DatasetCollectionContext);
-  const { folderId, className, ...restProps } = props;
+  const { folderId, className, isEditable, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
     accept: DraggableDatasetType,
@@ -275,7 +275,7 @@ function FolderItemAsDropTarget(props: {
         Toast.error("Could not move dataset. Please try again.");
       }
     },
-    canDrop: () => props.isEditable,
+    canDrop: () => isEditable,
     collect: (monitor: DropTargetMonitor) => ({
       canDrop: monitor.canDrop(),
       isOver: monitor.isOver(),
@@ -426,7 +426,7 @@ function getFolderHierarchy(
   // Expand the parent chain of the active folder.
   if (activeFolderId != null) {
     let currentFolder = itemById[activeFolderId];
-    while (currentFolder != null && currentFolder.parent != null) {
+    while (currentFolder?.parent != null) {
       currentFolder = itemById[currentFolder.parent];
       currentFolder.expanded = true;
     }

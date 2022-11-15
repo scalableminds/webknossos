@@ -95,7 +95,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       <Dropdown
         overlay={overlay}
         overlayClassName="dropdown-overlay-container-for-context-menu"
-        visible={contextMenuPosition != null}
+        open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
         // @ts-ignore
         destroyPopupOnHide
@@ -393,7 +393,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           })}
           rowSelection={{
             selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
-            onSelectNone: () => this.props.onSelectDataset && this.props.onSelectDataset(null),
+            onSelectNone: () => this.props.onSelectDataset?.(null),
           }}
         >
           <Column

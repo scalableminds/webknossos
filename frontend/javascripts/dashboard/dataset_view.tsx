@@ -29,6 +29,8 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -70,6 +72,9 @@ function DatasetView(props: Props) {
   const { user } = props;
   const history = useHistory();
   const datasetCacheContext = useContext(DatasetCacheContext);
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
+
   const context = props.context || datasetCacheContext;
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchTags, setSearchTags] = useState<string[]>([]);
@@ -251,27 +256,18 @@ function DatasetView(props: Props) {
   const datasets = filterDatasetsForUsersOrganization(context.datasets, user);
   const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
   const content = isEmpty ? renderPlaceholder(context, user) : renderTable();
+
   return (
     <div>
-      {adminHeader}
+      {activeTab === renderingTab && (
+        <RenderToPortal portalId={"dashboard-TabBarExtraContent"}>{adminHeader}</RenderToPortal>
+      )}
       <CategorizationSearch
         searchTags={searchTags}
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
       />
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
       <NewJobsAlert jobs={jobs} />
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
       <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
         {content}
       </Spin>
@@ -349,7 +345,8 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       description={newJobsList}
       type="info"
       style={{
-        marginTop: 20,
+        marginTop: 12,
+        marginBottom: 12,
       }}
       showIcon
       icon={<HourglassOutlined />}

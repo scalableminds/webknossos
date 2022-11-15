@@ -89,6 +89,14 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       ))
   }
 
+  def termsOfServiceAcceptanceNeeded: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      organization <- organizationDAO.findOne(request.identity._organization)
+      needsAcceptance = conf.WebKnossos.TermsOfService.enabled &&
+        organization.lastTermsOfServiceAcceptanceVersion < conf.WebKnossos.TermsOfService.version
+    } yield Ok(Json.toJson(needsAcceptance))
+  }
+
   def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"

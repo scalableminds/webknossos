@@ -817,10 +817,6 @@ function TopBar({
   const activeTab = React.useContext(ActiveTabContext);
   const renderingTab = React.useContext(RenderingTabContext);
 
-  if (activeTab !== renderingTab) {
-    return null;
-  }
-
   const marginRight = {
     marginRight: 8,
   };
@@ -836,30 +832,32 @@ function TopBar({
     />
   );
 
+  const content = isAdminView ? (
+    search
+  ) : (
+    <div className="pull-right">
+      <Button
+        icon={<UploadOutlined />}
+        style={marginRight}
+        onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
+      >
+        Upload Annotation(s)
+      </Button>
+      <Button onClick={toggleShowArchived} style={marginRight}>
+        Show {shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
+      </Button>
+      {!shouldShowArchivedTracings ? (
+        <Button onClick={archiveAll} style={marginRight}>
+          Archive All
+        </Button>
+      ) : null}
+      {search}
+    </div>
+  );
+
   return (
-    <RenderToPortal portalId={"dashboard-TabBarExtraContent"}>
-      {isAdminView ? (
-        search
-      ) : (
-        <div className="pull-right">
-          <Button
-            icon={<UploadOutlined />}
-            style={marginRight}
-            onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
-          >
-            Upload Annotation(s)
-          </Button>
-          <Button onClick={toggleShowArchived} style={marginRight}>
-            Show {shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
-          </Button>
-          {!shouldShowArchivedTracings ? (
-            <Button onClick={archiveAll} style={marginRight}>
-              Archive All
-            </Button>
-          ) : null}
-          {search}
-        </div>
-      )}
+    <RenderToPortal portalId="dashboard-TabBarExtraContent">
+      {activeTab === renderingTab ? content : null}
     </RenderToPortal>
   );
 }

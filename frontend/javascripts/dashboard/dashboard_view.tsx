@@ -187,7 +187,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
           label: "Annotations",
           key: "explorativeAnnotations",
           children: (
-            <RenderingTabContext.Provider value={this.state.activeTabKey}>
+            <RenderingTabContext.Provider value="explorativeAnnotations">
               <ExplorativeAnnotationsView
                 isAdminView={this.props.isAdminView}
                 userId={this.props.userId}

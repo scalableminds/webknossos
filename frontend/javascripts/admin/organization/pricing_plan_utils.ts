@@ -4,7 +4,7 @@ export const teamPlanFeatures = [
   "Collaborative Annotation",
   "Project Management",
   "Dataset Management and Access Control",
-  "5 Users / 1TB Storage",
+  "5 Users / 1TB Storage (upgradable)",
   "Priority Email Support",
   "Everything from Free plan",
 ];

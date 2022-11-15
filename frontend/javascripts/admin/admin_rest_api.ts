@@ -1889,11 +1889,11 @@ export function sendInvitesForOrganization(
 
 export async function getOrganization(organizationName: string): Promise<APIOrganization> {
   const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
-  return Promise.resolve({
+  return {
     ...organization,
     includedStorage: organization.includedStorage ?? Number.POSITIVE_INFINITY,
     includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
-  });
+  };
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {

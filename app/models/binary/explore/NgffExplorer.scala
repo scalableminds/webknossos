@@ -25,7 +25,7 @@ class NgffExplorer extends RemoteLayerExplorer {
     for {
       zattrsPath <- Fox.successful(remotePath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS))
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      labelLayers <- exploreLabelLayers(remotePath, credentials)
+      labelLayers <- exploreLabelLayers(remotePath, credentials).orElse(Fox.successful(List[(ZarrLayer, Vec3Double)]()))
 
       layerLists: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiscale => {
         for {
@@ -94,8 +94,8 @@ class NgffExplorer extends RemoteLayerExplorer {
     } yield layerTuples.flatten
 
   private def layersForLabel(remotePath: Path,
-                                labelPath: String,
-                                credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
+                             labelPath: String,
+                             credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath.resolve("labels").resolve(labelPath))
       zattrsPath = fullLabelPath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS)

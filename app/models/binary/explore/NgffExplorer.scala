@@ -42,8 +42,11 @@ class NgffExplorer extends RemoteLayerExplorer {
       zarrayPath = magPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
-      channelAxisIndex <- axisOrder.c.toFox
-    } yield zarrHeader.shape(channelAxisIndex)
+      channelCount = axisOrder.c match {
+        case Some(channeAxislIndex) => zarrHeader.shape(channeAxislIndex)
+        case _                      => 1
+      }
+    } yield channelCount
 
   private def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                        remotePath: Path,
@@ -148,9 +151,10 @@ class NgffExplorer extends RemoteLayerExplorer {
   private def extractAndCombineScaleTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
                                                axisOrder: AxisOrder): Vec3Double = {
     val filtered = coordinateTransforms.filter(_.`type` == "scale")
-    val xFactors = filtered.map(_.scale(axisOrder.x))
-    val yFactors = filtered.map(_.scale(axisOrder.y))
-    val zFactors = filtered.map(_.scale(axisOrder.z))
+    val scalesFromTransforms = filtered.flatMap(_.scale)
+    val xFactors = scalesFromTransforms.map(_(axisOrder.x))
+    val yFactors = scalesFromTransforms.map(_(axisOrder.y))
+    val zFactors = scalesFromTransforms.map(_(axisOrder.z))
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 }

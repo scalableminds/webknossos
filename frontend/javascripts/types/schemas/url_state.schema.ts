@@ -147,6 +147,9 @@ export default {
             additionalProperties: false,
             required: ["connectomeName"],
           },
+          isDisabled: {
+            type: "boolean",
+          },
         },
         additionalProperties: false,
       },

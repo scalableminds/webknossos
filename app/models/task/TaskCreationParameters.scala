@@ -25,7 +25,8 @@ object TaskParameters {
   implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]
 }
 
-case class NmlTaskParameters(taskTypeId: String,
+case class NmlTaskParameters(taskTypeIdOrSummary: String,
+                             // taskTypeIdOrSummary named like this for compatibility, note that in NML case only ids are valid.
                              neededExperience: Experience,
                              openInstances: Int,
                              projectName: String,

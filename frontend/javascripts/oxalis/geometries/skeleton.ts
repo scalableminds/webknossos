@@ -301,9 +301,10 @@ class Skeleton {
           break;
         }
 
-        case "deleteNode":
+        case "deleteNode": {
           this.deleteNode(update.value.treeId, update.value.nodeId);
           break;
+        }
 
         case "createEdge": {
           const tree = skeletonTracing.trees[update.value.treeId];
@@ -313,9 +314,10 @@ class Skeleton {
           break;
         }
 
-        case "deleteEdge":
+        case "deleteEdge": {
           this.deleteEdge(update.value.treeId, update.value.source, update.value.target);
           break;
+        }
 
         case "updateNode": {
           const { treeId, id, radius, position } = update.value;
@@ -325,9 +327,10 @@ class Skeleton {
           break;
         }
 
-        case "createTree":
+        case "createTree": {
           this.updateTreeColor(update.value.id, update.value.color, update.value.isVisible);
           break;
+        }
 
         case "updateTreeVisibility": {
           const { treeId } = update.value;

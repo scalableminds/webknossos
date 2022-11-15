@@ -9,7 +9,7 @@ export default function PresentModernControls() {
   const dispatch = useDispatch();
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [isModalVisible, setIsModalVisible] = React.useState(
-    activeUser != null && activeUser.novelUserExperienceInfos.shouldSeeModernControlsModal,
+    activeUser?.novelUserExperienceInfos.shouldSeeModernControlsModal,
   );
 
   if (!isModalVisible) {

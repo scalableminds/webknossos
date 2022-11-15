@@ -233,13 +233,15 @@ function updateState(mergerModeState: MergerModeState, skeletonTracing: Skeleton
         break;
       }
 
-      case "deleteNode":
+      case "deleteNode": {
         onDeleteNode(mergerModeState, action.value);
         break;
+      }
 
-      case "updateNode":
+      case "updateNode": {
         onUpdateNode(mergerModeState, action.value);
         break;
+      }
 
       default:
         break;

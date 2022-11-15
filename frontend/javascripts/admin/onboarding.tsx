@@ -247,7 +247,7 @@ export class InviteUsersModal extends React.Component<
 
   sendInvite = async () => {
     const addresses = this.extractEmailAddresses();
-   
+
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
     this.setState({

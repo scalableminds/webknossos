@@ -25,12 +25,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Jobs can no longer be started on datastores without workers. [#6595](https://github.com/scalableminds/webknossos/pull/6595)
 - When downloading volume annotations with volume data skipped, the nml volume tag is now included anyway (but has no location attribute in this case). [#6566](https://github.com/scalableminds/webknossos/pull/6566)
 - Re-phrased some backend (error) messages to improve clarity and provide helping hints. [#6616](https://github.com/scalableminds/webknossos/pull/6616)
+- The layer visibility is now encoded in the sharing link. The user opening the link will see the same layers that were visible when copying the link. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
+- Voxelytics workflows can now be viewed by anyone with the link who is in the right organization. [#6622](https://github.com/scalableminds/webknossos/pull/6622)
  
 ### Fixed
 - Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 - Fixed a bug in the dataset import view, where the layer name text field would lose focus after each key press. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 - Fixed importing NGFF Zarr datasets with non-scale transforms. [#6621](https://github.com/scalableminds/webknossos/pull/6621)
-- Fixed a regression in NGFF Zarr import for datasets with no channel axis. [#6636](https://github.com/scalableminds/webknossos/pull/6636)
+- Fixed a regression in NGFF Zarr import for datasets with no channel axis. [#6636](https://github.com/scalableminds/webknossos/pull/6636)<<<<<<< task-creation-nml
+- Fixed broken creation of tasks using base NMLs. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
 
 ### Removed
 

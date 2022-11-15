@@ -44,8 +44,11 @@ export function AsyncButton(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const { children, hideContentWhenLoading, ...rest } = props;
   const effectiveChildren = hideContentWhenLoading && isLoading ? null : children;
-  // eslint-disable-next-line react/no-children-prop
-  return <Button {...rest} children={effectiveChildren} loading={isLoading} onClick={onClick} />;
+  return (
+    <Button {...rest} loading={isLoading} onClick={onClick}>
+      {effectiveChildren}
+    </Button>
+  );
 }
 export function AsyncIconButton(
   props: Omit<AsyncButtonProps, "icon"> & {

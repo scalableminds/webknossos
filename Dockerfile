@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk
+FROM eclipse-temurin:11
 RUN apt-get update \
   && apt-get -y install libblosc1 postgresql-client \
   && rm -rf /var/lib/apt/lists/*

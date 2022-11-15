@@ -54,7 +54,7 @@ export const normFile = (
     return e;
   }
 
-  return e && e.fileList;
+  return e?.fileList;
 };
 
 function TaskCreateBulkView() {
@@ -181,7 +181,7 @@ function TaskCreateBulkView() {
   const handleSubmit = async (formValues) => {
     let tasks;
 
-    if (formValues.csvFile && formValues.csvFile.length) {
+    if (formValues.csvFile?.length) {
       // Workaround: Antd replaces file objects in the formValues with a wrapper file
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
@@ -278,7 +278,7 @@ function TaskCreateBulkView() {
                     // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
                     const csvFile = getFieldValue("csvFile");
 
-                    if (csvFile && csvFile.length) {
+                    if (csvFile?.length) {
                       return Promise.resolve();
                     }
 

@@ -534,9 +534,10 @@ export class DataBucket {
 
   markAsPulled(): void {
     switch (this.state) {
-      case BucketStateEnum.UNREQUESTED:
+      case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -545,7 +546,7 @@ export class DataBucket {
 
   markAsFailed(isMissing: boolean): void {
     switch (this.state) {
-      case BucketStateEnum.REQUESTED:
+      case BucketStateEnum.REQUESTED: {
         this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
 
         if (isMissing) {
@@ -553,6 +554,7 @@ export class DataBucket {
         }
 
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -605,9 +607,10 @@ export class DataBucket {
   markAsPushed(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
-      case BucketStateEnum.MISSING:
+      case BucketStateEnum.MISSING: {
         this.dirty = false;
         break;
+      }
 
       default:
         this.unexpectedState();

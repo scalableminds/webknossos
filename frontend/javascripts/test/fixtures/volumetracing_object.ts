@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import update from "immutability-helper";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
 import mockRequire from "mock-require";

@@ -9,9 +9,9 @@ export const teamPlanFeatures = [
   "Everything from Free plan",
 ];
 export const powerPlanFeatures = [
+  "Unlimited Users",
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
-  "Unlimited Users",
   "Integration with your HPC and storage servers",
   "Everything from Team and Free plans",
 ];

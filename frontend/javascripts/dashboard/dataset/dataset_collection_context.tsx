@@ -466,7 +466,9 @@ export default function DatasetCollectionContextProvider({
     updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
-  const isLoading = datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
+  const isLoading = globalSearchQuery
+    ? datasetSearchQuery.isFetching
+    : datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
 
   const value: DatasetCollectionContextValue = useMemo(
     () => ({

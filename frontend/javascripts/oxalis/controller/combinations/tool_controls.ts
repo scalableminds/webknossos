@@ -755,17 +755,15 @@ export class ProofreadTool {
   }
 
   static onLeftClick(
-    planeView: PlaneView,
+    _planeView: PlaneView,
     pos: Point2,
     plane: OrthoView,
     event: MouseEvent,
-    isTouch: boolean,
+    _isTouch: boolean,
   ) {
-    SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-
     if (plane === OrthoViews.TDView) {
       // The click position cannot be mapped to a 3D coordinate in the
-      // 3D viewport (unless a node was clicked which is already handled above).
+      // 3D viewport.
       return;
     }
 

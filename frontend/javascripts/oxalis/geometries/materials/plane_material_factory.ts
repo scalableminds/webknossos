@@ -156,7 +156,7 @@ class PlaneMaterialFactory {
         value: new THREE.Vector3(0, 0, 0),
       },
       activeSegmentPosition: {
-        value: new THREE.Vector3(0, 0, 0),
+        value: new THREE.Vector3(-1, -1, -1),
       },
       brushSizeInPixel: {
         value: 0,
@@ -613,7 +613,7 @@ class PlaneMaterialFactory {
             if (activeSegmentPosition != null) {
               this.uniforms.activeSegmentPosition.value.set(...activeSegmentPosition);
             } else {
-              this.uniforms.activeSegmentPosition.value.set(0, 0, 0);
+              this.uniforms.activeSegmentPosition.value.set(-1, -1, -1);
             }
           },
           true,

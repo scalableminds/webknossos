@@ -230,6 +230,11 @@ export const getBrushOverlay: ShaderModule = {
 export const getCrossHairOverlay: ShaderModule = {
   code: `
     vec4 getCrossHairOverlay(vec3 worldCoordUVW) {
+      // An active segment position of -1, -1, -1 indicates that the position is not available
+      if (activeSegmentPosition == vec3(-1.0)) {
+        return vec4(0.0);
+      }
+
       vec3 flooredGlobalPosUVW = transDim(floor(globalPosition));
       vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
 

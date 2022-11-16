@@ -77,7 +77,8 @@ function DatasetView(props: Props) {
 
   const context: DatasetCacheContextValue | DatasetCollectionContextValue =
     props.context || datasetCacheContext;
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const searchQuery = context.globalSearchQuery;
+  const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
@@ -124,7 +125,7 @@ function DatasetView(props: Props) {
   }, []);
   useEffect(() => {
     persistence.persist({
-      searchQuery,
+      searchQuery: searchQuery || "",
       datasetFilteringMode,
     });
   }, [searchQuery, datasetFilteringMode]);
@@ -139,10 +140,6 @@ function DatasetView(props: Props) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const value = event.target.value;
     setSearchQuery(value);
-
-    if ("setGlobalSearchQuery" in context) {
-      context.setGlobalSearchQuery(value);
-    }
   }
 
   const useGlobalSearch = true;
@@ -153,7 +150,7 @@ function DatasetView(props: Props) {
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
         selectedDataset={props.selectedDataset}
-        searchQuery={useGlobalSearch ? "" : searchQuery}
+        searchQuery={useGlobalSearch ? "" : searchQuery || ""}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
@@ -202,7 +199,7 @@ function DatasetView(props: Props) {
       }}
       onPressEnter={handleSearch}
       onChange={handleSearch}
-      value={searchQuery}
+      value={searchQuery || ""}
     />
   );
 
@@ -261,10 +258,8 @@ function DatasetView(props: Props) {
       )}
     </div>
   );
-  const datasets =
-    "globalSearchQuery" in context && context.globalSearchQuery != null
-      ? context.queries.datasetSearchQuery.data || []
-      : context.datasets;
+
+  const datasets = context.datasets;
   const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
 
   const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";

@@ -443,7 +443,7 @@ export default function DatasetCollectionContextProvider({
   const updateFolderMutation = useUpdateFolderMutation();
   const moveFolderMutation = useMoveFolderMutation();
   const updateDatasetMutation = useUpdateDatasetMutation(activeFolderId);
-  const datasets = datasetsInFolderQuery.data || [];
+  const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
 
   useEffect(() => {
     if (activeFolderId != null) {

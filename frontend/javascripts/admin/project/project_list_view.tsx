@@ -1,5 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Spin, Button, Input, Modal, Tooltip } from "antd";
@@ -55,9 +54,7 @@ type StateProps = {
   activeUser: APIUser;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+
 type State = {
   isLoading: boolean;
   projects: Array<APIProjectWithAssignments>;
@@ -73,7 +70,7 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "projectList",
 );
 
-class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
+class ProjectListView extends React.PureComponent<Props, State> {
   state: State = {
     isLoading: true,
     projects: [],
@@ -97,9 +94,8 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     this.fetchData();
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'prevProps' implicitly has an 'any' type... Remove this comment to see the full error message
-  componentDidUpdate(prevProps) {
-    persistence.persist(this.props.history, this.state);
+  componentDidUpdate(prevProps: Props) {
+    persistence.persist(this.state);
 
     if (prevProps.taskTypeId !== this.props.taskTypeId) {
       this.fetchData();
@@ -513,4 +509,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(ProjectListView));
+export default connector(ProjectListView);

@@ -1,4 +1,4 @@
-import { RouteComponentProps, Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Table, Button, Modal, Tooltip, Tag } from "antd";
@@ -65,7 +65,6 @@ type TracingModeState = {
 type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
-  history: RouteComponentProps["history"];
   activeUser: APIUser;
 };
 type State = {
@@ -122,13 +121,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   currentPageData: Readonly<APIAnnotationCompact[]> = [];
 
   componentDidMount() {
-    this.setState(persistence.load(this.props.history) as PartialState, () => {
+    this.setState(persistence.load() as PartialState, () => {
       this.fetchNextPage(0);
     });
   }
 
   componentDidUpdate(_prevProps: Props, prevState: State) {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
 
     if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
       this.fetchNextPage(0);
@@ -862,4 +861,4 @@ function TopBar({
   );
 }
 
-export default withRouter<RouteComponentProps & Props, any>(ExplorativeAnnotationsView);
+export default ExplorativeAnnotationsView;

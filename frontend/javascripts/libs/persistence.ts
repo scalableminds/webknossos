@@ -12,8 +12,8 @@ class Persistence<T extends Record<string, any>> {
     this.name = name;
   }
 
-  load(history: RouteComponentProps["history"]): Partial<T> {
-    const locationState = history.location.state as Record<string, T>;
+  load(): Partial<T> {
+    const locationState = window.history.state as Record<string, T>;
 
     if (locationState?.[this.name] != null) {
       console.log(
@@ -39,7 +39,7 @@ class Persistence<T extends Record<string, any>> {
         );
       } catch (e) {
         // Reset the persisted state and log the error to airbrake so we learn whether and how often this happens
-        this.persist(history, {}, {});
+        this.persist({}, {});
         // @ts-ignore
         ErrorHandling.notify(e);
         return {};
@@ -51,12 +51,8 @@ class Persistence<T extends Record<string, any>> {
     return {};
   }
 
-  persist(
-    history: RouteComponentProps["history"],
-    state: Partial<T>,
-    stateProperties: Record<keyof T, any> | {} = this.stateProperties,
-  ) {
-    const locationState = (history.location.state || {}) as Record<string, T>;
+  persist(state: Partial<T>, stateProperties: Record<keyof T, any> | {} = this.stateProperties) {
+    const locationState = (window.history.state || {}) as Record<string, T>;
 
     const stateToBePersisted = _.pick(state, Object.keys(stateProperties));
 
@@ -64,13 +60,19 @@ class Persistence<T extends Record<string, any>> {
       locationState[this.name] == null ||
       !_.isEqual(stateToBePersisted, locationState[this.name])
     ) {
+      // Don't use the history object of react-router here, because
+      // calling history.replace() leads to focus-loss-bugs for input fields
+      // which are rendered into portals (this is the case for the search box
+      // in the dashboard).
+
       // If one of the state properties changed, replace the whole state
-      history.replace(
-        history.location.pathname, // There could be multiple state namespaces on one page, so only extend the current location state,
+      window.history.replaceState(
+        // There could be multiple state namespaces on one page, so only extend the current location state,
         // but do not replace it
         _.extend(locationState, {
           [this.name]: stateToBePersisted,
         }),
+        "",
       );
     }
   }

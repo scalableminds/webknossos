@@ -59,9 +59,7 @@ type StateProps = {
   activeUser: APIUser;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+
 type State = {
   showFinishedTasks: boolean;
   isLoading: boolean;
@@ -106,7 +104,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> {
+class DashboardTaskListView extends React.PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
@@ -126,12 +124,12 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchNextPage(0);
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
@@ -590,4 +588,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DashboardTaskListView));
+export default connector(DashboardTaskListView);

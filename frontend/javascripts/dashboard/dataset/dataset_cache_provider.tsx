@@ -21,6 +21,8 @@ export type DatasetCacheContextValue = {
   isLoading: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
+  globalSearchQuery: string | null;
+  setGlobalSearchQuery: (val: string | null) => void;
   fetchDatasets: (options?: Options) => Promise<void>;
   reloadDataset: (
     datasetId: APIDatasetId,
@@ -56,11 +58,14 @@ export const DatasetCacheContext = createContext<DatasetCacheContextValue>({
   checkDatasets: async () => {},
   reloadDataset: async () => {},
   updateCachedDataset: async () => {},
+  globalSearchQuery: null,
+  setGlobalSearchQuery: () => {},
 });
 export default function DatasetCacheProvider({ children }: { children: React.ReactNode }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState<string | null>(null);
   const [pendingDatasetUpdates, setPendingDatasetUpdates] = useState<
     Record<string, Promise<APIDataset>>
   >({});
@@ -217,6 +222,8 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
       fetchDatasets,
       reloadDataset,
       updateCachedDataset,
+      globalSearchQuery,
+      setGlobalSearchQuery,
     }),
     [
       datasets,
@@ -226,6 +233,8 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
       fetchDatasets,
       reloadDataset,
       updateCachedDataset,
+      globalSearchQuery,
+      setGlobalSearchQuery,
     ],
   );
 

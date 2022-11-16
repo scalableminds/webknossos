@@ -1,6 +1,5 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { RouteComponentProps } from "react-router-dom";
 import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 

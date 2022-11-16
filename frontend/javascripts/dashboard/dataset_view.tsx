@@ -31,12 +31,13 @@ import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 
 const { Search, Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
-  context?: DatasetCacheContextValue;
+  context?: DatasetCacheContextValue | DatasetCollectionContextValue;
   onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
   selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns: boolean;
@@ -70,12 +71,12 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
 
 function DatasetView(props: Props) {
   const { user } = props;
-  const history = useHistory();
   const datasetCacheContext = useContext(DatasetCacheContext);
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
 
-  const context = props.context || datasetCacheContext;
+  const context: DatasetCacheContextValue | DatasetCollectionContextValue =
+    props.context || datasetCacheContext;
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
@@ -83,7 +84,7 @@ function DatasetView(props: Props) {
   const [jobs, setJobs] = useState<APIJob[]>([]);
 
   useEffect(() => {
-    const state = persistence.load(history) as PersistenceState;
+    const state = persistence.load() as PersistenceState;
 
     if (state.searchQuery != null) {
       setSearchQuery(state.searchQuery);
@@ -122,7 +123,7 @@ function DatasetView(props: Props) {
     return () => (interval != null ? clearInterval(interval) : undefined);
   }, []);
   useEffect(() => {
-    persistence.persist(history, {
+    persistence.persist({
       searchQuery,
       datasetFilteringMode,
     });
@@ -136,17 +137,23 @@ function DatasetView(props: Props) {
 
   function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-    setSearchQuery(event.target.value);
+    const value = event.target.value;
+    setSearchQuery(value);
+
+    if ("setGlobalSearchQuery" in context) {
+      context.setGlobalSearchQuery(value);
+    }
   }
 
-  function renderTable() {
-    const filteredDatasets = filterDatasetsForUsersOrganization(context.datasets, user);
+  const useGlobalSearch = true;
+
+  function renderTable(filteredDatasets: APIMaybeUnimportedDataset[]) {
     return (
       <DatasetTable
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
         selectedDataset={props.selectedDataset}
-        searchQuery={searchQuery}
+        searchQuery={useGlobalSearch ? "" : searchQuery}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
@@ -198,6 +205,7 @@ function DatasetView(props: Props) {
       value={searchQuery}
     />
   );
+
   const isUserAdminOrDatasetManager = Utils.isUserAdminOrDatasetManager(user);
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
@@ -253,15 +261,21 @@ function DatasetView(props: Props) {
       )}
     </div>
   );
-  const datasets = filterDatasetsForUsersOrganization(context.datasets, user);
+  const datasets =
+    "globalSearchQuery" in context && context.globalSearchQuery != null
+      ? context.queries.datasetSearchQuery.data || []
+      : context.datasets;
+  const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
+
   const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
-  const content = isEmpty ? renderPlaceholder(context, user) : renderTable();
+  const content = isEmpty ? renderPlaceholder(context, user) : renderTable(filteredDatasets);
 
   return (
     <div>
       {activeTab === renderingTab && (
-        <RenderToPortal portalId={"dashboard-TabBarExtraContent"}>{adminHeader}</RenderToPortal>
+        <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
       )}
+      {searchQuery && <h3>Search Results for &quot;{searchQuery}&quot;</h3>}
       <CategorizationSearch
         searchTags={searchTags}
         setTags={setSearchTags}

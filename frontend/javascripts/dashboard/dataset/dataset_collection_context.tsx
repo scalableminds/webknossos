@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import type {
   APIMaybeUnimportedDataset,
@@ -42,9 +42,12 @@ export type DatasetCollectionContextValue = {
   updateCachedDataset: (dataset: APIDataset) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string) => void;
+  globalSearchQuery: string | null;
+  setGlobalSearchQuery: (val: string | null) => void;
   queries: {
     folderTreeQuery: ReturnType<typeof useFolderTreeQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
+    datasetSearchQuery: ReturnType<typeof useDatasetSearchQuery>;
     createFolderMutation: ReturnType<typeof useCreateFolderMutation>;
     updateFolderMutation: ReturnType<typeof useUpdateFolderMutation>;
     moveFolderMutation: ReturnType<typeof useMoveFolderMutation>;
@@ -71,6 +74,8 @@ export const DatasetCollectionContext = createContext<DatasetCollectionContextVa
     // @ts-ignore todo
     datasetsInFolderQuery: {},
     // @ts-ignore todo
+    datasetSearchQuery: {},
+    // @ts-ignore todo
     createFolderMutation: {},
     // @ts-ignore todo
     updateFolderMutation: {},
@@ -88,6 +93,23 @@ export function useFolderQuery(folderId: string) {
   return useQuery(queryKey, () => getFolder(folderId), {
     refetchOnWindowFocus: false,
   });
+}
+
+export function useDatasetSearchQuery(query: string | null) {
+  const queryKey = ["dataset", "search", query];
+  return useQuery(
+    queryKey,
+    async () => {
+      if (query == null) {
+        return [];
+      }
+      return await getDatasets(null, null, query);
+    },
+    {
+      refetchOnWindowFocus: false,
+      enabled: query != null,
+    },
+  );
 }
 
 function useFolderTreeQuery() {
@@ -394,9 +416,28 @@ export default function DatasetCollectionContextProvider({
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
 
+  const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
+  const setGlobalSearchQuery = useCallback(
+    (value: string | null) => {
+      // Empty string should be handled as null
+      setGlobalSearchQueryInner(value ? value : null);
+      if (value) {
+        setActiveFolderId(null);
+      }
+    },
+    [setGlobalSearchQueryInner, setActiveFolderId],
+  );
+
+  useEffect(() => {
+    if (activeFolderId != null) {
+      setGlobalSearchQuery(null);
+    }
+  }, [activeFolderId]);
+
   const queryClient = useQueryClient();
   const folderTreeQuery = useFolderTreeQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
+  const datasetSearchQuery = useDatasetSearchQuery(globalSearchQuery);
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
@@ -440,9 +481,12 @@ export default function DatasetCollectionContextProvider({
       checkDatasets: async () => {
         datasetsInFolderQuery.refetch();
       },
+      globalSearchQuery,
+      setGlobalSearchQuery,
       queries: {
         folderTreeQuery,
         datasetsInFolderQuery,
+        datasetSearchQuery,
         createFolderMutation,
         deleteFolderMutation,
         updateFolderMutation,
@@ -460,6 +504,7 @@ export default function DatasetCollectionContextProvider({
       setActiveFolderId,
       folderTreeQuery,
       datasetsInFolderQuery,
+      datasetSearchQuery,
       createFolderMutation,
       deleteFolderMutation,
       updateFolderMutation,

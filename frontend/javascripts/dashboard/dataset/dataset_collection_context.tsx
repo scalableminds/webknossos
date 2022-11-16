@@ -102,8 +102,6 @@ function useDatasetsInFolderQuery(folderId: string | null) {
   const queryKey = ["datasetsByFolder", folderId];
   const fetchedDatasetsRef = useRef<APIMaybeUnimportedDataset[] | null>(null);
 
-  // console.log("[p] hook runs for", folderId);
-
   const queryData = useQuery(
     queryKey,
     () => {
@@ -114,16 +112,9 @@ function useDatasetsInFolderQuery(folderId: string | null) {
       }
 
       if (fetchedDatasetsRef.current != null) {
-        // console.log(
-        //   "[p] folderId",
-        //   folderId,
-        //   "using existing fetchedDatasetsRef.current",
-        //   fetchedDatasetsRef.current,
-        // );
         return fetchedDatasetsRef.current;
       }
 
-      // console.log("[p] folderId", folderId, "getDatasets without prefetching");
       return getDatasets(false, folderId);
     },
     {
@@ -145,17 +136,14 @@ function useDatasetsInFolderQuery(folderId: string | null) {
     const startTime = performance.now();
     getDatasets(null, folderId).then((newDatasets) => {
       if (ignoreFetchResult) {
-        // console.log("[p] ignore received datasets for", folderId);
         return;
       }
       const requestDuration = performance.now() - startTime;
 
       const acceptNewDatasets = () => {
         if (ignoreFetchResult) {
-          // console.log("[p] ignore sleep for", folderId);
           return;
         }
-        // console.log("[p] setFetchedDatasets", newDatasets);
         fetchedDatasetsRef.current = newDatasets;
         Toast.close(`new-datasets-are-available-${folderId || null}`);
         queryData.refetch();
@@ -210,7 +198,6 @@ function useDatasetsInFolderQuery(folderId: string | null) {
     });
 
     return () => {
-      // console.log("[p] clear effect for", folderId);
       fetchedDatasetsRef.current = null;
       ignoreFetchResult = true;
       Toast.close(`new-datasets-are-available-${folderId || null}`);
@@ -425,29 +412,6 @@ export default function DatasetCollectionContextProvider({
 
   async function fetchDatasets(_options: Options = {}): Promise<void> {
     queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", activeFolderId] });
-
-    // const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;
-    // const datasetFilteringMode = options.datasetFilteringMode || "onlyShowReported";
-    // const applyUpdatePredicate = options.applyUpdatePredicate || ((_datasets) => true);
-    // if (isLoading && !isCalledFromCheckDatasets) return;
-    // try {
-    //   setIsLoading(true);
-    //   const mapFilterModeToUnreportedParameter = {
-    //     showAllDatasets: null,
-    //     onlyShowReported: false,
-    //     onlyShowUnreported: true,
-    //   };
-    //   const newDatasets = await getDatasets(
-    //     mapFilterModeToUnreportedParameter[datasetFilteringMode],
-    //   );
-    //   if (applyUpdatePredicate(newDatasets)) {
-    //     setDatasets(newDatasets);
-    //   }
-    // } catch (error) {
-    //   handleGenericError(error as Error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
   }
 
   async function reloadDataset(
@@ -462,10 +426,6 @@ export default function DatasetCollectionContextProvider({
   }
 
   const isLoading = datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
-
-  console.log("datasetsInFolderQuery.isLoading", datasetsInFolderQuery.isLoading);
-  console.log("datasetsInFolderQuery.isFetching", datasetsInFolderQuery.isFetching);
-  console.log("datasetsInFolderQuery.isRefetching", datasetsInFolderQuery.isRefetching);
 
   const value: DatasetCollectionContextValue = useMemo(
     () => ({

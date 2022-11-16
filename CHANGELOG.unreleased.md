@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added ability to shuffle / set colors for a whole tree group. [#6586](https://github.com/scalableminds/webknossos/pull/6586)
 - Annotation layers can now be removed. [#6593](https://github.com/scalableminds/webknossos/pull/6593)
 - When adding remote Zarr datasets with multiple channels, channels are converted into layers. [#6609](https://github.com/scalableminds/webknossos/pull/6609)
+- The scale bar is now included in screenshots of the viewports made using the `Q` shortcut or the "Screenshot" menu entry. If the scale bar should not be included, disable it using "Settings - Viewport Options - Show Scalebars". [#6644](https://github.com/scalableminds/webknossos/pull/6644)
 
 ### Changed
 - The log viewer in the Voxelytics workflow reporting now uses a virtualized list. [#6579](https://github.com/scalableminds/webknossos/pull/6579)

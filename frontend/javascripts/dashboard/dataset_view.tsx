@@ -10,6 +10,7 @@ import {
   SettingOutlined,
   InfoCircleOutlined,
   HourglassOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
@@ -263,14 +264,20 @@ function DatasetView(props: Props) {
   const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
 
   const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
-  const content = isEmpty ? renderPlaceholder(context, user) : renderTable(filteredDatasets);
+  const content = isEmpty
+    ? renderPlaceholder(context, user, searchQuery)
+    : renderTable(filteredDatasets);
 
   return (
     <div>
       {activeTab === renderingTab && (
         <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
       )}
-      {searchQuery && <h3>Search Results for &quot;{searchQuery}&quot;</h3>}
+      {searchQuery && (
+        <h3>
+          <SearchOutlined /> Search Results for &quot;{searchQuery}&quot;
+        </h3>
+      )}
       <CategorizationSearch
         searchTags={searchTags}
         setTags={setSearchTags}
@@ -363,7 +370,19 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   );
 }
 
-function renderPlaceholder(context: DatasetCacheContextValue, user: APIUser) {
+function renderPlaceholder(
+  context: DatasetCacheContextValue,
+  user: APIUser,
+  searchQuery: string | null,
+) {
+  if (context.isLoading) {
+    return null;
+  }
+
+  if (searchQuery) {
+    return "No datasets found. All folders have been searched.";
+  }
+
   const openPublicDatasetCard = (
     <OptionCard
       header="Open Demo Dataset"
@@ -400,7 +419,7 @@ function renderPlaceholder(context: DatasetCacheContextValue, user: APIUser) {
     ? "There are no datasets in this folder. Import one or try a public demo dataset."
     : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets.";
 
-  return context.isLoading ? null : (
+  return (
     <Row
       justify="center"
       style={{

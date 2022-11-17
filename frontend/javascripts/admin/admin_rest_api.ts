@@ -789,6 +789,7 @@ export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
   fallbackLayerName?: string | null | undefined,
+  mappingName?: string | null | undefined,
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
@@ -808,6 +809,7 @@ export function createExplorational(
         typ: "Volume",
         name: fallbackLayerName || "Volume",
         fallbackLayerName,
+        mappingName,
         resolutionRestrictions,
       },
     ];
@@ -821,6 +823,7 @@ export function createExplorational(
         typ: "Volume",
         name: fallbackLayerName || "Volume",
         fallbackLayerName,
+        mappingName,
         resolutionRestrictions,
       },
     ];

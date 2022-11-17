@@ -110,6 +110,10 @@ export async function downloadScreenshot() {
       inputCatcherElement != null
         ? await html2canvas(inputCatcherElement as HTMLElement, {
             backgroundColor: null,
+            // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
+            // as otherwise the two images would not fit together on a HiDPI screen.
+            // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
+            scale: 1,
             ignoreElements: (element) => element.id === "TDViewControls",
           })
         : null;

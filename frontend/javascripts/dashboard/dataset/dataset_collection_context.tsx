@@ -16,7 +16,13 @@ import type {
   FlatFolderTreeItem,
   FolderUpdater,
 } from "types/api_flow_types";
-import { getDatasets, getDataset, updateDataset } from "admin/admin_rest_api";
+import {
+  getDatasets,
+  getDataset,
+  updateDataset,
+  getDatastores,
+  triggerDatasetCheck,
+} from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -127,7 +133,11 @@ function useDatasetsInFolderQuery(folderId: string | null) {
       }
 
       if (fetchedDatasetsRef.current != null) {
-        return fetchedDatasetsRef.current;
+        const datasets = fetchedDatasetsRef.current;
+        // Clear the pre-fetched datasets so that future refetches don't
+        // reuse this value (e.g., when the user clicks on refresh).
+        fetchedDatasetsRef.current = null;
+        return datasets;
       }
 
       return getDatasets(false, folderId);
@@ -408,6 +418,7 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
+  const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
 
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
@@ -450,7 +461,7 @@ export default function DatasetCollectionContextProvider({
   }, [activeFolderId]);
 
   async function fetchDatasets(_options: Options = {}): Promise<void> {
-    queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", activeFolderId] });
+    datasetsInFolderQuery.refetch();
   }
 
   async function reloadDataset(
@@ -479,8 +490,26 @@ export default function DatasetCollectionContextProvider({
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
-      isChecking: false,
+      isChecking,
       checkDatasets: async () => {
+        if (isChecking) {
+          console.warn("Ignore second rechecking request, since a recheck is already in progress");
+          return;
+        }
+        setIsChecking(true);
+        const datastores = await getDatastores();
+        await Promise.all(
+          datastores.map(
+            (
+              datastore, // Catch potentially failing triggers, since these should not
+            ) =>
+              // block the subsequent fetch of datasets. Otherwise, one offline
+              // datastore will stop the refresh for all datastores.
+              triggerDatasetCheck(datastore.url).catch(() => {}),
+          ),
+        );
+        setIsChecking(false);
+
         datasetsInFolderQuery.refetch();
       },
       globalSearchQuery,
@@ -497,6 +526,7 @@ export default function DatasetCollectionContextProvider({
       },
     }),
     [
+      isChecking,
       datasets,
       isLoading,
       fetchDatasets,

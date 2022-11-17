@@ -1,6 +1,19 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin, Tooltip, Alert } from "antd";
+import {
+  Badge,
+  Button,
+  Radio,
+  Col,
+  Dropdown,
+  Input,
+  Menu,
+  Row,
+  Spin,
+  Tooltip,
+  Alert,
+  MenuProps,
+} from "antd";
 import {
   CloudUploadOutlined,
   LoadingOutlined,
@@ -73,6 +86,13 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
     ? datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
 }
+
+const refreshMenuItems = [
+  {
+    key: "1",
+    label: "Refresh from disk",
+  },
+];
 
 function DatasetView(props: Props) {
   const { user } = props;
@@ -221,8 +241,8 @@ function DatasetView(props: Props) {
   ) : (
     searchBox
   );
-  const showLoadingIndicator =
-    (context.datasets.length === 0 && context.isLoading) || context.isChecking;
+  const showLoadingIndicator = context.isLoading || context.isChecking;
+
   const adminHeader = (
     <div
       className="pull-right"
@@ -234,18 +254,17 @@ function DatasetView(props: Props) {
         <React.Fragment>
           <Tooltip
             title={
-              showLoadingIndicator
-                ? "Refreshing the dataset list."
-                : "Search for new datasets on disk."
+              showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."
             }
           >
-            <Button
-              icon={showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />}
+            <Dropdown.Button
+              overlay={<Menu onClick={context.checkDatasets} items={refreshMenuItems} />}
               style={margin}
-              onClick={context.checkDatasets}
+              onClick={() => context.fetchDatasets()}
+              disabled={context.isChecking}
             >
-              Refresh
-            </Button>
+              {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+            </Dropdown.Button>
           </Tooltip>
           <Link to="/datasets/upload" style={margin}>
             <Button type="primary" icon={<PlusOutlined />}>

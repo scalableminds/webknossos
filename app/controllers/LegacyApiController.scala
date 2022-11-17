@@ -407,11 +407,10 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       logVersioned(request)
-      val oldRequest = request.request
+      val oldRequest = request
       val newRequest =
         if (request.body.as[JsObject].keys.contains("isPublic"))
-          request.copy(
-            request = oldRequest.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject]))))
+          request.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject])))
         else request
 
       for {

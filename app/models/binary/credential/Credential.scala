@@ -19,17 +19,13 @@ case class Credential(_id: ObjectId,
                       filePath: Option[String])
 
 // Specific credentials
+trait AnyCredential
+
 case class HTTPBasicAuthCredential(_id: ObjectId, name: String, username: String, password: String, domain: String)
+    extends AnyCredential
 
 case class S3AccessKeyCredential(_id: ObjectId, name: String, keyId: String, key: String, bucket: String)
-
-sealed trait AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential]
-object AnyCredential {
-  implicit def httpBasicAuthInstance[HTTPBasicAuthCredential, S3AccessKeyCredential](c: HTTPBasicAuthCredential) =
-    new AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential] {}
-  implicit def s3AccessKeyInstance[HTTPBasicAuthCredential, S3AccessKeyCredential](c: S3AccessKeyCredential) =
-    new AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential] {}
-}
+    extends AnyCredential
 
 class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Credential, CredentialsRow, Credentials](sqlClient) {
@@ -77,14 +73,14 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                      values(${credential._id}, '#${CredentialType.S3_Access_Key}', ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.bucket})""")
     } yield ()
 
-  def findOne(id: String): Fox[AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential]] =
+  def findOne(id: String): Fox[AnyCredential] =
     for {
       r <- run(sql"select #$columns from webknossos.credentials where id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed
 
-  def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential]] =
+  def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential] =
     r.`type` match {
       case "HTTP Basic-Auth" =>
         for {

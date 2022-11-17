@@ -32,7 +32,11 @@ import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
-import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import {
+  DatasetCollectionContextValue,
+  MINIMUM_SEARCH_QUERY_LENGTH,
+  SEARCH_RESULTS_LIMIT,
+} from "./dataset/dataset_collection_context";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -143,15 +147,13 @@ function DatasetView(props: Props) {
     setSearchQuery(value);
   }
 
-  const useGlobalSearch = true;
-
   function renderTable(filteredDatasets: APIMaybeUnimportedDataset[]) {
     return (
       <DatasetTable
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
         selectedDataset={props.selectedDataset}
-        searchQuery={useGlobalSearch ? "" : searchQuery || ""}
+        searchQuery={searchQuery || ""}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
@@ -273,11 +275,21 @@ function DatasetView(props: Props) {
       {activeTab === renderingTab && (
         <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
       )}
-      {searchQuery && (
-        <h3>
-          <SearchOutlined /> Search Results for &quot;{searchQuery}&quot;
-        </h3>
-      )}
+      {searchQuery &&
+        // Render a header for the search.
+        (searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
+          <h3>
+            <SearchOutlined /> Search Results for &quot;{searchQuery}&quot;
+            {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+              <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+                (only showing the first {SEARCH_RESULTS_LIMIT} results)
+              </span>
+            ) : null}
+          </h3>
+        ) : (
+          // No results are shown because the search query is too short
+          isEmpty && <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+        ))}
       <CategorizationSearch
         searchTags={searchTags}
         setTags={setSearchTags}
@@ -380,7 +392,9 @@ function renderPlaceholder(
   }
 
   if (searchQuery) {
-    return "No datasets found. All folders have been searched.";
+    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH
+      ? "No datasets found. All folders have been searched."
+      : null;
   }
 
   const openPublicDatasetCard = (

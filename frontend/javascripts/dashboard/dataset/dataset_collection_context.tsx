@@ -24,6 +24,9 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { handleGenericError } from "libs/error_handling";
 
+export const SEARCH_RESULTS_LIMIT = 100;
+export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
+
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
@@ -100,10 +103,10 @@ export function useDatasetSearchQuery(query: string | null) {
   return useQuery(
     queryKey,
     async () => {
-      if (query == null) {
+      if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
         return [];
       }
-      return await getDatasets(null, null, query);
+      return await getDatasets(null, null, query, SEARCH_RESULTS_LIMIT);
     },
     {
       refetchOnWindowFocus: false,

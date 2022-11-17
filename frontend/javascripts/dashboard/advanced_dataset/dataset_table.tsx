@@ -33,6 +33,7 @@ import { DndProvider, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
 import Shortcut from "libs/shortcut_component";
+import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/dataset_collection_context";
 
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
@@ -273,9 +274,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const datasetToRankMap: Map<APIMaybeUnimportedDataset, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
-    const sortedDataSource = // Sort using the dice coefficient if the table is not sorted otherwise
-      // and if the query is longer then 3 characters to avoid sorting *all* datasets
-      this.props.searchQuery.length > 3 && sortedInfo.columnKey == null
+    const sortedDataSource =
+      // Sort using the dice coefficient if the table is not sorted by another key
+      // and if the query is at least 3 characters long to avoid sorting *all* datasets
+      this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH && sortedInfo.columnKey == null
         ? _.chain(filteredDataSource)
             .map((dataset) => {
               const diceCoefficient = dice(dataset.name, this.props.searchQuery);

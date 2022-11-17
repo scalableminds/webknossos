@@ -59,9 +59,6 @@ export function DatasetFolderView(props: Props) {
 function DatasetFolderViewInner(props: Props) {
   const [selectedDataset, setSelectedDataset] = useState<APIMaybeUnimportedDataset | null>(null);
   const context = useDatasetCollectionContext();
-  const isMutating = useIsMutating() > 0;
-
-  console.log("context.datasets", context.datasets);
 
   useEffect(() => {
     if (!selectedDataset || !context.datasets) {
@@ -90,15 +87,13 @@ function DatasetFolderViewInner(props: Props) {
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
-        <Spin spinning={context.isLoading || isMutating}>
-          <DatasetView
-            user={props.user}
-            onSelectDataset={setSelectedDataset}
-            selectedDataset={selectedDataset}
-            context={context}
-            hideDetailsColumns
-          />
-        </Spin>
+        <DatasetView
+          user={props.user}
+          onSelectDataset={setSelectedDataset}
+          selectedDataset={selectedDataset}
+          context={context}
+          hideDetailsColumns
+        />
       </main>
       <div
         style={{

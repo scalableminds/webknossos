@@ -18,7 +18,7 @@ import type {
 } from "types/api_flow_types";
 import { getDatasets, getDataset, updateDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
@@ -405,6 +405,7 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
+  const isMutating = useIsMutating() > 0;
 
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
@@ -458,9 +459,10 @@ export default function DatasetCollectionContextProvider({
     updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
-  const isLoading = globalSearchQuery
-    ? datasetSearchQuery.isFetching
-    : datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
+  const isLoading =
+    (globalSearchQuery
+      ? datasetSearchQuery.isFetching
+      : datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching) || isMutating;
 
   const value: DatasetCollectionContextValue = useMemo(
     () => ({

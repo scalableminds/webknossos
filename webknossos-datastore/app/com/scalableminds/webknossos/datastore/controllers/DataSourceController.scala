@@ -30,6 +30,7 @@ class DataSourceController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
+    storageUsageService: StorateUsageService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -439,6 +440,20 @@ Expects:
             BadRequest
         }
   }
+
+  @ApiOperation(hidden = true, value = "")
+  def measureUsedStorage(token: Option[String],
+             organizationName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+        urlOrHeaderToken(token, request)) {
+        for {
+          usedStorageInBytes: Long <- storageUsageService.measureStorage(organizationName)
+        } yield Ok(Json.obj(
+          "usedStorageInBytes" -> usedStorageInBytes
+        ))
+      }
+    }
 
   @ApiOperation(hidden = true, value = "")
   def reload(token: Option[String],

@@ -139,6 +139,8 @@ function DatasetDetailsSidebar({
     }
   }, [selectedDataset, context.activeFolderId]);
 
+  const maybeSelectMsg = datasetCount > 0 ? "Select one to see details." : "";
+
   return (
     <div style={{ width: 300, padding: 16 }}>
       {selectedDataset != null ? (
@@ -183,13 +185,19 @@ function DatasetDetailsSidebar({
           {searchQuery ? (
             <Result
               icon={<SearchOutlined style={{ fontSize: 50 }} />}
-              subTitle={<>{datasetCount} dataset(s) were found. Select one to see details.</>}
+              subTitle={
+                <>
+                  {datasetCount} dataset(s) were found. {maybeSelectMsg}
+                </>
+              }
             />
           ) : (
             <Result
               icon={<FolderOpenOutlined style={{ fontSize: 50 }} />}
               subTitle={
-                <>This folder contains {datasetCount} dataset(s). Select one to see details.</>
+                <>
+                  This folder contains {datasetCount} dataset(s). {maybeSelectMsg}
+                </>
               }
             />
           )}

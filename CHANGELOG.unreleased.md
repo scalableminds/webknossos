@@ -28,6 +28,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Re-phrased some backend (error) messages to improve clarity and provide helping hints. [#6616](https://github.com/scalableminds/webknossos/pull/6616)
 - The layer visibility is now encoded in the sharing link. The user opening the link will see the same layers that were visible when copying the link. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
 - Voxelytics workflows can now be viewed by anyone with the link who is in the right organization. [#6622](https://github.com/scalableminds/webknossos/pull/6622)
+- When importing an annotation into an existing annotation, webKnossos ensures that bounding boxes are not duplicated in case they exist in the current *and* imported annotation. [#6648](https://github.com/scalableminds/webknossos/pull/6648)
+
  
 ### Fixed
 - Fixed a bug in the dataset import view, where the layer name text field would lose focus after each key press. [#6615](https://github.com/scalableminds/webknossos/pull/6615)

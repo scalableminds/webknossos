@@ -1,0 +1,98 @@
+package models.binary.credential
+
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.schema.Tables
+import utils.{ObjectId, SQLClient, SQLDAO}
+import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
+import slick.lifted.Rep
+
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
+
+// Generic credential as it appears in the database
+case class Credential(_id: ObjectId,
+                      credentialType: CredentialType.Value,
+                      name: String,
+                      identifier: Option[String],
+                      secret: Option[String],
+                      scope: Option[String],
+                      filePath: Option[String])
+
+// Specific credentials
+case class HTTPBasicAuthCredential(_id: ObjectId, name: String, username: String, password: String, domain: String)
+
+case class S3AccessKeyCredential(_id: ObjectId, name: String, keyId: String, key: String, bucket: String)
+
+sealed trait AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential]
+object AnyCredential {
+  implicit def httpBasicAuthInstance[HTTPBasicAuthCredential, S3AccessKeyCredential](c: HTTPBasicAuthCredential) =
+    new AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential] {}
+  implicit def s3AccessKeyInstance[HTTPBasicAuthCredential, S3AccessKeyCredential](c: S3AccessKeyCredential) =
+    new AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential] {}
+}
+
+class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends SQLDAO[Credential, CredentialsRow, Credentials](sqlClient) {
+  val collection = Credentials
+
+  def idColumn(x: Credentials): Rep[String] = x._Id
+
+  def parseAsHTTPBasicAuthCredential(r: CredentialsRow): Fox[HTTPBasicAuthCredential] =
+    for {
+      username <- r.identifier.toFox
+      password <- r.secret.toFox
+      domain <- r.scope.toFox
+    } yield
+      HTTPBasicAuthCredential(
+        ObjectId(r._Id),
+        r.name,
+        username,
+        password,
+        domain
+      )
+
+  def parseAsS3AccessKeyCredential(r: CredentialsRow): Fox[S3AccessKeyCredential] =
+    for {
+      keyId <- r.identifier.toFox
+      key <- r.secret.toFox
+      bucket <- r.scope.toFox
+    } yield
+      S3AccessKeyCredential(
+        ObjectId(r._Id),
+        r.name,
+        keyId,
+        key,
+        bucket
+      )
+
+  def insertOne(credential: HTTPBasicAuthCredential): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""insert into webknossos.credentials(_id, credentialType, name, identifier, secret, scope)
+                     values(${credential._id}, '#${CredentialType.HTTP_Basic_Auth}', ${credential.name}, ${credential.username}, ${credential.password}, ${credential.domain})""")
+    } yield ()
+
+  def insertOne(credential: S3AccessKeyCredential): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""insert into webknossos.credentials(_id, credentialType, name, identifier, secret, scope)
+                     values(${credential._id}, '#${CredentialType.S3_Access_Key}', ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.bucket})""")
+    } yield ()
+
+  def findOne(id: String): Fox[AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential]] =
+    for {
+      r <- run(sql"select #$columns from webknossos.credentials where id = $id".as[CredentialsRow])
+      firstRow <- r.headOption.toFox
+      parsed <- parseAnyCredential(firstRow)
+    } yield parsed
+
+  def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential[HTTPBasicAuthCredential, S3AccessKeyCredential]] =
+    r.`type` match {
+      case "HTTP Basic-Auth" =>
+        for {
+          parsed <- parseAsHTTPBasicAuthCredential(r)
+        } yield parsed
+      case "S3 Access Key" =>
+        for {
+          parsed <- parseAsS3AccessKeyCredential(r)
+        } yield parsed
+    }
+}

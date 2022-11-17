@@ -6,6 +6,7 @@ import {
   FolderOutlined,
   PlusOutlined,
   SearchOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
 import { Menu, Dropdown, Spin, Modal, Input, Form, Result, Tag } from "antd";
@@ -63,6 +64,7 @@ export function DatasetFolderView(props: Props) {
 function DatasetFolderViewInner(props: Props) {
   const [selectedDataset, setSelectedDataset] = useState<APIMaybeUnimportedDataset | null>(null);
   const context = useDatasetCollectionContext();
+  const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedDataset || !context.datasets) {
@@ -80,6 +82,12 @@ function DatasetFolderViewInner(props: Props) {
         gridTemplate: "auto 1fr auto / auto 1fr auto",
       }}
     >
+      {folderIdForEditModal != null && (
+        <EditFolderModal
+          onClose={() => setFolderIdForEditModal(null)}
+          folderId={folderIdForEditModal}
+        />
+      )}
       <div
         style={{
           gridColumn: "1 / 2",
@@ -88,7 +96,7 @@ function DatasetFolderViewInner(props: Props) {
           marginRight: 16,
         }}
       >
-        <FolderTreeSidebar />
+        <FolderTreeSidebar setFolderIdForEditModal={setFolderIdForEditModal} />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
         <DatasetView
@@ -112,6 +120,7 @@ function DatasetFolderViewInner(props: Props) {
           setSelectedDataset={setSelectedDataset}
           activeFolderId={context.activeFolderId}
           datasetCount={context.datasets.length}
+          setFolderIdForEditModal={setFolderIdForEditModal}
           searchQuery={context.globalSearchQuery}
         />
       </div>
@@ -125,12 +134,14 @@ function DetailsSidebar({
   datasetCount,
   searchQuery,
   activeFolderId,
+  setFolderIdForEditModal,
 }: {
   selectedDataset: APIMaybeUnimportedDataset | null;
   setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
   datasetCount: number;
   searchQuery: string | null;
   activeFolderId: string | null;
+  setFolderIdForEditModal: (value: string | null) => void;
 }) {
   const context = useDatasetCollectionContext();
   const { data: folder } = useFolderQuery(activeFolderId);
@@ -153,7 +164,8 @@ function DetailsSidebar({
       {selectedDataset != null ? (
         <>
           <h3 style={{ wordBreak: "break-all" }}>
-            <FileOutlined /> {selectedDataset.displayName || selectedDataset.name}
+            <FileOutlined style={{ marginRight: 4 }} />{" "}
+            {selectedDataset.displayName || selectedDataset.name}
           </h3>
           {selectedDataset.isActive && (
             <div>
@@ -206,8 +218,18 @@ function DetailsSidebar({
               {folder ? (
                 <div style={{ textAlign: "left" }}>
                   <h3 style={{ wordBreak: "break-all" }}>
-                    <FolderOpenOutlined />
-                    {Unicode.NonBreakingSpace}
+                    <span
+                      style={{
+                        float: "right",
+                        fontSize: 16,
+                        marginTop: 8,
+                        marginLeft: 2,
+                        color: "var(--ant-text-secondary)",
+                      }}
+                    >
+                      <SettingOutlined onClick={() => setFolderIdForEditModal(folder.id)} />
+                    </span>
+                    <FolderOpenOutlined style={{ marginRight: 8 }} />
                     {folder.name}
                   </h3>
                   <p>
@@ -374,9 +396,12 @@ function FolderItemAsDropTarget(props: {
   );
 }
 
-function FolderTreeSidebar() {
+function FolderTreeSidebar({
+  setFolderIdForEditModal,
+}: {
+  setFolderIdForEditModal: (value: string | null) => void;
+}) {
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
-  const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
   const context = useDatasetCollectionContext();
 
   const { data: folderTree } = context.queries.folderTreeQuery;
@@ -441,12 +466,6 @@ function FolderTreeSidebar() {
         padding: 2,
       }}
     >
-      {folderIdForEditModal != null && (
-        <EditFolderModal
-          onClose={() => setFolderIdForEditModal(null)}
-          folderId={folderIdForEditModal}
-        />
-      )}
       <SortableTree
         treeData={treeData}
         onChange={(newTreeData: FolderItem[]) => {

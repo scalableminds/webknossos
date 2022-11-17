@@ -182,9 +182,9 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     searchQueryOpt match {
       case None => "true"
       case Some(searchQuery) =>
-        val searchQueryFiltered = searchQuery.replaceAll("[^A-Za-z0-9_\\-. ]", "").toLowerCase()
-        val segments = searchQueryFiltered.trim.split(" +")
-        segments.map(queryToken => s" LOWER(name) LIKE '%$queryToken%' ").mkString(" AND ")
+        val searchQueryFiltered = searchQuery.replaceAll("[^A-Za-z0-9_\\-. ]", " ").toLowerCase.trim
+        val queryTokens = searchQueryFiltered.split(" +")
+        queryTokens.map(queryToken => s"LOWER(name) LIKE '%$queryToken%'").mkString(" AND ")
     }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =

@@ -176,34 +176,11 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(rows, "id")
     } yield parsed
 
-  def findParentId(folderId: ObjectId): Fox[ObjectId] =
-    for {
-      rows <- run(sql"""SELECT _ancestor
-                        FROM webknossos.folder_paths
-                        WHERE _descendant = $folderId
-                        AND depth = 1
-                        """.as[ObjectId])
-      parsed <- rows.headOption
-    } yield parsed
-
-  def nameExistsInLevel(name: String, parentFolderId: ObjectId): Fox[Boolean] =
-    for {
-      rows <- run(sql"""SELECT EXISTS(
-                SELECT 1 FROM
-                webknossos.folders_ f
-                JOIN webknossos.folder_paths fp ON fp._descendant = f._id
-                WHERE f.name = $name
-                AND fp._ancestor = $parentFolderId
-                AND fp.depth = 1
-              )""".as[Boolean])
-      result <- rows.headOption
-    } yield result
-
   def countChildren(folderId: ObjectId): Fox[Int] =
     for {
-      rows <- run(sql"SELECT COUNT(*) FROM webknossos.folder_paths WHERE _ancestor = $folderId".as[Int])
+      rows <- run(sql"SELECT COUNT(*) FROM webknossos.folder_paths WHERE _ancestor = $folderId AND depth = 1".as[Int])
       firstRow <- rows.headOption
-    } yield firstRow - 1 // subtract the self-link
+    } yield firstRow
 
   def updateName(folderId: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -297,11 +274,5 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   private def insertFolderQuery(f: Folder): SqlAction[Int, NoStream, Effect] =
     sqlu"INSERT INTO webknossos.folders(_id, name) VALUES (${f._id}, ${f.name})"
-
-  def updateOne(f: Folder)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- assertUpdateAccess(f._id)
-      _ <- run(sqlu"UPDATE webknossos.folders SET name = ${f.name} WHERE _id = ${f._id}")
-    } yield ()
 
 }

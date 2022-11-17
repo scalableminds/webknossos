@@ -1,7 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.FoxImplicits
 import models.binary.DataSetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
@@ -50,9 +50,8 @@ class FolderController @Inject()(
         idValidated <- ObjectId.fromString(id)
         params = request.body
         organization <- organizationDAO.findOne(request.identity._organization)
-        oldFolder <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
-        _ <- Fox
-          .runIf(oldFolder.name != params.name)(folderDAO.updateName(idValidated, params.name)) ?~> "folder.update.name.failed"
+        _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+        _ <- folderDAO.updateName(idValidated, params.name) ?~> "folder.update.name.failed"
         _ <- folderService
           .updateAllowedTeams(idValidated, params.allowedTeams, request.identity) ?~> "folder.update.teams.failed"
         updated <- folderDAO.findOne(idValidated)
@@ -66,7 +65,7 @@ class FolderController @Inject()(
       newParentIdValidated <- ObjectId.fromString(newParentId)
       organization <- organizationDAO.findOne(request.identity._organization)
       _ <- bool2Fox(organization._rootFolder != idValidated) ?~> "folder.move.root"
-      folderToMove <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+      _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
       _ <- folderDAO.findOne(newParentIdValidated) ?~> "folder.notFound"
       _ <- folderDAO.moveSubtree(idValidated, newParentIdValidated)
       updated <- folderDAO.findOne(idValidated)
@@ -93,8 +92,8 @@ class FolderController @Inject()(
       organization <- organizationDAO.findOne(request.identity._organization)
       foldersWithParents <- folderDAO.findTreeOf(organization._rootFolder)
       allEditableIds <- folderDAO.findAllEditableIds
-      foldersWithParentsJson = foldersWithParents.map(f =>
-        folderService.publicWritesWithParent(f, allEditableIds.toSet))
+      allEditableIdsSet = allEditableIds.toSet
+      foldersWithParentsJson = foldersWithParents.map(f => folderService.publicWritesWithParent(f, allEditableIdsSet))
     } yield Ok(Json.toJson(foldersWithParentsJson))
   }
 
@@ -102,6 +101,7 @@ class FolderController @Inject()(
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
       newFolder = Folder(ObjectId.generate, name)
+      _ <- folderDAO.findOne(parentIdValidated) ?~> "folder.notFound"
       _ <- folderDAO.insertAsChild(parentIdValidated, newFolder) ?~> "folder.create.failed"
       organization <- organizationDAO.findOne(request.identity._organization) ?~> "folder.notFound"
       folderJson <- folderService.publicWrites(newFolder, Some(request.identity), Some(organization))

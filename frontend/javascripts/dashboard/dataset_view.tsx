@@ -430,9 +430,17 @@ function renderPlaceholder(
     </OptionCard>
   );
 
-  const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
-    ? "There are no datasets in this folder. Import one or try a public demo dataset."
-    : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets.";
+  let emptyListHintText;
+
+  if (context.supportsFolders) {
+    emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+      ? "There are no datasets in this folder. Import one or move a dataset from another folder."
+      : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
+  } else {
+    emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+      ? "There are no datasets available yet. Import one or try a public demo dataset."
+      : "There are no datasets available yet. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets.";
+  }
 
   return (
     <Row

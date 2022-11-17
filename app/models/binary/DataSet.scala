@@ -183,7 +183,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       case None => "true"
       case Some(searchQuery) =>
         val searchQueryFiltered = searchQuery.replaceAll("[^A-Za-z0-9_\\-. ]", "").toLowerCase()
-        val segments = searchQueryFiltered.split(" ")
+        val segments = searchQueryFiltered.trim.split(" +")
         segments.map(queryToken => s" LOWER(name) LIKE '%$queryToken%' ").mkString(" AND ")
     }
 

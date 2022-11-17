@@ -315,6 +315,17 @@ function FolderSidebar() {
     });
   }, [folderTree]);
 
+  useEffect(() => {
+    if (context.activeFolderId == null && !context.globalSearchQuery) {
+      // No search is active and no folder is selected. For example, this happens
+      // after clearing the search box.
+      // Activate the root folder.
+      if (treeData.length > 0) {
+        context.setActiveFolderId(treeData[0].id);
+      }
+    }
+  }, [context.activeFolderId, context.globalSearchQuery]);
+
   // This useDrop is only used to highlight the sidebar when
   // a dataset is dragged. This helps the user to understand that
   // the dataset should be dragged to folders in the sidebar.

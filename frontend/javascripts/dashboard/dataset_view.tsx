@@ -38,7 +38,7 @@ const { Search, Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
-  context?: DatasetCacheContextValue | DatasetCollectionContextValue;
+  context: DatasetCacheContextValue | DatasetCollectionContextValue;
   onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
   selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns: boolean;
@@ -72,12 +72,10 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
 
 function DatasetView(props: Props) {
   const { user } = props;
-  const datasetCacheContext = useContext(DatasetCacheContext);
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
 
-  const context: DatasetCacheContextValue | DatasetCollectionContextValue =
-    props.context || datasetCacheContext;
+  const context = props.context;
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);

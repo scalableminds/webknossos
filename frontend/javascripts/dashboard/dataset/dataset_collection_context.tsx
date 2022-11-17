@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import type {
   APIMaybeUnimportedDataset,
@@ -56,37 +64,18 @@ export type DatasetCollectionContextValue = {
   };
 };
 
-export const DatasetCollectionContext = createContext<DatasetCollectionContextValue>({
-  datasets: [],
-  isLoading: false,
-  isChecking: false,
-  fetchDatasets: async () => {},
-  checkDatasets: async () => {},
-  reloadDataset: async () => {},
-  updateCachedDataset: async () => {},
-  activeFolderId: null,
-  setActiveFolderId: () => {},
-  queries: {
-    // @ts-ignore todo
-    folderQuery: {},
-    // @ts-ignore todo
-    folderTreeQuery: {},
-    // @ts-ignore todo
-    datasetsInFolderQuery: {},
-    // @ts-ignore todo
-    datasetSearchQuery: {},
-    // @ts-ignore todo
-    createFolderMutation: {},
-    // @ts-ignore todo
-    updateFolderMutation: {},
-    // @ts-ignore todo
-    deleteFolderMutation: {},
-    // @ts-ignore todo
-    updateDatasetMutation: {},
-    // @ts-ignore todo
-    moveFolderMutation: {},
-  },
-});
+export const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
+  undefined,
+);
+
+export const useDatasetCollectionContext = () => {
+  const context = useContext(DatasetCollectionContext);
+  if (!context)
+    throw new Error(
+      "No DatasetCollectionContext.Provider found when calling useDatasetCollectionContext.",
+    );
+  return context;
+};
 
 export function useFolderQuery(folderId: string) {
   const queryKey = ["folders", folderId];
@@ -448,6 +437,8 @@ export default function DatasetCollectionContextProvider({
   useEffect(() => {
     if (activeFolderId != null) {
       UserLocalStorage.setItem(ACTIVE_FOLDER_ID_STORAGE_KEY, activeFolderId);
+    } else {
+      UserLocalStorage.removeItem(ACTIVE_FOLDER_ID_STORAGE_KEY);
     }
   }, [activeFolderId]);
 

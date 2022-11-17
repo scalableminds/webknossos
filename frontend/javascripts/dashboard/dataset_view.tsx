@@ -141,15 +141,13 @@ function DatasetView(props: Props) {
     setSearchQuery(value);
   }
 
-  const useGlobalSearch = true;
-
   function renderTable(filteredDatasets: APIMaybeUnimportedDataset[]) {
     return (
       <DatasetTable
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
         selectedDataset={props.selectedDataset}
-        searchQuery={useGlobalSearch ? "" : searchQuery || ""}
+        searchQuery={context.supportsOnlineSearch ? "" : searchQuery || ""}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
@@ -369,7 +367,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
 }
 
 function renderPlaceholder(
-  context: DatasetCacheContextValue,
+  context: DatasetCacheContextValue | DatasetCollectionContextValue,
   user: APIUser,
   searchQuery: string | null,
 ) {

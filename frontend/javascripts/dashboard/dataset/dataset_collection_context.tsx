@@ -50,6 +50,7 @@ export type DatasetCollectionContextValue = {
   updateCachedDataset: (dataset: APIDataset) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string) => void;
+  supportsOnlineSearch: true;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   queries: {
@@ -463,6 +464,7 @@ export default function DatasetCollectionContextProvider({
 
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
+      supportsOnlineSearch: true as true,
       datasets,
       isLoading,
       fetchDatasets,

@@ -1,12 +1,13 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  FolderOpenOutlined,
   FolderOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
-import { Menu, Dropdown, Spin, Modal, Input, Form } from "antd";
+import { Menu, Dropdown, Spin, Modal, Input, Form, Result } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
@@ -106,6 +107,8 @@ function DatasetFolderViewInner(props: Props) {
         <DatasetDetailsSidebar
           selectedDataset={selectedDataset}
           setSelectedDataset={setSelectedDataset}
+          datasetCount={context.datasets.length}
+          searchQuery={context.globalSearchQuery}
         />
       </div>
     </div>
@@ -115,9 +118,13 @@ function DatasetFolderViewInner(props: Props) {
 function DatasetDetailsSidebar({
   selectedDataset,
   setSelectedDataset,
+  datasetCount,
+  searchQuery,
 }: {
   selectedDataset: APIMaybeUnimportedDataset | null;
   setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
+  datasetCount: number;
+  searchQuery: string | null;
 }) {
   const context = useDatasetCollectionContext();
 
@@ -172,7 +179,21 @@ function DatasetDetailsSidebar({
           ) : null}
         </>
       ) : (
-        <div style={{ textAlign: "center" }}>No dataset selected</div>
+        <div style={{ textAlign: "center" }}>
+          {searchQuery ? (
+            <Result
+              icon={<SearchOutlined style={{ fontSize: 50 }} />}
+              subTitle={<>{datasetCount} dataset(s) were found. Select one to see details.</>}
+            />
+          ) : (
+            <Result
+              icon={<FolderOpenOutlined style={{ fontSize: 50 }} />}
+              subTitle={
+                <>This folder contains {datasetCount} dataset(s). Select one to see details.</>
+              }
+            />
+          )}
+        </div>
       )}
     </div>
   );

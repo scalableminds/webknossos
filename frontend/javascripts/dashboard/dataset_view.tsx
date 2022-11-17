@@ -42,7 +42,7 @@ const { Search, Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
-  context?: DatasetCacheContextValue | DatasetCollectionContextValue;
+  context: DatasetCacheContextValue | DatasetCollectionContextValue;
   onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
   selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns: boolean;
@@ -76,12 +76,10 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
 
 function DatasetView(props: Props) {
   const { user } = props;
-  const datasetCacheContext = useContext(DatasetCacheContext);
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
 
-  const context: DatasetCacheContextValue | DatasetCollectionContextValue =
-    props.context || datasetCacheContext;
+  const context = props.context;
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
@@ -383,12 +381,15 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
 }
 
 function renderPlaceholder(
-  context: DatasetCacheContextValue,
+  context: DatasetCacheContextValue | DatasetCollectionContextValue,
   user: APIUser,
   searchQuery: string | null,
 ) {
   if (context.isLoading) {
-    return null;
+    // A spinner is rendered by the parent above this component which is
+    // why a height is necessary to avoid the spinner sticking to the top
+    // (and being cropped).
+    return <div style={{ height: 200 }}></div>;
   }
 
   if (searchQuery) {

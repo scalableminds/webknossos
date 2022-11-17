@@ -21,6 +21,7 @@ export type DatasetCacheContextValue = {
   isLoading: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
+  supportsOnlineSearch: false;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   fetchDatasets: (options?: Options) => Promise<void>;
@@ -51,6 +52,7 @@ export const datasetCache = {
   },
 };
 export const DatasetCacheContext = createContext<DatasetCacheContextValue>({
+  supportsOnlineSearch: false,
   datasets: [],
   isLoading: false,
   isChecking: false,
@@ -215,6 +217,7 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
 
   const value = useMemo(
     () => ({
+      supportsOnlineSearch: false as false,
       datasets,
       isLoading,
       isChecking,

@@ -1,10 +1,16 @@
-import { DeleteOutlined, EditOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  FolderOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
 import { Menu, Dropdown, Spin, Modal, Input, Form } from "antd";
 import Toast from "libs/toast";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DragObjectWithType, DropTargetMonitor, useDrop } from "react-dnd";
 import SortableTree, {
   ExtendedNodeData,
@@ -29,8 +35,8 @@ import {
   TeamTags,
 } from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
-  DatasetCollectionContext,
   DatasetCollectionContextValue,
+  useDatasetCollectionContext,
   useFolderQuery,
 } from "./dataset/dataset_collection_context";
 import { FormItemWithInfo } from "./dataset/helper_components";
@@ -52,10 +58,7 @@ export function DatasetFolderView(props: Props) {
 
 function DatasetFolderViewInner(props: Props) {
   const [selectedDataset, setSelectedDataset] = useState<APIMaybeUnimportedDataset | null>(null);
-  const context = useContext(DatasetCollectionContext);
-  const isMutating = useIsMutating() > 0;
-
-  console.log("context.datasets", context.datasets);
+  const context = useDatasetCollectionContext();
 
   useEffect(() => {
     if (!selectedDataset || !context.datasets) {
@@ -84,15 +87,13 @@ function DatasetFolderViewInner(props: Props) {
         <FolderSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
-        <Spin spinning={context.isLoading || isMutating}>
-          <DatasetView
-            user={props.user}
-            onSelectDataset={setSelectedDataset}
-            selectedDataset={selectedDataset}
-            context={context}
-            hideDetailsColumns
-          />
-        </Spin>
+        <DatasetView
+          user={props.user}
+          onSelectDataset={setSelectedDataset}
+          selectedDataset={selectedDataset}
+          context={context}
+          hideDetailsColumns
+        />
       </main>
       <div
         style={{
@@ -118,7 +119,7 @@ function DatasetDetailsSidebar({
   selectedDataset: APIMaybeUnimportedDataset | null;
   setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
 }) {
-  const context = useContext(DatasetCollectionContext);
+  const context = useDatasetCollectionContext();
 
   useEffect(() => {
     if (selectedDataset == null || !("folderId" in selectedDataset)) {
@@ -262,7 +263,7 @@ function FolderItemAsDropTarget(props: {
   onClick: () => void;
   isEditable: boolean;
 }) {
-  const context = useContext(DatasetCollectionContext);
+  const context = useDatasetCollectionContext();
   const { folderId, className, isEditable, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
@@ -300,7 +301,7 @@ function FolderItemAsDropTarget(props: {
 function FolderSidebar() {
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
-  const context = useContext(DatasetCollectionContext);
+  const context = useDatasetCollectionContext();
 
   const { data: folderTree } = context.queries.folderTreeQuery;
 
@@ -454,7 +455,7 @@ function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) 
 function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () => void }) {
   const { data: folder, isFetching } = useFolderQuery(folderId);
   const [form] = Form.useForm();
-  const context = useContext(DatasetCollectionContext);
+  const context = useDatasetCollectionContext();
 
   const onSave = async () => {
     const name = form.getFieldValue("name");

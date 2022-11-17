@@ -3,7 +3,7 @@ import { withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import React, { PureComponent } from "react";
+import React, { PureComponent, useContext } from "react";
 import _ from "lodash";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { WhatsNextHeader } from "admin/welcome_ui";
@@ -13,7 +13,9 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
-import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
+import DatasetCacheProvider, {
+  DatasetCacheContext,
+} from "dashboard/dataset/dataset_cache_provider";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
@@ -157,7 +159,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
               key: "datasets",
               children: (
                 <RenderingTabContext.Provider value="datasets">
-                  <DatasetView user={user} hideDetailsColumns={false} />
+                  <DatasetViewWithLegacyContext user={user} />
                 </RenderingTabContext.Provider>
               ),
             }
@@ -281,6 +283,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       </NmlUploadZoneContainer>
     );
   }
+}
+function DatasetViewWithLegacyContext({ user }: { user: APIUser }) {
+  const datasetCacheContext = useContext(DatasetCacheContext);
+  return <DatasetView user={user} hideDetailsColumns={false} context={datasetCacheContext} />;
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

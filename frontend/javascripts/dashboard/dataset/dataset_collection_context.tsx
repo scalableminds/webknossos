@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import type {
   APIMaybeUnimportedDataset,
@@ -10,7 +18,7 @@ import type {
 } from "types/api_flow_types";
 import { getDatasets, getDataset, updateDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
@@ -45,6 +53,7 @@ export type DatasetCollectionContextValue = {
   updateCachedDataset: (dataset: APIDataset) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string) => void;
+  supportsOnlineSearch: true;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   queries: {
@@ -59,37 +68,18 @@ export type DatasetCollectionContextValue = {
   };
 };
 
-export const DatasetCollectionContext = createContext<DatasetCollectionContextValue>({
-  datasets: [],
-  isLoading: false,
-  isChecking: false,
-  fetchDatasets: async () => {},
-  checkDatasets: async () => {},
-  reloadDataset: async () => {},
-  updateCachedDataset: async () => {},
-  activeFolderId: null,
-  setActiveFolderId: () => {},
-  queries: {
-    // @ts-ignore todo
-    folderQuery: {},
-    // @ts-ignore todo
-    folderTreeQuery: {},
-    // @ts-ignore todo
-    datasetsInFolderQuery: {},
-    // @ts-ignore todo
-    datasetSearchQuery: {},
-    // @ts-ignore todo
-    createFolderMutation: {},
-    // @ts-ignore todo
-    updateFolderMutation: {},
-    // @ts-ignore todo
-    deleteFolderMutation: {},
-    // @ts-ignore todo
-    updateDatasetMutation: {},
-    // @ts-ignore todo
-    moveFolderMutation: {},
-  },
-});
+export const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
+  undefined,
+);
+
+export const useDatasetCollectionContext = () => {
+  const context = useContext(DatasetCollectionContext);
+  if (!context)
+    throw new Error(
+      "No DatasetCollectionContext.Provider found when calling useDatasetCollectionContext.",
+    );
+  return context;
+};
 
 export function useFolderQuery(folderId: string) {
   const queryKey = ["folders", folderId];
@@ -418,6 +408,7 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
+  const isMutating = useIsMutating() > 0;
 
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
@@ -451,6 +442,8 @@ export default function DatasetCollectionContextProvider({
   useEffect(() => {
     if (activeFolderId != null) {
       UserLocalStorage.setItem(ACTIVE_FOLDER_ID_STORAGE_KEY, activeFolderId);
+    } else {
+      UserLocalStorage.removeItem(ACTIVE_FOLDER_ID_STORAGE_KEY);
     }
   }, [activeFolderId]);
 
@@ -469,12 +462,14 @@ export default function DatasetCollectionContextProvider({
     updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
-  const isLoading = globalSearchQuery
-    ? datasetSearchQuery.isFetching
-    : datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching;
+  const isLoading =
+    (globalSearchQuery
+      ? datasetSearchQuery.isFetching
+      : datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching) || isMutating;
 
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
+      supportsOnlineSearch: true as true,
       datasets,
       isLoading,
       fetchDatasets,

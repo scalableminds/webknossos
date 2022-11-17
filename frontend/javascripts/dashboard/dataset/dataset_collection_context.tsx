@@ -428,6 +428,8 @@ export default function DatasetCollectionContextProvider({
     }
   }, [activeFolderId]);
 
+  useManagedUrlParams(setGlobalSearchQuery, setActiveFolderId, globalSearchQuery, activeFolderId);
+
   const queryClient = useQueryClient();
   const folderTreeQuery = useFolderTreeQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
@@ -516,6 +518,59 @@ export default function DatasetCollectionContextProvider({
   return (
     <DatasetCollectionContext.Provider value={value}>{children}</DatasetCollectionContext.Provider>
   );
+}
+
+function useManagedUrlParams(
+  setGlobalSearchQuery: (value: string | null) => void,
+  setActiveFolderId: React.Dispatch<React.SetStateAction<string | null>>,
+  globalSearchQuery: string | null,
+  activeFolderId: string | null,
+) {
+  // Read params upon component mount.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const query = params.get("query");
+    if (query) {
+      setGlobalSearchQuery(query);
+    }
+
+    const folderId = params.get("folderId");
+    if (folderId) {
+      setActiveFolderId(folderId);
+    }
+  }, []);
+
+  // Update query
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (globalSearchQuery) {
+      params.set("query", globalSearchQuery);
+    } else {
+      params.delete("query");
+    }
+    const paramStr = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      `${location.pathname}${paramStr === "" ? "" : "?"}${paramStr}`,
+    );
+  }, [globalSearchQuery]);
+
+  // Update folderId
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (activeFolderId) {
+      params.set("folderId", activeFolderId);
+    } else {
+      params.delete("folderId");
+    }
+    const paramStr = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      `${location.pathname}${paramStr === "" ? "" : "?"}${paramStr}`,
+    );
+  }, [activeFolderId]);
 }
 
 function diffDatasets(

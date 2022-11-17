@@ -389,7 +389,7 @@ function renderPlaceholder(
     // A spinner is rendered by the parent above this component which is
     // why a height is necessary to avoid the spinner sticking to the top
     // (and being cropped).
-    return <div style={{ height: 200 }}></div>;
+    return <div style={{ height: 200 }} />;
   }
 
   if (searchQuery) {

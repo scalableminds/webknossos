@@ -87,11 +87,21 @@ export const useDatasetCollectionContext = () => {
   return context;
 };
 
-export function useFolderQuery(folderId: string) {
+export function useFolderQuery(folderId: string | null) {
   const queryKey = ["folders", folderId];
-  return useQuery(queryKey, () => getFolder(folderId), {
-    refetchOnWindowFocus: false,
-  });
+  return useQuery(
+    queryKey,
+    () => {
+      if (folderId == null) {
+        throw new Error("No folder id provided");
+      }
+      return getFolder(folderId);
+    },
+    {
+      refetchOnWindowFocus: false,
+      enabled: folderId != null,
+    },
+  );
 }
 
 export function useDatasetSearchQuery(query: string | null) {

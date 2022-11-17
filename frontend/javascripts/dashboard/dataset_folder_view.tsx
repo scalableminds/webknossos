@@ -1,14 +1,17 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  FileOutlined,
   FolderOpenOutlined,
   FolderOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import { useIsMutating } from "@tanstack/react-query";
-import { Menu, Dropdown, Spin, Modal, Input, Form, Result } from "antd";
+import { Menu, Dropdown, Spin, Modal, Input, Form, Result, Tag } from "antd";
+import { stringToColor } from "libs/format_utils";
 import Toast from "libs/toast";
+import { Unicode } from "oxalis/constants";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import React, { useEffect, useState } from "react";
@@ -85,7 +88,7 @@ function DatasetFolderViewInner(props: Props) {
           marginRight: 16,
         }}
       >
-        <FolderSidebar />
+        <FolderTreeSidebar />
       </div>
       <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
         <DatasetView
@@ -104,9 +107,10 @@ function DatasetFolderViewInner(props: Props) {
           marginLeft: 16,
         }}
       >
-        <DatasetDetailsSidebar
+        <DetailsSidebar
           selectedDataset={selectedDataset}
           setSelectedDataset={setSelectedDataset}
+          activeFolderId={context.activeFolderId}
           datasetCount={context.datasets.length}
           searchQuery={context.globalSearchQuery}
         />
@@ -115,18 +119,21 @@ function DatasetFolderViewInner(props: Props) {
   );
 }
 
-function DatasetDetailsSidebar({
+function DetailsSidebar({
   selectedDataset,
   setSelectedDataset,
   datasetCount,
   searchQuery,
+  activeFolderId,
 }: {
   selectedDataset: APIMaybeUnimportedDataset | null;
   setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
   datasetCount: number;
   searchQuery: string | null;
+  activeFolderId: string | null;
 }) {
   const context = useDatasetCollectionContext();
+  const { data: folder } = useFolderQuery(activeFolderId);
 
   useEffect(() => {
     if (selectedDataset == null || !("folderId" in selectedDataset)) {
@@ -145,37 +152,40 @@ function DatasetDetailsSidebar({
     <div style={{ width: 300, padding: 16 }}>
       {selectedDataset != null ? (
         <>
-          <h2 style={{ wordBreak: "break-all" }}>
-            {selectedDataset.displayName || selectedDataset.name}
-          </h2>
+          <h3 style={{ wordBreak: "break-all" }}>
+            <FileOutlined /> {selectedDataset.displayName || selectedDataset.name}
+          </h3>
           {selectedDataset.isActive && (
-            <div className="info-tab-block">
-              <table
-                style={{
-                  fontSize: 14,
-                }}
-              >
-                <tbody>
-                  <DatasetExtentRow dataset={selectedDataset} />
-                </tbody>
-              </table>
+            <div>
+              <span className="sidebar-label">Voxel Size & Extent</span>
+              <div className="info-tab-block" style={{ marginTop: -6 }}>
+                <table
+                  style={{
+                    fontSize: 14,
+                  }}
+                >
+                  <tbody>
+                    <DatasetExtentRow dataset={selectedDataset} />
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
           {selectedDataset.description && (
             <div style={{ marginBottom: 12 }}>Description: {selectedDataset.description}</div>
           )}
           <div style={{ marginBottom: 4 }}>
-            Access Permissions:
+            <span className="sidebar-label">Access Permissions</span>
             <br />
             <TeamTags dataset={selectedDataset} emptyValue="default" />
           </div>
           <div style={{ marginBottom: 4 }}>
-            Layers:
+            <span className="sidebar-label">Layers</span>
             <br /> <DatasetLayerTags dataset={selectedDataset} />
           </div>
           {selectedDataset.isActive ? (
             <div style={{ marginBottom: 4 }}>
-              Tags:
+              <span className="sidebar-label">Tags</span>
               <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
             </div>
           ) : null}
@@ -192,18 +202,55 @@ function DatasetDetailsSidebar({
               }
             />
           ) : (
-            <Result
-              icon={<FolderOpenOutlined style={{ fontSize: 50 }} />}
-              subTitle={
-                <>
-                  This folder contains {datasetCount} dataset(s). {maybeSelectMsg}
-                </>
-              }
-            />
+            <>
+              {folder ? (
+                <div style={{ textAlign: "left" }}>
+                  <h3 style={{ wordBreak: "break-all" }}>
+                    <FolderOpenOutlined />
+                    {Unicode.NonBreakingSpace}
+                    {folder.name}
+                  </h3>
+                  <p>
+                    This folder contains {datasetCount} dataset(s). {maybeSelectMsg}
+                  </p>
+                  <span className="sidebar-label">Access Permissions</span>
+                  <br />
+                  <FolderTeamTags teams={folder.allowedTeamsCumulative} />
+                </div>
+              ) : (
+                <Spin spinning />
+              )}
+            </>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+function FolderTeamTags({ teams }: { teams: APITeam[] }) {
+  if (teams.length === 0) {
+    return <Tag>default</Tag>;
+  }
+
+  return (
+    <>
+      {teams.map((team) => (
+        <div key={team.name}>
+          <Tag
+            style={{
+              maxWidth: 200,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+            }}
+            color={stringToColor(team.name)}
+          >
+            {team.name}
+          </Tag>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -327,7 +374,7 @@ function FolderItemAsDropTarget(props: {
   );
 }
 
-function FolderSidebar() {
+function FolderTreeSidebar() {
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
   const context = useDatasetCollectionContext();
@@ -353,7 +400,7 @@ function FolderSidebar() {
         context.setActiveFolderId(treeData[0].id);
       }
     }
-  }, [context.activeFolderId, context.globalSearchQuery]);
+  }, [context.activeFolderId, context.globalSearchQuery, treeData.length]);
 
   // This useDrop is only used to highlight the sidebar when
   // a dataset is dragged. This helps the user to understand that

@@ -173,7 +173,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
               FROM #$existingCollectionName
               WHERE #$folderPredicate
               AND (#$searchPredicate)
-              AND #$accessQuery""".as[DatasetsRow])
+              AND #$accessQuery
+              """.as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -181,9 +182,9 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     searchQueryOpt match {
       case None => "true"
       case Some(searchQuery) =>
-        val searchQueryFiltered = searchQuery.replaceAll("[^A-Za-z0-9_\\-. ]", "")
+        val searchQueryFiltered = searchQuery.replaceAll("[^A-Za-z0-9_\\-. ]", "").toLowerCase()
         val segments = searchQueryFiltered.split(" ")
-        segments.map(queryToken => s" name LIKE '%$queryToken%' ").mkString(" AND ")
+        segments.map(queryToken => s" LOWER(name) LIKE '%$queryToken%' ").mkString(" AND ")
     }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =

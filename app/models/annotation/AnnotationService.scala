@@ -364,6 +364,7 @@ class AnnotationService @Inject()(
       newAnnotationLayerParameters = AnnotationLayerParameters(
         newAnnotationLayerType,
         usedFallbackLayerName,
+        None,
         Some(ResolutionRestrictions.empty),
         AnnotationLayer.defaultNameForType(newAnnotationLayerType))
       _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"

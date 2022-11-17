@@ -661,6 +661,7 @@ type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
   name: string;
   fallbackLayerName?: string | null | undefined;
+  mappingName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
 };
 

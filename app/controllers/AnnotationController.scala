@@ -33,7 +33,7 @@ import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
-                                     mappingName: Option[String],
+                                     mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
                                      name: String)
 object AnnotationLayerParameters {

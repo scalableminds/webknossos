@@ -96,7 +96,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
         ? maybeSegmentationLayer.name
         : null;
-    const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName);
+    const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName, null);
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };

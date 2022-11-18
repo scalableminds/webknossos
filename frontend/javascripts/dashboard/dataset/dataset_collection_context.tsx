@@ -293,7 +293,7 @@ function useUpdateFolderMutation() {
             : oldFolder,
         ),
       );
-      queryClient.setQueryData(["folders", updatedFolder.id], undefined);
+      queryClient.setQueryData(["folders", updatedFolder.id], updatedFolder);
     },
     onError: (err: any) => {
       handleGenericError(err, "Could not update folder. Check the console for details");

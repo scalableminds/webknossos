@@ -248,6 +248,10 @@ GET           /publications/:id                                                 
 POST          /shortLinks                                                               controllers.ShortLinkController.create
 GET           /shortLinks/byKey/:key                                                    controllers.ShortLinkController.getByKey(key: String)
 
+# Credentials
+POST          /credentials/httpBasicAuth                                                controllers.CredentialController.createHttpBasicAuthCredential
+POST          /credentials/s3AccessKey                                                  controllers.CredentialController.createS3AccessKeyCredential
+
 # Voxelytics
 POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow
 GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows(workflowHash: Option[String])

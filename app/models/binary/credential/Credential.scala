@@ -1,8 +1,10 @@
 package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.schema.Tables
 import utils.{ObjectId, SQLClient, SQLDAO}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 
 import javax.inject.Inject
@@ -31,6 +33,10 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   val collection = Credentials
 
   def idColumn(x: Credentials): Rep[String] = x._Id
+  override def isDeletedColumn(x: Tables.Credentials): Rep[Boolean] = false
+
+  // use parseAnyCredential instead
+  def parse(row: com.scalableminds.webknossos.schema.Tables.Credentials#TableElementType): com.scalableminds.util.tools.Fox[models.binary.credential.Credential] = ???
 
   def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =
     for {

@@ -43,9 +43,9 @@ import {
 import DatasetCollectionContextProvider, {
   DatasetCollectionContextValue,
   useDatasetCollectionContext,
-  useFolderQuery,
 } from "./dataset/dataset_collection_context";
 import { FormItemWithInfo } from "./dataset/helper_components";
+import { useFolderQuery } from "./dataset/queries";
 import TeamSelectionComponent from "./dataset/team_selection_component";
 
 import DatasetView from "./dataset_view";

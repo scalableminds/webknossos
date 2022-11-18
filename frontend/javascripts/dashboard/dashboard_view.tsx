@@ -54,7 +54,6 @@ export const urlTokenToTabKeyMap = {
 };
 
 function TabBarExtraContent({ activeTabKey }: { activeTabKey: string }) {
-  // console.log("portal constr", `dashboard-TabBarExtraContent-${activeTabKey}`);
   return (
     <PortalTarget
       portalId={"dashboard-TabBarExtraContent"}

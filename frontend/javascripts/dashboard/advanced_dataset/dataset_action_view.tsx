@@ -250,7 +250,7 @@ const onClearCache = async (
   );
 };
 
-export function getDatasetActionMenu({
+export function getDatasetActionContextMenu({
   reloadDataset,
   dataset,
   hideContextMenu,

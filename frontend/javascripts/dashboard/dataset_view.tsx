@@ -45,11 +45,8 @@ import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
-import {
-  DatasetCollectionContextValue,
-  MINIMUM_SEARCH_QUERY_LENGTH,
-  SEARCH_RESULTS_LIMIT,
-} from "./dataset/dataset_collection_context";
+import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
 
 const { Search, Group: InputGroup } = Input;
 

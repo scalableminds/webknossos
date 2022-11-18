@@ -388,7 +388,8 @@ class SegmentsView extends React.Component<Props, State> {
     if (this.props.visibleSegmentationLayer != null) {
       const maybeMappingName =
         mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType === "HDF5"
+        mappingInfo.mappingType === "HDF5" &&
+        mappingInfo.mappingName != undefined
           ? mappingInfo.mappingName
           : undefined;
 

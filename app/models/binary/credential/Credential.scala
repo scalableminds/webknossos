@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables
 import utils.{ObjectId, SQLClient, SQLDAO}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
+import play.api.libs.json.{Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 
@@ -20,7 +21,11 @@ case class Credential(_id: ObjectId,
                       filePath: Option[String])
 
 // Specific credentials
-trait AnyCredential
+sealed trait AnyCredential
+
+object AnyCredential {
+  implicit val jsonFormat: OFormat[AnyCredential] = Json.format[AnyCredential]
+}
 
 case class HttpBasicAuthCredential(_id: ObjectId, name: String, username: String, password: String, domain: String)
     extends AnyCredential
@@ -36,7 +41,8 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   override def isDeletedColumn(x: Tables.Credentials): Rep[Boolean] = false
 
   // use parseAnyCredential instead
-  def parse(row: com.scalableminds.webknossos.schema.Tables.Credentials#TableElementType): com.scalableminds.util.tools.Fox[models.binary.credential.Credential] = ???
+  def parse(row: com.scalableminds.webknossos.schema.Tables.Credentials#TableElementType)
+    : com.scalableminds.util.tools.Fox[models.binary.credential.Credential] = ???
 
   def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =
     for {
@@ -78,7 +84,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                      values(${credential._id}, '#${CredentialType.S3_Access_Key}', ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.bucket})""")
     } yield ()
 
-  def findOne(id: String): Fox[AnyCredential] =
+  def findOne(id: ObjectId): Fox[AnyCredential] =
     for {
       r <- run(sql"select #$columns from webknossos.credentials where id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox

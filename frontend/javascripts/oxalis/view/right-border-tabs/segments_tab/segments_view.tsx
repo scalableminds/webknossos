@@ -389,7 +389,7 @@ class SegmentsView extends React.Component<Props, State> {
       const maybeMappingName =
         mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
         mappingInfo.mappingType === "HDF5" &&
-        mappingInfo.mappingName != undefined
+        mappingInfo.mappingName != null
           ? mappingInfo.mappingName
           : undefined;
 

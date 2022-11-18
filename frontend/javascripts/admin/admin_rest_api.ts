@@ -2327,3 +2327,7 @@ export function sendHelpEmail(message: string) {
     method: "POST",
   });
 }
+
+export function requestSingleSignOnLogin() {
+  return Request.receiveJSON("/api/auth/oidc/login");
+}

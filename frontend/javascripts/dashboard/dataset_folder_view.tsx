@@ -11,6 +11,7 @@ import {
 import { useIsMutating } from "@tanstack/react-query";
 import { Menu, Dropdown, Spin, Modal, Input, Form, Result, Tag } from "antd";
 import { stringToColor } from "libs/format_utils";
+import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { Unicode } from "oxalis/constants";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
@@ -586,6 +587,7 @@ function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () 
     // this would populate the form with outdated initial values.
     folder != null && !isFetching ? (
       <div>
+        <Shortcut keys="enter" onTrigger={onSave} supportInputElements />
         <Form
           form={form}
           layout="vertical"

@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Annotation layers can now be removed. [#6593](https://github.com/scalableminds/webknossos/pull/6593)
 - When adding remote Zarr datasets with multiple channels, channels are converted into layers. [#6609](https://github.com/scalableminds/webknossos/pull/6609)
 - When adding a remote OME-NGFF dataset with labels, these are added as segmentation layers. [#6638](https://github.com/scalableminds/webknossos/pull/6638)
+- When creating an annotation from the dataset view, a previously selected mapping of the segmentation layer is now automatically selected in the volume annotation layer fallback segmentation as well. [#6647](https://github.com/scalableminds/webknossos/pull/6647)
 
 ### Changed
 - The log viewer in the Voxelytics workflow reporting now uses a virtualized list. [#6579](https://github.com/scalableminds/webknossos/pull/6579)

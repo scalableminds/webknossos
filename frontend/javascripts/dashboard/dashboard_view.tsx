@@ -53,10 +53,10 @@ export const urlTokenToTabKeyMap = {
   annotations: "explorativeAnnotations",
 };
 
-function TabBarExtraContent({ activeTabKey }: { activeTabKey: string }) {
+function TabBarExtraContent() {
   return (
     <PortalTarget
-      portalId={"dashboard-TabBarExtraContent"}
+      portalId="dashboard-TabBarExtraContent"
       style={{
         flex: 1,
         display: "flex",
@@ -273,12 +273,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
                 activeKey={this.state.activeTabKey}
                 onChange={onTabChange}
                 items={this.getTabs(user)}
-                tabBarExtraContent={
-                  <TabBarExtraContent
-                    key={this.state.activeTabKey}
-                    activeTabKey={this.state.activeTabKey}
-                  />
-                }
+                tabBarExtraContent={<TabBarExtraContent />}
               />
             </ActiveTabContext.Provider>
           </DatasetCacheProvider>

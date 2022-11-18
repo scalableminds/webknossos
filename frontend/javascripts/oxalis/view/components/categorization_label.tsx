@@ -10,6 +10,7 @@ type LabelProps = {
   closable: boolean;
 };
 type FilterProps = {
+  itemName: string;
   searchTags: Array<string>;
   setTags: (arg0: Array<string>) => void;
   localStorageSavingKey: string;
@@ -33,7 +34,12 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
     </Tooltip>
   );
 }
-export function CategorizationSearch({ searchTags, setTags, localStorageSavingKey }: FilterProps) {
+export function CategorizationSearch({
+  itemName,
+  searchTags,
+  setTags,
+  localStorageSavingKey,
+}: FilterProps) {
   useEffect(() => {
     // restore the search query tags from the last session
     const searchTagString = UserLocalStorage.getItem(localStorageSavingKey);
@@ -58,8 +64,13 @@ export function CategorizationSearch({ searchTags, setTags, localStorageSavingKe
     }
   }
 
+  if (searchTags.length === 0) {
+    return null;
+  }
+
   return (
-    <>
+    <div style={{ marginBottom: 8 }}>
+      <span style={{ marginRight: 6 }}>Only showing {itemName} with these tags:</span>
       {searchTags.map((tag) => (
         <Tag
           key={tag}
@@ -72,6 +83,6 @@ export function CategorizationSearch({ searchTags, setTags, localStorageSavingKe
           {tag}
         </Tag>
       ))}
-    </>
+    </div>
   );
 }

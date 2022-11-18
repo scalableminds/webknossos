@@ -308,6 +308,7 @@ function DatasetView(props: Props) {
           isEmpty && <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
         ))}
       <CategorizationSearch
+        itemName="datasets"
         searchTags={searchTags}
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}

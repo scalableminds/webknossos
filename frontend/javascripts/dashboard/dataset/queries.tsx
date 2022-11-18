@@ -65,8 +65,27 @@ export function useFolderTreeQuery() {
   });
 }
 
-const LIST_REQUEST_DURATION_THRESHOLD = 1000;
+const LIST_REQUEST_DURATION_THRESHOLD = 500;
 export function useDatasetsInFolderQuery(folderId: string | null) {
+  /*
+   * This query is a bit more complex. The default behavior of react-query
+   * would be to show the cached data, fetch new data and then update the
+   * data in-place.
+   * However, this can easily lead to situations where the user clicks on something
+   * and while doing so the list updates and the click ends up somewhere else.
+   * Since this can be very annoying, we fetch the new datasets in the background
+   * and do something of the following:
+   * - update the list immediately if it's been empty before OR if the request
+   *   was relatively fast (i.e., it's unrealistic that the user already clicked
+   *   somewhere).
+   * - ask the user if they want to update the list IF something changes
+   * - do nothing (since the cache is up to date)
+   *
+   * We do this by disabling the main query by default (and enabling it when
+   * necessary). Also the main query reads its result from the prefetched
+   * data (if available).
+   */
+
   const queryClient = useQueryClient();
   const queryKey = ["datasetsByFolder", folderId];
   const fetchedDatasetsRef = useRef<APIMaybeUnimportedDataset[] | null>(null);
@@ -99,22 +118,20 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
   useEffect(() => {
     if (queryData.data == null || queryData.data.length === 0) {
       // No data exists in the cache. Allow the query to fetch.
-      // console.log("[p] refetch");
       queryData.refetch();
       return undefined;
     }
 
-    let ignoreFetchResult = false;
-    // console.log("[p] prefetch datasets");
+    let effectWasCancelled = false;
     const startTime = performance.now();
     getDatasets(null, folderId).then((newDatasets) => {
-      if (ignoreFetchResult) {
+      if (effectWasCancelled) {
         return;
       }
       const requestDuration = performance.now() - startTime;
 
       const acceptNewDatasets = () => {
-        if (ignoreFetchResult) {
+        if (effectWasCancelled) {
           return;
         }
         fetchedDatasetsRef.current = newDatasets;
@@ -172,7 +189,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
     return () => {
       fetchedDatasetsRef.current = null;
-      ignoreFetchResult = true;
+      effectWasCancelled = true;
       Toast.close(`new-datasets-are-available-${folderId || null}`);
     };
   }, [folderId]);

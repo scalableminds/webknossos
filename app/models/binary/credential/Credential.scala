@@ -1,7 +1,6 @@
 package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables
 import utils.{ObjectId, SQLClient, SQLDAO}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import slick.lifted.Rep
@@ -21,7 +20,7 @@ case class Credential(_id: ObjectId,
 // Specific credentials
 trait AnyCredential
 
-case class HTTPBasicAuthCredential(_id: ObjectId, name: String, username: String, password: String, domain: String)
+case class HttpBasicAuthCredential(_id: ObjectId, name: String, username: String, password: String, domain: String)
     extends AnyCredential
 
 case class S3AccessKeyCredential(_id: ObjectId, name: String, keyId: String, key: String, bucket: String)
@@ -33,13 +32,13 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def idColumn(x: Credentials): Rep[String] = x._Id
 
-  def parseAsHTTPBasicAuthCredential(r: CredentialsRow): Fox[HTTPBasicAuthCredential] =
+  def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =
     for {
       username <- r.identifier.toFox
       password <- r.secret.toFox
       domain <- r.scope.toFox
     } yield
-      HTTPBasicAuthCredential(
+      HttpBasicAuthCredential(
         ObjectId(r._Id),
         r.name,
         username,
@@ -61,7 +60,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         bucket
       )
 
-  def insertOne(credential: HTTPBasicAuthCredential): Fox[Unit] =
+  def insertOne(credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.credentials(_id, credentialType, name, identifier, secret, scope)
                      values(${credential._id}, '#${CredentialType.HTTP_Basic_Auth}', ${credential.name}, ${credential.username}, ${credential.password}, ${credential.domain})""")
@@ -84,7 +83,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     r.`type` match {
       case "HTTP Basic-Auth" =>
         for {
-          parsed <- parseAsHTTPBasicAuthCredential(r)
+          parsed <- parseAsHttpBasicAuthCredential(r)
         } yield parsed
       case "S3 Access Key" =>
         for {

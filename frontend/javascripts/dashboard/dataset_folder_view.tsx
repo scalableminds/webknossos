@@ -164,10 +164,10 @@ function DetailsSidebar({
     <div style={{ width: 300, padding: 16 }}>
       {selectedDataset != null ? (
         <>
-          <h3 style={{ wordBreak: "break-all" }}>
+          <h4 style={{ wordBreak: "break-all" }}>
             <FileOutlined style={{ marginRight: 4 }} />{" "}
             {selectedDataset.displayName || selectedDataset.name}
-          </h3>
+          </h4>
           {selectedDataset.isActive && (
             <div>
               <span className="sidebar-label">Voxel Size & Extent</span>
@@ -218,12 +218,12 @@ function DetailsSidebar({
             <>
               {folder ? (
                 <div style={{ textAlign: "left" }}>
-                  <h3 style={{ wordBreak: "break-all" }}>
+                  <h4 style={{ wordBreak: "break-all" }}>
                     <span
                       style={{
                         float: "right",
                         fontSize: 16,
-                        marginTop: 8,
+                        marginTop: 2,
                         marginLeft: 2,
                         color: "var(--ant-text-secondary)",
                       }}
@@ -232,7 +232,7 @@ function DetailsSidebar({
                     </span>
                     <FolderOpenOutlined style={{ marginRight: 8 }} />
                     {folder.name}
-                  </h3>
+                  </h4>
                   <p>
                     This folder contains {datasetCount} dataset(s). {maybeSelectMsg}
                   </p>

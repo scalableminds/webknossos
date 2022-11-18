@@ -369,6 +369,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   startComputingMeshfile = async () => {
     const {
+      mappingInfo,
       preferredQualityForMeshPrecomputation,
       resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
     } = this.props;
@@ -385,11 +386,18 @@ class SegmentsView extends React.Component<Props, State> {
     );
 
     if (this.props.visibleSegmentationLayer != null) {
+      const maybeMappingName =
+        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+        mappingInfo.mappingType === "HDF5"
+          ? mappingInfo.mappingName
+          : undefined;
+
       const job = await startComputeMeshFileJob(
         this.props.organization,
         this.props.datasetName,
         getBaseSegmentationName(this.props.visibleSegmentationLayer),
         meshfileResolution,
+        maybeMappingName,
       );
       this.setState({
         activeMeshJobId: job.id,

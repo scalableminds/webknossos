@@ -48,7 +48,7 @@ type State = {
 export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
-  datasetsFolders: "datasetsFolders",
+  datasetsLegacy: "datasetsLegacy",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
 };
@@ -131,9 +131,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     return {
       publications: features().isDemoInstance,
       datasets: !isAdminView,
+      datasetsLegacy: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
-      datasetsFolders: true,
     };
   }
 
@@ -155,19 +155,23 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         validTabKeys.datasets
           ? {
               label: "Datasets",
-              key: "datasets",
+              key: "datasetsLegacy",
               children: (
-                <RenderingTabContext.Provider value="datasets">
+                <RenderingTabContext.Provider value="datasetsLegacy">
                   <DatasetViewWithLegacyContext user={user} />
                 </RenderingTabContext.Provider>
               ),
             }
           : null,
         {
-          label: "Dataset (Folders)",
-          key: "datasetsFolders",
+          label: (
+            <span>
+              Datasets <sup>Beta</sup>
+            </span>
+          ),
+          key: "datasets",
           children: (
-            <RenderingTabContext.Provider value="datasetsFolders">
+            <RenderingTabContext.Provider value="datasets">
               <DatasetFolderView user={user} />
             </RenderingTabContext.Provider>
           ),

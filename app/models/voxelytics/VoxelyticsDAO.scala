@@ -62,16 +62,17 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       r.toList.map(row =>
         TaskEntry(ObjectId(row._1), ObjectId(row._2), row._3, row._4, Json.parse(row._5).as[JsObject]))
 
-  def findWorkflowsByHash(organizationId: ObjectId, workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
+  def findWorkflowsByHashAndOrganization(organizationId: ObjectId,
+                                         workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
     for {
       r <- run(sql"""
           SELECT name, hash
           FROM webknossos.voxelytics_workflows
           WHERE hash IN #${writeEscapedTuple(workflowHashes.toList)} AND _organization = $organizationId
           """.as[(String, String)])
-    } yield r.toList.map(row => WorkflowEntry(row._1, row._2))
+    } yield r.toList.map(row => WorkflowEntry(row._1, row._2, organizationId))
 
-  def findWorkflowByHash(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
+  def findWorkflowByHashAndOrganization(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
     for {
       r <- run(sql"""
           SELECT name, hash
@@ -79,7 +80,17 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           WHERE hash = $workflowHash AND _organization = $organizationId
           """.as[(String, String)])
       (name, hash) <- r.headOption
-    } yield WorkflowEntry(name, hash)
+    } yield WorkflowEntry(name, hash, organizationId)
+
+  def findWorkflowByHash(workflowHash: String): Fox[WorkflowEntry] =
+    for {
+      r <- run(sql"""
+          SELECT name, hash, _organization
+          FROM webknossos.voxelytics_workflows
+          WHERE hash = $workflowHash
+          """.as[(String, String, String)])
+      (name, hash, organizationId) <- r.headOption // Could have multiple entries; picking the first.
+    } yield WorkflowEntry(name, hash, ObjectId(organizationId))
 
   def findTaskRuns(organizationId: ObjectId, runIds: List[ObjectId], staleTimeout: Duration): Fox[List[TaskRunEntry]] =
     for {
@@ -184,9 +195,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def findRuns(currentUser: User,
                runIds: Option[List[ObjectId]],
                workflowHash: Option[String],
-               staleTimeout: Duration): Fox[List[RunEntry]] = {
+               staleTimeout: Duration,
+               allowUnlisted: Boolean): Fox[List[RunEntry]] = {
     val organizationId = currentUser._organization
-    val readAccessQ = if (currentUser.isAdmin) { "" } else { s" AND (r._user = ${escapeLiteral(currentUser._id.id)})" }
+    val readAccessQ =
+      if (currentUser.isAdmin || allowUnlisted) "" else { s" AND (r._user = ${escapeLiteral(currentUser._id.id)})" }
     val runIdsQ = runIds.map(runIds => s" AND r._id IN ${writeEscapedTuple(runIds.map(_.id))}").getOrElse("")
     val workflowHashQ =
       workflowHash.map(workflowHash => s" AND r.workflow_hash = ${escapeLiteral(workflowHash)}").getOrElse("")

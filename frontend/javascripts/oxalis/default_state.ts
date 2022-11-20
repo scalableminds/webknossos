@@ -78,6 +78,14 @@ const defaultState: OxalisState = {
     fillMode: FillModeEnum._2D,
     interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
+    quickSelect: {
+      showPreview: false,
+      segmentMode: "light",
+      threshold: 128,
+      closeValue: 3,
+      erodeValue: 1,
+      dilateValue: 2,
+    },
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -219,13 +227,11 @@ const defaultState: OxalisState = {
       right: false,
       left: false,
     },
-    theme:
-      primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
-        ? "dark"
-        : "light",
+    theme: primaryStylesheetElement?.href.includes("dark.css") ? "dark" : "light",
     busyBlockingInfo: {
       isBusy: false,
     },
+    isQuickSelectActive: false,
   },
   localSegmentationData: {},
 };

@@ -180,7 +180,7 @@ class PlaneView {
     }
 
     // Undo highlighting of old hit
-    if (oldRaycasterHit != null && oldRaycasterHit.parent != null) {
+    if (oldRaycasterHit?.parent != null) {
       oldRaycasterHit.parent.children.forEach((meshPart) => {
         // @ts-ignore
         meshPart.material.emissive.setHex("#000000");

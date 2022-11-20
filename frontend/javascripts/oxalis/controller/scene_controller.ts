@@ -20,7 +20,7 @@ import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import ContourGeometry from "oxalis/geometries/contourgeometry";
+import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import Cube from "oxalis/geometries/cube";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
@@ -54,10 +54,13 @@ class SceneController {
   userBoundingBoxGroup: THREE.Group;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxes' has no initializer an... Remove this comment to see the full error message
   userBoundingBoxes: Array<Cube>;
+  annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectGeometry' has no initializer and is not d... Remove this comment to see the full error message
+  quickSelectGeometry: QuickSelectGeometry;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
@@ -308,7 +311,6 @@ class SceneController {
   addLights(): void {
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-
     const AMBIENT_INTENSITY = 30;
     const DIRECTIONAL_INTENSITY = 5;
     const POINT_INTENSITY = 5;
@@ -373,6 +375,8 @@ class SceneController {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
+    this.annotationToolsGeometryGroup = new THREE.Group();
+    this.rootNode.add(this.annotationToolsGeometryGroup);
     this.userBoundingBoxes = [];
     const state = Store.getState();
     // Cubes
@@ -388,10 +392,11 @@ class SceneController {
     const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (state.tracing.volumes.length > 0) {
-      this.contour = new ContourGeometry();
-      this.contour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
-    }
+    this.contour = new ContourGeometry();
+    this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
+
+    this.quickSelectGeometry = new QuickSelectGeometry();
+    this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
 
     if (state.tracing.skeleton != null) {
       this.addSkeleton((_state) => getSkeletonTracing(_state.tracing), true);
@@ -470,31 +475,31 @@ class SceneController {
     Utils.__guard__(this.taskBoundingBox, (x) => x.updateForCam(id));
 
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
+    this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
+    const originalPosition = getPosition(Store.getState().flycam);
     if (id !== OrthoViews.TDView) {
-      let ind;
-
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
-          const originalPosition = getPosition(Store.getState().flycam);
 
           const pos = _.clone(originalPosition);
 
-          ind = Dimensions.getIndices(planeId);
+          const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
+
+          this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
           this.planes[planeId].setVisible(false);
         }
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        const pos = getPosition(Store.getState().flycam);
-        this.planes[planeId].setPosition(pos);
+        this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,

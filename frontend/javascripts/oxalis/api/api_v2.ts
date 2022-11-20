@@ -261,7 +261,7 @@ class TracingApi {
       const isDifferentTaskType =
         annotation.task.type.id !== Utils.__guard__(task, (x) => x.type.id);
 
-      const currentScript = task != null && task.script != null ? task.script.gist : null;
+      const currentScript = task?.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
       const isDifferentScript = currentScript !== nextScript;
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;

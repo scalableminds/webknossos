@@ -6,6 +6,7 @@ object Dependencies {
   private val akkaHttpVersion = "10.2.6"
   private val log4jVersion = "2.17.0"
   private val webknossosWrapVersion = "1.1.15"
+  private val silhouetteVersion = "7.0.7"
 
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   private val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
@@ -32,8 +33,9 @@ object Dependencies {
   private val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.7"
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
   private val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
-  private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % "7.0.7"
-  private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % "7.0.7" % "test"
+  private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion
+  private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test"
+  private val silhouetteCrypto = "io.github.honeycomb-cheesecake" %% "play-silhouette-crypto-jca" % silhouetteVersion
   private val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
   private val triremeNode = "io.apigee.trireme" % "trireme-node12src" % "0.9.3"
   private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
@@ -116,6 +118,7 @@ object Dependencies {
     scalaTestPlusPlay,
     silhouette,
     silhouetteTestkit,
+    silhouetteCrypto,
     specs2 % Test,
     trireme,
     triremeNode,

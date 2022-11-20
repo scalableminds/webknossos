@@ -109,8 +109,8 @@ Expects:
       _ <- bool2Fox(inputFiles.nonEmpty) ?~> "nml.file.notFound"
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseAndValidateJson[NmlTaskParameters](jsonString) ?~> "task.create.failed"
-      _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeId))
-      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
+      _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeIdOrSummary))
+      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeIdOrSummary) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND

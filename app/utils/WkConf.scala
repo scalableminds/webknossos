@@ -139,6 +139,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
       val authenticatorExpiry: Duration = get[Duration]("silhouette.cookieAuthenticator.authenticatorExpiry")
       val cookieMaxAge: Duration = get[Duration]("silhouette.cookieAuthenticator.cookieMaxAge")
+      val signerSecret: String = get[String]("silhouette.cookieAuthenticator.signerSecret")
     }
 
     val children = List(TokenAuthenticator, CookieAuthenticator)

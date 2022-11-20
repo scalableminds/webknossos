@@ -109,6 +109,12 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
     sqlu"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
             values($annotationId, ${a.tracingId}, '#${a.typ}', ${a.name})"""
 
+  def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""delete from webknossos.annotation_layers where _annotation = $annotationId and
+             name = $layerName""")
+    } yield ()
+
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {
       rList <- run(sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])

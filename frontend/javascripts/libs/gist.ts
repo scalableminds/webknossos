@@ -35,7 +35,7 @@ export async function fetchGistContent(url: string, name: string): Promise<strin
 
   const firstFile = gist.files[Object.keys(gist.files)[0]];
 
-  if (firstFile && firstFile.content) {
+  if (firstFile?.content) {
     return firstFile.content;
   } else {
     handleError(name);

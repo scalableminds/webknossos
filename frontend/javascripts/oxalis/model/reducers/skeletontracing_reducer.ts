@@ -2,7 +2,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import {
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -72,13 +72,13 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         })
         .orElse(() => {
           // use last tree for active tree
-          const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), (tree) => tree.treeId));
+          const lastTree: Maybe<Tree> = Maybe.fromNullable(
+            _.maxBy(_.values(trees), (tree) => tree.treeId),
+          );
           return lastTree.map((t) => {
             // use last node for active node
-            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
             const lastNode = _.maxBy(Array.from(t.nodes.values()), (node) => node.id);
 
-            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
             activeNodeId = lastNode != null ? lastNode.id : null;
             return t.treeId;
           });

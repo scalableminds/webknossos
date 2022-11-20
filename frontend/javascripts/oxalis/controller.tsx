@@ -1,13 +1,11 @@
 import type { RouteComponentProps } from "react-router-dom";
-import { withRouter, Link } from "react-router-dom";
-import { AsyncButton } from "components/async_clickables";
+import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import { Location as HistoryLocation, Action as HistoryAction } from "history";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
-import { Button, Col, Row } from "antd";
 import { APIAnnotationTypeEnum, APICompoundType } from "types/api_flow_types";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -17,11 +15,9 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
-import { switchToOrganization } from "admin/admin_rest_api";
-import LoginForm from "admin/auth/login_form";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import BrainSpinner from "components/brain_spinner";
+import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
 import Model from "oxalis/model";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
@@ -57,7 +53,6 @@ type State = {
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
-  // eslint-disable-next-line react/no-unused-class-component-methods
   keyboardNoLoop: InputKeyboardNoLoop;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isMounted' has no initializer and is not... Remove this comment to see the full error message
   isMounted: boolean;
@@ -200,7 +195,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     // script assigned to the task
     const { task } = Store.getState();
 
-    if (task != null && task.script != null) {
+    if (task?.script != null) {
       const { script } = task;
       const content = await fetchGistContent(script.gist, script.name);
 
@@ -309,7 +304,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       },
     });
 
-    // eslint-disable-next-line react/no-unused-class-component-methods
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 
@@ -317,79 +311,26 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const status = this.props.controllerStatus;
     const { user, viewMode } = this.props;
     const { gotUnhandledError, organizationToSwitchTo } = this.state;
-    const switchToOwningOrganizationButton = (
-      <AsyncButton
-        type="primary"
-        style={{
-          marginRight: 26,
-        }}
-        onClick={async () => {
-          if (organizationToSwitchTo != null) {
-            await switchToOrganization(organizationToSwitchTo.name);
-          }
-        }}
-      >
-        Switch to this Organization
-      </AsyncButton>
-    );
 
     if (status === "loading") {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
-      const message =
-        organizationToSwitchTo != null
-          ? `This dataset belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
-          : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
-        <BrainSpinner
-          message={
-            <div
-              style={{
-                textAlign: "center",
-              }}
-            >
-              {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
-              <br />
-              <div
-                style={{
-                  marginTop: 16,
-                  display: "inline-block",
-                }}
-              >
-                {organizationToSwitchTo != null ? switchToOwningOrganizationButton : null}
-                <Link to="/">
-                  <Button type="primary">Return to dashboard</Button>
-                </Link>
-              </div>
-            </div>
-          }
-          isLoading={false}
+        <BrainSpinnerWithError
+          gotUnhandledError={gotUnhandledError}
+          organizationToSwitchTo={organizationToSwitchTo}
         />
       );
     } else if (status === "failedLoading") {
       return (
-        <div className="cover-whole-screen">
-          <Row
-            justify="center"
-            style={{
-              padding: 50,
-            }}
-            align="middle"
-          >
-            <Col span={8}>
-              <h3>Try logging in to view the dataset.</h3>
-              <LoginForm
-                layout="horizontal"
-                onLoggedIn={() => {
-                  // Close existing error toasts for "Not Found" errors before trying again.
-                  // If they get relevant again, they will be recreated anyway.
-                  Toast.close("404");
-                  this.tryFetchingModel();
-                }}
-              />
-            </Col>
-          </Row>
-        </div>
+        <CoverWithLogin
+          onLoggedIn={() => {
+            // Close existing error toasts for "Not Found" errors before trying again.
+            // If they get relevant again, they will be recreated anyway.
+            Toast.close("404");
+            this.tryFetchingModel();
+          }}
+        />
       );
     }
 

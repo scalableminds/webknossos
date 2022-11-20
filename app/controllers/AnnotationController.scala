@@ -5,22 +5,22 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
@@ -28,10 +28,6 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import models.organization.OrganizationDAO
-import oxalis.mail.{MailchimpClient, MailchimpTag}
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -222,6 +218,31 @@ class AnnotationController @Inject()(
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         result <- addAnnotationLayer(annotation.typ.toString, id)(request)
+      } yield result
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
+          "annotation.layer.notFound",
+          layerName)
+        _ <- bool2Fox(annotation.annotationLayers.length != 1) ?~> "annotation.deleteLayer.onlyLayer"
+        _ = logger.info(s"Deleting annotation layer $layerName for annotation $id")
+        _ <- annotationService.deleteAnnotationLayer(annotation, layerName)
+      } yield Ok
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def deleteAnnotationLayerWithoutType(id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- deleteAnnotationLayer(annotation.typ.toString, id, layerName)(request)
       } yield result
     }
 

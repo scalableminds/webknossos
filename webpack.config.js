@@ -47,6 +47,7 @@ module.exports = function (env = {}) {
   };
 
   return {
+    experiments: { asyncWebAssembly: true },
     entry: {
       main: "main.tsx",
       light: "style_light.ts",

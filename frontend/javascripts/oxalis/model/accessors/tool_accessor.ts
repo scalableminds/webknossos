@@ -237,7 +237,8 @@ export function adaptActiveToolToShortcuts(
     activeTool === AnnotationToolEnum.MOVE ||
     activeTool === AnnotationToolEnum.ERASE_BRUSH ||
     activeTool === AnnotationToolEnum.ERASE_TRACE ||
-    activeTool === AnnotationToolEnum.QUICK_SELECT
+    activeTool === AnnotationToolEnum.QUICK_SELECT ||
+    activeTool === AnnotationToolEnum.PROOFREAD
   ) {
     // These tools do not have any modifier-related behavior currently (except for ALT
     // which is already handled below)

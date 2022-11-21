@@ -273,7 +273,7 @@ export class InviteUsersModal extends React.Component<
   render() {
     return (
       <Modal
-        visible={this.props.visible == null ? true : this.props.visible}
+        open={this.props.visible == null ? true : this.props.visible}
         title="Invite Users"
         width={600}
         footer={

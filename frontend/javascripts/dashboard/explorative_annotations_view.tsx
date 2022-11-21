@@ -744,6 +744,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   renderSearchTags() {
     return (
       <CategorizationSearch
+        itemName="annotations"
         searchTags={this.state.tags}
         setTags={(tags) =>
           this.setState({
@@ -768,12 +769,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           archiveAll={this.archiveAll}
         />
         {this.renderSearchTags()}
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
-        />
         <Spin spinning={this.state.isLoading} size="large">
           {this.renderTable()}
         </Spin>

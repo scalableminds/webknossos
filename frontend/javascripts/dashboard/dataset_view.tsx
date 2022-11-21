@@ -1,6 +1,19 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin, Tooltip, Alert } from "antd";
+import {
+  Badge,
+  Button,
+  Radio,
+  Col,
+  Dropdown,
+  Input,
+  Menu,
+  Row,
+  Spin,
+  Tooltip,
+  Alert,
+  MenuProps,
+} from "antd";
 import {
   CloudUploadOutlined,
   LoadingOutlined,
@@ -33,12 +46,13 @@ import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
 
 const { Search, Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
-  context?: DatasetCacheContextValue | DatasetCollectionContextValue;
+  context: DatasetCacheContextValue | DatasetCollectionContextValue;
   onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
   selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns: boolean;
@@ -70,14 +84,19 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
     : datasets;
 }
 
+const refreshMenuItems = [
+  {
+    key: "1",
+    label: "Refresh from disk",
+  },
+];
+
 function DatasetView(props: Props) {
   const { user } = props;
-  const datasetCacheContext = useContext(DatasetCacheContext);
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
 
-  const context: DatasetCacheContextValue | DatasetCollectionContextValue =
-    props.context || datasetCacheContext;
+  const context = props.context;
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
@@ -143,15 +162,13 @@ function DatasetView(props: Props) {
     setSearchQuery(value);
   }
 
-  const useGlobalSearch = true;
-
   function renderTable(filteredDatasets: APIMaybeUnimportedDataset[]) {
     return (
       <DatasetTable
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
         selectedDataset={props.selectedDataset}
-        searchQuery={useGlobalSearch ? "" : searchQuery || ""}
+        searchQuery={searchQuery || ""}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
@@ -221,8 +238,8 @@ function DatasetView(props: Props) {
   ) : (
     searchBox
   );
-  const showLoadingIndicator =
-    (context.datasets.length === 0 && context.isLoading) || context.isChecking;
+  const showLoadingIndicator = context.isLoading || context.isChecking;
+
   const adminHeader = (
     <div
       className="pull-right"
@@ -234,18 +251,17 @@ function DatasetView(props: Props) {
         <React.Fragment>
           <Tooltip
             title={
-              showLoadingIndicator
-                ? "Refreshing the dataset list."
-                : "Search for new datasets on disk."
+              showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."
             }
           >
-            <Button
-              icon={showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />}
+            <Dropdown.Button
+              overlay={<Menu onClick={context.checkDatasets} items={refreshMenuItems} />}
               style={margin}
-              onClick={context.checkDatasets}
+              onClick={() => context.fetchDatasets()}
+              disabled={context.isChecking}
             >
-              Refresh
-            </Button>
+              {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+            </Dropdown.Button>
           </Tooltip>
           <Link to="/datasets/upload" style={margin}>
             <Button type="primary" icon={<PlusOutlined />}>
@@ -273,12 +289,23 @@ function DatasetView(props: Props) {
       {activeTab === renderingTab && (
         <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
       )}
-      {searchQuery && (
-        <h3>
-          <SearchOutlined /> Search Results for &quot;{searchQuery}&quot;
-        </h3>
-      )}
+      {searchQuery &&
+        // Render a header for the search.
+        (searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
+          <h3>
+            <SearchOutlined /> Search Results for &quot;{searchQuery}&quot;
+            {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+              <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+                (only showing the first {SEARCH_RESULTS_LIMIT} results)
+              </span>
+            ) : null}
+          </h3>
+        ) : (
+          // No results are shown because the search query is too short
+          isEmpty && <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+        ))}
       <CategorizationSearch
+        itemName="datasets"
         searchTags={searchTags}
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
@@ -371,16 +398,21 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
 }
 
 function renderPlaceholder(
-  context: DatasetCacheContextValue,
+  context: DatasetCacheContextValue | DatasetCollectionContextValue,
   user: APIUser,
   searchQuery: string | null,
 ) {
   if (context.isLoading) {
-    return null;
+    // A spinner is rendered by the parent above this component which is
+    // why a height is necessary to avoid the spinner sticking to the top
+    // (and being cropped).
+    return <div style={{ height: 200 }} />;
   }
 
   if (searchQuery) {
-    return "No datasets found. All folders have been searched.";
+    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH
+      ? "No datasets found. All folders have been searched."
+      : null;
   }
 
   const openPublicDatasetCard = (
@@ -415,9 +447,17 @@ function renderPlaceholder(
     </OptionCard>
   );
 
-  const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
-    ? "There are no datasets in this folder. Import one or try a public demo dataset."
-    : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets.";
+  let emptyListHintText;
+
+  if (context.supportsFolders) {
+    emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+      ? "There are no datasets in this folder. Import one or move a dataset from another folder."
+      : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
+  } else {
+    emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+      ? "There are no datasets available yet. Import one or try a public demo dataset."
+      : "There are no datasets available yet. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets.";
+  }
 
   return (
     <Row

@@ -34,9 +34,8 @@ export const minCutAgglomerateAction = (sourceNodeId: number, targetNodeId: numb
     targetNodeId,
   } as const);
 
-export const minCutAgglomerateWithPositionAction = (sourceNodeId: number, position: Vector3) =>
+export const minCutAgglomerateWithPositionAction = (position: Vector3) =>
   ({
     type: "MIN_CUT_AGGLOMERATE_WITH_POSITION",
-    sourceNodeId,
     position,
   } as const);

@@ -334,6 +334,20 @@ export function getVisibleSegments(state: OxalisState): SegmentMap | null | unde
   return state.localSegmentationData[layer.name].segments;
 }
 
+export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {
+  const layer = getVisibleSegmentationLayer(state);
+  if (layer == null) return null;
+
+  const volumeTracing = getVolumeTracingByLayerName(state.tracing, layer.name);
+  if (volumeTracing == null) return null;
+
+  const activeCellId = getActiveCellId(volumeTracing);
+  if (activeCellId == null) return null;
+
+  const segments = getSegmentsForLayer(state, layer.name);
+  return segments.getNullable(activeCellId)?.somePosition;
+}
+
 /*
   This function returns the resolution and zoom step in which the given segmentation
   tracing layer is currently rendered (if it is rendered). These properties should be used

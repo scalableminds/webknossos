@@ -9,7 +9,6 @@ import {
   annotation as ANNOTATION,
 } from "../fixtures/skeletontracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
-mockRequire.stopAll();
 
 function makeModelMock() {
   class ModelMock {}

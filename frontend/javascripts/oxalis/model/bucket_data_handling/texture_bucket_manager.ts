@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import * as THREE from "three";
 import _ from "lodash";
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";

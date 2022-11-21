@@ -9,6 +9,7 @@ import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
+import _ from "lodash";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -174,10 +175,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         ...bb,
         id: highestBoundingBoxId + index + 1,
       }));
-      const mergedUserBoundingBoxes = [
-        ...tracing.userBoundingBoxes,
-        ...additionalUserBoundingBoxes,
-      ];
+      const mergedUserBoundingBoxes = _.uniqWith(
+        [...tracing.userBoundingBoxes, ...additionalUserBoundingBoxes],
+        (bboxWithId1, bboxWithId2) => {
+          const { id: id1, ...bbox1 } = bboxWithId1;
+          const { id: id2, ...bbox2 } = bboxWithId2;
+          return _.isEqual(bbox1, bbox2);
+        },
+      );
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
     }
 

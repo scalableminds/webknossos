@@ -1,4 +1,5 @@
 import _ from "lodash";
+import "test/mocks/lz4";
 import type { Vector3, LabeledVoxelsMap, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { map3 } from "libs/utils";

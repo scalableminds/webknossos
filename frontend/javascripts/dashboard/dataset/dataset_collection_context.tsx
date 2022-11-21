@@ -13,8 +13,10 @@ import {
   useMoveFolderMutation,
   useDeleteFolderMutation,
   useUpdateDatasetMutation,
+  useFolderQuery,
 } from "./queries";
 import { useIsMutating } from "@tanstack/react-query";
+import { useHistory } from "react-router-dom";
 
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
@@ -212,6 +214,9 @@ function useManagedUrlParams(
   globalSearchQuery: string | null,
   activeFolderId: string | null,
 ) {
+  const history = useHistory();
+  const { data: folder } = useFolderQuery(activeFolderId);
+
   // Read params upon component mount.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -220,9 +225,14 @@ function useManagedUrlParams(
       setGlobalSearchQuery(query);
     }
 
-    const folderId = params.get("folderId");
-    if (folderId) {
-      setActiveFolderId(folderId);
+    const folderSpecifier = _.last(location.pathname.split("/"));
+
+    if (folderSpecifier?.includes("-")) {
+      const nameChunksAndFolderId = folderSpecifier.split("-");
+      const folderId = _.last(nameChunksAndFolderId);
+      if (folderId) {
+        setActiveFolderId(folderId);
+      }
     }
   }, []);
 
@@ -244,17 +254,16 @@ function useManagedUrlParams(
 
   // Update folderId
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
     if (activeFolderId) {
-      params.set("folderId", activeFolderId);
+      let folderName = folder?.name || "";
+      folderName = folderName.replace("/", "-");
+      folderName = folderName.replace(" ", "-");
+
+      // Use folderName-folderId in path or only folderId if name is empty (e.g., because
+      // not loaded yet)
+      history.replace(`/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`);
     } else {
-      params.delete("folderId");
+      history.replace("/dashboard/datasets");
     }
-    const paramStr = params.toString();
-    window.history.replaceState(
-      {},
-      "",
-      `${location.pathname}${paramStr === "" ? "" : "?"}${paramStr}`,
-    );
-  }, [activeFolderId]);
+  }, [activeFolderId, folder]);
 }

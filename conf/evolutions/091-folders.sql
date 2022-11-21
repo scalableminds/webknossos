@@ -54,18 +54,17 @@ CREATE TABLE webknossos.folder_allowedTeams(
   PRIMARY KEY (_folder, _team)
 );
 
-
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.datasets_;
 DROP VIEW webknossos.organizations_;
-
 
 ALTER TABLE webknossos.dataSets ADD COLUMN _folder CHAR(24);
 ALTER TABLE webknossos.organizations ADD COLUMN _rootFolder CHAR(24);
 
 UPDATE webknossos.organizations SET _rootFolder = webknossos.generate_object_id();
 
-INSERT INTO webknossos.folders SELECT _rootFolder, name, isDeleted from webknossos.organizations;
+-- insert root folders from the ids just inserted in the organizations table
+INSERT INTO webknossos.folders SELECT _rootFolder, 'Datasets', isDeleted from webknossos.organizations;
 INSERT INTO webknossos.folder_paths SELECT _id, _id, 0 FROM webknossos.folders;
 UPDATE webknossos.datasets d
   SET _folder = o._rootFolder
@@ -74,10 +73,9 @@ UPDATE webknossos.datasets d
 
 ALTER TABLE webknossos.dataSets ALTER COLUMN _folder SET NOT NULL;
 ALTER TABLE webknossos.organizations ALTER COLUMN _rootFolder SET NOT NULL;
-
+ALTER TABLE webknossos.organizations ADD CONSTRAINT organizations__rootfolder_key UNIQUE(_rootFolder);
 
 DROP FUNCTION webknossos.generate_object_id;
-
 
 ALTER TABLE webknossos.folder_paths
   ADD FOREIGN KEY (_ancestor) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
@@ -86,6 +84,7 @@ ALTER TABLE webknossos.folder_paths
 ALTER TABLE webknossos.organizations
   ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
+CREATE INDEX ON webknossos.dataSets(_folder);
 
 CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
 CREATE VIEW webknossos.datasets_ as SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
@@ -100,8 +99,6 @@ m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastAct
 FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
-
-
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 91;
 

@@ -137,8 +137,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
           _id IN (
             SELECT _dataSet
             FROM webknossos.dataSet_allowedTeams dt
-            JOIN webknossos.user_team_roles ut ON dt._team = ut._team
-            WHERE ut._user = '$requestingUserId'
+            JOIN webknossos.user_team_roles utr ON dt._team = utr._team
+            WHERE utr._user = '$requestingUserId'
           )
         )
         OR ( -- user is in a team that is allowed for the folder or its ancestors
@@ -148,8 +148,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
             WHERE fp._ancestor IN (
               SELECT at._folder
               FROM webknossos.folder_allowedTeams at
-              JOIN webknossos.user_team_roles tr ON at._team = tr._team
-              WHERE tr._user = '$requestingUserId'
+              JOIN webknossos.user_team_roles utr ON at._team = utr._team
+              WHERE utr._user = '$requestingUserId'
             )
           )
         )

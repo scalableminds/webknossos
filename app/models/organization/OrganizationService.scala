@@ -7,7 +7,7 @@ import controllers.InitialDataService
 
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO}
-import models.folder.{Folder, FolderDAO}
+import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User}
 import play.api.libs.json.{JsObject, Json}
@@ -20,6 +20,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     teamDAO: TeamDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
+                                    folderService: FolderService,
                                     rpc: RPC,
                                     initialDataService: InitialDataService,
                                     conf: WkConf,
@@ -80,7 +81,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
       initialPricingPlan = if (conf.Features.isDemoInstance) PricingPlan.Basic else PricingPlan.Custom
-      organizationRootFolder = Folder(ObjectId.generate, organizationName)
+      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
       organization = Organization(ObjectId.generate,
                                   organizationName,
                                   "",
@@ -89,9 +90,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                   initialPricingPlan,
                                   organizationRootFolder._id)
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
+      _ <- folderDAO.insertAsRoot(organizationRootFolder)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
-      _ <- folderDAO.insertAsRoot(organizationRootFolder)
       _ <- initialDataService.insertLocalDataStoreIfEnabled()
     } yield organization
 

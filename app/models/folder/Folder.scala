@@ -29,6 +29,8 @@ class FolderService @Inject()(teamDAO: TeamDAO,
                               folderDAO: FolderDAO,
                               organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext) {
 
+  val defaultRootName: String = "Datasets"
+
   def publicWrites(
       folder: Folder,
       requestingUser: Option[User] = None,
@@ -92,72 +94,73 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     rawAccessQ(write = true, requestingUserId, prefix = "")
 
   private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: String): String = {
-    val writeAccessPredicate = if (write) "AND tr.isTeamManager" else ""
+    val writeAccessPredicate = if (write) "tr.isTeamManager" else "true"
     val breadCrumbsAccessForFolder =
-      if (write) ""
+      if (write) "false"
       else
         s"""
        -- only for read access: you may read the ancestors of a folder you can access
-       UNION ALL
-       SELECT fp._ancestor
-       FROM webknossos.folder_paths fp
-       WHERE fp._descendant IN (
-         SELECT at._folder
-         FROM webknossos.folder_allowedTeams at
-         JOIN webknossos.user_team_roles tr ON at._team = tr._team
-         WHERE tr._user = '$requestingUserId'
+       ${prefix}_id IN (
+         SELECT fp._ancestor
+         FROM webknossos.folder_paths fp
+         WHERE fp._descendant IN (
+           SELECT at._folder
+           FROM webknossos.folder_allowedTeams at
+           JOIN webknossos.user_team_roles utr ON at._team = utr._team
+           WHERE utr._user = '$requestingUserId'
+         )
        )
        """
     val breadCrumbsAccessForDataset =
-      if (write) ""
+      if (write) "false"
       else
         s"""
        -- only for read access: you may read the ancestors of a dataset you can access
-       UNION ALL
-       SELECT fp._ancestor
-       FROM webknossos.folder_paths fp
-       WHERE fp._descendant IN (
-         SELECT d._folder
-         FROM webknossos.dataSets_ d
-         JOIN webknossos.dataSet_allowedTeams dt ON dt._dataSet = d._id
-         JOIN webknossos.user_team_roles ut ON dt._team = ut._team
-         WHERE ut._user = '$requestingUserId'
+       ${prefix}_id IN (
+         SELECT fp._ancestor
+         FROM webknossos.folder_paths fp
+         WHERE fp._descendant IN (
+           SELECT d._folder
+           FROM webknossos.dataSets_ d
+           JOIN webknossos.dataSet_allowedTeams dt ON dt._dataSet = d._id
+           JOIN webknossos.user_team_roles utr ON dt._team = utr._team
+           WHERE utr._user = '$requestingUserId'
+         )
        )
        """
     s"""
-        (
-          -- is descendant of user organization folder and user is admin or dataset manager
-          ${prefix}_id IN (
-            SELECT fp._descendant
-            FROM webknossos.folder_paths fp
-            WHERE fp._ancestor IN (
-               SELECT o._rootFolder
-               FROM webknossos.organizations_ o
-               JOIN webknossos.users_ u ON u._organization = o._id
-               WHERE u._id = '$requestingUserId'
-               AND (
-                 u.isAdmin
-                 OR u.isDatasetManager
-               )
-            )
+        -- is descendant of user organization folder and user is admin or dataset manager
+        ${prefix}_id IN (
+          SELECT fp._descendant
+          FROM webknossos.folder_paths fp
+          WHERE fp._ancestor IN (
+             SELECT o._rootFolder
+             FROM webknossos.organizations_ o
+             JOIN webknossos.users_ u ON u._organization = o._id
+             WHERE u._id = '$requestingUserId'
+             AND (
+               u.isAdmin
+               OR u.isDatasetManager
+             )
           )
         )
-        OR (
+        OR
           -- is descendant of a folder with allowed teams the user is in
-          ${prefix}_id IN (
-            SELECT fp._descendant
-            FROM webknossos.folder_paths fp
-            WHERE fp._ancestor IN (
-              SELECT at._folder
-              FROM webknossos.folder_allowedTeams at
-              JOIN webknossos.user_team_roles tr ON at._team = tr._team
-              WHERE tr._user = '$requestingUserId'
-              $writeAccessPredicate
-            )
-            $breadCrumbsAccessForFolder
-            $breadCrumbsAccessForDataset
+        ${prefix}_id IN (
+          SELECT fp._descendant
+          FROM webknossos.folder_paths fp
+          WHERE fp._ancestor IN (
+            SELECT at._folder
+            FROM webknossos.folder_allowedTeams at
+            JOIN webknossos.user_team_roles tr ON at._team = tr._team
+            WHERE tr._user = '$requestingUserId'
+            AND $writeAccessPredicate
           )
         )
+        OR
+        $breadCrumbsAccessForFolder
+        OR
+        $breadCrumbsAccessForDataset
         """
   }
 
@@ -220,7 +223,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
               AND #$accessQueryWithPrefix
-              UNION ALL SELECT _id, name, NULL from webknossos.folders_  -- find self again, with no parent
+              UNION ALL SELECT _id, name, NULL -- find self again, with no parent
+              FROM webknossos.folders_
               WHERE _id = $folderId
               AND #$accessQuery
               """.as[(String, String, Option[String])])
@@ -230,7 +234,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertAsChild(parentId: ObjectId, f: Folder)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val insertPathQuery =
       sqlu"""INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth)
-             SELECT _ancestor, ${f._id}, depth + 1 from webknossos.folder_paths WHERE _descendant = $parentId -- links to ancestors
+             SELECT _ancestor, ${f._id}, depth + 1 -- links to ancestors
+             FROM webknossos.folder_paths WHERE _descendant = $parentId
              UNION ALL SELECT ${f._id}, ${f._id}, 0 -- self link
           """
     for {
@@ -252,8 +257,8 @@ class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         SELECT supertree._ancestor, subtree._descendant, supertree.depth + subtree.depth + 1
         FROM webknossos.folder_paths supertree
         CROSS JOIN webknossos.folder_paths subtree
-        WHERE subtree._ancestor = $idValidated
-        AND supertree._descendant = $newParentIdValidated
+        WHERE subtree._ancestor = $idValidated  -- subtree is the OLD tree including self
+        AND supertree._descendant = $newParentIdValidated  -- supertree is the ancestor tree of the NEW parent, including it
           """
     for {
       _ <- assertUpdateAccess(idValidated)

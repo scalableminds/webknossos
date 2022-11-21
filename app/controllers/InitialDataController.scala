@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.binary._
-import models.folder.{Folder, FolderDAO}
+import models.folder.{Folder, FolderDAO, FolderService}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
@@ -43,6 +43,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
                                    folderDAO: FolderDAO,
+                                   folderService: FolderService,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
                                    tokenDAO: TokenDAO,
@@ -111,11 +112,11 @@ Samplecountry
     for {
       _ <- updateLocalDataStorePublicUri()
       _ <- updateLocalTracingStorePublicUri()
-      _ <- insertRootFolder()
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- assertInitialDataEnabled
       _ <- assertNoOrganizationsPresent
+      _ <- insertRootFolder()
       _ <- insertOrganization()
       _ <- insertTeams()
       _ <- insertDefaultUser()
@@ -139,7 +140,7 @@ Samplecountry
   private def insertRootFolder(): Fox[Unit] =
     folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, defaultOrganization.name))
+      case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName))
     }
 
   private def insertDefaultUser(): Fox[Unit] =

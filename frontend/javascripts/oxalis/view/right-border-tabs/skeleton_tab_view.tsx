@@ -745,7 +745,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         type="info"
         message={
           <React.Fragment>
-            {this.state.selectedTrees.length} Tree(s) selected.{" "}
+            {this.state.selectedTrees.length}{" "}
+            {Utils.pluralize("Tree", this.state.selectedTrees.length)} selected.{" "}
             <Button type="dashed" size="small" onClick={this.deselectAllTrees}>
               Clear Selection
             </Button>

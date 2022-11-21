@@ -6,6 +6,7 @@ import {
 } from "@ant-design/icons";
 import { Result, Spin, Tag } from "antd";
 import { stringToColor } from "libs/format_utils";
+import { pluralize } from "libs/utils";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useState } from "react";
 import { APIMaybeUnimportedDataset, APITeam, APIUser } from "types/api_flow_types";
@@ -179,7 +180,7 @@ function DetailsSidebar({
               icon={<SearchOutlined style={{ fontSize: 50 }} />}
               subTitle={
                 <>
-                  {datasetCount} dataset(s) were found. {maybeSelectMsg}
+                  {datasetCount} {pluralize("dataset", datasetCount)} were found. {maybeSelectMsg}
                 </>
               }
             />
@@ -203,7 +204,8 @@ function DetailsSidebar({
                     {folder.name}
                   </h4>
                   <p>
-                    This folder contains {datasetCount} dataset(s). {maybeSelectMsg}
+                    This folder contains {datasetCount} {pluralize("dataset", datasetCount)}.{" "}
+                    {maybeSelectMsg}
                   </p>
                   <span className="sidebar-label">Access Permissions</span>
                   <br />

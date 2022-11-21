@@ -182,9 +182,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     searchQueryOpt match {
       case None => "true"
       case Some(searchQuery) =>
-        val searchQueryFiltered = searchQuery.replaceAll("[^A-Za-z0-9_\\-. ]", " ").toLowerCase.trim
-        val queryTokens = searchQueryFiltered.split(" +")
-        queryTokens.map(queryToken => s"LOWER(name) LIKE '%$queryToken%'").mkString(" AND ")
+        val queryTokens = searchQuery.toLowerCase.trim.split(" +")
+        queryTokens.map(queryToken => s"POSITION(${escapeLiteral(queryToken)} IN LOWER(name)) > 0").mkString(" AND ")
     }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =
@@ -226,8 +225,11 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where name in #${writeStructTupleWithQuotes(
-        names.map(sanitize))} and _organization = $organizationId and #$accessQuery".as[DatasetsRow]).map(_.toList)
+      r <- run(sql"""SELECT #$columns
+                     FROM #$existingCollectionName
+                     WHERE name IN #${writeEscapedTuple(names)}
+                     AND _organization = $organizationId
+                     AND #$accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
     } yield parsed
 

@@ -182,9 +182,9 @@ export function useCreateFolderMutation() {
 
   return useMutation(([parentId, name]: [string, string]) => createFolder(parentId, name), {
     mutationKey,
-    onSuccess: (newFolder) => {
-      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
-        (oldItems || []).concat([newFolder]),
+    onSuccess: (newFolder: Folder, [parentId]) => {
+      queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
+        (oldItems || []).concat([{ ...newFolder, parent: parentId }]),
       );
     },
     onError: (err: any) => {
@@ -200,8 +200,8 @@ export function useDeleteFolderMutation() {
   return useMutation((id: string) => deleteFolder(id), {
     mutationKey,
     onSuccess: (deletedId) => {
-      queryClient.setQueryData(mutationKey, (oldItems: Folder[] | undefined) =>
-        (oldItems || []).filter((folder: Folder) => folder.id !== deletedId),
+      queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
+        (oldItems || []).filter((folder: FlatFolderTreeItem) => folder.id !== deletedId),
       );
     },
     onError: (err: any) => {

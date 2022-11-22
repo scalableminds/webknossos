@@ -81,8 +81,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load() as { searchQuery: string });
 
     if (this.props.initialSearchValue != null && this.props.initialSearchValue !== "") {
       // Only override the persisted value if the provided initialSearchValue is not empty

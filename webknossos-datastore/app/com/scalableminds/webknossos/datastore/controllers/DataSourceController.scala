@@ -24,14 +24,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 @Api(tags = Array("datastore"))
 class DataSourceController @Inject()(
-                                      dataSourceRepository: DataSourceRepository,
-                                      dataSourceService: DataSourceService,
-                                      remoteWebKnossosClient: DSRemoteWebKnossosClient,
-                                      accessTokenService: DataStoreAccessTokenService,
-                                      binaryDataServiceHolder: BinaryDataServiceHolder,
-                                      connectomeFileService: ConnectomeFileService,
-                                      storageUsageService: StorageUsageService,
-                                      uploadService: UploadService
+    dataSourceRepository: DataSourceRepository,
+    dataSourceService: DataSourceService,
+    remoteWebKnossosClient: DSRemoteWebKnossosClient,
+    accessTokenService: DataStoreAccessTokenService,
+    binaryDataServiceHolder: BinaryDataServiceHolder,
+    connectomeFileService: ConnectomeFileService,
+    storageUsageService: StorageUsageService,
+    uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -442,16 +442,17 @@ Expects:
   }
 
   @ApiOperation(hidden = true, value = "")
-  def measureUsedStorage(token: Option[String],
-             organizationName: String): Action[AnyContent] =
+  def measureUsedStorage(token: Option[String], organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
         urlOrHeaderToken(token, request)) {
-        for {
-          usedStorageInBytes: Long <- storageUsageService.measureStorage(organizationName)
-        } yield Ok(Json.obj(
-          "usedStorageInBytes" -> usedStorageInBytes
-        ))
+      for {
+        usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName)
+      } yield
+        Ok(
+          Json.obj(
+            "usedStorageInBytes" -> usedStorageInBytes
+          ))
       }
     }
 

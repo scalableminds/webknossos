@@ -155,12 +155,9 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
         return;
       }
 
-      const { maybeNewAndChangedSentence, removedStr } = generateDiffMessage(diff);
-
       Toast.info(
         <>
-          {maybeNewAndChangedSentence}
-          {removedStr}{" "}
+          {generateDiffMessage(diff)}{" "}
           <a href="#" onClick={acceptNewDatasets}>
             Show updated list.
           </a>
@@ -409,6 +406,12 @@ export function generateDiffMessage(diff: {
   onlyInOld: number;
   onlyInNew: number;
 }) {
+  const joinStrings = (a: string, b: string) => {
+    if (a && b) {
+      return `${a} ${b}`;
+    }
+    return `${a}${b}`;
+  };
   const newOrChangedCount = diff.onlyInNew + diff.changed;
   const newStr = diff.onlyInNew > 0 ? `${diff.onlyInNew} new ` : "";
   const changedStr = diff.changed > 0 ? `${diff.changed} changed ` : "";
@@ -428,5 +431,5 @@ export function generateDiffMessage(diff: {
         "is",
       )} ${newStr}${maybeAnd}${changedStr}${Utils.pluralize("dataset", newOrChangedCount)}.`
     : "";
-  return { maybeNewAndChangedSentence, removedStr };
+  return joinStrings(maybeNewAndChangedSentence, removedStr);
 }

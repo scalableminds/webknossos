@@ -1008,7 +1008,7 @@ export function coalesce<T>(obj: { [key: string]: T }, field: T): T | null {
 }
 
 export function pluralize(str: string, count: number, optPluralForm: string | null = null): string {
-  if (count < 2) {
+  if (count === 1) {
     return str;
   }
   if (optPluralForm != null) {

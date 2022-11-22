@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import _ from "lodash";
 import {
   tokenUserA,

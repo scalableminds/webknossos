@@ -155,25 +155,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
         return;
       }
 
-      const newOrChangedCount = diff.onlyInNew + diff.changed;
-      const newStr = diff.onlyInNew > 0 ? `${diff.onlyInNew} new ` : "";
-      const changedStr = diff.changed > 0 ? `${diff.changed} changed ` : "";
-      const maybeAnd = changedStr && newStr ? "and " : "";
-      const maybeAlso = newOrChangedCount ? "Also, " : "";
-      const removedStr =
-        diff.onlyInOld > 0
-          ? `${maybeAlso}${diff.onlyInOld} ${Utils.pluralize(
-              "dataset",
-              diff.onlyInOld,
-            )} no longer ${Utils.conjugate("exist", diff.onlyInOld)} in this folder.`
-          : "";
-      const maybeNewAndChangedSentence = newOrChangedCount
-        ? `There ${Utils.conjugate(
-            "are",
-            newOrChangedCount,
-            "is",
-          )} ${newStr}${maybeAnd}${changedStr}${Utils.pluralize("dataset", newOrChangedCount)}.`
-        : "";
+      const { maybeNewAndChangedSentence, removedStr } = generateDiffMessage(diff);
 
       Toast.info(
         <>
@@ -420,4 +402,31 @@ function diffDatasets(
     onlyInOld: onlyInOld.length,
     onlyInNew: onlyInNew.length,
   };
+}
+
+export function generateDiffMessage(diff: {
+  changed: number;
+  onlyInOld: number;
+  onlyInNew: number;
+}) {
+  const newOrChangedCount = diff.onlyInNew + diff.changed;
+  const newStr = diff.onlyInNew > 0 ? `${diff.onlyInNew} new ` : "";
+  const changedStr = diff.changed > 0 ? `${diff.changed} changed ` : "";
+  const maybeAnd = changedStr && newStr ? "and " : "";
+  const maybeAlso = newOrChangedCount ? "Also, " : "";
+  const removedStr =
+    diff.onlyInOld > 0
+      ? `${maybeAlso}${diff.onlyInOld} ${Utils.pluralize(
+          "dataset",
+          diff.onlyInOld,
+        )} no longer ${Utils.conjugate("exist", diff.onlyInOld)} in this folder.`
+      : "";
+  const maybeNewAndChangedSentence = newOrChangedCount
+    ? `There ${Utils.conjugate(
+        "are",
+        newOrChangedCount,
+        "is",
+      )} ${newStr}${maybeAnd}${changedStr}${Utils.pluralize("dataset", newOrChangedCount)}.`
+    : "";
+  return { maybeNewAndChangedSentence, removedStr };
 }

@@ -4,12 +4,13 @@ import {
   SearchOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { Result, Spin, Tag } from "antd";
+import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { pluralize } from "libs/utils";
+import _ from "lodash";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useState } from "react";
-import { APIMaybeUnimportedDataset, APITeam, APIUser } from "types/api_flow_types";
+import { APIMaybeUnimportedDataset, APITeam, APIUser, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
@@ -211,7 +212,7 @@ function DetailsSidebar({
                   </p>
                   <span className="sidebar-label">Access Permissions</span>
                   <br />
-                  <FolderTeamTags teams={folder.allowedTeamsCumulative} />
+                  <FolderTeamTags folder={folder} />
                 </div>
               ) : (
                 <Spin spinning />
@@ -224,28 +225,41 @@ function DetailsSidebar({
   );
 }
 
-function FolderTeamTags({ teams }: { teams: APITeam[] }) {
-  if (teams.length === 0) {
+function FolderTeamTags({ folder }: { folder: Folder }) {
+  if (folder.allowedTeamsCumulative.length === 0) {
     return <Tag>default</Tag>;
   }
+  const allowedTeamsById = _.keyBy(folder.allowedTeams, "id");
 
   return (
     <>
-      {teams.map((team) => (
-        <div key={team.name}>
-          <Tag
-            style={{
-              maxWidth: 200,
-              overflow: "hidden",
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
-            }}
-            color={stringToColor(team.name)}
+      {folder.allowedTeamsCumulative.map((team) => {
+        const isCumulative = !allowedTeamsById[team.id];
+        return (
+          <Tooltip
+            title={
+              isCumulative
+                ? "This team may access this folder, because of the permissions of the parent folders."
+                : null
+            }
           >
-            {team.name}
-          </Tag>
-        </div>
-      ))}
+            <div key={team.name}>
+              <Tag
+                style={{
+                  maxWidth: 200,
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                }}
+                color={stringToColor(team.name)}
+              >
+                {team.name}
+                {isCumulative ? "*" : ""}
+              </Tag>
+            </div>
+          </Tooltip>
+        );
+      })}
     </>
   );
 }

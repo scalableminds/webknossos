@@ -614,23 +614,36 @@ export function TeamTags({
     return <Tag>{emptyValue}</Tag>;
   }
 
+  const allowedTeamsById = _.keyBy(dataset.allowedTeams, "id");
   return (
     <>
-      {permittedTeams.map((team) => (
-        <div key={`allowed_teams_${dataset.name}_${team.name}`}>
-          <Tag
-            style={{
-              maxWidth: 200,
-              overflow: "hidden",
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
-            }}
-            color={stringToColor(team.name)}
+      {permittedTeams.map((team) => {
+        const isCumulative = !allowedTeamsById[team.id];
+        return (
+          <Tooltip
+            title={
+              isCumulative
+                ? "This team may access this dataset, because of the permissions of the current folder."
+                : null
+            }
           >
-            {team.name}
-          </Tag>
-        </div>
-      ))}
+            <div key={`allowed_teams_${dataset.name}_${team.name}`}>
+              <Tag
+                style={{
+                  maxWidth: 200,
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                }}
+                color={stringToColor(team.name)}
+              >
+                {team.name}
+                {isCumulative ? "*" : ""}
+              </Tag>
+            </div>
+          </Tooltip>
+        );
+      })}
     </>
   );
 }

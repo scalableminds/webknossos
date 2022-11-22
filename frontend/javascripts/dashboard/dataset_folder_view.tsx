@@ -118,7 +118,7 @@ function DetailsSidebar({
   setFolderIdForEditModal: (value: string | null) => void;
 }) {
   const context = useDatasetCollectionContext();
-  const { data: folder } = useFolderQuery(activeFolderId);
+  const { data: folder, error } = useFolderQuery(activeFolderId);
 
   useEffect(() => {
     if (selectedDataset == null || !("folderId" in selectedDataset)) {
@@ -214,6 +214,8 @@ function DetailsSidebar({
                   <br />
                   <FolderTeamTags folder={folder} />
                 </div>
+              ) : error ? (
+                "Could not load folder."
               ) : (
                 <Spin spinning />
               )}

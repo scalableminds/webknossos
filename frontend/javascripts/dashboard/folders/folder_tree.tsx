@@ -40,7 +40,7 @@ export function FolderTreeSidebar({
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const context = useDatasetCollectionContext();
 
-  const { data: folderTree } = context.queries.folderTreeQuery;
+  const { data: folderTree, isLoading } = context.queries.folderTreeQuery;
 
   useEffect(() => {
     setTreeData((prevState) => {
@@ -102,6 +102,12 @@ export function FolderTreeSidebar({
         padding: 2,
       }}
     >
+      {!isLoading && treeData.length === 0 ? (
+        <div style={{ textAlign: "center" }}>
+          No folders available.
+          <br /> Ask an administrator to grant you access.
+        </div>
+      ) : null}
       <SortableTree
         treeData={treeData}
         onChange={(newTreeData: FolderItem[]) => {

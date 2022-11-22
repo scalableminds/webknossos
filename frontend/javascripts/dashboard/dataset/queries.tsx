@@ -66,6 +66,7 @@ export function useFolderTreeQuery() {
 }
 
 const LIST_REQUEST_DURATION_THRESHOLD = 500;
+const DATASET_POLLING_INTERVAL = 60 * 1000;
 export function useDatasetsInFolderQuery(folderId: string | null) {
   /*
    * This query is a bit more complex. The default behavior of react-query
@@ -116,6 +117,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
   );
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timer | null = null;
     if (queryData.data == null || queryData.data.length === 0) {
       // No data exists in the cache. Allow the query to fetch.
       queryData.refetch();
@@ -124,51 +126,97 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
     let effectWasCancelled = false;
     const startTime = performance.now();
-    getDatasets(null, folderId).then((newDatasets) => {
-      if (effectWasCancelled) {
-        return;
-      }
-      const requestDuration = performance.now() - startTime;
-
-      const acceptNewDatasets = () => {
+    getDatasets(null, folderId)
+      .then((newDatasets) => {
         if (effectWasCancelled) {
           return;
         }
-        fetchedDatasetsRef.current = newDatasets;
-        Toast.close(`new-datasets-are-available-${folderId || null}`);
-        queryData.refetch();
-      };
+        const requestDuration = performance.now() - startTime;
 
-      // If the request was relatively fast, accept it without asking.
-      // Otherwise, ask the user whether they want to accept the new results
-      // since it would otherwise mean that the table content can change
-      // suddenly which is quite annoying.
-      if (requestDuration < LIST_REQUEST_DURATION_THRESHOLD) {
-        acceptNewDatasets();
-        return;
-      }
+        const acceptNewDatasets = () => {
+          if (effectWasCancelled) {
+            return;
+          }
+          fetchedDatasetsRef.current = newDatasets;
+          Toast.close(`new-datasets-are-available-${folderId || null}`);
+          queryData.refetch();
+        };
 
-      const oldDatasets = queryClient.getQueryData<APIDataset[]>(queryKey);
-      const diff = diffDatasets(oldDatasets, newDatasets);
-      if (diff.changed === 0 && diff.onlyInOld === 0 && diff.onlyInNew === 0) {
-        // Nothing changed
-        return;
-      }
+        // If the request was relatively fast, accept it without asking.
+        // Otherwise, ask the user whether they want to accept the new results
+        // since it would otherwise mean that the table content can change
+        // suddenly which is quite annoying.
+        if (requestDuration < LIST_REQUEST_DURATION_THRESHOLD) {
+          acceptNewDatasets();
+          return;
+        }
 
-      Toast.info(
-        <>
-          {generateDiffMessage(diff)}{" "}
-          <a href="#" onClick={acceptNewDatasets}>
-            Show updated list.
-          </a>
-        </>,
-        { key: `new-datasets-are-available-${folderId || null}` },
-      );
-    });
+        const oldDatasets = queryClient.getQueryData<APIDataset[]>(queryKey);
+        const diff = diffDatasets(oldDatasets, newDatasets);
+        if (diff.changed === 0 && diff.onlyInOld === 0 && diff.onlyInNew === 0) {
+          // Nothing changed
+          return;
+        }
+
+        Toast.info(
+          <>
+            {generateDiffMessage(diff)}{" "}
+            <a href="#" onClick={acceptNewDatasets}>
+              Show updated list.
+            </a>
+          </>,
+          {
+            key: `new-datasets-are-available-${folderId || null}`,
+            timeout: DATASET_POLLING_INTERVAL / 2,
+          },
+        );
+      })
+      .then(() => {
+        // The initial refresh of the dataset list is done and the
+        // potential update toast will also be gone once the following
+        // poll action is triggered (due to the timeout of the toast).
+        //
+        // Let's poll for dataset updates here to keep the dataset
+        // objects up to date. This is especially helpful to avoid that
+        // long running sessions show outdated data which can then be
+        // mutated by the user while discarding other updates.
+        // Problematic scenario example:
+        // - user A opens folder F
+        // - user B opens folder F
+        // - user B adds a tag to a dataset D in F
+        // - user A also adds a tag to D. however, this update won't reflect
+        //   the tag added by B.
+        // The problem can be mitigated by polling, since the scenario would
+        // only occur, if the conflict happens in the same time window (defined
+        // by the polling interval).
+
+        function scheduleNextPoll() {
+          timeoutId = setTimeout(async () => {
+            if (timeoutId == null) {
+              return;
+            }
+            const newDatasets = await getDatasets(null, folderId);
+            const oldDatasets = (queryClient.getQueryData(queryKey) ||
+              []) as APIMaybeUnimportedDataset[];
+            queryClient.setQueryData(
+              queryKey,
+              getUnobtrusivelyUpdatedDatasets(newDatasets, oldDatasets),
+            );
+
+            scheduleNextPoll();
+          }, DATASET_POLLING_INTERVAL);
+        }
+
+        scheduleNextPoll();
+      });
 
     return () => {
       fetchedDatasetsRef.current = null;
       effectWasCancelled = true;
+      if (timeoutId != null) {
+        clearInterval(timeoutId);
+        timeoutId = null;
+      }
       Toast.close(`new-datasets-are-available-${folderId || null}`);
     };
   }, [folderId]);
@@ -432,4 +480,30 @@ export function generateDiffMessage(diff: {
       )} ${newStr}${maybeAnd}${changedStr}${Utils.pluralize("dataset", newOrChangedCount)}.`
     : "";
   return joinStrings(maybeNewAndChangedSentence, removedStr);
+}
+
+function getUnobtrusivelyUpdatedDatasets(
+  newDatasets: APIMaybeUnimportedDataset[],
+  oldDatasets: APIMaybeUnimportedDataset[],
+): APIMaybeUnimportedDataset[] {
+  /*
+   * Only update existing datasets from oldDatasets with the ones from new datasets, so that the rendered
+   * dataset list doesn't change in size (which would cause annoying scroll jumps). Also, don't change the
+   * lastUsedByUser property, as this would change the ordering when the default sorting is used.
+   */
+
+  const idFn = (dataset: APIMaybeUnimportedDataset) =>
+    `${dataset.owningOrganization}#${dataset.name}`;
+
+  const newDatasetsById = _.keyBy(newDatasets, idFn);
+  return oldDatasets.map((oldDataset) => {
+    const newPendant = newDatasetsById[idFn(oldDataset)];
+    if (!newPendant) {
+      return oldDataset;
+    }
+    return {
+      ...newPendant,
+      lastUsedByUser: oldDataset.lastUsedByUser,
+    };
+  });
 }

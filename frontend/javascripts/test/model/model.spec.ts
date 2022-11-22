@@ -1,5 +1,6 @@
 // @ts-nocheck
 import _ from "lodash";
+import "test/mocks/lz4";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";

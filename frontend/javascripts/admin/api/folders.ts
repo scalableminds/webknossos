@@ -17,7 +17,6 @@ export async function createFolder(parentId: string, name: string): Promise<Fold
   const folder = await Request.receiveJSON(`/api/folders/create?${params}`, {
     method: "POST",
   });
-  folder.parent = parentId;
   return folder;
 }
 

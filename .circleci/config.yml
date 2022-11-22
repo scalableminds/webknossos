@@ -52,7 +52,7 @@ jobs:
           command: tools/postgres/assert_unique_evolution_numbers.sh
       - run:
           name: Test Git
-          command: docker-compose run -e git status
+          command: docker-compose run -e base git status
       - run:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile

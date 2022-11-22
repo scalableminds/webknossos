@@ -330,6 +330,7 @@ Expects:
   - sortingKey (optional long)
   - isPublic (boolean)
   - tags (list of string)
+  - folderId (optional string)
  - As GET parameters:
   - organizationName (string): url-safe name of the organization owning the dataset
   - dataSetName (string): name of the dataset

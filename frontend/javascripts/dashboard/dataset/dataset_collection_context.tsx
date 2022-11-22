@@ -16,7 +16,6 @@ import {
   useFolderQuery,
 } from "./queries";
 import { useIsMutating } from "@tanstack/react-query";
-import { useHistory } from "react-router-dom";
 
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
@@ -214,7 +213,6 @@ function useManagedUrlParams(
   globalSearchQuery: string | null,
   activeFolderId: string | null,
 ) {
-  const history = useHistory();
   const { data: folder } = useFolderQuery(activeFolderId);
 
   // Read params upon component mount.
@@ -245,6 +243,9 @@ function useManagedUrlParams(
       params.delete("query");
     }
     const paramStr = params.toString();
+
+    // Don't use useHistory because this would lose the input search
+    // focus.
     window.history.replaceState(
       {},
       "",
@@ -260,10 +261,16 @@ function useManagedUrlParams(
       folderName = folderName.replace(" ", "-");
 
       // Use folderName-folderId in path or only folderId if name is empty (e.g., because
-      // not loaded yet)
-      history.replace(`/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`);
+      // not loaded yet).
+      // Don't use useHistory because this would lose the input search
+      // focus.
+      window.history.replaceState(
+        {},
+        "",
+        `/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`,
+      );
     } else {
-      history.replace("/dashboard/datasets");
+      window.history.replaceState({}, "", "/dashboard/datasets");
     }
   }, [activeFolderId, folder]);
 }

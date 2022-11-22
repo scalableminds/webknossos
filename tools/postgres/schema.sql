@@ -288,6 +288,14 @@ CREATE TABLE webknossos.organizations(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.organizations_usedStorage(
+  _organization CHAR(24) NOT NULL,
+  _dataStore VARCHAR(256) NOT NULL,
+  usedStorageBytes BIGINT NOT NULL,
+  lastUpdated TIMESTAMPTZ,
+  PRIMARY KEY(_organization, _dataStore)
+);
+
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY,

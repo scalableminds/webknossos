@@ -24,14 +24,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 @Api(tags = Array("datastore"))
 class DataSourceController @Inject()(
-    dataSourceRepository: DataSourceRepository,
-    dataSourceService: DataSourceService,
-    remoteWebKnossosClient: DSRemoteWebKnossosClient,
-    accessTokenService: DataStoreAccessTokenService,
-    binaryDataServiceHolder: BinaryDataServiceHolder,
-    connectomeFileService: ConnectomeFileService,
-    storageUsageService: StorateUsageService,
-    uploadService: UploadService
+                                      dataSourceRepository: DataSourceRepository,
+                                      dataSourceService: DataSourceService,
+                                      remoteWebKnossosClient: DSRemoteWebKnossosClient,
+                                      accessTokenService: DataStoreAccessTokenService,
+                                      binaryDataServiceHolder: BinaryDataServiceHolder,
+                                      connectomeFileService: ConnectomeFileService,
+                                      storageUsageService: StorageUsageService,
+                                      uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {

@@ -626,21 +626,20 @@ export function TeamTags({
                 ? "This team may access this dataset, because of the permissions of the current folder."
                 : null
             }
+            key={`allowed_teams_${dataset.name}_${team.name}`}
           >
-            <div key={`allowed_teams_${dataset.name}_${team.name}`}>
-              <Tag
-                style={{
-                  maxWidth: 200,
-                  overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
-                }}
-                color={stringToColor(team.name)}
-              >
-                {team.name}
-                {isCumulative ? "*" : ""}
-              </Tag>
-            </div>
+            <Tag
+              style={{
+                maxWidth: 200,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              }}
+              color={stringToColor(team.name)}
+            >
+              {team.name}
+              {isCumulative ? "*" : ""}
+            </Tag>
           </Tooltip>
         );
       })}

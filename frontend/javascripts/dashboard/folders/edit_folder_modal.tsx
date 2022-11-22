@@ -48,7 +48,7 @@ export function EditFolderModal({ folderId, onClose }: { folderId: string; onClo
           <FormItemWithInfo
             name="allowedTeams"
             label="Access Permissions"
-            info="Teams which may access this folder"
+            info="Teams which may access this folder. Note that teams that can access a parent folder of this folder, will always be able to also access this folder."
           >
             <TeamSelectionComponent mode="multiple" allowNonEditableTeams />
           </FormItemWithInfo>

@@ -242,21 +242,20 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
                 ? "This team may access this folder, because of the permissions of the parent folders."
                 : null
             }
+            key={team.name}
           >
-            <div key={team.name}>
-              <Tag
-                style={{
-                  maxWidth: 200,
-                  overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
-                }}
-                color={stringToColor(team.name)}
-              >
-                {team.name}
-                {isCumulative ? "*" : ""}
-              </Tag>
-            </div>
+            <Tag
+              style={{
+                maxWidth: 200,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              }}
+              color={stringToColor(team.name)}
+            >
+              {team.name}
+              {isCumulative ? "*" : ""}
+            </Tag>
           </Tooltip>
         );
       })}

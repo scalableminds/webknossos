@@ -50,7 +50,9 @@ function DatasetFolderViewInner(props: Props) {
     <div
       style={{
         display: "grid",
-        gridTemplate: "auto 1fr auto / auto 1fr auto",
+        gridTemplate: "auto / auto 1fr auto",
+        flexGrow: 1,
+        minHeight: 0,
       }}
     >
       {folderIdForEditModal != null && (
@@ -69,7 +71,7 @@ function DatasetFolderViewInner(props: Props) {
       >
         <FolderTreeSidebar setFolderIdForEditModal={setFolderIdForEditModal} />
       </div>
-      <main style={{ gridColumn: "2 / 2", overflow: "auto" }}>
+      <main style={{ gridColumn: "2 / 2", overflow: "auto", paddingRight: 4 }}>
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
@@ -83,7 +85,7 @@ function DatasetFolderViewInner(props: Props) {
           gridColumn: "3 / 4",
           overflow: "auto",
           borderLeft: "1px solid var(--ant-border-base)",
-          marginLeft: 16,
+          marginLeft: 4,
         }}
       >
         <DetailsSidebar

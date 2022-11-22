@@ -265,7 +265,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         {whatsNextBanner}
-        <div className="container">
+        <div className="container propagate-flex-height">
           {userHeader}
           <DatasetCacheProvider>
             <ActiveTabContext.Provider value={this.state.activeTabKey}>

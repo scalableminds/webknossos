@@ -29,12 +29,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Re-phrased some backend (error) messages to improve clarity and provide helping hints. [#6616](https://github.com/scalableminds/webknossos/pull/6616)
 - The layer visibility is now encoded in the sharing link. The user opening the link will see the same layers that were visible when copying the link. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
 - Voxelytics workflows can now be viewed by anyone with the link who is in the right organization. [#6622](https://github.com/scalableminds/webknossos/pull/6622)
+- When importing an annotation into an existing annotation, webKnossos ensures that bounding boxes are not duplicated in case they exist in the current *and* imported annotation. [#6648](https://github.com/scalableminds/webknossos/pull/6648)
+- Reworked the proofreading mode so that agglomerate skeletons are no longer needed (nor automatically loaded). Instead, segments can be selected by left-clicking onto them, indicated by a small white cross. To merge or split agglomerates, then either use the shortcuts `Shift + Leftclick`/`Ctrl + Leftclick` or use the context menu. [#6625](https://github.com/scalableminds/webknossos/pull/6625)
  
 ### Fixed
 - Fixed a bug in the dataset import view, where the layer name text field would lose focus after each key press. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
 - Fixed importing NGFF Zarr datasets with non-scale transforms. [#6621](https://github.com/scalableminds/webknossos/pull/6621)
-- Fixed a regression in NGFF Zarr import for datasets with no channel axis. [#6636](https://github.com/scalableminds/webknossos/pull/6636)<<<<<<< task-creation-nml
+- Fixed a regression in NGFF Zarr import for datasets with no channel axis. [#6636](https://github.com/scalableminds/webknossos/pull/6636
 - Fixed broken creation of tasks using base NMLs. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
+- Fixed that the precomputation of meshes didn't take the active mapping into account. [#6651](https://github.com/scalableminds/webknossos/pull/6651)
 
 ### Removed
 

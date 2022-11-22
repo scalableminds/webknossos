@@ -432,7 +432,7 @@ CREATE TABLE webknossos.shortLinks(
   longLink Text NOT NULL
 );
 
-CREATE TYPE webknossos.CREDENTIAL_TYPE AS ENUM ('HTTP Basic-Auth', 'S3 Access Key', 'HTTP Token', 'GCS');
+CREATE TYPE webknossos.CREDENTIAL_TYPE AS ENUM ('HTTP_Basic_Auth', 'S3_Access_Key', 'HTTP_Token', 'GCS');
 CREATE TABLE webknossos.credentials(
   _id CHAR(24) PRIMARY KEY,
   type webknossos.CREDENTIAL_TYPE NOT NULL,

@@ -30,8 +30,16 @@ object AnyCredential {
 case class HttpBasicAuthCredential(_id: ObjectId, name: String, username: String, password: String, domain: String)
     extends AnyCredential
 
+object HttpBasicAuthCredential {
+  implicit val jsonFormat: OFormat[HttpBasicAuthCredential] = Json.format[HttpBasicAuthCredential]
+}
+
 case class S3AccessKeyCredential(_id: ObjectId, name: String, keyId: String, key: String, bucket: String)
     extends AnyCredential
+
+object S3AccessKeyCredential {
+  implicit val jsonFormat: OFormat[S3AccessKeyCredential] = Json.format[S3AccessKeyCredential]
+}
 
 class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Credential, CredentialsRow, Credentials](sqlClient) {

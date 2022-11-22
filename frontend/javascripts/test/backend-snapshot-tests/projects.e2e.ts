@@ -1,4 +1,3 @@
-import "test/mocks/lz4";
 import _ from "lodash";
 import type { APIProject, APIProjectUpdater } from "types/api_flow_types";
 import {

@@ -57,7 +57,7 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean] and
       (__ \ 'tags).read[List[String]] and
-      (__ \ 'folderId).read[ObjectId]).tupled
+      (__ \ 'folderId).readNullable[ObjectId]).tupled
 
   @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
@@ -359,7 +359,7 @@ Expects:
                                          displayName,
                                          sortingKey.getOrElse(dataSet.created),
                                          isPublic,
-                                         folderId)
+                                         folderId.getOrElse(dataSet._folder))
             _ <- dataSetDAO.updateTags(dataSet._id, tags)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))

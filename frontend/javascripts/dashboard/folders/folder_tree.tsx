@@ -161,10 +161,8 @@ function getFolderHierarchy(
     }
   }
 
-  if (roots.length === 1) {
+  if (roots.length > 0) {
     roots[0].expanded = true;
-  } else {
-    throw new Error("Multiple folder roots found");
   }
 
   // Expand the parent chain of the active folder.

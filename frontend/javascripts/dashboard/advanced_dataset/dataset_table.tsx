@@ -604,7 +604,7 @@ export function TeamTags({
   dataset: APIMaybeUnimportedDataset;
   emptyValue?: React.ReactNode;
 }) {
-  const teams = dataset.allowedTeams;
+  const teams = dataset.allowedTeamsCumulative;
   const permittedTeams = [...teams];
   if (dataset.isPublic) {
     permittedTeams.push({ name: "public", id: "", organization: "" });

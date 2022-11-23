@@ -23,23 +23,29 @@ type UrlParams = Record<string, string>;
 export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
+
 export function values<T>(o: { [s: string]: T } | ArrayLike<T>): T[] {
   return Object.values(o);
 }
+
 export function entries<T>(o: { [s: string]: T } | ArrayLike<T>): [string, T][] {
   return Object.entries(o);
 }
+
 export function map2<A, B>(fn: (arg0: A, arg1: 0 | 1) => B, tuple: [A, A]): [B, B] {
   const [x, y] = tuple;
   return [fn(x, 0), fn(y, 1)];
 }
+
 export function map3<A, B>(fn: (arg0: A, arg1: 0 | 1 | 2) => B, tuple: [A, A, A]): [B, B, B] {
   const [x, y, z] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
 }
+
 export function take2<A>(tuple: [A, A, A] | [A, A, A, A]): [A, A] {
   return [tuple[0], tuple[1]];
 }
+
 export function take3<A>(tuple: [A, A, A, A]): [A, A, A] {
   return [tuple[0], tuple[1], tuple[2]];
 }
@@ -51,10 +57,12 @@ export function map4<A, B>(
   const [x, y, z, q] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2), fn(q, 3)];
 }
+
 export function floor3(tuple: Vector3): Vector3 {
   const [x, y, z] = tuple;
   return [Math.floor(x), Math.floor(y), Math.floor(z)];
 }
+
 export function iterateThroughBounds(
   minVoxel: Vector3,
   maxVoxel: Vector3,
@@ -105,6 +113,7 @@ function cheapSort<T extends string | number>(valueA: T, valueB: T): -1 | 0 | 1 
 export function unique<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
+
 export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
   return (nullableA: A | null | undefined) => {
     if (nullableA == null) {
@@ -114,9 +123,11 @@ export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) 
     return fn(nullableA);
   };
 }
+
 export function maybe<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => Maybe<B> {
   return (nullableA: A | null | undefined) => Maybe.fromNullable(nullableA).map(fn);
 }
+
 export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
   try {
     const parsedJSON = JSON.parse(str || "");
@@ -130,6 +141,7 @@ export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
     return Maybe.Nothing();
   }
 }
+
 export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<T | null | undefined> {
   try {
     return await promise;
@@ -137,6 +149,7 @@ export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<T | nul
     return null;
   }
 }
+
 export function asAbortable<T>(
   promise: Promise<T>,
   signal: AbortSignal,
@@ -158,12 +171,15 @@ export function asAbortable<T>(
     signal.removeEventListener("abort", abort);
   });
 }
+
 export function jsonStringify(json: Record<string, any>) {
   return JSON.stringify(json, null, "  ");
 }
+
 export function clamp(min: number, value: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
+
 export function zeroPad(num: number, zeros: number = 0): string {
   let paddedNum = `${num.toString()}`;
 
@@ -173,10 +189,12 @@ export function zeroPad(num: number, zeros: number = 0): string {
 
   return paddedNum;
 }
+
 export function roundTo(value: number, digits: number): number {
   const digitMultiplier = Math.pow(10, digits);
   return Math.round(value * digitMultiplier) / digitMultiplier;
 }
+
 export function capitalize(str: string): string {
   return str[0].toUpperCase() + str.slice(1);
 }
@@ -188,9 +206,11 @@ function intToHex(int: number, digits: number = 6): string {
 export function rgbToInt(color: Vector3): number {
   return (color[0] << 16) + (color[1] << 8) + color[2];
 }
+
 export function rgbToHex(color: Vector3): string {
   return `#${color.map((int) => intToHex(Math.round(int), 2)).join("")}`;
 }
+
 export function hexToRgb(hex: string): Vector3 {
   const bigint = parseInt(hex.slice(1), 16);
   const r = (bigint >> 16) & 255;
@@ -235,14 +255,17 @@ export function hslaToRgba(hsla: Vector4): Vector4 {
 
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), Math.round(a * 255)];
 }
+
 export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
   return [r, g, b];
 }
+
 export function getRandomColor(): Vector3 {
   // Generate three values between 0 and 1 that multiplied with 255 will be integers.
   const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256) / 255);
   return randomColor as any as Vector3;
 }
+
 export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   const [x, y, z, width, height, depth] = bb;
   return {
@@ -250,9 +273,11 @@ export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
     max: [x + width, y + height, z + depth],
   };
 }
+
 export function computeBoundingBoxFromBoundingBoxObject(bb: BoundingBoxObject): BoundingBoxType {
   return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
 }
+
 export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): BoundingBoxObject {
   const boundingBoxArray = computeArrayFromBoundingBox(bb);
   return {
@@ -262,6 +287,7 @@ export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): Bo
     depth: boundingBoxArray[5],
   };
 }
+
 export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
   return [
     bb.min[0],
@@ -272,6 +298,7 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
     bb.max[2] - bb.min[2],
   ];
 }
+
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
   if (boundingBoxes.length === 0) {
     return {
@@ -301,6 +328,7 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
     max,
   };
 }
+
 export function areBoundingBoxesOverlappingOrTouching(
   firstBB: BoundingBoxType,
   secondBB: BoundingBoxType,
@@ -313,6 +341,7 @@ export function areBoundingBoxesOverlappingOrTouching(
 
   return areOverlapping;
 }
+
 export function compareBy<T>(
   _collectionForTypeInference: Array<T>, // this parameter is only used let TS infer the used type
   selector: (arg0: T) => number,
@@ -337,6 +366,7 @@ export function compareBy<T>(
     return cheapSort(valueA, valueB);
   };
 }
+
 export function localeCompareBy<T>(
   _collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
   selector: (arg0: T) => string,
@@ -363,6 +393,7 @@ export function localeCompareBy<T>(
     return sortNatural ? naturalSort(valueA, valueB) : cheapSort(valueA, valueB);
   };
 }
+
 export function stringToNumberArray(s: string): Array<number> {
   // remove leading/trailing whitespaces
   s = s.trim();
@@ -381,9 +412,11 @@ export function stringToNumberArray(s: string): Array<number> {
 
   return result;
 }
+
 export function concatVector3(a: Vector3, b: Vector3): Vector6 {
   return [a[0], a[1], a[2], b[0], b[1], b[2]];
 }
+
 export function numberArrayToVector3(array: Array<number>): Vector3 {
   const output = [0, 0, 0];
 
@@ -394,6 +427,7 @@ export function numberArrayToVector3(array: Array<number>): Vector3 {
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return output;
 }
+
 export function numberArrayToVector6(array: Array<number>): Vector6 {
   const output = [0, 0, 0, 0, 0, 0];
 
@@ -404,9 +438,11 @@ export function numberArrayToVector6(array: Array<number>): Vector6 {
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector6... Remove this comment to see the full error message
   return output;
 }
+
 export function point3ToVector3({ x, y, z }: Point3): Vector3 {
   return [x, y, z];
 }
+
 export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
   return {
     x,
@@ -446,6 +482,7 @@ export function mayUserEditDataset(user: APIUser | null | undefined, dataset: AP
 export function getUrlParamsObject(): UrlParams {
   return getUrlParamsObjectFromString(location.search);
 }
+
 export function getUrlParamsObjectFromString(str: string): UrlParams {
   // Parse the URL parameters as objects and return it or just a single param
   return str
@@ -467,14 +504,17 @@ export function getUrlParamsObjectFromString(str: string): UrlParams {
       return result;
     }, {});
 }
+
 export function getUrlParamValue(paramName: string): string {
   const params = getUrlParamsObject();
   return params[paramName];
 }
+
 export function hasUrlParam(paramName: string): boolean {
   const params = getUrlParamsObject();
   return Object.prototype.hasOwnProperty.call(params, paramName);
 }
+
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {
   const range = [];
   const ascending = left < right;
@@ -487,14 +527,17 @@ export function __range__(left: number, right: number, inclusive: boolean): Arra
 
   return range;
 }
+
 export function __guard__<T, U>(value: T | null | undefined, transform: (arg0: T) => U) {
   return typeof value !== "undefined" && value !== null ? transform(value) : undefined;
 }
+
 export function sleep(timeout: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, timeout);
   });
 }
+
 export function isFileExtensionEqualTo(
   fileName: string | null | undefined,
   extensionOrExtensions: string | Array<string>,
@@ -510,6 +553,7 @@ export function isFileExtensionEqualTo(
 
   return passedExtension === extensionOrExtensions;
 }
+
 // Only use this function if you really need a busy wait (useful
 // for testing performance-related edge cases). Prefer `sleep`
 // otherwise.
@@ -527,6 +571,7 @@ export function busyWaitDevHelper(time: number) {
     }
   }
 }
+
 export function animationFrame(maxTimeout?: number): Promise<number | void> {
   const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
     (resolve) => {
@@ -541,6 +586,7 @@ export function animationFrame(maxTimeout?: number): Promise<number | void> {
   const timeoutPromise = sleep(maxTimeout);
   return Promise.race([rafPromise, timeoutPromise]);
 }
+
 export function diffArrays<T>(
   stateA: Array<T>,
   stateB: Array<T>,
@@ -560,6 +606,7 @@ export function diffArrays<T>(
     onlyB,
   };
 }
+
 export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   // This set-based implementation avoids stackoverflow errors from which
   // _.without(arr, ...elements) suffers.
@@ -571,14 +618,17 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   const auxSet = new Set(elements);
   return arr.filter((x) => !auxSet.has(x));
 }
+
 export function zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
   return maybeA.chain((valueA) => maybeB.map((valueB) => [valueA, valueB]));
 }
+
 // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
 // you can't do getOrElse(null) without flow complaining
 export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {
   return _maybe.isJust ? _maybe.get() : null;
 }
+
 // TODO: Remove this function as it's currently unused
 // Filters an array given a search string. Supports searching for several words as OR query.
 // Supports nested properties
@@ -615,6 +665,7 @@ export function filterWithSearchQueryOR<
     );
   }
 }
+
 // Filters an array given a search string. Supports searching for several words as AND query.
 // Supports nested properties
 export function filterWithSearchQueryAND<
@@ -651,16 +702,20 @@ export function filterWithSearchQueryAND<
     );
   }
 }
+
 export function millisecondsToMinutes(ms: number) {
   return ms / 60000;
 }
+
 export function minutesToMilliseconds(min: number) {
   return min * 60000;
 }
+
 export function millisecondsToHours(ms: number) {
   const oneHourInMilliseconds = 1000 * 60 * 60;
   return ms / oneHourInMilliseconds;
 }
+
 export function isNoElementFocussed(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
@@ -719,10 +774,12 @@ export function addEventListenerWithDelegation(
     [eventName]: wrapperFunc,
   };
 }
+
 export function median8(dataArray: Array<number>): number {
   // Returns the median of an already *sorted* array of size 8 (e.g., with sortArray8)
   return Math.round((dataArray[3] + dataArray[4]) / 2);
 }
+
 export function mode8(arr: Array<number>): number {
   // Returns the mode of an already *sorted* array of size 8 (e.g., with sortArray8)
   let currentConsecCount = 0;
@@ -749,6 +806,7 @@ export function mode8(arr: Array<number>): number {
 
   return currentMode;
 }
+
 export function sortArray8(arr: Array<number>): void {
   // This function sorts an array of size 8.
   // Swap instructions were generated here:
@@ -773,6 +831,7 @@ export function sortArray8(arr: Array<number>): void {
   swap(arr, 3, 5);
   swap(arr, 3, 4);
 }
+
 // When an interval greater than RAF_INTERVAL_THRESHOLD is used,
 // setTimeout is used instead of requestAnimationFrame.
 const RAF_INTERVAL_THRESHOLD = 20;
@@ -789,6 +848,7 @@ export function waitForCondition(pred: () => boolean, interval: number = 0): Pro
 
   return new Promise(tryToResolve);
 }
+
 export function waitForElementWithId(elementId: string): Promise<any> {
   const tryToResolve = (resolve: (value: any) => void) => {
     const el = document.getElementById(elementId);
@@ -802,6 +862,7 @@ export function waitForElementWithId(elementId: string): Promise<any> {
 
   return new Promise(tryToResolve);
 }
+
 export function convertDecToBase256(num: number): Vector4 {
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
@@ -825,7 +886,7 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
 }
 
 export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
-  if (num == null) {
+  if (num == null || isNaN(num)) {
     return [
       [0, 0, 0, 0],
       [0, 0, 0, 0],
@@ -869,6 +930,7 @@ export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Prom
     },
   );
 }
+
 // This function will chunk an array of elements by time (or some other numeric value).
 // Only subsequent elements are potentially put into the same chunk.
 // The mapToTimeFn should be a function that maps from an element to a number.
@@ -898,11 +960,13 @@ export function chunkIntoTimeWindows<T>(
     [],
   );
 }
+
 export function convertBufferToImage(
   buffer: Uint8Array,
   width: number,
   height: number,
-  flipHorizontally: boolean = true,
+  flipHorizontally: boolean = false,
+  canvasToMerge: HTMLCanvasElement | null | undefined,
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     width = Math.round(width);
@@ -921,11 +985,17 @@ export function convertBufferToImage(
     if (flipHorizontally) {
       ctx.transform(1, 0, 0, -1, 0, height);
       ctx.drawImage(canvas, 0, 0);
+      ctx.transform(1, 0, 0, -1, 0, height);
+    }
+
+    if (canvasToMerge != null) {
+      ctx.drawImage(canvasToMerge, 0, 0);
     }
 
     canvas.toBlob((blob: Blob | null) => resolve(blob));
   });
 }
+
 export function getIsInIframe() {
   try {
     return window.self !== window.top;
@@ -933,6 +1003,7 @@ export function getIsInIframe() {
     return true;
   }
 }
+
 export function getWindowBounds(): [number, number] {
   // Function taken from https://stackoverflow.com/questions/3333329/javascript-get-browser-height.
   let width = 0;
@@ -961,6 +1032,7 @@ export function getWindowBounds(): [number, number] {
 
   return [width, height];
 }
+
 export function disableViewportMetatag() {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
   const viewport = document.querySelector("meta[name=viewport]");

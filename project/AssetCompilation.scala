@@ -140,7 +140,7 @@ object AssetCompilation {
           "slick.codegen.SourceCodeGenerator",
           dependencyClasspathValue.files,
           Array(
-            "file://" + (baseDirectoryValue / "conf" / "application.conf").toString + "#slick",
+            "file://" + (baseDirectoryValue / "conf" / "slick.conf").toString + "#slick",
             (sourceManagedValue / "schema").toString
           ),
           streamsValue.log

@@ -1,6 +1,6 @@
 FROM eclipse-temurin:11
 RUN apt-get update \
-  && apt-get -y install libblosc1 postgresql-client \
+  && apt-get -y install libblosc1 postgresql-client git \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos

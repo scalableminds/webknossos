@@ -1147,6 +1147,25 @@ function* watchForSaveConflicts() {
         tracing.type,
       );
 
+      // There is a rare chance of a race condition happening
+      // which can result in an incorrect toast warning.
+      // It occurs if certain saga effects run in the following order:
+      // 1) a new version is pushed to the server (in sendRequestToServer)
+      // 2) the current server version is fetched (in this saga here)
+      // 3) the server version is compared with the client version (in this saga here)
+      // 4) only now is the local version number updated because the
+      //    sendRequestToServer saga was scheduled now.
+      // Since (4) is happening too late, the comparison in (3) will assume
+      // that client and server are out of sync.
+      // The chance of this happening is relatively low, but from time to time it
+      // happened. To mitigate this problem, we introduce a simple sleep here which
+      // means that the chance of (4) being scheduled after (2) should be close to
+      // 0 (hopefully).
+      // Note that a false-positive warning in this saga doesn't have serious side-effects
+      // (except for potentially confusing the user). This is why a more complex mutex- or
+      // semaphore-based solution to this problem was not chosen.
+      yield* call(sleep, 2000);
+
       // Read the tracing version again from the store, since the
       // old reference to tracing might be outdated now due to the
       // immutability.

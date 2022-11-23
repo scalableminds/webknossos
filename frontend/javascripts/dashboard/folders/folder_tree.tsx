@@ -136,7 +136,7 @@ export function FolderTreeSidebar({
         ) : null}
         <DirectoryTree
           expandAction="doubleclick"
-          // draggable={{ icon: false }}
+          draggable={isDraggingDataset ? false : { icon: false }}
           defaultExpandAll
           onSelect={onSelect}
           onExpand={onExpand}

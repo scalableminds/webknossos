@@ -22,7 +22,7 @@ import { Dropdown, Menu } from "antd";
 import Toast from "libs/toast";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import { DragObjectWithType } from "react-dnd";
-import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import Tree, { DirectoryTreeProps } from "antd/lib/tree";
 
 type FolderItem = {
   title: string;
@@ -115,19 +115,18 @@ export function FolderTreeSidebar({
       context.queries.moveFolderMutation.mutateAsync([dragNode.key, newParent.key]);
     }
   };
-
   return (
     <div>
       <div
-      // ref={drop}
-      // className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
-      // style={{
-      //   height: 400,
-      //   width: 250,
-      //   marginRight: 4,
-      //   borderRadius: 2,
-      //   padding: 2,
-      // }}
+        ref={drop}
+        className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
+        style={{
+          height: 400,
+          width: 250,
+          marginRight: 4,
+          borderRadius: 2,
+          padding: 2,
+        }}
       >
         {!isLoading && treeData.length === 0 ? (
           <div style={{ textAlign: "center" }}>
@@ -408,7 +407,7 @@ function FolderItemAsDropTarget(props: {
         context.activeFolderId === folderId ? "" : ""
       }`}
       ref={drop}
-      style={{ cursor: "pointer", background: "green" }}
+      style={{ cursor: "pointer" }}
       {...restProps}
     >
       {props.children}

@@ -84,6 +84,7 @@ async function _screenshotAnnotationHelper(
     typ,
     fallbackLayerName,
     null,
+    null,
     options,
   );
 
@@ -107,6 +108,7 @@ export async function screenshotDatasetWithMapping(
     "skeleton",
     null,
     null,
+    null,
     options,
   );
   await openTracingView(page, baseUrl, createdExplorational.id);
@@ -126,6 +128,7 @@ export async function screenshotDatasetWithMappingLink(
   const createdExplorational = await createExplorational(
     datasetId,
     "skeleton",
+    null,
     null,
     null,
     options,

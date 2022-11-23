@@ -185,6 +185,7 @@
     "jszip": "^3.7.0",
     "lodash": "^4.17.21",
     "lz4-wasm": "^0.9.2",
+    "lz4js": "^0.2.0",
     "memoize-one": "^6.0.0",
     "mini-css-extract-plugin": "^2.5.2",
     "minisearch": "^5.0.0",

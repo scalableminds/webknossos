@@ -43,21 +43,27 @@ function _PythonClientModalView(props: Props): JSX.Element {
     "loading...",
     [activeUser],
   );
+
+  const nonDefaultHost = !document.location.host.endsWith("webknossos.org");
+  const indention = "\n        ";
+  const contextUrlAddendum = nonDefaultHost ? `, url="${window.location.origin}"` : "";
+  const maybeUrlParameter = nonDefaultHost
+    ? `${indention}webknossos_url="${window.location.origin}"`
+    : "";
+
   const wkInitSnippet = `import webknossos as wk
 
-with wk.webknossos_context(token="${authToken || "<insert token here>"}"):
+with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contextUrlAddendum}):
     # Download the dataset.
     dataset = wk.Dataset.download(
-        webknossos_url="${window.location.origin}",
         dataset_name_or_url="${dataset.name}",
-        organization_id="${dataset.owningOrganization}",
+        organization_id="${dataset.owningOrganization}",${maybeUrlParameter}
     )
     # Alternatively, directly open the dataset. Image data will be
     # streamed when being accessed.
     remote_dataset = wk.Dataset.open_remote(
-        webknossos_url="${window.location.origin}",
         dataset_name_or_url="${dataset.name}",
-        organization_id="${dataset.owningOrganization}",
+        organization_id="${dataset.owningOrganization}",${maybeUrlParameter}
     )
 `;
 

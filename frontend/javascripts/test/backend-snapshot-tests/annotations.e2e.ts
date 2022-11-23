@@ -1,4 +1,10 @@
-import "test/mocks/lz4";
+import {
+  resetDatabase,
+  replaceVolatileValues,
+  setCurrToken,
+  tokenUserA,
+  writeTypeCheckingFile,
+} from "test/enzyme/e2e-setup";
 import type { APIAnnotation } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -8,13 +14,6 @@ import {
   getSkeletonDescriptor,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  resetDatabase,
-  replaceVolatileValues,
-  setCurrToken,
-  tokenUserA,
-  writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 import * as api from "admin/admin_rest_api";

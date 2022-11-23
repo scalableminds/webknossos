@@ -1,4 +1,3 @@
-import "test/mocks/lz4";
 import _ from "lodash";
 import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";

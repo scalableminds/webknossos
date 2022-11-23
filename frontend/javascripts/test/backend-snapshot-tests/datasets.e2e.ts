@@ -1,12 +1,11 @@
-import "test/mocks/lz4";
 import _ from "lodash";
-import type { APIDataset } from "types/api_flow_types";
 import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
+import type { APIDataset } from "types/api_flow_types";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 

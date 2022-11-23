@@ -40,6 +40,7 @@ export function FolderTreeSidebar({
 }) {
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const context = useDatasetCollectionContext();
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
 
   const { data: folderTree, isLoading } = context.queries.folderTreeQuery;
 
@@ -49,6 +50,13 @@ export function FolderTreeSidebar({
       if (newTreeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(newTreeData[0].key);
       }
+      const newExpandedKeys: string[] = [];
+      forEachFolderItem(newTreeData || [], (item: FolderItem) => {
+        if (item.expanded) {
+          newExpandedKeys.push(item.key);
+        }
+      });
+      setExpandedKeys(newExpandedKeys);
       return newTreeData;
     });
   }, [folderTree]);
@@ -102,7 +110,7 @@ export function FolderTreeSidebar({
   };
 
   const onExpand: DirectoryTreeProps["onExpand"] = (keys, info) => {
-    console.log("Trigger Expand", keys, info);
+    setExpandedKeys(keys);
   };
   const titleRender = (nodeData: FolderItem) => {
     return newGenerateNodeProps(context, nodeData, setFolderIdForEditModal);
@@ -135,6 +143,7 @@ export function FolderTreeSidebar({
           </div>
         ) : null}
         <DirectoryTree
+          blockNode
           expandAction="doubleClick"
           draggable={isDraggingDataset ? false : { icon: false }}
           defaultExpandAll
@@ -143,6 +152,7 @@ export function FolderTreeSidebar({
           treeData={treeData}
           titleRender={titleRender}
           onDrop={onDrop}
+          expandedKeys={expandedKeys}
         />
         {/*<SortableTree
           treeData={treeData}

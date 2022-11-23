@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import _ from "lodash";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
@@ -9,7 +10,7 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-mockRequire.stopAll();
+
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,

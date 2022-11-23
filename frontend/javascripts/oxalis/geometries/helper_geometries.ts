@@ -88,6 +88,7 @@ export class QuickSelectGeometry {
       opacity: 0.5,
     });
     this.rectangle = new THREE.Mesh(geometry, material);
+    this.rectangle.visible = false;
 
     const centerGeometry = new THREE.PlaneGeometry(2, 2);
     const centerMaterial = new THREE.MeshBasicMaterial({
@@ -97,6 +98,7 @@ export class QuickSelectGeometry {
       opacity: 0.9,
     });
     this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
+    this.centerMarker.visible = false;
 
     this.meshGroup = new THREE.Group();
     this.meshGroup.add(this.rectangle);
@@ -143,6 +145,16 @@ export class QuickSelectGeometry {
     this.rectangle.geometry.computeBoundingSphere();
 
     this.centerMarker.position.set(...centerPosition);
+
+    // Hide the objects if the rectangle has size zero, so whenever
+    // the quick select tool is not currently used to draw a rectangle.
+    if (V3.isEqual(endPosition, startPosition)) {
+      this.centerMarker.visible = false;
+      this.rectangle.visible = false;
+    } else {
+      this.centerMarker.visible = true;
+      this.rectangle.visible = true;
+    }
 
     app.vent.trigger("rerender");
   }

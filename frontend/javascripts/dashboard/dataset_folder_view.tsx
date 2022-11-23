@@ -10,7 +10,7 @@ import { pluralize } from "libs/utils";
 import _ from "lodash";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useState } from "react";
-import { APIMaybeUnimportedDataset, APITeam, APIUser, Folder } from "types/api_flow_types";
+import { APIMaybeUnimportedDataset, APIUser, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "./advanced_dataset/dataset_table";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,

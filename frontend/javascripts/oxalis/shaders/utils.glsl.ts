@@ -71,12 +71,14 @@ export function jsRgb2hsl(rgb: Vector3): Vector3 {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r:
+      case r: {
         h = (g - b) / d + (g < b ? 6 : 0);
         break;
-      case g:
+      }
+      case g: {
         h = (b - r) / d + 2;
         break;
+      }
       case b:
       default:
         h = (r - g) / d + 4;

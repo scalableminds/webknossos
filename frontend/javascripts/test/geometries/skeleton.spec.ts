@@ -1,4 +1,5 @@
 // Integration tests for skeleton.js
+import "test/mocks/lz4";
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import * as Utils from "libs/utils";
@@ -7,7 +8,7 @@ import test from "ava";
 import { Vector3 } from "oxalis/constants";
 import { OxalisState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
-mockRequire.stopAll();
+
 mockRequire("app", {
   currentUser: {
     firstName: "SCM",

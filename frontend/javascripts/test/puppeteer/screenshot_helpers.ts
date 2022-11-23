@@ -80,7 +80,7 @@ export async function compareScreenshot(
     },
   );
 
-  if (pixelErrors > 0) {
+  if (!isPixelEquivalent(pixelErrors, width, height)) {
     // If the screenshots are not equal, save the diff and the new screenshot
     await Promise.all([
       saveScreenshot(diff, path, `${name}.diff`),

@@ -223,7 +223,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       : roundTo(value, this.getPrecision()).toString();
   };
 
-  // eslint-disable-next-line react/sort-comp
   updateMinimumDebounced = _.debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
     500,

@@ -1,6 +1,4 @@
 // @ts-nocheck
-/* eslint-disable eslint-comments/no-unlimited-disable */
-
 /* eslint-disable */
 !(function (e) {
   if ("object" == typeof exports && "undefined" != typeof module) module.exports = e();

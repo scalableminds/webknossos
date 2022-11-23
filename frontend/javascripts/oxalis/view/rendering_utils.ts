@@ -12,6 +12,7 @@ import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { convertBufferToImage } from "libs/utils";
+import html2canvas from "html2canvas";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
@@ -103,8 +104,22 @@ export async function downloadScreenshot() {
     const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
     const buffer = renderToTexture(planeId, null, null, false, clearColor);
+
+    const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
+    const canvas =
+      inputCatcherElement != null
+        ? await html2canvas(inputCatcherElement as HTMLElement, {
+            backgroundColor: null,
+            // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
+            // as otherwise the two images would not fit together on a HiDPI screen.
+            // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
+            scale: 1,
+            ignoreElements: (element) => element.id === "TDViewControls",
+          })
+        : null;
+
     // eslint-disable-next-line no-await-in-loop
-    const blob = await convertBufferToImage(buffer, width, height);
+    const blob = await convertBufferToImage(buffer, width, height, true, canvas);
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
       saveAs(blob, `${baseName}__${planeDescriptor}.png`);

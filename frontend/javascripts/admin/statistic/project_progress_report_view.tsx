@@ -31,8 +31,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     updatedAt: null,
   };
 
-  // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-  async fetchData(suppressLoadingState?: boolean = false) {
+  async fetchData(suppressLoadingState: boolean = false) {
     const { team } = this.state;
 
     if (team == null) {

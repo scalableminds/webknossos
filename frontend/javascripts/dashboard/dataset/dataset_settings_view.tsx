@@ -26,8 +26,9 @@ import type {
   MutableAPIDataSource,
   APIDatasetId,
   APIMessage,
+  APIUnimportedDatasource,
 } from "types/api_flow_types";
-import { Unicode } from "oxalis/constants";
+import { Unicode, Vector3 } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import LinkButton from "components/link_button";
@@ -95,7 +96,7 @@ type State = {
   isLoading: boolean;
   activeDataSourceEditMode: "simple" | "advanced";
   activeTabKey: TabKey;
-  savedDataSourceOnServer: APIDataSource | null | undefined;
+  savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined;
   inferredDataSource: APIDataSource | null | undefined;
   differenceBetweenDataSources: Record<string, any>;
   hasNoAllowedTeams: boolean;
@@ -110,25 +111,35 @@ export type FormData = {
 };
 
 function ensureValidScaleOnInferredDataSource(
-  savedDataSourceOnServer: APIDataSource | null | undefined,
+  savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined,
   inferredDataSource: APIDataSource | null | undefined,
 ): APIDataSource | null | undefined {
   if (savedDataSourceOnServer == null || inferredDataSource == null) {
     // If one of the data sources is null, return the other.
-    return savedDataSourceOnServer || inferredDataSource;
+    const potentialSource = savedDataSourceOnServer || inferredDataSource;
+    if (potentialSource && "dataLayers" in potentialSource) {
+      return potentialSource;
+    } else {
+      return null;
+    }
   }
 
   const inferredDataSourceClone = _.cloneDeep(inferredDataSource) as any as MutableAPIDataSource;
 
-  if (
-    _.isEqual(inferredDataSource.scale, [0, 0, 0]) &&
-    !_.isEqual(savedDataSourceOnServer.scale, [0, 0, 0])
-  ) {
-    inferredDataSourceClone.scale = savedDataSourceOnServer.scale;
+  const savedScale =
+    "dataLayers" in savedDataSourceOnServer
+      ? savedDataSourceOnServer.scale
+      : ([0, 0, 0] as Vector3);
+  if (_.isEqual(inferredDataSource.scale, [0, 0, 0]) && !_.isEqual(savedScale, [0, 0, 0])) {
+    inferredDataSourceClone.scale = savedScale;
   }
 
   // Trying to use the saved value for largestSegmentId instead of 0.
-  if (savedDataSourceOnServer.dataLayers != null && inferredDataSourceClone.dataLayers != null) {
+  if (
+    "dataLayers" in savedDataSourceOnServer &&
+    savedDataSourceOnServer.dataLayers != null &&
+    inferredDataSourceClone.dataLayers != null
+  ) {
     const segmentationLayerSettings = inferredDataSourceClone.dataLayers.find(
       (layer) => layer.category === "segmentation",
     );
@@ -250,7 +261,11 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
       // Ensure that zarr layers (which aren't inferred by the back-end) are still
       // included in the inferred data source
-      if (savedDataSourceOnServer != null && inferredDataSource != null) {
+      if (
+        savedDataSourceOnServer &&
+        "dataLayers" in savedDataSourceOnServer &&
+        inferredDataSource != null
+      ) {
         const layerDict = _.keyBy(inferredDataSource.dataLayers, "name");
         for (const layer of savedDataSourceOnServer.dataLayers) {
           if (layer.dataFormat === "zarr" && layerDict[layer.name] == null) {
@@ -297,7 +312,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         throw new Error("No datasource received from server.");
       }
 
-      if (dataset.dataSource.status != null && dataset.dataSource.status.includes("Error")) {
+      if (dataset.dataSource.status?.includes("Error")) {
         // If the datasource-properties.json could not be parsed due to schema errors,
         // we replace it with the version that is at least parsable.
         const datasetClone = _.cloneDeep(dataset) as any as MutableAPIDataset;
@@ -425,8 +440,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       message = (
         <div>
           The current datasource-properties.json on the server seems to be in an invalid JSON format
-          and webKnossos could not parse this file. The settings below are suggested by webKnossos
-          and should be adjusted. <br />
+          (or is missing completely). The settings below are suggested by webKnossos and should be
+          adjusted. <br />
           Be aware that webKnossos cannot guess properties like the voxel size or the largest
           segment id. You must set them yourself.
         </div>
@@ -854,10 +869,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                       <DatasetSettingsDataTab
                         key="SimpleAdvancedDataForm"
                         datasetId={this.props.datasetId}
-                        isEditingMode={this.props.isEditingMode}
-                        isReadOnlyDataset={
-                          this.state.dataset != null && this.state.dataset.dataStore.isConnector
-                        }
+                        allowRenamingDataset={false}
+                        isReadOnlyDataset={this.state.dataset?.dataStore.isConnector ?? false}
                         form={form}
                         activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                         onChange={(activeEditMode) => {
@@ -945,7 +958,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
+  isUserAdmin: state.activeUser?.isAdmin || false,
 });
 
 const connector = connect(mapStateToProps);

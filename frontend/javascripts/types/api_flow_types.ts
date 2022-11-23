@@ -561,6 +561,7 @@ export type APIFeatureToggles = {
   readonly exportTiffMaxEdgeLengthVx: number;
   readonly defaultToLegacyBindings: boolean;
   readonly optInTabs?: Array<string>;
+  readonly oidcEnabled?: boolean;
 };
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;

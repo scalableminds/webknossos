@@ -38,7 +38,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
     } yield redirectUrl
 
   /*
-  Fetches token form the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
+  Fetches token from the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
   fields described by https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
    */
   def getToken(redirectUrl: String, code: String): Fox[JsObject] =

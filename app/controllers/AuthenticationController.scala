@@ -118,7 +118,7 @@ class AuthenticationController @Inject()(
     )
   }
 
-  def createUser(organization: Organization,
+  private def createUser(organization: Organization,
                  email: String,
                  firstName: String,
                  lastName: String,
@@ -487,7 +487,7 @@ class AuthenticationController @Inject()(
     openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Ok(Json.obj("redirect_url" -> url)))
   }
 
-  def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
+  private def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
     userService.retrieve(loginInfo).flatMap {
       case Some(user) if !user.isDeactivated =>
         for {

@@ -360,7 +360,6 @@ export function useUpdateDatasetMutation(folderId: string | null) {
     {
       mutationKey,
       onSuccess: (updatedDataset) => {
-        console.log("setQueryData for", mutationKey);
         queryClient.setQueryData(mutationKey, (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
           updateDatasetInQueryData(updatedDataset, folderId, oldItems),
         );

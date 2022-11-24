@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { DropTargetMonitor, useDrop } from "react-dnd";
 import { FlatFolderTreeItem } from "types/api_flow_types";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
@@ -15,6 +15,8 @@ import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
 
+const { DirectoryTree } = Tree;
+
 type FolderItem = {
   title: string;
   key: string;
@@ -22,6 +24,9 @@ type FolderItem = {
   children: FolderItem[];
   isEditable: boolean;
 };
+
+const isNodeDraggable = (node: DataNode): boolean => (node as FolderItem).isEditable;
+const draggableConfig = { icon: false, nodeDraggable: isNodeDraggable };
 
 export function FolderTreeSidebar({
   setFolderIdForEditModal,
@@ -64,7 +69,7 @@ export function FolderTreeSidebar({
   // a dataset is dragged. This helps the user to understand that
   // the dataset should be dragged to folders in the sidebar.
   // The actual dnd operation is handled by the individual folder
-  // entries (see FolderItemAsDropTarget), though.
+  // entries (see FolderItemAsDropTarget).
   const [isDraggingDataset, drop] = useDrop({
     accept: DraggableDatasetType,
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
@@ -76,46 +81,49 @@ export function FolderTreeSidebar({
   //   return sourceAllowed && targetAllowed;
   // };
 
-  const nodeDraggable = (node: DataNode): boolean => {
-    return (node as FolderItem).isEditable;
-  };
-
-  const { DirectoryTree } = Tree;
-
-  const onSelect: DirectoryTreeProps["onSelect"] = (keys, info) => {
-    if (keys.length > 0) {
-      context.setActiveFolderId(keys[0] as string);
-    }
-  };
+  const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
+    (keys) => {
+      if (keys.length > 0) {
+        context.setActiveFolderId(keys[0] as string);
+      }
+    },
+    [context],
+  );
 
   const onExpand: DirectoryTreeProps["onExpand"] = (keys: Key[]) => {
     setExpandedKeys(keys as string[]);
   };
-  const titleRender = (nodeData: FolderItem) => {
-    return generateTitle(context, nodeData, setFolderIdForEditModal);
-  };
+  const titleRender = useCallback(
+    (nodeData: FolderItem) => {
+      return generateTitle(context, nodeData, setFolderIdForEditModal);
+    },
+    [context, setFolderIdForEditModal],
+  );
 
-  const onDrop = ({
-    node,
-    dragNode,
-    dropToGap,
-  }: {
-    node: FolderItem | null;
-    dragNode: FolderItem;
-    dropToGap: boolean;
-  }) => {
-    // Node is the node onto which dragNode is dropped
-    if (node == null) {
-      return;
-    }
-    if (dropToGap && node.parent) {
-      // dragNode was dragged *next to* node. Move into parent.
-      context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.parent]);
-    } else {
-      // dragNode was dragged *into* node
-      context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.key]);
-    }
-  };
+  const onDrop = useCallback(
+    ({
+      node,
+      dragNode,
+      dropToGap,
+    }: {
+      node: FolderItem | null;
+      dragNode: FolderItem;
+      dropToGap: boolean;
+    }) => {
+      // Node is the node onto which dragNode is dropped
+      if (node == null) {
+        return;
+      }
+      if (dropToGap && node.parent) {
+        // dragNode was dragged *next to* node. Move into parent.
+        context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.parent]);
+      } else {
+        // dragNode was dragged *into* node
+        context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.key]);
+      }
+    },
+    [context],
+  );
 
   return (
     <div>
@@ -140,7 +148,7 @@ export function FolderTreeSidebar({
           blockNode
           expandAction="doubleClick"
           selectedKeys={nullableIdToArray(context.activeFolderId)}
-          draggable={isDraggingDataset ? false : { icon: false, nodeDraggable }}
+          draggable={isDraggingDataset ? false : draggableConfig}
           defaultExpandAll
           onSelect={onSelect}
           onExpand={onExpand}
@@ -190,15 +198,15 @@ function getFolderHierarchy(
     }
   }
 
-  const newExpandedKeys = [];
+  const newExpandedKeySet = new Set<string>();
   if (roots.length > 0) {
-    newExpandedKeys.push(roots[0].key);
+    newExpandedKeySet.add(roots[0].key);
   }
 
   for (const oldExpandedKey of prevExpandedKeys) {
     const maybeItem = itemById[oldExpandedKey];
     if (maybeItem != null) {
-      newExpandedKeys.push(oldExpandedKey);
+      newExpandedKeySet.add(oldExpandedKey);
     }
   }
 
@@ -206,12 +214,12 @@ function getFolderHierarchy(
   if (activeFolderId != null) {
     let currentFolder = itemById[activeFolderId];
     while (currentFolder?.parent != null) {
-      newExpandedKeys.push(currentFolder.parent as string);
+      newExpandedKeySet.add(currentFolder.parent as string);
       currentFolder = itemById[currentFolder.parent];
     }
   }
 
-  return [roots, newExpandedKeys];
+  return [roots, Array.from(newExpandedKeySet)];
 }
 
 function generateTitle(
@@ -297,22 +305,16 @@ function FolderItemAsDropTarget(props: {
         Toast.error("Could not move dataset. Please try again.");
       }
     },
-    canDrop: () => {
-      return isEditable;
-    },
-    collect: (monitor: DropTargetMonitor) => {
-      return {
-        canDrop: monitor.canDrop(),
-        isOver: monitor.isOver(),
-      };
-    },
+    canDrop: () => isEditable,
+    collect: (monitor: DropTargetMonitor) => ({
+      canDrop: monitor.canDrop(),
+      isOver: monitor.isOver(),
+    }),
   });
   const { canDrop, isOver } = collectedProps;
   return (
     <div
-      className={`${className || ""} folder-item ${isOver && canDrop ? "valid-drop-target" : ""} ${
-        context.activeFolderId === folderId ? "" : ""
-      }`}
+      className={`${className || ""} folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`}
       ref={drop}
       style={{ cursor: "pointer" }}
       {...restProps}

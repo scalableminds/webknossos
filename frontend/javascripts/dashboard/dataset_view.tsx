@@ -439,8 +439,14 @@ function renderPlaceholder(
       height={350}
     >
       webKnossos supports a variety of (remote){" "}
-      <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and is
-      also able to convert them when necessary.
+      <a
+        href="https://docs.webknossos.org/webknossos/data_formats.html"
+        target="_blank"
+        rel="noreferrer"
+      >
+        file formats
+      </a>{" "}
+      and is also able to convert them when necessary.
     </OptionCard>
   );
 

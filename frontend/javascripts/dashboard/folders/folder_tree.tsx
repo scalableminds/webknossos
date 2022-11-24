@@ -1,15 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { DropTargetMonitor, useDrop } from "react-dnd";
-import SortableTree, {
-  ExtendedNodeData,
-  FullTree,
-  NodeData,
-  OnDragPreviousAndNextLocation,
-  OnMovePreviousAndNextLocation,
-} from "react-sortable-tree";
-// @ts-ignore
-import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
-
 import { FlatFolderTreeItem } from "types/api_flow_types";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
@@ -17,10 +7,9 @@ import {
   useDatasetCollectionContext,
 } from "../dataset/dataset_collection_context";
 
-import { DeleteOutlined, EditOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { Dropdown, Menu } from "antd";
 import Toast from "libs/toast";
-import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
@@ -46,7 +35,7 @@ export function FolderTreeSidebar({
   const { data: folderTree, isLoading } = context.queries.folderTreeQuery;
 
   useEffect(() => {
-    setTreeData((prevState) => {
+    setTreeData(() => {
       const [newTreeData, newExpandedKeys] = getFolderHierarchy(folderTree, expandedKeys);
       if (newTreeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(newTreeData[0].key);
@@ -77,23 +66,11 @@ export function FolderTreeSidebar({
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
 
-  const onMoveNode = (
-    params: NodeData<FolderItem> & FullTree<FolderItem> & OnMovePreviousAndNextLocation<FolderItem>,
-  ) => {
-    const { nextParentNode: newParent, node: draggedItem } = params;
-    if (newParent != null) {
-      context.queries.moveFolderMutation.mutateAsync([draggedItem.key, newParent.key]);
-    }
-  };
-
-  const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean => {
-    const sourceAllowed = (params.prevParent as FolderItem | null)?.isEditable ?? false;
-    const targetAllowed = (params.nextParent as FolderItem | null)?.isEditable ?? false;
-    return sourceAllowed && targetAllowed;
-  };
-
-  const canDragFolder = (params: ExtendedNodeData): boolean =>
-    (params.node as FolderItem).isEditable;
+  // const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean => {
+  //   const sourceAllowed = (params.prevParent as FolderItem | null)?.isEditable ?? false;
+  //   const targetAllowed = (params.nextParent as FolderItem | null)?.isEditable ?? false;
+  //   return sourceAllowed && targetAllowed;
+  // };
 
   const nodeDraggable = (node: DataNode): boolean => {
     return (node as FolderItem).isEditable;
@@ -111,7 +88,7 @@ export function FolderTreeSidebar({
     setExpandedKeys(keys as string[]);
   };
   const titleRender = (nodeData: FolderItem) => {
-    return newGenerateNodeProps(context, nodeData, setFolderIdForEditModal);
+    return generateTitle(context, nodeData, setFolderIdForEditModal);
   };
 
   const onDrop = ({
@@ -169,24 +146,6 @@ export function FolderTreeSidebar({
           onDrop={onDrop}
           expandedKeys={expandedKeys}
         />
-        {/*<SortableTree
-          treeData={treeData}
-          onChange={(newTreeData: FolderItem[]) => {
-            setTreeData(newTreeData);
-          }}
-          onMoveNode={onMoveNode}
-          theme={FileExplorerTheme}
-          canDrag={canDragFolder}
-          canDrop={canDropFolder}
-          generateNodeProps={(params) =>
-            generateNodeProps(
-              context,
-              // @ts-ignore
-              params as ExtendedNodeData<FolderItem>,
-              setFolderIdForEditModal,
-            )
-          }
-        />*/}
       </div>
     </div>
   );
@@ -242,83 +201,7 @@ function getFolderHierarchy(
   return [roots, newExpandedKeys];
 }
 
-function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) {
-  for (const item of roots) {
-    fn(item);
-    forEachFolderItem(item.children, fn);
-  }
-}
-
-function generateNodeProps(
-  context: DatasetCollectionContextValue,
-  params: ExtendedNodeData<FolderItem>,
-  setFolderIdForEditModal: (folderId: string) => void,
-): GenerateNodePropsType {
-  const { node } = params;
-  const { key: id, title, isEditable } = node;
-  const nodeProps: GenerateNodePropsType = {};
-
-  function createFolder(): void {
-    const folderName = prompt("Please input a name for the new folder");
-    context.queries.createFolderMutation.mutateAsync([id, folderName || "New folder"]);
-  }
-  function deleteFolder(): void {
-    context.queries.deleteFolderMutation.mutateAsync(id);
-  }
-
-  function editFolder(): void {
-    setFolderIdForEditModal(id);
-  }
-
-  const createMenu = () => (
-    <Menu>
-      <Menu.Item key="create" data-group-id={id} onClick={createFolder}>
-        <PlusOutlined />
-        New Folder
-      </Menu.Item>
-      <Menu.Item key="edit" data-group-id={id} onClick={editFolder}>
-        <EditOutlined />
-        Edit Folder
-      </Menu.Item>
-
-      <Menu.Item key="delete" data-group-id={id} onClick={deleteFolder}>
-        <DeleteOutlined />
-        Delete Folder
-      </Menu.Item>
-    </Menu>
-  );
-
-  nodeProps.title = (
-    <div>
-      <Dropdown
-        overlay={createMenu}
-        placement="bottom"
-        // The overlay is generated lazily. By default, this would make the overlay
-        // re-render on each parent's render() after it was shown for the first time.
-        // The reason for this is that it's not destroyed after closing.
-        // Therefore, autoDestroy is passed.
-        // destroyPopupOnHide should also be an option according to the docs, but
-        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-        autoDestroy
-        trigger={["contextMenu"]}
-      >
-        <FolderItemAsDropTarget
-          onClick={() => context.setActiveFolderId(id)}
-          folderId={id}
-          isEditable={isEditable}
-        >
-          <FolderOutlined />
-          {title}
-        </FolderItemAsDropTarget>
-      </Dropdown>
-    </div>
-  );
-
-  return nodeProps;
-}
-
-function newGenerateNodeProps(
+function generateTitle(
   context: DatasetCollectionContextValue,
   folder: FolderItem,
   setFolderIdForEditModal: (folderId: string) => void,
@@ -431,6 +314,3 @@ function _nullableIdToArray(activeFolderId: string | null): string[] {
 }
 
 const nullableIdToArray = memoizeOne(_nullableIdToArray);
-
-// removed css classes?
-// active-folder-item

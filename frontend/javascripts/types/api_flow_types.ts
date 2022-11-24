@@ -893,7 +893,7 @@ export type VoxelyticsChunkStatistics = {
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
-  parent?: string | null;
+  parent: string | null;
   isEditable: boolean;
 };
 

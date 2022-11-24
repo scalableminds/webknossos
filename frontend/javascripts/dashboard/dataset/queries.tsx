@@ -287,6 +287,17 @@ export function useMoveFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];
 
+  const updater =
+    (folderId: string, newParentId: string) => (oldItems: FlatFolderTreeItem[] | undefined) =>
+      (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
+        oldFolder.id === folderId
+          ? {
+              ...oldFolder,
+              parent: newParentId,
+            }
+          : oldFolder,
+      );
+
   return useMutation(
     ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
     {
@@ -294,32 +305,14 @@ export function useMoveFolderMutation() {
       onMutate: ([folderId, newParentId]) => {
         // Optimistically update the folder with the new parent.
         const previousFolders = queryClient.getQueryData(mutationKey);
-        queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
-          (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
-            oldFolder.id === folderId
-              ? {
-                  ...oldFolder,
-                  parent: newParentId,
-                }
-              : oldFolder,
-          ),
-        );
+        queryClient.setQueryData(mutationKey, updater(folderId, newParentId));
         return {
           previousFolders,
         };
       },
       onSuccess: (updatedFolder, [folderId, newParentId]) => {
         // Use the returned updatedFolder to update the query data
-        queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
-          (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
-            oldFolder.id === updatedFolder.id
-              ? {
-                  ...updatedFolder,
-                  parent: newParentId,
-                }
-              : oldFolder,
-          ),
-        );
+        queryClient.setQueryData(mutationKey, updater(updatedFolder.id, newParentId));
         queryClient.setQueryData(["folders", folderId], () => updatedFolder);
       },
       onError: (err: any, _params, context) => {

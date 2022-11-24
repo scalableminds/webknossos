@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When adding remote Zarr datasets with multiple channels, channels are converted into layers. [#6609](https://github.com/scalableminds/webknossos/pull/6609)
 - When adding a remote OME-NGFF dataset with labels, these are added as segmentation layers. [#6638](https://github.com/scalableminds/webknossos/pull/6638)
 - The scale bar is now included in screenshots of the viewports made using the `Q` shortcut or the "Screenshot" menu entry. If the scale bar should not be included, disable it using "Settings - Viewport Options - Show Scalebars". [#6644](https://github.com/scalableminds/webknossos/pull/6644)
+- Added a new datasets tab to the dashboard which supports managing datasets in folders. Folders can be organized hierarchically and datasets can be moved into these folders. Selecting a dataset will show dataset details in a sidebar. [#6591](https://github.com/scalableminds/webknossos/pull/6591)
 
 ### Changed
 - The log viewer in the Voxelytics workflow reporting now uses a virtualized list. [#6579](https://github.com/scalableminds/webknossos/pull/6579)

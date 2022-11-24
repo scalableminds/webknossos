@@ -354,7 +354,14 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       mutationKey,
       onSuccess: (updatedDataset) => {
         queryClient.setQueryData(mutationKey, (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
-          updateDatasetInQueryData(updatedDataset, folderId, oldItems),
+          (oldItems || [])
+            .map((oldDataset: APIMaybeUnimportedDataset) =>
+              oldDataset.name === updatedDataset.name
+                ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
+                  { ...updatedDataset, lastUsedByUser: oldDataset.lastUsedByUser }
+                : oldDataset,
+            )
+            .filter((dataset: APIMaybeUnimportedDataset) => dataset.folderId === folderId),
         );
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
@@ -380,21 +387,6 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       },
     },
   );
-}
-
-function updateDatasetInQueryData(
-  updatedDataset: APIDataset,
-  activeFolderId: string | null,
-  oldItems: APIMaybeUnimportedDataset[] | undefined,
-) {
-  return (oldItems || [])
-    .map((oldDataset: APIMaybeUnimportedDataset) =>
-      oldDataset.name === updatedDataset.name
-        ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
-          { ...updatedDataset, lastUsedByUser: oldDataset.lastUsedByUser }
-        : oldDataset,
-    )
-    .filter((dataset: APIMaybeUnimportedDataset) => dataset.folderId === activeFolderId);
 }
 
 function diffDatasets(

@@ -108,7 +108,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
         return datasets;
       }
 
-      return getDatasets(false, folderId);
+      return getDatasets(null, folderId);
     },
     {
       refetchOnWindowFocus: false,

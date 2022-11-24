@@ -211,8 +211,11 @@ function DetailsSidebar({
                     {folder.name}
                   </h4>
                   <p>
-                    This folder contains {datasetCount} {pluralize("dataset", datasetCount)}.{" "}
-                    {maybeSelectMsg}
+                    This folder contains{" "}
+                    <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
+                      {datasetCount} {pluralize("dataset", datasetCount)}*
+                    </Tooltip>
+                    . {maybeSelectMsg}
                   </p>
                   <span className="sidebar-label">Access Permissions</span>
                   <br />

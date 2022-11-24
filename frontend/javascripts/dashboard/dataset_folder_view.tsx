@@ -159,7 +159,10 @@ function DetailsSidebar({
             </div>
           )}
           {selectedDataset.description && (
-            <div style={{ marginBottom: 12 }}>Description: {selectedDataset.description}</div>
+            <div style={{ marginBottom: 4 }}>
+              <span className="sidebar-label">Description</span>
+              <div>{selectedDataset.description}</div>
+            </div>
           )}
           <div style={{ marginBottom: 4 }}>
             <span className="sidebar-label">Access Permissions</span>

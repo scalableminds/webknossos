@@ -73,8 +73,7 @@ type ContextMenuProps = {
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
-  const { dataset, reloadDataset, ...props } = propsWithInputRef;
-  const { contextMenuPosition, hideContextMenu } = props;
+  const { dataset, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
   let overlay = <div />;
 
   if (contextMenuPosition != null && dataset != null) {
@@ -364,8 +363,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
             onContextMenu: (event) => {
               event.preventDefault();
 
+              // Find the overlay div whose parent acts as a reference for positioning the context menu.
+              // Since the dashboard tabs don't destroy their contents after switching the tabs,
+              // there might be several overlays. We will use the one with a non-zero width since
+              // this should be the relevant one.
               const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
-
               const referenceDiv = Array.from(overlayDivs)
                 .map((p) => p.parentElement)
                 .find((potentialParent) => {

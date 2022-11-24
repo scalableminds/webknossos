@@ -14,6 +14,7 @@ import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
+import classNames from "classnames";
 
 const { DirectoryTree } = Tree;
 
@@ -326,7 +327,9 @@ function FolderItemAsDropTarget(props: {
   const { canDrop, isOver } = collectedProps;
   return (
     <div
-      className={`${className || ""} folder-item ${isOver && canDrop ? "valid-drop-target" : ""}`}
+      className={classNames("folder-item", className, {
+        "valid-drop-target": isOver && canDrop,
+      })}
       ref={drop}
       style={{ cursor: "pointer" }}
       {...restProps}

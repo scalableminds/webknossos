@@ -338,6 +338,11 @@ export function useMoveFolderMutation() {
 }
 
 export function useUpdateDatasetMutation(folderId: string | null) {
+  /*
+   * This mutation can either trigger a simple refresh of the dataset
+   * (only pass the APIDatasetId) or it can update the actual dataset
+   * when the tuple [APIMaybeUnimportedDataset, string] is passed.
+   */
   const queryClient = useQueryClient();
   const mutationKey = ["datasetsByFolder", folderId];
 

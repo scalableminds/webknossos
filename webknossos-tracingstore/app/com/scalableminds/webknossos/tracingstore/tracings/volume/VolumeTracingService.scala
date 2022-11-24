@@ -95,7 +95,7 @@ class VolumeTracingService @Inject()(
               case a: UpdateBucketVolumeAction =>
                 if (tracing.getMappingIsEditable) {
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
-                } else updateBucket(tracingId, tracing, a, updateGroup.version)
+                } else updateBucket(tracingId, tracing, a, updateGroup.version) ?~> "Failed to save volume data."
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   tracing.copy(
@@ -129,7 +129,7 @@ class VolumeTracingService @Inject()(
                            action: UpdateBucketVolumeAction,
                            updateGroupVersion: Long): Fox[VolumeTracing] =
     for {
-      _ <- assertMagIsValid(volumeTracing, action.mag)
+      _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag} bucket, which is invalid for this annotation."
       bucket = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
       _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
     } yield volumeTracing

@@ -100,3 +100,10 @@ object NgffMetadata {
 
   val FILENAME_DOT_ZATTRS = ".zattrs"
 }
+
+case class NgffLabelsGroup(labels: List[String])
+
+object NgffLabelsGroup {
+  implicit val jsonFormat: OFormat[NgffLabelsGroup] = Json.format[NgffLabelsGroup]
+  val LABEL_PATH = "labels/.zattrs"
+}

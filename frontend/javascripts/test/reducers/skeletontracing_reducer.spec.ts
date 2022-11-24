@@ -1,5 +1,6 @@
 // @ts-nocheck
 /* eslint-disable no-useless-computed-key */
+import "test/mocks/lz4";
 import _ from "lodash";
 import update from "immutability-helper";
 import { rgbs as colors } from "libs/color_generator";
@@ -8,7 +9,7 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import mock from "mock-require";
 import test from "ava";
-mock.stopAll();
+
 mock("app", {
   currentUser: {
     firstName: "SCM",

@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
@@ -7,7 +8,7 @@ import mockRequire from "mock-require";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
-mockRequire.stopAll();
+
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,

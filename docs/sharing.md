@@ -184,10 +184,11 @@ The information is JSON-encoded in the URL fragment and has the following format
       connectomeInfo?: {
         connectomeName: string,
         agglomerateIdsToImport?: Array<number>,
-      }
+      },
+      isDisabled?: boolean,
     },
   };
-  
+
   type UrlManagerState = {|
     position?: Vector3,
     mode?: ViewMode,

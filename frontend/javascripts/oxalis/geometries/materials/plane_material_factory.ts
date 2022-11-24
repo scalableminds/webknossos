@@ -1,12 +1,19 @@
 import * as THREE from "three";
 import _ from "lodash";
 import type { OrthoView, Vector3 } from "oxalis/constants";
-import { ViewModeValues, OrthoViewValues, OrthoViews, MappingStatusEnum } from "oxalis/constants";
+import {
+  ViewModeValues,
+  OrthoViewValues,
+  OrthoViews,
+  MappingStatusEnum,
+  AnnotationToolEnum,
+} from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getActiveSegmentPosition,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
@@ -148,6 +155,9 @@ class PlaneMaterialFactory {
       globalMousePosition: {
         value: new THREE.Vector3(0, 0, 0),
       },
+      activeSegmentPosition: {
+        value: new THREE.Vector3(-1, -1, -1),
+      },
       brushSizeInPixel: {
         value: 0,
       },
@@ -161,6 +171,9 @@ class PlaneMaterialFactory {
         value: false,
       },
       showBrush: {
+        value: false,
+      },
+      isProofreading: {
         value: false,
       },
       viewMode: {
@@ -588,6 +601,20 @@ class PlaneMaterialFactory {
           (storeState) => storeState.uiInformation.activeTool,
           (annotationTool) => {
             this.uniforms.showBrush.value = isBrushTool(annotationTool);
+            this.uniforms.isProofreading.value = annotationTool === AnnotationToolEnum.PROOFREAD;
+          },
+          true,
+        ),
+      );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => getActiveSegmentPosition(storeState),
+          (activeSegmentPosition) => {
+            if (activeSegmentPosition != null) {
+              this.uniforms.activeSegmentPosition.value.set(...activeSegmentPosition);
+            } else {
+              this.uniforms.activeSegmentPosition.value.set(-1, -1, -1);
+            }
           },
           true,
         ),

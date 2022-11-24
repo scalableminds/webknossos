@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [22.11.2](https://github.com/scalableminds/webknossos/releases/tag/22.11.2) - 2022-11-10
+[Commits](https://github.com/scalableminds/webknossos/compare/22.11.1...22.11.2)
+
+### Changed
+- When merging annotations, bounding boxes are no longer duplicated. [#6576](https://github.com/scalableminds/webknossos/pull/6576)
+
+### Fixed
+- Fixed importing a dataset from disk. [#6615](https://github.com/scalableminds/webknossos/pull/6615)
+
 ## [22.11.1](https://github.com/scalableminds/webknossos/releases/tag/22.11.1) - 2022-10-27
 [Commits](https://github.com/scalableminds/webknossos/compare/22.11.0...22.11.1)
 

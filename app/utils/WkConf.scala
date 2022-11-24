@@ -80,7 +80,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
-    val oidcEnabled: Boolean = get[Boolean]("features.oidcEnabled")
+    val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
   }
 
   object Datastore {

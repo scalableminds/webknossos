@@ -30,7 +30,6 @@ type FolderItem = {
   title: string;
   key: string;
   parent: string | null | undefined;
-  expanded?: boolean;
   children: FolderItem[];
   isEditable: boolean;
 };
@@ -48,16 +47,10 @@ export function FolderTreeSidebar({
 
   useEffect(() => {
     setTreeData((prevState) => {
-      const newTreeData = getFolderHierarchy(folderTree, prevState, context.activeFolderId);
+      const [newTreeData, newExpandedKeys] = getFolderHierarchy(folderTree, expandedKeys);
       if (newTreeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(newTreeData[0].key);
       }
-      const newExpandedKeys: string[] = [];
-      forEachFolderItem(newTreeData || [], (item: FolderItem) => {
-        if (item.expanded) {
-          newExpandedKeys.push(item.key);
-        }
-      });
       setExpandedKeys(newExpandedKeys);
       return newTreeData;
     });
@@ -102,7 +95,9 @@ export function FolderTreeSidebar({
   const canDragFolder = (params: ExtendedNodeData): boolean =>
     (params.node as FolderItem).isEditable;
 
-  const nodeDraggable = (node: DataNode): boolean => (node as FolderItem).isEditable;
+  const nodeDraggable = (node: DataNode): boolean => {
+    return (node as FolderItem).isEditable;
+  };
 
   const { DirectoryTree } = Tree;
 
@@ -199,11 +194,10 @@ export function FolderTreeSidebar({
 
 function getFolderHierarchy(
   folderTree: FlatFolderTreeItem[] | undefined,
-  prevFolderItems: FolderItem[] | null,
-  activeFolderId: string | null,
-): FolderItem[] {
+  prevExpandedKeys: string[],
+): [FolderItem[], string[]] {
   if (folderTree == null) {
-    return [];
+    return [[], prevExpandedKeys];
   }
   const roots: FolderItem[] = [];
   const itemById: Record<string, FolderItem> = {};
@@ -213,7 +207,6 @@ function getFolderHierarchy(
       title: folderTreeItem.name,
       isEditable: folderTreeItem.isEditable,
       parent: folderTreeItem.parent,
-      expanded: false,
       children: [],
     };
     if (folderTreeItem.parent == null) {
@@ -234,19 +227,19 @@ function getFolderHierarchy(
     }
   }
 
+  const newExpandedKeys = [];
   if (roots.length > 0) {
-    roots[0].expanded = true;
+    newExpandedKeys.push(roots[0].key);
   }
 
-  // Copy the expanded flags from the old state
-  forEachFolderItem(prevFolderItems || [], (item: FolderItem) => {
-    const maybeItem = itemById[item.key];
+  for (const oldExpandedKey of prevExpandedKeys) {
+    const maybeItem = itemById[oldExpandedKey];
     if (maybeItem != null) {
-      maybeItem.expanded = item.expanded;
+      newExpandedKeys.push(oldExpandedKey);
     }
-  });
+  }
 
-  return roots;
+  return [roots, newExpandedKeys];
 }
 
 function forEachFolderItem(roots: FolderItem[], fn: (item: FolderItem) => void) {
@@ -400,7 +393,6 @@ function FolderItemAsDropTarget(props: {
   const [collectedProps, drop] = useDrop({
     accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
-      console.log("drop!");
       const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
       if (dataset) {
@@ -410,11 +402,9 @@ function FolderItemAsDropTarget(props: {
       }
     },
     canDrop: () => {
-      console.log("can drop", isEditable);
       return isEditable;
     },
     collect: (monitor: DropTargetMonitor) => {
-      console.log("collecting", monitor.canDrop(), monitor.isOver());
       return {
         canDrop: monitor.canDrop(),
         isOver: monitor.isOver(),

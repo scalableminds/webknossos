@@ -23,6 +23,8 @@ import Toast from "libs/toast";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DirectoryTreeProps } from "antd/lib/tree";
+import { Key } from "antd/lib/table/interface";
+import memoizeOne from "memoize-one";
 
 type FolderItem = {
   title: string;
@@ -103,24 +105,37 @@ export function FolderTreeSidebar({
   const { DirectoryTree } = Tree;
 
   const onSelect: DirectoryTreeProps["onSelect"] = (keys, info) => {
-    console.log("Trigger Select", keys, info);
     if (keys.length > 0) {
       context.setActiveFolderId(keys[0] as string);
     }
   };
 
-  const onExpand: DirectoryTreeProps["onExpand"] = (keys, info) => {
-    setExpandedKeys(keys);
+  const onExpand: DirectoryTreeProps["onExpand"] = (keys: Key[]) => {
+    setExpandedKeys(keys as string[]);
   };
   const titleRender = (nodeData: FolderItem) => {
     return newGenerateNodeProps(context, nodeData, setFolderIdForEditModal);
   };
 
-  const onDrop = ({ node, dragNode }: { node: FolderItem | null; dragNode: FolderItem }) => {
-    const newParent = node;
-
-    if (newParent != null) {
-      context.queries.moveFolderMutation.mutateAsync([dragNode.key, newParent.key]);
+  const onDrop = ({
+    node,
+    dragNode,
+    dropToGap,
+  }: {
+    node: FolderItem | null;
+    dragNode: FolderItem;
+    dropToGap: boolean;
+  }) => {
+    // Node is the node onto which dragNode is dropped
+    if (node == null) {
+      return;
+    }
+    if (!dropToGap) {
+      // dragNode was dragged *into* node
+      context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.key]);
+    } else if (node.parent) {
+      // dragNode was dragged *next to* node
+      context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.parent]);
     }
   };
   return (
@@ -145,6 +160,7 @@ export function FolderTreeSidebar({
         <DirectoryTree
           blockNode
           expandAction="doubleClick"
+          selectedKeys={nullableIdToArray(context.activeFolderId)}
           draggable={isDraggingDataset ? false : { icon: false }}
           defaultExpandAll
           onSelect={onSelect}
@@ -424,6 +440,12 @@ function FolderItemAsDropTarget(props: {
     </div>
   );
 }
+
+function _nullableIdToArray(activeFolderId: string | null): string[] {
+  return activeFolderId != null ? [activeFolderId] : [];
+}
+
+const nullableIdToArray = memoizeOne(_nullableIdToArray);
 
 // removed css classes?
 // active-folder-item

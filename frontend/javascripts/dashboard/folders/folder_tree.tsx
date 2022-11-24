@@ -146,6 +146,7 @@ export function FolderTreeSidebar({
           marginRight: 4,
           borderRadius: 2,
           paddingRight: 10,
+          maxWidth: "20vw",
         }}
       >
         {!isLoading && treeData.length === 0 ? (

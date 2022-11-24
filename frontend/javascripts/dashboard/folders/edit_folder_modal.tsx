@@ -12,6 +12,13 @@ export function EditFolderModal({ folderId, onClose }: { folderId: string; onClo
   const { data: folder, isFetching } = useFolderQuery(folderId);
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
+  const inputElement = useRef<InputRef>(null);
+
+  useEffect(() => {
+    if (inputElement.current) {
+      inputElement.current.focus();
+    }
+  }, [inputElement.current, isFetching]);
 
   const onSave = async () => {
     const name = form.getFieldValue("name");
@@ -43,7 +50,7 @@ export function EditFolderModal({ folderId, onClose }: { folderId: string; onClo
           initialValues={{ name: folder.name, allowedTeams: folder.allowedTeams }}
         >
           <FormItemWithInfo name="name" label="Name" info="Name of the folder">
-            <Input value={folder.name} />
+            <Input value={folder.name} ref={inputElement} />
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"

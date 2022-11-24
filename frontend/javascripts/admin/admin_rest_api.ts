@@ -661,6 +661,7 @@ type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
   name: string;
   fallbackLayerName?: string | null | undefined;
+  mappingName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
 };
 
@@ -789,6 +790,7 @@ export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
   fallbackLayerName?: string | null | undefined,
+  mappingName?: string | null | undefined,
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
@@ -808,6 +810,7 @@ export function createExplorational(
         typ: "Volume",
         name: fallbackLayerName || "Volume",
         fallbackLayerName,
+        mappingName,
         resolutionRestrictions,
       },
     ];
@@ -821,6 +824,7 @@ export function createExplorational(
         typ: "Volume",
         name: fallbackLayerName || "Volume",
         fallbackLayerName,
+        mappingName,
         resolutionRestrictions,
       },
     ];
@@ -1145,10 +1149,16 @@ export function startComputeMeshFileJob(
   mag: Vector3,
   agglomerateView?: string,
 ): Promise<APIJob> {
+  const params = new URLSearchParams();
+  params.append("layerName", layerName);
+  params.append("mag", mag.join("-"));
+
+  if (agglomerateView) {
+    params.append("agglomerateView", agglomerateView);
+  }
+
   return Request.receiveJSON(
-    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
-      "-",
-    )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
+    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?${params}`,
     {
       method: "POST",
     },

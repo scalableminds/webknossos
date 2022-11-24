@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";

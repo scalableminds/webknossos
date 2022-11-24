@@ -36,7 +36,11 @@ export function FolderTreeSidebar({
 
   useEffect(() => {
     setTreeData(() => {
-      const [newTreeData, newExpandedKeys] = getFolderHierarchy(folderTree, expandedKeys);
+      const [newTreeData, newExpandedKeys] = getFolderHierarchy(
+        folderTree,
+        expandedKeys,
+        context.activeFolderId,
+      );
       if (newTreeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(newTreeData[0].key);
       }
@@ -120,10 +124,9 @@ export function FolderTreeSidebar({
         className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
         style={{
           height: 400,
-          width: 250,
           marginRight: 4,
           borderRadius: 2,
-          padding: 2,
+          paddingRight: 10,
         }}
       >
         {!isLoading && treeData.length === 0 ? (
@@ -154,6 +157,7 @@ export function FolderTreeSidebar({
 function getFolderHierarchy(
   folderTree: FlatFolderTreeItem[] | undefined,
   prevExpandedKeys: string[],
+  activeFolderId: string | null,
 ): [FolderItem[], string[]] {
   if (folderTree == null) {
     return [[], prevExpandedKeys];
@@ -195,6 +199,15 @@ function getFolderHierarchy(
     const maybeItem = itemById[oldExpandedKey];
     if (maybeItem != null) {
       newExpandedKeys.push(oldExpandedKey);
+    }
+  }
+
+  // Expand the parent chain of the active folder.
+  if (activeFolderId != null) {
+    let currentFolder = itemById[activeFolderId];
+    while (currentFolder?.parent != null) {
+      newExpandedKeys.push(currentFolder.parent as string);
+      currentFolder = itemById[currentFolder.parent];
     }
   }
 

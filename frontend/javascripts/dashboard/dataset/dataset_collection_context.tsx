@@ -257,8 +257,7 @@ function useManagedUrlParams(
   useEffect(() => {
     if (activeFolderId) {
       let folderName = folder?.name || "";
-      folderName = folderName.replace("/", "-");
-      folderName = folderName.replace(" ", "-");
+      folderName = folderName.replace(/[/ ]+/g, "-");
 
       // Use folderName-folderId in path or only folderId if name is empty (e.g., because
       // not loaded yet).

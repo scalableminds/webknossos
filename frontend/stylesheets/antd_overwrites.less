@@ -251,10 +251,16 @@ label.ant-checkbox-wrapper {
   // Make the tree element full-width (subtract the width of the
   // directory icon)
   width: calc(100% - 24px);
+  display: flex;
 }
 
 .ant-tree-directory {
   background: transparent;
+  display: flex;
+}
+
+.ant-tree-node-content-wrapper {
+  display: flex;
 }
 
 .ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,

@@ -257,7 +257,11 @@ function useManagedUrlParams(
   useEffect(() => {
     if (activeFolderId) {
       let folderName = folder?.name || "";
-      folderName = folderName.replace(/[/ ]+/g, "-");
+      // The replacement of / and space is only done to make the URL
+      // nicer to read for a human.
+      // encodeURIComponent is used so that special characters, such as # and ?
+      // don't break the URL parsing.
+      folderName = encodeURIComponent(folderName.replace(/[/ ]+/g, "-"));
 
       // Use folderName-folderId in path or only folderId if name is empty (e.g., because
       // not loaded yet).

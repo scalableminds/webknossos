@@ -22,7 +22,7 @@ import { Dropdown, Menu } from "antd";
 import Toast from "libs/toast";
 import { GenerateNodePropsType } from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import { DragObjectWithType } from "react-dnd";
-import Tree, { DirectoryTreeProps } from "antd/lib/tree";
+import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
 
@@ -102,6 +102,8 @@ export function FolderTreeSidebar({
   const canDragFolder = (params: ExtendedNodeData): boolean =>
     (params.node as FolderItem).isEditable;
 
+  const nodeDraggable = (node: DataNode): boolean => (node as FolderItem).isEditable;
+
   const { DirectoryTree } = Tree;
 
   const onSelect: DirectoryTreeProps["onSelect"] = (keys, info) => {
@@ -130,14 +132,15 @@ export function FolderTreeSidebar({
     if (node == null) {
       return;
     }
-    if (!dropToGap) {
+    if (dropToGap && node.parent) {
+      // dragNode was dragged *next to* node. Move into parent.
+      context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.parent]);
+    } else {
       // dragNode was dragged *into* node
       context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.key]);
-    } else if (node.parent) {
-      // dragNode was dragged *next to* node
-      context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.parent]);
     }
   };
+
   return (
     <div>
       <div
@@ -158,10 +161,11 @@ export function FolderTreeSidebar({
           </div>
         ) : null}
         <DirectoryTree
+          autoExpandParent
           blockNode
           expandAction="doubleClick"
           selectedKeys={nullableIdToArray(context.activeFolderId)}
-          draggable={isDraggingDataset ? false : { icon: false }}
+          draggable={isDraggingDataset ? false : { icon: false, nodeDraggable }}
           defaultExpandAll
           onSelect={onSelect}
           onExpand={onExpand}
@@ -232,15 +236,6 @@ function getFolderHierarchy(
 
   if (roots.length > 0) {
     roots[0].expanded = true;
-  }
-
-  // Expand the parent chain of the active folder.
-  if (activeFolderId != null) {
-    let currentFolder = itemById[activeFolderId];
-    while (currentFolder?.parent != null) {
-      currentFolder = itemById[currentFolder.parent];
-      currentFolder.expanded = true;
-    }
   }
 
   // Copy the expanded flags from the old state

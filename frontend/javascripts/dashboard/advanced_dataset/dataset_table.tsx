@@ -531,7 +531,7 @@ export function DatasetTags({
 
     if (!updatedDataset.isActive) {
       console.error(
-        `Tags can only be added to active datasets. ${updatedDataset.name} is not active.`,
+        `Tags can only be modified for active datasets. ${updatedDataset.name} is not active.`,
       );
       return;
     }

@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import constants from "oxalis/constants";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";

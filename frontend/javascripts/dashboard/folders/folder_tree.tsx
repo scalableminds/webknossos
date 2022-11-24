@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { DropTargetMonitor, useDrop } from "react-dnd";
 import { FlatFolderTreeItem } from "types/api_flow_types";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
@@ -36,16 +36,18 @@ export function FolderTreeSidebar({
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const context = useDatasetCollectionContext();
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const itemByIdRef = useRef<Record<string, FolderItem>>({});
 
   const { data: folderTree, isLoading } = context.queries.folderTreeQuery;
 
   useEffect(() => {
     setTreeData(() => {
-      const [newTreeData, newExpandedKeys] = getFolderHierarchy(
+      const [newTreeData, newExpandedKeys, itemById] = getFolderHierarchy(
         folderTree,
         expandedKeys,
         context.activeFolderId,
       );
+      itemByIdRef.current = itemById;
       if (newTreeData.length > 0 && context.activeFolderId == null) {
         context.setActiveFolderId(newTreeData[0].key);
       }
@@ -74,12 +76,6 @@ export function FolderTreeSidebar({
     accept: DraggableDatasetType,
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
-
-  // const canDropFolder = (params: OnDragPreviousAndNextLocation): boolean => {
-  //   const sourceAllowed = (params.prevParent as FolderItem | null)?.isEditable ?? false;
-  //   const targetAllowed = (params.nextParent as FolderItem | null)?.isEditable ?? false;
-  //   return sourceAllowed && targetAllowed;
-  // };
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
     (keys) => {
@@ -114,12 +110,27 @@ export function FolderTreeSidebar({
       if (node == null) {
         return;
       }
+
+      function moveIfAllowed(sourceId: string, targetId: string) {
+        const sourceAllowed = itemByIdRef.current[sourceId]?.isEditable ?? false;
+        const targetAllowed = itemByIdRef.current[targetId]?.isEditable ?? false;
+        if (sourceAllowed && targetAllowed) {
+          context.queries.moveFolderMutation.mutateAsync([sourceId, targetId]);
+        } else {
+          Toast.warning(
+            `You don't have the necessary permissions to move this folder${
+              sourceAllowed ? " to the specified target" : ""
+            }.`,
+          );
+        }
+      }
+
       if (dropToGap && node.parent) {
         // dragNode was dragged *next to* node. Move into parent.
-        context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.parent]);
+        moveIfAllowed(dragNode.key, node.parent);
       } else {
         // dragNode was dragged *into* node
-        context.queries.moveFolderMutation.mutateAsync([dragNode.key, node.key]);
+        moveIfAllowed(dragNode.key, node.key);
       }
     },
     [context],
@@ -166,9 +177,9 @@ function getFolderHierarchy(
   folderTree: FlatFolderTreeItem[] | undefined,
   prevExpandedKeys: string[],
   activeFolderId: string | null,
-): [FolderItem[], string[]] {
+): [FolderItem[], string[], Record<string, FolderItem>] {
   if (folderTree == null) {
-    return [[], prevExpandedKeys];
+    return [[], prevExpandedKeys, {}];
   }
   const roots: FolderItem[] = [];
   const itemById: Record<string, FolderItem> = {};
@@ -219,7 +230,7 @@ function getFolderHierarchy(
     }
   }
 
-  return [roots, Array.from(newExpandedKeySet)];
+  return [roots, Array.from(newExpandedKeySet), itemById];
 }
 
 function generateTitle(

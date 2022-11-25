@@ -60,7 +60,7 @@ function AcceptTermsOfServiceModal({ onAccept }: { onAccept: (version: number) =
     >
       <p>Please accept the following terms of services to continue using webKnossos:</p>
 
-      <p style={{ maxHeight: "66vh", overflow: "auto" }}>
+      <p style={{ maxHeight: "66vh", overflow: "auto", whiteSpace: "pre-line" }}>
         {terms == null ? <Spin spinning /> : terms.content}
       </p>
     </Modal>

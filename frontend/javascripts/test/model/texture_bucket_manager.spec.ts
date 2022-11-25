@@ -1,4 +1,5 @@
 import mock from "mock-require";
+import "test/mocks/lz4";
 import test, { ExecutionContext } from "ava";
 import { Vector4 } from "oxalis/constants";
 

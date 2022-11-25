@@ -139,7 +139,8 @@ class AnnotationService @Inject()(
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
       startRotation: Option[Vec3Double] = None,
-      resolutionRestrictions: ResolutionRestrictions
+      resolutionRestrictions: ResolutionRestrictions,
+      mappingName: Option[String]
   ): Fox[VolumeTracing] = {
     val resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
@@ -160,6 +161,7 @@ class AnnotationService @Inject()(
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(datasetOrganizationName),
+        mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto)
       )
   }
@@ -249,7 +251,8 @@ class AnnotationService @Inject()(
                 datasetOrganizationName,
                 fallbackLayer,
                 resolutionRestrictions =
-                  annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
+                  annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty),
+                mappingName = annotationLayerParameters.mappingName
               )
               volumeTracingAdapted = oldPrecedenceLayerProperties.map { p =>
                 volumeTracing.copy(
@@ -361,6 +364,7 @@ class AnnotationService @Inject()(
       newAnnotationLayerParameters = AnnotationLayerParameters(
         newAnnotationLayerType,
         usedFallbackLayerName,
+        None,
         Some(ResolutionRestrictions.empty),
         AnnotationLayer.defaultNameForType(newAnnotationLayerType))
       _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
@@ -524,7 +528,8 @@ class AnnotationService @Inject()(
         },
         startPosition = Some(startPosition),
         startRotation = Some(startRotation),
-        resolutionRestrictions = resolutionRestrictions
+        resolutionRestrictions = resolutionRestrictions,
+        mappingName = None
       )
     } yield volumeTracing
 

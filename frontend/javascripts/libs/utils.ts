@@ -886,7 +886,7 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
 }
 
 export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
-  if (num == null) {
+  if (num == null || isNaN(num)) {
     return [
       [0, 0, 0, 0],
       [0, 0, 0, 0],

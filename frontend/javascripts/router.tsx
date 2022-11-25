@@ -1,46 +1,26 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { ContextRouter } from "react-router-dom";
-import { Redirect, Route, Router, Switch } from "react-router-dom";
-import { Layout, Alert } from "antd";
-import { connect } from "react-redux";
-import React, { lazy, Suspense } from "react";
-import { createBrowserHistory } from "history";
-import _ from "lodash";
-import AcceptInviteView from "admin/auth/accept_invite_view";
-import { TracingTypeEnum, APICompoundTypeEnum, APIUser } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
-import { Imprint, Privacy } from "components/legal";
-import type { OxalisState } from "oxalis/store";
 import {
+  createExplorational,
   getAnnotationInformation,
   getOrganizationForDataset,
-  createExplorational,
   getShortLink,
 } from "admin/admin_rest_api";
-import AdaptViewportMetatag from "components/adapt_viewport_metatag";
-import AsyncRedirect from "components/redirect";
+import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
-import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
-import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
-import DisableGenericDnd from "components/disable_generic_dnd";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
-import JobListView from "admin/job/job_list_view";
 import LoginView from "admin/auth/login_view";
-import Navbar from "navbar";
+import RegistrationView from "admin/auth/registration_view";
+import StartResetPasswordView from "admin/auth/start_reset_password_view";
+import DatasetAddView from "admin/dataset/dataset_add_view";
+import JobListView from "admin/job/job_list_view";
 import Onboarding from "admin/onboarding";
-import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
 import OrganizationEditView from "admin/organization/organization_edit_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
-import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import PublicationDetailView from "dashboard/publication_details_view";
-import RegistrationView from "admin/auth/registration_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
-import SecuredRoute from "components/secured_route";
-import StartResetPasswordView from "admin/auth/start_reset_password_view";
+import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
 import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
@@ -49,14 +29,35 @@ import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
-import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
-import * as Utils from "libs/utils";
+import { Alert, Layout } from "antd";
+import AdaptViewportMetatag from "components/adapt_viewport_metatag";
+import DisableGenericDnd from "components/disable_generic_dnd";
+import { Imprint, Privacy } from "components/legal";
+import AsyncRedirect from "components/redirect";
+import SecuredRoute from "components/secured_route";
+import { CheckTermsOfServices } from "components/terms_of_services_check";
+import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import PublicationDetailView from "dashboard/publication_details_view";
 import features from "features";
-import window from "libs/window";
-import { trackAction } from "oxalis/model/helpers/analytics";
+import { createBrowserHistory } from "history";
+import * as Utils from "libs/utils";
 import { coalesce } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import Navbar from "navbar";
+import { ControlModeEnum } from "oxalis/constants";
+import { trackAction } from "oxalis/model/helpers/analytics";
+import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
+import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
+import React, { lazy, Suspense } from "react";
+import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
+import type { ContextRouter } from "react-router-dom";
+import { Redirect, Route, Router, Switch } from "react-router-dom";
+import { APICompoundTypeEnum, APIUser, TracingTypeEnum } from "types/api_flow_types";
 const { Content } = Layout;
 
 function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
@@ -182,6 +183,7 @@ class ReactRouter extends React.Component<Props> {
         <Layout>
           <DisableGenericDnd />
           <AdaptViewportMetatag isAuthenticated={isAuthenticated} />
+          <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
           <Content>

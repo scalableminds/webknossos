@@ -152,6 +152,7 @@ export const annotation: APIAnnotation = {
     isAnonymous: false,
     isAdmin: true,
     isDatasetManager: true,
+    isOrganizationOwner: true,
     teams: [
       {
         id: "5b1e45f9a00000a000abc2c3",

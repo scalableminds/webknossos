@@ -68,6 +68,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     object OpenIdConnect {
       val providerUrl: String = get[String]("singleSignOn.openIdConnect.providerUrl")
       val clientId: String = get[String]("singleSignOn.openIdConnect.clientId")
+      val publicKey: String = get[String]("singleSignOn.openIdConnect.publicKey")
+      val publicKeyAlgorithm: String = get[String]("singleSignOn.openIdConnect.publicKeyAlgorithm")
     }
   }
 

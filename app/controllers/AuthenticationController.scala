@@ -119,13 +119,13 @@ class AuthenticationController @Inject()(
   }
 
   private def createUser(organization: Organization,
-                 email: String,
-                 firstName: String,
-                 lastName: String,
-                 autoActivate: Boolean = true,
-                 password: Option[String],
-                 inviteBox: Box[Invite] = Empty,
-                 registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
+                         email: String,
+                         firstName: String,
+                         lastName: String,
+                         autoActivate: Boolean = true,
+                         password: Option[String],
+                         inviteBox: Box[Invite] = Empty,
+                         registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
     val passwordInfo: PasswordInfo =
       password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
     for {

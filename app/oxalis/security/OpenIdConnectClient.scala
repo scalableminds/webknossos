@@ -10,6 +10,9 @@ import utils.WkConf
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.security.spec.X509EncodedKeySpec
+import java.security.{KeyFactory, PublicKey}
+import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -53,9 +56,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
           "redirect_uri" -> redirectUrl,
           "code" -> code
         ))
-      newToken <- JwtJson
-        .decodeJson(tokenResponse.access_token, JwtOptions.DEFAULT.copy(signature = false))
-        .toFox ?~> "failed to parse JWT"
+      newToken <- validateOpenIdConnectTokenResponse(tokenResponse) ?~> "failed to parse JWT"
     } yield newToken
 
   /*
@@ -66,6 +67,26 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
       response: WSResponse <- rpc(oidcConfig.discoveryUrl).get
       serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
     } yield serverInfo
+
+  private def validateOpenIdConnectTokenResponse(tr: OpenIdConnectTokenResponse) =
+    publicKey match {
+      case Some(pk) => JwtJson.decodeJson(tr.access_token, pk).toFox
+      case None =>
+        JwtJson.decodeJson(tr.access_token, JwtOptions.DEFAULT.copy(signature = false)).toFox
+    }
+
+  lazy val publicKey: Option[PublicKey] = {
+    if (conf.SingleSignOn.OpenIdConnect.publicKey.isEmpty || conf.SingleSignOn.OpenIdConnect.publicKeyAlgorithm.isEmpty) {
+      None
+    } else {
+      val kf = KeyFactory.getInstance("RSA")
+      val base64EncodedKey = conf.SingleSignOn.OpenIdConnect.publicKey
+      val key = Base64.getDecoder.decode(base64EncodedKey.getBytes)
+      val spec = new X509EncodedKeySpec(key)
+      Some(kf.generatePublic(spec))
+    }
+
+  }
 
 }
 

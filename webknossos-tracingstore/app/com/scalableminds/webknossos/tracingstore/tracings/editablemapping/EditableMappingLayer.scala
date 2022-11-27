@@ -9,11 +9,14 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossos
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataLayer, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataCubeCache
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
 
 import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
+
+  override def fileSystemServiceOpt: Option[FileSystemService] = None
+
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
@@ -62,7 +65,7 @@ case class EditableMappingLayer(name: String,
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider: BucketProvider = new EditableMappingBucketProvider(layer = this)
+  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider = new EditableMappingBucketProvider(layer = this)
 
   override def mappings: Option[Set[String]] = None
 

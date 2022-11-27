@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import java.net.URI
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import play.api.libs.json.{Json, OFormat}
+
+import java.net.URI
 
 case class FileSystemCredentials(user: String, password: Option[String])
 
@@ -22,7 +24,7 @@ trait ZarrLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr
 
-  lazy val bucketProvider = new ZarrBucketProvider(this)
+  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) = new ZarrBucketProvider(this, fileSystemServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

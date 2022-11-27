@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Paths
-
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
+
 import javax.inject.Inject
 
 /*
@@ -12,10 +13,11 @@ import javax.inject.Inject
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(config: DataStoreConfig, agglomerateService: AgglomerateService) {
+class BinaryDataServiceHolder @Inject()(config: DataStoreConfig, agglomerateService: AgglomerateService, fileSystemService: FileSystemService) {
 
-  val binaryDataService = new BinaryDataService(Paths.get(config.Datastore.baseFolder),
-                                                config.Datastore.Cache.DataCube.maxEntries,
-                                                Some(agglomerateService))
+  val binaryDataService: BinaryDataService = new BinaryDataService(Paths.get(config.Datastore.baseFolder),
+    config.Datastore.Cache.DataCube.maxEntries,
+    Some(agglomerateService),
+    Some(fileSystemService))
 
 }

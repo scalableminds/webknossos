@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Path
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -9,17 +8,20 @@ import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache, FileSystemService}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateServiceOpt: Option[AgglomerateService])
+class BinaryDataService(val dataBaseDir: Path,
+                        maxCacheSize: Int,
+                        val agglomerateServiceOpt: Option[AgglomerateService],
+                        fileSystemServiceOpt: Option[FileSystemService])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
 
-  /* Note that this must stay in sync with the back-end constant
+  /* Note that this must stay in sync with the front-end constant
     compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
   lazy val cache = new DataCubeCache(maxCacheSize)
@@ -43,9 +45,9 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
   }
 
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
-    def convertIfNecessary[T](isNecessary: Boolean,
-                              inputArray: Array[Byte],
-                              conversionFunc: Array[Byte] => Array[Byte]): Array[Byte] =
+    def convertIfNecessary(isNecessary: Boolean,
+                           inputArray: Array[Byte],
+                           conversionFunc: Array[Byte] => Array[Byte]): Array[Byte] =
       if (isNecessary) conversionFunc(inputArray) else inputArray
 
     val requestsCount = requests.length
@@ -76,7 +78,8 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      request.dataLayer.bucketProvider.load(readInstruction, cache)
+      // TODO: cache for bucket providers (those are no longer lazy vals in the layers, but defs)
+      request.dataLayer.bucketProvider(fileSystemServiceOpt).load(readInstruction, cache)
     } else {
       Fox.empty
     }

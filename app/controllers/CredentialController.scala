@@ -2,7 +2,8 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
-import models.binary.credential.{CredentialDAO, HttpBasicAuthCredential, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{HttpBasicAuthCredential, S3AccessKeyCredential}
+import models.binary.credential.CredentialDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, PlayBodyParsers}
@@ -34,9 +35,8 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
       val _id = ObjectId.generate
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- credentialDAO.insertOne(
-          HttpBasicAuthCredential(_id,
-                                  request.body.name,
+        _ <- credentialDAO.insertOne(_id,
+          HttpBasicAuthCredential(request.body.name,
                                   request.body.username,
                                   request.body.password,
                                   request.body.domain)) ?~> "create.failed"
@@ -48,8 +48,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
       val _id = ObjectId.generate
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- credentialDAO.insertOne(S3AccessKeyCredential(_id,
-                                                           request.body.name,
+        _ <- credentialDAO.insertOne(_id, S3AccessKeyCredential(request.body.name,
                                                            request.body.keyId,
                                                            request.body.key,
                                                            request.body.bucket)) ?~> "create.failed"

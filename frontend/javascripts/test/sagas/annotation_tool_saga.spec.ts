@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import test from "ava";
 import { AnnotationToolEnum, AnnotationTool } from "oxalis/constants";
 import mockRequire from "mock-require";

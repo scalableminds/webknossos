@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import { AnnotationToolEnum } from "oxalis/constants";
 import { __setupOxalis } from "test/helpers/apiHelpers";
 import test from "ava";

@@ -47,6 +47,7 @@ module.exports = function (env = {}) {
   };
 
   return {
+    experiments: { asyncWebAssembly: true },
     entry: {
       main: "main.tsx",
       light: "style_light.ts",
@@ -136,6 +137,13 @@ module.exports = function (env = {}) {
       fallback: {
         // Needed for jsonschema
         url: require.resolve("url/"),
+        // Needed for lz4-wasm-nodejs (which is only used in test context, which is
+        // why we use empty modules)
+        path: false,
+        util: false,
+        fs: false,
+        // Needed for mock-require
+        module: false,
       },
     },
     optimization: {

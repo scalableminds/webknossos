@@ -65,7 +65,8 @@ case class EditableMappingLayer(name: String,
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider = new EditableMappingBucketProvider(layer = this)
+  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider =
+    new EditableMappingBucketProvider(layer = this)
 
   override def mappings: Option[Set[String]] = None
 

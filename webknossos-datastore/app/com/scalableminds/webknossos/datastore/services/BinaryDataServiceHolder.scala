@@ -13,11 +13,13 @@ import javax.inject.Inject
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(config: DataStoreConfig, agglomerateService: AgglomerateService, fileSystemService: FileSystemService) {
+class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
+                                        agglomerateService: AgglomerateService,
+                                        fileSystemService: FileSystemService) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(Paths.get(config.Datastore.baseFolder),
-    config.Datastore.Cache.DataCube.maxEntries,
-    Some(agglomerateService),
-    Some(fileSystemService))
+                                                                   config.Datastore.Cache.DataCube.maxEntries,
+                                                                   Some(agglomerateService),
+                                                                   Some(fileSystemService))
 
 }

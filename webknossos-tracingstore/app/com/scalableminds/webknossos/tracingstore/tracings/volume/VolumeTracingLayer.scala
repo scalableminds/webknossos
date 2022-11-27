@@ -10,7 +10,11 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingStore, TemporaryVolumeDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBClient,
+  TemporaryTracingStore,
+  TemporaryVolumeDataStore
+}
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext

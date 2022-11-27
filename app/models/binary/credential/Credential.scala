@@ -20,7 +20,6 @@ case class Credential(_id: ObjectId,
                       scope: Option[String],
                       filePath: Option[String])
 
-
 class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Credential, CredentialsRow, Credentials](sqlClient) {
   val collection = Credentials

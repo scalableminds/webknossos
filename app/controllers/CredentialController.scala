@@ -36,10 +36,10 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- credentialDAO.insertOne(_id,
-          HttpBasicAuthCredential(request.body.name,
-                                  request.body.username,
-                                  request.body.password,
-                                  request.body.domain)) ?~> "create.failed"
+                                     HttpBasicAuthCredential(request.body.name,
+                                                             request.body.username,
+                                                             request.body.password,
+                                                             request.body.domain)) ?~> "create.failed"
       } yield Ok
     }
 
@@ -48,7 +48,8 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
       val _id = ObjectId.generate
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- credentialDAO.insertOne(_id, S3AccessKeyCredential(request.body.name,
+        _ <- credentialDAO.insertOne(_id,
+                                     S3AccessKeyCredential(request.body.name,
                                                            request.body.keyId,
                                                            request.body.key,
                                                            request.body.bucket)) ?~> "create.failed"

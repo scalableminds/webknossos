@@ -17,7 +17,7 @@ case class MagLocator(mag: Vec3Int,
 
   lazy val pathWithFallback: String = path.getOrElse(mag.toMagLiteral(allowScalar = true))
   private lazy val uri: URI = new URI(pathWithFallback)
-  private lazy val isRemote: Boolean = FileSystemsHolder.isSupportedRemoteScheme(uri.getScheme)
+  lazy val isRemote: Boolean = FileSystemsHolder.isSupportedRemoteScheme(uri.getScheme)
   lazy val remoteSource: Option[RemoteSourceDescriptor] =
     if (isRemote)
       Some(RemoteSourceDescriptor(uri, credentials.map(_.user), credentials.flatMap(_.password)))

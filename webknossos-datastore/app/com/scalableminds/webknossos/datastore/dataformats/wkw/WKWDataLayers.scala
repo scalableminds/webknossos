@@ -17,7 +17,8 @@ trait WKWLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.wkw
 
-  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider = new WKWBucketProvider(this)
+  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider =
+    new WKWBucketProvider(this)
 
   def wkwResolutions: List[WKWResolution]
 

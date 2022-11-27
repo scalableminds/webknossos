@@ -24,7 +24,8 @@ trait ZarrLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr
 
-  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) = new ZarrBucketProvider(this, fileSystemServiceOpt)
+  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) =
+    new ZarrBucketProvider(this, fileSystemServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

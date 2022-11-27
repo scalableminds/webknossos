@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty}
+import net.liftweb.common.Empty
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,7 +29,8 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
 
   override def fileSystemServiceOpt: Option[FileSystemService] = None
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCubeHandle] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[WKWCubeHandle] = {
     val wkwFile = wkwFilePath(
       readInstruction.cube,
       Some(readInstruction.dataSource.id),

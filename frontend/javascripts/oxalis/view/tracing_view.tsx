@@ -33,6 +33,9 @@ const registerWebGlCrashHandler = (canvas) => {
     (e: MessageEvent) => {
       e.preventDefault();
 
+      // To bring webKnossos back to life, switching the current view mode
+      // to another one and then switching back proved to be the most robust way,
+      // even though it seems a bit hacky.
       const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
       const { allowedModes } = Store.getState().tracing.restrictions;
       const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
@@ -49,6 +52,8 @@ const registerWebGlCrashHandler = (canvas) => {
         Store.dispatch(setViewModeAction(currentViewMode));
       }, 1000);
 
+      // Also reload all buckets to ensure that the buckets are all available on the
+      // GPU.
       api.data.reloadAllBuckets();
 
       Toast.close(WEBGL_CONTEXT_LOST_KEY);

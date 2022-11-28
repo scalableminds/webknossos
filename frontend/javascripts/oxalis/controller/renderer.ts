@@ -31,39 +31,9 @@ function testContextLoss() {
   }
   ext.loseContext();
   setTimeout(() => ext.restoreContext(), 2500);
-  // renderer.domElement.addEventListener("webglcontextrestored", function (event) {
-  //   renderer.getContext();
-  //   const scene = window.scene;
-  //   const updateMaterial = function (material) {
-  //     material.needsUpdate = true;
-  //     for (var key in material)
-  //       if (material[key] && material[key].isTexture) {
-  //         material[key].needsUpdate = true;
-  //       }
-  //   };
-  //   scene.traverse(function (object) {
-  //     if (object.geometry) {
-  //       for (var key in object.geometry.attributes) {
-  //         object.geometry.attributes[key].needsUpdate = true;
-  //       }
-  //       if (object.geometry.index) {
-  //         object.geometry.index.needsUpdate = true;
-  //       }
-  //     }
-  //     if (object.material) {
-  //       if (object.material.length) {
-  //         object.material.forEach(updateMaterial);
-  //       } else {
-  //         updateMaterial(object.material);
-  //       }
-  //     }
-  //   });
-  //   try {
-  //     scene.backgound.needsUpdate = true;
-  //   } catch (e) {}
-  // });
 }
 
+// @ts-ignore
 window.testContextLoss = testContextLoss;
 
 export { getRenderer };

@@ -117,7 +117,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
   );
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timer | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     if (queryData.data == null || queryData.data.length === 0) {
       // No data exists in the cache. Allow the query to fetch.
       queryData.refetch();
@@ -214,7 +214,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
       fetchedDatasetsRef.current = null;
       effectWasCancelled = true;
       if (timeoutId != null) {
-        clearInterval(timeoutId);
+        clearTimeout(timeoutId);
         timeoutId = null;
       }
       Toast.close(`new-datasets-are-available-${folderId || null}`);

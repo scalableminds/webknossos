@@ -3,6 +3,8 @@ import Toast from "libs/toast";
 import messages from "messages";
 import ErrorHandling from "libs/error_handling";
 
+const WEBGL_CONTEXT_LOST_KEY = "WEBGL_CONTEXT_LOST_KEY";
+
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'canvas' implicitly has an 'any' type.
 const registerWebGlCrashHandler = (canvas) => {
   if (!canvas) {
@@ -12,11 +14,22 @@ const registerWebGlCrashHandler = (canvas) => {
   canvas.addEventListener(
     "webglcontextlost",
     (e: MessageEvent) => {
+      e.preventDefault();
       Toast.error(messages["webgl.context_loss"], {
         sticky: true,
+        key: WEBGL_CONTEXT_LOST_KEY,
       });
       console.error("Webgl context lost", e);
       ErrorHandling.notify(e);
+    },
+    false,
+  );
+
+  canvas.addEventListener(
+    "webglcontextrestored",
+    (e: MessageEvent) => {
+      e.preventDefault();
+      Toast.close(WEBGL_CONTEXT_LOST_KEY);
     },
     false,
   );

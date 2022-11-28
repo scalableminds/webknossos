@@ -20,7 +20,7 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import PlaneView from "oxalis/view/plane_view";
 import type { OxalisState, Tracing } from "oxalis/store";
@@ -262,6 +262,35 @@ class PlaneController extends React.PureComponent<Props> {
     this.forceUpdate();
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
     this.start();
+
+    // // todo: also remove event listener
+    //
+
+    getSceneController().renderer.domElement.addEventListener("webglcontextlost", () => {
+      // this.stop();
+    });
+    getSceneController().renderer.domElement.addEventListener("webglcontextrestored", () => {
+      // setTimeout(() => {
+      //   this.start();
+      // }, 500);
+      // setTimeout(() => {
+      //   this.planeView.resize();
+      // }, 1000);
+
+      const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+      const { allowedModes } = Store.getState().tracing.restrictions;
+      const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
+      Store.dispatch(setViewModeAction(allowedModes[index]));
+
+      setTimeout(() => {
+        Store.dispatch(setViewModeAction(currentViewMode));
+      }, 1000);
+
+      // console.log("context restored. setSize");
+      // // this.resize();
+      // const { width, height } = getGroundTruthLayoutRect();
+      // getSceneController().renderer.setSize(width + 1, height + 1);
+    });
   }
 
   componentWillUnmount() {

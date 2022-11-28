@@ -152,7 +152,7 @@ class UpdatableTexture extends THREE.Texture {
       src,
     );
     this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
-    this.image = null;
+    // this.image = undefined;
   }
 }
 export default UpdatableTexture;

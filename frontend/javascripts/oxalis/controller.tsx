@@ -32,6 +32,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 import DataLayer from "./model/data_layer";
+import getSceneController from "./controller/scene_controller_provider";
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
@@ -88,6 +89,25 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     }
 
     this.tryFetchingModel();
+
+    // setTimeout(() => {
+    //   getSceneController().renderer.domElement.addEventListener(
+    //     "webglcontextlost",
+    //     (e: MessageEvent) => {
+    //       e.preventDefault();
+    //       this.props.setControllerStatus("failedLoading");
+    //     },
+    //     false,
+    //   );
+    //   getSceneController().renderer.domElement.addEventListener(
+    //     "webglcontextrestored",
+    //     (e: MessageEvent) => {
+    //       e.preventDefault();
+    //       this.props.setControllerStatus("loaded");
+    //     },
+    //     false,
+    //   );
+    // }, 2000);
   }
 
   componentWillUnmount() {

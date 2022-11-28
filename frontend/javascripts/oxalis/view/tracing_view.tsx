@@ -2,6 +2,9 @@ import * as React from "react";
 import Toast from "libs/toast";
 import messages from "messages";
 import ErrorHandling from "libs/error_handling";
+import Store from "oxalis/store";
+import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import api from "oxalis/api/internal_api";
 
 const WEBGL_CONTEXT_LOST_KEY = "WEBGL_CONTEXT_LOST_KEY";
 
@@ -29,7 +32,27 @@ const registerWebGlCrashHandler = (canvas) => {
     "webglcontextrestored",
     (e: MessageEvent) => {
       e.preventDefault();
+
+      const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+      const { allowedModes } = Store.getState().tracing.restrictions;
+      const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
+      const newViewMode = allowedModes[index];
+      console.log(
+        "Trying to recover from WebGL context loss by switching to",
+        allowedModes[index],
+        "...",
+      );
+      Store.dispatch(setViewModeAction(newViewMode));
+
+      setTimeout(() => {
+        console.log("... and switching back to", currentViewMode);
+        Store.dispatch(setViewModeAction(currentViewMode));
+      }, 1000);
+
+      api.data.reloadAllBuckets();
+
       Toast.close(WEBGL_CONTEXT_LOST_KEY);
+      Toast.info(messages["webgl.context_recovery"], { timeout: 10000 });
     },
     false,
   );

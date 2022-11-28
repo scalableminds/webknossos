@@ -89,25 +89,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     }
 
     this.tryFetchingModel();
-
-    // setTimeout(() => {
-    //   getSceneController().renderer.domElement.addEventListener(
-    //     "webglcontextlost",
-    //     (e: MessageEvent) => {
-    //       e.preventDefault();
-    //       this.props.setControllerStatus("failedLoading");
-    //     },
-    //     false,
-    //   );
-    //   getSceneController().renderer.domElement.addEventListener(
-    //     "webglcontextrestored",
-    //     (e: MessageEvent) => {
-    //       e.preventDefault();
-    //       this.props.setControllerStatus("loaded");
-    //     },
-    //     false,
-    //   );
-    // }, 2000);
   }
 
   componentWillUnmount() {

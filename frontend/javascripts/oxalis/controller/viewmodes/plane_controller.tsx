@@ -262,35 +262,6 @@ class PlaneController extends React.PureComponent<Props> {
     this.forceUpdate();
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
     this.start();
-
-    // // todo: also remove event listener
-    //
-
-    getSceneController().renderer.domElement.addEventListener("webglcontextlost", () => {
-      // this.stop();
-    });
-    getSceneController().renderer.domElement.addEventListener("webglcontextrestored", () => {
-      // setTimeout(() => {
-      //   this.start();
-      // }, 500);
-      // setTimeout(() => {
-      //   this.planeView.resize();
-      // }, 1000);
-
-      const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-      const { allowedModes } = Store.getState().tracing.restrictions;
-      const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
-      Store.dispatch(setViewModeAction(allowedModes[index]));
-
-      setTimeout(() => {
-        Store.dispatch(setViewModeAction(currentViewMode));
-      }, 1000);
-
-      // console.log("context restored. setSize");
-      // // this.resize();
-      // const { width, height } = getGroundTruthLayoutRect();
-      // getSceneController().renderer.setSize(width + 1, height + 1);
-    });
   }
 
   componentWillUnmount() {

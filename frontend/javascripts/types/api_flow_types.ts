@@ -170,7 +170,6 @@ export type APIUserBase = APIUserCompact & {
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
   readonly isDatasetManager: boolean;
-  readonly isOrganizationOwner: boolean;
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
@@ -180,6 +179,7 @@ export type NovelUserExperienceInfoType = {
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
+  readonly isOrganizationOwner: boolean;
   readonly created: number;
   readonly experiences: ExperienceMap;
   readonly isSuperUser: boolean;

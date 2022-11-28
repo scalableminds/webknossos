@@ -6,10 +6,7 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  setViewModeAction,
-  updateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import type { OrthoViewMap, Vector3 } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
@@ -136,11 +133,7 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          try {
-            renderer.render(scene, this.cameras[plane]);
-          } catch (exc) {
-            console.warn("caught", exc);
-          }
+          renderer.render(scene, this.cameras[plane]);
         }
       }
 

@@ -20,7 +20,7 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
-import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import PlaneView from "oxalis/view/plane_view";
 import type { OxalisState, Tracing } from "oxalis/store";

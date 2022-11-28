@@ -599,6 +599,7 @@ class ReactRouter extends React.Component<Props> {
                         dataset,
                         type,
                         fallbackLayerName,
+                        null,
                         resolutionRestrictions,
                       );
                       trackAction(`Create ${type} tracing`);

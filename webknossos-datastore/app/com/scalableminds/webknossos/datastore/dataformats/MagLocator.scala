@@ -13,10 +13,11 @@ case class MagLocator(mag: Vec3Int,
                       path: Option[String],
                       credentials: Option[FileSystemCredentials],
                       axisOrder: Option[AxisOrder],
-                      channelIndex: Option[Int]) {
+                      channelIndex: Option[Int],
+                      credentialId: Option[String]) {
 
   lazy val pathWithFallback: String = path.getOrElse(mag.toMagLiteral(allowScalar = true))
-  private lazy val uri: URI = new URI(pathWithFallback)
+  lazy val uri: URI = new URI(pathWithFallback)
   lazy val isRemote: Boolean = FileSystemsHolder.isSupportedRemoteScheme(uri.getScheme)
   lazy val remoteSource: Option[RemoteSourceDescriptor] =
     if (isRemote)

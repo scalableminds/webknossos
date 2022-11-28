@@ -1,7 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.DataSetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
@@ -51,6 +51,7 @@ class FolderController @Inject()(
         params = request.body
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
+        - <- Fox.assertTrue(folderDAO.isEditable(idValidated)) ?~> "folder.update.notAllowed" ~> FORBIDDEN
         _ <- folderDAO.updateName(idValidated, params.name) ?~> "folder.update.name.failed"
         _ <- folderService
           .updateAllowedTeams(idValidated, params.allowedTeams, request.identity) ?~> "folder.update.teams.failed"

@@ -444,7 +444,7 @@ class SceneController {
       this.taskBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
-        Utils.__guard__(this.taskBoundingBox, (bb) => bb.setVisibility(false));
+        this.taskBoundingBox?.setVisibility(false);
       }
     }
   }
@@ -461,7 +461,7 @@ class SceneController {
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.updateForCam(id));
+    this.taskBoundingBox?.updateForCam(id);
 
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
@@ -621,7 +621,7 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(false);
     this.userBoundingBoxGroup.visible = false;
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(false));
+    this.taskBoundingBox?.setVisibility(false);
 
     if (this.isosurfacesRootGroup != null) {
       this.isosurfacesRootGroup.visible = false;
@@ -636,7 +636,7 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(true);
     this.userBoundingBoxGroup.visible = true;
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(true));
+    this.taskBoundingBox?.setVisibility(true);
   }
 
   bindToEvents(): void {

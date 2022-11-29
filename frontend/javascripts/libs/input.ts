@@ -611,8 +611,12 @@ export class InputMouse {
 
   getElementOffset() {
     // Return the bounding rectangle relative to the top-left corner of the document
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-    const boundingRect = document.getElementById(this.targetId).getBoundingClientRect();
+    const boundingRect = document.getElementById(this.targetId)?.getBoundingClientRect() || {
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+    };
     return _.extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,

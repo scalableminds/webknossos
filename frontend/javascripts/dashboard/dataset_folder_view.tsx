@@ -223,9 +223,9 @@ function DetailsSidebar({
                 </div>
               ) : error ? (
                 "Could not load folder."
-              ) : (
+              ) : activeFolderId != null ? (
                 <Spin spinning />
-              )}
+              ) : null}
             </>
           )}
         </div>

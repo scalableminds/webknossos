@@ -525,7 +525,7 @@ export function DatasetTags({
     updatedDataset: APIMaybeUnimportedDataset,
     shouldAddTag: boolean,
     tag: string,
-    event: React.SyntheticEvent,
+    event: React.MouseEvent,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
 
@@ -566,15 +566,16 @@ export function DatasetTags({
           key={tag}
           kind="datasets"
           onClick={_.partial(onClickTag || _.noop, tag)}
-          /* @ts-ignore */
           onClose={_.partial(editTagFromDataset, dataset, false, tag)}
-          closable
+          closable={dataset.isEditable}
         />
       ))}
-      <EditableTextIcon
-        icon={<PlusOutlined />}
-        onChange={_.partial(editTagFromDataset, dataset, true)}
-      />
+      {dataset.isEditable ? (
+        <EditableTextIcon
+          icon={<PlusOutlined />}
+          onChange={_.partial(editTagFromDataset, dataset, true)}
+        />
+      ) : null}
     </div>
   );
 }

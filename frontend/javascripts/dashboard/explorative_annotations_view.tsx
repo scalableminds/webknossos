@@ -704,7 +704,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   key={tag}
                   kind="annotations"
                   onClick={_.partial(this.addTagToSearch, tag)}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SyntheticEvent<Element, Event>, vo... Remove this comment to see the full error message
                   onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                   tag={tag}
                   closable={

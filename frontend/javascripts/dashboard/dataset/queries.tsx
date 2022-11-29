@@ -382,8 +382,8 @@ export function useUpdateDatasetMutation(folderId: string | null) {
           );
         }
       },
-      onError: (err) => {
-        Toast.error(`Could not update dataset. ${err}`);
+      onError: (err: any) => {
+        handleGenericError(err, "Could not update dataset.");
       },
     },
   );

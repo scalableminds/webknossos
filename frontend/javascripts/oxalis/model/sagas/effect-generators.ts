@@ -20,7 +20,7 @@ export function* take(
 export { call } from "typed-redux-saga";
 
 // Prefer to use these functions in combination with `yield*`
-// as they provide better typing safety with flow.
+// as they provide better typing safety with TS.
 // export function* select(...args) {
 //   return yield IOEffects.select(...args);
 // }

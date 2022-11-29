@@ -24,7 +24,7 @@ const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
-// Callable Object, see https://flow.org/en/docs/types/functions/#toc-callable-objects
+// Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
   delayed?: boolean;

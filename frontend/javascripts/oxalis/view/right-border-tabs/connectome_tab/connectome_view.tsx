@@ -572,7 +572,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const getMappingNameFromConnectomeDataEnforced = (
       connectome: ConnectomeData | null | undefined,
     ) => {
-      // This should never be the case, but it's not straightforward for Flow to infer
+      // This should never be the case, but it's not straightforward for TS to infer
       if (connectome == null) throw new Error("Connectome data was null.");
       return connectome.connectomeFile.mappingName;
     };

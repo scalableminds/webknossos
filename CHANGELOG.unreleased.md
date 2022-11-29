@@ -14,8 +14,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - webKnossos is now able to recover from a lost webGL context. [#6663](https://github.com/scalableminds/webknossos/pull/6663)
+- Bulk task creation now needs the taskTypeId, the task type summary will no longer be accepted. [#6640](https://github.com/scalableminds/webknossos/pull/6640)
 
 ### Fixed
+- Fixed a bug where it was possible to create invalid an state by deleting teams that are referenced elsewhere. [6664](https://github.com/scalableminds/webknossos/pull/6664)
 
 ### Removed
 

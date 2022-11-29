@@ -24,6 +24,7 @@ import { handleGenericError } from "libs/error_handling";
 
 export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
+const FOLDER_TREE_REFETCH_INTERVAL = 30000;
 
 export function useFolderQuery(folderId: string | null) {
   const queryKey = ["folders", folderId];
@@ -62,6 +63,7 @@ export function useDatasetSearchQuery(query: string | null) {
 export function useFolderTreeQuery() {
   return useQuery(["folders"], getFolderTree, {
     refetchOnWindowFocus: false,
+    refetchInterval: FOLDER_TREE_REFETCH_INTERVAL,
   });
 }
 

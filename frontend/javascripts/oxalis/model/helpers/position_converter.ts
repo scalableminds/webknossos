@@ -63,7 +63,7 @@ export function upsampleResolution(resolutions: Array<Vector3>, resolutionIndex:
     lastResolution[2] * multiplier,
   ];
 }
-export function bucketPositionToGlobalAddressNew(
+export function bucketPositionToGlobalAddress(
   [x, y, z, resolutionIndex]: Vector4,
   resolutionInfo: ResolutionInfo,
 ): Vector3 {

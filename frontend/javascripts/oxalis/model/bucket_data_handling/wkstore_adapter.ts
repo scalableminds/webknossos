@@ -1,5 +1,5 @@
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { bucketPositionToGlobalAddressNew } from "oxalis/model/helpers/position_converter";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { doWithToken } from "admin/admin_rest_api";
 import {
@@ -72,7 +72,7 @@ function createSendBucketInfo(
   resolutionInfo: ResolutionInfo,
 ): SendBucketInfo {
   return {
-    position: bucketPositionToGlobalAddressNew(zoomedAddress, resolutionInfo),
+    position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
     mag: resolutionInfo.getResolutionByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };

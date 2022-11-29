@@ -107,7 +107,7 @@ Samplecountry
     userId2,
     multiUserId2,
     defaultOrganization._id,
-    "Second",
+    "Non-Admin",
     "User",
     System.currentTimeMillis(),
     Json.obj(),
@@ -137,8 +137,8 @@ Samplecountry
       _ <- assertNoOrganizationsPresent
       _ <- insertOrganization()
       _ <- insertTeams()
-      _ <- insertDefaultUser()
-      _ <- insertSecondDefaultUser()
+      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, true)
+      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, false)
       _ <- insertToken()
       _ <- insertTaskType()
       _ <- insertProject()
@@ -156,37 +156,20 @@ Samplecountry
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
-  private def insertDefaultUser(): Fox[Unit] =
+  private def insertDefaultUser(userEmail: String, multiUser: MultiUser, user: User, isTeamManager: Boolean): Fox[Unit] =
     userService
-      .userFromMultiUserEmail(defaultUserEmail)
+      .userFromMultiUserEmail(userEmail)
       .futureBox
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
           for {
-            _ <- multiUserDAO.insertOne(defaultMultiUser)
-            _ <- userDAO.insertOne(defaultUser)
-            _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser, Map("sampleExp" -> 10))
-            _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
-                                                       TeamMembership(organizationTeam._id, isTeamManager = true))
+            _ <- multiUserDAO.insertOne(multiUser)
+            _ <- userDAO.insertOne(user)
+            _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
+            _ <- userTeamRolesDAO.insertTeamMembership(user._id,
+                                                       TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
             _ = logger.info("Inserted default user")
-          } yield ()
-      }
-      .toFox
-
-  private def insertSecondDefaultUser(): Fox[Unit] =
-    userService
-      .userFromMultiUserEmail(defaultUserEmail2)
-      .futureBox
-      .flatMap {
-        case Full(_) => Fox.successful(())
-        case _ =>
-          for {
-            _ <- multiUserDAO.insertOne(defaultMultiUser2)
-            _ <- userDAO.insertOne(defaultUser2)
-            _ <- userTeamRolesDAO.insertTeamMembership(defaultUser2._id,
-                                                       TeamMembership(organizationTeam._id, isTeamManager = false))
-            _ = logger.info("Inserted second default user")
           } yield ()
       }
       .toFox

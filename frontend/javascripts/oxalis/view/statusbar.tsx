@@ -192,7 +192,7 @@ function ShortcutsInfo() {
           />
           Move
         </span>
-        <span key="zoom" className="shortcut-info-element">
+        <span className="shortcut-info-element">
           <span
             key="space-forward-i"
             className="keyboard-key-icon-small"
@@ -213,7 +213,7 @@ function ShortcutsInfo() {
           </span>{" "}
           Trace forward
         </span>
-        <span key="zoom" className="shortcut-info-element">
+        <span className="shortcut-info-element">
           <span
             key="ctrl-back-i"
             className="keyboard-key-icon-small"
@@ -252,7 +252,7 @@ function ShortcutsInfo() {
           </span>{" "}
           Trace backward
         </span>
-        <span key="zoom" className="shortcut-info-element">
+        <span className="shortcut-info-element">
           <span
             key="arrow-left-i"
             className="keyboard-key-icon-small"

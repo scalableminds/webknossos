@@ -219,7 +219,7 @@ Samplecountry
     taskTypeDAO.findAll.flatMap { types =>
       if (types.isEmpty) {
         val taskType = TaskType(
-          ObjectId.generate,
+          ObjectId("63721e2cef0100470266c485"),
           organizationTeam._id,
           "sampleTaskType",
           "Check those cells out!"

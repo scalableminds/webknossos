@@ -612,7 +612,11 @@ function aggregateTaskInfos(
 
     if (taskInfos.every((t) => t.state === VoxelyticsRunState.SKIPPED)) {
       state = VoxelyticsRunState.SKIPPED;
-    } else if (taskInfos.every((t) => t.state === VoxelyticsRunState.PENDING)) {
+    } else if (
+      taskInfos.every(
+        (t) => t.state === VoxelyticsRunState.PENDING || t.state === VoxelyticsRunState.SKIPPED,
+      )
+    ) {
       state = VoxelyticsRunState.PENDING;
     } else if (
       taskInfos.every(

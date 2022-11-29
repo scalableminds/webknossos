@@ -137,8 +137,7 @@ export function zoomedAddressToAnotherZoomStepWithInfo(
     targetResolutionIndex,
   ];
 }
-export function getBucketExtent(resolutions: Vector3[], resolutionIndex: number): Vector3 {
-  const resolution = resolutions[resolutionIndex];
+export function getBucketExtent(resolution: Vector3): Vector3 {
   return [
     constants.BUCKET_WIDTH * resolution[0],
     constants.BUCKET_WIDTH * resolution[1],

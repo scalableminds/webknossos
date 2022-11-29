@@ -42,19 +42,17 @@ export function FolderTreeSidebar({
   const { data: folderTree, isLoading } = context.queries.folderTreeQuery;
 
   useEffect(() => {
-    setTreeData(() => {
-      const [newTreeData, newExpandedKeys, itemById] = getFolderHierarchy(
-        folderTree,
-        expandedKeys,
-        context.activeFolderId,
-      );
-      itemByIdRef.current = itemById;
-      if (newTreeData.length > 0 && context.activeFolderId == null) {
-        context.setActiveFolderId(newTreeData[0].key);
-      }
-      setExpandedKeys(newExpandedKeys);
-      return newTreeData;
-    });
+    const [newTreeData, newExpandedKeys, itemById] = getFolderHierarchy(
+      folderTree,
+      expandedKeys,
+      context.activeFolderId,
+    );
+    itemByIdRef.current = itemById;
+    if (newTreeData.length > 0 && context.activeFolderId == null) {
+      context.setActiveFolderId(newTreeData[0].key);
+    }
+    setTreeData(newTreeData);
+    setExpandedKeys(newExpandedKeys);
   }, [folderTree]);
 
   useEffect(() => {

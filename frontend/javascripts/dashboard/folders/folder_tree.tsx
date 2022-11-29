@@ -254,16 +254,26 @@ function generateTitle(
 
   const createMenu = () => (
     <Menu>
-      <Menu.Item key="create" data-group-id={id} onClick={createFolder}>
+      <Menu.Item
+        key="create"
+        data-group-id={id}
+        onClick={createFolder}
+        disabled={!folder.isEditable}
+      >
         <PlusOutlined />
         New Folder
       </Menu.Item>
-      <Menu.Item key="edit" data-group-id={id} onClick={editFolder}>
+      <Menu.Item key="edit" data-group-id={id} onClick={editFolder} disabled={!folder.isEditable}>
         <EditOutlined />
         Edit Folder
       </Menu.Item>
 
-      <Menu.Item key="delete" data-group-id={id} onClick={deleteFolder}>
+      <Menu.Item
+        key="delete"
+        data-group-id={id}
+        onClick={deleteFolder}
+        disabled={!folder.isEditable}
+      >
         <DeleteOutlined />
         Delete Folder
       </Menu.Item>

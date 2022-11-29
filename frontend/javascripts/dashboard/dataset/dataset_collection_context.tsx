@@ -135,7 +135,9 @@ export default function DatasetCollectionContextProvider({
   const isLoading =
     (globalSearchQuery
       ? datasetSearchQuery.isFetching
-      : datasetsInFolderQuery.isFetching || datasetsInFolderQuery.isRefetching) || isMutating;
+      : folderTreeQuery.isFetching ||
+        datasetsInFolderQuery.isFetching ||
+        datasetsInFolderQuery.isRefetching) || isMutating;
 
   const value: DatasetCollectionContextValue = useMemo(
     () => ({

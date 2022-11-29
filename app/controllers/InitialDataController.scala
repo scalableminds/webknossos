@@ -156,7 +156,10 @@ Samplecountry
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
-  private def insertDefaultUser(userEmail: String, multiUser: MultiUser, user: User, isTeamManager: Boolean): Fox[Unit] =
+  private def insertDefaultUser(userEmail: String,
+                                multiUser: MultiUser,
+                                user: User,
+                                isTeamManager: Boolean): Fox[Unit] =
     userService
       .userFromMultiUserEmail(userEmail)
       .futureBox
@@ -167,8 +170,9 @@ Samplecountry
             _ <- multiUserDAO.insertOne(multiUser)
             _ <- userDAO.insertOne(user)
             _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-            _ <- userTeamRolesDAO.insertTeamMembership(user._id,
-                                                       TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
+            _ <- userTeamRolesDAO.insertTeamMembership(
+              user._id,
+              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
             _ = logger.info("Inserted default user")
           } yield ()
       }

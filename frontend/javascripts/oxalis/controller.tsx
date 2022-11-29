@@ -32,6 +32,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 import DataLayer from "./model/data_layer";
+
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;

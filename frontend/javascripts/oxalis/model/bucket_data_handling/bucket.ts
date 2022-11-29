@@ -6,7 +6,7 @@ import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue"
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import {
-  bucketPositionToGlobalAddress,
+  bucketPositionToGlobalAddressOld,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -194,7 +194,7 @@ export class DataBucket {
 
   getBoundingBox(): BoundingBoxType {
     const resolutions = getResolutions(Store.getState().dataset);
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+    const min = bucketPositionToGlobalAddressOld(this.zoomedAddress, resolutions);
     const bucketResolution = resolutions[this.zoomedAddress[3]];
     const max: Vector3 = [
       min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
@@ -209,7 +209,7 @@ export class DataBucket {
 
   getGlobalPosition(): Vector3 {
     const resolutions = getResolutions(Store.getState().dataset);
-    return bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+    return bucketPositionToGlobalAddressOld(this.zoomedAddress, resolutions);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -697,7 +697,7 @@ export class DataBucket {
       const resolutions = getResolutions(Store.getState().dataset);
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+        bucketPositionToGlobalAddressOld(this.zoomedAddress, resolutions),
         this.zoomedAddress[3],
         this.visualizationColor,
       );

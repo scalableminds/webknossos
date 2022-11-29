@@ -54,14 +54,12 @@ function minValue(array: Array<number>): number {
 }
 
 export class ResolutionInfo {
-  resolutions: ReadonlyArray<Vector3>;
-  resolutionMap: Map<number, Vector3>;
+  readonly resolutions: ReadonlyArray<Vector3>;
+  readonly resolutionMap: ReadonlyMap<number, Vector3>;
 
   constructor(resolutions: Array<Vector3>) {
     this.resolutions = resolutions;
-    this.resolutionMap = new Map();
-
-    this._buildResolutionMap();
+    this.resolutionMap = this._buildResolutionMap();
   }
 
   _buildResolutionMap() {
@@ -71,23 +69,21 @@ export class ResolutionInfo {
     // Therefore, the largest dim for each resolution has to be unique across all resolutions.
     // This function creates a map which maps from powerOfTwo (2**index) to resolution.
     const { resolutions } = this;
+    const resolutionMap = new Map();
 
     if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
       throw new Error("Max dimension in resolutions is not unique.");
     }
 
     for (const resolution of resolutions) {
-      this.resolutionMap.set(maxValue(resolution), resolution);
+      resolutionMap.set(maxValue(resolution), resolution);
     }
+    return resolutionMap;
   }
 
-  getDenseResolutions(): Array<Vector3> {
-    return convertToDenseResolution(this.getResolutionList());
-  }
+  getDenseResolutions = memoizeOne(() => convertToDenseResolution(this.getResolutionList()));
 
-  getResolutionList(): Array<Vector3> {
-    return Array.from(this.resolutionMap.values());
-  }
+  getResolutionList = memoizeOne(() => Array.from(this.resolutionMap.values()));
 
   getResolutionsWithIndices(): Array<[number, Vector3]> {
     return _.sortBy(

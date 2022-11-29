@@ -53,6 +53,7 @@ class InitialDataService @Inject()(userService: UserService,
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
 
   private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email
+  private val defaultUserEmail2 = conf.WebKnossos.SampleOrganization.User.email2
   private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
   private val defaultUserToken = conf.WebKnossos.SampleOrganization.User.token
   private val additionalInformation = """**Sample Organization**
@@ -73,6 +74,8 @@ Samplecountry
     Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
   private val userId = ObjectId.generate
   private val multiUserId = ObjectId.generate
+  private val userId2 = ObjectId.generate
+  private val multiUserId2 = ObjectId.generate
   private val defaultMultiUser = MultiUser(
     multiUserId,
     defaultUserEmail,
@@ -90,6 +93,27 @@ Samplecountry
     userService.createLoginInfo(userId),
     isAdmin = true,
     isDatasetManager = true,
+    isUnlisted = false,
+    isDeactivated = false,
+    lastTaskTypeId = None
+  )
+  private val defaultMultiUser2 = MultiUser(
+    multiUserId2,
+    defaultUserEmail2,
+    userService.createPasswordInfo(defaultUserPassword),
+    isSuperUser = false,
+  )
+  private val defaultUser2 = User(
+    userId2,
+    multiUserId2,
+    defaultOrganization._id,
+    "Second",
+    "User",
+    System.currentTimeMillis(),
+    Json.obj(),
+    userService.createLoginInfo(userId2),
+    isAdmin = false,
+    isDatasetManager = false,
     isUnlisted = false,
     isDeactivated = false,
     lastTaskTypeId = None
@@ -114,6 +138,7 @@ Samplecountry
       _ <- insertOrganization()
       _ <- insertTeams()
       _ <- insertDefaultUser()
+      _ <- insertSecondDefaultUser()
       _ <- insertToken()
       _ <- insertTaskType()
       _ <- insertProject()
@@ -145,6 +170,23 @@ Samplecountry
             _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
                                                        TeamMembership(organizationTeam._id, isTeamManager = true))
             _ = logger.info("Inserted default user")
+          } yield ()
+      }
+      .toFox
+
+  private def insertSecondDefaultUser(): Fox[Unit] =
+    userService
+      .userFromMultiUserEmail(defaultUserEmail2)
+      .futureBox
+      .flatMap {
+        case Full(_) => Fox.successful(())
+        case _ =>
+          for {
+            _ <- multiUserDAO.insertOne(defaultMultiUser2)
+            _ <- userDAO.insertOne(defaultUser2)
+            _ <- userTeamRolesDAO.insertTeamMembership(defaultUser2._id,
+                                                       TeamMembership(organizationTeam._id, isTeamManager = false))
+            _ = logger.info("Inserted second default user")
           } yield ()
       }
       .toFox

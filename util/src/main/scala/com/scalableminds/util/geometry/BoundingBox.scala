@@ -52,6 +52,9 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def scale(s: Float): BoundingBox =
     BoundingBox(topLeft.scale(s), (width * s).toInt, (height * s).toInt, (depth * s).toInt)
 
+  def *(that: Vec3Int): BoundingBox =
+    BoundingBox(topLeft * that, width * that.x, height * that.y, depth * that.z)
+
   def toSql: List[Int] =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)
 

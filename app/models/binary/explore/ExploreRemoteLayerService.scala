@@ -88,7 +88,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
 
   private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayer, Vec3Double)])(
       implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] = {
-    val allVoxelSizes: Set[Vec3Double] = layersWithVoxelSizes
+    val allVoxelSizes = layersWithVoxelSizes
       .flatMap(layerWithVoxelSize => {
         val layer = layerWithVoxelSize._1
         val voxelSize = layerWithVoxelSize._2
@@ -109,11 +109,19 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
         val layerVoxelSize = layerWithVoxelSize._2
         val magFactors = (layerVoxelSize / minVoxelSize).toVec3Int
         layer match {
-          case l: ZarrDataLayer         => l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)))
-          case l: ZarrSegmentationLayer => l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)))
-          case l: N5DataLayer           => l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)))
-          case l: N5SegmentationLayer   => l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)))
-          case _                        => throw new Exception("Encountered unsupported layer format during explore remote")
+          case l: ZarrDataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: ZarrSegmentationLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: N5DataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: N5SegmentationLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case _ => throw new Exception("Encountered unsupported layer format during explore remote")
         }
       })
     } yield (rescaledLayers, minVoxelSize)
@@ -171,7 +179,6 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
         " <~ " + failure.msg + formatChain(failure.chain)
       case _ => ""
     }
-
     failure.msg + formatChain(failure.chain)
   }
 

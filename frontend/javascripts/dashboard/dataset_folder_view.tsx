@@ -15,7 +15,7 @@ import { DatasetLayerTags, DatasetTags, TeamTags } from "./advanced_dataset/data
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-import { useFolderQuery } from "./dataset/queries";
+import { SEARCH_RESULTS_LIMIT, useFolderQuery } from "./dataset/queries";
 
 import DatasetView from "./dataset_view";
 import { EditFolderModal } from "./folders/edit_folder_modal";
@@ -186,9 +186,16 @@ function DetailsSidebar({
             <Result
               icon={<SearchOutlined style={{ fontSize: 50 }} />}
               subTitle={
-                <>
-                  {datasetCount} {pluralize("dataset", datasetCount)} were found. {maybeSelectMsg}
-                </>
+                datasetCount !== SEARCH_RESULTS_LIMIT ? (
+                  <>
+                    {datasetCount} {pluralize("dataset", datasetCount)} were found. {maybeSelectMsg}
+                  </>
+                ) : (
+                  <>
+                    At least {SEARCH_RESULTS_LIMIT} datasets match your search criteria.{" "}
+                    {maybeSelectMsg}
+                  </>
+                )
               }
             />
           ) : (

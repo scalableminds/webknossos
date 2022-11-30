@@ -31,7 +31,6 @@ type Props = {
   onChange: (arg0: QueryObject) => Promise<void>;
   initialFieldValues: TaskFormFieldValues | null | undefined;
   isLoading: boolean;
-  history: RouteComponentProps["history"];
   onDownloadAllTasks: (arg0: QueryObject) => Promise<void>;
 };
 type State = {
@@ -67,7 +66,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.fetchData();
     // initialize form with default values when navigating from
     // project / taskType list views or when restoring values from persisted state
-    const persistedState = persistence.load(this.props.history);
+    const persistedState = persistence.load();
     const persistedFieldValues =
       persistedState.fieldValues != null ? persistedState.fieldValues : {};
     const fieldValues =
@@ -87,7 +86,7 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData() {
@@ -326,4 +325,4 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskSearchForm);
+export default TaskSearchForm;

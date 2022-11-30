@@ -17,7 +17,7 @@ ALTER TABLE webknossos.multiusers
     USING (passwordInfo_hasher::text::webknossos.USER_PASSWORDINFO_HASHERS),
   ALTER COLUMN passwordinfo_hasher SET DEFAULT 'SCrypt';
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 91;
+UPDATE webknossos.releaseInformation SET schemaVersion = 92;
 
 
 -- recreate dropped views

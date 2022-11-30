@@ -1023,9 +1023,25 @@ export async function downsampleSegmentation(
 // ### Datasets
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
+  folderId: string | null = null,
+  searchQuery: string | null = null,
+  limit: number | null = null,
 ): Promise<Array<APIMaybeUnimportedDataset>> {
-  const parameters = isUnreported != null ? `?isUnreported=${String(isUnreported)}` : "";
-  const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);
+  const params = new URLSearchParams();
+  if (isUnreported != null) {
+    params.append("isUnreported", String(isUnreported));
+  }
+  if (folderId != null) {
+    params.append("folderId", folderId);
+  }
+  if (searchQuery != null) {
+    params.append("searchQuery", searchQuery.trim());
+  }
+  if (limit != null) {
+    params.append("limit", String(limit));
+  }
+
+  const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
   return datasets;
 }
@@ -1326,12 +1342,24 @@ export function getDataset(
   );
 }
 
-export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Promise<APIDataset> {
+export function updateDataset(
+  datasetId: APIDatasetId,
+  dataset: APIMaybeUnimportedDataset,
+  folderId?: string,
+  skipResolutions?: boolean,
+): Promise<APIDataset> {
+  folderId = folderId || dataset.folderId;
+
+  const params = new URLSearchParams();
+  if (skipResolutions) {
+    params.append("skipResolutions", "true");
+  }
+
   return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}?${params}`,
     {
       method: "PATCH",
-      data: dataset,
+      data: { ...dataset, folderId },
     },
   );
 }

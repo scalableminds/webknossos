@@ -294,3 +294,13 @@ voxelytics.zeroRunWorkflow = No run for this workflow found
 publication.notFound = Publication could not be found.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
+
+folder.delete.notEmpty.children=Cannot delete folders that still contain other folders
+folder.delete.notEmpty.datasets=Cannot delete folders that still contain datasets
+folder.notFound=Could not find the requested folder
+folder.delete.root=Cannot delete the organization’s root folder
+folder.move.root=Cannot move the organization’s root folder
+folder.update.notAllowed=No write access on this folder
+folder.update.name.failed=Failed to update the folder’s name
+folder.update.teams.failed=Failed to update the folder’s allowed teams
+folder.create.failed.teams.failed=Failed to create folder in this location

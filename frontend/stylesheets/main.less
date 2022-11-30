@@ -433,9 +433,10 @@ i.without-icon-margin,
     text-align: right;
 
     tbody tr:nth-child(odd) {
-      background-color: rgba(128,128,128, 0.1);
+      background-color: rgba(128, 128, 128, 0.1);
     }
-    td, th {
+    td,
+    th {
       padding: 8px;
     }
     .stats-label {
@@ -463,7 +464,7 @@ i.without-icon-margin,
       background-color: @component-background;
     }
     .log-line {
-      @log-font-family: 'RobotoMono', Monaco, 'Courier New', monospace;
+      @log-font-family: "RobotoMono", Monaco, "Courier New", monospace;
       @log-font-size: 12px;
       @log-line-height: 19px;
       @log-line-number-width: 60px;
@@ -540,4 +541,26 @@ i.without-icon-margin,
       }
     }
   }
+}
+
+.folder-item {
+  padding: 0 4px;
+  border-radius: 2px;
+  display: inline-block;
+  flex-grow: 1;
+}
+
+.valid-drop-target {
+  background-color: @blue-4;
+}
+
+.highlight-folder-sidebar {
+  background-color: @blue-2;
+}
+
+.sidebar-label {
+  color: var(--ant-text-secondary);
+  font-size: 12px;
+  font-weight: 50;
+  letter-spacing: 0.5px;
 }

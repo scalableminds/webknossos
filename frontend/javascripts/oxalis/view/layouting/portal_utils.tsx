@@ -20,7 +20,8 @@ function getOrCreatePortalTargetNode(id: string) {
   return portalTargetNodes[id];
 }
 
-// This is the placeholder component which is registered with and rendered by GoldenLayout
+// This is the placeholder component to which can be rendered from somewhere else
+// via RenderToPortal.
 export class PortalTarget extends React.Component<any, any> {
   componentWillUnmount() {
     const child = getOrCreatePortalTargetNode(this.props.portalId);
@@ -38,7 +39,6 @@ export class PortalTarget extends React.Component<any, any> {
           if (!node) {
             return;
           }
-
           const child = getOrCreatePortalTargetNode(portalId);
           node.appendChild(child);
         }}

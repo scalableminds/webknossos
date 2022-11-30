@@ -69,12 +69,12 @@ GET           /teams/:id/progressOverview                                       
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational              controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                     controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String])
+GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], searchQuery: Option[String], limit: Option[Int])
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
 POST          /datasets/exploreRemote                                                   controllers.DataSetController.exploreRemoteDataset
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                           controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
-PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String)
+PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String, skipResolutions: Option[Boolean])
 GET           /datasets/:organizationName/:dataSetName/accessList                       controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
 DELETE        /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
@@ -83,6 +83,15 @@ GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail  
 PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache              controllers.DataSetController.removeFromThumbnailCache(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/isValidNewName                   controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
+
+# Folders
+GET           /folders/root                                                             controllers.FolderController.getRoot
+GET           /folders/tree                                                             controllers.FolderController.getTree
+POST          /folders/create                                                           controllers.FolderController.create(parentId: String, name: String)
+GET           /folders/:id                                                              controllers.FolderController.get(id: String)
+PUT           /folders/:id                                                              controllers.FolderController.update(id: String)
+PUT           /folders/:id/move                                                         controllers.FolderController.move(id: String, newParentId: String)
+DELETE        /folders/:id                                                              controllers.FolderController.delete(id: String)
 
 # Datastores
 GET           /datastores                                                               controllers.DataStoreController.list

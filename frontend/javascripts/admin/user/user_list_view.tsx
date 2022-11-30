@@ -1,5 +1,5 @@
 import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
@@ -82,7 +82,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchData();
 
     if (location.hash === "#invite") {
@@ -93,7 +93,7 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(): Promise<void> {
@@ -648,4 +648,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(UserListView));
+export default connector(UserListView);

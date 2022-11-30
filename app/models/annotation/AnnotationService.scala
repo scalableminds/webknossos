@@ -118,7 +118,7 @@ class AnnotationService @Inject()(
   private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
-      datasetAllowedTeamIds <- dataSetService.allowedTeamIdsFor(dataSet._id)
+      datasetAllowedTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true) ?~> "allowedTeams.notFound"
     } yield {
       val selectedTeamOpt = datasetAllowedTeamIds.intersect(userTeamIds).headOption
       selectedTeamOpt match {

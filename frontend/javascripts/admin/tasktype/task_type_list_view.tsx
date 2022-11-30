@@ -1,5 +1,5 @@
 import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal } from "antd";
@@ -26,7 +26,6 @@ import {
 const { Column } = Table;
 const { Search } = Input;
 type Props = {
-  history: RouteComponentProps["history"];
   initialSearchValue?: string;
 };
 type State = {
@@ -50,7 +49,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
 
     if (this.props.initialSearchValue && this.props.initialSearchValue !== "") {
       this.setState({
@@ -62,7 +61,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(): Promise<void> {
@@ -313,4 +312,4 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskTypeListView);
+export default TaskTypeListView;

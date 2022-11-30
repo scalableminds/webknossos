@@ -10,7 +10,6 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import utils.ObjectId
 import javax.inject.Inject
-import models.binary.DataSetAllowedTeamsDAO
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
@@ -18,7 +17,6 @@ import scala.concurrent.ExecutionContext
 @Api
 class TeamController @Inject()(teamDAO: TeamDAO,
                                userTeamRolesDAO: UserTeamRolesDAO,
-                               datasetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                teamService: TeamService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
@@ -46,10 +44,10 @@ class TeamController @Inject()(teamDAO: TeamDAO,
       _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
       team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
       _ <- bool2Fox(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN
-      _ <- teamDAO.deleteOne(teamIdValidated)
       _ <- teamService.assertNoReferences(teamIdValidated) ?~> "team.delete.inUse" ~> FORBIDDEN
+      _ <- teamDAO.deleteOne(teamIdValidated)
       _ <- userTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
-      _ <- datasetAllowedTeamsDAO.removeTeamFromAllDatasets(teamIdValidated)
+      _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(teamIdValidated)
     } yield JsonOk(Messages("team.deleted"))
   }
 

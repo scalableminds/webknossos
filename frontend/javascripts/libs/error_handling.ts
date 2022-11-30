@@ -42,13 +42,14 @@ export function handleGenericError(
   error: Error & {
     messages?: unknown;
   },
+  fallbackMessage?: string | null,
 ) {
   if (error.messages) {
     // The user was already notified about this error
     return;
   }
 
-  Toast.error(messages.unknown_error);
+  Toast.error(fallbackMessage || messages.unknown_error);
   console.warn(error);
 }
 

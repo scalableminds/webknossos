@@ -1,17 +1,14 @@
 import * as THREE from "three";
 import { document } from "libs/window";
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'renderer' implicitly has type 'any' in s... Remove this comment to see the full error message
-let renderer = null;
+let renderer: THREE.WebGLRenderer | null = null;
 
-function getRenderer() {
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'renderer' implicitly has an 'any' type.
+function getRenderer(): THREE.WebGLRenderer {
   if (renderer != null) {
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'renderer' implicitly has an 'any' type.
     return renderer;
   }
 
   const renderCanvasElement = document.getElementById("render-canvas");
-  renderer =
+  renderer = (
     renderCanvasElement != null
       ? // Create a WebGL2 renderer
         new THREE.WebGLRenderer({
@@ -20,7 +17,8 @@ function getRenderer() {
           preserveDrawingBuffer: true,
           antialias: true,
         })
-      : {};
+      : {}
+  ) as THREE.WebGLRenderer;
 
   return renderer;
 }

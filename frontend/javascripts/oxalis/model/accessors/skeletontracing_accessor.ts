@@ -51,7 +51,7 @@ export function getNullableSkeletonTracing(
   const skeletonTracings = (tracings || []).filter((tracing) => tracing.typ === "Skeleton");
 
   if (skeletonTracings.length > 0 && skeletonTracings[0].typ === "Skeleton") {
-    // Only one skeleton is supported. The second type-check is only for flow.
+    // Only one skeleton is supported. The second type-check is only for TS.
     return skeletonTracings[0];
   }
 

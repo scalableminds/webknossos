@@ -252,7 +252,8 @@ export class InviteUsersModal extends React.Component<
     return (
       <React.Fragment>
         Send invites to the following email addresses. Multiple addresses should be separated with a
-        comma, a space or a new line:
+        comma, a space or a new line. Note that new users have limited permissions by default which
+        is why their role and team assignments should be doublechecked after account activation.
         <Input.TextArea
           spellCheck={false}
           autoSize={{
@@ -273,7 +274,7 @@ export class InviteUsersModal extends React.Component<
   render() {
     return (
       <Modal
-        visible={this.props.visible == null ? true : this.props.visible}
+        open={this.props.visible == null ? true : this.props.visible}
         title="Invite Users"
         width={600}
         footer={

@@ -55,7 +55,7 @@ const fullWidth = {
 };
 const maxDisplayedTasksCount = 50;
 const TASK_CSV_HEADER =
-  "taskId,dataSet,taskType,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
+  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 type Props = {
   taskId: string | null | undefined;
   history: RouteComponentProps["history"];
@@ -611,7 +611,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               <Row gutter={8} align="middle" wrap={false}>
                 <Col flex="auto">
                   <FormItem
-                    name="taskTypeIdOrSummary"
+                    name="taskTypeId"
                     label="Task Type"
                     hasFeedback
                     rules={[

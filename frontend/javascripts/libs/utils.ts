@@ -528,10 +528,6 @@ export function __range__(left: number, right: number, inclusive: boolean): Arra
   return range;
 }
 
-export function __guard__<T, U>(value: T | null | undefined, transform: (arg0: T) => U) {
-  return typeof value !== "undefined" && value !== null ? transform(value) : undefined;
-}
-
 export function sleep(timeout: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, timeout);
@@ -1080,11 +1076,25 @@ export function coalesce<T>(obj: { [key: string]: T }, field: T): T | null {
 }
 
 export function pluralize(str: string, count: number, optPluralForm: string | null = null): string {
-  if (count < 2) {
+  if (count === 1) {
     return str;
   }
   if (optPluralForm != null) {
     return optPluralForm;
   }
   return `${str}s`;
+}
+
+export function conjugate(
+  verbStr: string,
+  count: number,
+  optThirdForm: string | null = null,
+): string {
+  if (count >= 2) {
+    return verbStr;
+  }
+  if (optThirdForm != null) {
+    return optThirdForm;
+  }
+  return `${verbStr}s`;
 }

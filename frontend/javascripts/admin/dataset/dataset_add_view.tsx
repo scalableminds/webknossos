@@ -182,7 +182,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
         <VoxelyticsBanner />
       </Layout>
       <Modal
-        visible={showAfterUploadContent}
+        open={showAfterUploadContent}
         closable={showAfterUploadContent}
         keyboard={showAfterUploadContent}
         maskClosable={false}

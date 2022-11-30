@@ -219,6 +219,21 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
 
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/dashboard/datasets/:folderIdWithName"
+                render={({ match }: ContextRouter) => {
+                  const initialTabKey = "datasets";
+                  return (
+                    <DashboardView
+                      userId={null}
+                      isAdminView={false}
+                      initialTabKey={initialTabKey}
+                    />
+                  );
+                }}
+              />
+
               <Route
                 // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 isAuthenticated={isAuthenticated}

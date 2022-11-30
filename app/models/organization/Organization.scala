@@ -19,6 +19,7 @@ case class Organization(
     logoUrl: String,
     displayName: String,
     pricingPlan: PricingPlan,
+    _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
@@ -45,6 +46,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.logourl,
         r.displayname,
         pricingPlan,
+        ObjectId(r._Rootfolder),
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
@@ -80,8 +82,8 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def insertOne(o: Organization): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${new java.sql.Timestamp(
+        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, _rootFolder, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)
+                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${new java.sql.Timestamp(
           o.created)}, ${o.isDeleted})
             """)
     } yield ()

@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed import of N5 datasets. [#6668](https://github.com/scalableminds/webknossos/pull/6668)
 
 ### Removed
 

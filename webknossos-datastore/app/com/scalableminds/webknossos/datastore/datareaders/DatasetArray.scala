@@ -130,5 +130,5 @@ class DatasetArray(relativePath: DatasetPath,
 }
 
 object DatasetArray {
-  val chunkSizeLimitBytes: Int = 64 * 1024 * 1024
+  val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
 }

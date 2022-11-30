@@ -122,7 +122,7 @@ class AuthenticationController @Inject()(
                          email: String,
                          firstName: String,
                          lastName: String,
-                         autoActivate: Boolean = true,
+                         autoActivate: Boolean,
                          password: Option[String],
                          inviteBox: Box[Invite] = Empty,
                          registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {

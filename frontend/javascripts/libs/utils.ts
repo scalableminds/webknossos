@@ -528,10 +528,6 @@ export function __range__(left: number, right: number, inclusive: boolean): Arra
   return range;
 }
 
-export function __guard__<T, U>(value: T | null | undefined, transform: (arg0: T) => U) {
-  return typeof value !== "undefined" && value !== null ? transform(value) : undefined;
-}
-
 export function sleep(timeout: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, timeout);

@@ -44,8 +44,8 @@ class TeamController @Inject()(teamDAO: TeamDAO,
       _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
       team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
       _ <- bool2Fox(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN
-      _ <- teamDAO.deleteOne(teamIdValidated)
       _ <- teamService.assertNoReferences(teamIdValidated) ?~> "team.delete.inUse" ~> FORBIDDEN
+      _ <- teamDAO.deleteOne(teamIdValidated)
       _ <- userTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
       _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(teamIdValidated)
     } yield JsonOk(Messages("team.deleted"))

@@ -186,7 +186,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
         if (!("trees" in parsedTracing)) {
-          // This check is only for flow to realize that we have a skeleton tracing
+          // This check is only for TS to realize that we have a skeleton tracing
           // on our hands.
           throw new Error("Skeleton tracing doesn't contain trees");
         }
@@ -745,7 +745,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         type="info"
         message={
           <React.Fragment>
-            {this.state.selectedTrees.length} Tree(s) selected.{" "}
+            {this.state.selectedTrees.length}{" "}
+            {Utils.pluralize("Tree", this.state.selectedTrees.length)} selected.{" "}
             <Button type="dashed" size="small" onClick={this.deselectAllTrees}>
               Clear Selection
             </Button>

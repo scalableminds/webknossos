@@ -42,6 +42,8 @@ import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
@@ -59,9 +61,7 @@ type StateProps = {
   activeUser: APIUser;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+
 type State = {
   showFinishedTasks: boolean;
   isLoading: boolean;
@@ -106,7 +106,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> {
+class DashboardTaskListView extends React.PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
@@ -126,12 +126,12 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchNextPage(0);
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
@@ -528,33 +528,16 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   render() {
     return (
       <div>
-        <div className="pull-right">
-          <AsyncButton
-            type="primary"
-            icon={<UserAddOutlined />}
-            onClick={() => this.confirmGetNewTask()}
-            disabled={this.props.isAdminView && this.props.userId != null}
-          >
-            Get a New Task
-          </AsyncButton>
-          <Button
-            onClick={this.toggleShowFinished}
-            style={{
-              marginLeft: 20,
-            }}
-          >
-            Show {this.getFinishVerb()} Tasks Only
-          </Button>
-        </div>
+        <TopBar
+          confirmGetNewTask={this.confirmGetNewTask}
+          isAdminView={this.props.isAdminView}
+          userId={this.props.userId}
+          toggleShowFinished={this.toggleShowFinished}
+          getFinishVerb={this.getFinishVerb}
+        />
         <h3 id="tasksHeadline" className="TestTasksHeadline">
           {this.state.showFinishedTasks ? "My Finished Tasks" : null}
         </h3>
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
-        />
         {this.renderTaskList()}
         <div
           style={{
@@ -585,9 +568,53 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   }
 }
 
+function TopBar({
+  confirmGetNewTask,
+  isAdminView,
+  userId,
+  toggleShowFinished,
+  getFinishVerb,
+}: {
+  confirmGetNewTask: () => Promise<void>;
+  isAdminView: boolean;
+  userId: string | null | undefined;
+  toggleShowFinished: () => void;
+  getFinishVerb: () => string;
+}) {
+  const activeTab = React.useContext(ActiveTabContext);
+  const renderingTab = React.useContext(RenderingTabContext);
+
+  const content = (
+    <div className="pull-right">
+      <AsyncButton
+        type="primary"
+        icon={<UserAddOutlined />}
+        onClick={() => confirmGetNewTask()}
+        disabled={isAdminView && userId != null}
+      >
+        Get a New Task
+      </AsyncButton>
+      <Button
+        onClick={toggleShowFinished}
+        style={{
+          marginLeft: 20,
+        }}
+      >
+        Show {getFinishVerb()} Tasks Only
+      </Button>
+    </div>
+  );
+
+  return (
+    <RenderToPortal portalId="dashboard-TabBarExtraContent">
+      {activeTab === renderingTab ? content : null}
+    </RenderToPortal>
+  );
+}
+
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DashboardTaskListView));
+export default connector(DashboardTaskListView);

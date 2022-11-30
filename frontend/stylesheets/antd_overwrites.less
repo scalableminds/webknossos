@@ -38,10 +38,6 @@ p {
   }
 }
 
-.ant-tag {
-  margin-bottom: 8px;
-}
-
 .ant-notification {
   z-index: 1040; // make sure we are above nav bar
   width: auto;
@@ -241,4 +237,33 @@ label.ant-checkbox-wrapper {
 .link-button > .anticon + span,
 .link-button > span + .anticon {
   margin-left: initial;
+}
+
+.hide-checkbox-selection {
+  .ant-table-selection,
+  .ant-table-selection-col,
+  .ant-table-selection-column {
+    display: none;
+  }
+}
+
+.ant-tree-title {
+  // Make the tree element full-width (subtract the width of the
+  // directory icon)
+  width: calc(100% - 24px);
+  display: flex;
+}
+
+.ant-tree-directory {
+  background: transparent;
+  display: flex;
+}
+
+.ant-tree-node-content-wrapper {
+  display: flex;
+}
+
+.ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,
+.ant-tree.ant-tree-directory .ant-tree-treenode-selected::before {
+  border-radius: 4px;
 }

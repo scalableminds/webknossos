@@ -272,8 +272,9 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {...getRootProps()}
             style={{
               position: "relative",
-              minHeight: `calc(100vh - ${navbarHeight}px)`,
+              height: `calc(100vh - ${navbarHeight}px)`,
             }}
+            className="flex-column"
           >
             {
               // While dragging files over the view, the OverlayDropZone is rendered

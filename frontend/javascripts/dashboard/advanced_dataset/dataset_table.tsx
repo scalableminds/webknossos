@@ -1,6 +1,6 @@
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Table, Tag, Tooltip } from "antd";
+import { Dropdown, Table, Tag, Tooltip } from "antd";
 import type {
   FilterValue,
   SorterResult,
@@ -22,11 +22,18 @@ import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accesso
 import { stringToColor, formatScale } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
-import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
+import DatasetActionView, {
+  getDatasetActionContextMenu,
+} from "dashboard/advanced_dataset/dataset_action_view";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
 import FixedExpandableTable from "components/fixed_expandable_table";
+import { DndProvider, useDrag } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
+import Shortcut from "libs/shortcut_component";
+import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
@@ -43,13 +50,105 @@ type Props = {
   isUserAdmin: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (arg0: APIDatasetId, arg1: Array<APIMaybeUnimportedDataset>) => Promise<void>;
+  reloadDataset: (arg0: APIDatasetId, arg1?: Array<APIMaybeUnimportedDataset>) => Promise<void>;
   updateDataset: (arg0: APIDataset) => Promise<void>;
   addTagToSearch: (tag: string) => void;
+  onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
+  selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
+  hideDetailsColumns?: boolean;
 };
 type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
+  contextMenuPosition: [number, number] | null | undefined;
+  datasetForContextMenu: APIMaybeUnimportedDataset | null;
+};
+
+type ContextMenuProps = {
+  contextMenuPosition: [number, number] | null | undefined;
+  hideContextMenu: () => void;
+  dataset: APIMaybeUnimportedDataset | null;
+  reloadDataset: Props["reloadDataset"];
+};
+
+function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
+  const inputRef = React.useContext(ContextMenuContext);
+  const { dataset, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
+  let overlay = <div />;
+
+  if (contextMenuPosition != null && dataset != null) {
+    // getDatasetActionContextMenu should not be turned into <DatasetActionMenu />
+    // as this breaks antd's styling of the menu within the dropdown.
+    overlay = getDatasetActionContextMenu({
+      hideContextMenu,
+      dataset,
+      reloadDataset,
+    });
+  }
+
+  if (inputRef == null || inputRef.current == null) return null;
+  const refContent = inputRef.current;
+
+  return (
+    <React.Fragment>
+      <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+      <Dropdown
+        overlay={overlay}
+        overlayClassName="dropdown-overlay-container-for-context-menu"
+        open={contextMenuPosition != null}
+        getPopupContainer={() => refContent}
+        // @ts-ignore
+        destroyPopupOnHide
+      >
+        <div />
+      </Dropdown>
+    </React.Fragment>
+  );
+}
+
+function ContextMenuContainer(props: ContextMenuProps) {
+  return (
+    /* Sticky positioning doesn't work for this container for some reason.
+     * The y position is always off by a certain amount.
+     * Maybe because the container doesn't cover the entire screen?
+     * Use absolute positioning for now. This forgoes the "stay-in-container"
+     * behavior, but that's not critical for the context menu right now.
+     */
+    <GenericContextMenuContainer positionAbsolute {...props}>
+      <ContextMenuInner {...props} />
+    </GenericContextMenuContainer>
+  );
+}
+
+// Adapted from https://ant.design/components/table/
+// (needed adaption to react-dnd 11.1.3). Updating react-dnd
+// wasn't possible due to react-sortable-tree.
+interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+  index: number;
+}
+export const DraggableDatasetType = "DraggableDatasetRow";
+
+const DraggableDatasetRow = ({
+  index,
+  className,
+  style,
+  ...restProps
+}: DraggableDatasetRowProps) => {
+  const ref = React.useRef<HTMLTableRowElement>(null);
+  // @ts-ignore
+  const datasetName = restProps["data-row-key"];
+  const [, drag] = useDrag({
+    item: { type: DraggableDatasetType, index, datasetName },
+  });
+  drag(ref);
+
+  return <tr ref={ref} className={className} style={{ cursor: "move", ...style }} {...restProps} />;
+};
+
+const components = {
+  body: {
+    row: DraggableDatasetRow,
+  },
 };
 
 class DatasetTable extends React.PureComponent<Props, State> {
@@ -59,6 +158,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
       order: "descend",
     },
     prevSearchQuery: "",
+    contextMenuPosition: null,
+    datasetForContextMenu: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
@@ -130,43 +231,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
     return filterByQuery(filteredByTags(filterByMode(filterByHasLayers(this.props.datasets))));
   }
 
-  editTagFromDataset = (
-    dataset: APIMaybeUnimportedDataset,
-    shouldAddTag: boolean,
-    tag: string,
-    event: React.SyntheticEvent,
-  ): void => {
-    event.stopPropagation(); // prevent the onClick event
-
-    if (!dataset.isActive) {
-      console.error(`Tags can only be added to active datasets. ${dataset.name} is not active.`);
-      return;
-    }
-
-    let updatedDataset = dataset;
-
-    if (shouldAddTag) {
-      if (!dataset.tags.includes(tag)) {
-        updatedDataset = update(dataset, {
-          tags: {
-            $push: [tag],
-          },
-        });
-      }
-    } else {
-      const newTags = _.without(dataset.tags, tag);
-
-      updatedDataset = update(dataset, {
-        tags: {
-          $set: newTags,
-        },
-      });
-    }
-
-    trackAction("Edit dataset tag");
-    this.props.updateDataset(updatedDataset);
-  };
-
   renderEmptyText() {
     const maybeWarning =
       this.props.datasetFilteringMode !== "showAllDatasets" ? (
@@ -185,6 +249,20 @@ class DatasetTable extends React.PureComponent<Props, State> {
     );
   }
 
+  showContextMenuAt = (xPos: number, yPos: number) => {
+    // On Windows the right click to open the context menu is also triggered for the overlay
+    // of the context menu. This causes the context menu to instantly close after opening.
+    // Therefore delay the state update to delay that the context menu is rendered.
+    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    setTimeout(
+      () =>
+        this.setState({
+          contextMenuPosition: [xPos, yPos],
+        }),
+      0,
+    );
+  };
+
   render() {
     const filteredDataSource = this.getFilteredDatasets();
     const { sortedInfo } = this.state;
@@ -195,9 +273,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const datasetToRankMap: Map<APIMaybeUnimportedDataset, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
-    const sortedDataSource = // Sort using the dice coefficient if the table is not sorted otherwise
-      // and if the query is longer then 3 characters to avoid sorting *all* datasets
-      this.props.searchQuery.length > 3 && sortedInfo.columnKey == null
+    const sortedDataSource =
+      // Sort using the dice coefficient if the table is not sorted by another key
+      // and if the query is at least 3 characters long to avoid sorting *all* datasets
+      this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH && sortedInfo.columnKey == null
         ? _.chain(filteredDataSource)
             .map((dataset) => {
               const diceCoefficient = dice(dataset.name, this.props.searchQuery);
@@ -243,169 +322,332 @@ class DatasetTable extends React.PureComponent<Props, State> {
     );
 
     return (
-      <FixedExpandableTable
-        dataSource={sortedDataSource}
-        rowKey="name"
-        pagination={{
-          defaultPageSize: 50,
-        }}
-        onChange={this.handleChange}
-        locale={{
-          emptyText: this.renderEmptyText(),
-        }}
-      >
-        <Column
-          title="Name"
-          dataIndex="name"
-          key="name"
-          width={280}
-          sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
-          sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-          render={(name: string, dataset: APIMaybeUnimportedDataset) => (
-            <div>
-              <Link
-                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-                title="View Dataset"
-                className="incognito-link"
-              >
-                {dataset.name}
-              </Link>
-              <br />
-              <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
-            </div>
-          )}
+      <DndProvider backend={HTML5Backend}>
+        <ContextMenuContainer
+          hideContextMenu={() => {
+            this.setState({ contextMenuPosition: null });
+          }}
+          dataset={this.state.datasetForContextMenu}
+          reloadDataset={this.props.reloadDataset}
+          contextMenuPosition={this.state.contextMenuPosition}
         />
-        <Column
-          title="Tags"
-          dataIndex="tags"
-          key="tags"
-          sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-          render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
-            dataset.isActive ? (
-              <div style={{ maxWidth: 280 }}>
-                {tags.map((tag) => (
-                  <CategorizationLabel
-                    tag={tag}
-                    key={tag}
-                    kind="datasets"
-                    onClick={_.partial(this.props.addTagToSearch, tag)}
-                    /* @ts-ignore */
-                    onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
-                    closable
+        <FixedExpandableTable
+          dataSource={sortedDataSource}
+          rowKey="name"
+          components={components}
+          pagination={{
+            defaultPageSize: 50,
+          }}
+          className="hide-checkbox-selection"
+          onChange={this.handleChange}
+          locale={{
+            emptyText: this.renderEmptyText(),
+          }}
+          onRow={(record: APIMaybeUnimportedDataset) => ({
+            onClick: (event) => {
+              // @ts-expect-error
+              if (event.target?.tagName !== "TD") {
+                // Don't (de)select when another element within the row was clicked
+                // (e.g., a link). Otherwise, clicking such elements would cause two actions
+                // (e.g., the link action and a (de)selection).
+                return;
+              }
+              if (this.props.onSelectDataset) {
+                if (this.props.selectedDataset === record) {
+                  this.props.onSelectDataset(null);
+                } else {
+                  this.props.onSelectDataset(record);
+                }
+              }
+            },
+            onContextMenu: (event) => {
+              event.preventDefault();
+
+              // Find the overlay div whose parent acts as a reference for positioning the context menu.
+              // Since the dashboard tabs don't destroy their contents after switching the tabs,
+              // there might be several overlays. We will use the one with a non-zero width since
+              // this should be the relevant one.
+              const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
+              const referenceDiv = Array.from(overlayDivs)
+                .map((p) => p.parentElement)
+                .find((potentialParent) => {
+                  if (potentialParent == null) {
+                    return false;
+                  }
+                  const bounds = potentialParent.getBoundingClientRect();
+                  return bounds.width > 0;
+                });
+
+              if (referenceDiv == null) {
+                return;
+              }
+              const bounds = referenceDiv.getBoundingClientRect();
+              const x = event.clientX - bounds.left;
+              const y = event.clientY - bounds.top;
+
+              this.showContextMenuAt(x, y);
+              this.setState({ datasetForContextMenu: record });
+            },
+            onDoubleClick: () => {
+              window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
+            },
+          })}
+          rowSelection={{
+            selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
+            onSelectNone: () => this.props.onSelectDataset?.(null),
+          }}
+        >
+          <Column
+            title="Name"
+            dataIndex="name"
+            key="name"
+            width={280}
+            sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
+            sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
+            render={(name: string, dataset: APIMaybeUnimportedDataset) => (
+              <>
+                <Link
+                  to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+                  title="View Dataset"
+                  className="incognito-link"
+                >
+                  {dataset.name}
+                </Link>
+                <br />
+                <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
+              </>
+            )}
+          />
+          <Column
+            title="Tags"
+            dataIndex="tags"
+            key="tags"
+            sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
+            render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
+              dataset.isActive ? (
+                <DatasetTags
+                  dataset={dataset}
+                  onClickTag={this.props.addTagToSearch}
+                  updateDataset={this.props.updateDataset}
+                />
+              ) : (
+                <Tooltip title="No tags available for inactive datasets">
+                  <WarningOutlined
+                    style={{
+                      color: "@disabled-color",
+                    }}
                   />
-                ))}
-                <EditableTextIcon
-                  icon={<PlusOutlined />}
-                  onChange={_.partial(this.editTagFromDataset, dataset, true)}
-                />
-              </div>
-            ) : (
-              <Tooltip title="No tags available for inactive datasets">
-                <WarningOutlined
-                  style={{
-                    color: "@disabled-color",
-                  }}
-                />
-              </Tooltip>
-            )
-          }
-        />
-        <Column
-          title="Voxel Size & Extent"
-          dataIndex="scale"
-          key="scale"
-          width={230}
-          render={(__, dataset: APIMaybeUnimportedDataset) =>
-            `${
-              dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
-            }  ${getDatasetExtentAsString(dataset)}`
-          }
-        />
-        <Column
-          width={180}
-          title="Creation Date"
-          dataIndex="created"
-          key="created"
-          sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
-          sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
-          render={(created) => <FormattedDate timestamp={created} />}
-        />
-
-        <Column
-          title="Access Permissions"
-          dataIndex="allowedTeams"
-          key="allowedTeams"
-          filters={accessPermissionFilters}
-          onFilter={(value, dataset) => {
-            if (value === PUBLIC_SYMBOL) {
-              return dataset.isPublic;
+                </Tooltip>
+              )
             }
-            return dataset.allowedTeams.some((team) => team.name === value);
-          }}
-          render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
-            const permittedTeams = [...teams];
-            if (dataset.isPublic) {
-              permittedTeams.push({ name: "public", id: "", organization: "" });
-            }
+          />
+          {!this.props.hideDetailsColumns ? (
+            <Column
+              title="Voxel Size & Extent"
+              dataIndex="scale"
+              key="scale"
+              width={230}
+              render={(__, dataset: APIMaybeUnimportedDataset) =>
+                `${
+                  dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
+                }  ${getDatasetExtentAsString(dataset)}`
+              }
+            />
+          ) : null}
+          <Column
+            width={180}
+            title="Creation Date"
+            dataIndex="created"
+            key="created"
+            sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
+            sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
+            render={(created) => <FormattedDate timestamp={created} />}
+          />
+          {!this.props.hideDetailsColumns ? (
+            <Column
+              title="Access Permissions"
+              dataIndex="allowedTeams"
+              key="allowedTeams"
+              filters={accessPermissionFilters}
+              onFilter={(value, dataset) => {
+                if (value === PUBLIC_SYMBOL) {
+                  return dataset.isPublic;
+                }
+                return dataset.allowedTeams.some((team) => team.name === value);
+              }}
+              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => (
+                <TeamTags dataset={dataset} />
+              )}
+            />
+          ) : null}
+          {!this.props.hideDetailsColumns ? (
+            <Column
+              title="Data Layers"
+              key="dataLayers"
+              dataIndex="dataSource.dataLayers"
+              filters={dataLayersFilter}
+              onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
+                "dataLayers" in dataset.dataSource
+                  ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
+                  : false
+              }
+              render={(__, dataset: APIMaybeUnimportedDataset) => (
+                <DatasetLayerTags dataset={dataset} />
+              )}
+            />
+          ) : null}
 
-            return permittedTeams.map((team) => (
-              <div key={`allowed_teams_${dataset.name}_${team.name}`}>
-                <Tag
-                  style={{
-                    maxWidth: 200,
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                  }}
-                  color={stringToColor(team.name)}
-                >
-                  {team.name}
-                </Tag>
-              </div>
-            ));
-          }}
-        />
-        <Column
-          title="Data Layers"
-          key="dataLayers"
-          dataIndex="dataSource.dataLayers"
-          filters={dataLayersFilter}
-          onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
-            "dataLayers" in dataset.dataSource
-              ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
-              : false
-          }
-          render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <div style={{ maxWidth: 250 }}>
-              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
-                <Tag
-                  key={layer.name}
-                  style={{
-                    maxWidth: 250,
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {layer.name} - {layer.elementClass}
-                </Tag>
-              ))}
-            </div>
-          )}
-        />
-
-        <Column
-          width={200}
-          title="Actions"
-          key="actions"
-          fixed="right"
-          render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
-          )}
-        />
-      </FixedExpandableTable>
+          <Column
+            width={200}
+            title="Actions"
+            key="actions"
+            fixed="right"
+            render={(__, dataset: APIMaybeUnimportedDataset) => (
+              <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
+            )}
+          />
+        </FixedExpandableTable>
+      </DndProvider>
     );
   }
+}
+
+export function DatasetTags({
+  dataset,
+  onClickTag,
+  updateDataset,
+}: {
+  dataset: APIDataset;
+  onClickTag?: (t: string) => void;
+  updateDataset: (d: APIDataset) => void;
+}) {
+  const editTagFromDataset = (
+    updatedDataset: APIMaybeUnimportedDataset,
+    shouldAddTag: boolean,
+    tag: string,
+    event: React.MouseEvent,
+  ): void => {
+    event.stopPropagation(); // prevent the onClick event
+
+    if (!updatedDataset.isActive) {
+      console.error(
+        `Tags can only be modified for active datasets. ${updatedDataset.name} is not active.`,
+      );
+      return;
+    }
+
+    if (shouldAddTag) {
+      if (!dataset.tags.includes(tag)) {
+        updatedDataset = update(dataset, {
+          tags: {
+            $push: [tag],
+          },
+        });
+      }
+    } else {
+      const newTags = _.without(dataset.tags, tag);
+
+      updatedDataset = update(dataset, {
+        tags: {
+          $set: newTags,
+        },
+      });
+    }
+
+    trackAction("Edit dataset tag");
+    updateDataset(updatedDataset);
+  };
+
+  return (
+    <div style={{ maxWidth: 280 }}>
+      {dataset.tags.map((tag) => (
+        <CategorizationLabel
+          tag={tag}
+          key={tag}
+          kind="datasets"
+          onClick={_.partial(onClickTag || _.noop, tag)}
+          onClose={_.partial(editTagFromDataset, dataset, false, tag)}
+          closable={dataset.isEditable}
+        />
+      ))}
+      {dataset.isEditable ? (
+        <EditableTextIcon
+          icon={<PlusOutlined />}
+          onChange={_.partial(editTagFromDataset, dataset, true)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {
+  return (
+    <div style={{ maxWidth: 250 }}>
+      {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
+        <Tag
+          key={layer.name}
+          style={{
+            maxWidth: 250,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {layer.name} - {layer.elementClass}
+        </Tag>
+      ))}
+    </div>
+  );
+}
+
+export function TeamTags({
+  dataset,
+  emptyValue,
+}: {
+  dataset: APIMaybeUnimportedDataset;
+  emptyValue?: React.ReactNode;
+}) {
+  const teams = dataset.allowedTeamsCumulative;
+  const permittedTeams = [...teams];
+  if (dataset.isPublic) {
+    permittedTeams.push({ name: "public", id: "", organization: "" });
+  }
+
+  if (permittedTeams.length === 0 && emptyValue != null) {
+    return <Tag>{emptyValue}</Tag>;
+  }
+
+  const allowedTeamsById = _.keyBy(dataset.allowedTeams, "id");
+  return (
+    <>
+      {permittedTeams.map((team) => {
+        const isCumulative = !allowedTeamsById[team.id];
+        return (
+          <Tooltip
+            title={
+              isCumulative
+                ? "This team may access this dataset, because of the permissions of the current folder."
+                : null
+            }
+            key={`allowed_teams_${dataset.name}_${team.name}`}
+          >
+            <Tag
+              style={{
+                maxWidth: 200,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              }}
+              color={stringToColor(team.name)}
+            >
+              {team.name}
+              {isCumulative ? "*" : ""}
+            </Tag>
+          </Tooltip>
+        );
+      })}
+    </>
+  );
 }
 
 export default DatasetTable;

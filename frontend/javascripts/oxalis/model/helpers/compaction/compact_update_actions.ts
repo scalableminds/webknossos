@@ -5,6 +5,7 @@ import type {
   CreateNodeUpdateAction,
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
+  DeleteTreeUpdateAction,
   UpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
@@ -140,10 +141,9 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
   // just one deleteTree update action is sufficient for the server to delete the tree.
   // As the deleteTree update action is already part of the update actions if a tree is deleted,
   // all corresponding deleteNode/deleteEdge update actions can simply be removed.
-  // TODO: Remove the check in map once Flow recognizes that the result of the filter contains only deleteTree update actions
   const deletedTreeIds = updateActions
     .filter((ua) => ua.name === "deleteTree")
-    .map((ua) => (ua.name === "deleteTree" ? ua.value.id : -1));
+    .map((ua) => (ua as DeleteTreeUpdateAction).value.id);
   return _.filter(
     updateActions,
     (ua) =>

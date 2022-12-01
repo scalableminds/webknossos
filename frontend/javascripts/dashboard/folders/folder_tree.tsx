@@ -13,6 +13,7 @@ import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
+import { MenuInfo } from "rc-menu/lib/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 
@@ -77,8 +78,16 @@ export function FolderTreeSidebar({
   });
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
-    (keys) => {
-      if (keys.length > 0) {
+    (keys, event) => {
+      // Without the following check, the onSelect callback would also be called by antd
+      // when the user clicks on a menu entry in the context menu (e.g., deleting a folder
+      // would directly select it afterwards).
+      // Since the context menu is inserted at the root of the DOM, it's not a child node of
+      // the ant-tree container. Therefore, we can use this property to filter out those
+      // click events.
+      // The classic preventDefault() didn't work as an alternative workaround.
+      const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
+      if (keys.length > 0 && doesEventReferToTreeUi) {
         context.setActiveFolderId(keys[0] as string);
       }
     },
@@ -300,11 +309,7 @@ function generateTitle(
       autoDestroy
       trigger={["contextMenu"]}
     >
-      <FolderItemAsDropTarget
-        onClick={() => context.setActiveFolderId(id)}
-        folderId={id}
-        isEditable={isEditable}
-      >
+      <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
         {title}
       </FolderItemAsDropTarget>
     </Dropdown>
@@ -315,7 +320,6 @@ function FolderItemAsDropTarget(props: {
   folderId: string;
   children: React.ReactNode;
   className?: string;
-  onClick: () => void;
   isEditable: boolean;
 }) {
   const context = useDatasetCollectionContext();

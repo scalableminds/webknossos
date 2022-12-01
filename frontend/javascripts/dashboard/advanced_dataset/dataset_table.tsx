@@ -11,6 +11,7 @@ import * as React from "react";
 import _ from "lodash";
 import { diceCoefficient as dice } from "dice-coefficient";
 import update from "immutability-helper";
+import type { OxalisState } from "oxalis/store";
 import type {
   APITeam,
   APIMaybeUnimportedDataset,
@@ -29,11 +30,12 @@ import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
 import FixedExpandableTable from "components/fixed_expandable_table";
-import { DndProvider, useDrag } from "react-dnd";
+import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
 import Shortcut from "libs/shortcut_component";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
+import { useSelector } from "react-redux";
 
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
@@ -128,21 +130,90 @@ interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElem
 }
 export const DraggableDatasetType = "DraggableDatasetRow";
 
+class DragPreviewProvider {
+  static singleton: DragPreviewProvider | null;
+  lightIcon: string | null;
+  darkIcon: string | null;
+
+  constructor() {
+    // We fine-tune the drag image of a row because some browsers don't make
+    // the row transparent enough. Since the table row is quite wide, it often
+    // hides important UI elements (such as the directory sidebar).
+    // The icons are loaded asynchronously as soon as DragPreviewProvider
+    // is instantiated. As long as the files were not loaded, an empty
+    // string will be used for the preview which the browser will simply ignore
+    // and do its default drag behavior (i.e., showing a drag preview of the entire
+    // row).
+    this.lightIcon = null;
+    this.darkIcon = null;
+    this.convertImageURLtoDataURL("/assets/images/file-light.png").then((dataURL) => {
+      this.lightIcon = dataURL;
+    });
+    this.convertImageURLtoDataURL("/assets/images/file-dark.png").then((dataURL) => {
+      this.darkIcon = dataURL;
+    });
+  }
+
+  convertImageURLtoDataURL(src: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = "Anonymous";
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        if (!context) {
+          return reject("Could not construct context");
+        }
+        canvas.height = image.naturalHeight;
+        canvas.width = image.naturalWidth;
+        context.drawImage(image, 0, 0);
+        const dataURL = canvas.toDataURL("image/png");
+        resolve(dataURL);
+      };
+      image.src = src;
+    });
+  }
+
+  getIcon(theme: "dark" | "light") {
+    if (theme === "dark") {
+      return this.darkIcon || "";
+    } else {
+      return this.lightIcon || "";
+    }
+  }
+
+  static getProvider() {
+    if (!DragPreviewProvider.singleton) {
+      DragPreviewProvider.singleton = new DragPreviewProvider();
+    }
+    return DragPreviewProvider.singleton;
+  }
+}
+
 const DraggableDatasetRow = ({
   index,
   className,
   style,
+  children,
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
+  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
   // @ts-ignore
   const datasetName = restProps["data-row-key"];
-  const [, drag] = useDrag({
+  const [, drag, preview] = useDrag({
     item: { type: DraggableDatasetType, index, datasetName },
   });
   drag(ref);
 
-  return <tr ref={ref} className={className} style={{ cursor: "move", ...style }} {...restProps} />;
+  const fileIcon = DragPreviewProvider.getProvider().getIcon(theme);
+
+  return (
+    <tr ref={ref} className={className} style={{ cursor: "move", ...style }} {...restProps}>
+      <DragPreviewImage connect={preview} src={fileIcon} />
+      {children}
+    </tr>
+  );
 };
 
 const components = {

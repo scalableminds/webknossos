@@ -144,7 +144,9 @@ export function FolderTreeSidebar({
           height: 400,
           marginRight: 4,
           borderRadius: 2,
-          paddingRight: 10,
+          paddingLeft: 6,
+          paddingRight: 6,
+          paddingTop: 2,
           maxWidth: "20vw",
         }}
       >

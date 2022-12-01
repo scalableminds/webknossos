@@ -42,7 +42,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       onLoggedIn();
     }
   };
-  const { oidcEnabled } = features();
+  const { openIdConnectEnabled } = features();
 
   const iframeWarning = getIsInIframe() ? (
     <Alert
@@ -122,7 +122,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
               Log in
             </Button>
           </FormItem>
-          {oidcEnabled && (
+          {openIdConnectEnabled && (
             <FormItem style={{ flexGrow: 1 }}>
               <Button
                 style={{

@@ -71,7 +71,7 @@ Samplecountry
                  "Sample Organization",
                  PricingPlan.Custom)
   private val organizationTeam =
-    Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
+    Team(organizationTeamId, defaultOrganization._id, "Default", isOrganizationTeam = true)
   private val userId = ObjectId.generate
   private val multiUserId = ObjectId.generate
   private val userId2 = ObjectId.generate

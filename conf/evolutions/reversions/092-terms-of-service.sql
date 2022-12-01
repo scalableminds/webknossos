@@ -5,9 +5,9 @@ DROP VIEW webknossos.organizations_;
 DROP VIEW webknossos.users_;
 
 
-ALTER TABLE webknossos.users ADD COLUMN isOrganizationOwner BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE webknossos.organizations ADD COLUMN lastTermsOfServiceAcceptanceTime TIMESTAMPTZ;
-ALTER TABLE webknossos.organizations ADD COLUMN lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0;
+ALTER TABLE webknossos.users DROP COLUMN isOrganizationOwner;
+ALTER TABLE webknossos.organizations DROPCOLUMN lastTermsOfServiceAcceptanceTime;
+ALTER TABLE webknossos.organizations DROPCOLUMN lastTermsOfServiceAcceptanceVersion;
 
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;

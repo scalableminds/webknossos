@@ -5,9 +5,9 @@ DROP VIEW webknossos.organizations_;
 DROP VIEW webknossos.users_;
 
 
-ALTER TABLE webknossos.users DROP COLUMN isOrganizationOwner;
-ALTER TABLE webknossos.organizations DROPCOLUMN lastTermsOfServiceAcceptanceTime;
-ALTER TABLE webknossos.organizations DROPCOLUMN lastTermsOfServiceAcceptanceVersion;
+ALTER TABLE webknossos.users ADD COLUMN isOrganizationOwner BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE webknossos.organizations ADD COLUMN lastTermsOfServiceAcceptanceTime TIMESTAMPTZ;
+ALTER TABLE webknossos.organizations ADD COLUMN lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0;
 
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
@@ -22,7 +22,7 @@ FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 90;
+UPDATE webknossos.releaseInformation SET schemaVersion = 92;
 
 COMMIT;
 

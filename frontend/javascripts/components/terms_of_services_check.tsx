@@ -47,11 +47,12 @@ function AcceptTermsOfServiceModal({ onAccept }: { onAccept: (version: number) =
       open
       title="Terms of Services"
       closable={false}
+      width={850}
       maskClosable={false}
       footer={[
         <AsyncButton
           type="primary"
-          loading={terms?.content == null}
+          loading={terms?.url == null}
           onClick={async () => (terms != null ? await onAccept(terms.version) : null)}
         >
           Accept
@@ -60,9 +61,16 @@ function AcceptTermsOfServiceModal({ onAccept }: { onAccept: (version: number) =
     >
       <p>Please accept the following terms of services to continue using webKnossos:</p>
 
-      <p style={{ maxHeight: "66vh", overflow: "auto", whiteSpace: "pre-line" }}>
-        {terms == null ? <Spin spinning /> : terms.content}
-      </p>
+      <div style={{ maxHeight: "66vh", overflow: "auto" }}>
+        {terms == null ? (
+          <Spin spinning />
+        ) : (
+          <iframe
+            style={{ width: 800, height: 800, border: "none" }}
+            src={"https://wikipedia.org" || terms.url}
+          />
+        )}
+      </div>
     </Modal>
   );
 }

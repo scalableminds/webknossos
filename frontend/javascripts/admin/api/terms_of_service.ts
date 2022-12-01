@@ -1,7 +1,7 @@
 import Request from "libs/request";
 
 export function getTermsOfService(): Promise<{
-  content: string;
+  url: string;
   enabled: boolean;
   version: number;
 }> {

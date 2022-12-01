@@ -62,7 +62,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object TermsOfService {
       val enabled: Boolean = get[Boolean]("webKnossos.termsOfService.enabled")
-      val content: String = get[String]("webKnossos.termsOfService.content")
+      val url: String = get[String]("webKnossos.termsOfService.url")
       val version: Int = get[Int]("webKnossos.termsOfService.version")
     }
 

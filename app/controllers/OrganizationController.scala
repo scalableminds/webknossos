@@ -85,7 +85,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       Json.obj(
         "version" -> conf.WebKnossos.TermsOfService.version,
         "enabled" -> conf.WebKnossos.TermsOfService.enabled,
-        "content" -> conf.WebKnossos.TermsOfService.content
+        "url" -> conf.WebKnossos.TermsOfService.url
       ))
   }
 

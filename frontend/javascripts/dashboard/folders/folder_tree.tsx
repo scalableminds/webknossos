@@ -241,8 +241,12 @@ function generateTitle(
   const { key: id, title, isEditable } = folder;
 
   function createFolder(): void {
-    const folderName = prompt("Please input a name for the new folder");
-    context.queries.createFolderMutation.mutateAsync([id, folderName || "New folder"]);
+    const folderName = prompt("Please input a name for the new folder", "New folder");
+    if (!folderName) {
+      // The user hit escape/cancel
+      return;
+    }
+    context.queries.createFolderMutation.mutateAsync([id, folderName]);
   }
   function deleteFolder(): void {
     context.queries.deleteFolderMutation.mutateAsync(id);

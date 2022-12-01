@@ -108,7 +108,7 @@ import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
-// This function is needed so that Flow is satisfied
+// This function is needed so that TS is satisfied
 // with how a mere promise is awaited within a saga.
 function unpackPromise<T>(p: Promise<T>): Promise<T> {
   return p;

@@ -1,5 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Spin, Button, Input, Modal } from "antd";
@@ -16,9 +15,7 @@ import messages from "messages";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIScript[] = [];
-type Props = {
-  history: RouteComponentProps["history"];
-};
+type Props = {};
 type State = {
   isLoading: boolean;
   scripts: Array<APIScript>;
@@ -40,12 +37,12 @@ class ScriptListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchData();
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(): Promise<void> {
@@ -218,4 +215,4 @@ class ScriptListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(ScriptListView);
+export default ScriptListView;

@@ -99,8 +99,7 @@ class UrlManager {
   reset(keepUrlState: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
-      window.history.replaceState({}, null, location.pathname + location.search);
+      window.history.replaceState({}, "", location.pathname + location.search);
     }
 
     this.initialize();
@@ -115,8 +114,7 @@ class UrlManager {
 
   updateUnthrottled() {
     const url = this.buildUrl();
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
-    window.history.replaceState({}, null, url);
+    window.history.replaceState({}, "", url);
   }
 
   onHashChange = () => {

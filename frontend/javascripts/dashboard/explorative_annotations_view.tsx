@@ -1,4 +1,4 @@
-import { RouteComponentProps, Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Table, Button, Modal, Tooltip, Tag } from "antd";
@@ -49,6 +49,8 @@ import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import TextWithDescription from "components/text_with_description";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -63,7 +65,6 @@ type TracingModeState = {
 type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
-  history: RouteComponentProps["history"];
   activeUser: APIUser;
 };
 type State = {
@@ -120,13 +121,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   currentPageData: Readonly<APIAnnotationCompact[]> = [];
 
   componentDidMount() {
-    this.setState(persistence.load(this.props.history) as PartialState, () => {
+    this.setState(persistence.load() as PartialState, () => {
       this.fetchNextPage(0);
     });
   }
 
   componentDidUpdate(_prevProps: Props, prevState: State) {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
 
     if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
       this.fetchNextPage(0);
@@ -703,7 +704,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   key={tag}
                   kind="annotations"
                   onClick={_.partial(this.addTagToSearch, tag)}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SyntheticEvent<Element, Event>, vo... Remove this comment to see the full error message
                   onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                   tag={tag}
                   closable={
@@ -743,6 +743,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   renderSearchTags() {
     return (
       <CategorizationSearch
+        itemName="annotations"
         searchTags={this.state.tags}
         setTags={(tags) =>
           this.setState({
@@ -755,51 +756,18 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const marginRight = {
-      marginRight: 8,
-    };
-    const search = (
-      <Search
-        style={{
-          width: 200,
-          float: "right",
-        }}
-        onPressEnter={this.handleSearchPressEnter}
-        onChange={this.handleSearch}
-        value={this.state.searchQuery}
-      />
-    );
     return (
       <div className="TestExplorativeAnnotationsView">
-        {this.props.isAdminView ? (
-          search
-        ) : (
-          <div className="pull-right">
-            <Button
-              icon={<UploadOutlined />}
-              style={marginRight}
-              onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
-            >
-              Upload Annotation(s)
-            </Button>
-            <Button onClick={this.toggleShowArchived} style={marginRight}>
-              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
-            </Button>
-            {!this.state.shouldShowArchivedTracings ? (
-              <Button onClick={this.archiveAll} style={marginRight}>
-                Archive All
-              </Button>
-            ) : null}
-            {search}
-          </div>
-        )}
-        {this.renderSearchTags()}
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
+        <TopBar
+          isAdminView={this.props.isAdminView}
+          handleSearchPressEnter={this.handleSearchPressEnter}
+          handleSearch={this.handleSearch}
+          searchQuery={this.state.searchQuery}
+          toggleShowArchived={this.toggleShowArchived}
+          shouldShowArchivedTracings={this.state.shouldShowArchivedTracings}
+          archiveAll={this.archiveAll}
         />
+        {this.renderSearchTags()}
         <Spin spinning={this.state.isLoading} size="large">
           {this.renderTable()}
         </Spin>
@@ -822,4 +790,69 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(ExplorativeAnnotationsView);
+function TopBar({
+  isAdminView,
+  handleSearchPressEnter,
+  handleSearch,
+  searchQuery,
+  toggleShowArchived,
+  shouldShowArchivedTracings,
+  archiveAll,
+}: {
+  isAdminView: boolean;
+  handleSearchPressEnter: (event: React.SyntheticEvent) => void;
+  handleSearch: (event: React.SyntheticEvent) => void;
+  searchQuery: string;
+  toggleShowArchived: () => void;
+  shouldShowArchivedTracings: boolean;
+  archiveAll: () => void;
+}) {
+  const activeTab = React.useContext(ActiveTabContext);
+  const renderingTab = React.useContext(RenderingTabContext);
+
+  const marginRight = {
+    marginRight: 8,
+  };
+  const search = (
+    <Search
+      style={{
+        width: 200,
+        float: "right",
+      }}
+      onPressEnter={handleSearchPressEnter}
+      onChange={handleSearch}
+      value={searchQuery}
+    />
+  );
+
+  const content = isAdminView ? (
+    search
+  ) : (
+    <div className="pull-right">
+      <Button
+        icon={<UploadOutlined />}
+        style={marginRight}
+        onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
+      >
+        Upload Annotation(s)
+      </Button>
+      <Button onClick={toggleShowArchived} style={marginRight}>
+        Show {shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
+      </Button>
+      {!shouldShowArchivedTracings ? (
+        <Button onClick={archiveAll} style={marginRight}>
+          Archive All
+        </Button>
+      ) : null}
+      {search}
+    </div>
+  );
+
+  return (
+    <RenderToPortal portalId="dashboard-TabBarExtraContent">
+      {activeTab === renderingTab ? content : null}
+    </RenderToPortal>
+  );
+}
+
+export default ExplorativeAnnotationsView;

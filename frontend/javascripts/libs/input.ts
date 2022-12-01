@@ -24,7 +24,7 @@ const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
-// Callable Object, see https://flow.org/en/docs/types/functions/#toc-callable-objects
+// Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
   delayed?: boolean;
@@ -611,8 +611,12 @@ export class InputMouse {
 
   getElementOffset() {
     // Return the bounding rectangle relative to the top-left corner of the document
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-    const boundingRect = document.getElementById(this.targetId).getBoundingClientRect();
+    const boundingRect = document.getElementById(this.targetId)?.getBoundingClientRect() || {
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+    };
     return _.extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,

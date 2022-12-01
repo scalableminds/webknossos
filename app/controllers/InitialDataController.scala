@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.binary._
+import models.folder.{Folder, FolderDAO, FolderService}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
@@ -15,6 +16,7 @@ import org.joda.time.DateTime
 import oxalis.security._
 import play.api.libs.json.Json
 import utils.{ObjectId, StoreModules, WkConf}
+
 import javax.inject.Inject
 import models.organization.{Organization, OrganizationDAO}
 import play.api.mvc.{Action, AnyContent}
@@ -40,6 +42,8 @@ class InitialDataService @Inject()(userService: UserService,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
+                                   folderDAO: FolderDAO,
+                                   folderService: FolderService,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
                                    tokenDAO: TokenDAO,
@@ -68,7 +72,8 @@ Samplecountry
                  additionalInformation,
                  "/assets/images/oxalis.svg",
                  "Sample Organization",
-                 PricingPlan.Custom)
+                 PricingPlan.Custom,
+                 ObjectId.generate)
   private val organizationTeam =
     Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
   private val userId = ObjectId.generate
@@ -112,6 +117,7 @@ Samplecountry
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- assertInitialDataEnabled
       _ <- assertNoOrganizationsPresent
+      _ <- insertRootFolder()
       _ <- insertOrganization()
       _ <- insertTeams()
       _ <- insertDefaultUser()
@@ -131,6 +137,12 @@ Samplecountry
       organizations <- organizationDAO.findAll
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
+
+  private def insertRootFolder(): Fox[Unit] =
+    folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName))
+    }
 
   private def insertDefaultUser(): Fox[Unit] =
     userService

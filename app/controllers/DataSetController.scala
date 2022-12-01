@@ -11,7 +11,7 @@ import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatas
 import models.binary._
 import models.binary.explore.{ExploreRemoteDatasetParameters, ExploreRemoteLayerService}
 import models.organization.OrganizationDAO
-import models.team.TeamDAO
+import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
@@ -31,12 +31,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class DataSetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   dataSetService: DataSetService,
-                                  dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                   dataSetDataLayerDAO: DataSetDataLayerDAO,
                                   dataStoreDAO: DataStoreDAO,
                                   dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
+                                  teamService: TeamService,
                                   dataSetDAO: DataSetDAO,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -56,7 +56,8 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'displayName).readNullable[String] and
       (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean] and
-      (__ \ 'tags).read[List[String]]).tupled
+      (__ \ 'tags).read[List[String]] and
+      (__ \ 'folderId).readNullable[ObjectId]).tupled
 
   @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
@@ -174,7 +175,13 @@ class DataSetController @Inject()(userService: UserService,
       @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")
       onlyMyOrganization: Option[Boolean],
       @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
-      uploaderId: Option[String]
+      uploaderId: Option[String],
+      @ApiParam(value = "Optional filtering: List only datasets in the folder with this id")
+      folderId: Option[String],
+      @ApiParam(value = "Optional filtering: List only datasets with names matching this search query")
+      searchQuery: Option[String],
+      @ApiParam(value = "Optional limit, return only the first n matching datasets.")
+      limit: Option[Int]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter(isActive, (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
@@ -202,9 +209,11 @@ class DataSetController @Inject()(userService: UserService,
       )
     ) { filter =>
       for {
-        dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
+        folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
+        dataSets <- dataSetDAO.findAllWithSearch(folderIdValidated, searchQuery) ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
-        js <- listGrouped(filtered, request.identity) ?~> "dataSet.list.failed"
+        limited = limit.map(l => filtered.take(l)).getOrElse(filtered)
+        js <- listGrouped(limited, request.identity) ?~> "dataSet.list.failed"
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
       } yield {
         addRemoteOriginHeaders(Ok(Json.toJson(js)))
@@ -248,7 +257,7 @@ class DataSetController @Inject()(userService: UserService,
         organization <- organizationDAO.findOneByName(organizationName)
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
+        allowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true) ?~> "allowedTeams.notFound"
         usersByTeams <- userDAO.findAllByTeams(allowedTeams)
         adminsAndDatasetManagers <- userDAO.findAdminsAndDatasetManagersByOrg(organization._id)
         usersFiltered = (usersByTeams ++ adminsAndDatasetManagers).distinct.filter(!_.isUnlisted)
@@ -321,6 +330,7 @@ Expects:
   - sortingKey (optional long)
   - isPublic (boolean)
   - tags (list of string)
+  - folderId (optional string)
  - As GET parameters:
   - organizationName (string): url-safe name of the organization owning the dataset
   - dataSetName (string): name of the dataset
@@ -335,10 +345,12 @@ Expects:
                            paramType = "body")))
   def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                        example = "sample_organization") organizationName: String,
-             @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
+             @ApiParam(value = "The name of the dataset") dataSetName: String,
+             @ApiParam(value = "If true, the resolutions of the dataset layers in the returned json are skipped")
+             skipResolutions: Option[Boolean]): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
-        case (description, displayName, sortingKey, isPublic, tags) =>
+        case (description, displayName, sortingKey, isPublic, tags, folderId) =>
           for {
             dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
               dataSetName) ~> NOT_FOUND
@@ -347,13 +359,18 @@ Expects:
                                          description,
                                          displayName,
                                          sortingKey.getOrElse(dataSet.created),
-                                         isPublic)
+                                         isPublic,
+                                         folderId.getOrElse(dataSet._folder))
             _ <- dataSetDAO.updateTags(dataSet._id, tags)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
             dataStore <- dataSetService.dataStoreFor(updated)
-            js <- dataSetService.publicWrites(updated, Some(request.identity), Some(organization), Some(dataStore))
+            js <- dataSetService.publicWrites(updated,
+                                              Some(request.identity),
+                                              Some(organization),
+                                              Some(dataStore),
+                                              skipResolutions.getOrElse(false))
           } yield Ok(Json.toJson(js))
       }
     }
@@ -377,23 +394,20 @@ Expects:
                            paramType = "body")))
   def updateTeams(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                             example = "sample_organization") organizationName: String,
-                  @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
-    sil.SecuredAction.async(parse.json) { implicit request =>
-      withJsonBodyAs[List[String]] { teams =>
-        for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
-            dataSetName) ~> NOT_FOUND
-          _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
-          includeMemberOnlyTeams = request.identity.isDatasetManager
-          userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-          oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
-          teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
-          teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
-          _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id,
-                                                                   (teamsWithUpdate ++ teamsWithoutUpdate).distinct)
-        } yield Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.toString)))
-      }
+                  @ApiParam(value = "The name of the dataset") dataSetName: String): Action[List[ObjectId]] =
+    sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
+      for {
+        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+          dataSetName) ~> NOT_FOUND
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        includeMemberOnlyTeams = request.identity.isDatasetManager
+        userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
+        oldAllowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = false) ?~> "allowedTeams.notFound"
+        teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
+        teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
+        newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
+        _ <- teamDAO.updateAllowedTeamsForDataset(dataSet._id, newTeams)
+      } yield Ok(Json.toJson(newTeams))
     }
 
   @ApiOperation(value = "Sharing token of a dataset", nickname = "datasetSharingToken")

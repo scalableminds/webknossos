@@ -108,7 +108,7 @@ export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode 
   return Tab(name, id, "border-tab", enableRenderOnDemand);
 }
 const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
-// Flow does not understand that the values must have a name and an id.
+
 Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });

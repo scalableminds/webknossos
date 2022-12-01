@@ -167,7 +167,7 @@ function DetailsSidebar({
           <div style={{ marginBottom: 4 }}>
             <span className="sidebar-label">Access Permissions</span>
             <br />
-            <TeamTags dataset={selectedDataset} emptyValue="default" />
+            <TeamTags dataset={selectedDataset} emptyValue="Administrators & Dataset Managers" />
           </div>
           <div style={{ marginBottom: 4 }}>
             <span className="sidebar-label">Layers</span>
@@ -243,7 +243,7 @@ function DetailsSidebar({
 
 function FolderTeamTags({ folder }: { folder: Folder }) {
   if (folder.allowedTeamsCumulative.length === 0) {
-    return <Tag>default</Tag>;
+    return <Tag>Administrators & Dataset Managers</Tag>;
   }
   const allowedTeamsById = _.keyBy(folder.allowedTeams, "id");
 

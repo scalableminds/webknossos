@@ -49,7 +49,12 @@ export function FolderTreeSidebar({
       context.activeFolderId,
     );
     itemByIdRef.current = itemById;
-    if (newTreeData.length > 0 && context.activeFolderId == null) {
+    if (
+      newTreeData.length > 0 &&
+      (context.activeFolderId == null || itemById[context.activeFolderId] == null)
+    ) {
+      // Select the root if there's no active folder id or if the active folder id doesn't
+      // exist in the tree data (e.g., happens when deleting the active folder).
       context.setActiveFolderId(newTreeData[0].key);
     }
     setTreeData(newTreeData);

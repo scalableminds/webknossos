@@ -139,6 +139,10 @@ class DragPreviewProvider {
     // We fine-tune the drag image of a row because some browsers don't make
     // the row transparent enough. Since the table row is quite wide, it often
     // hides important UI elements (such as the directory sidebar).
+    // Unfortunately, the icons have to be converted to a DataURL to work with
+    // DragPreviewImage from react-dnd. This conversion is handled by this class
+    // here.
+
     // The icons are loaded asynchronously as soon as DragPreviewProvider
     // is instantiated. As long as the files were not loaded, an empty
     // string will be used for the preview which the browser will simply ignore

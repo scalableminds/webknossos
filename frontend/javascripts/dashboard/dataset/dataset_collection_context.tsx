@@ -75,6 +75,7 @@ export default function DatasetCollectionContextProvider({
   );
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
+  const { data: folder } = useFolderQuery(activeFolderId);
 
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
@@ -98,14 +99,15 @@ export default function DatasetCollectionContextProvider({
   // Keep url GET parameters in sync with search and active folder
   useManagedUrlParams(setGlobalSearchQuery, setActiveFolderId, globalSearchQuery, activeFolderId);
 
-  // Persist last active folder to localStorage.
   useEffect(() => {
-    if (activeFolderId != null) {
+    // Persist last active folder to localStorage. We
+    // check folder against null to avoid that invalid ids are persisted.
+    if (activeFolderId != null && folder != null) {
       UserLocalStorage.setItem(ACTIVE_FOLDER_ID_STORAGE_KEY, activeFolderId);
     } else {
       UserLocalStorage.removeItem(ACTIVE_FOLDER_ID_STORAGE_KEY);
     }
-  }, [activeFolderId]);
+  }, [folder, activeFolderId]);
 
   const folderTreeQuery = useFolderTreeQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);

@@ -15,7 +15,7 @@ import { DatasetLayerTags, DatasetTags, TeamTags } from "./advanced_dataset/data
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-import { useFolderQuery } from "./dataset/queries";
+import { SEARCH_RESULTS_LIMIT, useFolderQuery } from "./dataset/queries";
 
 import DatasetView from "./dataset_view";
 import { EditFolderModal } from "./folders/edit_folder_modal";
@@ -167,7 +167,7 @@ function DetailsSidebar({
           <div style={{ marginBottom: 4 }}>
             <span className="sidebar-label">Access Permissions</span>
             <br />
-            <TeamTags dataset={selectedDataset} emptyValue="default" />
+            <TeamTags dataset={selectedDataset} emptyValue="Administrators & Dataset Managers" />
           </div>
           <div style={{ marginBottom: 4 }}>
             <span className="sidebar-label">Layers</span>
@@ -186,9 +186,16 @@ function DetailsSidebar({
             <Result
               icon={<SearchOutlined style={{ fontSize: 50 }} />}
               subTitle={
-                <>
-                  {datasetCount} {pluralize("dataset", datasetCount)} were found. {maybeSelectMsg}
-                </>
+                datasetCount !== SEARCH_RESULTS_LIMIT ? (
+                  <>
+                    {datasetCount} {pluralize("dataset", datasetCount)} were found. {maybeSelectMsg}
+                  </>
+                ) : (
+                  <>
+                    At least {SEARCH_RESULTS_LIMIT} datasets match your search criteria.{" "}
+                    {maybeSelectMsg}
+                  </>
+                )
               }
             />
           ) : (
@@ -236,7 +243,7 @@ function DetailsSidebar({
 
 function FolderTeamTags({ folder }: { folder: Folder }) {
   if (folder.allowedTeamsCumulative.length === 0) {
-    return <Tag>default</Tag>;
+    return <Tag>Administrators & Dataset Managers</Tag>;
   }
   const allowedTeamsById = _.keyBy(folder.allowedTeams, "id");
 

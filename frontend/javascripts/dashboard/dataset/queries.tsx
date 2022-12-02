@@ -43,15 +43,15 @@ export function useFolderQuery(folderId: string | null) {
   );
 }
 
-export function useDatasetSearchQuery(query: string | null) {
-  const queryKey = ["dataset", "search", query];
+export function useDatasetSearchQuery(query: string | null, folderId: string | null) {
+  const queryKey = ["dataset", "search", query, "in", folderId];
   return useQuery(
     queryKey,
     async () => {
       if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
         return [];
       }
-      return await getDatasets(null, null, query, SEARCH_RESULTS_LIMIT);
+      return await getDatasets(null, folderId, query, SEARCH_RESULTS_LIMIT);
     },
     {
       refetchOnWindowFocus: false,

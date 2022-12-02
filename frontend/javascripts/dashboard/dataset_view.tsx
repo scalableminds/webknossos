@@ -13,6 +13,7 @@ import {
   Tooltip,
   Alert,
   MenuProps,
+  TreeSelect,
 } from "antd";
 import {
   CloudUploadOutlined,
@@ -44,6 +45,7 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
+import { FolderItem, getFolderHierarchy } from "./folders/folder_tree";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -197,15 +199,20 @@ function DatasetView(props: Props) {
   );
 
   const filterMenu = (
-    <Menu onClick={() => {}}>
-      <Menu.Item>{createFilteringModeRadio("showAllDatasets", "Show all datasets")}</Menu.Item>
-      <Menu.Item>
-        {createFilteringModeRadio("onlyShowReported", "Only show available datasets")}
-      </Menu.Item>
-      <Menu.Item>
-        {createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets")}
-      </Menu.Item>
-    </Menu>
+    <Menu
+      onClick={() => {}}
+      items={[
+        { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
+        {
+          label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
+          key: "available",
+        },
+        {
+          label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
+          key: "missing",
+        },
+      ]}
+    />
   );
   const searchBox = (
     <Search
@@ -286,21 +293,16 @@ function DatasetView(props: Props) {
       {activeTab === renderingTab && (
         <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
       )}
-      {searchQuery &&
-        // Render a header for the search.
-        (searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
-          <h3>
-            <SearchOutlined /> Search Results for &quot;{searchQuery}&quot;
-            {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-              <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
-                (only showing the first {SEARCH_RESULTS_LIMIT} results)
-              </span>
-            ) : null}
-          </h3>
-        ) : (
-          // No results are shown because the search query is too short
-          isEmpty && <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
-        ))}
+
+      {searchQuery && "queries" in context && (
+        <GlobalSearchHeader
+          searchQuery={searchQuery}
+          isEmpty={isEmpty}
+          filteredDatasets={filteredDatasets}
+          context={context}
+        />
+      )}
+
       <CategorizationSearch
         itemName="datasets"
         searchTags={searchTags}
@@ -312,6 +314,73 @@ function DatasetView(props: Props) {
         {content}
       </Spin>
     </div>
+  );
+}
+
+function GlobalSearchHeader({
+  searchQuery,
+  filteredDatasets,
+  isEmpty,
+  context,
+}: {
+  searchQuery: string;
+  filteredDatasets: APIMaybeUnimportedDataset[];
+  isEmpty: boolean;
+  context: DatasetCollectionContextValue;
+}) {
+  const { data: folderTree } = context.queries.folderTreeQuery;
+  const [treeData, setTreeData] = useState<FolderItem[]>([]);
+  const { folderIdForSearch, setFolderIdForSearch } = context;
+
+  const onChange = (newValue: string) => {
+    setFolderIdForSearch(newValue);
+  };
+
+  useEffect(() => {
+    const [newTreeData] = getFolderHierarchy(folderTree, [], null);
+    setTreeData(newTreeData);
+  }, [folderTree]);
+
+  if (searchQuery.length < MINIMUM_SEARCH_QUERY_LENGTH) {
+    // No results are shown because the search query is too short (at least
+    // when the back-end search is used. The frontend search doesn't have
+    // this restriction which is why isEmpty is checked, too).
+    return isEmpty ? null : (
+      <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+    );
+  }
+  return (
+    <>
+      <div style={{ float: "right" }}>
+        <Tooltip title="When selecting a folder, only that folder will be searched (not its child folders)">
+          <span style={{ marginRight: 4 }}>Where to search:</span>
+        </Tooltip>
+        <TreeSelect
+          size="small"
+          showSearch
+          style={{ width: 150 }}
+          value={folderIdForSearch || undefined}
+          dropdownStyle={{ maxHeight: 500, overflow: "auto" }}
+          placeholder="Everywhere"
+          allowClear
+          dropdownMatchSelectWidth={false}
+          treeDefaultExpandAll
+          onChange={onChange}
+          treeData={treeData}
+          fieldNames={{ label: "title", value: "key", children: "children" }}
+          treeNodeLabelProp="title"
+        />
+      </div>
+      <h3>
+        <SearchOutlined />
+        Search Results for &quot;{searchQuery}&quot;
+        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+          <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+            (only showing the first {SEARCH_RESULTS_LIMIT} results)
+          </span>
+        ) : null}
+      </h3>
+    </>
   );
 }
 
@@ -407,9 +476,7 @@ function renderPlaceholder(
   }
 
   if (searchQuery) {
-    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH
-      ? "No datasets found. All folders have been searched."
-      : null;
+    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? "No datasets found." : null;
   }
 
   const openPublicDatasetCard = (

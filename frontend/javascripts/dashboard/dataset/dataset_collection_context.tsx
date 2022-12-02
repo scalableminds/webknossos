@@ -38,6 +38,8 @@ export type DatasetCollectionContextValue = {
   supportsFolders: true;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
+  folderIdForSearch: string | null;
+  setFolderIdForSearch: (val: string | null) => void;
   queries: {
     folderTreeQuery: ReturnType<typeof useFolderTreeQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
@@ -78,6 +80,7 @@ export default function DatasetCollectionContextProvider({
   const { data: folder } = useFolderQuery(activeFolderId);
 
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
+  const [folderIdForSearch, setFolderIdForSearch] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
     (value: string | null) => {
       // Empty string should be handled as null
@@ -97,7 +100,14 @@ export default function DatasetCollectionContextProvider({
   }, [activeFolderId]);
 
   // Keep url GET parameters in sync with search and active folder
-  useManagedUrlParams(setGlobalSearchQuery, setActiveFolderId, globalSearchQuery, activeFolderId);
+  useManagedUrlParams(
+    setGlobalSearchQuery,
+    setActiveFolderId,
+    globalSearchQuery,
+    activeFolderId,
+    folderIdForSearch,
+    setFolderIdForSearch,
+  );
 
   useEffect(() => {
     // Persist last active folder to localStorage. We
@@ -111,7 +121,7 @@ export default function DatasetCollectionContextProvider({
 
   const folderTreeQuery = useFolderTreeQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
-  const datasetSearchQuery = useDatasetSearchQuery(globalSearchQuery);
+  const datasetSearchQuery = useDatasetSearchQuery(globalSearchQuery, folderIdForSearch);
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
@@ -175,6 +185,8 @@ export default function DatasetCollectionContextProvider({
       },
       globalSearchQuery,
       setGlobalSearchQuery,
+      folderIdForSearch,
+      setFolderIdForSearch,
       queries: {
         folderTreeQuery,
         datasetsInFolderQuery,
@@ -203,6 +215,9 @@ export default function DatasetCollectionContextProvider({
       updateFolderMutation,
       moveFolderMutation,
       updateDatasetMutation,
+      globalSearchQuery,
+      folderIdForSearch,
+      setFolderIdForSearch,
     ],
   );
 
@@ -216,6 +231,8 @@ function useManagedUrlParams(
   setActiveFolderId: React.Dispatch<React.SetStateAction<string | null>>,
   globalSearchQuery: string | null,
   activeFolderId: string | null,
+  folderIdForSearch: string | null,
+  setFolderIdForSearch: React.Dispatch<React.SetStateAction<string | null>>,
 ) {
   const { data: folder } = useFolderQuery(activeFolderId);
 
@@ -225,6 +242,10 @@ function useManagedUrlParams(
     const query = params.get("query");
     if (query) {
       setGlobalSearchQuery(query);
+    }
+    const folderId = params.get("folderId");
+    if (folderId) {
+      setFolderIdForSearch(folderId);
     }
 
     const folderSpecifier = _.last(location.pathname.split("/"));
@@ -238,13 +259,18 @@ function useManagedUrlParams(
     }
   }, []);
 
-  // Update query
+  // Update query and folderIdForSearch
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (globalSearchQuery) {
       params.set("query", globalSearchQuery);
     } else {
       params.delete("query");
+    }
+    if (globalSearchQuery && folderIdForSearch) {
+      params.set("folderId", folderIdForSearch);
+    } else {
+      params.delete("folderId");
     }
     const paramStr = params.toString();
 
@@ -255,7 +281,7 @@ function useManagedUrlParams(
       "",
       `${location.pathname}${paramStr === "" ? "" : "?"}${paramStr}`,
     );
-  }, [globalSearchQuery]);
+  }, [globalSearchQuery, folderIdForSearch]);
 
   // Update folderId
   useEffect(() => {

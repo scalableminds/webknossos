@@ -1031,7 +1031,7 @@ export async function getDatasets(
   if (isUnreported != null) {
     params.append("isUnreported", String(isUnreported));
   }
-  if (folderId != null) {
+  if (folderId != null && folderId !== "") {
     params.append("folderId", folderId);
   }
   if (searchQuery != null) {

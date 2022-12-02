@@ -13,13 +13,12 @@ import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
-import { MenuInfo } from "rc-menu/lib/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 
 const { DirectoryTree } = Tree;
 
-type FolderItem = {
+export type FolderItem = {
   title: string;
   key: string;
   parent: string | null | undefined;
@@ -189,7 +188,7 @@ export function FolderTreeSidebar({
   );
 }
 
-function getFolderHierarchy(
+export function getFolderHierarchy(
   folderTree: FlatFolderTreeItem[] | undefined,
   prevExpandedKeys: string[],
   activeFolderId: string | null,

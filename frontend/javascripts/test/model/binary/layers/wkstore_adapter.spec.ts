@@ -15,8 +15,6 @@ const RequestMock = {
 const { dataSource } = datasetServerObject;
 let _fourBit = false;
 
-// test
-
 function setFourBit(bool) {
   _fourBit = bool;
 }

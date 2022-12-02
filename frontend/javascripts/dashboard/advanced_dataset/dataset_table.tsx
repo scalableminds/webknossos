@@ -494,10 +494,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
                   {dataset.name}
                 </Link>
                 <br />
-                <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
+
                 {"getBreadcrumbs" in this.props.context ? (
                   <BreadcrumbsTag parts={this.props.context.getBreadcrumbs(dataset)} />
-                ) : null}
+                ) : (
+                  <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
+                )}
               </>
             )}
           />

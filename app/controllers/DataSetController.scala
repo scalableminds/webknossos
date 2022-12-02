@@ -178,7 +178,9 @@ class DataSetController @Inject()(userService: UserService,
       uploaderId: Option[String],
       @ApiParam(value = "Optional filtering: List only datasets in the folder with this id")
       folderId: Option[String],
-      @ApiParam(value = "Optional filtering: If a folderId was specified, this parameter controls whether subfolders should be considered, too (default: false)")
+      @ApiParam(
+        value =
+          "Optional filtering: If a folderId was specified, this parameter controls whether subfolders should be considered, too (default: false)")
       recursive: Option[Boolean],
       @ApiParam(value = "Optional filtering: List only datasets with names matching this search query")
       searchQuery: Option[String],
@@ -212,7 +214,8 @@ class DataSetController @Inject()(userService: UserService,
     ) { filter =>
       for {
         folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-        dataSets <- dataSetDAO.findAllWithSearch(folderIdValidated, searchQuery, recursive.getOrElse(false)) ?~> "dataSet.list.failed"
+        dataSets <- dataSetDAO
+          .findAllWithSearch(folderIdValidated, searchQuery, recursive.getOrElse(false)) ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
         limited = limit.map(l => filtered.take(l)).getOrElse(filtered)
         js <- listGrouped(limited, request.identity) ?~> "dataSet.list.failed"

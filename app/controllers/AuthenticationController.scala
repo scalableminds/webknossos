@@ -134,17 +134,14 @@ class AuthenticationController @Inject()(
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
-      brainDBResult <- Fox
-        .runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")).toFox)
-        .getOrElse(None)
-        .toFox
+      brainDBResult <- Fox.runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")))
       _ = if (conf.Features.isDemoInstance) {
         mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
       } else {
-        Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
+        Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult.flatten, autoActivate))
       }
       _ = Mailer ! Send(
-        defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
+        defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult.flatten, organization, autoActivate))
     } yield {
       user
     }

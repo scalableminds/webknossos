@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebKnossosClient

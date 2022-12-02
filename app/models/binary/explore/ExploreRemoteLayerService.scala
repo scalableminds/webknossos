@@ -1,6 +1,6 @@
 package models.binary.explore
 
-import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
@@ -18,8 +18,10 @@ import java.nio.file.Path
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 case class ExploreRemoteDatasetParameters(remoteUri: String, user: Option[String], password: Option[String])
+
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
@@ -34,11 +36,13 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
         exploreRemoteLayersForUri(parameters.remoteUri, parameters.user, parameters.password, reportMutable))
       layersWithVoxelSizes = exploredLayersNested.flatten
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
-      voxelSize <- commonVoxelSize(layersWithVoxelSizes.map(_._2)) ?~> "Could not extract common voxel size from layers"
-      layers = makeLayerNamesUnique(layersWithVoxelSizes.map(_._1))
+      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes) ?~> "Could not extract common voxel size from layers"
+      rescaledLayers = rescaledLayersAndVoxelSize._1
+      voxelSize = rescaledLayersAndVoxelSize._2
+      renamedLayers = makeLayerNamesUnique(rescaledLayers)
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
-        layers,
+        renamedLayers,
         voxelSize
       )
     } yield dataSource
@@ -66,11 +70,62 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     }
   }
 
-  private def commonVoxelSize(voxelSizes: List[Vec3Double])(implicit ec: ExecutionContext): Fox[Vec3Double] =
+  private def magFromVoxelSize(minVoxelSize: Vec3Double, voxelSize: Vec3Double)(
+      implicit ec: ExecutionContext): Fox[Vec3Int] = {
+    def isPowerOfTwo(x: Int): Boolean =
+      x != 0 && (x & (x - 1)) == 0
+
+    val mag = (voxelSize / minVoxelSize).round.toVec3Int
     for {
-      head <- voxelSizes.headOption.toFox
-      _ <- bool2Fox(voxelSizes.forall(_ == head)) ?~> s"voxel sizes for layers are not uniform, got $voxelSizes"
-    } yield head
+      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: $mag. Must all be powers of two"
+    } yield mag
+  }
+
+  private def checkForDuplicateMags(magGroup: List[Vec3Int])(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- bool2Fox(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
+    } yield ()
+
+  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayer, Vec3Double)])(
+      implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] = {
+    val allVoxelSizes = layersWithVoxelSizes
+      .flatMap(layerWithVoxelSize => {
+        val layer = layerWithVoxelSize._1
+        val voxelSize = layerWithVoxelSize._2
+
+        layer.resolutions.map(resolution => voxelSize * resolution.toVec3Double)
+      })
+      .toSet
+    val minVoxelSizeOpt = Try(allVoxelSizes.minBy(_.toTuple)).toOption
+
+    for {
+      minVoxelSize <- option2Fox(minVoxelSizeOpt)
+      allMags <- Fox.combined(allVoxelSizes.map(magFromVoxelSize(minVoxelSize, _)).toList) ?~> s"voxel sizes for layers are not uniform, got ${layersWithVoxelSizes
+        .map(_._2)}"
+      groupedMags = allMags.groupBy(_.maxDim)
+      _ <- Fox.combined(groupedMags.values.map(checkForDuplicateMags).toList)
+      rescaledLayers = layersWithVoxelSizes.map(layerWithVoxelSize => {
+        val layer = layerWithVoxelSize._1
+        val layerVoxelSize = layerWithVoxelSize._2
+        val magFactors = (layerVoxelSize / minVoxelSize).toVec3Int
+        layer match {
+          case l: ZarrDataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: ZarrSegmentationLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: N5DataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: N5SegmentationLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case _ => throw new Exception("Encountered unsupported layer format during explore remote")
+        }
+      })
+    } yield (rescaledLayers, minVoxelSize)
+  }
 
   private def exploreRemoteLayersForUri(
       layerUri: String,

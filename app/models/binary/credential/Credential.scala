@@ -35,7 +35,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       username <- r.identifier.toFox
       password <- r.secret.toFox
-      domain <- r.scope.toFox
+      domain = r.scope
     } yield
       HttpBasicAuthCredential(
         r.name,
@@ -48,7 +48,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       keyId <- r.identifier.toFox
       key <- r.secret.toFox
-      bucket <- r.scope.toFox
+      bucket = r.scope
     } yield
       S3AccessKeyCredential(
         r.name,

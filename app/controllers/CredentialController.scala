@@ -12,13 +12,13 @@ import utils.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class HttpBasicAuthCredentialParameters(name: String, username: String, password: String, domain: String)
+case class HttpBasicAuthCredentialParameters(name: String, username: String, password: String, domain: Option[String])
 
 object HttpBasicAuthCredentialParameters {
   implicit val jsonFormat: OFormat[HttpBasicAuthCredentialParameters] = Json.format[HttpBasicAuthCredentialParameters]
 }
 
-case class S3AccessKeyCredentialParameters(name: String, keyId: String, key: String, bucket: String)
+case class S3AccessKeyCredentialParameters(name: String, keyId: String, key: String, bucket: Option[String])
 
 object S3AccessKeyCredentialParameters {
   implicit val jsonFormat: OFormat[S3AccessKeyCredentialParameters] = Json.format[S3AccessKeyCredentialParameters]

@@ -19,8 +19,7 @@ type DataLayerWKWPartial = {
 };
 
 type AxisKey = "x" | "y" | "z" | "c";
-type DataLayerZarrPartial = {
-  dataFormat: "zarr";
+type BaseRemoteLayer = {
   boundingBox: BoundingBox;
   numChannels: number;
   mags: Array<{
@@ -28,6 +27,12 @@ type DataLayerZarrPartial = {
     path: string;
     axisOrder: Record<AxisKey, number>;
   }>;
+};
+type DataLayerZarrPartial = BaseRemoteLayer & {
+  dataFormat: "zarr";
+};
+type DataLayerN5Partial = BaseRemoteLayer & {
+  dataFormat: "n5";
 };
 export type DataLayer = {
   name: string;
@@ -54,7 +59,7 @@ export type DataLayer = {
       mappings: Array<string>;
     }
 ) &
-  (DataLayerWKWPartial | DataLayerZarrPartial);
+  (DataLayerWKWPartial | DataLayerZarrPartial | DataLayerN5Partial);
 export type DatasourceConfiguration = {
   id: {
     name: string;

@@ -12,6 +12,6 @@ CREATE TABLE webknossos.credentials(
 );
 
 UPDATE webknossos.releaseInformation
-SET schemaVersion = 92;
+SET schemaVersion = 93;
 
 COMMIT TRANSACTION;

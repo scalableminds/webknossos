@@ -135,6 +135,39 @@ export function convertNmToPixels(
   return lengthInNm / (zoomValue * getBaseVoxel(dataset.dataSource.scale));
 }
 
+export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
+  const extentInVoxel = getDatasetExtentAsString(dataset, true);
+  const extentInLength = getDatasetExtentAsString(dataset, false);
+
+  return (
+    <Tooltip title="Dataset extent" placement="left">
+      <tr>
+        <td
+          style={{
+            paddingRight: 4,
+            paddingTop: 10,
+            verticalAlign: "top",
+          }}
+        >
+          <img
+            className="info-tab-icon"
+            src="/assets/images/icon-extent.svg"
+            alt="Dataset extent"
+          />
+        </td>
+        <td
+          style={{
+            paddingTop: 10,
+          }}
+        >
+          {extentInVoxel}
+          <br /> {extentInLength}
+        </td>
+      </tr>
+    </Tooltip>
+  );
+}
+
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     showJobsDetailsModal: null,
@@ -516,8 +549,6 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { dataset, activeResolution, activeUser } = this.props;
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
-    const extentInVoxel = getDatasetExtentAsString(dataset, true);
-    const extentInLength = getDatasetExtentAsString(dataset, false);
     const resolutions = getResolutions(dataset);
     const resolutionInfo =
       activeResolution != null ? (
@@ -594,31 +625,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                   <td>{formatScale(this.props.dataset.dataSource.scale)}</td>
                 </tr>
               </Tooltip>
-              <Tooltip title="Dataset extent" placement="left">
-                <tr>
-                  <td
-                    style={{
-                      paddingRight: 4,
-                      paddingTop: 10,
-                      verticalAlign: "top",
-                    }}
-                  >
-                    <img
-                      className="info-tab-icon"
-                      src="/assets/images/icon-extent.svg"
-                      alt="Dataset extent"
-                    />
-                  </td>
-                  <td
-                    style={{
-                      paddingTop: 10,
-                    }}
-                  >
-                    {extentInVoxel}
-                    <br /> {extentInLength}
-                  </td>
-                </tr>
-              </Tooltip>
+              <DatasetExtentRow dataset={dataset} />
               {resolutionInfo}
 
               {features().jobsEnabled &&

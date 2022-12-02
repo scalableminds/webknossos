@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(92);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(93);
 COMMIT TRANSACTION;
 
 
@@ -99,6 +99,7 @@ CREATE TABLE webknossos.dataSets(
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   _uploader CHAR(24),
+  _folder CHAR(24) NOT NULL,
   inboxSourceHash INT,
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
@@ -280,6 +281,7 @@ CREATE TABLE webknossos.organizations(
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
+  _rootFolder CHAR(24) NOT NULL UNIQUE,
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
@@ -443,9 +445,29 @@ CREATE TABLE webknossos.credentials(
   filePath Text
 );
 
+CREATE TABLE webknossos.folders(
+    _id CHAR(24) PRIMARY KEY,
+    name TEXT NOT NULL,
+    isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE webknossos.folder_paths(
+    _ancestor CHAR(24) NOT NULL,
+    _descendant CHAR(24) NOT NULL,
+    depth INT NOT NULL,
+    PRIMARY KEY(_ancestor, _descendant)
+);
+
+CREATE TABLE webknossos.folder_allowedTeams(
+  _folder CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
+  PRIMARY KEY (_folder, _team)
+);
+
+
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
-CREATE TABLE webknossos.voxelytics_artifacts (
+CREATE TABLE webknossos.voxelytics_artifacts(
     _id CHAR(24) NOT NULL,
     _task CHAR(24) NOT NULL,
     name VARCHAR(512) NOT NULL,
@@ -459,7 +481,7 @@ CREATE TABLE webknossos.voxelytics_artifacts (
     CONSTRAINT metadataIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_runs (
+CREATE TABLE webknossos.voxelytics_runs(
     _id CHAR(24) NOT NULL,
     _organization CHAR(24) NOT NULL,
     _user CHAR(24) NOT NULL,
@@ -475,7 +497,7 @@ CREATE TABLE webknossos.voxelytics_runs (
     CONSTRAINT workflowConfigIsJsonObject CHECK(jsonb_typeof(workflow_config) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_tasks (
+CREATE TABLE webknossos.voxelytics_tasks(
     _id CHAR(24) NOT NULL,
     _run CHAR(24) NOT NULL,
     name varCHAR(2048) NOT NULL,
@@ -486,7 +508,7 @@ CREATE TABLE webknossos.voxelytics_tasks (
     CONSTRAINT configIsJsonObject CHECK(jsonb_typeof(config) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_chunks (
+CREATE TABLE webknossos.voxelytics_chunks(
     _id CHAR(24) NOT NULL,
     _task CHAR(24) NOT NULL,
     executionId VARCHAR(2048) NOT NULL,
@@ -495,41 +517,41 @@ CREATE TABLE webknossos.voxelytics_chunks (
     UNIQUE (_task, executionId, chunkName)
 );
 
-CREATE TABLE webknossos.voxelytics_workflows (
+CREATE TABLE webknossos.voxelytics_workflows(
     _organization CHAR(24) NOT NULL,
     hash VARCHAR(512) NOT NULL,
     name TEXT NOT NULL,
     PRIMARY KEY (_organization, hash)
 );
 
-CREATE TABLE webknossos.voxelytics_runStateChangeEvents (
+CREATE TABLE webknossos.voxelytics_runStateChangeEvents(
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_run, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_runHeartbeatEvents (
+CREATE TABLE webknossos.voxelytics_runHeartbeatEvents(
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (_run)
 );
 
-CREATE TABLE webknossos.voxelytics_taskStateChangeEvents (
+CREATE TABLE webknossos.voxelytics_taskStateChangeEvents(
     _task CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_task, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents (
+CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents(
     _chunk CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_chunk, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_chunkProfilingEvents (
+CREATE TABLE webknossos.voxelytics_chunkProfilingEvents(
     _chunk CHAR(24) NOT NULL,
     hostname TEXT NOT NULL,
     pid INT8 NOT NULL,
@@ -540,7 +562,7 @@ CREATE TABLE webknossos.voxelytics_chunkProfilingEvents (
     PRIMARY KEY (_chunk, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents (
+CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents(
     _artifact CHAR(24) NOT NULL,
     path TEXT NOT NULL,
     resolvedPath TEXT NOT NULL,
@@ -574,6 +596,7 @@ CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT is
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.annotation_privateLinks WHERE NOT isDeleted;
+CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -593,6 +616,7 @@ CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
 CREATE INDEX ON webknossos.dataSets(name);
+CREATE INDEX ON webknossos.dataSets(_folder);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.tasks(isDeleted);
 CREATE INDEX ON webknossos.tasks(_project, isDeleted);
@@ -676,6 +700,12 @@ ALTER TABLE webknossos.workers
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.annotation_privateLinks
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
+ALTER TABLE webknossos.folder_paths
+  ADD FOREIGN KEY (_ancestor) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.folder_paths
+  ADD FOREIGN KEY (_descendant) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organizations
+  ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;

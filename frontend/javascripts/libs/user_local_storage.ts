@@ -17,7 +17,7 @@ function prefixKey(key, isOrganizationSpecific) {
 }
 
 const UserLocalStorage = {
-  getItem(key: string, isOrganizationSpecific: boolean = true): string | null | undefined {
+  getItem(key: string, isOrganizationSpecific: boolean = true): string | null {
     return localStorage.getItem(prefixKey(key, isOrganizationSpecific));
   },
 

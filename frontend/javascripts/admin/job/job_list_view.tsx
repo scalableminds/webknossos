@@ -2,8 +2,7 @@ import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Table, Spin, Input, Tooltip } from "antd";
 import {
   CheckCircleTwoTone,
@@ -62,9 +61,7 @@ const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIJob[] = [];
-type Props = {
-  history: RouteComponentProps["history"];
-};
+type Props = {};
 type State = {
   isLoading: boolean;
   jobs: Array<APIJob>;
@@ -89,12 +86,12 @@ class JobListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchData();
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   componentWillUnmount() {
@@ -376,4 +373,4 @@ class JobListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(JobListView);
+export default JobListView;

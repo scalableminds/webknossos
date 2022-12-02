@@ -80,7 +80,7 @@ export function HelpModal(props: HelpModalProps) {
     <Modal
       title="Do you have any questions?"
       style={!props.centeredLayout ? positionStyle : undefined}
-      visible={props.isModalOpen}
+      open={props.isModalOpen}
       onOk={sendHelp}
       onCancel={props.onCancel}
       mask={props.centeredLayout}

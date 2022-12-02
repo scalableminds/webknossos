@@ -193,7 +193,7 @@ export class ResolutionInfo {
     return this.getResolutionsWithIndices().map((entry) => entry[0]);
   }
 
-  getClosestExistingIndex(index: number): number {
+  getClosestExistingIndex(index: number, errorMessage: string | null = null): number {
     if (this.hasIndex(index)) {
       return index;
     }
@@ -216,7 +216,7 @@ export class ResolutionInfo {
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
     if (bestIndexWithDistance == null) {
-      throw new Error("Couldn't find any resolution.");
+      throw new Error(errorMessage || "Couldn't find any resolution.");
     }
 
     return bestIndexWithDistance[0];

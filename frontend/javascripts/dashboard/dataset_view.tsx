@@ -14,6 +14,7 @@ import {
   Alert,
   MenuProps,
   TreeSelect,
+  Switch,
 } from "antd";
 import {
   CloudUploadOutlined,
@@ -28,7 +29,7 @@ import {
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
+import type { APIJob, APIMaybeUnimportedDataset, APIUser, FolderItem } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import { DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
@@ -45,7 +46,6 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
-import { FolderItem, getFolderHierarchy } from "./folders/folder_tree";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -164,6 +164,7 @@ function DatasetView(props: Props) {
   function renderTable(filteredDatasets: APIMaybeUnimportedDataset[]) {
     return (
       <DatasetTable
+        context={props.context}
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
         selectedDataset={props.selectedDataset}
@@ -328,7 +329,7 @@ function GlobalSearchHeader({
   isEmpty: boolean;
   context: DatasetCollectionContextValue;
 }) {
-  const { data: folderTree } = context.queries.folderTreeQuery;
+  const { data: folderHierarchy } = context.queries.folderHierarchyQuery;
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const { folderIdForSearch, setFolderIdForSearch } = context;
 
@@ -337,17 +338,17 @@ function GlobalSearchHeader({
   };
 
   useEffect(() => {
-    const [newTreeData] = getFolderHierarchy(folderTree, [], null);
+    const newTreeData = folderHierarchy?.tree || [];
     setTreeData(newTreeData);
-  }, [folderTree]);
+  }, [folderHierarchy]);
 
   if (searchQuery.length < MINIMUM_SEARCH_QUERY_LENGTH) {
     // No results are shown because the search query is too short (at least
     // when the back-end search is used. The frontend search doesn't have
     // this restriction which is why isEmpty is checked, too).
-    return isEmpty ? null : (
+    return isEmpty ? (
       <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
-    );
+    ) : null;
   }
   return (
     <>
@@ -369,6 +370,19 @@ function GlobalSearchHeader({
           treeData={treeData}
           fieldNames={{ label: "title", value: "key", children: "children" }}
           treeNodeLabelProp="title"
+          dropdownRender={(node) => (
+            <div>
+              <div style={{ display: "flex", justifyContent: "right", marginBottom: 4 }}>
+                <Switch
+                  checkedChildren="Search Recursively"
+                  unCheckedChildren="Only Search Selected Folder"
+                  checked={context.searchRecursively}
+                  onChange={() => context.setSearchRecursively(!context.searchRecursively)}
+                />
+              </div>
+              {node}
+            </div>
+          )}
         />
       </div>
       <h3>

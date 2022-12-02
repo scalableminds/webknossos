@@ -18,6 +18,7 @@ import {
   APIMaybeUnimportedDataset,
   FlatFolderTreeItem,
   Folder,
+  FolderItem,
   FolderUpdater,
 } from "types/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
@@ -43,15 +44,19 @@ export function useFolderQuery(folderId: string | null) {
   );
 }
 
-export function useDatasetSearchQuery(query: string | null, folderId: string | null) {
-  const queryKey = ["dataset", "search", query, "in", folderId];
+export function useDatasetSearchQuery(
+  query: string | null,
+  folderId: string | null,
+  searchRecursively: boolean,
+) {
+  const queryKey = ["dataset", "search", query, "in", folderId, "recursive?", searchRecursively];
   return useQuery(
     queryKey,
     async () => {
       if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
         return [];
       }
-      return await getDatasets(null, folderId, query, SEARCH_RESULTS_LIMIT);
+      return await getDatasets(null, folderId, query, searchRecursively, SEARCH_RESULTS_LIMIT);
     },
     {
       refetchOnWindowFocus: false,
@@ -60,8 +65,13 @@ export function useDatasetSearchQuery(query: string | null, folderId: string | n
   );
 }
 
-export function useFolderTreeQuery() {
-  return useQuery(["folders"], getFolderTree, {
+async function fetchTreeHierarchy() {
+  const flatTreeItems = await getFolderTree();
+  return getFolderHierarchy(flatTreeItems);
+}
+
+export function useFolderHierarchyQuery() {
+  return useQuery(["folders"], fetchTreeHierarchy, {
     refetchOnWindowFocus: false,
     refetchInterval: FOLDER_TREE_REFETCH_INTERVAL,
   });
@@ -233,8 +243,11 @@ export function useCreateFolderMutation() {
   return useMutation(([parentId, name]: [string, string]) => createFolder(parentId, name), {
     mutationKey,
     onSuccess: (newFolder: Folder, [parentId]) => {
-      queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
-        (oldItems || []).concat([{ ...newFolder, parent: parentId }]),
+      queryClient.setQueryData(
+        mutationKey,
+        transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
+          (oldItems || []).concat([{ ...newFolder, parent: parentId }]),
+        ),
       );
     },
     onError: (err: any) => {
@@ -250,8 +263,11 @@ export function useDeleteFolderMutation() {
   return useMutation((id: string) => deleteFolder(id), {
     mutationKey,
     onSuccess: (deletedId) => {
-      queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
-        (oldItems || []).filter((folder: FlatFolderTreeItem) => folder.id !== deletedId),
+      queryClient.setQueryData(
+        mutationKey,
+        transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
+          (oldItems || []).filter((folder: FlatFolderTreeItem) => folder.id !== deletedId),
+        ),
       );
     },
     onError: (err: any) => {
@@ -267,14 +283,17 @@ export function useUpdateFolderMutation() {
   return useMutation((folder: FolderUpdater) => updateFolder(folder), {
     mutationKey,
     onSuccess: (updatedFolder) => {
-      queryClient.setQueryData(mutationKey, (oldItems: FlatFolderTreeItem[] | undefined) =>
-        (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
-          oldFolder.id === updatedFolder.id
-            ? {
-                ...updatedFolder,
-                parent: oldFolder.parent,
-              }
-            : oldFolder,
+      queryClient.setQueryData(
+        mutationKey,
+        transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
+          (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
+            oldFolder.id === updatedFolder.id
+              ? {
+                  ...updatedFolder,
+                  parent: oldFolder.parent,
+                }
+              : oldFolder,
+          ),
         ),
       );
       queryClient.setQueryData(["folders", updatedFolder.id], updatedFolder);
@@ -289,8 +308,8 @@ export function useMoveFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];
 
-  const updater =
-    (folderId: string, newParentId: string) => (oldItems: FlatFolderTreeItem[] | undefined) =>
+  const updater = (folderId: string, newParentId: string) =>
+    transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
       (oldItems || []).map((oldFolder: FlatFolderTreeItem) =>
         oldFolder.id === folderId
           ? {
@@ -298,7 +317,8 @@ export function useMoveFolderMutation() {
               parent: newParentId,
             }
           : oldFolder,
-      );
+      ),
+    );
 
   return useMutation(
     ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
@@ -497,4 +517,59 @@ function getUnobtrusivelyUpdatedDatasets(
       lastUsedByUser: oldDataset.lastUsedByUser,
     };
   });
+}
+
+type FolderHierarchy = {
+  tree: FolderItem[];
+  itemById: Record<string, FolderItem>;
+  flatItems: FlatFolderTreeItem[];
+};
+
+export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHierarchy {
+  const roots: FolderItem[] = [];
+  const itemById: Record<string, FolderItem> = {};
+  for (const folderTreeItem of folderTree) {
+    const treeItem = {
+      key: folderTreeItem.id,
+      title: folderTreeItem.name,
+      isEditable: folderTreeItem.isEditable,
+      parent: folderTreeItem.parent,
+      children: [],
+    };
+    if (folderTreeItem.parent == null) {
+      roots.push(treeItem);
+    }
+    itemById[folderTreeItem.id] = treeItem;
+  }
+
+  for (const folderTreeItem of folderTree) {
+    if (folderTreeItem.parent != null) {
+      itemById[folderTreeItem.parent].children.push(itemById[folderTreeItem.id]);
+    }
+  }
+
+  for (const folderTreeItem of folderTree) {
+    if (folderTreeItem.parent != null) {
+      itemById[folderTreeItem.parent].children.sort((a, b) => a.title.localeCompare(b.title));
+    }
+  }
+
+  return { tree: roots, itemById, flatItems: folderTree };
+}
+
+function transformHierarchy(
+  mapNewToOld: (old: FlatFolderTreeItem[] | undefined) => FlatFolderTreeItem[],
+) {
+  /*
+   * The backend responds with FlatFolderTreeItem[] to represent the folder directory.
+   * The frontend maps this to a nested folder hierarchy (see getFolderHierarchy).
+   * Optimistic updates are easier to compute on the FlatFolderTreeItem[] structure, though.
+   * This function here can be used to create a function which maps from FolderHierarchy
+   * to FolderHierarchy by passing a function which maps from FlatFolderTreeItem[] to FlatFolderTreeItem[].
+   */
+  return (oldHierarchy: FolderHierarchy | undefined) => {
+    const oldItems = oldHierarchy?.flatItems;
+    const newItems = mapNewToOld(oldItems);
+    return getFolderHierarchy(newItems);
+  };
 }

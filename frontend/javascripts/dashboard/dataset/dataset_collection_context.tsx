@@ -5,7 +5,7 @@ import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import {
-  useFolderTreeQuery,
+  useFolderHierarchyQuery,
   useDatasetsInFolderQuery,
   useDatasetSearchQuery,
   useCreateFolderMutation,
@@ -40,8 +40,11 @@ export type DatasetCollectionContextValue = {
   setGlobalSearchQuery: (val: string | null) => void;
   folderIdForSearch: string | null;
   setFolderIdForSearch: (val: string | null) => void;
+  searchRecursively: boolean;
+  setSearchRecursively: (val: boolean) => void;
+  getBreadcrumbs: (dataset: APIMaybeUnimportedDataset) => string[] | null;
   queries: {
-    folderTreeQuery: ReturnType<typeof useFolderTreeQuery>;
+    folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
     datasetSearchQuery: ReturnType<typeof useDatasetSearchQuery>;
     createFolderMutation: ReturnType<typeof useCreateFolderMutation>;
@@ -91,6 +94,7 @@ export default function DatasetCollectionContextProvider({
     },
     [setGlobalSearchQueryInner, setActiveFolderId],
   );
+  const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
 
   // Clear search query if active folder changes.
   useEffect(() => {
@@ -119,9 +123,13 @@ export default function DatasetCollectionContextProvider({
     }
   }, [folder, activeFolderId]);
 
-  const folderTreeQuery = useFolderTreeQuery();
+  const folderHierarchyQuery = useFolderHierarchyQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
-  const datasetSearchQuery = useDatasetSearchQuery(globalSearchQuery, folderIdForSearch);
+  const datasetSearchQuery = useDatasetSearchQuery(
+    globalSearchQuery,
+    folderIdForSearch,
+    searchRecursively,
+  );
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
@@ -144,10 +152,26 @@ export default function DatasetCollectionContextProvider({
     updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
+  const getBreadcrumbs = (dataset: APIMaybeUnimportedDataset) => {
+    if (folderHierarchyQuery.data?.itemById == null) {
+      return null;
+    }
+    const { itemById } = folderHierarchyQuery.data;
+
+    let currentFolder = itemById[dataset.folderId];
+    const breadcrumbs = [currentFolder.title];
+    while (currentFolder?.parent != null) {
+      currentFolder = itemById[currentFolder.parent];
+      breadcrumbs.unshift(currentFolder.title);
+    }
+
+    return breadcrumbs;
+  };
+
   const isLoading =
     (globalSearchQuery
       ? datasetSearchQuery.isFetching
-      : folderTreeQuery.isLoading ||
+      : folderHierarchyQuery.isLoading ||
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
@@ -162,6 +186,7 @@ export default function DatasetCollectionContextProvider({
       activeFolderId,
       setActiveFolderId,
       isChecking,
+      getBreadcrumbs,
       checkDatasets: async () => {
         if (isChecking) {
           console.warn("Ignore second rechecking request, since a recheck is already in progress");
@@ -187,8 +212,10 @@ export default function DatasetCollectionContextProvider({
       setGlobalSearchQuery,
       folderIdForSearch,
       setFolderIdForSearch,
+      searchRecursively,
+      setSearchRecursively,
       queries: {
-        folderTreeQuery,
+        folderHierarchyQuery,
         datasetsInFolderQuery,
         datasetSearchQuery,
         createFolderMutation,
@@ -207,9 +234,11 @@ export default function DatasetCollectionContextProvider({
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
-      folderTreeQuery,
+      folderHierarchyQuery,
       datasetsInFolderQuery,
       datasetSearchQuery,
+      searchRecursively,
+      setSearchRecursively,
       createFolderMutation,
       deleteFolderMutation,
       updateFolderMutation,

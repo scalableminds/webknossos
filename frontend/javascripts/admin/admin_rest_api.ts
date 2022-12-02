@@ -1025,6 +1025,7 @@ export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
   searchQuery: string | null = null,
+  searchRecursively: boolean | null = null,
   limit: number | null = null,
 ): Promise<Array<APIMaybeUnimportedDataset>> {
   const params = new URLSearchParams();
@@ -1039,6 +1040,9 @@ export async function getDatasets(
   }
   if (limit != null) {
     params.append("limit", String(limit));
+  }
+  if (searchRecursively != null) {
+    params.append("recursive", searchRecursively ? "true" : "false");
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);

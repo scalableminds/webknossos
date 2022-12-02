@@ -36,7 +36,11 @@ import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/con
 import Shortcut from "libs/shortcut_component";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import { useSelector } from "react-redux";
+import { DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
+import { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
+import { Unicode } from "oxalis/constants";
 
+const { ThinSpace } = Unicode;
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
 const useLruRank = true;
@@ -58,6 +62,7 @@ type Props = {
   onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
   selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
   hideDetailsColumns?: boolean;
+  context: DatasetCacheContextValue | DatasetCollectionContextValue;
 };
 type State = {
   prevSearchQuery: string;
@@ -490,6 +495,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 </Link>
                 <br />
                 <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
+                {"getBreadcrumbs" in this.props.context ? (
+                  <BreadcrumbsTag parts={this.props.context.getBreadcrumbs(dataset)} />
+                ) : null}
               </>
             )}
           />
@@ -722,6 +730,28 @@ export function TeamTags({
         );
       })}
     </>
+  );
+}
+
+function formatPath(parts: string[]) {
+  return parts.join(`${ThinSpace}/${ThinSpace}`);
+}
+
+function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
+  if (allParts == null) {
+    return null;
+  }
+  let parts;
+  if (allParts.length <= 4) {
+    parts = allParts;
+  } else {
+    parts = [...allParts.slice(0, 2), "...", ...allParts.slice(-2)];
+  }
+
+  return (
+    <Tooltip title={`This folder is located in ${formatPath(allParts)}.`}>
+      <Tag>{formatPath(parts)}</Tag>
+    </Tooltip>
   );
 }
 

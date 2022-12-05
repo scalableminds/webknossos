@@ -180,7 +180,7 @@ function getDescriptionForSpecificBatch(
   const firstAction = actions[0];
 
   if (firstAction.name !== type) {
-    throw new Error("Flow constraint violated");
+    throw new Error("Type constraint violated");
   }
 
   return descriptionFns[type](firstAction, actions.length);
@@ -206,7 +206,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     const firstMoveTreeComponentUA = moveTreeComponentUAs[0];
 
     if (firstMoveTreeComponentUA.name !== "moveTreeComponent") {
-      throw new Error("Flow constraint violated");
+      throw new Error("Type constraint violated");
     }
 
     if (groupedUpdateActions.createTree != null) {

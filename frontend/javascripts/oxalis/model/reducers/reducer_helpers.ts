@@ -58,7 +58,6 @@ export function convertUserBoundingBoxesFromServerToFrontend(
 export function convertUserBoundingBoxesFromFrontendToServer(
   boundingBoxes: Array<UserBoundingBox>,
 ): Array<UserBoundingBoxToServer> {
-  // The exact spreading is needed for flow to grasp that the conversion is correct.
   return boundingBoxes.map((bb) => {
     const { boundingBox, ...rest } = bb;
     return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };

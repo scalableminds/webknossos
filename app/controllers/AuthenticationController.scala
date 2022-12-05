@@ -4,10 +4,11 @@ import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
-import com.mohiva.play.silhouette.api.util.Credentials
+import com.mohiva.play.silhouette.api.util.{Credentials, PasswordInfo}
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.JsonHelper.validateJsValue
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.annotation.AnnotationState.Cancelled
@@ -27,7 +28,7 @@ import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
 import utils.{ObjectId, WkConf}
 
 import java.net.URLEncoder
@@ -55,6 +56,7 @@ class AuthenticationController @Inject()(
     annotationDAO: AnnotationDAO,
     voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    openIdConnectClient: OpenIdConnectClient,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -83,7 +85,7 @@ class AuthenticationController @Inject()(
           errors ::= Messages("user.lastName.invalid")
           ""
         }
-        multiUserDAO.findOneByEmail(email)(GlobalAccessContext).toFox.futureBox.flatMap {
+        multiUserDAO.findOneByEmail(email)(GlobalAccessContext).futureBox.flatMap {
           case Full(_) =>
             errors ::= Messages("user.email.alreadyInUse")
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
@@ -98,25 +100,15 @@ class AuthenticationController @Inject()(
                   inviteBox.toOption,
                   organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
-                user <- userService.insert(organization._id,
-                                           email,
-                                           firstName,
-                                           lastName,
-                                           autoActivate,
-                                           passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
-                multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-                _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
-                _ <- Fox.runOptional(inviteBox.toOption)(i =>
-                  inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
-                brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
+                _ <- createUser(organization,
+                                email,
+                                firstName,
+                                lastName,
+                                autoActivate,
+                                Option(signUpData.password),
+                                inviteBox,
+                                registerBrainDB = true)
               } yield {
-                if (conf.Features.isDemoInstance) {
-                  mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
-                } else {
-                  Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
-                }
-                Mailer ! Send(
-                  defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
                 Ok
               }
             }
@@ -124,6 +116,35 @@ class AuthenticationController @Inject()(
         }
       }
     )
+  }
+
+  private def createUser(organization: Organization,
+                         email: String,
+                         firstName: String,
+                         lastName: String,
+                         autoActivate: Boolean,
+                         password: Option[String],
+                         inviteBox: Box[Invite] = Empty,
+                         registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
+    val passwordInfo: PasswordInfo =
+      password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
+    for {
+      user <- userService.insert(organization._id, email, firstName, lastName, autoActivate, passwordInfo) ?~> "user.creation.failed"
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
+      _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
+        inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
+      brainDBResult <- Fox.runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")))
+      _ = if (conf.Features.isDemoInstance) {
+        mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
+      } else {
+        Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult.flatten, autoActivate))
+      }
+      _ = Mailer ! Send(
+        defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult.flatten, organization, autoActivate))
+    } yield {
+      user
+    }
   }
 
   def authenticate: Action[AnyContent] = Action.async { implicit request =>
@@ -430,7 +451,7 @@ class AuthenticationController @Inject()(
     request.identity match {
       case Some(user) =>
         // logged in
-        // Check if the request we recieved was signed using our private sso-key
+        // Check if the request we received was signed using our private sso-key
         if (shaHex(ssoKey, sso) == sig) {
           val payload = new String(Base64.decodeBase64(sso))
           val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
@@ -457,6 +478,58 @@ class AuthenticationController @Inject()(
     }
   }
 
+  lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
+
+  def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Ok(Json.obj("redirect_url" -> url)))
+  }
+
+  private def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
+    userService.retrieve(loginInfo).flatMap {
+      case Some(user) if !user.isDeactivated =>
+        for {
+          authenticator: CombinedAuthenticator <- combinedAuthenticatorService.create(loginInfo)
+          value: Cookie <- combinedAuthenticatorService.init(authenticator)
+          result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
+          _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+          _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+        } yield result
+      case None =>
+        Future.successful(BadRequest(Messages("error.noUser")))
+      case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+    }
+
+  // Is called after user was successfully authenticated
+  def loginOrSignupViaOidc(oidc: OpenIdConnectClaimSet): Request[AnyContent] => Future[Result] = {
+    implicit request: Request[AnyContent] =>
+      userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).futureBox.flatMap {
+        case Full(user) =>
+          val loginInfo = LoginInfo("credentials", user._id.toString)
+          loginUser(loginInfo)
+        case Empty =>
+          for {
+            organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
+              GlobalAccessContext)
+            user <- createUser(organization, oidc.email, oidc.given_name, oidc.family_name, autoActivate = true, None)
+            // After registering, also login
+            loginInfo = LoginInfo("credentials", user._id.toString)
+            loginResult <- loginUser(loginInfo)
+          } yield loginResult
+        case _ => Future.successful(InternalServerError)
+      }
+  }
+
+  def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      code <- openIdConnectClient.getToken(
+        absoluteOpenIdConnectCallbackURL,
+        request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
+      )
+      oidc: OpenIdConnectClaimSet <- validateJsValue[OpenIdConnectClaimSet](code).toFox
+      user_result <- loginOrSignupViaOidc(oidc)(request)
+    } yield user_result
+  }
+
   private def shaHex(key: String, valueToDigest: String): String =
     new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)
 
@@ -476,7 +549,7 @@ class AuthenticationController @Inject()(
               errors ::= Messages("user.lastName.invalid")
               ""
             }
-            multiUserDAO.findOneByEmail(email)(GlobalAccessContext).toFox.futureBox.flatMap {
+            multiUserDAO.findOneByEmail(email)(GlobalAccessContext).futureBox.flatMap {
               case Full(_) =>
                 errors ::= Messages("user.email.alreadyInUse")
                 Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))

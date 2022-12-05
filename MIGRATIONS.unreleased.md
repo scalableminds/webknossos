@@ -11,4 +11,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - Bulk task creation now needs the taskTypeId, the task type summary will no longer be accepted. If you have scripts generating CSVs for bulk task creation, they should not output task type summaries. [#6640](https://github.com/scalableminds/webknossos/pull/6640)
 
 ### Postgres Evolutions:
+
 - [091-folders.sql](conf/evolutions/091-folders.sql)
+- [092-oidc.sql](conf/evolutions/092-oidc.sql)

@@ -52,6 +52,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
       object User {
         val email: String = get[String]("webKnossos.sampleOrganization.user.email")
+        val email2: String = get[String]("webKnossos.sampleOrganization.user.email2")
         val password: String = get[String]("webKnossos.sampleOrganization.user.password")
         val token: String = get[String]("webKnossos.sampleOrganization.user.token")
         val isSuperUser: Boolean = get[Boolean]("webKnossos.sampleOrganization.user.isSuperUser")

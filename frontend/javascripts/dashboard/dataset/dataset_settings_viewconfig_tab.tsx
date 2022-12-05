@@ -35,14 +35,14 @@ export default function DatasetSettingsViewConfigTab() {
   };
   const layerViewConfigurationEntries = _.map(
     getDefaultLayerViewConfiguration(),
-    (_value: any, key: string) => {
+    (defaultValue: any, key: string) => {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
       const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
-      const value = layerViewConfigurations[layerViewConfigurationKey];
+      const name = layerViewConfigurations[layerViewConfigurationKey];
       return {
-        name: value,
+        name,
         key,
-        value: value == null ? "not set" : value.toString(),
+        value: defaultValue == null ? "not set" : defaultValue.toString(),
         comment: comments[layerViewConfigurationKey] || "",
       };
     },

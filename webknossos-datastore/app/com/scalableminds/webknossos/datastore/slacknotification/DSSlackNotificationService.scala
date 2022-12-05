@@ -17,4 +17,11 @@ class DSSlackNotificationService @Inject()(rpc: RPC, config: DataStoreConfig) ex
       msg = msg
     )
 
+  def notifyForSigbusError(): Unit =
+    slackClient.info(
+      title = "SIGBUS unsafe memory access",
+      msg =
+        "Noticed an unsafe memory access, aborted operation (java.lang.InternalError: a fault occurred in a recent unsafe memory access operation in compiled Java code)"
+    )
+
 }

@@ -53,7 +53,8 @@ public class AmazonS3Factory {
             .standard()
             .withCredentials(getCredentialsProvider(props))
             .withClientConfiguration(getClientConfiguration(props))
-            .withEndpointConfiguration(getEndpointConfiguration(uri))
+            .withRegion(Regions.DEFAULT_REGION)
+            .withForceGlobalBucketAccessEnabled(true)
             .build();
     }
 

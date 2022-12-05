@@ -15,6 +15,8 @@ import {
   MenuProps,
   TreeSelect,
   Switch,
+  Checkbox,
+  Divider,
 } from "antd";
 import {
   CloudUploadOutlined,
@@ -372,14 +374,15 @@ function GlobalSearchHeader({
           treeNodeLabelProp="title"
           dropdownRender={(node) => (
             <div>
-              <div style={{ display: "flex", justifyContent: "right", marginBottom: 4 }}>
-                <Switch
-                  checkedChildren="Search Recursively"
-                  unCheckedChildren="Only Search Selected Folder"
+              <div style={{ marginLeft: 4 }}>
+                <Checkbox
                   checked={context.searchRecursively}
                   onChange={() => context.setSearchRecursively(!context.searchRecursively)}
-                />
+                >
+                  Also search subfolders
+                </Checkbox>
               </div>
+              <Divider style={{ margin: "6px 0" }} />
               {node}
             </div>
           )}

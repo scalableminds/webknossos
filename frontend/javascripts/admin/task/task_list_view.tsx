@@ -39,7 +39,6 @@ const { Column } = Table;
 const { Search, TextArea } = Input;
 type Props = {
   initialFieldValues?: TaskFormFieldValues;
-  history: RouteComponentProps["history"];
 };
 type State = {
   isLoading: boolean;
@@ -69,11 +68,11 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(queryObject: QueryObject) {
@@ -524,4 +523,4 @@ class TaskListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskListView);
+export default TaskListView;

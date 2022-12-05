@@ -53,7 +53,7 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 
-const CHECKBOX_STYLE = {};
+const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
   width: 16,
   display: "inline-block",
@@ -93,7 +93,7 @@ type State = {
   activeGroupDropdownId: number | null | undefined;
 };
 
-type GenerateNodePropsType = {
+export type GenerateNodePropsType = {
   title?: JSX.Element;
   className?: string;
   style?: React.CSSProperties;

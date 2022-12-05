@@ -71,7 +71,7 @@ export function getLayerInfos(
   // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
   // must exist.
   if (tracing == null) {
-    // Satisfy flow.
+    // Satisfy TS.
     throw new Error("Tracing is null, but layer.tracingId is defined.");
   }
   const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";

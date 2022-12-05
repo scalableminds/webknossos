@@ -115,6 +115,56 @@ export default {
       },
       required: ["dataFormat", "mags"],
     },
+    "types::DataLayerN5Partial": {
+      title: "DataLayerN5",
+      type: "object",
+      properties: {
+        dataFormat: {
+          const: "n5",
+        },
+        boundingBox: {
+          $ref: "#/definitions/types::BoundingBox",
+        },
+        numChannels: {
+          type: "number",
+        },
+        mags: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mag: {
+                anyOf: [
+                  {
+                    type: "number",
+                  },
+                  {
+                    $ref: "#/definitions/types::Vector3",
+                  },
+                ],
+              },
+              path: {
+                type: "string",
+              },
+              credentials: {
+                type: "object",
+                properties: {
+                  user: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["user", "password"],
+              },
+              axisOrder: {
+                type: "object",
+                additionalProperties: { type: "number" },
+              },
+            },
+            required: ["mag"],
+          },
+        },
+      },
+      required: ["dataFormat", "mags"],
+    },
     "types::DataLayer": {
       title: "DataLayer",
       allOf: [
@@ -192,6 +242,9 @@ export default {
             },
             {
               $ref: "#/definitions/types::DataLayerZarrPartial",
+            },
+            {
+              $ref: "#/definitions/types::DataLayerN5Partial",
             },
           ],
         },

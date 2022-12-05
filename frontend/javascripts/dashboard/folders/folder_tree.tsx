@@ -12,6 +12,7 @@ import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
+import { MenuInfo } from "rc-menu/lib/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";

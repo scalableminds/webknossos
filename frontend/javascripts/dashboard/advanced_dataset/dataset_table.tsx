@@ -1,4 +1,4 @@
-import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
+import { FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Dropdown, Table, Tag, Tooltip } from "antd";
 import type {
@@ -752,7 +752,10 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
 
   return (
     <Tooltip title={`This folder is located in ${formatPath(allParts)}.`}>
-      <Tag>{formatPath(parts)}</Tag>
+      <Tag>
+        <FolderOpenOutlined />
+        {formatPath(parts)}
+      </Tag>
     </Tooltip>
   );
 }

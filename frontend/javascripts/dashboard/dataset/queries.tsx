@@ -403,6 +403,15 @@ export function useUpdateDatasetMutation(folderId: string | null) {
             },
           );
         }
+        // Invalidate all search results so that outdated data won't be shown.
+        // We could also update the dataset instances in the cache, but this can
+        // get complex quite fast. Mainly because the mutation of a dataset can affect
+        // whether it will be found by a search (e.g., when a dataset is moved to another
+        // folder).
+        // Simply invalidating the search should be a clean solution for now.
+        queryClient.invalidateQueries({
+          queryKey: ["dataset", "search"],
+        });
       },
       onError: (err: any) => {
         handleGenericError(err, "Could not update dataset.");

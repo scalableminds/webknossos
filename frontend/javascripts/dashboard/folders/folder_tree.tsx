@@ -12,7 +12,6 @@ import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
-import { MenuInfo } from "rc-menu/lib/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";
@@ -260,17 +259,43 @@ function FolderItemAsDropTarget(props: {
   isEditable: boolean;
 }) {
   const context = useDatasetCollectionContext();
+  const { selectedDatasets, setSelectedDatasets } = context;
   const { folderId, className, isEditable, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
     accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
-      const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
-
-      if (dataset) {
-        context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+      if (selectedDatasets.length > 0) {
+        // todo: only go into this branch if multi-select was explicitly enabled?
+        // todo: block the UI so that nothing happens during the bulk update
+        //  - e.g. open a modal with a progress indicator?
+        Promise.all(
+          selectedDatasets.map((ds) => {
+            context.queries.updateDatasetMutation.mutateAsync([ds, folderId]);
+          }),
+        )
+          .then(
+            () => Toast.success(`Successfully moved ${selectedDatasets.length} datasets.`),
+            (err) => {
+              Toast.error(
+                `Couldn't move all ${selectedDatasets.length} datasets. See console for details`,
+              );
+              console.error(err);
+            },
+          )
+          .then(() => {
+            // The datasets are not in the active folder anymore. Clear the selection to avoid
+            // that stale instances are mutated during the next bulk action.
+            setSelectedDatasets([]);
+          });
       } else {
-        Toast.error("Could not move dataset. Please try again.");
+        const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
+
+        if (dataset) {
+          context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+        } else {
+          Toast.error("Could not move dataset. Please try again.");
+        }
       }
     },
     canDrop: () => isEditable,

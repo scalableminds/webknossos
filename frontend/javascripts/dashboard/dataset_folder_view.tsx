@@ -6,7 +6,7 @@ import {
 } from "@ant-design/icons";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
-import { pluralize } from "libs/utils";
+import { filterNullValues, pluralize } from "libs/utils";
 import _ from "lodash";
 import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useState } from "react";
@@ -34,17 +34,45 @@ export function DatasetFolderView(props: Props) {
 }
 
 function DatasetFolderViewInner(props: Props) {
-  const [selectedDataset, setSelectedDataset] = useState<APIMaybeUnimportedDataset | null>(null);
   const context = useDatasetCollectionContext();
+  const { selectedDatasets, setSelectedDatasets } = context;
   const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
 
+  const setSelectedDataset = (ds: APIMaybeUnimportedDataset | null, multiSelect?: boolean) => {
+    if (!ds) {
+      setSelectedDatasets([]);
+      return;
+    }
+    const set = new Set(selectedDatasets);
+
+    if (multiSelect) {
+      if (set.has(ds)) {
+        set.delete(ds);
+      } else {
+        set.add(ds);
+      }
+    } else {
+      set.clear();
+      set.add(ds);
+    }
+
+    setSelectedDatasets(Array.from(set));
+  };
+
   useEffect(() => {
-    if (!selectedDataset || !context.datasets) {
+    if (selectedDatasets.length === 0 || !context.datasets) {
       return;
     }
     // If the cache changed (e.g., because a dataset was updated), we need to update
     // the selectedDataset instance, too, to avoid that it refers to stale data.
-    setSelectedDataset(context.datasets.find((ds) => ds.name === selectedDataset.name) ?? null);
+    setSelectedDatasets(
+      filterNullValues(
+        selectedDatasets.map(
+          (selectedDataset) =>
+            context.datasets.find((ds) => ds.name === selectedDataset.name) ?? null,
+        ),
+      ),
+    );
   }, [context.datasets]);
 
   return (
@@ -76,7 +104,7 @@ function DatasetFolderViewInner(props: Props) {
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
-          selectedDataset={selectedDataset}
+          selectedDatasets={selectedDatasets}
           context={context}
           hideDetailsColumns
         />
@@ -90,7 +118,7 @@ function DatasetFolderViewInner(props: Props) {
         }}
       >
         <DetailsSidebar
-          selectedDataset={selectedDataset}
+          selectedDatasets={selectedDatasets}
           setSelectedDataset={setSelectedDataset}
           activeFolderId={context.activeFolderId}
           datasetCount={context.datasets.length}
@@ -103,14 +131,14 @@ function DatasetFolderViewInner(props: Props) {
 }
 
 function DetailsSidebar({
-  selectedDataset,
+  selectedDatasets,
   setSelectedDataset,
   datasetCount,
   searchQuery,
   activeFolderId,
   setFolderIdForEditModal,
 }: {
-  selectedDataset: APIMaybeUnimportedDataset | null;
+  selectedDatasets: APIMaybeUnimportedDataset[];
   setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
   datasetCount: number;
   searchQuery: string | null;
@@ -119,6 +147,8 @@ function DetailsSidebar({
 }) {
   const context = useDatasetCollectionContext();
   const { data: folder, error } = useFolderQuery(activeFolderId);
+
+  const selectedDataset = selectedDatasets.length > 0 ? selectedDatasets[0] : null;
 
   useEffect(() => {
     if (selectedDataset == null || !("folderId" in selectedDataset)) {

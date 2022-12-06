@@ -59,8 +59,8 @@ type Props = {
   reloadDataset: (arg0: APIDatasetId, arg1?: Array<APIMaybeUnimportedDataset>) => Promise<void>;
   updateDataset: (arg0: APIDataset) => Promise<void>;
   addTagToSearch: (tag: string) => void;
-  onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
-  selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
+  onSelectDataset: (dataset: APIMaybeUnimportedDataset | null, multiSelect?: boolean) => void;
+  selectedDatasets: APIMaybeUnimportedDataset[];
   hideDetailsColumns?: boolean;
   context: DatasetCacheContextValue | DatasetCollectionContextValue;
 };
@@ -424,7 +424,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             emptyText: this.renderEmptyText(),
           }}
           onRow={(record: APIMaybeUnimportedDataset) => ({
-            onClick: (event) => {
+            onMouseDown: (event) => {
               // @ts-expect-error
               if (event.target?.tagName !== "TD") {
                 // Don't (de)select when another element within the row was clicked
@@ -432,14 +432,22 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 // (e.g., the link action and a (de)selection).
                 return;
               }
-              if (this.props.onSelectDataset) {
-                if (this.props.selectedDataset === record) {
-                  this.props.onSelectDataset(null);
-                } else {
-                  this.props.onSelectDataset(record);
-                }
+
+              if (!this.props.selectedDatasets.includes(record)) {
+                this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
               }
             },
+            // onClick: (event) => {
+            //   // @ts-expect-error
+            //   if (event.target?.tagName !== "TD") {
+            //     // Don't (de)select when another element within the row was clicked
+            //     // (e.g., a link). Otherwise, clicking such elements would cause two actions
+            //     // (e.g., the link action and a (de)selection).
+            //     return;
+            //   }
+
+            //   this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
+            // },
             onContextMenu: (event) => {
               event.preventDefault();
 
@@ -473,8 +481,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
             },
           })}
           rowSelection={{
-            selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
-            onSelectNone: () => this.props.onSelectDataset?.(null),
+            selectedRowKeys: this.props.selectedDatasets.map((ds) => ds.name),
+            onSelectNone: () => this.props.onSelectDataset(null),
           }}
         >
           <Column

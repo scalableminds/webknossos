@@ -129,7 +129,14 @@ class AuthenticationController @Inject()(
     val passwordInfo: PasswordInfo =
       password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
     for {
-      user <- userService.insert(organization._id, email, firstName, lastName, autoActivate, passwordInfo, isAdmin = false, isOrganizationOwner = false) ?~> "user.creation.failed"
+      user <- userService.insert(organization._id,
+                                 email,
+                                 firstName,
+                                 lastName,
+                                 autoActivate,
+                                 passwordInfo,
+                                 isAdmin = false,
+                                 isOrganizationOwner = false) ?~> "user.creation.failed"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>

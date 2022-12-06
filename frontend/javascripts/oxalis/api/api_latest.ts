@@ -72,6 +72,7 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
+  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -1443,7 +1444,7 @@ class DataApi {
     const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep);
 
     const topLeft = (bucketAddress: Vector4) =>
-      bucketPositionToGlobalAddress(bucketAddress, resolutions);
+      bucketPositionToGlobalAddress(bucketAddress, new ResolutionInfo(resolutions));
 
     const nextBucketInDim = (bucket: Vector4, dim: 0 | 1 | 2) => {
       const copy = bucket.slice();

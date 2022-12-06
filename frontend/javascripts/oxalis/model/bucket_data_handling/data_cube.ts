@@ -546,8 +546,10 @@ class DataCube {
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
-      const resolutions = getResolutions(Store.getState().dataset);
-      const currentResolution = resolutions[currentBucket.zoomedAddress[3]];
+
+      const currentResolution = this.resolutionInfo.getResolutionByIndexOrThrow(
+        currentBucket.zoomedAddress[3],
+      );
 
       const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]: Vector3) => {
         // Convert bucket local W coordinate to global W (both mag-dependent)

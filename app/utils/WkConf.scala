@@ -65,6 +65,15 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val children = List(User, Tasks, Cache, SampleOrganization)
   }
 
+  object SingleSignOn {
+    object OpenIdConnect {
+      val providerUrl: String = get[String]("singleSignOn.openIdConnect.providerUrl")
+      val clientId: String = get[String]("singleSignOn.openIdConnect.clientId")
+      val publicKey: String = get[String]("singleSignOn.openIdConnect.publicKey")
+      val publicKeyAlgorithm: String = get[String]("singleSignOn.openIdConnect.publicKeyAlgorithm")
+    }
+  }
+
   object Features {
     val isDemoInstance: Boolean = get[Boolean]("features.isDemoInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
@@ -74,6 +83,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
+    val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
   }
 
   object Datastore {

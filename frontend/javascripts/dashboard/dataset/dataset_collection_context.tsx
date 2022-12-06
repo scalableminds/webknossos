@@ -83,7 +83,7 @@ export default function DatasetCollectionContextProvider({
   const { data: folder } = useFolderQuery(activeFolderId);
 
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
-  const [folderIdForSearch, setFolderIdForSearch] = useState<string | null>(null);
+  const [folderIdForSearch, setFolderIdForSearch] = useState<string | null>(activeFolderId);
   const setGlobalSearchQuery = useCallback(
     (value: string | null) => {
       // Empty string should be handled as null
@@ -111,7 +111,28 @@ export default function DatasetCollectionContextProvider({
     activeFolderId,
     folderIdForSearch,
     setFolderIdForSearch,
+    searchRecursively,
+    setSearchRecursively,
   );
+
+  useEffect(() => {
+    // When the user initiates a search, the current folder should always
+    // be used as a default search location. This is accomplished by
+    // synchronizing the folderIdForSearch and the activeFolderId
+    // unidirectionally here.
+    // Note that the two variables are not always the same. For example,
+    // when a search is active, the activeFolderId is null.
+    if (activeFolderId && folderIdForSearch != null) {
+      // folderIdForSearch is only changed when it's not null. That way,
+      // if the user changes the search mode to "global" at some point,
+      // this is not reverted as soon as the user navigates to another
+      // folder (outside of search).
+      // If the user switches to another folder within a search context,
+      // folderIdForSearch is set by the onSelect handler of the DirectoryTree
+      // component.
+      setFolderIdForSearch(activeFolderId);
+    }
+  }, [activeFolderId]);
 
   useEffect(() => {
     // Persist last active folder to localStorage. We
@@ -262,6 +283,8 @@ function useManagedUrlParams(
   activeFolderId: string | null,
   folderIdForSearch: string | null,
   setFolderIdForSearch: React.Dispatch<React.SetStateAction<string | null>>,
+  searchRecursively: boolean,
+  setSearchRecursively: (val: boolean) => void,
 ) {
   const { data: folder } = useFolderQuery(activeFolderId);
 
@@ -276,6 +299,8 @@ function useManagedUrlParams(
     if (folderId) {
       setFolderIdForSearch(folderId);
     }
+    const recursive = params.get("recursive");
+    setSearchRecursively(!!recursive);
 
     const folderSpecifier = _.last(location.pathname.split("/"));
 
@@ -288,7 +313,7 @@ function useManagedUrlParams(
     }
   }, []);
 
-  // Update query and folderIdForSearch
+  // Update query, folderIdForSearch and searchRecursively
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (globalSearchQuery) {
@@ -301,6 +326,11 @@ function useManagedUrlParams(
     } else {
       params.delete("folderId");
     }
+    if (searchRecursively) {
+      params.set("recursive", "true");
+    } else {
+      params.delete("recursive");
+    }
     const paramStr = params.toString();
 
     // Don't use useHistory because this would lose the input search
@@ -310,7 +340,7 @@ function useManagedUrlParams(
       "",
       `${location.pathname}${paramStr === "" ? "" : "?"}${paramStr}`,
     );
-  }, [globalSearchQuery, folderIdForSearch]);
+  }, [globalSearchQuery, folderIdForSearch, searchRecursively]);
 
   // Update folderId
   useEffect(() => {

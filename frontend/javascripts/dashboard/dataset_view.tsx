@@ -17,6 +17,8 @@ import {
   Switch,
   Checkbox,
   Divider,
+  RadioChangeEvent,
+  Select,
 } from "antd";
 import {
   CloudUploadOutlined,
@@ -218,7 +220,9 @@ function DatasetView(props: Props) {
     />
   );
   const searchBox = (
-    <Search
+    <Input
+      prefix={<SearchOutlined />}
+      allowClear
       style={{
         width: 200,
       }}
@@ -335,10 +339,6 @@ function GlobalSearchHeader({
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const { folderIdForSearch, setFolderIdForSearch } = context;
 
-  const onChange = (newValue: string) => {
-    setFolderIdForSearch(newValue);
-  };
-
   useEffect(() => {
     const newTreeData = folderHierarchy?.tree || [];
     setTreeData(newTreeData);
@@ -352,40 +352,35 @@ function GlobalSearchHeader({
       <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
     ) : null;
   }
+  const plainOptions = [
+    { label: "Search everywhere", value: "everywhere" },
+    { label: "Search current folder", value: "folder" },
+    { label: "Search current folder and its subfolders", value: "folder-with-subfolders" },
+  ];
+
   return (
     <>
       <div style={{ float: "right" }}>
-        <Tooltip title="When selecting a folder, only that folder will be searched (not its child folders)">
-          <span style={{ marginRight: 4 }}>Where to search:</span>
-        </Tooltip>
-        <TreeSelect
-          size="small"
-          showSearch
-          style={{ width: 150 }}
-          value={folderIdForSearch || undefined}
-          dropdownStyle={{ maxHeight: 500, overflow: "auto" }}
-          placeholder="Everywhere"
-          allowClear
+        <Select
+          options={plainOptions}
           dropdownMatchSelectWidth={false}
-          treeDefaultExpandAll
-          onChange={onChange}
-          treeData={treeData}
-          fieldNames={{ label: "title", value: "key", children: "children" }}
-          treeNodeLabelProp="title"
-          dropdownRender={(node) => (
-            <div>
-              <div style={{ marginLeft: 4 }}>
-                <Checkbox
-                  checked={context.searchRecursively}
-                  onChange={() => context.setSearchRecursively(!context.searchRecursively)}
-                >
-                  Also search subfolders
-                </Checkbox>
-              </div>
-              <Divider style={{ margin: "6px 0" }} />
-              {node}
-            </div>
-          )}
+          onChange={(value) => {
+            if (value === "everywhere") {
+              setFolderIdForSearch(null);
+            } else {
+              if (folderIdForSearch == null && treeData.length > 0) {
+                setFolderIdForSearch(treeData[0].key);
+              }
+              context.setSearchRecursively(value === "folder-with-subfolders");
+            }
+          }}
+          value={
+            folderIdForSearch == null
+              ? "everywhere"
+              : context.searchRecursively
+              ? "folder-with-subfolders"
+              : "folder"
+          }
         />
       </div>
       <h3>

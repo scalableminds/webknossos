@@ -88,7 +88,11 @@ export function FolderTreeSidebar({
       // The classic preventDefault() didn't work as an alternative workaround.
       const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
       if (keys.length > 0 && doesEventReferToTreeUi) {
-        context.setActiveFolderId(keys[0] as string);
+        if (context.globalSearchQuery == null) {
+          context.setActiveFolderId(keys[0] as string);
+        } else {
+          context.setFolderIdForSearch(keys[0] as string);
+        }
       }
     },
     [context],
@@ -168,7 +172,7 @@ export function FolderTreeSidebar({
         <DirectoryTree
           blockNode
           expandAction="doubleClick"
-          selectedKeys={nullableIdToArray(context.activeFolderId)}
+          selectedKeys={nullableIdToArray(context.activeFolderId || context.folderIdForSearch)}
           draggable={isDraggingDataset ? false : draggableConfig}
           defaultExpandAll
           onSelect={onSelect}

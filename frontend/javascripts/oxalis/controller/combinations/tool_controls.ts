@@ -40,7 +40,11 @@ import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
-import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
+import {
+  minCutAgglomerateWithPositionAction,
+  proofreadAtPosition,
+  proofreadMerge,
+} from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 
@@ -690,13 +694,13 @@ export class QuickSelectTool {
         _delta: Point2,
         pos: Point2,
         _id: string | null | undefined,
-        _event: MouseEvent,
+        event: MouseEvent,
       ) => {
         if (!isDragging || startPos == null) {
           return;
         }
         const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
-        if (_event.shiftKey) {
+        if (event.shiftKey) {
           // If shift is held, the rectangle is resized on topLeft and bottomRight
           // so that the center is constant.
           // We don't use the passed _delta variable, because that is given in pixel-space
@@ -751,37 +755,47 @@ export class ProofreadTool {
   }
 
   static onLeftClick(
-    planeView: PlaneView,
+    _planeView: PlaneView,
     pos: Point2,
     plane: OrthoView,
-    _event: MouseEvent,
-    isTouch: boolean,
+    event: MouseEvent,
+    _isTouch: boolean,
   ) {
-    const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-    if (didSelectNode) {
-      // Don't do anything else
-      return;
-    }
-
     if (plane === OrthoViews.TDView) {
       // The click position cannot be mapped to a 3D coordinate in the
-      // 3D viewport (unless a node was clicked which is already handled above).
+      // 3D viewport.
       return;
     }
 
     const globalPosition = calculateGlobalPos(Store.getState(), pos);
-    Store.dispatch(proofreadAtPosition(globalPosition));
+
+    if (event.shiftKey) {
+      Store.dispatch(proofreadMerge(globalPosition));
+    } else if (event.ctrlKey) {
+      Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
+    } else {
+      Store.dispatch(proofreadAtPosition(globalPosition));
+      VolumeHandlers.handlePickCell(pos);
+    }
   }
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
-    _shiftKey: boolean,
-    _ctrlKey: boolean,
+    shiftKey: boolean,
+    ctrlKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
+    let leftClick = "Select Segment to Proofread";
+
+    if (shiftKey) {
+      leftClick = "Merge with active Segment";
+    } else if (ctrlKey) {
+      leftClick = "Split from active Segment";
+    }
+
     return {
-      leftClick: "Select Segment to Proofread",
+      leftClick,
       rightClick: "Context Menu",
     };
   }

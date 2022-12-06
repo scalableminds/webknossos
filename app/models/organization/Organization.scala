@@ -24,6 +24,7 @@ case class Organization(
     paidUntil: Option[Timestamp],
     includedUsers: Option[Int],
     includedStorage: Option[Long],
+    _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
@@ -53,6 +54,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.paiduntil,
         r.includedusers,
         r.includedstorage,
+        ObjectId(r._Rootfolder),
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
@@ -88,8 +90,8 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def insertOne(o: Organization): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, enableAutoVerify, pricingplan, paidUntil, includedusers, includedstorage, created, isDeleted)
-values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${new java.sql.Timestamp(
+        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, _rootFolder, newUserMailingList, overTimeMailingList, enableAutoVerify, pricingplan, paidUntil, includedusers, includedstorage, created, isDeleted)
+values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${new java.sql.Timestamp(
           o.created)}, ${o.isDeleted})
             """)
     } yield ()

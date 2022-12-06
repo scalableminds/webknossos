@@ -7,6 +7,7 @@ import controllers.InitialDataService
 
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO}
+import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO}
 import play.api.libs.json.{JsObject, Json}
@@ -19,6 +20,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     userDAO: UserDAO,
                                     teamDAO: TeamDAO,
                                     dataStoreDAO: DataStoreDAO,
+                                    folderDAO: FolderDAO,
+                                    folderService: FolderService,
                                     rpc: RPC,
                                     initialDataService: InitialDataService,
                                     conf: WkConf,
@@ -46,12 +49,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     )
   }
 
-  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
+  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizationNameOpt: Option[String])(
       implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization)
       case None =>
-        organizatioNameOpt match {
+        organizationNameOpt match {
           case Some(organizationName) => organizationDAO.findOneByName(organizationName)
           case None =>
             for {
@@ -83,6 +86,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
       initialPricingParameters = if (conf.Features.isDemoInstance) (PricingPlan.Free, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
+      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
+      
       organization = Organization(
         ObjectId.generate,
         organizationName,
@@ -92,9 +97,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         initialPricingParameters._1,
         None,
         initialPricingParameters._2,
-        initialPricingParameters._3
+        initialPricingParameters._3,
+        organizationRootFolder._id
       )
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
+      _ <- folderDAO.insertAsRoot(organizationRootFolder)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
       _ <- initialDataService.insertLocalDataStoreIfEnabled()

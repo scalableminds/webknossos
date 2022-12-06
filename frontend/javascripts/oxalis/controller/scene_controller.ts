@@ -202,7 +202,7 @@ class SceneController {
     return color;
   }
 
-  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
+  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry) {
     const color = this.getColorObjectForSegment(cellId);
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
@@ -213,14 +213,13 @@ class SceneController {
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    mesh.renderOrder = passive ? 1 : 0;
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
     });
     tweenAnimation
       .to(
         {
-          opacity: passive ? 0.4 : 1,
+          opacity: 1,
         },
         500,
       )
@@ -245,33 +244,25 @@ class SceneController {
 
     const meshNumber = _.size(this.stlMeshes);
 
-    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry, false);
+    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry);
     this.meshesRootGroup.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
   }
 
-  addIsosurfaceFromVertices(
-    vertices: Float32Array,
-    segmentationId: number,
-    // Passive isosurfaces are ignored during picking, are shown more transparently, and are rendered
-    // last so that all non-passive isosurfaces are rendered before them. This makes sure that non-passive
-    // isosurfaces are not skipped during rendering if they are overlapped by passive ones.
-    passive: boolean,
-  ): void {
+  addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
 
-    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, passive);
+    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
   }
 
   addIsosurfaceFromGeometry(
     geometry: THREE.BufferGeometry,
     segmentationId: number,
-    passive: boolean = false,
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
   ): void {
@@ -281,13 +272,11 @@ class SceneController {
       this.isosurfacesRootGroup.add(newGroup);
       // @ts-ignore
       newGroup.cellId = segmentationId;
-      // @ts-ignore
-      newGroup.passive = passive;
       if (scale != null) {
         newGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
-    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry, passive);
+    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry);
     if (offset) {
       mesh.translateX(offset[0]);
       mesh.translateY(offset[1]);
@@ -455,7 +444,7 @@ class SceneController {
       this.taskBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
-        Utils.__guard__(this.taskBoundingBox, (bb) => bb.setVisibility(false));
+        this.taskBoundingBox?.setVisibility(false);
       }
     }
   }
@@ -472,7 +461,7 @@ class SceneController {
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.updateForCam(id));
+    this.taskBoundingBox?.updateForCam(id);
 
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
@@ -632,7 +621,7 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(false);
     this.userBoundingBoxGroup.visible = false;
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(false));
+    this.taskBoundingBox?.setVisibility(false);
 
     if (this.isosurfacesRootGroup != null) {
       this.isosurfacesRootGroup.visible = false;
@@ -647,7 +636,7 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(true);
     this.userBoundingBoxGroup.visible = true;
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(true));
+    this.taskBoundingBox?.setVisibility(true);
   }
 
   bindToEvents(): void {

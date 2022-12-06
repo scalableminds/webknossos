@@ -62,11 +62,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
     implicit request =>
       for {
-        taskParameters <- Fox.serialCombined(request.body) { tp =>
-          taskCreationService.normalizeTaskTypeId(tp, request.identity._organization)
-        }
-        _ <- taskCreationService.assertBatchLimit(request.body.length, taskParameters.map(_.taskTypeIdOrSummary))
-        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(taskParameters,
+        _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
+        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
                                                                                 request.identity._organization)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
           taskParameters)
@@ -108,9 +105,9 @@ Expects:
         file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
       _ <- bool2Fox(inputFiles.nonEmpty) ?~> "nml.file.notFound"
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
-      params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
-      _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeIdOrSummary))
-      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeIdOrSummary) ?~> "taskType.id.invalid"
+      params <- JsonHelper.parseAndValidateJson[NmlTaskParameters](jsonString) ?~> "task.create.failed"
+      _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeId))
+      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND

@@ -662,6 +662,7 @@ type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
   name: string;
   fallbackLayerName?: string | null | undefined;
+  mappingName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
 };
 
@@ -790,6 +791,7 @@ export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
   fallbackLayerName?: string | null | undefined,
+  mappingName?: string | null | undefined,
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
@@ -809,6 +811,7 @@ export function createExplorational(
         typ: "Volume",
         name: fallbackLayerName || "Volume",
         fallbackLayerName,
+        mappingName,
         resolutionRestrictions,
       },
     ];
@@ -822,6 +825,7 @@ export function createExplorational(
         typ: "Volume",
         name: fallbackLayerName || "Volume",
         fallbackLayerName,
+        mappingName,
         resolutionRestrictions,
       },
     ];
@@ -1020,9 +1024,25 @@ export async function downsampleSegmentation(
 // ### Datasets
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
+  folderId: string | null = null,
+  searchQuery: string | null = null,
+  limit: number | null = null,
 ): Promise<Array<APIMaybeUnimportedDataset>> {
-  const parameters = isUnreported != null ? `?isUnreported=${String(isUnreported)}` : "";
-  const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);
+  const params = new URLSearchParams();
+  if (isUnreported != null) {
+    params.append("isUnreported", String(isUnreported));
+  }
+  if (folderId != null) {
+    params.append("folderId", folderId);
+  }
+  if (searchQuery != null) {
+    params.append("searchQuery", searchQuery.trim());
+  }
+  if (limit != null) {
+    params.append("limit", String(limit));
+  }
+
+  const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
   return datasets;
 }
@@ -1146,10 +1166,16 @@ export function startComputeMeshFileJob(
   mag: Vector3,
   agglomerateView?: string,
 ): Promise<APIJob> {
+  const params = new URLSearchParams();
+  params.append("layerName", layerName);
+  params.append("mag", mag.join("-"));
+
+  if (agglomerateView) {
+    params.append("agglomerateView", agglomerateView);
+  }
+
   return Request.receiveJSON(
-    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
-      "-",
-    )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
+    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?${params}`,
     {
       method: "POST",
     },
@@ -1317,12 +1343,24 @@ export function getDataset(
   );
 }
 
-export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Promise<APIDataset> {
+export function updateDataset(
+  datasetId: APIDatasetId,
+  dataset: APIMaybeUnimportedDataset,
+  folderId?: string,
+  skipResolutions?: boolean,
+): Promise<APIDataset> {
+  folderId = folderId || dataset.folderId;
+
+  const params = new URLSearchParams();
+  if (skipResolutions) {
+    params.append("skipResolutions", "true");
+  }
+
   return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}?${params}`,
     {
       method: "PATCH",
-      data: dataset,
+      data: { ...dataset, folderId },
     },
   );
 }
@@ -2402,4 +2440,8 @@ export function sendHelpEmail(message: string) {
   return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
     method: "POST",
   });
+}
+
+export function requestSingleSignOnLogin() {
+  return Request.receiveJSON("/api/auth/oidc/login");
 }

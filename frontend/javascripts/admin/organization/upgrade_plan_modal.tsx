@@ -20,6 +20,17 @@ import { PricingPlanEnum } from "./organization_edit_view";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 
+const ModalInformationFooter = (
+  <>
+    <Divider style={{ marginTop: 40 }} />
+    <p style={{ color: "#aaa", fontSize: 12 }}>
+      Requesting an upgrade to your organization&apos;s user quota will send an email to the
+      webKnossos sales team. We typically respond within one business day. See our{" "}
+      <a href="https://webknossos.org/faq">FAQ</a> for more information.
+    </p>
+  </>
+);
+
 function extendPricingPlan(organization: APIOrganization) {
   const extendedDate = moment(organization.paidUntil).add(1, "year");
 
@@ -49,12 +60,7 @@ function extendPricingPlan(organization: APIOrganization) {
           {formatDateInLocalTimeZone(organization.paidUntil, "YYYY-MM-DD")}
         </p>
         <p>Buy extension until: {extendedDate.format("YYYY-MM-DD")}</p>
-        <Divider style={{ marginTop: 40 }} />
-        <p style={{ color: "#aaa", fontSize: 12 }}>
-          Requesting an extension will send an email to the webKnossos sales team to extend your
-          current plan. We typically respond within one business day. webKnossos plans are billed
-          annually. See our <a href="https://webknossos.org/faq">FAQ</a> for more information.
-        </p>
+        {ModalInformationFooter}
       </div>
     ),
   });
@@ -104,13 +110,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
         <div>
           <InputNumber min={1} defaultValue={1} ref={userInputRef} />
         </div>
-
-        <Divider style={{ marginTop: 40 }} />
-        <p style={{ color: "#aaa", fontSize: 12 }}>
-          Requesting an upgrade to your organization&apos;s user quota will send an email to the
-          webKnossos sales team. We typically respond within one business day. See our{" "}
-          <a href="https://webknossos.org/faq">FAQ</a> for more information.
-        </p>
+        {ModalInformationFooter}
       </div>
     </Modal>
   );
@@ -160,12 +160,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
         <div>
           <InputNumber min={1} defaultValue={1} ref={storageInputRef} />
         </div>
-        <Divider style={{ marginTop: 40 }} />
-        <p style={{ color: "#aaa", fontSize: 12 }}>
-          Requesting an upgrade to your organization&apos;s storage quota will send an email to the
-          webKnossos sales team. We typically respond within one business day. See our{" "}
-          <a href="https://webknossos.org/faq">FAQ</a> for more information.
-        </p>
+        {ModalInformationFooter}
       </div>
     </Modal>
   );
@@ -193,7 +188,7 @@ function upgradePricingPlan(organization: APIOrganization) {
     okText: "Request Upgrade",
     onOk: callback,
     icon: <RocketOutlined style={{ color: "var(--ant-primary-color)" }} />,
-    width: 1000,
+    width: 800,
     content: (
       <div
         style={{
@@ -208,12 +203,7 @@ function upgradePricingPlan(organization: APIOrganization) {
             <li key={feature.slice(0, 10)}>{feature}</li>
           ))}
         </ul>
-        <Divider style={{ marginTop: 40 }} />
-        <p style={{ color: "#aaa", fontSize: 12 }}>
-          Requesting an upgrade will send an email to the webKnossos sales team to upgrade your
-          plan. We typically respond within one business day. Billing occurs annually. See our{" "}
-          <a href="https://webknossos.org/faq">FAQ</a> for more information.
-        </p>
+        {ModalInformationFooter}
       </div>
     ),
   });

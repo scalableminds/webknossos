@@ -193,9 +193,10 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const resolutions = getResolutions(Store.getState().dataset);
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
-    const bucketResolution = resolutions[this.zoomedAddress[3]];
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
+    const bucketResolution = this.cube.resolutionInfo.getResolutionByIndexOrThrow(
+      this.zoomedAddress[3],
+    );
     const max: Vector3 = [
       min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
       min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
@@ -208,8 +209,7 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    const resolutions = getResolutions(Store.getState().dataset);
-    return bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -694,10 +694,9 @@ export class DataBucket {
     const zoomStep = getRequestLogZoomStep(Store.getState());
 
     if (this.zoomedAddress[3] === zoomStep) {
-      const resolutions = getResolutions(Store.getState().dataset);
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
         this.zoomedAddress[3],
         this.visualizationColor,
       );

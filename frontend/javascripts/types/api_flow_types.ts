@@ -116,7 +116,9 @@ export type APIDatasetDetails = {
 };
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
+  folderId: string;
   allowedTeams: Array<APITeam>;
+  allowedTeamsCumulative: Array<APITeam>;
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
@@ -568,6 +570,7 @@ export type APIFeatureToggles = {
   readonly exportTiffMaxEdgeLengthVx: number;
   readonly defaultToLegacyBindings: boolean;
   readonly optInTabs?: Array<string>;
+  readonly openIdConnectEnabled?: boolean;
 };
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
@@ -893,4 +896,25 @@ export type VoxelyticsChunkStatistics = {
   cpuUser: Statistics | null;
   cpuSystem: Statistics | null;
   duration: Statistics | null;
+};
+
+export type FlatFolderTreeItem = {
+  name: string;
+  id: string;
+  parent: string | null;
+  isEditable: boolean;
+};
+
+export type Folder = {
+  name: string;
+  id: string;
+  allowedTeams: APITeam[];
+  allowedTeamsCumulative: APITeam[];
+  isEditable: boolean;
+};
+
+export type FolderUpdater = {
+  id: string;
+  name: string;
+  allowedTeams: string[];
 };

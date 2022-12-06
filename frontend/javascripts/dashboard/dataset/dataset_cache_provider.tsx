@@ -16,11 +16,14 @@ type Options = {
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
   isCalledFromCheckDatasets?: boolean;
 };
-type Context = {
+export type DatasetCacheContextValue = {
   datasets: Array<APIMaybeUnimportedDataset>;
   isLoading: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
+  supportsFolders: false;
+  globalSearchQuery: string | null;
+  setGlobalSearchQuery: (val: string | null) => void;
   fetchDatasets: (options?: Options) => Promise<void>;
   reloadDataset: (
     datasetId: APIDatasetId,
@@ -28,8 +31,8 @@ type Context = {
   ) => Promise<void>;
   updateCachedDataset: (dataset: APIDataset) => Promise<void>;
 };
-const oldWkDatasetsCacheKey = "wk.datasets";
-const wkDatasetsCacheKey = "wk.datasets-v2";
+const oldWkDatasetsCacheKey = "wk.datasets-v2";
+const wkDatasetsCacheKey = "wk.datasets-v3";
 export const datasetCache = {
   set(datasets: APIMaybeUnimportedDataset[]): void {
     UserLocalStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));
@@ -48,7 +51,8 @@ export const datasetCache = {
     UserLocalStorage.removeItem(wkDatasetsCacheKey);
   },
 };
-export const DatasetCacheContext = createContext<Context>({
+export const DatasetCacheContext = createContext<DatasetCacheContextValue>({
+  supportsFolders: false,
   datasets: [],
   isLoading: false,
   isChecking: false,
@@ -56,11 +60,14 @@ export const DatasetCacheContext = createContext<Context>({
   checkDatasets: async () => {},
   reloadDataset: async () => {},
   updateCachedDataset: async () => {},
+  globalSearchQuery: null,
+  setGlobalSearchQuery: () => {},
 });
 export default function DatasetCacheProvider({ children }: { children: React.ReactNode }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState<string | null>(null);
   const [pendingDatasetUpdates, setPendingDatasetUpdates] = useState<
     Record<string, Promise<APIDataset>>
   >({});
@@ -83,14 +90,10 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
       const newDatasets = await getDatasets(
         mapFilterModeToUnreportedParameter[datasetFilteringMode],
       );
-      // Hotfix for https://github.com/scalableminds/webknossos/issues/5038
-      // The deprecated cache key can still block a considerable amount of data in the localStorage (around 2 MB
-      // for some wk instances while the localStorage quota is at 5 MB for Chrome).
+      // Remove potential old cache. Since #6591, datasets
+      // have an additional `allowedTeamsCumulative` property which is missing
+      // in the outdated cache.
       UserLocalStorage.removeItem(oldWkDatasetsCacheKey);
-      UserLocalStorage.removeItem(oldWkDatasetsCacheKey, false);
-      // Previously, the datasets key was used globally. Now, it's tied to the current organization,
-      // which is why we can clear the global key (isOrganizationSpecific==false).
-      UserLocalStorage.removeItem(wkDatasetsCacheKey, false);
       datasetCache.set(newDatasets);
 
       if (applyUpdatePredicate(newDatasets)) {
@@ -210,6 +213,7 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
 
   const value = useMemo(
     () => ({
+      supportsFolders: false as false,
       datasets,
       isLoading,
       isChecking,
@@ -217,6 +221,8 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
       fetchDatasets,
       reloadDataset,
       updateCachedDataset,
+      globalSearchQuery,
+      setGlobalSearchQuery,
     }),
     [
       datasets,
@@ -226,6 +232,8 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
       fetchDatasets,
       reloadDataset,
       updateCachedDataset,
+      globalSearchQuery,
+      setGlobalSearchQuery,
     ],
   );
 

@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
@@ -8,7 +9,7 @@ import anyTest from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-mockRequire.stopAll();
+
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,

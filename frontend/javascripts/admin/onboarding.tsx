@@ -282,6 +282,7 @@ export class InviteUsersModal extends React.Component<
           projects.
         </p>
         <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>
+        <p>Note that new users have limited access permissions by default. Please doublecheck their roles and team assignments after they join your organization.</p>
         {exceedingUserLimitAlert}
         <Input.TextArea
           spellCheck={false}
@@ -307,7 +308,7 @@ export class InviteUsersModal extends React.Component<
 
     return (
       <Modal
-        visible={this.props.visible == null ? true : this.props.visible}
+        open={this.props.visible == null ? true : this.props.visible}
         title={
           <>
             <UserAddOutlined /> Invite Users

@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration._
 
@@ -63,6 +64,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     object TermsOfService {
       val enabled: Boolean = get[Boolean]("webKnossos.termsOfService.enabled")
       val url: String = get[String]("webKnossos.termsOfService.url")
+      val acceptanceDeadline: Instant = get[Instant]("webKnossos.termsOfService.acceptanceDeadline")
       val version: Int = get[Int]("webKnossos.termsOfService.version")
     }
 

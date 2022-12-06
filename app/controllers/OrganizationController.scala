@@ -94,7 +94,15 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(request.identity._organization)
       needsAcceptance = conf.WebKnossos.TermsOfService.enabled &&
         organization.lastTermsOfServiceAcceptanceVersion < conf.WebKnossos.TermsOfService.version
-    } yield Ok(Json.obj("acceptanceNeeded" -> needsAcceptance))
+      acceptanceDeadline = conf.WebKnossos.TermsOfService.acceptanceDeadline
+      deadlinePassed = acceptanceDeadline.toEpochMilli < System.currentTimeMillis()
+    } yield
+      Ok(
+        Json.obj(
+          "acceptanceNeeded" -> needsAcceptance,
+          "acceptanceDeadline" -> acceptanceDeadline.toEpochMilli,
+          "acceptanceDeadlinePassed" -> deadlinePassed
+        ))
   }
 
   def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

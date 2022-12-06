@@ -119,6 +119,7 @@ Samplecountry
     Json.obj(),
     userService.createLoginInfo(userId2),
     isAdmin = false,
+    isOrganizationOwner = false,
     isDatasetManager = false,
     isUnlisted = false,
     isDeactivated = false,
@@ -144,8 +145,8 @@ Samplecountry
       _ <- insertRootFolder()
       _ <- insertOrganization()
       _ <- insertTeams()
-      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, true)
-      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, false)
+      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
+      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
       _ <- insertToken()
       _ <- insertTaskType()
       _ <- insertProject()

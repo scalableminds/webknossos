@@ -114,7 +114,7 @@ class VolumeTracingService @Inject()(
           case Empty =>
             Fox.empty
           case f: Failure =>
-            Fox.failure(f.msg)
+            f.toFox
         }
       }
       _ <- save(updatedTracing.copy(version = updateGroup.version), Some(tracingId), updateGroup.version)
@@ -129,7 +129,7 @@ class VolumeTracingService @Inject()(
                            action: UpdateBucketVolumeAction,
                            updateGroupVersion: Long): Fox[VolumeTracing] =
     for {
-      _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag} bucket, which is invalid for this annotation."
+      _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
       bucket = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
       _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
     } yield volumeTracing

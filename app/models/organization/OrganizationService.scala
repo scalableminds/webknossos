@@ -45,12 +45,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     )
   }
 
-  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
+  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizationNameOpt: Option[String])(
       implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization)
       case None =>
-        organizatioNameOpt match {
+        organizationNameOpt match {
           case Some(organizationName) => organizationDAO.findOneByName(organizationName)
           case None =>
             for {

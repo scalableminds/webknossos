@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(91);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(92);
 COMMIT TRANSACTION;
 
 
@@ -290,7 +290,7 @@ CREATE TABLE webknossos.organizations(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
+CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt', 'Empty');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY,
   _multiUser CHAR(24) NOT NULL,

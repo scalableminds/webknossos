@@ -3,10 +3,11 @@ import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_con
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { doWithToken } from "admin/admin_rest_api";
 import {
-  getResolutions,
   isSegmentationLayer,
   getByteCountFromLayer,
   getMappingInfo,
+  ResolutionInfo,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { parseAsMaybe } from "libs/utils";
@@ -47,12 +48,12 @@ type RequestBucketInfo = SendBucketInfo & {
 // object as expected by the server on bucket request
 const createRequestBucketInfo = (
   zoomedAddress: Vector4,
-  resolutions: Array<Vector3>,
+  resolutionInfo: ResolutionInfo,
   fourBit: boolean,
   applyAgglomerate: string | null | undefined,
   version: number | null | undefined,
 ): RequestBucketInfo => ({
-  ...createSendBucketInfo(zoomedAddress, resolutions),
+  ...createSendBucketInfo(zoomedAddress, resolutionInfo),
   fourBit,
   ...(applyAgglomerate != null
     ? {
@@ -66,10 +67,13 @@ const createRequestBucketInfo = (
     : {}),
 });
 
-function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3>): SendBucketInfo {
+function createSendBucketInfo(
+  zoomedAddress: Vector4,
+  resolutionInfo: ResolutionInfo,
+): SendBucketInfo {
   return {
-    position: bucketPositionToGlobalAddress(zoomedAddress, resolutions),
-    mag: resolutions[zoomedAddress[3]],
+    position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
+    mag: resolutionInfo.getResolutionByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };
 }
@@ -160,13 +164,13 @@ export async function requestFromStore(
     activeMapping.mappingType === "HDF5"
       ? activeMapping.mappingName
       : null;
-  const resolutions = getResolutions(state.dataset);
+  const resolutionInfo = getResolutionInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
       ? maybeVolumeTracing.version
       : null;
   const bucketInfo = batch.map((zoomedAddress) =>
-    createRequestBucketInfo(zoomedAddress, resolutions, fourBit, applyAgglomerates, version),
+    createRequestBucketInfo(zoomedAddress, resolutionInfo, fourBit, applyAgglomerates, version),
   );
 
   try {
@@ -234,10 +238,7 @@ export async function sendToStore(batch: Array<DataBucket>, tracingId: string): 
   const items: Array<UpdateAction> = await Promise.all(
     batch.map(async (bucket): Promise<UpdateAction> => {
       const data = bucket.getCopyOfData();
-      const bucketInfo = createSendBucketInfo(
-        bucket.zoomedAddress,
-        getResolutions(Store.getState().dataset),
-      );
+      const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
       const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
       const compressedBase64 = await compressionPool.submit(byteArray);
       return updateBucket(bucketInfo, compressedBase64);

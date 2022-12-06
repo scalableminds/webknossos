@@ -52,8 +52,12 @@ function DatasetFolderViewInner(props: Props) {
         set.add(ds);
       }
     } else {
-      set.clear();
-      set.add(ds);
+      if (set.has(ds) && set.size === 1) {
+        set.clear();
+      } else {
+        set.clear();
+        set.add(ds);
+      }
     }
 
     setSelectedDatasets(Array.from(set));

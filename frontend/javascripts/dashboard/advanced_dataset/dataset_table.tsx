@@ -424,7 +424,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
             emptyText: this.renderEmptyText(),
           }}
           onRow={(record: APIMaybeUnimportedDataset) => ({
-            onMouseDown: (event) => {
+            onDragStart: () => {
+              if (!this.props.selectedDatasets.includes(record)) {
+                this.props.onSelectDataset(record);
+              }
+            },
+            onClick: (event) => {
               // @ts-expect-error
               if (event.target?.tagName !== "TD") {
                 // Don't (de)select when another element within the row was clicked
@@ -433,21 +438,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 return;
               }
 
-              if (!this.props.selectedDatasets.includes(record)) {
-                this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
-              }
+              this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
             },
-            // onClick: (event) => {
-            //   // @ts-expect-error
-            //   if (event.target?.tagName !== "TD") {
-            //     // Don't (de)select when another element within the row was clicked
-            //     // (e.g., a link). Otherwise, clicking such elements would cause two actions
-            //     // (e.g., the link action and a (de)selection).
-            //     return;
-            //   }
-
-            //   this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
-            // },
             onContextMenu: (event) => {
               event.preventDefault();
 

@@ -6,7 +6,7 @@ import {
   PlusCircleOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import { Tooltip } from "antd";
+import { Button, Tooltip } from "antd";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { isUserAdminOrTeamManager, isUserAdminOrDatasetManager } from "libs/utils";
@@ -73,7 +73,10 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
         }}
       >
         <Tooltip title="Don't show this again" placement="left">
-          <CloseOutlined onClick={onDismiss} />
+          <Button type="text" onClick={onDismiss}>
+            Close
+            <CloseOutlined />
+          </Button>
         </Tooltip>
       </div>
       <div className="welcome-header-content">

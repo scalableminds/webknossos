@@ -65,9 +65,9 @@ export function upsampleResolution(resolutions: Array<Vector3>, resolutionIndex:
 }
 export function bucketPositionToGlobalAddress(
   [x, y, z, resolutionIndex]: Vector4,
-  resolutions: Array<Vector3>,
+  resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  const resolution = resolutions[resolutionIndex];
+  const resolution = resolutionInfo.getResolutionByIndexOrThrow(resolutionIndex);
   return [
     x * constants.BUCKET_WIDTH * resolution[0],
     y * constants.BUCKET_WIDTH * resolution[1],
@@ -137,8 +137,12 @@ export function zoomedAddressToAnotherZoomStepWithInfo(
     targetResolutionIndex,
   ];
 }
-export function getBucketExtent(resolutions: Vector3[], resolutionIndex: number): Vector3 {
-  return bucketPositionToGlobalAddress([1, 1, 1, resolutionIndex], resolutions);
+export function getBucketExtent(resolution: Vector3): Vector3 {
+  return [
+    constants.BUCKET_WIDTH * resolution[0],
+    constants.BUCKET_WIDTH * resolution[1],
+    constants.BUCKET_WIDTH * resolution[2],
+  ];
 }
 // This function returns all bucket addresses for which the fallback bucket
 // is the provided bucket.

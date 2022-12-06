@@ -16,7 +16,10 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2, V3 } from "libs/mjs";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getSegmentationLayerForTracing,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   CancelQuickSelectAction,
   ComputeQuickSelectForRectAction,
@@ -70,6 +73,7 @@ export default function* listenToQuickSelect(): Saga<void> {
         ErrorHandling.notify(ex as Error);
         console.error(ex);
       } finally {
+        action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
         yield* put(setIsQuickSelectActiveAction(false));
       }
     },
@@ -136,10 +140,20 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     console.warn("No volumeTracing available.");
     return;
   }
+  const volumeLayer = yield* select((state) =>
+    getSegmentationLayerForTracing(state, volumeTracing),
+  );
 
   const requestedZoomStep = yield* select((store) => getRequestLogZoomStep(store));
-  const resolutionInfo = getResolutionInfo(colorLayer.resolutions);
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+  const resolutionInfo = getResolutionInfo(
+    // Ensure that a magnification is used which exists in the color layer as well as the
+    // target segmentation layer.
+    _.intersectionBy(colorLayer.resolutions, volumeLayer.resolutions, (mag) => mag.join("-")),
+  );
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(
+    requestedZoomStep,
+    "The visible color layer and the active segmentation layer don't have any magnifications in common. Cannot select segment.",
+  );
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);

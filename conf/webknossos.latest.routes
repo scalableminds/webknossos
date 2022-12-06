@@ -27,6 +27,9 @@ POST          /auth/changePassword                                              
 POST          /auth/resetPassword                                                       controllers.AuthenticationController.handleResetPassword
 GET           /auth/logout                                                              controllers.AuthenticationController.logout
 GET           /auth/sso                                                                 controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
+GET           /auth/oidc/login                                                          controllers.AuthenticationController.loginViaOpenIdConnect
+# /auth/oidc/callback route is used literally in code
+GET           /auth/oidc/callback                                                       controllers.AuthenticationController.openIdCallback
 POST          /auth/createOrganizationWithAdmin                                         controllers.AuthenticationController.createOrganizationWithAdmin
 
 # Configurations

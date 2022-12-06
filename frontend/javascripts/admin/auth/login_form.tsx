@@ -3,17 +3,24 @@ import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import React from "react";
 import { getIsInIframe } from "libs/utils";
-import { loginUser } from "admin/admin_rest_api";
+import { loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import messages from "messages";
+import features from "features";
+
 const FormItem = Form.Item;
 const { Password } = Input;
+
 type Props = {
   layout: "horizontal" | "vertical" | "inline";
   onLoggedIn?: () => unknown;
   hideFooter?: boolean;
   style?: Record<string, any>;
+};
+
+const DEFAULT_STYLE = {
+  maxWidth: 500,
 };
 
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
@@ -35,6 +42,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       onLoggedIn();
     }
   };
+  const { openIdConnectEnabled } = features();
 
   const iframeWarning = getIsInIframe() ? (
     <Alert
@@ -56,7 +64,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
     />
   ) : null;
   return (
-    <div style={style}>
+    <div style={style || DEFAULT_STYLE}>
       {iframeWarning}
       <Form onFinish={onFinish} layout={layout} form={form}>
         <FormItem
@@ -70,6 +78,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
           ]}
         >
           <Input
+            size="large"
             prefix={
               <MailOutlined
                 style={{
@@ -90,6 +99,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
           ]}
         >
           <Password
+            size="large"
             prefix={
               <LockOutlined
                 style={{
@@ -100,17 +110,34 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             placeholder="Password"
           />
         </FormItem>
-        <FormItem>
-          <Button
-            type="primary"
-            htmlType="submit"
-            style={{
-              width: "100%",
-            }}
-          >
-            Log in
-          </Button>
-        </FormItem>
+        <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
+          <FormItem style={{ flexGrow: 1 }}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              style={{
+                width: "100%",
+              }}
+            >
+              Log in
+            </Button>
+          </FormItem>
+          {openIdConnectEnabled && (
+            <FormItem style={{ flexGrow: 1 }}>
+              <Button
+                style={{
+                  width: "100%",
+                }}
+                onClick={async () => {
+                  const res = await requestSingleSignOnLogin();
+                  window.location.href = res.redirect_url;
+                }}
+              >
+                Log in with SSO
+              </Button>
+            </FormItem>
+          )}
+        </div>
         {hideFooter ? null : (
           <FormItem
             style={{

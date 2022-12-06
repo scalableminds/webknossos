@@ -102,8 +102,11 @@ object JsonHelper extends BoxImplicits with LazyLogging {
     }
   }
 
-  def parseJsonToFox[T: Reads](s: String): Box[T] =
-    Json.parse(s).validate[T] match {
+  def parseAndValidateJson[T: Reads](s: String): Box[T] =
+    validateJsValue[T](Json.parse(s))
+
+  def validateJsValue[T: Reads](o: JsValue): Box[T] =
+    o.validate[T] match {
       case JsSuccess(parsed, _) =>
         Full(parsed)
       case errors: JsError =>

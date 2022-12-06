@@ -91,6 +91,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
     performRequest
   }
 
+  def postFormParseJson[T: Reads](parameters: Map[String, String]): Fox[T] = {
+    request = request.withBody(parameters).withMethod("POST")
+    parseJsonResponse(performRequest)
+  }
+
   def postWithJsonResponse[T: Reads]: Fox[T] = {
     request = request.withMethod("POST")
     parseJsonResponse(performRequest)

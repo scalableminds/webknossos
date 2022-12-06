@@ -13,6 +13,7 @@ import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
+import { MenuInfo } from "rc-menu/lib/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 
@@ -48,7 +49,12 @@ export function FolderTreeSidebar({
       context.activeFolderId,
     );
     itemByIdRef.current = itemById;
-    if (newTreeData.length > 0 && context.activeFolderId == null) {
+    if (
+      newTreeData.length > 0 &&
+      (context.activeFolderId == null || itemById[context.activeFolderId] == null)
+    ) {
+      // Select the root if there's no active folder id or if the active folder id doesn't
+      // exist in the tree data (e.g., happens when deleting the active folder).
       context.setActiveFolderId(newTreeData[0].key);
     }
     setTreeData(newTreeData);
@@ -77,8 +83,16 @@ export function FolderTreeSidebar({
   });
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
-    (keys) => {
-      if (keys.length > 0) {
+    (keys, event) => {
+      // Without the following check, the onSelect callback would also be called by antd
+      // when the user clicks on a menu entry in the context menu (e.g., deleting a folder
+      // would directly select it afterwards).
+      // Since the context menu is inserted at the root of the DOM, it's not a child node of
+      // the ant-tree container. Therefore, we can use this property to filter out those
+      // click events.
+      // The classic preventDefault() didn't work as an alternative workaround.
+      const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
+      if (keys.length > 0 && doesEventReferToTreeUi) {
         context.setActiveFolderId(keys[0] as string);
       }
     },
@@ -144,7 +158,9 @@ export function FolderTreeSidebar({
           height: 400,
           marginRight: 4,
           borderRadius: 2,
-          paddingRight: 10,
+          paddingLeft: 6,
+          paddingRight: 6,
+          paddingTop: 2,
           maxWidth: "20vw",
         }}
       >
@@ -241,8 +257,12 @@ function generateTitle(
   const { key: id, title, isEditable } = folder;
 
   function createFolder(): void {
-    const folderName = prompt("Please input a name for the new folder");
-    context.queries.createFolderMutation.mutateAsync([id, folderName || "New folder"]);
+    const folderName = prompt("Please input a name for the new folder", "New folder");
+    if (!folderName) {
+      // The user hit escape/cancel
+      return;
+    }
+    context.queries.createFolderMutation.mutateAsync([id, folderName]);
   }
   function deleteFolder(): void {
     context.queries.deleteFolderMutation.mutateAsync(id);
@@ -294,11 +314,7 @@ function generateTitle(
       autoDestroy
       trigger={["contextMenu"]}
     >
-      <FolderItemAsDropTarget
-        onClick={() => context.setActiveFolderId(id)}
-        folderId={id}
-        isEditable={isEditable}
-      >
+      <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
         {title}
       </FolderItemAsDropTarget>
     </Dropdown>
@@ -309,7 +325,6 @@ function FolderItemAsDropTarget(props: {
   folderId: string;
   children: React.ReactNode;
   className?: string;
-  onClick: () => void;
   isEditable: boolean;
 }) {
   const context = useDatasetCollectionContext();

@@ -26,7 +26,7 @@ export default function traverse(
   const lastBucket = globalPositionToBucketPosition(endPosition, resolutions, zoomStep);
   // The integer variables X and Y are initialized to the starting voxel coordinates.
   let [X, Y, Z] = uBucket;
-  const voxelSize = getBucketExtent(resolutions, zoomStep);
+  const voxelSize = getBucketExtent(resolutions[zoomStep]);
   // In addition, the variables stepX and stepY are initialized to either 1 or -1 indicating whether X and Y are
   // incremented or decremented as the ray crosses voxel boundaries (this is determined by the sign of the x and y components of → v).
   const [stepX, stepY, stepZ] = v.map((el) => Math.sign(el));

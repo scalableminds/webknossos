@@ -147,7 +147,7 @@ export function FolderTreeSidebar({
         ref={drop}
         className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
         style={{
-          height: 400,
+          minHeight: 400,
           marginRight: 4,
           borderRadius: 2,
           paddingLeft: 6,

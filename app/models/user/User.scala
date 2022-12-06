@@ -214,9 +214,12 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(u: User): Fox[Unit] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.users(
-                               _id, _multiUser, _organization, firstName, lastName, lastActivity,
-                               userConfiguration, isDeactivated, isAdmin, isOrganizationOwner,
-                               isDatasetManager, isUnlisted, created, isDeleted
+                               _id, _multiUser, _organization, firstName, lastName,
+                               lastActivity,
+                               userConfiguration,
+                               isDeactivated, isAdmin, isOrganizationOwner,
+                               isDatasetManager, isUnlisted,
+                               created, isDeleted
                              )
                              VALUES(
                                ${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
@@ -224,8 +227,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                                '#${sanitize(Json.toJson(u.userConfiguration).toString)}',
                                ${u.isDeactivated}, ${u.isAdmin}, ${u.isOrganizationOwner},
                                ${u.isDatasetManager}, ${u.isUnlisted},
-                               ${new java.sql.Timestamp(u.created)},
-                               ${u.isDeleted}
+                               ${new java.sql.Timestamp(u.created)}, ${u.isDeleted}
                              )""")
     } yield ()
 

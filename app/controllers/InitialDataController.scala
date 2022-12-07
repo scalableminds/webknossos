@@ -2,6 +2,7 @@ package controllers
 
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
@@ -12,7 +13,6 @@ import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import org.joda.time.DateTime
 import oxalis.security._
 import play.api.libs.json.Json
 import utils.{ObjectId, StoreModules, WkConf}
@@ -143,8 +143,8 @@ Samplecountry
       _ <- insertRootFolder()
       _ <- insertOrganization()
       _ <- insertTeams()
-      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, true)
-      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, false)
+      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
+      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
       _ <- insertToken()
       _ <- insertTaskType()
       _ <- insertProject()
@@ -191,7 +191,7 @@ Samplecountry
       .toFox
 
   private def insertToken(): Fox[Unit] = {
-    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
+    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
     tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
@@ -199,8 +199,8 @@ Samplecountry
           ObjectId.generate,
           defaultUserToken,
           LoginInfo("credentials", defaultUser._id.id),
-          new DateTime(System.currentTimeMillis()),
-          new DateTime(System.currentTimeMillis() + expiryTime),
+          Instant.now,
+          Instant.in(expiryTime),
           None,
           TokenType.Authentication
         )

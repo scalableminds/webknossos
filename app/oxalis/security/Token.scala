@@ -3,8 +3,10 @@ package oxalis.security
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.Tokens
+
 import javax.inject.Inject
 import org.joda.time.DateTime
 import com.scalableminds.webknossos.schema.Tables._
@@ -19,8 +21,8 @@ import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 case class Token(_id: ObjectId,
                  value: String,
                  loginInfo: LoginInfo,
-                 lastUsedDateTime: DateTime,
-                 expirationDateTime: DateTime,
+                 lastUsedDateTime: Instant,
+                 expirationDateTime: Instant,
                  idleTimeout: Option[FiniteDuration],
                  tokenType: TokenType,
                  created: Long = System.currentTimeMillis(),
@@ -31,8 +33,8 @@ case class Token(_id: ObjectId,
       BearerTokenAuthenticator(
         value,
         loginInfo,
-        lastUsedDateTime,
-        expirationDateTime,
+        lastUsedDateTime.toJodaDateTime,
+        expirationDateTime.toJodaDateTime,
         idleTimeout
       ))
 }
@@ -45,8 +47,8 @@ object Token {
         ObjectId.generate,
         b.id,
         b.loginInfo,
-        b.lastUsedDateTime,
-        b.expirationDateTime,
+        Instant.fromJoda(b.lastUsedDateTime),
+        Instant.fromJoda(b.expirationDateTime),
         b.idleTimeout,
         tokenType,
         System.currentTimeMillis()
@@ -68,8 +70,8 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         ObjectId(r._Id),
         r.value,
         LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
-        new DateTime(r.lastuseddatetime.getTime),
-        new DateTime(r.expirationdatetime.getTime),
+        Instant.fromSql(r.lastuseddatetime),
+        Instant.fromSql(r.expirationdatetime),
         r.idletimeout.map(FiniteDuration(_, MILLISECONDS)),
         tokenType,
         r.created.getTime,
@@ -99,9 +101,8 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
-                    values(${t._id.id}, ${t.value}, '#${t.loginInfo.providerID}', ${t.loginInfo.providerKey}, ${new java.sql.Timestamp(
-          t.lastUsedDateTime.getMillis)},
-                          ${new java.sql.Timestamp(t.expirationDateTime.getMillis)}, ${t.idleTimeout
+                    values(${t._id.id}, ${t.value}, '#${t.loginInfo.providerID}', ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
+                          ${t.expirationDateTime}, ${t.idleTimeout
           .map(_.toMillis)}, '#${t.tokenType}', ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
 

@@ -2,6 +2,7 @@ package models.voxelytics
 
 import akka.actor.ActorSystem
 import com.scalableminds.util.mvc.MimeTypes
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -12,11 +13,10 @@ import play.api.http.{HeaderNames, Status}
 import play.api.libs.json.{JsArray, JsNumber, JsValue, Json}
 import utils.WkConf
 
-import java.time.{Duration, LocalDateTime}
 import java.util.UUID
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(implicit ec: ExecutionContext)
@@ -26,8 +26,8 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorS
   private lazy val conf = wkConf.Voxelytics.Elasticsearch
   private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
 
-  val SCROLL_SIZE = 10000
-  val POLLING_INTERVAL = FiniteDuration(1, SECONDS)
+  private val SCROLL_SIZE = 10000
+  private val POLLING_INTERVAL = 1 second
 
   private lazy val elasticsearchSchema = Json.obj(
     "settings" -> Json.obj(),
@@ -68,16 +68,16 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorS
     for {
       _ <- bool2Fox(enabled) ?~> "Elasticsearch is not enabled."
       _ = logger.info("Waiting for Elasticsearch to become available.")
-      _ <- pollUntilServerStartedUp(LocalDateTime.now.plus(Duration.ofMillis(conf.startupTimeout.toMillis))) ~> 500
+      _ <- pollUntilServerStartedUp(Instant.now + conf.startupTimeout) ~> 500
       _ <- bootstrapIndexOnServer
     } yield ()
   }
 
-  private def pollUntilServerStartedUp(until: LocalDateTime): Fox[Unit] = {
-    def waitAndRecurse(until: LocalDateTime): Fox[Unit] =
+  private def pollUntilServerStartedUp(until: Instant): Fox[Unit] = {
+    def waitAndRecurse(until: Instant): Fox[Unit] =
       for {
         _ <- akka.pattern.after(POLLING_INTERVAL, using = system.scheduler)(Future.successful(()))
-        _ <- bool2Fox(!LocalDateTime.now().isAfter(until)) ?~> s"Elasticsearch did not become ready within ${conf.startupTimeout}."
+        _ <- bool2Fox(!until.isPast) ?~> s"Elasticsearch did not become ready within ${conf.startupTimeout}."
         _ <- pollUntilServerStartedUp(until)
       } yield ()
 
@@ -92,10 +92,9 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorS
             Fox.failure(s"Unexpected error code from Elasticsearch ${result.status}.")
         })
         .recoverWith({
-          case e: java.net.ConnectException => {
+          case e: java.net.ConnectException =>
             logger.debug(s"Elasticsearch connection exception: $e")
             Fox.successful(false)
-          }
           case e =>
             logger.error(s"Unexpected error $e")
             Fox.failure("Unexpected error while trying to connect to Elasticsearch.", Full(e))

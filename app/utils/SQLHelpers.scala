@@ -1,6 +1,7 @@
 package utils
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
@@ -34,6 +35,14 @@ trait SQLTypeImplicits {
 
   implicit object GetObjectId extends GetResult[ObjectId] {
     override def apply(v1: PositionedResult): ObjectId = ObjectId(v1.<<)
+  }
+
+  implicit object SetInstant extends SetParameter[Instant] {
+    def apply(v: Instant, pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
+  }
+
+  implicit object GetInstant extends GetResult[Instant] {
+    override def apply(v1: PositionedResult): Instant = Instant.fromSql(v1.<<)
   }
 }
 

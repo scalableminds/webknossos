@@ -29,7 +29,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
-      val inviteExpiry: Duration = get[Duration]("webKnossos.user.inviteExpiry")
+      val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
     }
 
@@ -129,10 +129,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Silhouette {
     object TokenAuthenticator {
-      val resetPasswordExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
-      val dataStoreExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.dataStoreExpiry")
-      val authenticatorExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorExpiry")
-      val authenticatorIdleTimeout: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
+      val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
+      val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
+      val authenticatorIdleTimeout: FiniteDuration =
+        get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
     }
 
     object CookieAuthenticator {
@@ -141,8 +142,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val secureCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
       val httpOnlyCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
-      val authenticatorExpiry: Duration = get[Duration]("silhouette.cookieAuthenticator.authenticatorExpiry")
-      val cookieMaxAge: Duration = get[Duration]("silhouette.cookieAuthenticator.cookieMaxAge")
+      val authenticatorExpiry: FiniteDuration =
+        get[FiniteDuration]("silhouette.cookieAuthenticator.authenticatorExpiry")
+      val cookieMaxAge: FiniteDuration = get[FiniteDuration]("silhouette.cookieAuthenticator.cookieMaxAge")
       val signerSecret: String = get[String]("silhouette.cookieAuthenticator.signerSecret")
     }
 

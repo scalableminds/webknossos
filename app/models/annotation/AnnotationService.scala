@@ -7,6 +7,7 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessCo
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -458,8 +459,8 @@ class AnnotationService @Inject()(
           annotationLayers = annotationLayers,
           state = Active,
           typ = AnnotationType.Task,
-          created = System.currentTimeMillis,
-          modified = System.currentTimeMillis
+          created = Instant.now,
+          modified = Instant.now
         )
         _ <- annotationDAO.updateInitialized(newAnnotation)
       } yield newAnnotation

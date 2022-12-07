@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.schema.Tables._
@@ -36,8 +37,8 @@ case class Annotation(
     tracingTime: Option[Long] = None,
     typ: AnnotationType.Value = AnnotationType.Explorational,
     othersMayEdit: Boolean = false,
-    created: Long = System.currentTimeMillis,
-    modified: Long = System.currentTimeMillis,
+    created: Instant = Instant.now,
+    modified: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -172,8 +173,8 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         r.tracingtime,
         typ,
         r.othersmayedit,
-        r.created.getTime,
-        r.modified.getTime,
+        Instant.fromSql(r.created),
+        Instant.fromSql(r.modified),
         r.isdeleted
       )
     }
@@ -405,7 +406,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
          '#${a.state}', '#${sanitize(a.statistics.toString)}',
          '#${writeArrayTuple(a.tags.toList)}', ${a.tracingTime}, '#${a.typ}',
          ${a.othersMayEdit},
-         ${new java.sql.Timestamp(a.created)}, ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
+         ${a.created}, ${a.modified}, ${a.isDeleted})
          """
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
     for {
@@ -432,8 +433,8 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
                tracingTime = ${a.tracingTime},
                typ = '#${a.typ}',
                othersMayEdit = ${a.othersMayEdit},
-               created = ${new java.sql.Timestamp(a.created)},
-               modified = ${new java.sql.Timestamp(a.modified)},
+               created = ${a.created},
+               modified = ${a.modified},
                isDeleted = ${a.isDeleted}
              where _id = ${a._id}
           """

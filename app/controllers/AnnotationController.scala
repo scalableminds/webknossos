@@ -68,7 +68,7 @@ class AnnotationController @Inject()(
     with FoxImplicits {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
-  private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
+  private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
   @ApiOperation(value = "Information about an annotation, supplying the type explicitly",
                 nickname = "annotationInfoByType")
@@ -187,7 +187,7 @@ class AnnotationController @Inject()(
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         _ <- bool2Fox(annotation.state == AnnotationState.Finished) ?~> "annotation.reopen.notFinished"
         _ <- bool2Fox(isAdminOrTeamManager || annotation._user == user._id) ?~> "annotation.reopen.notAllowed"
-        _ <- bool2Fox(isAdminOrTeamManager || System.currentTimeMillis - annotation.modified < taskReopenAllowed) ?~> "annotation.reopen.tooLate"
+        _ <- bool2Fox(isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast) ?~> "annotation.reopen.tooLate"
       } yield ()
 
     for {

@@ -367,7 +367,7 @@ function GlobalSearchHeader({
                 activeFolderId == null &&
                 (context.mostRecentlyUsedActiveFolderId != null || treeData.length > 0)
               ) {
-                setActiveFolderId(context.mostRecentlyUsedActiveFolderId || treeData[0].key);
+                setActiveFolderId(context.mostRecentlyUsedActiveFolderId || treeData[0]?.key);
               }
               context.setSearchRecursively(value === "folder-with-subfolders");
             }

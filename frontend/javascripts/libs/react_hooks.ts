@@ -2,13 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 // Adapted from: https://usehooks.com/usePrevious/
-export function usePrevious<T>(value: T, ignoreNullableValues: boolean = false): T | null {
+export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
   // The ref object is a generic container whose current property is mutable ...
   // ... and can hold any value, similar to an instance property on a class
   const ref = useRef<T | null>(null);
   // Store current value in ref
   useEffect(() => {
-    if (!ignoreNullableValues || value != null) {
+    if (!ignoreNullAndUndefined || value != null) {
       ref.current = value;
     }
   }, [value]);

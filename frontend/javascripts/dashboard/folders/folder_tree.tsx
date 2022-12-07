@@ -61,7 +61,7 @@ export function FolderTreeSidebar({
       // No search is active and no folder is selected. For example, this can happen
       // after clearing the search box (when the search was global).
       // Activate the most recently used folder or the root folder.
-      context.setActiveFolderId(context.mostRecentlyUsedActiveFolderId || treeData[0].key);
+      context.setActiveFolderId(context.mostRecentlyUsedActiveFolderId || treeData[0]?.key);
     }
   }, [context.activeFolderId, context.globalSearchQuery, treeData.length]);
 

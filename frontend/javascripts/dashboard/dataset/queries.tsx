@@ -399,7 +399,14 @@ export function useUpdateDatasetMutation(folderId: string | null) {
                 // has finished, the page will be complete).
                 return undefined;
               }
-              return oldItems.concat([updatedDataset]);
+              return (
+                oldItems
+                  // The dataset shouldn't be in oldItems, but if it should be
+                  // for some reason (e.g., a bug), we filter it away to avoid
+                  // duplicates.
+                  .filter((el) => el.name !== updatedDataset.name)
+                  .concat([updatedDataset])
+              );
             },
           );
         }

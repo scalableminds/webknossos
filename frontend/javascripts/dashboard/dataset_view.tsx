@@ -90,7 +90,7 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
 const refreshMenuItems = [
   {
     key: "1",
-    label: "Refresh from disk",
+    label: "Scan disk for new datasets",
   },
 ];
 
@@ -337,7 +337,7 @@ function GlobalSearchHeader({
 }) {
   const { data: folderHierarchy } = context.queries.folderHierarchyQuery;
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
-  const { folderIdForSearch, setFolderIdForSearch } = context;
+  const { activeFolderId, setActiveFolderId } = context;
 
   useEffect(() => {
     const newTreeData = folderHierarchy?.tree || [];
@@ -366,16 +366,17 @@ function GlobalSearchHeader({
           dropdownMatchSelectWidth={false}
           onChange={(value) => {
             if (value === "everywhere") {
-              setFolderIdForSearch(null);
+              setActiveFolderId(null);
             } else {
-              if (folderIdForSearch == null && treeData.length > 0) {
-                setFolderIdForSearch(treeData[0].key);
+              if (activeFolderId == null && treeData.length > 0) {
+                // todo: use useLastValue
+                setActiveFolderId(treeData[0].key);
               }
               context.setSearchRecursively(value === "folder-with-subfolders");
             }
           }}
           value={
-            folderIdForSearch == null
+            activeFolderId == null
               ? "everywhere"
               : context.searchRecursively
               ? "folder-with-subfolders"

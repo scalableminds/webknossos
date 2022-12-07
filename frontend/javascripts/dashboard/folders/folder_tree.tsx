@@ -58,10 +58,11 @@ export function FolderTreeSidebar({
 
   useEffect(() => {
     if (context.activeFolderId == null && !context.globalSearchQuery) {
-      // No search is active and no folder is selected. For example, this happens
-      // after clearing the search box.
+      // No search is active and no folder is selected. For example, this can happen
+      // after clearing the search box (when the search was global).
       // Activate the root folder.
       if (treeData.length > 0) {
+        // todo: also use uselastvalue ?
         context.setActiveFolderId(treeData[0].key);
       }
     }
@@ -88,11 +89,7 @@ export function FolderTreeSidebar({
       // The classic preventDefault() didn't work as an alternative workaround.
       const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
       if (keys.length > 0 && doesEventReferToTreeUi) {
-        if (context.globalSearchQuery == null) {
-          context.setActiveFolderId(keys[0] as string);
-        } else {
-          context.setFolderIdForSearch(keys[0] as string);
-        }
+        context.setActiveFolderId(keys[0] as string);
       }
     },
     [context],
@@ -172,7 +169,7 @@ export function FolderTreeSidebar({
         <DirectoryTree
           blockNode
           expandAction="doubleClick"
-          selectedKeys={nullableIdToArray(context.activeFolderId || context.folderIdForSearch)}
+          selectedKeys={nullableIdToArray(context.activeFolderId)}
           draggable={isDraggingDataset ? false : draggableConfig}
           defaultExpandAll
           onSelect={onSelect}

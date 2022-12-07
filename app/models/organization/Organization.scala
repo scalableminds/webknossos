@@ -117,17 +117,29 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     } yield ()
 
   def upsertUsedStorage(organizationId: ObjectId,
-                        dataStoreId: ObjectId,
-                        datasetId: ObjectId,
+                        dataStoreName: String,
                         usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
-    val queries = usedStorageEntries.map(entry => sqlu"""INSERT INTO webknossos.organizations_usedStorage
-                      (_organization, _dataStore, _dataSet,
-                        magOrDirectoryName, usedStorageBytes, lastUpdated)
-                      VALUES($organizationId, $dataStoreId, $datasetId,
-                        ${entry.magOrDirectoryName}, ${entry.usedStorageBytes}, NOW())
-               ON CONFLICT DO UPDATE""")
+    val queries = usedStorageEntries.map(entry => sqlu"""
+               WITH ds AS (
+                 SELECT _id
+                 FROM webknossos.datasets_
+                 WHERE _organization = $organizationId
+                 AND name = ${entry.dataSetName}
+                 LIMIT 1
+               )
+               INSERT INTO webknossos.organization_usedStorage(
+                  _organization, _dataStore, _dataSet, layerName,
+                  magOrDirectoryName, usedStorageBytes, lastUpdated)
+               SELECT
+                $organizationId, $dataStoreName, ds._id, ${entry.layerName},
+                ${entry.magOrDirectoryName}, ${entry.usedStorageBytes}, NOW()
+               FROM ds
+               ON CONFLICT (_organization, _dataStore, _dataSet, layerName, magOrDirectoryName)
+               DO UPDATE
+                 SET usedStorageBytes = ${entry.usedStorageBytes}, lastUpdated = NOW()
+               """)
     for {
-      _ <- run(DBIO.sequence(queries))
+      _ <- Fox.serialCombined(queries)(q => run(q))
     } yield ()
   }
 

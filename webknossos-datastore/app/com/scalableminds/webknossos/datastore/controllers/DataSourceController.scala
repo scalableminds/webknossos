@@ -449,7 +449,7 @@ Expects:
         for {
           usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName)
           _ <- remoteWebKnossosClient.reportUsedStorage(organizationName, None, usedStorageInBytes)
-        } yield Ok(Json.toJson(usedStorageInBytes))
+        } yield Ok(Json.toJson(usedStorageInBytes)) // TODO, do not return result here, this is just a trigger
       }
     }
 

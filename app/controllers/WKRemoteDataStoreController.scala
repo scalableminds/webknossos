@@ -184,9 +184,10 @@ class WKRemoteDataStoreController @Inject()(
                         organizationName: String,
                         datasetName: Option[String]): Action[List[DirectoryStorageReport]] =
     Action.async(validateJson[List[services.DirectoryStorageReport]]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
         for {
-          _ <- Fox.successful(logger.info(s"received storage report, ${request.body.length} entries"))
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+          _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, request.body)
         } yield Ok
       }
     }

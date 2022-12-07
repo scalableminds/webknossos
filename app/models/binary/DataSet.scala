@@ -167,14 +167,12 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      folderPredicate = folderIdOpt
-        .map(
-          folderId =>
-            if (recursive)
-              s"_folder in (select _descendant FROM webknossos.folder_paths fp WHERE fp._ancestor = '$folderId')"
-            else
-              s"_folder = '$folderId'")
-        .getOrElse("true")
+      folderPredicate = folderIdOpt match {
+        case Some(folderId) if (recursive) =>
+          s"_folder IN (select _descendant FROM webknossos.folder_paths fp WHERE fp._ancestor = '$folderId')"
+        case Some(folderId) => s"_folder = '$folderId'"
+        case None           => "true"
+      }
       searchPredicate = buildSearchPredicate(searchQuery)
       r <- run(sql"""SELECT #$columns
               FROM #$existingCollectionName

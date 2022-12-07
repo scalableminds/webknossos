@@ -388,7 +388,7 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[String] = {
     def executeFinish: Fox[String] =
       for {
-        _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)
+        _ <- annotationDAO.updateModified(annotation._id, Instant.now)
         _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
       } yield {
         if (annotation._task.isEmpty)

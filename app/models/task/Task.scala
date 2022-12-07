@@ -1,9 +1,11 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{profile, _}
+
 import javax.inject.Inject
 import models.annotation._
 import models.project.ProjectDAO
@@ -27,7 +29,7 @@ case class Task(
     editPosition: Vec3Int,
     editRotation: Vec3Double,
     creationInfo: Option[String],
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -56,7 +58,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
         editPosition,
         editRotation,
         r.creationinfo,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
@@ -140,7 +142,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                  isTeamManagerOrAdmin: Boolean = false): Fox[(ObjectId, ObjectId)] = {
 
     val annotationId = ObjectId.generate
-    val now = new java.sql.Timestamp(System.currentTimeMillis)
+    val now = Instant.now
 
     val insertAnnotationQ = sqlu"""
            with task as (#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}),
@@ -172,7 +174,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
   def assignOneTo(taskId: ObjectId, userId: ObjectId, teamIds: List[ObjectId]): Fox[(ObjectId, ObjectId)] = {
     val annotationId = ObjectId.generate
-    val now = new java.sql.Timestamp(System.currentTimeMillis)
+    val now = Instant.now
 
     val insertAnnotationQ =
       sqlu"""
@@ -293,7 +295,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
           t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple))},
                            '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(
           t.editRotation.toList.map(_.toString))}',
-                           #${optionLiteral(t.creationInfo.map(sanitize))}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+                           #${optionLiteral(t.creationInfo.map(sanitize))}, ${t.created}, ${t.isDeleted})
         """)
     } yield ()
 

@@ -5,16 +5,13 @@ import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.Tokens
-
-import javax.inject.Inject
-import org.joda.time.DateTime
-import com.scalableminds.webknossos.schema.Tables._
-import slick.jdbc.PostgresProfile.api._
+import com.scalableminds.webknossos.schema.Tables.{Tokens, _}
 import oxalis.security.TokenType.TokenType
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
@@ -25,7 +22,7 @@ case class Token(_id: ObjectId,
                  expirationDateTime: Instant,
                  idleTimeout: Option[FiniteDuration],
                  tokenType: TokenType,
-                 created: Long = System.currentTimeMillis(),
+                 created: Instant = Instant.now,
                  isDeleted: Boolean = false) {
 
   def toBearerTokenAuthenticator(implicit ec: ExecutionContext): Fox[BearerTokenAuthenticator] =
@@ -51,7 +48,7 @@ object Token {
         Instant.fromJoda(b.expirationDateTime),
         b.idleTimeout,
         tokenType,
-        System.currentTimeMillis()
+        Instant.now
       ))
 }
 
@@ -74,7 +71,7 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         Instant.fromSql(r.expirationdatetime),
         r.idletimeout.map(FiniteDuration(_, MILLISECONDS)),
         tokenType,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
@@ -103,21 +100,21 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         sqlu"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
                     values(${t._id.id}, ${t.value}, '#${t.loginInfo.providerID}', ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
                           ${t.expirationDateTime}, ${t.idleTimeout
-          .map(_.toMillis)}, '#${t.tokenType}', ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
+          .map(_.toMillis)}, '#${t.tokenType}', ${t.created}, ${t.isDeleted})""")
     } yield ()
 
   def updateValues(id: ObjectId,
                    value: String,
-                   lastUsedDateTime: DateTime,
-                   expirationDateTime: DateTime,
+                   lastUsedDateTime: Instant,
+                   expirationDateTime: Instant,
                    idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"""update webknossos.tokens
                       set
                         value = $value,
-                        lastUsedDateTime = ${new java.sql.Timestamp(lastUsedDateTime.getMillis)},
-                        expirationDateTime = ${new java.sql.Timestamp(expirationDateTime.getMillis)},
+                        lastUsedDateTime = $lastUsedDateTime,
+                        expirationDateTime = $expirationDateTime,
                         idleTimeout = ${idleTimeout.map(_.toMillis)}
                       where _id = ${id.id}""")
     } yield ()
@@ -129,7 +126,7 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def deleteAllExpired(): Fox[Unit] = {
     val q = for {
-      row <- collection if notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis)
+      row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
     } yield isDeletedColumn(row)
     for { _ <- run(q.update(true)) } yield ()
   }

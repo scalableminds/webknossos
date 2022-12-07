@@ -1,6 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
@@ -257,13 +258,13 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore <- dataStoreFor(dataSet)
     } yield new WKRemoteDataStoreClient(dataStore, dataSet, rpc)
 
-  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Long] =
+  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Instant] =
     userOpt match {
       case Some(user) =>
         (for {
           lastUsedTime <- dataSetLastUsedTimesDAO.findForDataSetAndUser(_dataSet, user._id).futureBox
-        } yield lastUsedTime.toOption.getOrElse(0L)).toFox
-      case _ => Fox.successful(0L)
+        } yield lastUsedTime.toOption.getOrElse(Instant(0L))).toFox
+      case _ => Fox.successful(Instant(0L))
     }
 
   def allLayersFor(dataSet: DataSet): Fox[List[DataLayer]] =

@@ -1,8 +1,10 @@
 package models.user.time
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.annotation._
 import models.organization.OrganizationDAO
@@ -43,8 +45,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   def loggedTimeOfUser[T](user: User,
                           groupingF: TimeSpan => T,
-                          start: Option[Long] = None,
-                          end: Option[Long] = None): Fox[Map[T, Duration]] =
+                          start: Option[Instant] = None,
+                          end: Option[Instant] = None): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
@@ -58,8 +60,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   def loggedTimeOfAnnotation[T](annotationId: ObjectId,
                                 groupingF: TimeSpan => T,
-                                start: Option[Long] = None,
-                                end: Option[Long] = None): Fox[Map[T, Duration]] =
+                                start: Option[Instant] = None,
+                                end: Option[Instant] = None): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
     } yield {
@@ -72,8 +74,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
   def loggedTimePerInterval[T](groupingF: TimeSpan => T,
-                               start: Option[Long] = None,
-                               end: Option[Long] = None,
+                               start: Option[Instant] = None,
+                               end: Option[Instant] = None,
                                organizationId: ObjectId): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAll(start, end, organizationId).futureBox
@@ -109,10 +111,10 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       }
 
       def updateTimeSpan(timeSpan: TimeSpan, timestamp: Long) = {
-        val duration = timestamp - timeSpan.lastUpdate
+        val duration = timestamp - timeSpan.lastUpdate.epochMillis
         if (duration >= 0) {
           timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
-          timeSpan.addTime(duration, timestamp)
+          timeSpan.addTime(duration, Instant(timestamp))
         } else {
           // Negative duration. This is expected when updating an annotation with multiple layers.
           // Each layer reports updates that can overlap time-wise. We do not update the timespan with the negative duration.
@@ -150,7 +152,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
   private def isNotInterrupted(current: Long, last: TimeSpan) = {
-    val duration = current - last.lastUpdate
+    val duration = current - last.lastUpdate.epochMillis
     if (duration < 0) {
       logger.info(
         s"Negative timespan duration $duration ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=$this)")
@@ -226,8 +228,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   }
 
   private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Long)(implicit ctx: DBAccessContext) = {
-    val duration = timestamp - timeSpan.lastUpdate
-    val updated = timeSpan.addTime(duration, timestamp)
+    val duration = timestamp - timeSpan.lastUpdate.epochMillis
+    val updated = timeSpan.addTime(duration, Instant(timestamp))
 
     for {
       _ <- timeSpanDAO.updateOne(updated) ?~> "FAILED: TimeSpanDAO.updateOne"

@@ -93,7 +93,7 @@ Samplecountry
     defaultOrganization._id,
     "Sample",
     "User",
-    System.currentTimeMillis(),
+    Instant.now,
     Json.obj(),
     userService.createLoginInfo(userId),
     isAdmin = true,
@@ -114,7 +114,7 @@ Samplecountry
     defaultOrganization._id,
     "Non-Admin",
     "User",
-    System.currentTimeMillis(),
+    Instant.now,
     Json.obj(),
     userService.createLoginInfo(userId2),
     isAdmin = false,
@@ -125,7 +125,7 @@ Samplecountry
   )
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
-    Some(System.currentTimeMillis()),
+    Some(Instant.now),
     Some("https://static.webknossos.org/images/oxalis.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(

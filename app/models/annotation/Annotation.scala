@@ -507,10 +507,10 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       _ <- run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags)}' where _id = $id")
     } yield ()
 
-  def updateModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateModified(id: ObjectId, modified: Instant)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = $id")
+      _ <- run(sqlu"update webknossos.annotations set modified = $modified where _id = $id")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

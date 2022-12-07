@@ -41,6 +41,10 @@ trait SQLTypeImplicits {
     def apply(v: Instant, pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
   }
 
+  implicit object SetInstantOpt extends SetParameter[Option[Instant]] {
+    def apply(v: Option[Instant], pp: PositionedParameters): Unit = pp.setTimestampOption(v.map(_.toSql))
+  }
+
   implicit object GetInstant extends GetResult[Instant] {
     override def apply(v1: PositionedResult): Instant = Instant.fromSql(v1.<<)
   }
@@ -336,12 +340,12 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
     } yield ()
   }
 
-  def updateTimestampCol(id: ObjectId, column: X => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp)(
+  def updateTimestampCol(id: ObjectId, column: X => Rep[java.sql.Timestamp], newValue: Instant)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q.update(newValue))
+      _ <- run(q.update(newValue.toSql))
     } yield ()
   }
 

@@ -15,6 +15,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def toSql: java.sql.Timestamp = new java.sql.Timestamp(epochMillis)
 
   def +(duration: FiniteDuration): Instant = Instant(epochMillis + duration.toMillis)
+  def -(duration: FiniteDuration): Instant = Instant(epochMillis - duration.toMillis)
 
   def isPast: Boolean = this < Instant.now
 
@@ -26,6 +27,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
 
 object Instant extends FoxImplicits {
   def now: Instant = Instant(System.currentTimeMillis())
+  def max: Instant = Instant(253370761200000L)
   def in(duration: FiniteDuration): Instant = now + duration
   def fromString(instantLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
     fromStringSync(instantLiteral).toFox

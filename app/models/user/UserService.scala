@@ -7,6 +7,7 @@ import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.security.SCrypt
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -18,6 +19,7 @@ import oxalis.security.TokenDAO
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
+
 import javax.inject.Inject
 import models.organization.OrganizationDAO
 import net.liftweb.common.Box
@@ -103,7 +105,7 @@ class UserService @Inject()(conf: WkConf,
         organizationId,
         firstName,
         lastName,
-        System.currentTimeMillis(),
+        Instant.now,
         Json.obj(),
         LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
@@ -142,13 +144,13 @@ class UserService @Inject()(conf: WkConf,
         _id = newUserId,
         _organization = organizationId,
         loginInfo = loginInfo,
-        lastActivity = System.currentTimeMillis(),
+        lastActivity = Instant.now,
         isAdmin = isAdmin,
         isDatasetManager = false,
         isDeactivated = !autoActivate,
         lastTaskTypeId = None,
         isUnlisted = isUnlisted,
-        created = System.currentTimeMillis()
+        created = Instant.now
       )
       _ <- userDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))

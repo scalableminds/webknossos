@@ -10,9 +10,12 @@ import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.{GetResult, PositionedParameters, PositionedResult, PostgresProfile, SetParameter}
+import slick.jdbc._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import slick.util.{Dumpable, TreePrinter}
 
+import java.io.{ByteArrayOutputStream, PrintWriter}
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
@@ -69,15 +72,22 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
     logger.error("SQL Error: " + ex)
-    logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
+    logger.debug("Caused by query:\n" + querySummary(query).take(4000))
   }
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
     sqlClient.getSlackNotificationService.warnWithException(
       "SQL Error",
       ex,
-      s"Causing query: ${query.getDumpInfo.mainInfo}"
+      s"Causing query: ${querySummary(query).take(4000)}"
     )
+
+  private def querySummary(query: Dumpable): String = {
+    val treePrinter = new TreePrinter()
+    val os = new ByteArrayOutputStream()
+    treePrinter.print(query, new PrintWriter(os))
+    new String(os.toByteArray, StandardCharsets.UTF_8)
+  }
 
   def writeArrayTuple(elements: List[String]): String = {
     val commaSeparated = elements.map(sanitizeInArrayTuple).map(e => s""""$e"""").mkString(",")

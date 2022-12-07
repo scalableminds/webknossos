@@ -2,7 +2,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input, MenuItemProps } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
-import React, { useEffect } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -88,6 +88,9 @@ import {
 } from "oxalis/model/actions/proofread_actions";
 const { SubMenu } = Menu;
 
+type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
+export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
+
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {
   contextMenuPosition: [number, number] | null | undefined;
@@ -130,9 +133,7 @@ type StateProps = {
   allowUpdate: boolean;
 };
 type Props = OwnProps & StateProps & DispatchProps;
-type PropsWithRef = Props & {
-  inputRef: React.MutableRefObject<HTMLElement | null>;
-};
+
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
   clickedNodeId: number;
@@ -359,7 +360,7 @@ function NodeContextMenuOptions({
   allowUpdate,
 }: NodeContextMenuOptionsProps): JSX.Element {
   const isProofreadingActive = useSelector(
-    (state: OxalisState) => state.uiInformation.activeTool === "PROOFREAD",
+    (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
   );
   const dispatch = useDispatch();
 
@@ -674,6 +675,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
 
+  const isProofreadingActive = useSelector(
+    (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+  );
+
   useEffect(() => {
     dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
   }, [visibleSegmentationLayer, dataset]);
@@ -707,7 +712,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
-  const activeNodeId = skeletonTracing?.activeNodeId;
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
@@ -731,45 +735,46 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
             disabled={!isAgglomerateMappingEnabled.value}
             onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
           >
-            {isAgglomerateMappingEnabled.value ? (
+            <Tooltip
+              title={
+                isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
+              }
+            >
               <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
-            ) : (
-              <Tooltip title={isAgglomerateMappingEnabled.reason}>
-                <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
-              </Tooltip>
-            )}
+            </Tooltip>
           </Menu.Item>,
           isAgglomerateMappingEnabled.value ? (
             <Menu.Item
               key="merge-agglomerate-skeleton"
-              disabled={activeNodeId == null}
+              disabled={!isProofreadingActive}
               onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
             >
-              {activeNodeId != null ? (
-                <span>Merge with active segment</span>
-              ) : (
-                <Tooltip title={"Cannot merge because there's no active node id."}>
-                  <span>Merge with active segment</span>
-                </Tooltip>
-              )}
+              <Tooltip
+                title={
+                  isProofreadingActive
+                    ? undefined
+                    : "Cannot merge because the proofreading tool is not active."
+                }
+              >
+                <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
+              </Tooltip>
             </Menu.Item>
           ) : null,
           isAgglomerateMappingEnabled.value ? (
             <Menu.Item
               key="min-cut-agglomerate-at-position"
-              disabled={activeNodeId == null}
-              onClick={() =>
-                activeNodeId &&
-                Store.dispatch(minCutAgglomerateWithPositionAction(activeNodeId, globalPosition))
-              }
+              disabled={!isProofreadingActive}
+              onClick={() => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition))}
             >
-              {activeNodeId != null ? (
-                <span>Split from active segment (Min-Cut)</span>
-              ) : (
-                <Tooltip title={"Cannot split because there's no active node id."}>
-                  <span>Split from active segment (Min-Cut)</span>
-                </Tooltip>
-              )}
+              <Tooltip
+                title={
+                  isProofreadingActive
+                    ? undefined
+                    : "Cannot merge because the proofreading tool is not active."
+                }
+              >
+                <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+              </Tooltip>
             </Menu.Item>
           ) : null,
         ]
@@ -888,7 +893,12 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   );
 }
 
-function ContextMenuContainer(props: Props) {
+export function GenericContextMenuContainer(props: {
+  contextMenuPosition: [number, number] | null | undefined;
+  hideContextMenu: () => void;
+  children: React.ReactElement;
+  positionAbsolute?: boolean;
+}) {
   /*
    * This container for the context menu is *always* rendered.
    * An input ref is stored for the actual container which is
@@ -938,7 +948,7 @@ function ContextMenuContainer(props: Props) {
       >
         <div
           style={{
-            position: "sticky",
+            position: props.positionAbsolute ? "absolute" : "sticky",
             left: contextMenuPosition != null ? contextMenuPosition[0] : 0,
             top: contextMenuPosition != null ? contextMenuPosition[1] : 0,
             width: "fit-content",
@@ -949,9 +959,17 @@ function ContextMenuContainer(props: Props) {
           // @ts-ignore
           ref={inputRef}
         />
-        <ContextMenuInner {...props} inputRef={inputRef} />
+        <ContextMenuContext.Provider value={inputRef}>{props.children}</ContextMenuContext.Provider>
       </div>
     </React.Fragment>
+  );
+}
+
+function ContextMenuContainer(props: Props) {
+  return (
+    <GenericContextMenuContainer {...props}>
+      <ContextMenuInner {...props} />
+    </GenericContextMenuContainer>
   );
 }
 
@@ -970,8 +988,9 @@ function InfoMenuItem(propsWithEventKey: MenuItemProps) {
   return <div className="node-context-menu-item">{children}</div>;
 }
 
-function ContextMenuInner(propsWithInputRef: PropsWithRef) {
-  const { inputRef, ...props } = propsWithInputRef;
+function ContextMenuInner(propsWithInputRef: Props) {
+  const inputRef = useContext(ContextMenuContext);
+  const { ...props } = propsWithInputRef;
   const {
     skeletonTracing,
     maybeClickedNodeId,

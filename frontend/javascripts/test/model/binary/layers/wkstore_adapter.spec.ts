@@ -1,7 +1,7 @@
 // @ts-nocheck
 import _ from "lodash";
 import "test/model/binary/layers/wkstore_adapter.mock.js";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { ResolutionInfo, getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { byteArrayToLz4Base64 } from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
@@ -21,6 +21,10 @@ function setFourBit(bool) {
 
 const mockedCube = {
   isSegmentation: true,
+  resolutionInfo: new ResolutionInfo([
+    [1, 1, 1],
+    [2, 2, 2],
+  ]),
 };
 const StoreMock = {
   getState: () => ({

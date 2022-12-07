@@ -1,5 +1,6 @@
 // @ts-nocheck
 import _ from "lodash";
+import "test/mocks/lz4";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
@@ -9,7 +10,6 @@ import {
   annotation as ANNOTATION,
 } from "../fixtures/skeletontracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
-mockRequire.stopAll();
 
 function makeModelMock() {
   class ModelMock {}

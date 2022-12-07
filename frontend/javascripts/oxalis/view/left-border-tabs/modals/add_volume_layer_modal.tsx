@@ -8,11 +8,12 @@ import {
   NewVolumeLayerSelection,
   RestrictResolutionSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
-import type { Tracing } from "oxalis/store";
+import Store, { type Tracing } from "oxalis/store";
 import { addAnnotationLayer } from "admin/admin_rest_api";
 import {
   getDatasetResolutionInfo,
   getLayerByName,
+  getMappingInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -23,6 +24,7 @@ import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
+import { MappingStatusEnum } from "oxalis/constants";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(
@@ -162,6 +164,19 @@ export default function AddVolumeLayerModal({
     } else {
       selectedSegmentationLayer = getLayerByName(dataset, selectedSegmentationLayerName);
       const fallbackLayerName = selectedSegmentationLayer.name;
+
+      const mappingInfo = getMappingInfo(
+        Store.getState().temporaryConfiguration.activeMappingByLayer,
+        selectedSegmentationLayerName,
+      );
+      let maybeMappingName = null;
+      if (
+        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+        mappingInfo.mappingType === "HDF5"
+      ) {
+        maybeMappingName = mappingInfo.mappingName;
+      }
+
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
         name: newLayerName,
@@ -170,6 +185,7 @@ export default function AddVolumeLayerModal({
           min: minResolutionAllowed,
           max: maxResolutionAllowed,
         },
+        mappingName: maybeMappingName,
       });
     }
 

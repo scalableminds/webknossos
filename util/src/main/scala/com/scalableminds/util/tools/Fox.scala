@@ -200,6 +200,12 @@ object Fox extends FoxImplicits {
       _ <- bool2Fox(asBoolean)
     } yield ()
 
+  def assertFalse(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      asBoolean <- fox
+      _ <- bool2Fox(!asBoolean)
+    } yield ()
+
   def chainFunctions[T](functions: List[T => Fox[T]])(implicit ec: ExecutionContext): T => Fox[T] = {
     def runNext(remainingFunctions: List[T => Fox[T]], previousRestult: T): Fox[T] =
       remainingFunctions match {

@@ -13,8 +13,24 @@ import Store from "oxalis/throttled_store";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { persistQueryClient } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import UserLocalStorage from "libs/user_local_storage";
+import { compress, decompress } from "lz-string";
 
-const reactQueryClient = new QueryClient();
+const reactQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      cacheTime: Infinity,
+    },
+  },
+});
+
+const localStoragePersister = createSyncStoragePersister({
+  storage: UserLocalStorage,
+  serialize: (data) => compress(JSON.stringify(data)),
+  deserialize: (data) => JSON.parse(decompress(data) || "{}"),
+});
 
 async function loadActiveUser() {
   // Try to retreive the currently active user if logged in
@@ -24,6 +40,10 @@ async function loadActiveUser() {
     });
     Store.dispatch(setActiveUserAction(user));
     ErrorHandling.setCurrentUser(user);
+    persistQueryClient({
+      queryClient: reactQueryClient,
+      persister: localStoragePersister,
+    });
   } catch (e) {
     // pass
   }

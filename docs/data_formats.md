@@ -349,25 +349,23 @@ my_dataset                      # Dataset root
 All segment IDs belonging to the same super-voxel need to be listed in an array:  
 ```
 {
-  {
-    "name": "astrocytes",
-    "classes": [
-      [
-        69381,
-        69445,
-        138248
-      ],
-      [
-        138307,
-        343831
-      ],
-      [
-        348348,
-        132432,
-        387433,
-        338330
-      ]
+  "name": "astrocytes",
+  "classes": [
+    [
+      69381,
+      69445,
+      138248
+    ],
+    [
+      138307,
+      343831
+    ],
+    [
+      348348,
+      132432,
+      387433,
+      338330
     ]
-  }
+  ]
 }
 ```

@@ -12,12 +12,6 @@ import {
   Spin,
   Tooltip,
   Alert,
-  MenuProps,
-  TreeSelect,
-  Switch,
-  Checkbox,
-  Divider,
-  RadioChangeEvent,
   Select,
 } from "antd";
 import {
@@ -51,7 +45,7 @@ import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
 
-const { Search, Group: InputGroup } = Input;
+const { Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
@@ -324,6 +318,12 @@ function DatasetView(props: Props) {
   );
 }
 
+const SEARCH_OPTIONS = [
+  { label: "Search everywhere", value: "everywhere" },
+  { label: "Search current folder", value: "folder" },
+  { label: "Search current folder and its subfolders", value: "folder-with-subfolders" },
+];
+
 function GlobalSearchHeader({
   searchQuery,
   filteredDatasets,
@@ -352,17 +352,12 @@ function GlobalSearchHeader({
       <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
     ) : null;
   }
-  const plainOptions = [
-    { label: "Search everywhere", value: "everywhere" },
-    { label: "Search current folder", value: "folder" },
-    { label: "Search current folder and its subfolders", value: "folder-with-subfolders" },
-  ];
 
   return (
     <>
       <div style={{ float: "right" }}>
         <Select
-          options={plainOptions}
+          options={SEARCH_OPTIONS}
           dropdownMatchSelectWidth={false}
           onChange={(value) => {
             if (value === "everywhere") {

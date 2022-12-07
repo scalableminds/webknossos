@@ -4,13 +4,14 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
+import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.file.{Files, Path, Paths}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.sys.process._
 
 case class DirectoryStorageReport(
     organizationName: String,
@@ -24,7 +25,9 @@ object DirectoryStorageReport {
   implicit val jsonFormat: OFormat[DirectoryStorageReport] = Json.format[DirectoryStorageReport]
 }
 
-class StorageUsageService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext) extends FoxImplicits {
+class StorageUsageService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
 
   private val baseDir: Path = Paths.get(config.Datastore.baseFolder)
 
@@ -74,10 +77,6 @@ class StorageUsageService @Inject()(config: DataStoreConfig)(implicit ec: Execut
     }
 
   def measureStorage(path: Path)(implicit ec: ExecutionContext): Fox[Long] =
-    for {
-      duOutput: String <- tryo(s"du -s -k ${path.toString}".!!.trim).toFox ?~> "failed to run du to measure storage"
-      sizeKibiBytesStr <- duOutput.split("\\s+").headOption ?~> "failed to parse du output"
-      sizeKibiBytes <- tryo(sizeKibiBytesStr.toLong) ?~> "failed to parse du output as number"
-    } yield sizeKibiBytes * 1024
+    tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue)
 
 }

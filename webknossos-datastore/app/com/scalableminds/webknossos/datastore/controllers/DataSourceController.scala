@@ -445,14 +445,17 @@ Expects:
   def measureUsedStorage(token: Option[String], organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
-        urlOrHeaderToken(token, request)) {
-      for {
-        usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName)
-      } yield
-        Ok(
-          Json.obj(
-            "usedStorageInBytes" -> usedStorageInBytes
-          ))
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          before <- Fox.successful(System.currentTimeMillis())
+          usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName)
+          after <- Fox.successful(System.currentTimeMillis())
+          _ = logger.info(s"took ${after - before} ms")
+        } yield
+          Ok(
+            Json.obj(
+              "usedStorageInBytes" -> usedStorageInBytes
+            ))
       }
     }
 

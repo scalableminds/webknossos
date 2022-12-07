@@ -124,7 +124,10 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO
         .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
       userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail, organization.displayName))
+      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail))
+              _ = Mailer ! Send(
+          defaultMails
+            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Extend webKnossos plan by a year"))
     } yield Ok
   }
 
@@ -139,7 +142,10 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         mail = if (requestedPlan == PricingPlan.Team) { defaultMails.upgradePricingPlanToTeamMail _ } else {
           defaultMails.upgradePricingPlanToTeamMail _
         }
-        _ = Mailer ! Send(mail(request.identity, userEmail, organization.displayName))
+        _ = Mailer ! Send(mail(request.identity, userEmail))
+        _ = Mailer ! Send(
+          defaultMails
+            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Upgrade webKnossos Plan to $requestedPlan"))
       } yield Ok
   }
 
@@ -151,7 +157,10 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         userEmail <- userService.emailFor(request.identity)
         _ = Mailer ! Send(
           defaultMails
-            .upgradePricingPlanUsersMail(request.identity, userEmail, organization.displayName, requestedUsers))
+            .upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
+        _ = Mailer ! Send(
+          defaultMails
+            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Purchase $requestedUsers additional users"))
       } yield Ok
     }
 
@@ -163,7 +172,10 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         userEmail <- userService.emailFor(request.identity)
         _ = Mailer ! Send(
           defaultMails
-            .upgradePricingPlanStorageMail(request.identity, userEmail, organization.displayName, requestedStorage))
+            .upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
+        _ = Mailer ! Send(
+         defaultMails
+            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Purchase $requestedStorage TB additional storage"))    
       } yield Ok
     }
 

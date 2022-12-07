@@ -1,8 +1,10 @@
-@( name: String, organizationDisplayName: String, requestedStorage: Int)
+@(name: String, requestedStorage: Int)
 
 @emailBaseTemplate() {
-<p>Hi webKnossos-Team</p>
-<p>I would like to add @{requestedStorage}TB of additional storage to my current webKnossos plan. Please send me a formal quote for the updated services.</p>
+<p>Hi @{name}</p>
+<p>Thank you for requesting to upgrade your webKnossos plan with more storage. Our sales team will be in contact with you shortly with a formal offer.</p>
+  
+<p>Requested additional storage: @{requestedStorage}TB</p>
 
-<p>With best regards,<br />@{name} from @{organizationDisplayName}</p>
+<p>With best regards,<br />the webKnossos-Team</p>
 }

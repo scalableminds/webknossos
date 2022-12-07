@@ -16,6 +16,7 @@ import {
   useFolderQuery,
 } from "./queries";
 import { useIsMutating } from "@tanstack/react-query";
+import { usePrevious } from "libs/react_hooks";
 
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
@@ -35,6 +36,7 @@ export type DatasetCollectionContextValue = {
   updateCachedDataset: (dataset: APIDataset) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
+  mostRecentlyUsedActiveFolderId: string | null;
   supportsFolders: true;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
@@ -76,6 +78,7 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
+  const mostRecentlyUsedActiveFolderId = usePrevious(activeFolderId, true);
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
   const { data: folder } = useFolderQuery(activeFolderId);
@@ -176,6 +179,7 @@ export default function DatasetCollectionContextProvider({
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
+      mostRecentlyUsedActiveFolderId,
       isChecking,
       getBreadcrumbs,
       checkDatasets: async () => {
@@ -223,6 +227,7 @@ export default function DatasetCollectionContextProvider({
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
+      mostRecentlyUsedActiveFolderId,
       folderHierarchyQuery,
       datasetsInFolderQuery,
       datasetSearchQuery,

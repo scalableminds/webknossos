@@ -368,9 +368,11 @@ function GlobalSearchHeader({
             if (value === "everywhere") {
               setActiveFolderId(null);
             } else {
-              if (activeFolderId == null && treeData.length > 0) {
-                // todo: use useLastValue
-                setActiveFolderId(treeData[0].key);
+              if (
+                activeFolderId == null &&
+                (context.mostRecentlyUsedActiveFolderId != null || treeData.length > 0)
+              ) {
+                setActiveFolderId(context.mostRecentlyUsedActiveFolderId || treeData[0].key);
               }
               context.setSearchRecursively(value === "folder-with-subfolders");
             }

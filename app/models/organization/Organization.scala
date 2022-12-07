@@ -2,7 +2,9 @@ package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
@@ -113,5 +115,20 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                       set displayName = $displayName, newUserMailingList = $newUserMailingList
                       where _id = $organizationId""")
     } yield ()
+
+  def upsertUsedStorage(organizationId: ObjectId,
+                        dataStoreId: ObjectId,
+                        datasetId: ObjectId,
+                        usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
+    val queries = usedStorageEntries.map(entry => sqlu"""INSERT INTO webknossos.organizations_usedStorage
+                      (_organization, _dataStore, _dataSet,
+                        magOrDirectoryName, usedStorageBytes, lastUpdated)
+                      VALUES($organizationId, $dataStoreId, $datasetId,
+                        ${entry.magOrDirectoryName}, ${entry.usedStorageBytes}, NOW())
+               ON CONFLICT DO UPDATE""")
+    for {
+      _ <- run(DBIO.sequence(queries))
+    } yield ()
+  }
 
 }

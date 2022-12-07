@@ -5,12 +5,15 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.services
 import com.scalableminds.webknossos.datastore.services.{
   DataStoreStatus,
+  DirectoryStorageReport,
   LinkedLayerIdentifier,
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
@@ -175,5 +178,17 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok(Json.toJson(jobExportProperties))
       }
   }
+
+  def reportUsedStorage(name: String,
+                        key: String,
+                        organizationName: String,
+                        datasetName: Option[String]): Action[List[DirectoryStorageReport]] =
+    Action.async(validateJson[List[services.DirectoryStorageReport]]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          _ <- Fox.successful(logger.info(s"received storage report, ${request.body.length} entries"))
+        } yield Ok
+      }
+    }
 
 }

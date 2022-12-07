@@ -30,7 +30,7 @@ class DataSourceController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
-    storageUsageService: StorageUsageService,
+    storageUsageService: UsedStorageService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -447,15 +447,9 @@ Expects:
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
                                         urlOrHeaderToken(token, request)) {
         for {
-          before <- Fox.successful(System.currentTimeMillis())
           usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName)
-          after <- Fox.successful(System.currentTimeMillis())
-          _ = logger.info(s"took ${after - before} ms")
-        } yield
-          Ok(
-            Json.obj(
-              "usedStorageInBytes" -> usedStorageInBytes
-            ))
+          _ <- remoteWebKnossosClient.reportUsedStorage(organizationName, None, usedStorageInBytes)
+        } yield Ok(Json.toJson(usedStorageInBytes))
       }
     }
 

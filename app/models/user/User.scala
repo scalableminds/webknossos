@@ -2,7 +2,7 @@ package models.user
 
 import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
-import com.scalableminds.util.tools.JsonHelper.parseJsonToFox
+import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -65,7 +65,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def parse(r: UsersRow): Fox[User] =
     for {
-      userConfiguration <- parseJsonToFox[JsObject](r.userconfiguration)
+      userConfiguration <- parseAndValidateJson[JsObject](r.userconfiguration)
     } yield {
       User(
         ObjectId(r._Id),

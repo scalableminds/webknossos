@@ -13,7 +13,7 @@ import { useSelector } from "react-redux";
 export function CheckTermsOfServices() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [recheckCounter, setRecheckCounter] = useState(0);
-  const acceptanceNeeded = useFetch(
+  const acceptanceInfo = useFetch(
     async () => {
       if (activeUser == null) {
         return null;
@@ -28,7 +28,7 @@ export function CheckTermsOfServices() {
     setRecheckCounter((val) => val + 1);
   };
 
-  if (!acceptanceNeeded || !activeUser) {
+  if (!acceptanceInfo || !activeUser || !acceptanceInfo.acceptanceNeeded) {
     return null;
   }
 

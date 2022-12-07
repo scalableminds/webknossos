@@ -8,8 +8,12 @@ export function getTermsOfService(): Promise<{
   return Request.receiveJSON("/api/termsOfService");
 }
 
-export async function requiresTermsOfServiceAcceptance(): Promise<boolean> {
-  return (await Request.receiveJSON("/api/termsOfService/acceptanceNeeded")).acceptanceNeeded;
+export async function requiresTermsOfServiceAcceptance(): Promise<{
+  acceptanceDeadline: number;
+  acceptanceDeadlinePassed: boolean;
+  acceptanceNeeded: boolean;
+}> {
+  return await Request.receiveJSON("/api/termsOfService/acceptanceNeeded");
 }
 
 export function acceptTermsOfService(version: number): Promise<unknown> {

@@ -442,13 +442,22 @@ Expects:
   }
 
   @ApiOperation(hidden = true, value = "")
-  def measureUsedStorage(token: Option[String], organizationName: String): Action[AnyContent] =
+  def measureUsedStorage(token: Option[String],
+                         organizationName: String,
+                         datasetName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
                                         urlOrHeaderToken(token, request)) {
         for {
-          usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName)
-          _ <- remoteWebKnossosClient.reportUsedStorage(organizationName, None, usedStorageInBytes)
+          before <- Fox.successful(System.currentTimeMillis())
+          usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName,
+                                                                                                 datasetName)
+          after = System.currentTimeMillis()
+          _ = if (after - before > 0) { // TODO 10000
+            val datasetLabel = datasetName.map(n => s" dataset $n of").getOrElse("")
+            logger.info(s"Measuring storage for$datasetLabel orga $organizationName took ${after - before} ms.")
+          }
+          _ <- remoteWebKnossosClient.reportUsedStorage(organizationName, datasetName, usedStorageInBytes)
         } yield Ok(Json.toJson(usedStorageInBytes)) // TODO, do not return result here, this is just a trigger
       }
     }

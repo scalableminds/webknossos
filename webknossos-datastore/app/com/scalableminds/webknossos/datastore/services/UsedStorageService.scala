@@ -33,11 +33,17 @@ class UsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Executi
 
   private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
 
-  def measureStorage(organizationName: String)(implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] =
+  def measureStorage(organizationName: String, dataSetName: Option[String])(
+      implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
+    def selectedDatasetFilter(p: Path) = dataSetName.forall(name => p.getFileName.toString == name)
+
     for {
-      datasetDirectories <- PathUtils.listDirectories(baseDir.resolve(organizationName), noSymlinksFilter) ?~> "listdir.failed"
+      datasetDirectories <- PathUtils.listDirectories(baseDir.resolve(organizationName),
+                                                      noSymlinksFilter,
+                                                      selectedDatasetFilter) ?~> "listdir.failed"
       storageReportsNested <- Fox.serialCombined(datasetDirectories)(d => measureStorageForDataSet(organizationName, d))
     } yield storageReportsNested.flatten
+  }
 
   def measureStorageForDataSet(organizationName: String, dataSetDirectory: Path): Fox[List[DirectoryStorageReport]] =
     for {

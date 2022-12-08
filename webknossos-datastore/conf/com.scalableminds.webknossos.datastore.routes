@@ -87,7 +87,7 @@ DELETE        /datasets/:organizationName/:dataSetName/deleteOnDisk             
 POST          /triggers/checkInboxBlocking                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(token: Option[String])
 POST          /triggers/newOrganizationFolder                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(token: Option[String], organizationName: String)
 POST          /triggers/reload/:organizationName/:dataSetName                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(token: Option[String], organizationName: String, dataSetName: String, layerName: Option[String])
-GET           /triggers/measureStorage/:organizationName                                                                                      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.measureUsedStorage(token: Option[String], organizationName: String)
+GET           /triggers/measureStorage/:organizationName                                                                                      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.measureUsedStorage(token: Option[String], organizationName: String, dataSetName: Option[String])
 #TODO make POST
 
 # Exports

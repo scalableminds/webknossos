@@ -169,7 +169,8 @@ CREATE TABLE webknossos.dataStores(
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
-  onlyAllowedOrganization CHAR(24)
+  onlyAllowedOrganization CHAR(24),
+  reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT false,
 );
 
 CREATE TABLE webknossos.tracingStores(
@@ -287,6 +288,7 @@ CREATE TABLE webknossos.organizations(
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  lastStorageScanStarted TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 

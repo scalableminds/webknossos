@@ -48,6 +48,10 @@ trait SQLTypeImplicits {
   implicit object GetInstant extends GetResult[Instant] {
     override def apply(v1: PositionedResult): Instant = Instant.fromSql(v1.<<)
   }
+
+  implicit object GetInstantOpt extends GetResult[Option[Instant]] {
+    override def apply(v1: PositionedResult): Option[Instant] = v1.nextTimestampOption().map(Instant.fromSql)
+  }
 }
 
 class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

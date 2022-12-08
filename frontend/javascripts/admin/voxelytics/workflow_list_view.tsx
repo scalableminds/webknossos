@@ -17,8 +17,8 @@ import { VX_POLLING_INTERVAL } from "./workflow_view";
 function parseTaskInfo(taskInfo: VoxelyticsTaskInfo): VoxelyticsTaskInfo {
   return {
     ...taskInfo,
-    beginTime: taskInfo.beginTime != null ? new Date(taskInfo.beginTime) : null,
-    endTime: taskInfo.endTime != null ? new Date(taskInfo.endTime) : null,
+    beginTime: taskInfo.beginTime != null ? taskInfo.beginTime : null,
+    endTime: taskInfo.endTime != null ? taskInfo.endTime : null,
   } as VoxelyticsTaskInfo;
 }
 
@@ -26,19 +26,17 @@ function parseRunInfo(runInfo: VoxelyticsRunInfo): VoxelyticsRunInfo {
   return {
     ...runInfo,
     tasks: runInfo.tasks.map(parseTaskInfo),
-    beginTime: new Date(runInfo.beginTime),
-    endTime: runInfo.endTime != null ? new Date(runInfo.endTime) : null,
+    beginTime: runInfo.beginTime,
+    endTime: runInfo.endTime != null ? runInfo.endTime : null,
   } as any as VoxelyticsRunInfo;
 }
 
 function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowInfo): VoxelyticsWorkflowInfo {
   return {
     ...workflowInfo,
-    beginTime: new Date(workflowInfo.beginTime),
-    endTime: workflowInfo.endTime != null ? new Date(workflowInfo.endTime) : null,
-    runs: workflowInfo.runs
-      .map(parseRunInfo)
-      .sort((a, b) => b.beginTime.getTime() - a.beginTime.getTime()),
+    beginTime: workflowInfo.beginTime,
+    endTime: workflowInfo.endTime != null ? workflowInfo.endTime : null,
+    runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => b.beginTime - a.beginTime),
   };
 }
 
@@ -70,9 +68,7 @@ function aggregateTasks(runs: Array<VoxelyticsRunInfo>): Array<VoxelyticsTaskInf
           const taskMaybe = run.tasks.find((t) => t.taskName === task.taskName);
           return taskMaybe != null ? [taskMaybe] : [];
         })
-        .sort(
-          (a, b) => (b.beginTime?.getTime() ?? -Infinity) - (a.beginTime?.getTime() ?? -Infinity),
-        ),
+        .sort((a, b) => (b.beginTime ?? -Infinity) - (a.beginTime ?? -Infinity)),
     ),
   );
   return combinedTaskRuns;
@@ -245,14 +241,14 @@ export default function WorkflowListView() {
             key: "begin",
             defaultSortOrder: "descend",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.beginTime?.getTime() ?? Infinity) - (b.beginTime?.getTime() ?? Infinity),
+              (a.beginTime ?? Infinity) - (b.beginTime ?? Infinity),
             render: (run: RenderRunInfo) => run.beginTime && formatDateMedium(run.beginTime),
           },
           {
             title: "End",
             key: "end",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.endTime?.getTime() ?? Infinity) - (b.endTime?.getTime() ?? Infinity),
+              (a.endTime ?? Infinity) - (b.endTime ?? Infinity),
             render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
           },
         ]}

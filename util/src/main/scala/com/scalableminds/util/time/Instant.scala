@@ -5,7 +5,7 @@ import play.api.libs.json._
 
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 case class Instant(epochMillis: Long) extends Ordered[Instant] {
   override def toString: String = DateTimeFormatter.ISO_INSTANT.format(toJavaInstant)
@@ -17,12 +17,20 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def +(duration: FiniteDuration): Instant = Instant(epochMillis + duration.toMillis)
   def -(duration: FiniteDuration): Instant = Instant(epochMillis - duration.toMillis)
 
+  def -(other: Instant): FiniteDuration = (epochMillis - other.epochMillis) milliseconds
+
   def isPast: Boolean = this < Instant.now
 
   override def compare(that: Instant): Int =
     if (this.epochMillis < that.epochMillis) -1
     else if (this.epochMillis > that.epochMillis) 1
     else 0
+
+  def dayOfMonth: Int = toJodaDateTime.getDayOfMonth
+  def monthOfYear: Int = toJodaDateTime.getMonthOfYear
+  def year: Int = toJodaDateTime.getYear
+  def weekOfWeekyear: Int = toJodaDateTime.getWeekOfWeekyear
+  def weekyear: Int = toJodaDateTime.getWeekyear
 }
 
 object Instant extends FoxImplicits {

@@ -32,14 +32,12 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val MaxTracingPauseMillis =
-    conf.WebKnossos.User.timeTrackingPause.toMillis
 
-  def logUserInteraction(timestamp: Long, user: User, annotation: Annotation)(
+  def logUserInteraction(timestamp: Instant, user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     logUserInteraction(Seq(timestamp), user, annotation)
 
-  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Annotation)(
+  def logUserInteraction(timestamps: Seq[Instant], user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
@@ -91,7 +89,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpan]
 
   @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
-  private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: Annotation)(
+  private def trackTime(timestamps: Seq[Instant], _user: ObjectId, _annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     if (timestamps.isEmpty) {
       logger.warn("Timetracking called with empty timestamps list.")
@@ -102,19 +100,19 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       val start = timestamps.head
 
       var timeSpansToInsert: List[TimeSpan] = List()
-      var timeSpansToUpdate: List[(TimeSpan, Long)] = List()
+      var timeSpansToUpdate: List[(TimeSpan, Instant)] = List()
 
-      def createNewTimeSpan(timestamp: Long, _user: ObjectId, annotation: Option[Annotation]) = {
+      def createNewTimeSpan(timestamp: Instant, _user: ObjectId, annotation: Option[Annotation]) = {
         val timeSpan = TimeSpan.fromTimestamp(timestamp, _user, annotation.map(_._id))
         timeSpansToInsert = timeSpan :: timeSpansToInsert
         timeSpan
       }
 
-      def updateTimeSpan(timeSpan: TimeSpan, timestamp: Long) = {
-        val duration = timestamp - timeSpan.lastUpdate.epochMillis
-        if (duration >= 0) {
+      def updateTimeSpan(timeSpan: TimeSpan, timestamp: Instant) = {
+        val duration: FiniteDuration = timestamp - timeSpan.lastUpdate
+        if (duration.toMillis >= 0) {
           timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
-          timeSpan.addTime(duration, Instant(timestamp))
+          timeSpan.addTime(duration, timestamp)
         } else {
           // Negative duration. This is expected when updating an annotation with multiple layers.
           // Each layer reports updates that can overlap time-wise. We do not update the timespan with the negative duration.
@@ -140,7 +138,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         val start = pair.head
         val end = pair.last
         val duration = end - start
-        if (duration >= MaxTracingPauseMillis) {
+        if (duration >= conf.WebKnossos.User.timeTrackingPause) {
           updateTimeSpan(current, start)
           current = createNewTimeSpan(end, _user, annotation)
         }
@@ -151,19 +149,19 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
     }
 
-  private def isNotInterrupted(current: Long, last: TimeSpan) = {
-    val duration = current - last.lastUpdate.epochMillis
-    if (duration < 0) {
+  private def isNotInterrupted(current: Instant, last: TimeSpan) = {
+    val duration = current - last.lastUpdate
+    if (duration.toMillis < 0) {
       logger.info(
         s"Negative timespan duration $duration ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=$this)")
     }
-    duration < MaxTracingPauseMillis
+    duration < conf.WebKnossos.User.timeTrackingPause
   }
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =
     last._annotation.map(_.id) == annotation.map(_.id)
 
-  private def logTimeToAnnotation(duration: Long, annotation: Option[ObjectId]): Fox[Unit] =
+  private def logTimeToAnnotation(duration: FiniteDuration, annotation: Option[ObjectId]): Fox[Unit] =
     // Log time to annotation
     annotation match {
       case Some(a: ObjectId) =>
@@ -173,7 +171,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       // do nothing, this is not a stored annotation
     }
 
-  def signalOverTime(time: Long, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] =
+  def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] =
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
@@ -183,13 +181,13 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
     } yield {
-      if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
+      if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
         brainTracing.Mailer ! Send(
           defaultMails.overLimitMail(user, project.name, task._id.toString, annotation.id, organization))
       }
     }
 
-  private def logTimeToTask(duration: Long, annotation: Option[Annotation]) =
+  private def logTimeToTask(duration: FiniteDuration, annotation: Option[Annotation]) =
     annotation.flatMap(_._task) match {
       case Some(taskId) =>
         for {
@@ -212,7 +210,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
   @SuppressWarnings(Array("TryGet")) // This is okay because we check the failure case before using the try
-  private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Long)])(
+  private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Instant)])(
       implicit ctx: DBAccessContext) = {
     val updateResult = for {
       _ <- Fox.serialCombined(timespansToInsert)(t => timeSpanDAO.insertOne(t))
@@ -227,9 +225,9 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     updateResult
   }
 
-  private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Long)(implicit ctx: DBAccessContext) = {
-    val duration = timestamp - timeSpan.lastUpdate.epochMillis
-    val updated = timeSpan.addTime(duration, Instant(timestamp))
+  private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Instant)(implicit ctx: DBAccessContext) = {
+    val duration = timestamp - timeSpan.lastUpdate
+    val updated = timeSpan.addTime(duration, timestamp)
 
     for {
       _ <- timeSpanDAO.updateOne(updated) ?~> "FAILED: TimeSpanDAO.updateOne"

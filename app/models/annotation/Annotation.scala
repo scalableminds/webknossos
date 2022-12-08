@@ -19,6 +19,7 @@ import slick.sql.SqlAction
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class Annotation(
     _id: ObjectId,
@@ -465,10 +466,11 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         sqlu"delete from webknossos.annotations where state = '#${AnnotationState.Initializing}' and created < (now() - interval '1 hour')")
     } yield ()
 
-  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: FiniteDuration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
-      _ <- run(sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + $time where _id = $id") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
+      _ <- run(
+        sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + ${time.toMillis} where _id = $id") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
     } yield ()
 
   def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext): Fox[Unit] =

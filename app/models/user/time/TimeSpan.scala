@@ -3,15 +3,14 @@ package models.user.time
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-
-import javax.inject.Inject
-import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class TimeSpanRequest(users: List[String], start: Instant, end: Instant)
 object TimeSpanRequest { implicit val timeSpanRequest: OFormat[TimeSpanRequest] = Json.format[TimeSpanRequest] }
@@ -26,32 +25,23 @@ case class TimeSpan(
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) {
-  def createdAsDateTime = new DateTime(created)
-
-  def addTime(duration: Long, timestamp: Instant): TimeSpan =
-    this.copy(lastUpdate = timestamp, time = time + duration, numberOfUpdates = this.numberOfUpdates + 1)
+  def addTime(duration: FiniteDuration, timestamp: Instant): TimeSpan =
+    this.copy(lastUpdate = timestamp, time = time + duration.toMillis, numberOfUpdates = this.numberOfUpdates + 1)
 }
 
 object TimeSpan {
 
   def groupByMonth(timeSpan: TimeSpan): Month =
-    Month(timeSpan.createdAsDateTime.getMonthOfYear, timeSpan.createdAsDateTime.getYear)
+    Month(timeSpan.created.monthOfYear, timeSpan.created.year)
 
   def groupByWeek(timeSpan: TimeSpan): Week =
-    Week(timeSpan.createdAsDateTime.getWeekOfWeekyear, timeSpan.createdAsDateTime.getWeekyear)
+    Week(timeSpan.created.weekOfWeekyear, timeSpan.created.weekyear)
 
   def groupByDay(timeSpan: TimeSpan): Day =
-    Day(timeSpan.createdAsDateTime.getDayOfMonth,
-        timeSpan.createdAsDateTime.getMonthOfYear,
-        timeSpan.createdAsDateTime.getYear)
+    Day(timeSpan.created.dayOfMonth, timeSpan.created.monthOfYear, timeSpan.created.year)
 
-  def fromTimestamp(timestamp: Long, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
-    TimeSpan(ObjectId.generate,
-             _user,
-             _annotation,
-             time = 0L,
-             lastUpdate = Instant(timestamp),
-             created = Instant(timestamp))
+  def fromTimestamp(timestamp: Instant, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
+    TimeSpan(ObjectId.generate, _user, _annotation, time = 0L, lastUpdate = timestamp, created = timestamp)
 
 }
 

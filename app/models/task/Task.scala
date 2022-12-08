@@ -15,6 +15,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class Task(
     _id: ObjectId,
@@ -326,10 +327,11 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       _ <- run(sqlu"update webknossos.tasks set _script = null where _script = ${scriptId.id}")
     } yield ()
 
-  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: FiniteDuration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: TaskSQLDAO.assertUpdateAccess"
-      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}") ?~> "FAILED: run in TaskSQLDAO.logTime"
+      _ <- run(
+        sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + ${time.toMillis} where _id = ${id.id}") ?~> "FAILED: run in TaskSQLDAO.logTime"
     } yield ()
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {

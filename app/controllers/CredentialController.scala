@@ -40,7 +40,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
                                                              request.body.username,
                                                              request.body.password,
                                                              request.body.domain)) ?~> "create.failed"
-      } yield Ok
+      } yield Ok(Json.toJson(_id))
     }
 
   def createS3AccessKeyCredential: Action[S3AccessKeyCredentialParameters] =
@@ -53,7 +53,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
                                                            request.body.keyId,
                                                            request.body.key,
                                                            request.body.bucket)) ?~> "create.failed"
-      } yield Ok
+      } yield Ok(Json.toJson(_id))
     }
 
 }

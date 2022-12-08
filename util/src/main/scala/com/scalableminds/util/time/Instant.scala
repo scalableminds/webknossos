@@ -47,17 +47,17 @@ object Instant extends FoxImplicits {
   implicit object InstantFormat extends Format[Instant] {
     override def reads(json: JsValue): JsResult[Instant] =
       json
-        .validate[String]
-        .flatMap { instantString =>
-          val parsedOpt = fromStringSync(instantString)
-          parsedOpt match {
-            case Some(parsed) => JsSuccess(parsed)
-            case None         => JsError(f"instant.invalid: $instantString")
-          }
+        .validate[Long]
+        .flatMap { instantLong =>
+          JsSuccess(Instant(instantLong))
         }
         .orElse {
-          json.validate[Long].flatMap { instantLong =>
-            JsSuccess(Instant(instantLong))
+          json.validate[String].flatMap { instantString =>
+            val parsedOpt = fromStringSync(instantString)
+            parsedOpt match {
+              case Some(parsed) => JsSuccess(parsed)
+              case None         => JsError(f"instant.invalid: $instantString")
+            }
           }
         }
 

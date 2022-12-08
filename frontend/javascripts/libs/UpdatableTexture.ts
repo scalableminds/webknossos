@@ -26,10 +26,14 @@ const getImageData = _.memoize(
     // we are creating an image-like object here which can be used
     // with ThreeJS if isDataTexture = true is given.
     if (isInt) {
+      return { width, height, data: new Uint32Array(4) };
       return { width, height, data: new Uint32Array(4 * width * height) };
     }
 
-    const imageData = ctx.createImageData(width, height);
+    return { width, height, data: new Uint32Array(1) };
+
+    // const imageData = ctx.createImageData(width, height);
+    const imageData = ctx.createImageData(1, 1);
 
     // Explicitly "release" canvas. Necessary for iOS.
     // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
@@ -137,6 +141,7 @@ class UpdatableTexture extends THREE.Texture {
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
+    // this.setSize(width, width);
     const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
     const textureProperties = this.renderer.properties.get(this);
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);

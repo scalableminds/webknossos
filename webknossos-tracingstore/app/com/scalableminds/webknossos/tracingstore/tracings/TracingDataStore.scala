@@ -15,6 +15,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
 
+  logger.info("Tracingstore Startup: Checking FossilDB health...")
   healthClient.checkHealth
 
   lazy val skeletons = new FossilDBClient("skeletons", config, slackNotificationService)

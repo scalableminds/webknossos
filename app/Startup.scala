@@ -34,12 +34,14 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         slackNotificationService: SlackNotificationService)
     extends LazyLogging {
 
-  logger.info("Executing Startup")
+  private val beforeStartup = System.currentTimeMillis()
 
-  conf.warnIfOldKeysPresent()
+  logger.info(s"Executing Startup at $beforeStartup")
 
+  logger.info("Starting Actors...")
   startActors(actorSystem)
 
+  logger.info("Registering Cleanup Services...")
   private val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
@@ -54,13 +56,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
     annotationDAO.deleteOldInitializingAnnotations()
   }
 
-  ensurePostgresDatabase.onComplete { _ =>
-    initialDataService.insert.futureBox.map {
-      case Full(_)            => ()
-      case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
-      case _                  => logger.warn("Error while inserting initial data")
-    }
-  }
+  logger.info("Registering Stop Hooks...")
 
   lifecycle.addStopHook { () =>
     Future.successful {
@@ -76,7 +72,21 @@ class Startup @Inject()(actorSystem: ActorSystem,
     }
   }
 
-  private def ensurePostgresDatabase = {
+  // ensurePostgresDatabase()
+
+
+  logger.info("Inserting initial data...")
+
+  initialDataService.insert.futureBox.map {
+    case Full(_)            => ()
+    case Failure(msg, _, _) =>
+      logger.info("No initial data inserted: " + msg)
+      val afterPostgres = System.currentTimeMillis()
+      logger.info(s"Startup took ${afterPostgres - beforeStartup} ms. ")
+    case _                  => logger.warn("Error while inserting initial data")
+  }
+
+  private def ensurePostgresDatabase(): Unit = {
     logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
 
     val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
@@ -108,10 +118,9 @@ class Startup @Inject()(actorSystem: ActorSystem,
       slackNotificationService.warn("SQL schema mismatch", errorMessage)
     }
 
-    Future.successful(())
   }
 
-  private def startActors(actorSystem: ActorSystem) {
+  private def startActors(actorSystem: ActorSystem): Unit = {
     val mailerConf = MailerConfig(
       conf.Mail.logToStdout,
       conf.Mail.Smtp.host,

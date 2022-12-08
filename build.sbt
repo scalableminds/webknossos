@@ -1,5 +1,3 @@
-import play.routes.compiler.InjectedRoutesGenerator
-import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
 ThisBuild / version := "wk"
@@ -24,6 +22,7 @@ ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
   "-Xlint:deprecation"
 )
+ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
 
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
@@ -65,14 +64,13 @@ lazy val util = (project in file("util")).settings(
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
   .enablePlugins(play.sbt.PlayScala)
-  .enablePlugins(BuildInfoPlugin)
+  //.enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
   .settings(
     name := "webknossos-datastore",
     commonSettings,
-    BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
+    //BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
-    routesGenerator := InjectedRoutesGenerator,
     protocolBufferSettings,
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
@@ -82,53 +80,39 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    copyConfFilesSetting,
-    assembly / assemblyMergeStrategy := {
-      case PathList(ps @ _*) if ps.last endsWith ".class" => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last endsWith ".proto" => MergeStrategy.last
-      case PathList(ps @ _*) if List("io.netty.versions.properties", "mailcap.default",
-        "mimetypes.default", "native-image.properties").contains(ps.last) => MergeStrategy.last
-      case PathList(ps @ _*) if List("application.conf", "reference-overrides.conf").contains(ps.last) => MergeStrategy.concat
-      case x =>
-        val oldStrategy = (assembly / assemblyMergeStrategy).value
-        oldStrategy(x)
-    },
-    assembly / test := {},
-    assembly / assemblyJarName := s"webknossos-datastore-${BuildInfoSettings.webKnossosVersion}.jar"
+    copyConfFilesSetting
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
   .dependsOn(webknossosDatastore)
   .enablePlugins(play.sbt.PlayScala)
-  .enablePlugins(BuildInfoPlugin)
+  //.enablePlugins(BuildInfoPlugin)
   .settings(
     name := "webknossos-tracingstore",
     commonSettings,
-    BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
+    //BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    routesGenerator := InjectedRoutesGenerator,
     copyConfFilesSetting
   )
 
 lazy val webknossos = (project in file("."))
   .dependsOn(util, webknossosTracingstore)
   .enablePlugins(play.sbt.PlayScala)
-  .enablePlugins(BuildInfoPlugin)
+  //.enablePlugins(BuildInfoPlugin)
   .settings(
     name := "webknossos",
-    commonSettings,
-    AssetCompilation.settings,
-    BuildInfoSettings.webknossosBuildInfoSettings,
-    routesGenerator := InjectedRoutesGenerator,
+    //commonSettings,
+    //AssetCompilation.settings,
+    //BuildInfoSettings.webknossosBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDependencies,
-    Assets / sourceDirectory := file("none"),
-    updateOptions := updateOptions.value.withLatestSnapshots(true),
-    Compile / unmanagedJars ++= {
+    //Assets / sourceDirectory := file("none"),
+    //updateOptions := updateOptions.value.withLatestSnapshots(true),
+    /*Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
       val targets = ((subs / "target") ** "*") filter { f =>
         f.name.startsWith("scala-") && f.isDirectory
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
-    }
+    }*/
   )

@@ -46,7 +46,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
     } yield {
       addRemoteOriginHeaders(
         Ok(Json.obj(
-          "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
+          //"webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
           "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,

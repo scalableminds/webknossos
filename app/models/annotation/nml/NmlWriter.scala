@@ -325,7 +325,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writerGitCommit")
-      writer.writeAttribute("content", webknossos.BuildInfo.commitHash)
+      //writer.writeAttribute("content", webknossos.BuildInfo.commitHash)
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "timestamp")

@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where it was possible to create invalid an state by deleting teams that are referenced elsewhere. [6664](https://github.com/scalableminds/webknossos/pull/6664)
 - Miscellaneous fixes for the new folder UI. [#6674](https://github.com/scalableminds/webknossos/pull/6674)
 - Fixed import of remote datasets with multiple layers and differing resolution pyramid. #[6670](https://github.com/scalableminds/webknossos/pull/6670)
+- Fixed broken Get-new-Task button in task dashboard. [#6677](https://github.com/scalableminds/webknossos/pull/6677)
 
 ### Removed
 

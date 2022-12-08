@@ -57,6 +57,7 @@ class InitialDataService @Inject()(userService: UserService,
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
 
   private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email
+  private val defaultUserEmail2 = conf.WebKnossos.SampleOrganization.User.email2
   private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
   private val defaultUserToken = conf.WebKnossos.SampleOrganization.User.token
   private val additionalInformation = """**Sample Organization**
@@ -75,9 +76,11 @@ Samplecountry
                  PricingPlan.Custom,
                  ObjectId.generate)
   private val organizationTeam =
-    Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
+    Team(organizationTeamId, defaultOrganization._id, "Default", isOrganizationTeam = true)
   private val userId = ObjectId.generate
   private val multiUserId = ObjectId.generate
+  private val userId2 = ObjectId.generate
+  private val multiUserId2 = ObjectId.generate
   private val defaultMultiUser = MultiUser(
     multiUserId,
     defaultUserEmail,
@@ -95,6 +98,27 @@ Samplecountry
     userService.createLoginInfo(userId),
     isAdmin = true,
     isDatasetManager = true,
+    isUnlisted = false,
+    isDeactivated = false,
+    lastTaskTypeId = None
+  )
+  private val defaultMultiUser2 = MultiUser(
+    multiUserId2,
+    defaultUserEmail2,
+    userService.createPasswordInfo(defaultUserPassword),
+    isSuperUser = false,
+  )
+  private val defaultUser2 = User(
+    userId2,
+    multiUserId2,
+    defaultOrganization._id,
+    "Non-Admin",
+    "User",
+    System.currentTimeMillis(),
+    Json.obj(),
+    userService.createLoginInfo(userId2),
+    isAdmin = false,
+    isDatasetManager = false,
     isUnlisted = false,
     isDeactivated = false,
     lastTaskTypeId = None
@@ -119,7 +143,8 @@ Samplecountry
       _ <- insertRootFolder()
       _ <- insertOrganization()
       _ <- insertTeams()
-      _ <- insertDefaultUser()
+      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, true)
+      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, false)
       _ <- insertToken()
       _ <- insertTaskType()
       _ <- insertProject()
@@ -143,19 +168,23 @@ Samplecountry
       case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName))
     }
 
-  private def insertDefaultUser(): Fox[Unit] =
+  private def insertDefaultUser(userEmail: String,
+                                multiUser: MultiUser,
+                                user: User,
+                                isTeamManager: Boolean): Fox[Unit] =
     userService
-      .userFromMultiUserEmail(defaultUserEmail)
+      .userFromMultiUserEmail(userEmail)
       .futureBox
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
           for {
-            _ <- multiUserDAO.insertOne(defaultMultiUser)
-            _ <- userDAO.insertOne(defaultUser)
-            _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser, Map("sampleExp" -> 10))
-            _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
-                                                       TeamMembership(organizationTeam._id, isTeamManager = true))
+            _ <- multiUserDAO.insertOne(multiUser)
+            _ <- userDAO.insertOne(user)
+            _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
+            _ <- userTeamRolesDAO.insertTeamMembership(
+              user._id,
+              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
             _ = logger.info("Inserted default user")
           } yield ()
       }

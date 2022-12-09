@@ -45,8 +45,8 @@ export const getRgbaAtXYIndex: ShaderModule = {
     // sampler2D textures[dataTextureCountPerLayer]
     // as a function parameter properly
 
-    <% _.each(layerNamesWithSegmentation, (name) => { %>
-      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
+
+      vec4 getRgbaAtXYIndex(sampler2D textures[dataTextureCountPerLayer], float textureIdx, float x, float y) {
         // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
@@ -54,30 +54,19 @@ export const getRgbaAtXYIndex: ShaderModule = {
         <% if (dataTextureCountPerLayer === 1) { %>
             // Don't use if-else when there is only one data texture anyway
 
-            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
+            return texelFetch(textures[0], ivec2(x, y), 0).rgba;
         <% } else { %>
           if (textureIdx == 0.0) {
-            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
+            return texelFetch(textures[0], ivec2(x, y), 0).rgba;
           } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
+            return texelFetch(textures[<%= textureIndex %>], ivec2(x, y), 0).rgba;
           }
           <% }) %>
           return vec4(0.5, 0.0, 0.0, 0.0);
         <% } %>
       }
-    <% }); %>
 
-    vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float x, float y) {
-      if (layerIndex == 0.0) {
-        return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
-      } <% _.each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
-        else if (layerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
-          return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
-        }
-      <% }); %>
-      return vec4(0.0);
-    }
   `,
 };
 export const getColorForCoords: ShaderModule = {
@@ -92,7 +81,7 @@ export const getColorForCoords: ShaderModule = {
   code: `
     vec4[2] getColorForCoords64(
       sampler2D lookUpTexture,
-      float layerIndex,
+      sampler2D dataTextures[dataTextureCountPerLayer],
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW
@@ -200,7 +189,7 @@ export const getColorForCoords: ShaderModule = {
 
       // The lower 32-bit of the value.
       vec4 bucketColor = getRgbaAtXYIndex(
-        layerIndex,
+        dataTextures,
         textureIndex,
         x,
         y
@@ -208,7 +197,7 @@ export const getColorForCoords: ShaderModule = {
 
       if (packingDegree == 0.5) {
         vec4 bucketColorHigh = getRgbaAtXYIndex(
-          layerIndex,
+          dataTextures,
           textureIndex,
           // x + 1.0 will never exceed the texture width because
           // - the texture width is even
@@ -276,7 +265,7 @@ export const getColorForCoords: ShaderModule = {
 
     vec4 getColorForCoords(
       sampler2D lookUpTexture,
-      float layerIndex,
+      sampler2D dataTextures[dataTextureCountPerLayer],
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW
@@ -284,7 +273,7 @@ export const getColorForCoords: ShaderModule = {
       // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
       // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
       // No clear negative impact could be measured which is why this delegation should be ok.
-      vec4[2] retVal = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+      vec4[2] retVal = getColorForCoords64(lookUpTexture, dataTextures, d_texture_width, packingDegree, worldPositionUVW);
       return retVal[1];
     }
   `,

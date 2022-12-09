@@ -169,7 +169,7 @@ void main() {
       color_value =
         getMaybeFilteredColorOrFallback(
           <%= name %>_lookup_texture,
-          <%= formatNumberAsGLSLFloat(layerIndex) %>,
+          <%= name %>_textures,
           <%= name %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
           worldCoordUVW,

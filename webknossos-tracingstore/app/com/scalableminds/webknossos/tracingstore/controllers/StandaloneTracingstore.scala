@@ -8,11 +8,10 @@ import javax.inject.Inject
 class StandaloneTracingstore @Inject()() extends Controller {
 
   def buildInfo: Action[AnyContent] = Action {
-    addRemoteOriginHeaders(
-      Ok/*(
+    addRemoteOriginHeaders(Ok /*(
         Json.obj(
           "webknossosTracingstore" -> webknossosTracingstore.BuildInfo.toMap.mapValues(_.toString)
         )
-      )*/)
+      )*/ )
   }
 }

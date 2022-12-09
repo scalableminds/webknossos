@@ -1,4 +1,5 @@
 import sbt._
+import play.sbt.routes.RoutesKeys
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.12.15"
@@ -25,6 +26,8 @@ ThisBuild / javacOptions ++= Seq(
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
 
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
+
+RoutesKeys.generateReverseRouter := false
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
@@ -102,7 +105,7 @@ lazy val webknossos = (project in file("."))
   .settings(
     name := "webknossos",
     //commonSettings,
-    //AssetCompilation.settings,
+    AssetCompilation.settings,
     //BuildInfoSettings.webknossosBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDependencies,
     //Assets / sourceDirectory := file("none"),

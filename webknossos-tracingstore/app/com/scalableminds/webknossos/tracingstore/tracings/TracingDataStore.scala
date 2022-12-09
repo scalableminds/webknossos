@@ -1,22 +1,24 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
+import scala.concurrent.duration._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class TracingDataStore @Inject()(config: TracingStoreConfig,
                                  lifecycle: ApplicationLifecycle,
-                                 slackNotificationService: TSSlackNotificationService)
+                                 slackNotificationService: TSSlackNotificationService,
+                                 val system: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
 
-  logger.info("Tracingstore Startup: Checking FossilDB health...")
-  healthClient.checkHealth
+  system.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth)
 
   lazy val skeletons = new FossilDBClient("skeletons", config, slackNotificationService)
 

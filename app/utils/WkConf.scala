@@ -185,6 +185,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
   }
 
+  object Slick {
+    val checkSchemaOnStartup: Boolean = get[Boolean]("slick.checkSchemaOnStartup")
+  }
+
   object Voxelytics {
     val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
@@ -212,6 +216,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Airbrake,
       GoogleAnalytics,
       BackendAnalytics,
+      Slick,
       Voxelytics
     )
 

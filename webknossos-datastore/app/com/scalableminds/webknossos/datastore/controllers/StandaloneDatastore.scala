@@ -8,7 +8,7 @@ class StandaloneDatastore @Inject()() extends Controller {
 
   def buildInfo: Action[AnyContent] = Action {
     addRemoteOriginHeaders(
-      Ok/*(
+      Ok /*(
         Json.obj(
           "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)

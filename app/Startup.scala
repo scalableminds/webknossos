@@ -36,12 +36,10 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   private val beforeStartup = System.currentTimeMillis()
 
-  logger.info(s"Executing Startup at $beforeStartup")
+  logger.info(s"Executing Startup: Start actors, register cleanup services and stop hooks...")
 
-  logger.info("Starting Actors...")
   startActors(actorSystem)
 
-  logger.info("Registering Cleanup Services...")
   private val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
@@ -55,8 +53,6 @@ class Startup @Inject()(actorSystem: ActorSystem,
   cleanUpService.register("deletion of old annotations in initializing state", 1 day) {
     annotationDAO.deleteOldInitializingAnnotations()
   }
-
-  logger.info("Registering Stop Hooks...")
 
   lifecycle.addStopHook { () =>
     Future.successful {
@@ -72,18 +68,16 @@ class Startup @Inject()(actorSystem: ActorSystem,
     }
   }
 
-  // ensurePostgresDatabase()
-
-
-  logger.info("Inserting initial data...")
+  if (conf.Slick.checkSchemaOnStartup) {
+    ensurePostgresDatabase()
+  }
 
   initialDataService.insert.futureBox.map {
-    case Full(_)            => ()
+    case Full(_) => logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
     case Failure(msg, _, _) =>
       logger.info("No initial data inserted: " + msg)
-      val afterPostgres = System.currentTimeMillis()
-      logger.info(s"Startup took ${afterPostgres - beforeStartup} ms. ")
-    case _                  => logger.warn("Error while inserting initial data")
+      logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
+    case _ => ()
   }
 
   private def ensurePostgresDatabase(): Unit = {

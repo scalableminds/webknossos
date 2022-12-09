@@ -10,17 +10,15 @@ import { useFetch } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
 import moment from "moment";
 import type { OxalisState } from "oxalis/store";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { formatDateInLocalTimeZone } from "./formatted_date";
 
+const SNOOZE_DURATION_IN_SECONDS = 20;
 const LAST_TERM_OF_SERVICE_WARNING_KEY = "lastTermOfServiceWarning";
 
 export function CheckTermsOfServices() {
-  const lastWarningString = UserLocalStorage.getItem(LAST_TERM_OF_SERVICE_WARNING_KEY);
-  const lastWarning = moment(lastWarningString ? parseInt(lastWarningString) : 0);
-  const isLastWarningOld = moment().diff(lastWarning, "seconds") > 20;
-  const [isModalOpen, _setIsModalOpen] = useState(isLastWarningOld);
+  const [isModalOpen, _setIsModalOpen] = useState(false);
   const closeModal = () => {
     UserLocalStorage.setItem(LAST_TERM_OF_SERVICE_WARNING_KEY, String(Date.now()));
     _setIsModalOpen(false);
@@ -37,6 +35,23 @@ export function CheckTermsOfServices() {
     null,
     [activeUser, recheckCounter],
   );
+
+  useEffect(() => {
+    // Show ToS modal when the acceptance is needed and it wasn't snoozed
+    // (unless the deadline is exceeded).
+    if (!acceptanceInfo || !acceptanceInfo.acceptanceNeeded) {
+      return;
+    }
+    if (acceptanceInfo.acceptanceNeeded && acceptanceInfo.acceptanceDeadlinePassed) {
+      _setIsModalOpen(true);
+      return;
+    }
+
+    const lastWarningString = UserLocalStorage.getItem(LAST_TERM_OF_SERVICE_WARNING_KEY);
+    const lastWarning = moment(lastWarningString ? parseInt(lastWarningString) : 0);
+    const isLastWarningOld = moment().diff(lastWarning, "seconds") > SNOOZE_DURATION_IN_SECONDS;
+    _setIsModalOpen(isLastWarningOld);
+  }, [acceptanceInfo]);
   const onAccept = async (version: number) => {
     await acceptTermsOfService(version);
     setRecheckCounter((val) => val + 1);

@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed import of remote datasets with multiple layers and differing resolution pyramid. #[6670](https://github.com/scalableminds/webknossos/pull/6670)
 - Fixed broken Get-new-Task button in task dashboard. [#6677](https://github.com/scalableminds/webknossos/pull/6677)
 - Fixed access of remote datasets using the Amazon S3 protocol [#6679](https://github.com/scalableminds/webknossos/pull/6679)
+- Respect the config value mail.smtp.auth (used to be ignored, always using true) [#6692](https://github.com/scalableminds/webknossos/pull/6692)
 
 ### Removed
 

@@ -892,10 +892,20 @@ export type VoxelyticsChunkStatistics = {
   duration: Statistics | null;
 };
 
+// Backend type
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
+  isEditable: boolean;
+};
+
+// Frontend type
+export type FolderItem = {
+  title: string;
+  key: string;
+  parent: string | null | undefined;
+  children: FolderItem[];
   isEditable: boolean;
 };
 

@@ -104,14 +104,6 @@ class PlaneView {
   }
 
   renderFunction(forceRender: boolean = false): void {
-    if (window.skipper == null) {
-      window.skipper = 0;
-    }
-
-    window.skipper++;
-    // if (window.skipper < 100) {
-    //   return;
-    // }
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
     TWEEN.update();
@@ -124,11 +116,6 @@ class PlaneView {
     if (forceRender || this.needsRerender || window.needsRerender) {
       window.needsRerender = false;
       const { renderer, scene } = SceneController;
-      // if (window.skipper === 1) {
-      //   console.time("compile");
-      //   // renderer.compile(scene, this.cameras.PLANE_XY);
-      //   console.timeEnd("compile");
-      // }
       this.trigger("render");
       const storeState = Store.getState();
       const viewport = {
@@ -146,13 +133,7 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-
-          const start = performance.now();
           renderer.render(scene, this.cameras[plane]);
-          const now = performance.now();
-          if (now - start > 50) {
-            console.log("took", now - start, `(${window.skipper})`);
-          }
         }
       }
 

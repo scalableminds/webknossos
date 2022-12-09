@@ -32,24 +32,26 @@ function DatasetFolderViewInner(props: Props) {
       setSelectedDatasets([]);
       return;
     }
-    const set = new Set(selectedDatasets);
 
-    if (multiSelect) {
-      if (set.has(ds)) {
-        set.delete(ds);
-      } else {
-        set.add(ds);
-      }
-    } else {
-      if (set.has(ds) && set.size === 1) {
-        set.clear();
-      } else {
-        set.clear();
-        set.add(ds);
-      }
-    }
+    setSelectedDatasets((oldSelectedDatasets) => {
+      const set = new Set(oldSelectedDatasets);
 
-    setSelectedDatasets(Array.from(set));
+      if (multiSelect) {
+        if (set.has(ds)) {
+          set.delete(ds);
+        } else {
+          set.add(ds);
+        }
+      } else {
+        if (set.has(ds) && set.size === 1) {
+          set.clear();
+        } else {
+          set.clear();
+          set.add(ds);
+        }
+      }
+      return Array.from(set);
+    });
   };
 
   useEffect(() => {

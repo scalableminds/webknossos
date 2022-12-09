@@ -39,7 +39,7 @@ export type DatasetCollectionContextValue = {
   mostRecentlyUsedActiveFolderId: string | null;
   supportsFolders: true;
   selectedDatasets: APIMaybeUnimportedDataset[];
-  setSelectedDatasets: (datasets: APIMaybeUnimportedDataset[]) => void;
+  setSelectedDatasets: React.Dispatch<React.SetStateAction<APIMaybeUnimportedDataset[]>>;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   searchRecursively: boolean;

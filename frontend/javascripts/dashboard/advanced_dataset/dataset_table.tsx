@@ -69,6 +69,7 @@ type State = {
   sortedInfo: SorterResult<string>;
   contextMenuPosition: [number, number] | null | undefined;
   datasetForContextMenu: APIMaybeUnimportedDataset | null;
+  currentDataSource: APIMaybeUnimportedDataset[];
 };
 
 type ContextMenuProps = {
@@ -240,6 +241,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     prevSearchQuery: "",
     contextMenuPosition: null,
     datasetForContextMenu: null,
+    currentDataSource: [],
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
@@ -263,11 +265,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
     sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
-    _extra: TableCurrentDataSource<RecordType>,
+    extra: TableCurrentDataSource<RecordType>,
   ) => {
     this.setState({
       // @ts-ignore
       sortedInfo: sorter,
+      currentDataSource: extra.currentDataSource as APIMaybeUnimportedDataset[],
     });
   };
 
@@ -438,7 +441,39 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 return;
               }
 
-              this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
+              if (!event.shiftKey || this.props.selectedDatasets.length === 0) {
+                this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
+              } else {
+                // Shift was pressed and there's already another selected dataset that was not
+                // clicked just now.
+                const renderedDatasets =
+                  this.state.currentDataSource.length === 0
+                    ? this.props.datasets
+                    : this.state.currentDataSource;
+
+                const clickedDatasetIdx = renderedDatasets.indexOf(record);
+                const selectedIndices = this.props.selectedDatasets.map((selectedDS) =>
+                  renderedDatasets.indexOf(selectedDS),
+                );
+                const closestSelectedDatasetIdx = _.minBy(selectedIndices, (idx) =>
+                  Math.abs(idx - clickedDatasetIdx),
+                );
+
+                if (clickedDatasetIdx == null || closestSelectedDatasetIdx == null) {
+                  return;
+                }
+
+                const [start, end] = [closestSelectedDatasetIdx, clickedDatasetIdx].sort(
+                  (a, b) => a - b,
+                );
+
+                for (let idx = start; idx <= end; idx++) {
+                  // closestSelectedDatasetIdx is already selected (don't deselect it).
+                  if (idx !== closestSelectedDatasetIdx) {
+                    this.props.onSelectDataset(renderedDatasets[idx], true);
+                  }
+                }
+              }
             },
             onContextMenu: (event) => {
               event.preventDefault();

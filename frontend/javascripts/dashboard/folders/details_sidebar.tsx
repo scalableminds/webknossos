@@ -52,7 +52,7 @@ export function DetailsSidebar({
       {selectedDatasets.length === 1 ? (
         <DatasetDetails selectedDataset={selectedDatasets[0]} />
       ) : selectedDatasets.length > 1 ? (
-        <DatasetsDetails selectedDatasets={selectedDatasets} />
+        <DatasetsDetails selectedDatasets={selectedDatasets} datasetCount={datasetCount} />
       ) : searchQuery ? (
         <SearchDetails datasetCount={datasetCount} />
       ) : (
@@ -121,10 +121,17 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIMaybeUnimport
   );
 }
 
-function DatasetsDetails({ selectedDatasets }: { selectedDatasets: APIMaybeUnimportedDataset[] }) {
+function DatasetsDetails({
+  selectedDatasets,
+  datasetCount,
+}: {
+  selectedDatasets: APIMaybeUnimportedDataset[];
+  datasetCount: number;
+}) {
   return (
     <div style={{ textAlign: "center" }}>
-      Selected {selectedDatasets.length} datasets. Move them to another folder with drag and drop.
+      Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
+      with drag and drop.
     </div>
   );
 }

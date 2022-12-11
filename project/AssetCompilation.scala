@@ -150,14 +150,14 @@ object AssetCompilation {
         streamsValue.log.info("Slick SQL schema already up to date.")
       }
 
-      Seq(slickTablesOutPath)
+      Seq((slickTablesOutPath))
     }
 
   val settings = Seq(
-    //AssetCompilation.SettingsKeys.yarnPath := "yarn",
-    //stage := (stage dependsOn assetsGenerationTask).value,
-    //dist := (dist dependsOn assetsGenerationTask).value,
+    AssetCompilation.SettingsKeys.yarnPath := "yarn",
+    stage := (stage dependsOn assetsGenerationTask).value,
+    dist := (dist dependsOn assetsGenerationTask).value,
     Compile / sourceGenerators += slickClassesFromDBSchemaTask,
-    //Compile / managedSourceDirectories += sourceManaged.value
+    Compile / managedSourceDirectories += sourceManaged.value
   )
 }

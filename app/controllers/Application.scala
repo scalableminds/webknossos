@@ -45,14 +45,13 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
     } yield {
       addRemoteOriginHeaders(
-        Ok(
-          Json.obj(
-            //"webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
-            "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
-            "schemaVersion" -> schemaVersion.toOption,
-            "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
-            "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
-          )))
+        Ok(Json.obj(
+          "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
+          "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
+          "schemaVersion" -> schemaVersion.toOption,
+          "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
+          "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
+        )))
     }
   }
 

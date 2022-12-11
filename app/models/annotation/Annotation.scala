@@ -235,7 +235,6 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
 
   private def getStateQuery(isFinished: Option[Boolean]) =
     isFinished match {
-
       case Some(true)  => s"state = '${AnnotationState.Finished}'"
       case Some(false) => s"state = '${AnnotationState.Active}'"
       case None        => s"state != '${AnnotationState.Cancelled}'"

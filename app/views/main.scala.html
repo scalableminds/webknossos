@@ -1,36 +1,36 @@
 @( conf: utils.WkConf, selectedTheme: String )
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <meta name="commit-hash" content="iAmACommitHash" />
-  <title>@(conf.WebKnossos.tabTitle)</title>
-  @if(conf.Features.isDemoInstance){
-  <meta
-    name="description"
-    content="Annotate and explore large 3D datasets with webKnossos. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."
-  />
-  <meta
-    name="keywords"
-    content="connectomics, data annotation, image segmentation, electron microscopy, light microscopy, fluorescence microscopy, skeletonization, webknossos"
-  />
-  } else {
-  <meta name="robot" content="noindex" />
-  }
-  <link rel="shortcut icon" type="image/png" href="/assets/images/favicon.png" />
-  <link
-    rel="stylesheet"
-    type="text/css"
-    media="screen"
-    href="/assets/bundle/vendors~main.css?nocache=iAmACommitHash"
-  />
-  <link
-    rel="stylesheet"
-    type="text/css"
-    media="screen"
-    href="/assets/fonts/titillium-web.css?nocache=iAmACommitHash"
-  />
-  <script>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
+    <title>@(conf.WebKnossos.tabTitle)</title>
+    @if(conf.Features.isDemoInstance){
+    <meta
+      name="description"
+      content="Annotate and explore large 3D datasets with webKnossos. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."
+    />
+    <meta
+      name="keywords"
+      content="connectomics, data annotation, image segmentation, electron microscopy, light microscopy, fluorescence microscopy, skeletonization, webknossos"
+    />
+    } else {
+    <meta name="robot" content="noindex" />
+    }
+    <link rel="shortcut icon" type="image/png" href="/assets/images/favicon.png" />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="screen"
+      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="screen"
+      href="/assets/fonts/titillium-web.css?nocache=@(webknossos.BuildInfo.commitHash)"
+    />
+    <script>
       let initialTheme = "@(selectedTheme)";
       if (initialTheme === "auto") {
         initialTheme =
@@ -49,37 +49,37 @@
           'media="screen" ' +
           'href="/assets/bundle/' +
           initialTheme +
-          '.css?nocache=iAmACommitHash" ' +
+          '.css?nocache=@(webknossos.BuildInfo.commitHash)" ' +
           "onload=\"document.documentElement.style.display = ''\" " +
           "/>",
       );
     </script>
-  <script
-    data-airbrake-project-id="@(conf.Airbrake.projectID)"
-    data-airbrake-project-key="@(conf.Airbrake.projectKey)"
-    data-airbrake-environment-name="@(conf.Airbrake.environment)"
-  ></script>
-  <script src="/assets/bundle/vendors~main.js?nocache=iAmACommitHash"></script>
-  <script src="/assets/bundle/main.js?nocache=iAmACommitHash"></script>
-  @if(conf.Features.isDemoInstance){
-  <script type="text/javascript" src="https://app.olvy.co/script.js" defer="defer"></script>
-  <script>
+    <script
+      data-airbrake-project-id="@(conf.Airbrake.projectID)"
+      data-airbrake-project-key="@(conf.Airbrake.projectKey)"
+      data-airbrake-environment-name="@(conf.Airbrake.environment)"
+    ></script>
+    <script src="/assets/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    @if(conf.Features.isDemoInstance){
+    <script type="text/javascript" src="https://app.olvy.co/script.js" defer="defer"></script>
+    <script>
       // Suppress warning emitted by Olvy because it tries to eagerly initialize
       window.OlvyConfig = null;
     </script>
-  }
-</head>
-<body>
-<main id="main-container"></main>
+    }
+  </head>
+  <body>
+    <main id="main-container"></main>
 
-@if(conf.GoogleAnalytics.trackingId.nonEmpty) {
-<script async src="https://www.googletagmanager.com/gtag/js?id=@(conf.GoogleAnalytics.trackingId)"></script>
-<script>
+    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
+    <script async src="https://www.googletagmanager.com/gtag/js?id=@(conf.GoogleAnalytics.trackingId)"></script>
+    <script>
       window.dataLayer = window.dataLayer || [];
       function gtag() { dataLayer.push(arguments); }
       gtag('js', new Date());
       gtag('config', '@(conf.GoogleAnalytics.trackingId)', { 'anonymize_ip': true, 'cookie_expires': 0 });
     </script>
-}
-</body>
+    }
+  </body>
 </html>

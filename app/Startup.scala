@@ -114,7 +114,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   }
 
-  private def startActors(actorSystem: ActorSystem): Unit = {
+  private def startActors(actorSystem: ActorSystem) = {
     val mailerConf = MailerConfig(
       conf.Mail.logToStdout,
       conf.Mail.Smtp.host,

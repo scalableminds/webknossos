@@ -23,8 +23,6 @@ ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
   "-Xlint:deprecation"
 )
-ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
-
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 RoutesKeys.generateReverseRouter := false
@@ -33,8 +31,6 @@ PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play
 
 scapegoatIgnoredFiles := Seq(".*/Tables.scala",
                              ".*/Routes.scala",
-                             ".*/ReverseRoutes.scala",
-                             ".*/JavaScriptReverseRoutes.scala",
                              ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
@@ -51,7 +47,7 @@ lazy val protocolBufferSettings = Seq(
   )
 )
 
-lazy val copyConfFilesSetting = {
+lazy val copyMessagesFilesSetting = {
   lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
   copyMessages := {
     val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
@@ -67,12 +63,12 @@ lazy val util = (project in file("util")).settings(
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
   .enablePlugins(play.sbt.PlayScala)
-  //.enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
   .settings(
     name := "webknossos-datastore",
     commonSettings,
-    //BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
+    BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     protocolBufferSettings,
     Compile / unmanagedJars ++= {
@@ -83,39 +79,39 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    copyConfFilesSetting
+    copyMessagesFilesSetting
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
   .dependsOn(webknossosDatastore)
   .enablePlugins(play.sbt.PlayScala)
-  //.enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "webknossos-tracingstore",
     commonSettings,
-    //BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
+    BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    copyConfFilesSetting
+    copyMessagesFilesSetting
   )
 
 lazy val webknossos = (project in file("."))
   .dependsOn(util, webknossosTracingstore)
   .enablePlugins(play.sbt.PlayScala)
-  //.enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "webknossos",
-    //commonSettings,
+    commonSettings,
     AssetCompilation.settings,
-    //BuildInfoSettings.webknossosBuildInfoSettings,
+    BuildInfoSettings.webknossosBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDependencies,
-    //Assets / sourceDirectory := file("none"),
-    //updateOptions := updateOptions.value.withLatestSnapshots(true),
-    /*Compile / unmanagedJars ++= {
+    Assets / sourceDirectory := file("none"),
+    updateOptions := updateOptions.value.withLatestSnapshots(true),
+    Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
       val targets = ((subs / "target") ** "*") filter { f =>
         f.name.startsWith("scala-") && f.isDirectory
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
-    }*/
+    }
   )

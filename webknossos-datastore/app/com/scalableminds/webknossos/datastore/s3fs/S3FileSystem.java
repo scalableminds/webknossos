@@ -24,15 +24,15 @@ public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem>
     private final S3FileSystemProvider provider;
     private final String key;
     private final AmazonS3 client;
-    private final String endpoint;
     private int cache;
+    private final String bucket;
 
-    public S3FileSystem(S3FileSystemProvider provider, String key, AmazonS3 client, String endpoint) {
+    public S3FileSystem(S3FileSystemProvider provider, String key, AmazonS3 client, String bucket) {
         this.provider = provider;
         this.key = key;
         this.client = client;
-        this.endpoint = endpoint;
         this.cache = 60000; // 1 minute cache for the s3Path
+        this.bucket = bucket;
     }
 
     @Override
@@ -42,6 +42,14 @@ public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem>
 
     public String getKey() {
         return key;
+    }
+
+    public String getBucket() {
+        return bucket;
+    }
+
+    public Boolean hasBucket() {
+        return bucket != null;
     }
 
     @Override
@@ -89,6 +97,10 @@ public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem>
 
     @Override
     public S3Path getPath(String first, String... more) {
+
+        if (hasBucket() && first.startsWith("/")) {
+          first = "/" + this.bucket + first;
+        }
         if (more.length == 0) {
             return new S3Path(this, first);
         }
@@ -115,16 +127,6 @@ public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem>
         return client;
     }
 
-    /**
-     * get the endpoint associated with this fileSystem.
-     *
-     * @return string
-     * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html">http://docs.aws.amazon.com/general/latest/gr/rande.html</a>
-     */
-    public String getEndpoint() {
-        return endpoint;
-    }
-
     public String[] key2Parts(String keyParts) {
         String[] parts = keyParts.split(S3Path.PATH_SEPARATOR);
         String[] split = new String[parts.length];
@@ -139,7 +141,7 @@ public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem>
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((endpoint == null) ? 0 : endpoint.hashCode());
+        result = prime * result;
         result = prime * result + ((key == null) ? 0 : key.hashCode());
         return result;
     }
@@ -153,11 +155,6 @@ public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem>
         if (!(obj instanceof S3FileSystem))
             return false;
         S3FileSystem other = (S3FileSystem) obj;
-        if (endpoint == null) {
-            if (other.endpoint != null)
-                return false;
-        } else if (!endpoint.equals(other.endpoint))
-            return false;
         if (key == null) {
             if (other.key != null)
                 return false;

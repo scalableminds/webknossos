@@ -529,7 +529,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return (
       <div>
         <TopBar
-          confirmGetNewTask={this.confirmGetNewTask}
+          confirmGetNewTask={() => this.confirmGetNewTask()}
           isAdminView={this.props.isAdminView}
           userId={this.props.userId}
           toggleShowFinished={this.toggleShowFinished}
@@ -589,7 +589,7 @@ function TopBar({
       <AsyncButton
         type="primary"
         icon={<UserAddOutlined />}
-        onClick={() => confirmGetNewTask()}
+        onClick={confirmGetNewTask}
         disabled={isAdminView && userId != null}
       >
         Get a New Task

@@ -19,6 +19,7 @@ import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
+import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -453,7 +454,7 @@ Expects:
           usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName,
                                                                                                  datasetName)
           after = System.currentTimeMillis()
-          _ = if (after - before > 0) { // TODO 10000
+          _ = if (after - before > (10 seconds).toMillis) {
             val datasetLabel = datasetName.map(n => s" dataset $n of").getOrElse("")
             logger.info(s"Measuring storage for$datasetLabel orga $organizationName took ${after - before} ms.")
           }

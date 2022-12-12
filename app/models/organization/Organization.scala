@@ -12,6 +12,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import java.sql.Timestamp
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
@@ -122,6 +123,17 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId")
     } yield ()
 
+  def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _dataSet = $datasetId")
+    } yield ()
+
+  def updateLastStorageScanTime(organizationId: ObjectId, time: Long): Fox[Unit] =
+    for {
+      _ <- run(
+        sqlu"UPDATE webknossos.organizations SET lastStorageScanTime = ${new Timestamp(time)} WHERE _id = $organizationId")
+    } yield ()
+
   def upsertUsedStorage(organizationId: ObjectId,
                         dataStoreName: String,
                         usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
@@ -149,10 +161,24 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     } yield ()
   }
 
-  def findNotRecentlyScanned(scanDuration: FiniteDuration): Fox[List[Organization]] =
+  def getUsedStorage(organizationId: ObjectId): Fox[Long] =
     for {
-      // TODO query only not recently scanned
-      rows <- run(sql"SELECT #$columns FROM #$existingCollectionName ".as[OrganizationsRow])
+      rows <- run(
+        sql"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
+          .as[Long])
+      firstRow <- rows.headOption
+    } yield firstRow
+
+  def findNotRecentlyScanned(scanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =
+    for {
+      rows <- run(sql"""
+                  SELECT #$columns
+                  FROM #$existingCollectionName
+                  WHERE lastStorageScanTime < ${new java.sql.Timestamp(
+        System.currentTimeMillis() - scanInterval.toMillis)}
+                  ORDER BY lastStorageScanTime
+                  LIMIT $limit
+                  """.as[OrganizationsRow])
       parsed <- parseAll(rows)
     } yield parsed
 

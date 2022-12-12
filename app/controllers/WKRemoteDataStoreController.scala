@@ -15,6 +15,7 @@ import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.job.JobDAO
 import models.organization.OrganizationDAO
+import models.storage.UsedStorageService
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
@@ -34,6 +35,7 @@ class WKRemoteDataStoreController @Inject()(
     analyticsService: AnalyticsService,
     userService: UserService,
     organizationDAO: OrganizationDAO,
+    usedStorageService: UsedStorageService,
     dataSetDAO: DataSetDAO,
     userDAO: UserDAO,
     jobDAO: JobDAO,
@@ -90,6 +92,7 @@ class WKRemoteDataStoreController @Inject()(
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
+          _ <- usedStorageService.refreshStorageReportForDataset(dataSet)
           _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
           _ = mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
@@ -158,8 +161,12 @@ class WKRemoteDataStoreController @Inject()(
           .findOneByNameAndOrganizationName(datasourceId.name, datasourceId.team)(GlobalAccessContext)
           .futureBox
         _ <- existingDataset.flatMap {
-          case Full(dataset) => dataSetDAO.deleteDataset(dataset._id)
-          case _             => Fox.successful(())
+          case Full(dataset) => {
+            dataSetDAO
+              .deleteDataset(dataset._id)
+              .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+          }
+          case _ => Fox.successful(())
         }
       } yield Ok
     }

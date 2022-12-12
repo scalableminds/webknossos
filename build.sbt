@@ -1,6 +1,5 @@
 import play.routes.compiler.InjectedRoutesGenerator
 import sbt._
-import play.sbt.routes.RoutesKeys
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.12.15"
@@ -49,8 +48,6 @@ lazy val protocolBufferSettings = Seq(
   )
 )
 
-RoutesKeys.generateReverseRouter := false
-
 lazy val copyConfFilesSetting = {
   lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
   copyMessages := {
@@ -75,6 +72,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,
+    generateReverseRouter := false,
     protocolBufferSettings,
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
@@ -109,6 +107,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
     routesGenerator := InjectedRoutesGenerator,
+    generateReverseRouter := false,
     copyConfFilesSetting
   )
 
@@ -122,6 +121,7 @@ lazy val webknossos = (project in file("."))
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,
     routesGenerator := InjectedRoutesGenerator,
+    generateReverseRouter := false,
     libraryDependencies ++= Dependencies.webknossosDependencies,
     Assets / sourceDirectory := file("none"),
     updateOptions := updateOptions.value.withLatestSnapshots(true),

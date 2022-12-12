@@ -34,15 +34,17 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "pricingPlan" -> organization.pricingPlan
       )
     } else Json.obj()
-    Fox.successful(
+    for {
+      usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
+    } yield
       Json.obj(
         "id" -> organization._id.toString,
         "name" -> organization.name,
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
-        "displayName" -> organization.displayName
+        "displayName" -> organization.displayName,
+        "usedStorageBytes" -> usedStorageBytes
       ) ++ adminOnlyInfo
-    )
   }
 
   def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizationNameOpt: Option[String])(

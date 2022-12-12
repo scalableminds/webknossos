@@ -287,8 +287,8 @@ CREATE TABLE webknossos.organizations(
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
+  lastStorageScanTime TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  lastStorageScan TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 

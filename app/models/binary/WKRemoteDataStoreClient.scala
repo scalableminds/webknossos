@@ -9,8 +9,6 @@ import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
 
-import scala.concurrent.ExecutionContext
-
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
   def requestDataLayerThumbnail(organizationName: String,
@@ -19,7 +17,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                                 width: Int,
                                 height: Int,
                                 zoom: Option[Double],
-                                center: Option[Vec3Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+                                center: Option[Vec3Int]): Fox[Array[Byte]] = {
     logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
@@ -39,9 +37,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
-  def fetchStorageReport(organizationName: String): Fox[List[DirectoryStorageReport]] =
-    rpc(s"${dataStore.url}/data/measureUsedStorage/${urlEncode(organizationName)}")
+  def fetchStorageReport(organizationName: String, datasetName: Option[String]): Fox[List[DirectoryStorageReport]] =
+    rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationName)}")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryStringOptional("dataSetName", datasetName)
+      .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 
 }

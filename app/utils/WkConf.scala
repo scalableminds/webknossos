@@ -61,6 +61,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val children = List(User)
     }
 
+    object FetchUsedStorage {
+      val interval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.interval")
+    }
+
     val operatorData: String = get[String]("webKnossos.operatorData")
     val children = List(User, Tasks, Cache, SampleOrganization)
   }

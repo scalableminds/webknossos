@@ -125,9 +125,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def upgradePricingPlanUsersMail(user: User,
-                                  userEmail: String,
-                                  requestedUsers: Int): Mail =
+  def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade webKnossos users",
@@ -135,9 +133,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def upgradePricingPlanStorageMail(user: User,
-                                    userEmail: String,
-                                    requestedStorage: Int): Mail =
+  def upgradePricingPlanStorageMail(user: User, userEmail: String, requestedStorage: Int): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade webKnossos storage",
@@ -146,14 +142,14 @@ class DefaultMails @Inject()(conf: WkConf) {
     )
 
   def upgradePricingPlanRequestMail(user: User,
-                                 userEmail: String,
-                                 organizationDisplayName: String,
-                                 messageBody: String): Mail =
+                                    userEmail: String,
+                                    organizationDisplayName: String,
+                                    messageBody: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade webKnossos plan",
       bodyHtml = html.mail.upgradePricingPlanRequest(user.name, organizationDisplayName, messageBody).body,
       recipients = List("hello@webknossos.org")
-    )                          
-  
+    )
+
 }

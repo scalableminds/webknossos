@@ -125,9 +125,11 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
       userEmail <- userService.emailFor(request.identity)
       _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail))
-              _ = Mailer ! Send(
-          defaultMails
-            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Extend webKnossos plan by a year"))
+      _ = Mailer ! Send(
+        defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                   userEmail,
+                                                   organization.displayName,
+                                                   s"Extend webKnossos plan by a year"))
     } yield Ok
   }
 
@@ -144,8 +146,10 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         }
         _ = Mailer ! Send(mail(request.identity, userEmail))
         _ = Mailer ! Send(
-          defaultMails
-            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Upgrade webKnossos Plan to $requestedPlan"))
+          defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                     userEmail,
+                                                     organization.displayName,
+                                                     s"Upgrade webKnossos Plan to $requestedPlan"))
       } yield Ok
   }
 
@@ -155,12 +159,12 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
+        _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
         _ = Mailer ! Send(
-          defaultMails
-            .upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
-        _ = Mailer ! Send(
-          defaultMails
-            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Purchase $requestedUsers additional users"))
+          defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                     userEmail,
+                                                     organization.displayName,
+                                                     s"Purchase $requestedUsers additional users"))
       } yield Ok
     }
 
@@ -170,12 +174,12 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
+        _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
         _ = Mailer ! Send(
-          defaultMails
-            .upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
-        _ = Mailer ! Send(
-         defaultMails
-            .upgradePricingPlanRequestMail(request.identity, userEmail, organization.displayName, s"Purchase $requestedStorage TB additional storage"))    
+          defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                     userEmail,
+                                                     organization.displayName,
+                                                     s"Purchase $requestedStorage TB additional storage"))
       } yield Ok
     }
 

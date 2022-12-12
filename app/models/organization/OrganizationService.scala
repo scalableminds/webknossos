@@ -87,7 +87,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       initialPricingParameters = if (conf.Features.isDemoInstance) (PricingPlan.Free, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
-      
+
       organization = Organization(
         ObjectId.generate,
         organizationName,

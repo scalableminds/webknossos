@@ -497,8 +497,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               const wkwFile = entries.find((entry: Entry) =>
                 Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
               );
-              const hasArchiveWkwFile = wkwFile != null;
-              this.handleNeedsConversionInfo(!hasArchiveWkwFile);
+              const needsConversion = wkwFile == null;
+              this.handleNeedsConversionInfo(!needsConversion);
+
+              const nmlFile = entries.find((entry: Entry) =>
+                Utils.isFileExtensionEqualTo(entry.filename, "nml"),
+              );
+              if (nmlFile) {
+                Modal.error({
+                  content: messages["dataset.upload_zip_with_nml"],
+                });
+              }
             });
           },
           () => {

@@ -124,10 +124,15 @@ function DetailsSidebar({
     if (selectedDataset == null || !("folderId" in selectedDataset)) {
       return;
     }
-    if (selectedDataset.folderId !== context.activeFolderId && context.activeFolderId != null) {
+    if (
+      selectedDataset.folderId !== context.activeFolderId &&
+      context.activeFolderId != null &&
+      context.globalSearchQuery == null
+    ) {
       // Ensure that the selected dataset is in the active folder. If not,
-      // clear the sidebar. When there is no active folder, a search page is shown. In that case,
-      // clearing the selection should not happen.
+      // clear the sidebar. Don't do this when search results are shown (since
+      // these can cover multiple folders).
+      // Typically, this is triggered when navigating to another folder.
       setSelectedDataset(null);
     }
   }, [selectedDataset, context.activeFolderId]);

@@ -549,19 +549,37 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     public S3FileSystem createFileSystem(URI uri, Properties props) {
         URI uriWithNormalizedHost = resolveShortcutHost(uri);
-        return new S3FileSystem(this, getFileSystemKey(uriWithNormalizedHost, props), getAmazonS3(uriWithNormalizedHost, props), uriWithNormalizedHost.getHost());
+        String bucket = hostBucketFromUri(uri);
+        return new S3FileSystem(this, getFileSystemKey(uriWithNormalizedHost, props), getAmazonS3(uriWithNormalizedHost, props), bucket);
     }
 
     private URI resolveShortcutHost(URI uri) {
       String host = uri.getHost();
-      if (!uri.getHost().contains(".")) {
-        host += ".s3.amazonaws.com";
+      String newHost = host;
+      String bucketPrefix = "";
+      if (!host.contains(".")) { // assume host is omitted from uri, shortcut form s3://bucket/key
+        newHost = "s3.amazonaws.com";
+        bucketPrefix = "/" + host;
+      } else if (host.endsWith(".s3.amazonaws.com")) {
+        newHost = "s3.amazonaws.com";
+        bucketPrefix = "/" + host.substring(0, host.length() - ".s3.amazonaws.com".length());
       }
       try {
-        return new URI(uri.getScheme(), uri.getUserInfo(), host, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+        return new URI(uri.getScheme(), uri.getUserInfo(), newHost, uri.getPort(), bucketPrefix + uri.getPath(), uri.getQuery(), uri.getFragment());
       } catch (URISyntaxException e) {
         return uri;
       }
+    }
+
+
+    private String hostBucketFromUri(URI uri) {
+      String host = uri.getHost();
+      if (!host.contains(".")) { // assume host is omitted from uri, shortcut form s3://bucket/key
+        return host;
+      } else if (host.endsWith(".s3.amazonaws.com")) {
+        return host.substring(0, host.length() - ".s3.amazonaws.com".length());
+      }
+      return null;
     }
 
     protected AmazonS3 getAmazonS3(URI uri, Properties props) {

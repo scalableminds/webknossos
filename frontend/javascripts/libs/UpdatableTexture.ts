@@ -46,6 +46,11 @@ const getImageData = _.memoize(
   (width: number, height: number, isInt: boolean) => `${width}_${height}_${isInt}`,
 );
 
+let originalTexSubImage2D = null;
+
+const noop = () => {
+  console.log("noop");
+};
 class UpdatableTexture extends THREE.Texture {
   isUpdatableTexture: boolean = true;
   // Needs to be set to true for integer textures:
@@ -141,10 +146,15 @@ class UpdatableTexture extends THREE.Texture {
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
+    if (originalTexSubImage2D == null) {
+      originalTexSubImage2D = this.gl.texSubImage2D;
+      this.gl.texSubImage2D = noop;
+    }
     // this.setSize(width, width);
     const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
     const textureProperties = this.renderer.properties.get(this);
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
+    this.gl.texSubImage2D = originalTexSubImage2D;
     this.gl.texSubImage2D(
       this.gl.TEXTURE_2D,
       0,
@@ -156,6 +166,7 @@ class UpdatableTexture extends THREE.Texture {
       this.utils.convert(this.type),
       src,
     );
+    this.gl.texSubImage2D = noop;
     this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
   }
 }

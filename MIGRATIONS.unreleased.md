@@ -14,3 +14,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 - [091-folders.sql](conf/evolutions/091-folders.sql)
 - [092-oidc.sql](conf/evolutions/092-oidc.sql)
+- [093-storage.sql](conf/evolutions/093-storage.sql)

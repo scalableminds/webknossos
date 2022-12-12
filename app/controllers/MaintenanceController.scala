@@ -42,7 +42,7 @@ class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
     for {
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- bool2Fox(multiUser.isSuperUser)
-      _ <- maintenanceDAO.updateExpirationTime(Instant(0))
+      _ <- maintenanceDAO.updateExpirationTime(Instant.zero)
     } yield Ok("maintenance.close.success")
   }
 

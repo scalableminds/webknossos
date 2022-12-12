@@ -105,8 +105,8 @@ class TimeController @Inject()(userService: UserService,
     for {
       userJs <- userService.compactWrites(user)
       timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,
-                                                  Some(Instant(startDate.getTimeInMillis)),
-                                                  Some(Instant(endDate.getTimeInMillis)))
+                                                  Some(Instant.fromCalendar(startDate)),
+                                                  Some(Instant.fromCalendar(endDate)))
     } yield Json.obj("user" -> userJs, "timelogs" -> timeJs)
 
 }

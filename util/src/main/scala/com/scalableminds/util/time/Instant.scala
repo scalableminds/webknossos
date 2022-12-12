@@ -22,9 +22,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def isPast: Boolean = this < Instant.now
 
   override def compare(that: Instant): Int =
-    if (this.epochMillis < that.epochMillis) -1
-    else if (this.epochMillis > that.epochMillis) 1
-    else 0
+    this.epochMillis.compare(that.epochMillis)
 
   def dayOfMonth: Int = toJodaDateTime.getDayOfMonth
   def monthOfYear: Int = toJodaDateTime.getMonthOfYear
@@ -36,11 +34,13 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
 object Instant extends FoxImplicits {
   def now: Instant = Instant(System.currentTimeMillis())
   def max: Instant = Instant(253370761200000L)
+  def zero: Instant = Instant(0L)
   def in(duration: FiniteDuration): Instant = now + duration
   def fromString(instantLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
     fromStringSync(instantLiteral).toFox
   def fromJoda(jodaDateTime: org.joda.time.DateTime): Instant = Instant(jodaDateTime.getMillis)
   def fromSql(sqlTime: java.sql.Timestamp): Instant = Instant(sqlTime.getTime)
+  def fromCalendar(calendarTime: java.util.Calendar) = Instant(calendarTime.getTimeInMillis)
   private def fromStringSync(instantLiteral: String): Option[Instant] =
     tryo(java.time.Instant.parse(instantLiteral).toEpochMilli).toOption.map(timestamp => Instant(timestamp))
 

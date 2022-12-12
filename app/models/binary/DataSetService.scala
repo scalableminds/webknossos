@@ -263,8 +263,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       case Some(user) =>
         (for {
           lastUsedTime <- dataSetLastUsedTimesDAO.findForDataSetAndUser(_dataSet, user._id).futureBox
-        } yield lastUsedTime.toOption.getOrElse(Instant(0L))).toFox
-      case _ => Fox.successful(Instant(0L))
+        } yield lastUsedTime.toOption.getOrElse(Instant.zero)).toFox
+      case _ => Fox.successful(Instant.zero)
     }
 
   def allLayersFor(dataSet: DataSet): Fox[List[DataLayer]] =

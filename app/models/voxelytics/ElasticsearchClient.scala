@@ -68,7 +68,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorS
     for {
       _ <- bool2Fox(enabled) ?~> "Elasticsearch is not enabled."
       _ = logger.info("Waiting for Elasticsearch to become available.")
-      _ <- pollUntilServerStartedUp(Instant.now + conf.startupTimeout) ~> 500
+      _ <- pollUntilServerStartedUp(Instant.in(conf.startupTimeout)) ~> 500
       _ <- bootstrapIndexOnServer
     } yield ()
   }

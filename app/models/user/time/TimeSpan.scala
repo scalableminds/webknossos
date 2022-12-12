@@ -71,9 +71,9 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         Timespans
           .filter(
             r =>
-              notdel(r) && r._User === userId.id && (r.created >= start.getOrElse(Instant(0)).toSql) && r.created <= end
-                .getOrElse(Instant.max)
-                .toSql)
+              notdel(r) && r._User === userId.id && (r.created >= start
+                .getOrElse(Instant.zero)
+                .toSql) && r.created <= end.getOrElse(Instant.max).toSql)
           .result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -88,7 +88,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                         join webknossos.taskTypes_ tt on t._taskType = tt._id
                         where ts._user = ${userId.id}
                         and ts.time > 0
-                        and ts.created >= ${start.getOrElse(Instant(0))}
+                        and ts.created >= ${start.getOrElse(Instant.zero)}
                         and ts.created < ${end
         .getOrElse(Instant.max)}""".as[(Long, Instant, String, String, String, String, String, String)])
     } yield formatTimespanTuples(tuples)
@@ -127,7 +127,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           .filter(
             r =>
               notdel(r) && r._Annotation === annotationId.id && (r.created >= start
-                .getOrElse(Instant(0))
+                .getOrElse(Instant.zero)
                 .toSql) && r.created <= end.getOrElse(Instant.max).toSql)
           .result)
       parsed <- Fox.combined(r.toList.map(parse))
@@ -137,7 +137,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       r <- run(sql"""select #${columnsWithPrefix("t.")} from #$existingCollectionName t
               join webknossos.users u on t._user = u._id
-              where t.created >= ${start.getOrElse(Instant(0))} and t.created <= ${end.getOrElse(Instant.max)}
+              where t.created >= ${start.getOrElse(Instant.zero)} and t.created <= ${end.getOrElse(Instant.max)}
               and u._organization = $organizationId
           """.as[TimespansRow])
       parsed <- Fox.combined(r.toList.map(parse))

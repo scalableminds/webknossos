@@ -47,7 +47,7 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
     for {
       isActivated <- multiUserDAO.hasAtLeastOneActiveUser(multiUser._id) ?~> "Could not determine isActivated"
       lastActivity <- if (isActivated) multiUserDAO.lastActivity(multiUser._id) ?~> "Could not determine lastActivity"
-      else Fox.successful(Instant(0L))
+      else Fox.successful(Instant.zero)
       registeredAtLeast21DaysAgo = (multiUser.created + (21 days)).isPast
       registeredAtMost22DaysAgo = !(multiUser.created + (22 days)).isPast
       shouldBeTaggedNow = isActivated && registeredAtLeast21DaysAgo && registeredAtMost22DaysAgo

@@ -51,6 +51,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
     }
+    object ReportUsedStorage {
+      val enabled: Boolean = get[Boolean]("datastore.reportUsedStorage.enabled")
+    }
     val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface, Redis, AgglomerateSkeleton)
   }
 

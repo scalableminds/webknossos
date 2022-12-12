@@ -255,7 +255,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WKRemoteDataStoreClient] =
     for {
       dataStore <- dataStoreFor(dataSet)
-    } yield new WKRemoteDataStoreClient(dataStore, dataSet, rpc)
+    } yield new WKRemoteDataStoreClient(dataStore, rpc)
 
   def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Long] =
     userOpt match {

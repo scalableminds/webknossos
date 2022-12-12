@@ -4,6 +4,7 @@ import models.analytics.AnalyticsSessionService
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
 import models.job.{JobService, WorkerLivenessService}
+import models.storage.UsedStorageService
 import models.task.TaskService
 import models.user.time.TimeSpanService
 import models.user._
@@ -35,5 +36,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[AnalyticsSessionService]).asEagerSingleton()
     bind(classOf[WorkerLivenessService]).asEagerSingleton()
     bind(classOf[ElasticsearchClient]).asEagerSingleton()
+    bind(classOf[UsedStorageService]).asEagerSingleton()
   }
 }

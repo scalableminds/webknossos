@@ -25,7 +25,7 @@ object DirectoryStorageReport {
   implicit val jsonFormat: OFormat[DirectoryStorageReport] = Json.format[DirectoryStorageReport]
 }
 
-class UsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 

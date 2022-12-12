@@ -30,7 +30,7 @@ class DataSourceController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
-    storageUsageService: UsedStorageService,
+    storageUsageService: DSUsedStorageService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -457,8 +457,7 @@ Expects:
             val datasetLabel = datasetName.map(n => s" dataset $n of").getOrElse("")
             logger.info(s"Measuring storage for$datasetLabel orga $organizationName took ${after - before} ms.")
           }
-          _ <- remoteWebKnossosClient.reportUsedStorage(organizationName, datasetName, usedStorageInBytes)
-        } yield Ok(Json.toJson(usedStorageInBytes)) // TODO, do not return result here, this is just a trigger
+        } yield Ok(Json.toJson(usedStorageInBytes))
       }
     }
 

@@ -3,21 +3,23 @@ package models.binary
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
 
-class WKRemoteDataStoreClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends LazyLogging {
+import scala.concurrent.ExecutionContext
 
-  def baseInfo = s"Dataset: ${dataSet.name} Datastore: ${dataStore.url}"
+class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
   def requestDataLayerThumbnail(organizationName: String,
+                                dataSet: DataSet,
                                 dataLayerName: String,
                                 width: Int,
                                 height: Int,
                                 zoom: Option[Double],
-                                center: Option[Vec3Int]): Fox[Array[Byte]] = {
+                                center: Option[Vec3Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
@@ -29,12 +31,17 @@ class WKRemoteDataStoreClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC) 
       .getWithBytesResponse
   }
 
-  def findPositionWithData(organizationName: String, dataLayerName: String): Fox[JsObject] =
+  def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =
     rpc(
       s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .getWithJsonResponse[JsObject]
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
+
+  def fetchStorageReport(organizationName: String): Fox[List[DirectoryStorageReport]] =
+    rpc(s"${dataStore.url}/data/measureUsedStorage/${urlEncode(organizationName)}")
+      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .getWithJsonResponse[List[DirectoryStorageReport]]
 
 }

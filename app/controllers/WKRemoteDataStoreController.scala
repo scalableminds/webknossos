@@ -5,16 +5,12 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services
 import com.scalableminds.webknossos.datastore.services.{
   DataStoreStatus,
-  DirectoryStorageReport,
   LinkedLayerIdentifier,
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.job.JobDAO
@@ -28,6 +24,7 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
@@ -104,7 +101,11 @@ class WKRemoteDataStoreController @Inject()(
       request.body.validate[DataStoreStatus] match {
         case JsSuccess(status, _) =>
           logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
-          dataStoreDAO.updateUrlByName(name, status.url).map(_ => Ok)
+          for {
+            _ <- dataStoreDAO.updateUrlByName(name, status.url)
+            _ <- dataStoreDAO.updateReportUsedStorageEnabledByName(name,
+                                                                   status.reportUsedStorageEnabled.getOrElse(false))
+          } yield Ok
         case e: JsError =>
           logger.error("Data store '$name' sent invalid update. Error: " + e)
           Future.successful(JsonBadRequest(JsError.toJson(e)))
@@ -178,18 +179,5 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok(Json.toJson(jobExportProperties))
       }
   }
-
-  def reportUsedStorage(name: String,
-                        key: String,
-                        organizationName: String,
-                        datasetName: Option[String]): Action[List[DirectoryStorageReport]] =
-    Action.async(validateJson[List[services.DirectoryStorageReport]]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { dataStore =>
-        for {
-          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-          _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, request.body)
-        } yield Ok
-      }
-    }
 
 }

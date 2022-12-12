@@ -1,6 +1,6 @@
 import play.routes.compiler.InjectedRoutesGenerator
-import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
+import play.sbt.routes.RoutesKeys
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.12.15"
@@ -48,6 +48,8 @@ lazy val protocolBufferSettings = Seq(
     scalapb.gen() -> (Compile / sourceManaged).value / "proto"
   )
 )
+
+RoutesKeys.generateReverseRouter := false
 
 lazy val copyConfFilesSetting = {
   lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")

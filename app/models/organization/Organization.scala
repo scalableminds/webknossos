@@ -13,6 +13,7 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class Organization(
     _id: ObjectId,
@@ -116,6 +117,11 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                       where _id = $organizationId""")
     } yield ()
 
+  def deleteUsedStorage(organizationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId")
+    } yield ()
+
   def upsertUsedStorage(organizationId: ObjectId,
                         dataStoreName: String,
                         usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
@@ -142,5 +148,12 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       _ <- Fox.serialCombined(queries)(q => run(q))
     } yield ()
   }
+
+  def findNotRecentlyScanned(scanDuration: FiniteDuration): Fox[List[Organization]] =
+    for {
+      // TODO query only not recently scanned
+      rows <- run(sql"SELECT #$columns FROM #$existingCollectionName ".as[OrganizationsRow])
+      parsed <- parseAll(rows)
+    } yield parsed
 
 }

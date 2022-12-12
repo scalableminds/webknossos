@@ -53,18 +53,20 @@ function findBreakableCharFromRight(str: string, position: number): number {
   }
   return -1;
 }
+
 function getLineCount(str: string, wrapLength: number): number {
   // Inspired by https://stackoverflow.com/a/857770
-  const trimmedStr = str.trim();
-  if (trimmedStr.length <= wrapLength) {
-    return 1;
-  } else {
+  let trimmedStr = str.trim();
+  let counter = 1;
+  while (trimmedStr.length > wrapLength) {
     let splitIdx = findBreakableCharFromRight(trimmedStr, wrapLength);
-    if (splitIdx === -1) {
+    if (splitIdx < 1) {
       splitIdx = wrapLength;
     }
-    return 1 + getLineCount(trimmedStr.substring(splitIdx), wrapLength);
+    trimmedStr = trimmedStr.substring(splitIdx).trim();
+    counter++;
   }
+  return counter;
 }
 
 function LogContent({

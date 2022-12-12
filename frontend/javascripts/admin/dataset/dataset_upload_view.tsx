@@ -777,6 +777,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
+                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["nml"]))
+                        .length === 0,
+                    "An NML file is an annotation of a dataset and not an independent dataset. Please upload the NML file into the Annotations page in the dashboard or into an open dataset.",
+                  ),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) =>
                       files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["mrc"]))
                         .length === 0,
                     "MRC files are not supported currently.",

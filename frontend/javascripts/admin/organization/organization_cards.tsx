@@ -14,6 +14,10 @@ import React from "react";
 import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
 import {
+  hasPricingPlanExceededStorage,
+  hasPricingPlanExceededUsers,
+  hasPricingPlanExpired,
+  isPlanKaputt,
   powerPlanFeatures,
   storageWarningThresholdMB,
   teamPlanFeatures,
@@ -121,9 +125,8 @@ export function PlanDashboardCard({
   const usedUsersPercentage = (activeUsersCount / organization.includedUsers) * 100;
   const usedStoragePercentage = (usedStorageMB / organization.includedStorage) * 100;
 
-  const hasExceededUserLimit = usedUsersPercentage > 100;
-  const hasExceededStorageLimit = usedStoragePercentage > 100;
-  const hasPlanExpired = Date.now() > organization.paidUntil;
+  const hasExceededUserLimit = hasPricingPlanExceededUsers(organization, activeUsersCount);
+  const hasExceededStorageLimit = hasPricingPlanExceededStorage(organization, usedStorageSpace);
 
   const maxUsersCountLabel =
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
@@ -142,7 +145,7 @@ export function PlanDashboardCard({
 
   const storageLabel = `${usedStorageLabel}/${includedStorageLabel}`;
 
-  const hasPlanExceeded = hasExceededStorageLimit || hasExceededUserLimit || hasPlanExpired;
+  const hasPlanExceeded = isPlanKaputt(organization, usedStorageSpace, activeUsersCount);
 
   const redStrokeColor = "#ff4d4f";
   const greenStrokeColor = "#52c41a";
@@ -247,7 +250,7 @@ export function PlanDashboardCard({
 }
 
 function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
-  const hasPlanExpired = Date.now() > organization.paidUntil;
+  const hasPlanExpired = hasPricingPlanExpired(organization);
 
   const message = hasPlanExpired
     ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
@@ -290,10 +293,11 @@ export function PlanAboutToExceedWarning({
 }) {
   const alerts = [];
   const isAboutToExpire =
-    moment.duration(moment(organization.paidUntil).diff(moment())).asWeeks() <= 6;
+    moment.duration(moment(organization.paidUntil).diff(moment())).asWeeks() <= 6 &&
+    !hasPricingPlanExpired(organization);
 
   const isAboutToExceedStorage =
-    usedStorageSpace >= organization.includedStorage - storageWarningThresholdMB;
+    usedStorageSpace + storageWarningThresholdMB <= organization.includedStorage;
 
   if (isAboutToExpire)
     alerts.push({

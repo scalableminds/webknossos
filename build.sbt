@@ -1,5 +1,4 @@
 import sbt._
-import play.sbt.routes.RoutesKeys
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.12.15"
@@ -24,8 +23,6 @@ ThisBuild / javacOptions ++= Seq(
   "-Xlint:deprecation"
 )
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
-
-RoutesKeys.generateReverseRouter := false
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
@@ -68,6 +65,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .settings(
     name := "webknossos-datastore",
     commonSettings,
+    generateReverseRouter := false,
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     protocolBufferSettings,
@@ -89,6 +87,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
   .settings(
     name := "webknossos-tracingstore",
     commonSettings,
+    generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
     copyMessagesFilesSetting
@@ -101,6 +100,7 @@ lazy val webknossos = (project in file("."))
   .settings(
     name := "webknossos",
     commonSettings,
+    generateReverseRouter := false,
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDependencies,

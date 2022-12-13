@@ -120,6 +120,25 @@ class SceneController {
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
     this.setupDebuggingMethods();
+
+    const lod = new THREE.LOD();
+    // const material = new THREE.MeshLambertMaterial({ color: 0x33ffff, wireframe: true });
+
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x33ffff,
+    });
+    material.side = THREE.FrontSide;
+    material.transparent = false;
+
+    //Create spheres with 3 levels of detail and create new LOD levels for them
+    for (let i = 0; i < 3; i++) {
+      const geometry = new THREE.IcosahedronGeometry(1000, 3 - i);
+      const mesh = new THREE.Mesh(geometry, material);
+      // mesh.position.x = 0;
+      lod.addLevel(mesh, i * 75);
+    }
+
+    this.meshesRootGroup.add(lod);
   }
 
   setupDebuggingMethods() {

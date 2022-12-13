@@ -126,5 +126,6 @@ class DSRemoteWebKnossosClient @Inject()(
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/findCredential")
       .addQueryString("credentialId" -> credentialId)
       .addQueryString("key" -> dataStoreKey)
+      .silent
       .getWithJsonResponse[AnyCredential]
 }

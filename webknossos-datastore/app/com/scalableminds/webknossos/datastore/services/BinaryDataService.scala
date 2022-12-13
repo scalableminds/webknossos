@@ -76,7 +76,6 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =

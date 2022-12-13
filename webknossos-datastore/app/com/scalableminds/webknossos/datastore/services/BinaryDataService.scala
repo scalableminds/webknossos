@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -8,9 +7,10 @@ import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache, FileSystemService}
+import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class BinaryDataService(val dataBaseDir: Path,
@@ -24,7 +24,9 @@ class BinaryDataService(val dataBaseDir: Path,
   /* Note that this must stay in sync with the front-end constant
     compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
-  lazy val cache = new DataCubeCache(maxCacheSize)
+
+  private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
+  private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
@@ -74,12 +76,14 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
+
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      // TODO: cache for bucket providers (those are no longer lazy vals in the layers, but defs)
-      request.dataLayer.bucketProvider(fileSystemServiceOpt).load(readInstruction, cache)
+      val bucketProvider = bucketProviderCache.getOrLoadAndPut(request.dataLayer)(dataLayer =>
+        dataLayer.bucketProvider(fileSystemServiceOpt))
+      bucketProvider.load(readInstruction, shardHandleCache)
     } else {
       Fox.empty
     }
@@ -183,7 +187,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
-    val closedDataCubeHandleCount = cache.clear(dataCubeMatchPredicate)
+    val closedDataCubeHandleCount = shardHandleCache.clear(dataCubeMatchPredicate)
     (closedAgglomerateFileHandleCount, closedDataCubeHandleCount)
   }
 

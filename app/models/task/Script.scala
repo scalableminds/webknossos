@@ -1,6 +1,7 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.user.{UserDAO, UserService}
@@ -17,7 +18,7 @@ case class Script(
     _owner: ObjectId,
     name: String,
     gist: String,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -61,14 +62,14 @@ class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         ObjectId(r._Owner),
         r.name,
         r.gist,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
   def insertOne(s: Script): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.scripts(_id, _owner, name, gist, created, isDeleted)
-                         values(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${new java.sql.Timestamp(s.created)}, ${s.isDeleted})""")
+                         values(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${s.created}, ${s.isDeleted})""")
     } yield ()
 
   def updateOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =

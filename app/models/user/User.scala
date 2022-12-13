@@ -2,11 +2,13 @@ package models.user
 
 import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import models.team._
 import play.api.libs.json._
@@ -27,14 +29,14 @@ case class User(
     _organization: ObjectId,
     firstName: String,
     lastName: String,
-    lastActivity: Long = System.currentTimeMillis(),
+    lastActivity: Instant = Instant.now,
     userConfiguration: JsObject,
     loginInfo: LoginInfo,
     isAdmin: Boolean,
     isDatasetManager: Boolean,
     isDeactivated: Boolean,
     isUnlisted: Boolean,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     lastTaskTypeId: Option[ObjectId] = None,
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
@@ -73,14 +75,14 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         ObjectId(r._Organization),
         r.firstname,
         r.lastname,
-        r.lastactivity.getTime,
+        Instant.fromSql(r.lastactivity),
         userConfiguration,
         LoginInfo(User.default_login_provider_id, r._Id),
         r.isadmin,
         r.isdatasetmanager,
         r.isdeactivated,
         r.isunlisted,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.lasttasktypeid.map(ObjectId(_)),
         r.isdeleted
       )
@@ -214,16 +216,14 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity,
                                             userConfiguration, isDeactivated, isAdmin, isDatasetManager, isUnlisted, created, isDeleted)
                      values(${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
-                            ${new java.sql.Timestamp(u.lastActivity)}, '#${sanitize(
-        Json.toJson(u.userConfiguration).toString)}',
-                     ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isUnlisted}, ${new java.sql.Timestamp(
-        u.created)}, ${u.isDeleted})
+                            ${u.lastActivity}, '#${sanitize(Json.toJson(u.userConfiguration).toString)}',
+                     ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isUnlisted}, ${u.created}, ${u.isDeleted})
           """)
     } yield ()
 
-  def updateLastActivity(userId: ObjectId, lastActivity: Long = System.currentTimeMillis())(
+  def updateLastActivity(userId: ObjectId, lastActivity: Instant = Instant.now)(
       implicit ctx: DBAccessContext): Fox[Unit] =
-    updateTimestampCol(userId, _.lastactivity, new java.sql.Timestamp(lastActivity))
+    updateTimestampCol(userId, _.lastactivity, lastActivity)
 
   def updateUserConfiguration(userId: ObjectId, userConfiguration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

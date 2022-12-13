@@ -34,9 +34,9 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         slackNotificationService: SlackNotificationService)
     extends LazyLogging {
 
-  logger.info("Executing Startup")
+  private val beforeStartup = System.currentTimeMillis()
 
-  conf.warnIfOldKeysPresent()
+  logger.info(s"Executing Startup: Start actors, register cleanup services and stop hooks...")
 
   startActors(actorSystem)
 
@@ -54,14 +54,6 @@ class Startup @Inject()(actorSystem: ActorSystem,
     annotationDAO.deleteOldInitializingAnnotations()
   }
 
-  ensurePostgresDatabase.onComplete { _ =>
-    initialDataService.insert.futureBox.map {
-      case Full(_)            => ()
-      case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
-      case _                  => logger.warn("Error while inserting initial data")
-    }
-  }
-
   lifecycle.addStopHook { () =>
     Future.successful {
       logger.info("Closing SQL Database handle")
@@ -76,7 +68,19 @@ class Startup @Inject()(actorSystem: ActorSystem,
     }
   }
 
-  private def ensurePostgresDatabase = {
+  if (conf.Slick.checkSchemaOnStartup) {
+    ensurePostgresDatabase()
+  }
+
+  initialDataService.insert.futureBox.map {
+    case Full(_) => logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
+    case Failure(msg, _, _) =>
+      logger.info("No initial data inserted: " + msg)
+      logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
+    case _ => ()
+  }
+
+  private def ensurePostgresDatabase(): Unit = {
     logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
 
     val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
@@ -108,10 +112,9 @@ class Startup @Inject()(actorSystem: ActorSystem,
       slackNotificationService.warn("SQL schema mismatch", errorMessage)
     }
 
-    Future.successful(())
   }
 
-  private def startActors(actorSystem: ActorSystem) {
+  private def startActors(actorSystem: ActorSystem) = {
     val mailerConf = MailerConfig(
       conf.Mail.logToStdout,
       conf.Mail.Smtp.host,

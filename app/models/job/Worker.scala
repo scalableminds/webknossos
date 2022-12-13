@@ -3,6 +3,7 @@ package models.job
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
@@ -24,7 +25,7 @@ case class Worker(_id: ObjectId,
                   key: String,
                   maxParallelJobs: Int,
                   lastHeartBeat: Long = 0,
-                  created: Long = System.currentTimeMillis,
+                  created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
 class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -43,7 +44,7 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.key,
         r.maxparalleljobs,
         r.lastheartbeat.getTime,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     )

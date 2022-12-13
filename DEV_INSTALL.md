@@ -142,7 +142,7 @@ yarn run lint
 yarn run pretty
 
 # Format backend code
-yarn pretty-backend
+yarn format
 
 # Frontend type checking
 yarn flow

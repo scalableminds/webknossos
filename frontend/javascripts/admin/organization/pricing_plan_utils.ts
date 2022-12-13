@@ -7,18 +7,18 @@ export const teamPlanFeatures = [
   "Dataset Management and Access Control",
   "5 Users / 1TB Storage (upgradable)",
   "Priority Email Support",
-  "Everything from Free plan",
+  "Everything from Basic plan",
 ];
 export const powerPlanFeatures = [
   "Unlimited Users",
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",
-  "Everything from Team and Free plans",
+  "Everything from Team and Basic plans",
 ];
 
 export const maxInludedUsersInFreePlan = 3;
-export const storageWarningThresholdMB = PricingPlanEnum.Free ? 5000 : 10000;
+export const storageWarningThresholdMB = PricingPlanEnum.Basic ? 5000 : 10000;
 
 export function getActiveUserCount(users: APIUser[]): number {
   return users.filter((user) => user.isActive && !user.isSuperUser).length;

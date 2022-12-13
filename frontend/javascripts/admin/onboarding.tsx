@@ -27,7 +27,7 @@ import RegistrationForm from "admin/auth/registration_form";
 import CreditsFooter from "components/credits_footer";
 import Toast from "libs/toast";
 import features from "features";
-import { maxInludedUsersInFreePlan } from "./organization/pricing_plan_utils";
+import { maxInludedUsersInFreePlan as maxInludedUsersInBasicPlan } from "./organization/pricing_plan_utils";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -235,7 +235,7 @@ export class InviteUsersModal extends React.Component<
 
   static defaultProps = {
     currentUserCount: 1,
-    maxUserCountPerOrganization: maxInludedUsersInFreePlan, // default for Free Plan
+    maxUserCountPerOrganization: maxInludedUsersInBasicPlan, // default for Basic Plan
   };
 
   extractEmailAddresses(): string[] {

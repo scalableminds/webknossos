@@ -12,12 +12,12 @@ DROP VIEW webknossos.organizations_;
 
 -- Edit pricing plans enum
 ALTER TYPE webknossos.PRICING_PLANS RENAME TO prizing_plans_old;
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Free', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 ALTER TABLE webknossos.organizations
   ALTER COLUMN pricingPLan DROP DEFAULT,
   ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING
     CASE pricingPlan
-      WHEN 'Basic'::webknossos.prizing_plans_old THEN 'Free'::webknossos.PRICING_PLANS
+      WHEN 'Basic'::webknossos.prizing_plans_old THEN 'Basic'::webknossos.PRICING_PLANS
       WHEN 'Premium'::webknossos.prizing_plans_old THEN 'Team'::webknossos.PRICING_PLANS
       WHEN 'Pilot'::webknossos.prizing_plans_old THEN 'Team'::webknossos.PRICING_PLANS
       ELSE 'Custom'::webknossos.PRICING_PLANS
@@ -25,7 +25,7 @@ ALTER TABLE webknossos.organizations
   ALTER COLUMN pricingPlan SET DEFAULT 'Custom'::webknossos.PRICING_PLANS;
 DROP TYPE webknossos.prizing_plans_old;
 
-UPDATE webknossos.organizations SET includedUsers = 3, includedStorage = 5e10 WHERE pricingplan = 'Free'::webknossos.PRICING_PLANS;
+UPDATE webknossos.organizations SET includedUsers = 3, includedStorage = 5e10 WHERE pricingplan = 'Basic'::webknossos.PRICING_PLANS;
 UPDATE webknossos.organizations SET includedUsers = 5, includedStorage = 1e12 WHERE pricingplan = 'Team'::webknossos.PRICING_PLANS;
 
 -- Recreate views

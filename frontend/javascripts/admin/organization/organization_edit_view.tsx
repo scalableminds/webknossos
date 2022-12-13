@@ -23,7 +23,7 @@ import { getActiveUserCount } from "./pricing_plan_utils";
 
 const FormItem = Form.Item;
 export enum PricingPlanEnum {
-  Free = "Free",
+  Basic = "Basic",
   Team = "Team",
   Power = "Power",
   TeamTrial = "Team_Trial",

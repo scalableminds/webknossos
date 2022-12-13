@@ -51,7 +51,7 @@ function extendPricingPlan(organization: APIOrganization) {
           Extend your plan now for uninterrupted access to webKnossos.
         </p>
         <p style={{ marginRight: "30%" }}>
-          Expired plans will be downgraded to the Free plan and you might lose access to some
+          Expired plans will be downgraded to the Basic plan and you might lose access to some
           webKnossos features and see restrictions on the number of permitted user accounts and your
           included storage space quota.
         </p>

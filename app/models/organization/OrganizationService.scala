@@ -84,7 +84,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
-      initialPricingParameters = if (conf.Features.isDemoInstance) (PricingPlan.Free, Some(3), Some(50000000000L))
+      initialPricingParameters = if (conf.Features.isDemoInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
 

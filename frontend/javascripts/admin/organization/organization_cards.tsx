@@ -32,15 +32,84 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
   )
     return null;
 
-  let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
-  let featureDescriptions = teamPlanFeatures;
+  let title = `Upgrade to unlock more features`;
+  let cardBody = (
+    <Row gutter={24}>
+      <Col span={12}>
+        <Card
+          title={`${PricingPlanEnum.Team} Plan`}
+          bodyStyle={{ minHeight: 220, opacity: 0.8 }}
+          actions={[
+            <Button
+              type="primary"
+              onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+            >
+              <PlusCircleOutlined /> Upgrade
+            </Button>,
+          ]}
+        >
+          <ul>
+            {teamPlanFeatures.map((feature) => (
+              <li key={feature.slice(0, 10)}>{feature}</li>
+            ))}
+          </ul>
+        </Card>
+      </Col>
+      <Col span={12}>
+        <Card
+          title={`${PricingPlanEnum.Power} Plan`}
+          bodyStyle={{ minHeight: 220, opacity: 0.8 }}
+          actions={[
+            <Button
+              type="primary"
+              onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+            >
+              <PlusCircleOutlined /> Upgrade
+            </Button>,
+          ]}
+        >
+          <ul>
+            {powerPlanFeatures.map((feature) => (
+              <li key={feature.slice(0, 10)}>{feature}</li>
+            ))}
+          </ul>
+        </Card>
+      </Col>
+    </Row>
+  );
 
   if (
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
     title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
-    featureDescriptions = powerPlanFeatures;
+    cardBody = (
+      <Row gutter={24}>
+        <Col span={18}>
+          <p>
+            Upgrading your webKnossos plan will unlock more advanced features and increase your user
+            and storage quotas.
+          </p>
+          <p>
+            <ul>
+              {powerPlanFeatures.map((feature) => (
+                <li key={feature.slice(0, 10)}>{feature}</li>
+              ))}
+            </ul>
+          </p>
+        </Col>
+        <Col span={6}>
+          <Button
+            type="primary"
+            icon={<RocketOutlined />}
+            onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+            style={{ borderColor: "white" }}
+          >
+            Upgrade Now
+          </Button>
+        </Col>
+      </Row>
+    );
   }
 
   return (
@@ -56,30 +125,11 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       }}
       headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
     >
-      <Row gutter={24}>
-        <Col span={18}>
-          <p>
-            Upgrading your webKnossos plan will unlock more advanced features and increase your user
-            and storage quotas.
-          </p>
-          <p>Upgrade Highlights include:</p>
-          <ul>
-            {featureDescriptions.map((feature) => (
-              <li key={feature.slice(0, 10)}>{feature}</li>
-            ))}
-          </ul>
-        </Col>
-        <Col span={6}>
-          <Button
-            type="primary"
-            icon={<RocketOutlined />}
-            onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
-            style={{ borderColor: "white" }}
-          >
-            Upgrade Now
-          </Button>
-        </Col>
-      </Row>
+      <p>
+        Upgrading your webKnossos plan will unlock more advanced features and increase your user and
+        storage quotas.
+      </p>
+      {cardBody}
     </Card>
   );
 }
@@ -132,14 +182,14 @@ export function PlanDashboardCard({
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
 
   let includedStorageLabel =
-    organization.pricingPlan === PricingPlanEnum.Free
+    organization.pricingPlan === PricingPlanEnum.Basic
       ? `${(organization.includedStorage / 1000).toFixed(0)}GB`
       : `${(organization.includedStorage / 1000 ** 2).toFixed(0)}TB`;
   includedStorageLabel =
     organization.includedStorage === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
 
   const usedStorageLabel =
-    organization.pricingPlan === PricingPlanEnum.Free
+    organization.pricingPlan === PricingPlanEnum.Basic
       ? `${(usedStorageMB / 1000).toFixed(1)}`
       : `${(usedStorageMB / 1000 ** 2).toFixed(1)}`;
 
@@ -155,7 +205,7 @@ export function PlanDashboardCard({
   let upgradePlanAction: React.ReactNode[] = [];
 
   if (
-    organization.pricingPlan === PricingPlanEnum.Free ||
+    organization.pricingPlan === PricingPlanEnum.Basic ||
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
@@ -163,7 +213,7 @@ export function PlanDashboardCard({
       <span
         key="upgradeUsersAction"
         onClick={
-          organization.pricingPlan === PricingPlanEnum.Free
+          organization.pricingPlan === PricingPlanEnum.Basic
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeUserQuota
         }
@@ -175,7 +225,7 @@ export function PlanDashboardCard({
       <span
         key="upgradeStorageAction"
         onClick={
-          organization.pricingPlan === PricingPlanEnum.Free
+          organization.pricingPlan === PricingPlanEnum.Basic
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeStorageQuota
         }

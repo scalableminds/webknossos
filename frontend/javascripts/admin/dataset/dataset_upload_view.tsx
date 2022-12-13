@@ -497,8 +497,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               const wkwFile = entries.find((entry: Entry) =>
                 Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
               );
-              const hasArchiveWkwFile = wkwFile != null;
-              this.handleNeedsConversionInfo(!hasArchiveWkwFile);
+              const needsConversion = wkwFile == null;
+              this.handleNeedsConversionInfo(!needsConversion);
+
+              const nmlFile = entries.find((entry: Entry) =>
+                Utils.isFileExtensionEqualTo(entry.filename, "nml"),
+              );
+              if (nmlFile) {
+                Modal.error({
+                  content: messages["dataset.upload_zip_with_nml"],
+                });
+              }
             });
           },
           () => {
@@ -772,6 +781,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         Utils.isFileExtensionEqualTo(file.path, ["ply", "stl", "obj"]),
                       ).length === 0,
                     "PLY, STL and OBJ files are not supported. Please upload image files instead of 3D geometries.",
+                  ),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) =>
+                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["nml"]))
+                        .length === 0,
+                    "An NML file is an annotation of a dataset and not an independent dataset. Please upload the NML file into the Annotations page in the dashboard or into an open dataset.",
                   ),
                 },
                 {

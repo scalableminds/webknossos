@@ -192,7 +192,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
-        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId and not isUnlisted"
+        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId and not isDeactivated and not isUnlisted"
           .as[Int])
       result <- resultList.headOption
     } yield result

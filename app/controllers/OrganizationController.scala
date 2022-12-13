@@ -141,7 +141,9 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
           .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
         requestedPlan <- PricingPlan.fromString(requestedPlan)
-        mail = if (requestedPlan == PricingPlan.Team) { defaultMails.upgradePricingPlanToTeamMail _ } else {
+        mail = if (requestedPlan == PricingPlan.Team) {
+          defaultMails.upgradePricingPlanToTeamMail _
+        } else {
           defaultMails.upgradePricingPlanToTeamMail _
         }
         _ = Mailer ! Send(mail(request.identity, userEmail))
@@ -181,6 +183,24 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                                      organization.displayName,
                                                      s"Purchase $requestedStorage TB additional storage"))
       } yield Ok
+    }
+
+  def pricingStatus: Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOne(request.identity._organization)
+        activeUserCount <- userDAO.countAllForOrganization(request.identity._organization)
+        // Note that this does not yet account for storage
+        isExceeded = organization.includedUsers.exists(userLimit => activeUserCount > userLimit)
+        isAlmostExceeded = activeUserCount > 1 && organization.includedUsers.exists(userLimit =>
+          activeUserCount > userLimit - 2)
+      } yield
+        Ok(
+          Json.obj(
+            "pricingPlan" -> organization.pricingPlan,
+            "isExceeded" -> isExceeded,
+            "isAlmostExceeded" -> isAlmostExceeded
+          ))
     }
 
 }

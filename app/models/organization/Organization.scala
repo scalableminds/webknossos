@@ -22,8 +22,8 @@ case class Organization(
     displayName: String,
     pricingPlan: PricingPlan,
     paidUntil: Option[Instant],
-    includedUsers: Option[Int],
-    includedStorage: Option[Long],
+    includedUsers: Option[Int], // None means unlimited
+    includedStorage: Option[Long], // None means unlimited
     _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",

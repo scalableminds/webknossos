@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -20,7 +21,7 @@ import play.api.libs.ws.WSResponse
 import scala.concurrent.ExecutionContext
 
 case class TracingUpdatesReport(tracingId: String,
-                                timestamps: List[Long],
+                                timestamps: List[Instant],
                                 statistics: Option[JsObject],
                                 significantChangesCount: Int,
                                 viewChangesCount: Int,

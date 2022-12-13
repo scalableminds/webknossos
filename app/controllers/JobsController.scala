@@ -47,7 +47,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       jobs <- jobDAO.findAll
-      jobsJsonList <- Fox.serialCombined(jobs.sortBy(-_.created))(jobService.publicWrites)
+      jobsJsonList <- Fox.serialCombined(jobs.sortBy(_.created).reverse)(jobService.publicWrites)
     } yield Ok(Json.toJson(jobsJsonList))
   }
 

@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Filter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataLayerLike, GenericDataSource}
 import io.swagger.annotations._
@@ -54,7 +55,7 @@ class DataSetController @Inject()(userService: UserService,
   private val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
-      (__ \ 'sortingKey).readNullable[Long] and
+      (__ \ 'sortingKey).readNullable[Instant] and
       (__ \ 'isPublic).read[Boolean] and
       (__ \ 'tags).read[List[String]] and
       (__ \ 'folderId).readNullable[ObjectId]).tupled

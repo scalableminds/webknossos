@@ -1,6 +1,7 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.scalableminds.webknossos.schema.Tables._
@@ -27,7 +28,7 @@ case class Organization(
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -54,7 +55,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
@@ -87,8 +88,8 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     for {
       _ <- run(
         sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, _rootFolder, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${new java.sql.Timestamp(
-          o.created)}, ${o.isDeleted})
+                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
+                   ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${o.created}, ${o.isDeleted})
             """)
     } yield ()
 

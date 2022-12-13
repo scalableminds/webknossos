@@ -686,7 +686,7 @@ export function DatasetTags({
   };
 
   return (
-    <div style={{ maxWidth: 280 }}>
+    <div className="tags-container">
       {dataset.tags.map((tag) => (
         <CategorizationLabel
           tag={tag}

@@ -274,6 +274,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.upload_cancel": "The dataset upload was cancelled.",
   "dataset.unsupported_file_type":
     "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
+  "dataset.upload_zip_with_nml":
+    "The archive you attached contains an NML file. If the archive is an annotation, please use the Annotations tab in the dashboard to upload it. Uploading annotations here won't succeed.",
   "dataset.upload_invalid_zip":
     "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":

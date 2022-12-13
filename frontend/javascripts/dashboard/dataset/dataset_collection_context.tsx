@@ -5,7 +5,7 @@ import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import {
-  useFolderTreeQuery,
+  useFolderHierarchyQuery,
   useDatasetsInFolderQuery,
   useDatasetSearchQuery,
   useCreateFolderMutation,
@@ -16,6 +16,7 @@ import {
   useFolderQuery,
 } from "./queries";
 import { useIsMutating } from "@tanstack/react-query";
+import { usePrevious } from "libs/react_hooks";
 
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode;
@@ -34,12 +35,16 @@ export type DatasetCollectionContextValue = {
   ) => Promise<void>;
   updateCachedDataset: (dataset: APIDataset) => Promise<void>;
   activeFolderId: string | null;
-  setActiveFolderId: (id: string) => void;
+  setActiveFolderId: (id: string | null) => void;
+  mostRecentlyUsedActiveFolderId: string | null;
   supportsFolders: true;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
+  searchRecursively: boolean;
+  setSearchRecursively: (val: boolean) => void;
+  getBreadcrumbs: (dataset: APIMaybeUnimportedDataset) => string[] | null;
   queries: {
-    folderTreeQuery: ReturnType<typeof useFolderTreeQuery>;
+    folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
     datasetSearchQuery: ReturnType<typeof useDatasetSearchQuery>;
     createFolderMutation: ReturnType<typeof useCreateFolderMutation>;
@@ -73,6 +78,7 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
+  const mostRecentlyUsedActiveFolderId = usePrevious(activeFolderId, true);
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
   const { data: folder } = useFolderQuery(activeFolderId);
@@ -82,22 +88,20 @@ export default function DatasetCollectionContextProvider({
     (value: string | null) => {
       // Empty string should be handled as null
       setGlobalSearchQueryInner(value ? value : null);
-      if (value) {
-        setActiveFolderId(null);
-      }
     },
-    [setGlobalSearchQueryInner, setActiveFolderId],
+    [setGlobalSearchQueryInner],
   );
-
-  // Clear search query if active folder changes.
-  useEffect(() => {
-    if (activeFolderId != null) {
-      setGlobalSearchQuery(null);
-    }
-  }, [activeFolderId]);
+  const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
 
   // Keep url GET parameters in sync with search and active folder
-  useManagedUrlParams(setGlobalSearchQuery, setActiveFolderId, globalSearchQuery, activeFolderId);
+  useManagedUrlParams(
+    setGlobalSearchQuery,
+    setActiveFolderId,
+    globalSearchQuery,
+    activeFolderId,
+    searchRecursively,
+    setSearchRecursively,
+  );
 
   useEffect(() => {
     // Persist last active folder to localStorage. We
@@ -109,14 +113,22 @@ export default function DatasetCollectionContextProvider({
     }
   }, [folder, activeFolderId]);
 
-  const folderTreeQuery = useFolderTreeQuery();
-  const datasetsInFolderQuery = useDatasetsInFolderQuery(activeFolderId);
-  const datasetSearchQuery = useDatasetSearchQuery(globalSearchQuery);
+  const folderHierarchyQuery = useFolderHierarchyQuery();
+  const datasetsInFolderQuery = useDatasetsInFolderQuery(
+    globalSearchQuery == null ? activeFolderId : null,
+  );
+  const datasetSearchQuery = useDatasetSearchQuery(
+    globalSearchQuery,
+    activeFolderId,
+    searchRecursively,
+  );
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
   const moveFolderMutation = useMoveFolderMutation();
-  const updateDatasetMutation = useUpdateDatasetMutation(activeFolderId);
+  const updateDatasetMutation = useUpdateDatasetMutation(
+    globalSearchQuery == null ? activeFolderId : null,
+  );
   const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
 
   async function fetchDatasets(_options: Options = {}): Promise<void> {
@@ -134,10 +146,26 @@ export default function DatasetCollectionContextProvider({
     updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
+  const getBreadcrumbs = (dataset: APIMaybeUnimportedDataset) => {
+    if (folderHierarchyQuery.data?.itemById == null) {
+      return null;
+    }
+    const { itemById } = folderHierarchyQuery.data;
+
+    let currentFolder = itemById[dataset.folderId];
+    const breadcrumbs = [currentFolder.title];
+    while (currentFolder?.parent != null) {
+      currentFolder = itemById[currentFolder.parent];
+      breadcrumbs.unshift(currentFolder.title);
+    }
+
+    return breadcrumbs;
+  };
+
   const isLoading =
     (globalSearchQuery
       ? datasetSearchQuery.isFetching
-      : folderTreeQuery.isLoading ||
+      : folderHierarchyQuery.isLoading ||
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
@@ -151,7 +179,9 @@ export default function DatasetCollectionContextProvider({
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
+      mostRecentlyUsedActiveFolderId,
       isChecking,
+      getBreadcrumbs,
       checkDatasets: async () => {
         if (isChecking) {
           console.warn("Ignore second rechecking request, since a recheck is already in progress");
@@ -175,8 +205,10 @@ export default function DatasetCollectionContextProvider({
       },
       globalSearchQuery,
       setGlobalSearchQuery,
+      searchRecursively,
+      setSearchRecursively,
       queries: {
-        folderTreeQuery,
+        folderHierarchyQuery,
         datasetsInFolderQuery,
         datasetSearchQuery,
         createFolderMutation,
@@ -195,14 +227,18 @@ export default function DatasetCollectionContextProvider({
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
-      folderTreeQuery,
+      mostRecentlyUsedActiveFolderId,
+      folderHierarchyQuery,
       datasetsInFolderQuery,
       datasetSearchQuery,
+      searchRecursively,
+      setSearchRecursively,
       createFolderMutation,
       deleteFolderMutation,
       updateFolderMutation,
       moveFolderMutation,
       updateDatasetMutation,
+      globalSearchQuery,
     ],
   );
 
@@ -216,6 +252,8 @@ function useManagedUrlParams(
   setActiveFolderId: React.Dispatch<React.SetStateAction<string | null>>,
   globalSearchQuery: string | null,
   activeFolderId: string | null,
+  searchRecursively: boolean,
+  setSearchRecursively: (val: boolean) => void,
 ) {
   const { data: folder } = useFolderQuery(activeFolderId);
 
@@ -226,6 +264,12 @@ function useManagedUrlParams(
     if (query) {
       setGlobalSearchQuery(query);
     }
+    const folderId = params.get("folderId");
+    if (folderId) {
+      setActiveFolderId(folderId);
+    }
+    const recursive = params.get("recursive");
+    setSearchRecursively(!!recursive);
 
     const folderSpecifier = _.last(location.pathname.split("/"));
 
@@ -238,28 +282,11 @@ function useManagedUrlParams(
     }
   }, []);
 
-  // Update query
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (globalSearchQuery) {
-      params.set("query", globalSearchQuery);
-    } else {
-      params.delete("query");
-    }
-    const paramStr = params.toString();
-
-    // Don't use useHistory because this would lose the input search
-    // focus.
-    window.history.replaceState(
-      {},
-      "",
-      `${location.pathname}${paramStr === "" ? "" : "?"}${paramStr}`,
-    );
-  }, [globalSearchQuery]);
+  // Update query and searchRecursively
 
   // Update folderId
   useEffect(() => {
-    if (activeFolderId) {
+    if (!globalSearchQuery && activeFolderId) {
       let folderName = folder?.name || "";
       // The replacement of / and space is only done to make the URL
       // nicer to read for a human.
@@ -277,7 +304,33 @@ function useManagedUrlParams(
         `/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`,
       );
     } else {
-      window.history.replaceState({}, "", "/dashboard/datasets");
+      const params = new URLSearchParams(location.search);
+      if (globalSearchQuery) {
+        params.set("query", globalSearchQuery);
+      } else {
+        params.delete("query");
+      }
+      if (globalSearchQuery && activeFolderId) {
+        params.set("folderId", activeFolderId);
+        // The recursive property is only relevant when a folderId is specified.
+        if (searchRecursively) {
+          params.set("recursive", "true");
+        } else {
+          params.delete("recursive");
+        }
+      } else {
+        params.delete("folderId");
+        params.delete("recursive");
+      }
+      const paramStr = params.toString();
+
+      // Don't use useHistory because this would lose the input search
+      // focus.
+      window.history.replaceState(
+        {},
+        "",
+        `/dashboard/datasets${paramStr === "" ? "" : "?"}${paramStr}`,
+      );
     }
-  }, [activeFolderId, folder]);
+  }, [globalSearchQuery, activeFolderId, folder, searchRecursively]);
 }

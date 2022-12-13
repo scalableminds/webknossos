@@ -72,7 +72,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
   /**
     * Extracts an email address from the given string and passes to the enclosed method.
     */
-  private def setAddress(emailAddress: String)(setter: (String, String) => _) {
+  private def setAddress(emailAddress: String)(setter: (String, String) => _): Unit =
     try {
       val iAddress = new InternetAddress(emailAddress)
       val address = iAddress.getAddress
@@ -80,9 +80,8 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
 
       setter(address, name)
     } catch {
-      case _: Exception => ()
+      case e: Exception => logger.warn(s"Failed to set email address: $e")
     }
-  }
 
   /**
     * Creates an appropriate email object based on the content type.

@@ -284,7 +284,15 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 }
 function DatasetViewWithLegacyContext({ user }: { user: APIUser }) {
   const datasetCacheContext = useContext(DatasetCacheContext);
-  return <DatasetView user={user} hideDetailsColumns={false} context={datasetCacheContext} />;
+  return (
+    <DatasetView
+      user={user}
+      hideDetailsColumns={false}
+      context={datasetCacheContext}
+      selectedDatasets={[]}
+      onSelectDataset={() => {}}
+    />
+  );
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

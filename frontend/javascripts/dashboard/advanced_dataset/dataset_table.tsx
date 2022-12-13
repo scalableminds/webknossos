@@ -69,7 +69,6 @@ type State = {
   sortedInfo: SorterResult<string>;
   contextMenuPosition: [number, number] | null | undefined;
   datasetForContextMenu: APIMaybeUnimportedDataset | null;
-  currentDataSource: APIMaybeUnimportedDataset[];
 };
 
 type ContextMenuProps = {
@@ -241,8 +240,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
     prevSearchQuery: "",
     contextMenuPosition: null,
     datasetForContextMenu: null,
-    currentDataSource: [],
   };
+  // currentPageData is only used for range selection (and not during
+  // rendering). That's why it's not included in this.state (also it
+  // would lead to infinite loops, too).
+  currentPageData: APIMaybeUnimportedDataset[] = [];
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
     const maybeSortedInfo: SorterResult<string> | {} = // Clear the sorting exactly when the search box is initially filled
@@ -265,12 +267,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
     sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
-    extra: TableCurrentDataSource<RecordType>,
   ) => {
     this.setState({
       // @ts-ignore
       sortedInfo: sorter,
-      currentDataSource: extra.currentDataSource as APIMaybeUnimportedDataset[],
     });
   };
 
@@ -426,6 +426,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
           locale={{
             emptyText: this.renderEmptyText(),
           }}
+          summary={(currentPageData) => {
+            // Workaround to get to the currently rendered entries (since the ordering
+            // is managed by antd).
+            // Also see https://github.com/ant-design/ant-design/issues/24022.
+            this.currentPageData = currentPageData as APIMaybeUnimportedDataset[];
+            return null;
+          }}
           onRow={(record: APIMaybeUnimportedDataset) => ({
             onDragStart: () => {
               if (!this.props.selectedDatasets.includes(record)) {
@@ -446,10 +453,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
               } else {
                 // Shift was pressed and there's already another selected dataset that was not
                 // clicked just now.
-                const renderedDatasets =
-                  this.state.currentDataSource.length === 0
-                    ? this.props.datasets
-                    : this.state.currentDataSource;
+                // We are using the current page data as there is no way to get the currently
+                // rendered datasets otherwise. Also see
+                // https://github.com/ant-design/ant-design/issues/24022.
+                const renderedDatasets = this.currentPageData;
 
                 const clickedDatasetIdx = renderedDatasets.indexOf(record);
                 const selectedIndices = this.props.selectedDatasets.map((selectedDS) =>

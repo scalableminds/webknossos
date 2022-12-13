@@ -2,6 +2,7 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.FoxImplicits
 import io.swagger.annotations._
@@ -54,7 +55,7 @@ class AnnotationPrivateLinkController @Inject()(
   private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
+      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> 404
       annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
     } yield annotation
 
@@ -96,7 +97,7 @@ class AnnotationPrivateLinkController @Inject()(
         idValidated <- ObjectId.fromString(id)
 
         annotationPrivateLink <- annotationPrivateLinkDAO.findOne(idValidated)
-        _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> NOT_FOUND
+        _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> NOT_FOUND
         _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
 
         annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(annotationPrivateLink)

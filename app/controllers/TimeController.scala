@@ -2,9 +2,10 @@ package controllers
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.user._
 import models.user.time.TimeSpanDAO
@@ -104,8 +105,8 @@ class TimeController @Inject()(userService: UserService,
     for {
       userJs <- userService.compactWrites(user)
       timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,
-                                                  Some(startDate.getTimeInMillis),
-                                                  Some(endDate.getTimeInMillis))
+                                                  Some(Instant.fromCalendar(startDate)),
+                                                  Some(Instant.fromCalendar(endDate)))
     } yield Json.obj("user" -> userJs, "timelogs" -> timeJs)
 
 }

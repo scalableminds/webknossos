@@ -1,6 +1,7 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
@@ -12,8 +13,8 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
-import javax.inject.Inject
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class TaskType(
@@ -24,7 +25,7 @@ case class TaskType(
     settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
     recommendedConfiguration: Option[JsValue] = None,
     tracingType: TracingType = TracingType.skeleton,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -103,7 +104,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         ),
         r.recommendedconfiguration.map(Json.parse),
         tracingType,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
 
@@ -158,7 +159,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                               #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
                               #${optionLiteral(t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
                               '#${t.tracingType.toString}',
-                              ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+                              ${t.created}, ${t.isDeleted})
                        """)
     } yield ()
 

@@ -174,7 +174,7 @@ export function formatHash(id: string): string {
   return id.slice(-6);
 }
 
-export function formatDateMedium(date: Date): string {
+export function formatDateMedium(date: Date | number): string {
   return moment(date).format("lll");
 }
 export function formatDistance(start: Date | number, end: Date | number): string {

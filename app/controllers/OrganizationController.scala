@@ -77,7 +77,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken)
-      _ <- bool2Fox(invite.expirationDateTime.isAfterNow)
+      _ <- bool2Fox(!invite.expirationDateTime.isPast)
       organization <- organizationDAO.findOne(invite._organization)
       organizationJson <- organizationService.publicWrites(organization)
     } yield Ok(organizationJson)

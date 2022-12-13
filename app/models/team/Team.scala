@@ -1,6 +1,7 @@
 package models.team
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 
@@ -25,7 +26,7 @@ case class Team(
     _organization: ObjectId,
     name: String,
     isOrganizationTeam: Boolean = false,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -109,7 +110,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         ObjectId(r._Organization),
         r.name,
         r.isorganizationteam,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
@@ -184,7 +185,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(t: Team): Fox[Unit] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
-                  VALUES(${t._id}, ${t._organization}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isOrganizationTeam}, ${t.isDeleted})
+                  VALUES(${t._id}, ${t._organization}, ${t.name}, ${t.created}, ${t.isOrganizationTeam}, ${t.isDeleted})
             """)
     } yield ()
 

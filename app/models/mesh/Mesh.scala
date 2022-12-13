@@ -3,6 +3,7 @@ package models.mesh
 import com.google.common.io.BaseEncoding
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 
@@ -20,7 +21,7 @@ case class MeshInfo(
     _annotation: ObjectId,
     description: String,
     position: Vec3Int,
-    created: Long = System.currentTimeMillis,
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -61,7 +62,7 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def isDeletedColumn(x: Meshes): Rep[Boolean] = x.isdeleted
 
   private val infoColumns = (columnsList diff Seq("data")).mkString(", ")
-  type InfoTuple = (String, String, String, String, java.sql.Timestamp, Boolean)
+  type InfoTuple = (ObjectId, ObjectId, String, String, Instant, Boolean)
 
   override def parse(r: MeshesRow): Fox[MeshInfo] =
     Fox.failure("not implemented, use parseInfo or get the data directly")
@@ -71,11 +72,11 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       position <- Vec3Int.fromList(parseArrayTuple(r._4).map(_.toInt)) ?~> "could not parse mesh position"
     } yield {
       MeshInfo(
-        ObjectId(r._1), //_id
-        ObjectId(r._2), //_annotation
+        r._1, //_id
+        r._2, //_annotation
         r._3, // description
         position,
-        r._5.getTime, //created
+        r._5, //created
         r._6 //isDeleted
       )
     }
@@ -103,7 +104,7 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- run(sqlu"""insert into webknossos.meshes(_id, _annotation, description, position, created, isDeleted)
                    values(${m._id.id}, ${m._annotation.id}, ${m.description}, '#${writeStructTuple(
         m.position.toList.map(_.toString))}',
-                          ${new java.sql.Timestamp(m.created)}, ${m.isDeleted})
+                          ${m.created}, ${m.isDeleted})
         """)
     } yield ()
 

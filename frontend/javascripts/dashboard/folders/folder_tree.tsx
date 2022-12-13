@@ -266,6 +266,13 @@ function FolderItemAsDropTarget(props: {
     accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
       if (selectedDatasets.length > 1) {
+        if (selectedDatasets.every((ds) => ds.folderId === folderId)) {
+          Toast.warning(
+            "The selected datasets are already in the specified folder. No dataset was moved.",
+          );
+          return;
+        }
+
         // Show a modal so that the user cannot do anything else while the datasets are being moved.
         const modal = Modal.info({
           title: "Moving Datasets",

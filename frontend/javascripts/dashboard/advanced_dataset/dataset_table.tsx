@@ -68,27 +68,27 @@ type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
   contextMenuPosition: [number, number] | null | undefined;
-  datasetForContextMenu: APIMaybeUnimportedDataset | null;
+  datasetsForContextMenu: APIMaybeUnimportedDataset[];
 };
 
 type ContextMenuProps = {
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
-  dataset: APIMaybeUnimportedDataset | null;
+  datasets: APIMaybeUnimportedDataset[];
   reloadDataset: Props["reloadDataset"];
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
-  const { dataset, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
+  const { datasets, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
   let overlay = <div />;
 
-  if (contextMenuPosition != null && dataset != null) {
+  if (contextMenuPosition != null) {
     // getDatasetActionContextMenu should not be turned into <DatasetActionMenu />
     // as this breaks antd's styling of the menu within the dropdown.
     overlay = getDatasetActionContextMenu({
       hideContextMenu,
-      dataset,
+      datasets,
       reloadDataset,
     });
   }
@@ -239,7 +239,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     },
     prevSearchQuery: "",
     contextMenuPosition: null,
-    datasetForContextMenu: null,
+    datasetsForContextMenu: [],
   };
   // currentPageData is only used for range selection (and not during
   // rendering). That's why it's not included in this.state (also it
@@ -410,7 +410,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           hideContextMenu={() => {
             this.setState({ contextMenuPosition: null });
           }}
-          dataset={this.state.datasetForContextMenu}
+          datasets={this.state.datasetsForContextMenu}
           reloadDataset={this.props.reloadDataset}
           contextMenuPosition={this.state.contextMenuPosition}
         />
@@ -508,7 +508,17 @@ class DatasetTable extends React.PureComponent<Props, State> {
               const y = event.clientY - bounds.top;
 
               this.showContextMenuAt(x, y);
-              this.setState({ datasetForContextMenu: record });
+              if (this.props.selectedDatasets.includes(record)) {
+                this.setState({
+                  datasetsForContextMenu: this.props.selectedDatasets,
+                });
+              } else {
+                // If dataset is clicked which is not selected, ignore the selected
+                // datasets.
+                this.setState({
+                  datasetsForContextMenu: [record],
+                });
+              }
             },
             onDoubleClick: () => {
               window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;

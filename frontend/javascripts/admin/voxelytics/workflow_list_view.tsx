@@ -17,8 +17,6 @@ import { VX_POLLING_INTERVAL } from "./workflow_view";
 function parseTaskInfo(taskInfo: VoxelyticsTaskInfo): VoxelyticsTaskInfo {
   return {
     ...taskInfo,
-    beginTime: taskInfo.beginTime != null ? taskInfo.beginTime : null,
-    endTime: taskInfo.endTime != null ? taskInfo.endTime : null,
   } as VoxelyticsTaskInfo;
 }
 
@@ -26,16 +24,12 @@ function parseRunInfo(runInfo: VoxelyticsRunInfo): VoxelyticsRunInfo {
   return {
     ...runInfo,
     tasks: runInfo.tasks.map(parseTaskInfo),
-    beginTime: runInfo.beginTime,
-    endTime: runInfo.endTime != null ? runInfo.endTime : null,
   } as any as VoxelyticsRunInfo;
 }
 
 function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowInfo): VoxelyticsWorkflowInfo {
   return {
     ...workflowInfo,
-    beginTime: workflowInfo.beginTime,
-    endTime: workflowInfo.endTime != null ? workflowInfo.endTime : null,
     runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => b.beginTime - a.beginTime),
   };
 }

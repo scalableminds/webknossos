@@ -187,6 +187,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
   }
 
+  object Slick {
+    val checkSchemaOnStartup: Boolean = get[Boolean]("slick.checkSchemaOnStartup")
+  }
+
   object Voxelytics {
     val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
@@ -214,60 +218,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Airbrake,
       GoogleAnalytics,
       BackendAnalytics,
+      Slick,
       Voxelytics
     )
 
-  val removedConfigKeys = List(
-    "actor.defaultTimeout",
-    "js.defaultTimeout",
-    "application.name",
-    "application.branch",
-    "application.version",
-    "application.title",
-    "application.insertInitialData",
-    "application.insertLocalConnectDatastore",
-    "application.authentication.defaultuser.email",
-    "application.authentication.defaultUser.password",
-    "application.authentication.defaultUser.token",
-    "application.authentication.defaultUser.isSuperUser",
-    "application.authentication.ssoKey",
-    "application.authentication.inviteExpiry",
-    "webKnossos.user.time.tracingPauseInSeconds",
-    "webKnossos.query.maxResults",
-    "user.cacheTimeoutInMinutes",
-    "tracingstore.enabled",
-    "datastore.enabled",
-    "datastore.webKnossos.pingIntervalMinutes",
-    "braingames.binary.cacheMaxSize",
-    "braingames.binary.mappingCacheMaxSize",
-    "braingames.binary.agglomerateFileCacheMaxSize",
-    "braingames.binary.agglomerateCacheMaxSize",
-    "braingames.binary.agglomerateStandardBlockSize",
-    "braingames.binary.agglomerateMaxReaderRange",
-    "braingames.binary.loadTimeout",
-    "braingames.binary.saveTimeout",
-    "braingames.binary.isosurfaceTimeout",
-    "braingames.binary.isosurfaceActorPoolSize",
-    "braingames.binary.baseFolder",
-    "braingames.binary.agglomerateSkeletonEdgeLimit",
-    "braingames.binary.changeHandler.enabled",
-    "braingames.binary.tickerInterval",
-    "mail.enabled",
-    "jobs.username",
-    "braintracing.active",
-    "braintracing.url",
-    "airbrake.apiKey",
-    "airbrake.ssl",
-    "airbrake.enabled",
-    "airbrake.endpoint",
-    "slackNotifications.url",
-    "google.analytics.trackingId",
-    "operatorData"
-  )
-
-  def warnIfOldKeysPresent(): Unit = removedConfigKeys.foreach { key =>
-    if (getOptional[String](key).isDefined) {
-      logger.warn(s"Removed config key $key is still supplied. Did you migrate your config?")
-    }
-  }
 }

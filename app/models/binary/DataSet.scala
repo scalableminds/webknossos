@@ -165,11 +165,16 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findAllWithSearch(folderIdOpt: Option[ObjectId], searchQuery: Option[String])(
+  def findAllWithSearch(folderIdOpt: Option[ObjectId], searchQuery: Option[String], includeSubfolders: Boolean = false)(
       implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      folderPredicate = folderIdOpt.map(folderId => s"_folder = '$folderId'").getOrElse("true")
+      folderPredicate = folderIdOpt match {
+        case Some(folderId) if (includeSubfolders) =>
+          s"_folder IN (select _descendant FROM webknossos.folder_paths fp WHERE fp._ancestor = '$folderId')"
+        case Some(folderId) => s"_folder = '$folderId'"
+        case None           => "true"
+      }
       searchPredicate = buildSearchPredicate(searchQuery)
       r <- run(sql"""SELECT #$columns
               FROM #$existingCollectionName

@@ -1025,13 +1025,14 @@ export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
   searchQuery: string | null = null,
+  includeSubfolders: boolean | null = null,
   limit: number | null = null,
 ): Promise<Array<APIMaybeUnimportedDataset>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
     params.append("isUnreported", String(isUnreported));
   }
-  if (folderId != null) {
+  if (folderId != null && folderId !== "") {
     params.append("folderId", folderId);
   }
   if (searchQuery != null) {
@@ -1039,6 +1040,9 @@ export async function getDatasets(
   }
   if (limit != null) {
     params.append("limit", String(limit));
+  }
+  if (includeSubfolders != null) {
+    params.append("includeSubfolders", includeSubfolders ? "true" : "false");
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);

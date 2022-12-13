@@ -27,6 +27,8 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
 
   override protected def tickerInterval: FiniteDuration = 1 hour
 
+  override protected def tickerInitialDelay: FiniteDuration = 1 hour
+
   override protected def tick(): Unit = {
     logger.info("Checking if any users need mailchimp tagging...")
     for {

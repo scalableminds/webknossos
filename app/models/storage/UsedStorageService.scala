@@ -2,6 +2,7 @@ package models.storage
 
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -35,7 +36,7 @@ class UsedStorageService @Inject()(val system: ActorSystem,
 
   private val isRunning = new java.util.concurrent.atomic.AtomicBoolean(false)
 
-  private val pauseAfterEachOrganization = (5 seconds).toMillis
+  private val pauseAfterEachOrganization = 5 seconds
   private val organizationCountToScanPerTick = 10
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
@@ -63,8 +64,8 @@ class UsedStorageService @Inject()(val system: ActorSystem,
       _ <- organizationDAO.deleteUsedStorage(organization._id)
       _ <- Fox.serialCombined(storageReportsByDataStore.zip(dataStores))(storageForDatastore =>
         upsertUsedStorage(organization, storageForDatastore))
-      _ <- organizationDAO.updateLastStorageScanTime(organization._id, System.currentTimeMillis())
-      _ = Thread.sleep(pauseAfterEachOrganization)
+      _ <- organizationDAO.updateLastStorageScanTime(organization._id, Instant.now)
+      _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
   private def refreshStorageReports(dataStore: DataStore,

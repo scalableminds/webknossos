@@ -5,15 +5,13 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.scalableminds.webknossos.schema.Tables._
-
-import javax.inject.Inject
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
-import java.sql.Timestamp
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
@@ -129,10 +127,9 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _dataSet = $datasetId")
     } yield ()
 
-  def updateLastStorageScanTime(organizationId: ObjectId, time: Long): Fox[Unit] =
+  def updateLastStorageScanTime(organizationId: ObjectId, time: Instant): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"UPDATE webknossos.organizations SET lastStorageScanTime = ${new Timestamp(time)} WHERE _id = $organizationId")
+      _ <- run(sqlu"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId")
     } yield ()
 
   def upsertUsedStorage(organizationId: ObjectId,
@@ -175,8 +172,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       rows <- run(sql"""
                   SELECT #$columns
                   FROM #$existingCollectionName
-                  WHERE lastStorageScanTime < ${new java.sql.Timestamp(
-        System.currentTimeMillis() - scanInterval.toMillis)}
+                  WHERE lastStorageScanTime < ${Instant.now - scanInterval}
                   ORDER BY lastStorageScanTime
                   LIMIT $limit
                   """.as[OrganizationsRow])

@@ -1,15 +1,16 @@
 package models.analytics
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.annotation.Annotation
 import models.binary.{DataSet, DataStore}
 import models.organization.Organization
 import models.user.{MultiUserDAO, User, UserDAO}
-import org.joda.time.DateTime
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
@@ -101,7 +102,6 @@ trait AnalyticsEvent {
         "webknossos_uri" -> analyticsLookUpService.webknossos_uri
       )
     }
-  def timestamp: String = DateTime.now().getMillis.toString
 
   def user: User
 
@@ -113,7 +113,7 @@ trait AnalyticsEvent {
       Json.obj(
         "event_type" -> eventType,
         "user_id" -> userId,
-        "time" -> timestamp,
+        "time" -> Instant.now.epochMillis.toString,
         "user_properties" -> userProperties,
         "event_properties" -> eventProperties,
         "session_id" -> sessionId

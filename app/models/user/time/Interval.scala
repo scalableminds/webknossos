@@ -1,35 +1,28 @@
 package models.user.time
 
+import com.scalableminds.util.time.Instant
 import org.joda.time.{DateTime, DateTimeConstants}
 import play.api.libs.json.{Json, OFormat}
 
 trait Interval {
-  def start: DateTime
+  def start: Instant
 
-  def end: DateTime
+  def end: Instant
 }
 
 case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
 
   def compare(p: Month): Int = 12 * (year - p.year) + (month - p.month)
 
-  override def <(that: Month): Boolean = (this compare that) < 0
-
-  override def >(that: Month): Boolean = (this compare that) > 0
-
-  override def <=(that: Month): Boolean = (this compare that) <= 0
-
-  override def >=(that: Month): Boolean = (this compare that) >= 0
-
   override def toString = f"$year%d-$month%02d"
 
-  def start: DateTime =
-    jodaMonth.dayOfMonth().withMinimumValue().millisOfDay().withMinimumValue()
+  def start: Instant =
+    Instant.fromJoda(jodaMonth.dayOfMonth().withMinimumValue().millisOfDay().withMinimumValue())
+
+  def end: Instant =
+    Instant.fromJoda(jodaMonth.dayOfMonth().withMaximumValue().millisOfDay().withMaximumValue())
 
   private def jodaMonth: DateTime = new DateTime().withYear(year).withMonthOfYear(month)
-
-  def end: DateTime =
-    jodaMonth.dayOfMonth().withMaximumValue().millisOfDay().withMaximumValue()
 }
 
 object Month {
@@ -39,24 +32,15 @@ object Month {
 case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   def compare(p: Week): Int = 53 * (year - p.year) + (week - p.week)
-
-  override def <(that: Week): Boolean = (this compare that) < 0
-
-  override def >(that: Week): Boolean = (this compare that) > 0
-
-  override def <=(that: Week): Boolean = (this compare that) <= 0
-
-  override def >=(that: Week): Boolean = (this compare that) >= 0
-
   override def toString = f"$year%d-W$week%02d"
 
-  def start: DateTime =
-    jodaWeek.withDayOfWeek(DateTimeConstants.MONDAY).millisOfDay().withMinimumValue()
+  def start: Instant =
+    Instant.fromJoda(jodaWeek.withDayOfWeek(DateTimeConstants.MONDAY).millisOfDay().withMinimumValue())
+
+  def end: Instant =
+    Instant.fromJoda(jodaWeek.dayOfWeek().withMaximumValue().millisOfDay().withMaximumValue())
 
   private def jodaWeek: DateTime = new DateTime().withYear(year).withWeekOfWeekyear(week)
-
-  def end: DateTime =
-    jodaWeek.dayOfWeek().withMaximumValue().millisOfDay().withMaximumValue()
 }
 
 object Week {
@@ -67,23 +51,15 @@ case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Da
 
   def compare(p: Day): Int = 500 * (year - p.year) + 40 * (month - p.month) + (day - p.day)
 
-  override def <(that: Day): Boolean = (this compare that) < 0
-
-  override def >(that: Day): Boolean = (this compare that) > 0
-
-  override def <=(that: Day): Boolean = (this compare that) <= 0
-
-  override def >=(that: Day): Boolean = (this compare that) >= 0
-
   override def toString = f"$year%d-$month%02d-$day%02d"
 
-  def start: DateTime =
-    jodaDay.millisOfDay().withMinimumValue()
+  def start: Instant =
+    Instant.fromJoda(jodaDay.millisOfDay().withMinimumValue())
+
+  def end: Instant =
+    Instant.fromJoda(jodaDay.millisOfDay().withMaximumValue())
 
   private def jodaDay = new DateTime().withDate(year, month, day)
-
-  def end: DateTime =
-    jodaDay.millisOfDay().withMaximumValue()
 }
 
 object Day {

@@ -1,6 +1,7 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 
@@ -11,7 +12,6 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
-import java.sql.Timestamp
 import scala.concurrent.ExecutionContext
 
 case class Organization(
@@ -21,14 +21,14 @@ case class Organization(
     logoUrl: String,
     displayName: String,
     pricingPlan: PricingPlan,
-    paidUntil: Option[Timestamp],
+    paidUntil: Option[Instant],
     includedUsers: Option[Int],
     includedStorage: Option[Long],
     _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -51,14 +51,14 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.logourl,
         r.displayname,
         pricingPlan,
-        r.paiduntil,
+        r.paiduntil.map(Instant.fromSql),
         r.includedusers,
         r.includedstorage,
         ObjectId(r._Rootfolder),
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
@@ -89,10 +89,14 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def insertOne(o: Organization): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, _rootFolder, newUserMailingList, overTimeMailingList, enableAutoVerify, pricingplan, paidUntil, includedusers, includedstorage, created, isDeleted)
-values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${new java.sql.Timestamp(
-          o.created)}, ${o.isDeleted})
+      _ <- run(sqlu"""INSERT INTO webknossos.organizations
+                      (_id, name, additionalInformation, logoUrl, displayName, _rootFolder,
+                      newUserMailingList, overTimeMailingList, enableAutoVerify,
+                      pricingplan, paidUntil, includedusers, includedstorage, created, isDeleted)
+                      VALUES
+                      (${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
+                      ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
+                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${o.created}, ${o.isDeleted})
             """)
     } yield ()
 

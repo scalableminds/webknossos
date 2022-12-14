@@ -54,15 +54,9 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
-<<<<<<< HEAD
-        r.lasttermsofserviceacceptancetime.map(_.getTime),
+        r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
         r.lasttermsofserviceacceptanceversion,
-        r.created.getTime,
-||||||| merged common ancestors
-        r.created.getTime,
-=======
         Instant.fromSql(r.created),
->>>>>>> master
         r.isdeleted
       )
     }

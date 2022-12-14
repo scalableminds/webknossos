@@ -520,6 +520,11 @@ export type APIOrganization = {
 export type APIOrganizationStorageInfo = {
   readonly usedStorageSpace: number;
 };
+export type APIPricingPlanStatus = {
+  readonly pricingPlan: PricingPlanEnum;
+  readonly isExceeded: boolean;
+  readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
+};
 
 export type APIBuildInfo = {
   webknossos: {

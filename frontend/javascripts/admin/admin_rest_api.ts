@@ -64,6 +64,7 @@ import type {
   VoxelyticsChunkStatistics,
   ShortLink,
   APIOrganizationStorageInfo,
+  APIPricingPlanStatus,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -2016,9 +2017,13 @@ export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): P
 }
 
 export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage} `, {
+  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
     method: "POST",
   });
+}
+
+export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
+  return Request.receiveJSON(`/api/pricing/status`);
 }
 
 // ### BuildInfo webknossos

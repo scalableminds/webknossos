@@ -17,7 +17,6 @@ import {
   hasPricingPlanExceededStorage,
   hasPricingPlanExceededUsers,
   hasPricingPlanExpired,
-  isPlanKaputt,
   powerPlanFeatures,
   storageWarningThresholdMB,
   teamPlanFeatures,
@@ -174,19 +173,14 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
 export function PlanDashboardCard({
   organization,
   activeUsersCount,
+  usedStorageSpace,
 }: {
   organization: APIOrganization;
   activeUsersCount: number;
+  usedStorageSpace: number;
 }) {
-  const usedStorageSpace = useFetch(
-    () => getOrganizationStorageSpace(organization.name),
-    { usedStorageSpace: 0 },
-    [],
-  );
-  const usedStorageMB = usedStorageSpace.usedStorageSpace;
-
   const usedUsersPercentage = (activeUsersCount / organization.includedUsers) * 100;
-  const usedStoragePercentage = (usedStorageMB / organization.includedStorage) * 100;
+  const usedStoragePercentage = (usedStorageSpace / organization.includedStorage) * 100;
 
   const hasExceededUserLimit = hasPricingPlanExceededUsers(organization, activeUsersCount);
   const hasExceededStorageLimit = hasPricingPlanExceededStorage(organization, usedStorageSpace);
@@ -203,12 +197,10 @@ export function PlanDashboardCard({
 
   const usedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(usedStorageMB / 1000).toFixed(1)}`
-      : `${(usedStorageMB / 1000 ** 2).toFixed(1)}`;
+      ? `${(usedStorageSpace / 1000).toFixed(1)}`
+      : `${(usedStorageSpace / 1000 ** 2).toFixed(1)}`;
 
   const storageLabel = `${usedStorageLabel}/${includedStorageLabel}`;
-
-  const hasPlanExceeded = isPlanKaputt(organization, usedStorageSpace, activeUsersCount);
 
   const redStrokeColor = "#ff4d4f";
   const greenStrokeColor = "#52c41a";
@@ -261,58 +253,48 @@ export function PlanDashboardCard({
   }
 
   return (
-    <>
-      {hasPlanExceeded ? (
-        <PlanExceededAlert organization={organization} />
-      ) : (
-        <PlanAboutToExceedWarning
-          organization={organization}
-          usedStorageSpace={usedStorageSpace.usedStorageSpace}
-        />
-      )}
-      <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
-        <Col>
-          <Card actions={upgradeUsersAction}>
-            <Row style={{ padding: "20px 35px" }}>
-              <Progress
-                type="dashboard"
-                percent={usedUsersPercentage}
-                format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
-                strokeColor={hasExceededUserLimit ? redStrokeColor : greenStrokeColor}
-                status={hasExceededUserLimit ? "exception" : "active"}
-              />
-            </Row>
-            <Row justify="center">Users</Row>
-          </Card>
-        </Col>
-        <Col>
-          <Card actions={upgradeStorageAction}>
-            <Row style={{ padding: "20px 35px" }}>
-              <Progress
-                type="dashboard"
-                percent={usedStoragePercentage}
-                format={() => storageLabel}
-                strokeColor={hasExceededStorageLimit ? redStrokeColor : greenStrokeColor}
-                status={hasExceededStorageLimit ? "exception" : "active"}
-              />
-            </Row>
-            <Row justify="center">Storage</Row>
-          </Card>
-        </Col>
-        <Col>
-          <Card actions={upgradePlanAction}>
-            <Row justify="center" align="middle" style={{ minHeight: 160, width: 188 }}>
-              <h3>{organization.pricingPlan}</h3>
-            </Row>
-            <Row justify="center">Current Plan</Row>
-          </Card>
-        </Col>
-      </Row>
-    </>
+    <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
+      <Col>
+        <Card actions={upgradeUsersAction}>
+          <Row style={{ padding: "20px 35px" }}>
+            <Progress
+              type="dashboard"
+              percent={usedUsersPercentage}
+              format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
+              strokeColor={hasExceededUserLimit ? redStrokeColor : greenStrokeColor}
+              status={hasExceededUserLimit ? "exception" : "active"}
+            />
+          </Row>
+          <Row justify="center">Users</Row>
+        </Card>
+      </Col>
+      <Col>
+        <Card actions={upgradeStorageAction}>
+          <Row style={{ padding: "20px 35px" }}>
+            <Progress
+              type="dashboard"
+              percent={usedStoragePercentage}
+              format={() => storageLabel}
+              strokeColor={hasExceededStorageLimit ? redStrokeColor : greenStrokeColor}
+              status={hasExceededStorageLimit ? "exception" : "active"}
+            />
+          </Row>
+          <Row justify="center">Storage</Row>
+        </Card>
+      </Col>
+      <Col>
+        <Card actions={upgradePlanAction}>
+          <Row justify="center" align="middle" style={{ minHeight: 160, width: 188 }}>
+            <h3>{organization.pricingPlan}</h3>
+          </Row>
+          <Row justify="center">Current Plan</Row>
+        </Card>
+      </Col>
+    </Row>
   );
 }
 
-function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
+export function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
   const hasPlanExpired = hasPricingPlanExpired(organization);
 
   const message = hasPlanExpired
@@ -347,20 +329,11 @@ function PlanExceededAlert({ organization }: { organization: APIOrganization }) 
   );
 }
 
-export function PlanAboutToExceedWarning({
-  organization,
-  usedStorageSpace,
-}: {
-  organization: APIOrganization;
-  usedStorageSpace: number;
-}) {
+export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
   const alerts = [];
   const isAboutToExpire =
     moment.duration(moment(organization.paidUntil).diff(moment())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);
-
-  const isAboutToExceedStorage =
-    usedStorageSpace + storageWarningThresholdMB <= organization.includedStorage;
 
   if (isAboutToExpire)
     alerts.push({
@@ -376,8 +349,7 @@ export function PlanAboutToExceedWarning({
         </Button>
       ),
     });
-
-  if (isAboutToExceedStorage)
+  else {
     alerts.push({
       message:
         "Your organization is about to exceed the storage space included in your current plan. Upgrade now to avoid your account from being blocked.",
@@ -391,8 +363,7 @@ export function PlanAboutToExceedWarning({
         </Button>
       ),
     });
-
-  if (!isAboutToExpire && !isAboutToExceedStorage) return null;
+  }
 
   return (
     <>

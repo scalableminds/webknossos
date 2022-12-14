@@ -7,12 +7,18 @@ import React, { PureComponent, useContext } from "react";
 import _ from "lodash";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { WhatsNextHeader } from "admin/welcome_ui";
-import type { APIOrganization, APIOrganizationStorageInfo, APIUser } from "types/api_flow_types";
+import type {
+  APIOrganization,
+  APIOrganizationStorageInfo,
+  APIPricingPlanStatus,
+  APIUser,
+} from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getOrganization,
   getOrganizationStorageSpace,
+  getPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
@@ -27,7 +33,7 @@ import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
-import { PlanAboutToExceedWarning } from "admin/organization/organization_cards";
+import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import { DatasetFolderView } from "./dataset_folder_view";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
@@ -51,7 +57,7 @@ type State = {
   activeTabKey: string;
   user: APIUser | null | undefined;
   organization: APIOrganization | null;
-  storageSpaceInfo: APIOrganizationStorageInfo | null;
+  pricingPlanStatus: APIPricingPlanStatus | null;
 };
 
 export const urlTokenToTabKeyMap = {
@@ -104,7 +110,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       activeTabKey,
       user: null,
       organization: null,
-      storageSpaceInfo: null,
+      pricingPlanStatus: null,
     };
   }
 
@@ -124,15 +130,15 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     const user =
       this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
 
-    const [organization, storageSpaceInfo] = await Promise.all([
+    const [organization, pricingPlanStatus] = await Promise.all([
       getOrganization(user.organization),
-      getOrganizationStorageSpace(user.organization),
+      getPricingPlanStatus(),
     ]);
 
     this.setState({
       user,
       organization,
-      storageSpaceInfo,
+      pricingPlanStatus,
     });
   }
 
@@ -283,21 +289,26 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       !activeUser.novelUserExperienceInfos.hasSeenDashboardWelcomeBanner ? (
         <WhatsNextHeader activeUser={activeUser} onDismiss={this.onDismissWelcomeBanner} />
       ) : null;
+    this.state.pricingPlanStatus?.isAlmostExceeded;
 
     // ToDo enable once pricing goes live
-    // const pricingPlanWarnings =
-    //   user.isAdmin && this.state.organization && this.state.storageSpaceInfo ? (
-    //     <PlanAboutToExceedWarning
-    //       organization={this.state.organization}
-    //       usedStorageSpace={this.state.storageSpaceInfo.usedStorageSpace}
-    //     />
-    //   ) : null;
+    const pricingPlanWarnings =
+      this.state.organization &&
+      this.state.pricingPlanStatus?.isAlmostExceeded &&
+      !this.state.pricingPlanStatus.isExceeded ? (
+        <PlanAboutToExceedAlert organization={this.state.organization} />
+      ) : null;
+    const pricingPlanErrors =
+      this.state.organization && this.state.pricingPlanStatus?.isExceeded ? (
+        <PlanExceededAlert organization={this.state.organization} />
+      ) : null;
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         {whatsNextBanner}
         <div className="container propagate-flex-height" style={{ minHeight: "66vh" }}>
-          {/* {pricingPlanWarnings} */}
+          {pricingPlanWarnings}
+          {pricingPlanErrors}
           {userHeader}
           <DatasetCacheProvider>
             <ActiveTabContext.Provider value={this.state.activeTabKey}>

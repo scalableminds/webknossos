@@ -14,11 +14,19 @@ import {
   deleteOrganization,
   updateOrganization,
   getUsers,
+  getPricingPlanStatus,
+  getOrganizationStorageSpace,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { coalesce } from "libs/utils";
-import { APIOrganization } from "types/api_flow_types";
-import { PlanDashboardCard, PlanExpirationCard, PlanUpgradeCard } from "./organization_cards";
+import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import {
+  PlanAboutToExceedAlert,
+  PlanDashboardCard,
+  PlanExceededAlert,
+  PlanExpirationCard,
+  PlanUpgradeCard,
+} from "./organization_cards";
 import { getActiveUserCount } from "./pricing_plan_utils";
 
 const FormItem = Form.Item;
@@ -41,6 +49,8 @@ type State = {
   isDeleting: boolean;
   organization: APIOrganization | null;
   activeUsersCount: number;
+  pricingPlanStatus: APIPricingPlanStatus | null;
+  usedStorageSpace: number | null;
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
@@ -52,6 +62,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     isDeleting: false,
     organization: null,
     activeUsersCount: 1,
+    pricingPlanStatus: null,
+    usedStorageSpace: null,
   };
   formRef = React.createRef<FormInstance>();
 
@@ -89,10 +101,13 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingData: true,
     });
-    const [organization, users] = await Promise.all([
+    const [organization, users, pricingPlanStatus, usedStorageSpace] = await Promise.all([
       getOrganization(this.props.organizationName),
       getUsers(),
+      getPricingPlanStatus(),
+      getOrganizationStorageSpace(this.props.organizationName),
     ]);
+
     const { displayName, newUserMailingList, pricingPlan } = organization;
     this.setState({
       displayName,
@@ -100,7 +115,9 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       newUserMailingList,
       isFetchingData: false,
       organization,
+      pricingPlanStatus,
       activeUsersCount: getActiveUserCount(users),
+      usedStorageSpace: usedStorageSpace.usedStorageSpace,
     });
   }
 
@@ -144,7 +161,13 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    if (this.state.isFetchingData || !this.state.organization || !this.state.pricingPlan)
+    if (
+      this.state.isFetchingData ||
+      !this.state.organization ||
+      !this.state.pricingPlan ||
+      !this.state.pricingPlanStatus ||
+      this.state.usedStorageSpace === null
+    )
       return (
         <div
           className="container"
@@ -173,9 +196,17 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         <Row style={{ marginBottom: 20 }}>
           <h2>{this.state.displayName}</h2>
         </Row>
+        {this.state.pricingPlanStatus.isExceeded ? (
+          <PlanExceededAlert organization={this.state.organization} />
+        ) : null}
+        {this.state.pricingPlanStatus.isAlmostExceeded &&
+        !this.state.pricingPlanStatus.isExceeded ? (
+          <PlanAboutToExceedAlert organization={this.state.organization} />
+        ) : null}
         <PlanDashboardCard
           organization={this.state.organization}
           activeUsersCount={this.state.activeUsersCount}
+          usedStorageSpace={this.state.usedStorageSpace}
         />
         <PlanExpirationCard organization={this.state.organization} />
         <PlanUpgradeCard organization={this.state.organization} />

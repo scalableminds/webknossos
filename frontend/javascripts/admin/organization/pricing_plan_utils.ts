@@ -37,20 +37,7 @@ export function hasPricingPlanExceededUsers(
 
 export function hasPricingPlanExceededStorage(
   organization: APIOrganization,
-  storageInfo: APIOrganizationStorageInfo,
+  usedStorageSpaceMB: number,
 ): boolean {
-  const usedStorageMB = storageInfo.usedStorageSpace;
-  return usedStorageMB > organization.includedStorage;
-}
-
-export function isPlanKaputt(
-  organization: APIOrganization,
-  storageInfo: APIOrganizationStorageInfo,
-  activeUserCount: number,
-): boolean {
-  return (
-    hasPricingPlanExpired(organization) ||
-    hasPricingPlanExceededStorage(organization, storageInfo) ||
-    hasPricingPlanExceededUsers(organization, activeUserCount)
-  );
+  return usedStorageSpaceMB > organization.includedStorage;
 }

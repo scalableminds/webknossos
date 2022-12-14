@@ -14,6 +14,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsNull, JsValue, Json, __}
 import play.api.mvc.{Action, AnyContent}
 import utils.WkConf
+import scala.concurrent.duration._
 import oxalis.mail.{DefaultMails, Send}
 
 import scala.concurrent.ExecutionContext
@@ -191,9 +192,11 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         organization <- organizationDAO.findOne(request.identity._organization)
         activeUserCount <- userDAO.countAllForOrganization(request.identity._organization)
         // Note that this does not yet account for storage
-        isExceeded = organization.includedUsers.exists(userLimit => activeUserCount > userLimit)
-        isAlmostExceeded = activeUserCount > 1 && organization.includedUsers.exists(userLimit =>
-          activeUserCount > userLimit - 2)
+        isExceeded = organization.includedUsers.exists(userLimit => activeUserCount > userLimit) || organization.paidUntil
+          .exists(_.isPast)
+        isAlmostExceeded = (activeUserCount > 1 && organization.includedUsers.exists(userLimit =>
+          activeUserCount > userLimit - 2)) || organization.paidUntil.exists(paidUntil =>
+          (paidUntil - (6 * 7 days)).isPast)
       } yield
         Ok(
           Json.obj(

@@ -284,19 +284,20 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         <WhatsNextHeader activeUser={activeUser} onDismiss={this.onDismissWelcomeBanner} />
       ) : null;
 
-    const pricingPlanWarnings =
-      user.isAdmin && this.state.organization && this.state.storageSpaceInfo ? (
-        <PlanAboutToExceedWarning
-          organization={this.state.organization}
-          usedStorageSpace={this.state.storageSpaceInfo.usedStorageSpace}
-        />
-      ) : null;
+    // ToDo enable once pricing goes live
+    // const pricingPlanWarnings =
+    //   user.isAdmin && this.state.organization && this.state.storageSpaceInfo ? (
+    //     <PlanAboutToExceedWarning
+    //       organization={this.state.organization}
+    //       usedStorageSpace={this.state.storageSpaceInfo.usedStorageSpace}
+    //     />
+    //   ) : null;
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         {whatsNextBanner}
         <div className="container propagate-flex-height" style={{ minHeight: "66vh" }}>
-          {pricingPlanWarnings}
+          {/* {pricingPlanWarnings} */}
           {userHeader}
           <DatasetCacheProvider>
             <ActiveTabContext.Provider value={this.state.activeTabKey}>

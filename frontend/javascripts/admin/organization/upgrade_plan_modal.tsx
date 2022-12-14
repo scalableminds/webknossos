@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Divider, InputNumber, Modal } from "antd";
+import { Button, Divider, InputNumber, Modal } from "antd";
 import moment from "moment";
 import {
   DatabaseOutlined,
@@ -19,6 +19,7 @@ import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./organization_edit_view";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
+import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 
 const ModalInformationFooter = (
   <>
@@ -166,30 +167,124 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
   );
 }
 
-function upgradePricingPlan(organization: APIOrganization) {
+function upgradePricingPlan(
+  organization: APIOrganization,
+  targetPlan?: PricingPlanEnum | "TeamAndPower",
+) {
+  let target = targetPlan;
+
+  if (targetPlan === undefined) {
+    switch (organization.pricingPlan) {
+      case PricingPlanEnum.Basic: {
+        target = "TeamAndPower";
+        break;
+      }
+      case PricingPlanEnum.Team:
+      case PricingPlanEnum.TeamTrial: {
+        target = PricingPlanEnum.Power;
+        break;
+      }
+      case PricingPlanEnum.Custom:
+      default:
+        return;
+    }
+  }
+
+  let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
+  let okButtonCallback: (() => Promise<void>) | undefined = () =>
+    sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+  let modalBody = (
+    <>
+      <p>Upgrade Highlights include:</p>
+      <ul>
+        {teamPlanFeatures.map((feature) => (
+          <li key={feature.slice(0, 10)}>{feature}</li>
+        ))}
+      </ul>
+    </>
+  );
+
+  if (target === PricingPlanEnum.Power) {
+    title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
+    okButtonCallback = () => sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+    modalBody = (
+      <>
+        <p>Upgrade Highlights include:</p>
+        <ul>
+          {powerPlanFeatures.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
+      </>
+    );
+  }
+
+  if (target === "TeamAndPower") {
+    title = "Upgrade to unlock more features";
+    okButtonCallback = undefined;
+    modalBody = (
+      <TeamAndPowerPlanUpgradeCards
+        teamUpgradeCallback={() => {
+          sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+        }}
+        powerUpgradeCallback={() => {
+          sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+        }}
+      />
+    );
+  }
+
+  renderIndependently((destroyCallback) => (
+    <UpgradePricingPlanModal
+      title={title}
+      modalBody={modalBody}
+      okButtonCallback={okButtonCallback}
+      destroy={destroyCallback}
+    />
+  ));
+}
+
+function UpgradePricingPlanModal({
+  title,
+  modalBody,
+  destroy,
+  okButtonCallback,
+}: {
+  title: string;
+  modalBody: React.ReactElement;
+  destroy: () => void;
+  okButtonCallback: (() => Promise<void>) | undefined;
+}) {
   const introSentence =
     "Upgrading your webKnossos plan will unlock more advanced features and increase your user and storage quotas.";
 
-  let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
-  let featureDescriptions = teamPlanFeatures;
-  let callback = () => sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
-
-  if (
-    organization.pricingPlan === PricingPlanEnum.Team ||
-    organization.pricingPlan === PricingPlanEnum.TeamTrial
-  ) {
-    title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
-    featureDescriptions = powerPlanFeatures;
-    callback = () => sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
-  }
-
-  Modal.confirm({
-    title,
-    okText: "Request Upgrade",
-    onOk: callback,
-    icon: <RocketOutlined style={{ color: "var(--ant-primary-color)" }} />,
-    width: 800,
-    content: (
+  return (
+    <Modal
+      open
+      title={
+        <>
+          <RocketOutlined style={{ color: "var(--ant-primary-color)" }} /> {title}
+        </>
+      }
+      width={800}
+      onCancel={destroy}
+      footer={
+        <>
+          <Button onClick={destroy}>Cancel</Button>
+          {okButtonCallback ? (
+            <Button
+              onClick={() => {
+                okButtonCallback();
+                destroy();
+              }}
+              type="primary"
+            >
+              Request Upgrade
+            </Button>
+          ) : null}
+        </>
+      }
+    >
       <div
         style={{
           background:
@@ -197,16 +292,11 @@ function upgradePricingPlan(organization: APIOrganization) {
         }}
       >
         <p>{introSentence}</p>
-        <p>Upgrade Highlights include:</p>
-        <ul>
-          {featureDescriptions.map((feature) => (
-            <li key={feature.slice(0, 10)}>{feature}</li>
-          ))}
-        </ul>
+        {modalBody}
         {ModalInformationFooter}
       </div>
-    ),
-  });
+    </Modal>
+  );
 }
 
 export default {

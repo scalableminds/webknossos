@@ -24,27 +24,22 @@ import {
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
-export function PlanUpgradeCard({ organization }: { organization: APIOrganization }) {
-  if (
-    organization.pricingPlan === PricingPlanEnum.Power ||
-    organization.pricingPlan === PricingPlanEnum.PowerTrial ||
-    organization.pricingPlan === PricingPlanEnum.Custom
-  )
-    return null;
-
-  let title = `Upgrade to unlock more features`;
-  let cardBody = (
+export function TeamAndPowerPlanUpgradeCards({
+  teamUpgradeCallback,
+  powerUpgradeCallback,
+}: {
+  teamUpgradeCallback: () => void;
+  powerUpgradeCallback: () => void;
+}) {
+  return (
     <Row gutter={24}>
       <Col span={12}>
         <Card
           title={`${PricingPlanEnum.Team} Plan`}
           bodyStyle={{ minHeight: 220, opacity: 0.8 }}
           actions={[
-            <Button
-              type="primary"
-              onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
-            >
-              <PlusCircleOutlined /> Upgrade
+            <Button type="primary" onClick={teamUpgradeCallback}>
+              <PlusCircleOutlined /> Request Upgrade
             </Button>,
           ]}
         >
@@ -60,11 +55,8 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
           title={`${PricingPlanEnum.Power} Plan`}
           bodyStyle={{ minHeight: 220, opacity: 0.8 }}
           actions={[
-            <Button
-              type="primary"
-              onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
-            >
-              <PlusCircleOutlined /> Upgrade
+            <Button type="primary" onClick={powerUpgradeCallback}>
+              <PlusCircleOutlined /> Request Upgrade
             </Button>,
           ]}
         >
@@ -76,6 +68,27 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
         </Card>
       </Col>
     </Row>
+  );
+}
+
+export function PlanUpgradeCard({ organization }: { organization: APIOrganization }) {
+  if (
+    organization.pricingPlan === PricingPlanEnum.Power ||
+    organization.pricingPlan === PricingPlanEnum.PowerTrial ||
+    organization.pricingPlan === PricingPlanEnum.Custom
+  )
+    return null;
+
+  let title = "Upgrade to unlock more features";
+  let cardBody = (
+    <TeamAndPowerPlanUpgradeCards
+      teamUpgradeCallback={() =>
+        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Team)
+      }
+      powerUpgradeCallback={() =>
+        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
+      }
+    />
   );
 
   if (

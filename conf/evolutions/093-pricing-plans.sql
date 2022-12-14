@@ -17,7 +17,7 @@ ALTER TABLE webknossos.organizations
   ALTER COLUMN pricingPLan DROP DEFAULT,
   ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING
     CASE pricingPlan
-      WHEN 'Basic'::webknossos.prizing_plans_old THEN 'Basic'::webknossos.PRICING_PLANS
+      WHEN 'Free'::webknossos.prizing_plans_old THEN 'Basic'::webknossos.PRICING_PLANS
       WHEN 'Premium'::webknossos.prizing_plans_old THEN 'Team'::webknossos.PRICING_PLANS
       WHEN 'Pilot'::webknossos.prizing_plans_old THEN 'Team'::webknossos.PRICING_PLANS
       ELSE 'Custom'::webknossos.PRICING_PLANS

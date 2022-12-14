@@ -31,13 +31,13 @@ case class Organization(
 
 class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
-  val collection = Organizations
+  protected val collection = Organizations
 
-  def idColumn(x: Organizations): Rep[String] = x._Id
+  protected def idColumn(x: Organizations): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
-  def parse(r: OrganizationsRow): Fox[Organization] =
+  protected def parse(r: OrganizationsRow): Fox[Organization] =
     for {
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
     } yield {
@@ -57,11 +57,11 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       )
     }
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
+  override protected def readAccessQ(requestingUserId: ObjectId): String =
     s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))" +
       s"or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))"
 
-  override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
     case Some(_) => "true"
     case _       => "false"
   }

@@ -4,19 +4,19 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import io.swagger.annotations._
 import models.team._
-import models.user.UserTeamRolesDAO
+import models.user.UserDAO
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json._
-import utils.ObjectId
-import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
+import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
 class TeamController @Inject()(teamDAO: TeamDAO,
-                               userTeamRolesDAO: UserTeamRolesDAO,
+                               userDAO: UserDAO,
                                teamService: TeamService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
@@ -46,7 +46,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
       _ <- bool2Fox(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN
       _ <- teamService.assertNoReferences(teamIdValidated) ?~> "team.delete.inUse" ~> FORBIDDEN
       _ <- teamDAO.deleteOne(teamIdValidated)
-      _ <- userTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
+      _ <- userDAO.removeTeamFromAllUsers(teamIdValidated)
       _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(teamIdValidated)
     } yield JsonOk(Messages("team.deleted"))
   }

@@ -47,15 +47,15 @@ object Script {
 
 class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
-  val collection = Scripts
+  protected val collection = Scripts
 
-  def idColumn(x: Scripts): Rep[String] = x._Id
-  def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Scripts): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
+  override protected def readAccessQ(requestingUserId: ObjectId): String =
     s"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = '$requestingUserId')"
 
-  def parse(r: ScriptsRow): Fox[Script] =
+  protected def parse(r: ScriptsRow): Fox[Script] =
     Fox.successful(
       Script(
         ObjectId(r._Id),

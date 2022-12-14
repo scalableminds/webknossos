@@ -62,11 +62,11 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                            dataSetDataLayerDAO: DataSetDataLayerDAO,
                            organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
-  val collection = Datasets
+  protected val collection = Datasets
 
-  def idColumn(x: Datasets): Rep[String] = x._Id
+  protected def idColumn(x: Datasets): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
@@ -79,7 +79,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   private def writeScaleLiteral(scale: Vec3Double): String =
     writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
 
-  def parse(r: DatasetsRow): Fox[DataSet] =
+  protected def parse(r: DatasetsRow): Fox[DataSet] =
     for {
       scale <- parseScaleOpt(r.scale)
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
@@ -405,7 +405,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
 class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-  def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
+  private def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
     for {
       resolution <- Vec3Int.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
     } yield resolution
@@ -447,7 +447,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def parseRow(row: DatasetLayersRow, dataSetId: ObjectId, skipResolutions: Boolean = false): Fox[DataLayer] = {
+  private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId, skipResolutions: Boolean): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox

@@ -30,12 +30,12 @@ case class MultiUser(
 
 class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
-  val collection = Multiusers
+  protected val collection = Multiusers
 
-  def idColumn(x: Multiusers): Rep[String] = x._Id
-  def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Multiusers): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted
 
-  def parse(r: MultiusersRow): Fox[MultiUser] =
+  protected def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
       novelUserExperienceInfos <- JsonHelper.parseAndValidateJson[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox

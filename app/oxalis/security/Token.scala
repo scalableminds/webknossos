@@ -54,12 +54,12 @@ object Token {
 
 class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
-  val collection = Tokens
+  protected val collection = Tokens
 
-  def idColumn(x: Tokens): Rep[String] = x._Id
-  def isDeletedColumn(x: Tokens): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Tokens): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Tokens): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TokensRow): Fox[Token] =
+  protected def parse(r: TokensRow): Fox[Token] =
     for {
       tokenType <- TokenType.fromString(r.tokentype).toFox
     } yield {

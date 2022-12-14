@@ -144,12 +144,12 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
 class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayerDAO)(
     implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
-  val collection = Annotations
+  protected val collection = Annotations
 
-  def idColumn(x: Annotations): Rep[String] = x._Id
-  def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Annotations): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
-  def parse(r: AnnotationsRow): Fox[Annotation] =
+  protected def parse(r: AnnotationsRow): Fox[Annotation] =
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
@@ -180,7 +180,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       )
     }
 
-  override def anonymousReadAccessQ(sharingToken: Option[String]) = s"visibility = '${AnnotationVisibility.Public}'"
+  protected override def anonymousReadAccessQ(sharingToken: Option[String]) = s"visibility = '${AnnotationVisibility.Public}'"
 
   private def listAccessQ(requestingUserId: ObjectId): String =
     s"""
@@ -206,7 +206,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         )
        """
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
+  override protected def readAccessQ(requestingUserId: ObjectId): String =
     s"""(
               visibility = '${AnnotationVisibility.Public}'
            or (visibility = '${AnnotationVisibility.Internal}'
@@ -218,12 +218,12 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
              in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin)
          )"""
 
-  override def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '$requestingUserId') or _user = '$requestingUserId'
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)
         in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
 
-  override def updateAccessQ(requestingUserId: ObjectId): String =
+  override protected def updateAccessQ(requestingUserId: ObjectId): String =
     deleteAccessQ(requestingUserId)
 
   // read operations
@@ -543,36 +543,32 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       _ <- run(
         sqlu"insert into webknossos.annotation_contributors (_annotation, _user) values($id, $userId) on conflict do nothing")
     } yield ()
-}
-
-class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient) {
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllSharedForTeams(teams: List[ObjectId]): Fox[List[Annotation]] =
     for {
       result <- run(
-        sql"""select distinct #${annotationDAO.columnsWithPrefix("a.")} from webknossos.annotations_ a
+        sql"""select distinct #${columnsWithPrefix("a.")} from webknossos.annotations_ a
                             join webknossos.annotation_sharedTeams l on a._id = l._annotation
                             where l._team in #${writeStructTupleWithQuotes(teams.map(t => sanitize(t.toString)))}"""
           .as[AnnotationsRow])
-      parsed <- Fox.combined(result.toList.map(annotationDAO.parse))
+      parsed <- Fox.combined(result.toList.map(parse))
     } yield parsed
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+    implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.annotation_sharedTeams where _annotation = $annotationId"
 
-    val insertQueries = teams.map(teamId => sqlu"""insert into webknossos.annotation_sharedTeams(_annotation, _team)
+    val insertQueries = teams.map(teamId =>
+      sqlu"""insert into webknossos.annotation_sharedTeams(_annotation, _team)
                                                               values($annotationId, $teamId)""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
-      _ <- annotationDAO.assertUpdateAccess(annotationId)
+      _ <- assertUpdateAccess(annotationId)
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
-
 }

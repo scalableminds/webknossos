@@ -1,8 +1,10 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
@@ -23,9 +25,9 @@ case class Organization(
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
-    lastTermsOfServiceAcceptanceTime: Option[Long] = None,
+    lastTermsOfServiceAcceptanceTime: Option[Instant] = None,
     lastTermsOfServiceAcceptanceVersion: Int = 0,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -52,9 +54,15 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
+<<<<<<< HEAD
         r.lasttermsofserviceacceptancetime.map(_.getTime),
         r.lasttermsofserviceacceptanceversion,
         r.created.getTime,
+||||||| merged common ancestors
+        r.created.getTime,
+=======
+        Instant.fromSql(r.created),
+>>>>>>> master
         r.isdeleted
       )
     }
@@ -93,9 +101,9 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                       VALUES(
                         ${o._id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName},
                         ${o._rootFolder}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
-                        ${o.lastTermsOfServiceAcceptanceTime.map(new java.sql.Timestamp(_))},
+                        ${o.lastTermsOfServiceAcceptanceTime},
                         ${o.lastTermsOfServiceAcceptanceVersion},
-                        ${new java.sql.Timestamp(o.created)}, ${o.isDeleted}
+                        ${o.created}, ${o.isDeleted}
                       )
             """)
     } yield ()

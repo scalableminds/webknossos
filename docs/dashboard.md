@@ -9,9 +9,11 @@ You can *view* a dataset (read-only) or start new annotations from this screen.
 Search for your dataset by using the search bar or sorting any of the table columns.
 Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
-The presentation differs corresponding to your user role.
+The presentation differs depending on your user role.
 Regular users can only start or continue annotations and work on tasks.
 [Admins and Team Managers](./users.md#access-rights-roles) also have access to additional administration actions, access-rights management, and advanced dataset properties for each dataset.
+
+Read more about the organization of datasets [here](./datasets.md#dataset-organization).
 
 ![Dashboard for Team Managers or Admins with access to dataset settings and additional administration actions.](./images/dashboard_datasets.jpeg)
 ![Dashboard for Regular Users](./images/dashboard_regular_user.jpeg)

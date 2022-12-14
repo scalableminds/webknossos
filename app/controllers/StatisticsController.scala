@@ -9,6 +9,7 @@ import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.time.Instant
 import play.api.i18n.Messages
 import play.api.libs.json.Json._
 import play.api.libs.json._
@@ -47,7 +48,10 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
           for {
             organizationId <- Fox.successful(request.identity._organization)
             _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, organizationId)) ?~> "notAllowed" ~> FORBIDDEN
-            times <- timeSpanService.loggedTimePerInterval(handler, start, end, organizationId)
+            times <- timeSpanService.loggedTimePerInterval(handler,
+                                                           start.map(Instant(_)),
+                                                           end.map(Instant(_)),
+                                                           organizationId)
             numberOfUsers <- userDAO.countAllForOrganization(organizationId)
             numberOfDatasets <- dataSetDAO.countAllForOrganization(organizationId)
             numberOfAnnotations <- annotationDAO.countAllForOrganization(organizationId)
@@ -76,7 +80,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
         users <- userDAO.findAll //Access query ensures only users of own orga are shown
         notUnlistedUsers = users.filter(!_.isUnlisted)
         usersWithTimes <- Fox.serialCombined(notUnlistedUsers)(user =>
-          timeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
+          timeSpanService.loggedTimeOfUser(user, handler, start.map(Instant(_)), end.map(Instant(_))).map(user -> _))
         data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
         json <- Fox.combined(data.map {
           case (user, times) =>

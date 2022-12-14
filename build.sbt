@@ -1,5 +1,3 @@
-import play.routes.compiler.InjectedRoutesGenerator
-import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
 ThisBuild / version := "wk"
@@ -24,15 +22,12 @@ ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
   "-Xlint:deprecation"
 )
-
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 scapegoatIgnoredFiles := Seq(".*/Tables.scala",
                              ".*/Routes.scala",
-                             ".*/ReverseRoutes.scala",
-                             ".*/JavaScriptReverseRoutes.scala",
                              ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
@@ -49,7 +44,7 @@ lazy val protocolBufferSettings = Seq(
   )
 )
 
-lazy val copyConfFilesSetting = {
+lazy val copyMessagesFilesSetting = {
   lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
   copyMessages := {
     val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
@@ -70,9 +65,9 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .settings(
     name := "webknossos-datastore",
     commonSettings,
+    generateReverseRouter := false,
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
-    routesGenerator := InjectedRoutesGenerator,
     protocolBufferSettings,
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
@@ -82,19 +77,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    copyConfFilesSetting,
-    assembly / assemblyMergeStrategy := {
-      case PathList(ps @ _*) if ps.last endsWith ".class" => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last endsWith ".proto" => MergeStrategy.last
-      case PathList(ps @ _*) if List("io.netty.versions.properties", "mailcap.default",
-        "mimetypes.default", "native-image.properties").contains(ps.last) => MergeStrategy.last
-      case PathList(ps @ _*) if List("application.conf", "reference-overrides.conf").contains(ps.last) => MergeStrategy.concat
-      case x =>
-        val oldStrategy = (assembly / assemblyMergeStrategy).value
-        oldStrategy(x)
-    },
-    assembly / test := {},
-    assembly / assemblyJarName := s"webknossos-datastore-${BuildInfoSettings.webKnossosVersion}.jar"
+    copyMessagesFilesSetting
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
@@ -104,10 +87,10 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
   .settings(
     name := "webknossos-tracingstore",
     commonSettings,
+    generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    routesGenerator := InjectedRoutesGenerator,
-    copyConfFilesSetting
+    copyMessagesFilesSetting
   )
 
 lazy val webknossos = (project in file("."))
@@ -117,9 +100,9 @@ lazy val webknossos = (project in file("."))
   .settings(
     name := "webknossos",
     commonSettings,
+    generateReverseRouter := false,
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,
-    routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= Dependencies.webknossosDependencies,
     Assets / sourceDirectory := file("none"),
     updateOptions := updateOptions.value.withLatestSnapshots(true),

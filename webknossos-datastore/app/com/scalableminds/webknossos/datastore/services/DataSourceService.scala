@@ -1,13 +1,11 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, FileWriter}
-import java.nio.file.{Files, Path, Paths}
-
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
@@ -17,11 +15,11 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import org.joda.time.DateTime
-import org.joda.time.format.ISODateTimeFormat
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
+import java.io.{File, FileWriter}
+import java.nio.file.{Files, Path, Paths}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.Source
@@ -180,9 +178,8 @@ class DataSourceService @Inject()(
     } else {
       "<empty>"
     }
-    val timestamp = ISODateTimeFormat.dateTime.print(new DateTime())
     val outputForLogfile =
-      f"Contents of $propertiesFileName were changed by webKnossos at $timestamp. Old content: \n\n$previousContentOrEmpty\n\n"
+      f"Contents of $propertiesFileName were changed by webKnossos at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
     val logfilePath = dataSourcePath.resolve(logFileName)
     try {
       val fileWriter = new FileWriter(logfilePath.toString, true)

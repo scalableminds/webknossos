@@ -38,6 +38,8 @@ export type DatasetCollectionContextValue = {
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
   supportsFolders: true;
+  selectedDatasets: APIMaybeUnimportedDataset[];
+  setSelectedDatasets: React.Dispatch<React.SetStateAction<APIMaybeUnimportedDataset[]>>;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   searchRecursively: boolean;
@@ -83,6 +85,7 @@ export default function DatasetCollectionContextProvider({
   const isMutating = useIsMutating() > 0;
   const { data: folder } = useFolderQuery(activeFolderId);
 
+  const [selectedDatasets, setSelectedDatasets] = useState<APIMaybeUnimportedDataset[]>([]);
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
     (value: string | null) => {
@@ -203,6 +206,8 @@ export default function DatasetCollectionContextProvider({
 
         datasetsInFolderQuery.refetch();
       },
+      selectedDatasets,
+      setSelectedDatasets,
       globalSearchQuery,
       setGlobalSearchQuery,
       searchRecursively,
@@ -238,6 +243,8 @@ export default function DatasetCollectionContextProvider({
       updateFolderMutation,
       moveFolderMutation,
       updateDatasetMutation,
+      selectedDatasets,
+      setSelectedDatasets,
       globalSearchQuery,
     ],
   );

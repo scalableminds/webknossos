@@ -2023,7 +2023,7 @@ export async function sendUpgradePricingPlanStorageEmail(requestedStorage: numbe
 }
 
 export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
-  return Request.receiveJSON(`/api/pricing/status`);
+  return Request.receiveJSON("/api/pricing/status");
 }
 
 // ### BuildInfo webknossos

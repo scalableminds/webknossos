@@ -291,7 +291,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       ) : null;
     this.state.pricingPlanStatus?.isAlmostExceeded;
 
-    // ToDo enable once pricing goes live
+    // ToDo enable components below once pricing goes live
     const pricingPlanWarnings =
       this.state.organization &&
       this.state.pricingPlanStatus?.isAlmostExceeded &&
@@ -307,8 +307,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         {whatsNextBanner}
         <div className="container propagate-flex-height" style={{ minHeight: "66vh" }}>
-          {pricingPlanWarnings}
-          {pricingPlanErrors}
+          {/* {pricingPlanWarnings}
+          {pricingPlanErrors} */}
           {userHeader}
           <DatasetCacheProvider>
             <ActiveTabContext.Provider value={this.state.activeTabKey}>

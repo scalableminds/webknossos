@@ -25,31 +25,31 @@ class SQLClient @Inject()(configuration: Configuration, slackNotificationService
 }
 
 trait SQLTypeImplicits {
-  protected implicit object SetObjectId extends SetParameter[ObjectId] {
+  implicit protected object SetObjectId extends SetParameter[ObjectId] {
     def apply(v: ObjectId, pp: PositionedParameters): Unit = pp.setString(v.id)
   }
 
-  protected implicit object SetObjectIdOpt extends SetParameter[Option[ObjectId]] {
+  implicit protected object SetObjectIdOpt extends SetParameter[Option[ObjectId]] {
     def apply(v: Option[ObjectId], pp: PositionedParameters): Unit = pp.setStringOption(v.map(_.id))
   }
 
-  protected implicit object GetObjectId extends GetResult[ObjectId] {
+  implicit protected object GetObjectId extends GetResult[ObjectId] {
     override def apply(v1: PositionedResult): ObjectId = ObjectId(v1.<<)
   }
 
-  protected implicit object SetInstant extends SetParameter[Instant] {
+  implicit protected object SetInstant extends SetParameter[Instant] {
     def apply(v: Instant, pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
   }
 
-  protected implicit object SetInstantOpt extends SetParameter[Option[Instant]] {
+  implicit protected object SetInstantOpt extends SetParameter[Option[Instant]] {
     def apply(v: Option[Instant], pp: PositionedParameters): Unit = pp.setTimestampOption(v.map(_.toSql))
   }
 
-  protected implicit object GetInstant extends GetResult[Instant] {
+  implicit protected object GetInstant extends GetResult[Instant] {
     override def apply(v1: PositionedResult): Instant = Instant.fromSql(v1.<<)
   }
 
-  protected implicit object GetInstantOpt extends GetResult[Option[Instant]] {
+  implicit protected object GetInstantOpt extends GetResult[Option[Instant]] {
     override def apply(v1: PositionedResult): Option[Instant] = v1.nextTimestampOption().map(Instant.fromSql)
   }
 }
@@ -62,8 +62,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   protected lazy val transactionSerializationError = "could not serialize access"
 
   protected def run[R](query: DBIOAction[R, NoStream, Nothing],
-             retryCount: Int = 0,
-             retryIfErrorContains: List[String] = List()): Fox[R] = {
+                       retryCount: Int = 0,
+                       retryIfErrorContains: List[String] = List()): Fox[R] = {
     val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) =>

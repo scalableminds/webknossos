@@ -15,10 +15,8 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
-class TeamController @Inject()(teamDAO: TeamDAO,
-                               userDAO: UserDAO,
-                               teamService: TeamService,
-                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
+    implicit ec: ExecutionContext)
     extends Controller {
 
   private def teamNameReads: Reads[String] =

@@ -180,7 +180,8 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       )
     }
 
-  protected override def anonymousReadAccessQ(sharingToken: Option[String]) = s"visibility = '${AnnotationVisibility.Public}'"
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]) =
+    s"visibility = '${AnnotationVisibility.Public}'"
 
   private def listAccessQ(requestingUserId: ObjectId): String =
     s"""
@@ -556,19 +557,18 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     } yield parsed
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
-    implicit ctx: DBAccessContext): Fox[Unit] = {
+      implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.annotation_sharedTeams where _annotation = $annotationId"
 
-    val insertQueries = teams.map(teamId =>
-      sqlu"""insert into webknossos.annotation_sharedTeams(_annotation, _team)
+    val insertQueries = teams.map(teamId => sqlu"""insert into webknossos.annotation_sharedTeams(_annotation, _team)
                                                               values($annotationId, $teamId)""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
       _ <- assertUpdateAccess(annotationId)
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError))
+               retryCount = 50,
+               retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 }

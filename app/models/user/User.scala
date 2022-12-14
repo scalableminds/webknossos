@@ -280,7 +280,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     sqlu"insert into webknossos.user_team_roles(_user, _team, isTeamManager) values($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})"
 
   def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: List[TeamMembership])(
-    implicit ctx: DBAccessContext): Fox[Unit] = {
+      implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.user_team_roles where _user = $userId"
     val insertQueries = teamMemberships.map(insertTeamMembershipQuery(userId, _))
     for {

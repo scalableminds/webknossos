@@ -92,12 +92,12 @@ case class Job(
 
 class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
-  val collection = Jobs
+  protected val collection = Jobs
 
-  def idColumn(x: Jobs): Rep[String] = x._Id
-  def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Jobs): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
 
-  def parse(r: JobsRow): Fox[Job] =
+  protected def parse(r: JobsRow): Fox[Job] =
     for {
       manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString)
       state <- JobState.fromString(r.state)
@@ -120,7 +120,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       )
     }
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""_owner = '$requestingUserId'"""
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =

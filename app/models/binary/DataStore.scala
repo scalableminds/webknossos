@@ -82,15 +82,15 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
 
 class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
-  val collection = Datastores
+  protected val collection = Datastores
 
-  def idColumn(x: Datastores): Rep[String] = x.name
-  def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Datastores): Rep[String] = x.name
+  protected def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
+  override protected def readAccessQ(requestingUserId: ObjectId): String =
     s"(onlyAllowedOrganization is null) OR (onlyAllowedOrganization in (select _organization from webknossos.users_ where _id = '$requestingUserId'))"
 
-  def parse(r: DatastoresRow): Fox[DataStore] =
+  protected def parse(r: DatastoresRow): Fox[DataStore] =
     Fox.successful(
       DataStore(
         r.name,

@@ -25,10 +25,12 @@ export default class ErrorBoundary extends React.Component<
 
       return (
         <div style={{ margin: 32 }}>
-          <h1>An unknown error occured.</h1>
+          <h1>webKnossos encountered an error</h1>
 
           <p>
-            Please try to reload the page. If the error persists, feel free to{" "}
+            Please try reloading the page. The error has been reported to our system and will be
+            investigated. If the error persists and/or you need help as soon as possible, feel free
+            to{" "}
             <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
               contact us.
             </a>

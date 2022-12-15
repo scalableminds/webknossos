@@ -1,9 +1,11 @@
 package models.project
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
@@ -27,7 +29,7 @@ case class Project(
     paused: Boolean,
     expectedTime: Option[Long],
     isBlacklistedFromReport: Boolean,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -71,7 +73,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.paused,
         r.expectedtime,
         r.isblacklistedfromreport,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
@@ -148,7 +150,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                                      paused, expectedTime, isblacklistedfromreport, created, isDeleted)
                          values(${p._id}, $organizationId, ${p._team}, ${p._owner}, ${p.name}, ${p.priority},
                          ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport},
-                         ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
+                         ${p.created}, ${p.isDeleted})""")
     } yield ()
 
   def updateOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =

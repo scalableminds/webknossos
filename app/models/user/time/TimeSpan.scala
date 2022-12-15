@@ -1,17 +1,18 @@
 package models.user.time
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import javax.inject.Inject
-import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
-case class TimeSpanRequest(users: List[String], start: Long, end: Long)
+case class TimeSpanRequest(users: List[String], start: Instant, end: Instant)
 object TimeSpanRequest { implicit val timeSpanRequest: OFormat[TimeSpanRequest] = Json.format[TimeSpanRequest] }
 
 case class TimeSpan(
@@ -19,31 +20,27 @@ case class TimeSpan(
     _user: ObjectId,
     _annotation: Option[ObjectId],
     time: Long,
-    lastUpdate: Long,
+    lastUpdate: Instant,
     numberOfUpdates: Long = 0,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) {
-  def createdAsDateTime = new DateTime(created)
-
-  def addTime(duration: Long, timestamp: Long): TimeSpan =
-    this.copy(lastUpdate = timestamp, time = time + duration, numberOfUpdates = this.numberOfUpdates + 1)
+  def addTime(duration: FiniteDuration, timestamp: Instant): TimeSpan =
+    this.copy(lastUpdate = timestamp, time = time + duration.toMillis, numberOfUpdates = this.numberOfUpdates + 1)
 }
 
 object TimeSpan {
 
   def groupByMonth(timeSpan: TimeSpan): Month =
-    Month(timeSpan.createdAsDateTime.getMonthOfYear, timeSpan.createdAsDateTime.getYear)
+    Month(timeSpan.created.monthOfYear, timeSpan.created.year)
 
   def groupByWeek(timeSpan: TimeSpan): Week =
-    Week(timeSpan.createdAsDateTime.getWeekOfWeekyear, timeSpan.createdAsDateTime.getWeekyear)
+    Week(timeSpan.created.weekOfWeekyear, timeSpan.created.weekyear)
 
   def groupByDay(timeSpan: TimeSpan): Day =
-    Day(timeSpan.createdAsDateTime.getDayOfMonth,
-        timeSpan.createdAsDateTime.getMonthOfYear,
-        timeSpan.createdAsDateTime.getYear)
+    Day(timeSpan.created.dayOfMonth, timeSpan.created.monthOfYear, timeSpan.created.year)
 
-  def fromTimestamp(timestamp: Long, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
+  def fromTimestamp(timestamp: Instant, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
     TimeSpan(ObjectId.generate, _user, _annotation, time = 0L, lastUpdate = timestamp, created = timestamp)
 
 }
@@ -51,7 +48,6 @@ object TimeSpan {
 class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
   val collection = Timespans
-  val MAX_TIMESTAMP = 253370761200000L
 
   def idColumn(x: Timespans): Rep[String] = x._Id
   def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
@@ -63,27 +59,28 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         ObjectId(r._User),
         r._Annotation.map(ObjectId(_)),
         r.time,
-        r.lastupdate.getTime,
+        Instant.fromSql(r.lastupdate),
         r.numberofupdates,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
-  def findAllByUser(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpan]] =
+  def findAllByUser(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[List[TimeSpan]] =
     for {
       r <- run(
         Timespans
-          .filter(r =>
-            notdel(r) && r._User === userId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(
-              end.getOrElse(MAX_TIMESTAMP)))
+          .filter(
+            r =>
+              notdel(r) && r._User === userId.id && (r.created >= start
+                .getOrElse(Instant.zero)
+                .toSql) && r.created <= end.getOrElse(Instant.max).toSql)
           .result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByUserWithTask(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[JsValue] =
+  def findAllByUserWithTask(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[JsValue] =
     for {
-      tuples <- run(
-        sql"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
+      tuples <- run(sql"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
                         from webknossos.timespans_ ts
                         join webknossos.annotations_ a on ts._annotation = a._id
                         join webknossos.tasks_ t on a._task = t._id
@@ -91,15 +88,14 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                         join webknossos.taskTypes_ tt on t._taskType = tt._id
                         where ts._user = ${userId.id}
                         and ts.time > 0
-                        and ts.created >= ${new java.sql.Timestamp(start.getOrElse(0))}
-                        and ts.created < ${new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))}"""
-          .as[(Long, java.sql.Timestamp, String, String, String, String, String, String)])
+                        and ts.created >= ${start.getOrElse(Instant.zero)}
+                        and ts.created < ${end
+        .getOrElse(Instant.max)}""".as[(Long, Instant, String, String, String, String, String, String)])
     } yield formatTimespanTuples(tuples)
 
-  private def formatTimespanTuples(
-      tuples: Vector[(Long, java.sql.Timestamp, String, String, String, String, String, String)]) = {
+  private def formatTimespanTuples(tuples: Vector[(Long, Instant, String, String, String, String, String, String)]) = {
 
-    def formatTimespanTuple(tuple: (Long, java.sql.Timestamp, String, String, String, String, String, String)) = {
+    def formatTimespanTuple(tuple: (Long, Instant, String, String, String, String, String, String)) = {
       def formatDuration(millis: Long): String = {
         // example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
         // only hours, min and sec are important in this scenario
@@ -112,7 +108,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
       Json.obj(
         "time" -> formatDuration(tuple._1),
-        "timestamp" -> tuple._2.getTime,
+        "timestamp" -> tuple._2,
         "annotation" -> tuple._3,
         "_id" -> tuple._4,
         "task_id" -> tuple._5,
@@ -124,24 +120,24 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     Json.toJson(tuples.map(formatTimespanTuple))
   }
 
-  def findAllByAnnotation(annotationId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpan]] =
+  def findAllByAnnotation(annotationId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[List[TimeSpan]] =
     for {
       r <- run(
         Timespans
           .filter(
             r =>
-              notdel(r) && r._Annotation === annotationId.id && (r.created >= new java.sql.Timestamp(
-                start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP)))
+              notdel(r) && r._Annotation === annotationId.id && (r.created >= start
+                .getOrElse(Instant.zero)
+                .toSql) && r.created <= end.getOrElse(Instant.max).toSql)
           .result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAll(start: Option[Long], end: Option[Long], organizationId: ObjectId): Fox[List[TimeSpan]] =
+  def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] =
     for {
       r <- run(sql"""select #${columnsWithPrefix("t.")} from #$existingCollectionName t
               join webknossos.users u on t._user = u._id
-              where t.created >= ${new java.sql.Timestamp(start.getOrElse(0))} and t.created <= ${new java.sql.Timestamp(
-        end.getOrElse(MAX_TIMESTAMP))}
+              where t.created >= ${start.getOrElse(Instant.zero)} and t.created <= ${end.getOrElse(Instant.max)}
               and u._organization = $organizationId
           """.as[TimespansRow])
       parsed <- Fox.combined(r.toList.map(parse))
@@ -151,8 +147,8 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
-                values(${t._id.id}, ${t._user.id}, ${t._annotation.map(_.id)}, ${t.time}, ${new java.sql.Timestamp(
-          t.lastUpdate)}, ${t.numberOfUpdates}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
+                values(${t._id.id}, ${t._user.id}, ${t._annotation.map(_.id)}, ${t.time}, ${t.lastUpdate},
+                ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""")
     } yield ()
 
   def updateOne(t: TimeSpan): Fox[Unit] =
@@ -162,7 +158,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                   _user = ${t._user.id},
                   _annotation = ${t._annotation.map(_.id)},
                   time = ${t.time},
-                  lastUpdate = ${new java.sql.Timestamp(t.lastUpdate)},
+                  lastUpdate = ${t.lastUpdate},
                   numberOfUpdates = ${t.numberOfUpdates},
                   isDeleted = ${t.isDeleted}
                 where _id = ${t._id.id}

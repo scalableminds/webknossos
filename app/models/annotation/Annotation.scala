@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.schema.Tables._
@@ -18,6 +19,7 @@ import slick.sql.SqlAction
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class Annotation(
     _id: ObjectId,
@@ -36,8 +38,8 @@ case class Annotation(
     tracingTime: Option[Long] = None,
     typ: AnnotationType.Value = AnnotationType.Explorational,
     othersMayEdit: Boolean = false,
-    created: Long = System.currentTimeMillis,
-    modified: Long = System.currentTimeMillis,
+    created: Instant = Instant.now,
+    modified: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -172,8 +174,8 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         r.tracingtime,
         typ,
         r.othersmayedit,
-        r.created.getTime,
-        r.modified.getTime,
+        Instant.fromSql(r.created),
+        Instant.fromSql(r.modified),
         r.isdeleted
       )
     }
@@ -405,7 +407,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
          '#${a.state}', '#${sanitize(a.statistics.toString)}',
          '#${writeArrayTuple(a.tags.toList)}', ${a.tracingTime}, '#${a.typ}',
          ${a.othersMayEdit},
-         ${new java.sql.Timestamp(a.created)}, ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
+         ${a.created}, ${a.modified}, ${a.isDeleted})
          """
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
     for {
@@ -432,8 +434,8 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
                tracingTime = ${a.tracingTime},
                typ = '#${a.typ}',
                othersMayEdit = ${a.othersMayEdit},
-               created = ${new java.sql.Timestamp(a.created)},
-               modified = ${new java.sql.Timestamp(a.modified)},
+               created = ${a.created},
+               modified = ${a.modified},
                isDeleted = ${a.isDeleted}
              where _id = ${a._id}
           """
@@ -464,10 +466,11 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         sqlu"delete from webknossos.annotations where state = '#${AnnotationState.Initializing}' and created < (now() - interval '1 hour')")
     } yield ()
 
-  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: FiniteDuration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
-      _ <- run(sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + $time where _id = $id") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
+      _ <- run(
+        sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + ${time.toMillis} where _id = $id") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
     } yield ()
 
   def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -506,10 +509,10 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       _ <- run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags)}' where _id = $id")
     } yield ()
 
-  def updateModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateModified(id: ObjectId, modified: Instant)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = $id")
+      _ <- run(sqlu"update webknossos.annotations set modified = $modified where _id = $id")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

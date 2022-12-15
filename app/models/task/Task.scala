@@ -1,9 +1,11 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{profile, _}
+
 import javax.inject.Inject
 import models.annotation._
 import models.project.ProjectDAO
@@ -13,6 +15,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class Task(
     _id: ObjectId,
@@ -27,7 +30,7 @@ case class Task(
     editPosition: Vec3Int,
     editRotation: Vec3Double,
     creationInfo: Option[String],
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -56,7 +59,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
         editPosition,
         editRotation,
         r.creationinfo,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
@@ -140,7 +143,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                  isTeamManagerOrAdmin: Boolean = false): Fox[(ObjectId, ObjectId)] = {
 
     val annotationId = ObjectId.generate
-    val now = new java.sql.Timestamp(System.currentTimeMillis)
+    val now = Instant.now
 
     val insertAnnotationQ = sqlu"""
            with task as (#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}),
@@ -172,7 +175,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
   def assignOneTo(taskId: ObjectId, userId: ObjectId, teamIds: List[ObjectId]): Fox[(ObjectId, ObjectId)] = {
     val annotationId = ObjectId.generate
-    val now = new java.sql.Timestamp(System.currentTimeMillis)
+    val now = Instant.now
 
     val insertAnnotationQ =
       sqlu"""
@@ -293,7 +296,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
           t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple))},
                            '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(
           t.editRotation.toList.map(_.toString))}',
-                           #${optionLiteral(t.creationInfo.map(sanitize))}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+                           #${optionLiteral(t.creationInfo.map(sanitize))}, ${t.created}, ${t.isDeleted})
         """)
     } yield ()
 
@@ -324,10 +327,11 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       _ <- run(sqlu"update webknossos.tasks set _script = null where _script = ${scriptId.id}")
     } yield ()
 
-  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: FiniteDuration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: TaskSQLDAO.assertUpdateAccess"
-      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}") ?~> "FAILED: run in TaskSQLDAO.logTime"
+      _ <- run(
+        sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + ${time.toMillis} where _id = ${id.id}") ?~> "FAILED: run in TaskSQLDAO.logTime"
     } yield ()
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {

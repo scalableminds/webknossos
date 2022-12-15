@@ -219,29 +219,33 @@ function upgradePricingPlan(
     );
   }
 
-  if (target === "TeamAndPower") {
-    title = "Upgrade to unlock more features";
-    okButtonCallback = undefined;
-    modalBody = (
-      <TeamAndPowerPlanUpgradeCards
-        teamUpgradeCallback={() => {
-          sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
-        }}
-        powerUpgradeCallback={() => {
-          sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
-        }}
+  renderIndependently((destroyCallback) => {
+    if (target === "TeamAndPower") {
+      title = "Upgrade to unlock more features";
+      okButtonCallback = undefined;
+      modalBody = (
+        <TeamAndPowerPlanUpgradeCards
+          teamUpgradeCallback={() => {
+            sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+            destroyCallback();
+          }}
+          powerUpgradeCallback={() => {
+            sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+            destroyCallback();
+          }}
+        />
+      );
+    }
+
+    return (
+      <UpgradePricingPlanModal
+        title={title}
+        modalBody={modalBody}
+        okButtonCallback={okButtonCallback}
+        destroy={destroyCallback}
       />
     );
-  }
-
-  renderIndependently((destroyCallback) => (
-    <UpgradePricingPlanModal
-      title={title}
-      modalBody={modalBody}
-      okButtonCallback={okButtonCallback}
-      destroy={destroyCallback}
-    />
-  ));
+  });
 }
 
 function UpgradePricingPlanModal({

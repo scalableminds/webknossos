@@ -4,34 +4,25 @@ import { Table, Progress, Tooltip, Button } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
-  VoxelyticsRunInfo,
+  VoxelyticsWorkflowListingRun,
   VoxelyticsRunState,
   VoxelyticsTaskInfo,
-  VoxelyticsWorkflowInfo,
+  VoxelyticsWorkflowListing,
 } from "types/api_flow_types";
 import { usePolling } from "libs/react_hooks";
 import { formatDateMedium } from "libs/format_utils";
 import Toast from "libs/toast";
 import { VX_POLLING_INTERVAL } from "./workflow_view";
 
-function parseTaskInfo(taskInfo: VoxelyticsTaskInfo): VoxelyticsTaskInfo {
-  return {
-    ...taskInfo,
-    beginTime: taskInfo.beginTime != null ? new Date(taskInfo.beginTime) : null,
-    endTime: taskInfo.endTime != null ? new Date(taskInfo.endTime) : null,
-  } as VoxelyticsTaskInfo;
-}
-
-function parseRunInfo(runInfo: VoxelyticsRunInfo): VoxelyticsRunInfo {
+function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
     ...runInfo,
-    tasks: runInfo.tasks.map(parseTaskInfo),
     beginTime: new Date(runInfo.beginTime),
     endTime: runInfo.endTime != null ? new Date(runInfo.endTime) : null,
-  } as any as VoxelyticsRunInfo;
+  } as any as VoxelyticsWorkflowListingRun;
 }
 
-function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowInfo): VoxelyticsWorkflowInfo {
+function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
   return {
     ...workflowInfo,
     beginTime: new Date(workflowInfo.beginTime),
@@ -46,47 +37,15 @@ function uniqueify<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
-function aggregateTasks(runs: Array<VoxelyticsRunInfo>): Array<VoxelyticsTaskInfo> {
-  function selectCombinedTaskRun(taskRuns: Array<VoxelyticsTaskInfo>): VoxelyticsTaskInfo {
-    const runningOrFinishedTaskRuns = taskRuns.filter((t) =>
-      [
-        VoxelyticsRunState.RUNNING,
-        VoxelyticsRunState.STALE,
-        VoxelyticsRunState.COMPLETE,
-        VoxelyticsRunState.FAILED,
-        VoxelyticsRunState.CANCELLED,
-      ].includes(t.state),
-    );
-    if (runningOrFinishedTaskRuns.length > 0) {
-      return runningOrFinishedTaskRuns[0];
-    }
-    return taskRuns[0];
-  }
-
-  const combinedTaskRuns = runs[0].tasks.map((task) =>
-    selectCombinedTaskRun(
-      runs
-        .flatMap((run) => {
-          const taskMaybe = run.tasks.find((t) => t.taskName === task.taskName);
-          return taskMaybe != null ? [taskMaybe] : [];
-        })
-        .sort(
-          (a, b) => (b.beginTime?.getTime() ?? -Infinity) - (a.beginTime?.getTime() ?? -Infinity),
-        ),
-    ),
-  );
-  return combinedTaskRuns;
-}
-
-type RenderRunInfo = VoxelyticsRunInfo & {
+type RenderRunInfo = VoxelyticsWorkflowListingRun & {
   workflowName: string;
   workflowHash: string;
-  children?: Array<VoxelyticsRunInfo>;
+  children?: Array<VoxelyticsWorkflowListingRun>;
 };
 
 export default function WorkflowListView() {
   const [isLoading, setIsLoading] = useState(false);
-  const [workflows, setWorkflows] = useState<Array<VoxelyticsWorkflowInfo>>([]);
+  const [workflows, setWorkflows] = useState<Array<VoxelyticsWorkflowListing>>([]);
 
   async function loadData() {
     setIsLoading(true);
@@ -116,7 +75,7 @@ export default function WorkflowListView() {
         username: uniqueify(workflow.runs.map((run) => run.username)).join(", "),
         hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
-        tasks: aggregateTasks(workflow.runs),
+        taskStatistics: workflow.taskStatistics,
         children: workflow.runs.map((run) => ({
           workflowName: workflow.name,
           workflowHash: workflow.hash,
@@ -127,21 +86,11 @@ export default function WorkflowListView() {
   ) as any as Array<RenderRunInfo>;
 
   function renderProgress(run: RenderRunInfo) {
-    const skippedCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.SKIPPED,
-    ).length;
-    const completeCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.COMPLETE,
-    ).length;
-    const cancelledCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.CANCELLED,
-    ).length;
-    const failedCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.FAILED,
-    ).length;
-    const runnableCount = run.tasks.filter(
-      (taskRun) => taskRun.state !== VoxelyticsRunState.SKIPPED,
-    ).length;
+    const skippedCount = run.taskStatistics.skipped;
+    const completeCount = run.taskStatistics.complete;
+    const cancelledCount = run.taskStatistics.cancelled;
+    const failedCount = run.taskStatistics.failed;
+    const runnableCount = run.taskStatistics.total - run.taskStatistics.skipped;
     let label = `${completeCount}/${runnableCount} complete`;
     if (cancelledCount > 0) {
       label += `, ${cancelledCount} cancelled`;

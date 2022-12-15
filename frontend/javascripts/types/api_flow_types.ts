@@ -855,7 +855,39 @@ export type VoxelyticsWorkflowReport = {
   };
   dag: VoxelyticsWorkflowDag;
   artifacts: Record<string, Record<string, VoxelyticsArtifactConfig>>;
-  run: VoxelyticsRunInfo;
+  runs: Array<VoxelyticsRunInfo>;
+  tasks: Array<{
+    taskName: string;
+    state: VoxelyticsRunState;
+    currentExecutionId: string | null;
+    chunksTotal: number;
+    chunksFinished: number;
+    runs: Array<
+      {
+        runId: string;
+      } & (
+        | {
+            state: VoxelyticsRunState.PENDING | VoxelyticsRunState.SKIPPED;
+            beginTime: null;
+            endTime: null;
+          }
+        | {
+            state: VoxelyticsRunState.RUNNING;
+            beginTime: Date;
+            endTime: null;
+          }
+        | {
+            state:
+              | VoxelyticsRunState.COMPLETE
+              | VoxelyticsRunState.FAILED
+              | VoxelyticsRunState.CANCELLED
+              | VoxelyticsRunState.STALE;
+            beginTime: Date;
+            endTime: Date;
+          }
+      )
+    >;
+  }>;
   workflow: {
     name: string;
     hash: string;
@@ -863,13 +895,50 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowInfo = {
+export type VoxelyticsWorkflowListingRun = (
+  | {
+      state: VoxelyticsRunState.RUNNING;
+      beginTime: Date;
+      endTime: null;
+    }
+  | {
+      state:
+        | VoxelyticsRunState.COMPLETE
+        | VoxelyticsRunState.FAILED
+        | VoxelyticsRunState.CANCELLED
+        | VoxelyticsRunState.STALE;
+      beginTime: Date;
+      endTime: Date;
+    }
+) & {
+  id: string;
+  name: string;
+  username: string;
+  hostname: string;
+  voxelyticsVersion: string;
+  taskStatistics: {
+    total: number;
+    failed: number;
+    skipped: number;
+    complete: number;
+    cancelled: number;
+  };
+};
+
+export type VoxelyticsWorkflowListing = {
   name: string;
   hash: string;
   beginTime: Date;
   endTime: Date | null;
   state: VoxelyticsRunState;
-  runs: Array<VoxelyticsRunInfo>;
+  taskStatistics: {
+    total: number;
+    failed: number;
+    skipped: number;
+    complete: number;
+    cancelled: number;
+  };
+  runs: Array<VoxelyticsWorkflowListingRun>;
 };
 
 type Statistics = {

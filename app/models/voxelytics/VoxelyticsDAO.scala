@@ -114,6 +114,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
             THEN run_heartbeat.timestamp ELSE task_end.timestamp END AS endTime,
           exec.executionId AS currentExecutionId,
           COALESCE(chunks.total, 0) AS chunksTotal,
+          COALESCE(chunks.skipped, 0) AS chunksSkipped,
           COALESCE(chunks.finished, 0) AS chunksFinished
         FROM webknossos.voxelytics_runs r
         JOIN webknossos.voxelytics_tasks t ON t._run = r._id
@@ -151,21 +152,13 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         ) exec ON exec._task = t._id
         LEFT JOIN (
           SELECT
-            count_all._task AS _task,
-            count_all.count AS total,
-            COALESCE(count_finished.count, 0) AS finished
-          FROM (
-            SELECT _task, COUNT(_id) AS count
-            FROM webknossos.voxelytics_chunks
-            GROUP BY _task
-          ) count_all
-          LEFT JOIN (
-            SELECT c._task, COUNT(_id) AS count
-              FROM latest_chunk_states
-              JOIN webknossos.voxelytics_chunks c ON c._id = latest_chunk_states._chunk
-              WHERE latest_chunk_states.state IN ('COMPLETE', 'FAILED', 'CANCELLED')
-            GROUP BY c._task
-          ) count_finished ON count_finished._task = count_all._task
+            c._task AS _task,
+            COUNT(c._id) AS total,
+            SUM(CASE WHEN l.state IN ('COMPLETE', 'FAILED', 'CANCELLED') THEN 1 ELSE 0 END) AS finished,
+            SUM(CASE WHEN l.state = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped
+          FROM webknossos.voxelytics_chunks c
+          JOIN latest_chunk_states l ON l._chunk = c._id
+          GROUP BY c._task
         ) chunks ON chunks._task = t._id
         WHERE
           r._organization = $organizationId AND
@@ -199,7 +192,10 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                allowUnlisted: Boolean): Fox[List[RunEntry]] = {
     val organizationId = currentUser._organization
     val readAccessQ =
-      if (currentUser.isAdmin || allowUnlisted) "" else { s" AND (r._user = ${escapeLiteral(currentUser._id.id)})" }
+      if (currentUser.isAdmin || allowUnlisted) ""
+      else {
+        s" AND (r._user = ${escapeLiteral(currentUser._id.id)})"
+      }
     val runIdsQ = runIds.map(runIds => s" AND r._id IN ${writeEscapedTuple(runIds.map(_.id))}").getOrElse("")
     val workflowHashQ =
       workflowHash.map(workflowHash => s" AND r.workflow_hash = ${escapeLiteral(workflowHash)}").getOrElse("")
@@ -273,6 +269,178 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
             )))
     } yield results
 
+  }
+
+  def findWorkflowTaskStatistics(currentUser: User, workflowHashes: Set[String]): Fox[Map[String, TaskStatistics]] = {
+    val organizationId = currentUser._organization
+    val readAccessQ =
+      if (currentUser.isAdmin) "TRUE"
+      else s"(r._user = ${escapeLiteral(currentUser._id.id)})"
+    for {
+      r <- run(sql"""
+        WITH latest_task_states AS (
+          SELECT DISTINCT ON (_task) _task, timestamp, state
+          FROM webknossos.voxelytics_taskStateChangeEvents
+          ORDER BY _task, timestamp DESC
+        )
+        SELECT
+          w.hash,
+          COUNT(t.state) AS total,
+          SUM(CASE WHEN t.state = 'FAILED' THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN t.state = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped,
+          SUM(CASE WHEN t.state = 'COMPLETE' THEN 1 ELSE 0 END) AS complete,
+          SUM(CASE WHEN t.state = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled
+        FROM webknossos.voxelytics_workflows w
+        JOIN (
+          -- Aggregating the task states of workflow runs (finished or running are prioritized)
+          SELECT
+            COALESCE(latest_finished_or_running_task_instances.taskName, latest_task_instances.taskName) taskName,
+            COALESCE(latest_finished_or_running_task_instances.runName, latest_task_instances.runName) runName,
+            COALESCE(latest_finished_or_running_task_instances.state, latest_task_instances.state) state,
+            w.hash hash
+          FROM webknossos.voxelytics_workflows w
+          JOIN (
+            SELECT DISTINCT ON (workflow_hash, taskName) r.workflow_hash workflow_hash, r.name runName, t.name taskName, timestamp, state
+            FROM webknossos.voxelytics_tasks t
+            JOIN webknossos.voxelytics_runs r ON t._run = r._id
+            JOIN latest_task_states l ON l._task = t._id
+            WHERE #$readAccessQ
+            ORDER BY workflow_hash, taskName, timestamp DESC
+          ) latest_task_instances ON latest_task_instances.workflow_hash = w.hash
+          LEFT JOIN (
+            SELECT DISTINCT ON (workflow_hash, taskName) r.workflow_hash workflow_hash, r.name runName, t.name taskName, timestamp, state
+            FROM webknossos.voxelytics_tasks t
+            JOIN webknossos.voxelytics_runs r ON t._run = r._id
+            JOIN latest_task_states l ON l._task = t._id
+            WHERE l.state IN ('RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED') AND #$readAccessQ
+            ORDER BY workflow_hash, taskName, timestamp DESC
+          ) latest_finished_or_running_task_instances ON latest_finished_or_running_task_instances.workflow_hash = w.hash AND latest_task_instances.taskName = latest_finished_or_running_task_instances.taskName
+        ) t ON t.hash = w.hash
+        WHERE w.hash IN #${writeEscapedTuple(workflowHashes.toList)} AND w._organization = $organizationId
+        GROUP BY w.hash
+        """.as[(String, Int, Int, Int, Int, Int)])
+    } yield
+      r.toList
+        .map(
+          row =>
+            (row._1,
+             TaskStatistics(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6)))
+        .toMap
+  }
+
+  def findRunsForWorkflowListing(currentUser: User, staleTimeout: Duration): Fox[List[WorkflowListingRunEntry]] = {
+    val organizationId = currentUser._organization
+    val readAccessQ =
+      if (currentUser.isAdmin) ""
+      else {
+        s" AND (r._user = ${escapeLiteral(currentUser._id.id)})"
+      }
+    for {
+      r <- run(
+        sql"""
+        WITH latest_task_states AS (
+          SELECT DISTINCT ON (_task) _task, timestamp, state
+          FROM webknossos.voxelytics_taskStateChangeEvents
+          ORDER BY _task, timestamp DESC
+        )
+        SELECT
+          r._id,
+          r.name,
+          r.username,
+          r.hostname,
+          r.voxelyticsVersion,
+          r.workflow_hash,
+          CASE
+            WHEN run_state.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - INTERVAL '#${staleTimeout.toSeconds} SECONDS'
+            THEN 'STALE' ELSE run_state.state END AS state,
+          run_begin.timestamp AS beginTime,
+          CASE
+            WHEN run_state.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - INTERVAL '#${staleTimeout.toSeconds} SECONDS'
+            THEN run_heartbeat.timestamp ELSE run_end.timestamp END AS endTime,
+          COALESCE(tasks.total, 0) AS tasksTotal,
+          COALESCE(tasks.failed, 0) AS tasksFailed,
+          COALESCE(tasks.skipped, 0) AS tasksSkipped,
+          COALESCE(tasks.complete, 0) AS tasksComplete,
+          COALESCE(tasks.cancelled, 0) AS tasksCancelled
+        FROM webknossos.voxelytics_runs r
+        JOIN (
+          SELECT DISTINCT ON (_run) _run, state
+          FROM webknossos.voxelytics_runStateChangeEvents
+          ORDER BY _run, timestamp DESC
+        ) run_state
+          ON r._id = run_state._run
+        JOIN (
+          SELECT DISTINCT ON (_run) _run, timestamp
+          FROM webknossos.voxelytics_runStateChangeEvents
+          WHERE state = 'RUNNING'
+          ORDER BY _run, timestamp
+        ) run_begin
+          ON r._id = run_begin._run
+        LEFT JOIN (
+          SELECT DISTINCT ON (_run) _run, timestamp
+          FROM webknossos.voxelytics_runStateChangeEvents
+          WHERE state IN ('COMPLETE', 'FAILED', 'CANCELLED')
+          ORDER BY _run, timestamp DESC
+        ) run_end
+          ON r._id = run_end._run
+        LEFT JOIN (
+          SELECT _run, timestamp
+          FROM webknossos.voxelytics_runHeartbeatEvents
+        ) run_heartbeat
+          ON r._id = run_heartbeat._run
+        LEFT JOIN (
+          SELECT
+            t._run AS _run,
+            COUNT(t._id) AS total,
+            SUM(CASE WHEN l.state = 'FAILED' THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN l.state = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped,
+            SUM(CASE WHEN l.state = 'COMPLETE' THEN 1 ELSE 0 END) AS complete,
+            SUM(CASE WHEN l.state = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled
+          FROM webknossos.voxelytics_tasks AS t
+          JOIN latest_task_states l ON l._task = t._id
+          GROUP BY t._run
+        ) tasks ON tasks._run = r._id
+        WHERE r._organization = $organizationId
+          #$readAccessQ
+        """.as[(String,
+                String,
+                String,
+                String,
+                String,
+                String,
+                String,
+                Timestamp,
+                Option[Timestamp],
+                Int,
+                Int,
+                Int,
+                Int,
+                Int)])
+      results <- Fox.combined(
+        r.toList.map(
+          row =>
+            for {
+              state <- VoxelyticsRunState.fromString(row._7).toFox
+            } yield
+              WorkflowListingRunEntry(
+                id = ObjectId(row._1),
+                name = row._2,
+                username = row._3,
+                hostname = row._4,
+                voxelyticsVersion = row._5,
+                workflow_hash = row._6,
+                state = state,
+                beginTime = row._8.toInstant,
+                endTime = row._9.map(_.toInstant),
+                taskStatistics = TaskStatistics(
+                  total = row._10,
+                  failed = row._11,
+                  skipped = row._12,
+                  complete = row._13,
+                  cancelled = row._14
+                )
+            )))
+    } yield results
   }
 
   def upsertArtifactChecksumEvent(artifactId: ObjectId, ev: ArtifactFileChecksumEvent): Fox[Unit] =

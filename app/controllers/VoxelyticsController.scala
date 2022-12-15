@@ -56,12 +56,12 @@ class VoxelyticsController @Inject()(
       } yield Ok
     }
 
-  def listWorkflows(workflowHash: Option[String]): Action[AnyContent] =
+  def listWorkflows: Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         // Auth is implemented in `voxelyticsDAO.findRuns`
-        runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout, allowUnlisted = false)
+        runs <- voxelyticsDAO.findRunsForWorkflowListing(request.identity, conf.staleTimeout)
         result <- if (runs.nonEmpty) {
           listWorkflowsWithRuns(request, runs)
         } else {
@@ -70,11 +70,13 @@ class VoxelyticsController @Inject()(
       } yield JsonOk(result)
     }
 
-  private def listWorkflowsWithRuns(request: SecuredRequest[WkEnv, AnyContent], runs: List[RunEntry]): Fox[JsArray] =
+  private def listWorkflowsWithRuns(request: SecuredRequest[WkEnv, AnyContent],
+                                    runs: List[WorkflowListingRunEntry]): Fox[JsArray] =
     for {
       _ <- bool2Fox(runs.nonEmpty) // just asserting once more
-      taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.id), conf.staleTimeout)
-      _ <- bool2Fox(taskRuns.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
+      workflowTaskStatistics <- voxelyticsDAO.findWorkflowTaskStatistics(request.identity,
+                                                                         runs.map(_.workflow_hash).toSet)
+      _ <- bool2Fox(workflowTaskStatistics.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
       workflows <- voxelyticsDAO.findWorkflowsByHashAndOrganization(request.identity._organization,
                                                                     runs.map(_.workflow_hash).toSet)
       _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
@@ -82,7 +84,8 @@ class VoxelyticsController @Inject()(
       workflowsAsJson = JsArray(workflows.flatMap(workflow => {
         val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
         if (workflowRuns.nonEmpty) {
-          val state, beginTime, endTime = voxelyticsService.aggregateBeginEndTime(workflowRuns)
+          val state, beginTime, endTime =
+            voxelyticsService.aggregateBeginEndTime(workflowRuns.map(r => (r.state, r.beginTime, r.endTime)))
           Some(
             Json.obj(
               "name" -> workflow.name,
@@ -90,10 +93,8 @@ class VoxelyticsController @Inject()(
               "beginTime" -> beginTime,
               "endTime" -> endTime,
               "state" -> state.toString(),
-              "runs" -> workflowRuns.map(run => {
-                val tasks = taskRuns.filter(taskRun => taskRun.runId == run.id)
-                voxelyticsService.runPublicWrites(run, tasks)
-              })
+              "taskStatistics" -> workflowTaskStatistics.get(workflow.hash),
+              "runs" -> workflowRuns
             ))
         } else {
           None
@@ -141,7 +142,8 @@ class VoxelyticsController @Inject()(
         tasks <- voxelyticsDAO.findTasks(combinedTaskRuns)
 
         // Assemble workflow report JSON
-        (state, beginTime, endTime) = voxelyticsService.aggregateBeginEndTime(runs)
+        (state, beginTime, endTime) = voxelyticsService.aggregateBeginEndTime(
+          runs.map(r => (r.state, r.beginTime, r.endTime)))
         result = Json.obj(
           "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflow_config, tasks),
           "artifacts" -> voxelyticsService.artifactsPublicWrites(artifacts),

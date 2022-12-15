@@ -52,6 +52,24 @@ object WorkflowEntry {
   implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
 }
 
+case class TaskStatistics(total: Int, failed: Int, skipped: Int, complete: Int, cancelled: Int)
+object TaskStatistics {
+  implicit val jsonFormat: OFormat[TaskStatistics] = Json.format[TaskStatistics]
+}
+case class WorkflowListingRunEntry(id: ObjectId,
+                                   name: String,
+                                   username: String,
+                                   hostname: String,
+                                   voxelyticsVersion: String,
+                                   workflow_hash: String,
+                                   state: VoxelyticsRunState,
+                                   beginTime: Instant,
+                                   endTime: Option[Instant],
+                                   taskStatistics: TaskStatistics)
+object WorkflowListingRunEntry {
+  implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]
+}
+
 case class ArtifactEntry(artifactId: ObjectId,
                          taskId: ObjectId,
                          name: String,
@@ -136,11 +154,12 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
     workflowConfig ++
       Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
 
-  def aggregateBeginEndTime(runs: List[RunEntry]): (VoxelyticsRunState, Instant, Option[Instant]) = {
+  def aggregateBeginEndTime(
+      runs: List[(VoxelyticsRunState, Instant, Option[Instant])]): (VoxelyticsRunState, Instant, Option[Instant]) = {
     // The calling code needs to make sure that runs is non-empty, otherwise the next lines will throw exceptions
-    val state = runs.maxBy(_.beginTime).state
-    val beginTime = runs.map(_.beginTime).min
-    val endTime = Try(runs.flatMap(_.endTime).max).toOption
+    val state = runs.maxBy(_._2)._1
+    val beginTime = runs.map(_._2).min
+    val endTime = Try(runs.flatMap(_._3).max).toOption
 
     (state, beginTime, endTime)
   }

@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added sign in via OIDC. [#6534](https://github.com/scalableminds/webknossos/pull/6534)
 - Added a new datasets tab to the dashboard which supports managing datasets in folders. Folders can be organized hierarchically and datasets can be moved into these folders. Selecting a dataset will show dataset details in a sidebar. [#6591](https://github.com/scalableminds/webknossos/pull/6591)
 - Added the option to search a specific folder in the new datasets tab. [#6677](https://github.com/scalableminds/webknossos/pull/6677)
+- The new datasets tab in the dashboard allows multi-selection of datasets so that multiple datasets can be moved to a folder at once. As in typical file explorers, CTRL + left click adds individual datasets to the current selection. Shift + left click selects a range of datasets. [#6683](https://github.com/scalableminds/webknossos/pull/6683)
 
 ### Changed
 - The log viewer in the Voxelytics workflow reporting now uses a virtualized list. [#6579](https://github.com/scalableminds/webknossos/pull/6579)
@@ -36,6 +37,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed access of remote datasets using the Amazon S3 protocol [#6679](https://github.com/scalableminds/webknossos/pull/6679)
 - Fixed a bug in line measurement that would lead to an infinite loop. [#6689](https://github.com/scalableminds/webknossos/pull/6689)
 - Fixed a bug where malformed json files could lead to uncaught exceptions.[#6691](https://github.com/scalableminds/webknossos/pull/6691)
+- Respect the config value mail.smtp.auth (used to be ignored, always using true) [#6692](https://github.com/scalableminds/webknossos/pull/6692)
 
 ### Removed
 

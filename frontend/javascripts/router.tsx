@@ -3,7 +3,7 @@ import type { ContextRouter, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
-import React, { ErrorInfo, lazy, Suspense } from "react";
+import React, { lazy, Suspense } from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
@@ -11,7 +11,6 @@ import { TracingTypeEnum, APICompoundTypeEnum, APIUser } from "types/api_flow_ty
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
-import ErrorHandling from "libs/error_handling";
 import {
   getAnnotationInformation,
   getOrganizationForDataset,

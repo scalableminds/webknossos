@@ -105,6 +105,14 @@ function toWebpackDev(req, res) {
   proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
 }
 
+proxy.on("proxyReq", function (proxyReq, req, res, options) {
+  if (req.url.match(/\/assets\/bundle\/.+\.js/)) {
+    // Disable compression for JS files, as the performance penalty of the compression
+    // isn't worth the size gain.
+    proxyReq.setHeader("Accept-Encoding", "");
+  }
+});
+
 app.all("/assets/bundle/*", toWebpackDev);
 app.all("/*", toBackend);
 

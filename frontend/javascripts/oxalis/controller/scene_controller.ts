@@ -40,8 +40,23 @@ import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 import { mergeVertices } from "libs/BufferGeometryUtils";
+import { getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 
 const CUBE_COLOR = 0x999999;
+
+class CustomLOD extends THREE.LOD {
+  update(camera) {
+    const levels = this.levels;
+
+    const scale = getTDViewZoom(Store.getState());
+    const visibleIndex = scale < 0.5 ? 0 : scale < 2 ? 1 : 2;
+    console.log("scale", scale);
+
+    for (let i = 0; i < this.levels.length; i++) {
+      levels[i].object.visible = i === visibleIndex;
+    }
+  }
+}
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -121,7 +136,7 @@ class SceneController {
     this.addLights();
     this.setupDebuggingMethods();
 
-    const lod = new THREE.LOD();
+    const lod = new CustomLOD();
     // const material = new THREE.MeshLambertMaterial({ color: 0x33ffff, wireframe: true });
 
     const material = new THREE.MeshBasicMaterial({

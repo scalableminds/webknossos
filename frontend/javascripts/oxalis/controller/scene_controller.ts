@@ -41,6 +41,7 @@ import { setSceneController } from "oxalis/controller/scene_controller_provider"
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
+import { SimplifyModifier } from "libs/simplify_modifier";
 
 const CUBE_COLOR = 0x999999;
 
@@ -49,8 +50,7 @@ class CustomLOD extends THREE.LOD {
     const levels = this.levels;
 
     const scale = getTDViewZoom(Store.getState());
-    const visibleIndex = scale < 0.5 ? 0 : scale < 2 ? 1 : 2;
-    console.log("scale", scale);
+    const visibleIndex = scale < 0.7 ? 0 : scale < 3 ? 1 : 2;
 
     for (let i = 0; i < this.levels.length; i++) {
       levels[i].object.visible = i === visibleIndex;
@@ -94,7 +94,7 @@ class SceneController {
   // Each group can hold multiple meshes.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isosurfacesRootGroup' has no initializer... Remove this comment to see the full error message
   isosurfacesRootGroup: THREE.Group;
-  isosurfacesGroupsPerSegmentationId: Record<number, THREE.Group> = {};
+  isosurfacesGroupsPerSegmentationId: Record<number, CustomLOD> = {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -139,18 +139,30 @@ class SceneController {
     const lod = new CustomLOD();
     // const material = new THREE.MeshLambertMaterial({ color: 0x33ffff, wireframe: true });
 
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x33ffff,
-    });
-    material.side = THREE.FrontSide;
-    material.transparent = false;
+    const qualityToColor = [0x33ffff, 0xff33ff, 0xffff33];
 
     //Create spheres with 3 levels of detail and create new LOD levels for them
     for (let i = 0; i < 3; i++) {
-      const geometry = new THREE.IcosahedronGeometry(1000, 3 - i);
+      // i = 0: best quality
+      const material = new THREE.MeshBasicMaterial({
+        color: qualityToColor[i],
+      });
+      material.side = THREE.FrontSide;
+      material.transparent = false;
+      const geometry =
+        i === 2 ? new THREE.BoxGeometry(500, 500, 500) : new THREE.IcosahedronGeometry(1000, 3 - i);
       const mesh = new THREE.Mesh(geometry, material);
-      // mesh.position.x = 0;
-      lod.addLevel(mesh, i * 75);
+
+      const modifier = new SimplifyModifier();
+
+      const simplified = mesh.clone();
+      simplified.material = simplified.material.clone();
+      simplified.material.flatShading = true;
+      const count = Math.floor(simplified.geometry.attributes.position.count * 0.875); // number of vertices to remove
+      simplified.geometry = modifier.modify(simplified.geometry, count);
+
+      simplified.position.x = 100;
+      lod.addLevel(i === 2 ? simplified : mesh, i * 75);
     }
 
     this.meshesRootGroup.add(lod);
@@ -226,7 +238,7 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): THREE.Group {
+  getIsosurfaceGeometry(cellId: number): CustomLOD {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
@@ -236,7 +248,7 @@ class SceneController {
     return color;
   }
 
-  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry) {
+  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, simplify: boolean) {
     const color = this.getColorObjectForSegment(cellId);
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
@@ -244,7 +256,18 @@ class SceneController {
     meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
 
-    const mesh = new THREE.Mesh(geometry, meshMaterial);
+    let mesh = new THREE.Mesh(geometry, meshMaterial);
+
+    if (simplify) {
+      const modifier = new SimplifyModifier();
+      const simplified = mesh.clone();
+      const count = Math.floor(simplified.geometry.attributes.position.count * 0.875); // number of vertices to remove
+      simplified.geometry = modifier.modify(simplified.geometry, count);
+      simplified.geometry.computeVertexNormals();
+
+      mesh = simplified;
+    }
+
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     const tweenAnimation = new TWEEN.Tween({
@@ -278,7 +301,7 @@ class SceneController {
 
     const meshNumber = _.size(this.stlMeshes);
 
-    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry);
+    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry, false);
     this.meshesRootGroup.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
@@ -301,23 +324,58 @@ class SceneController {
     scale: Vector3 | null = null,
   ): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
-      const newGroup = new THREE.Group();
-      this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
-      this.isosurfacesRootGroup.add(newGroup);
+      const lod = new CustomLOD();
+      const newGroup1 = new THREE.Group();
+      const newGroup2 = new THREE.Group();
+      const newGroup3 = new THREE.Group();
+      this.isosurfacesGroupsPerSegmentationId[segmentationId] = lod;
+      this.isosurfacesRootGroup.add(lod);
+
+      lod.addLevel(newGroup1);
+      lod.addLevel(newGroup2);
+      lod.addLevel(newGroup3);
+
       // @ts-ignore
-      newGroup.cellId = segmentationId;
+      newGroup1.cellId = segmentationId;
+      // @ts-ignore
+      newGroup2.cellId = segmentationId;
+      // @ts-ignore
+      newGroup3.cellId = segmentationId;
       if (scale != null) {
-        newGroup.scale.copy(new THREE.Vector3(...scale));
+        newGroup1.scale.copy(new THREE.Vector3(...scale));
+        newGroup2.scale.copy(new THREE.Vector3(...scale));
+        newGroup3.scale.copy(new THREE.Vector3(...scale));
       }
     }
-    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry);
+
+    const originalMesh = this.constructIsosurfaceMesh(segmentationId, geometry, false);
     if (offset) {
-      mesh.translateX(offset[0]);
-      mesh.translateY(offset[1]);
-      mesh.translateZ(offset[2]);
+      originalMesh.translateX(offset[0]);
+      originalMesh.translateY(offset[1]);
+      originalMesh.translateZ(offset[2]);
     }
 
-    this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
+    const simplifiedMesh2 = this.constructIsosurfaceMesh(segmentationId, geometry, true);
+    if (offset) {
+      simplifiedMesh2.translateX(offset[0]);
+      simplifiedMesh2.translateY(offset[1]);
+      simplifiedMesh2.translateZ(offset[2]);
+    }
+
+    const simplifiedMesh3 = this.constructIsosurfaceMesh(
+      segmentationId,
+      simplifiedMesh2.geometry,
+      true,
+    );
+    if (offset) {
+      simplifiedMesh3.translateX(offset[0]);
+      simplifiedMesh3.translateY(offset[1]);
+      simplifiedMesh3.translateZ(offset[2]);
+    }
+
+    this.isosurfacesGroupsPerSegmentationId[segmentationId].levels[0].object.add(originalMesh);
+    this.isosurfacesGroupsPerSegmentationId[segmentationId].levels[1].object.add(simplifiedMesh2);
+    this.isosurfacesGroupsPerSegmentationId[segmentationId].levels[2].object.add(simplifiedMesh3);
   }
 
   removeIsosurfaceById(segmentationId: number): void {

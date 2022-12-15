@@ -27,7 +27,7 @@ import RegistrationForm from "admin/auth/registration_form";
 import CreditsFooter from "components/credits_footer";
 import Toast from "libs/toast";
 import features from "features";
-import { maxInludedUsersInFreePlan as maxInludedUsersInBasicPlan } from "./organization/pricing_plan_utils";
+import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
 
 const { Step } = Steps;
 const FormItem = Form.Item;

@@ -31,10 +31,10 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import Persistence from "libs/persistence";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
+import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
 
@@ -396,6 +396,7 @@ class UserListView extends React.PureComponent<Props, State> {
             currentUserCount={getActiveUserCount(this.state.users)}
             maxUserCountPerOrganization={this.state.maxUserCountPerOrganization}
             visible={this.state.isInviteModalVisible}
+            organizationName={this.props.activeUser.organization}
             handleVisibleChange={(visible) => {
               this.setState({
                 isInviteModalVisible: visible,

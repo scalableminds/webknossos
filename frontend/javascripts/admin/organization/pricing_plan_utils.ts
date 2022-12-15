@@ -17,7 +17,7 @@ export const powerPlanFeatures = [
   "Everything from Team and Basic plans",
 ];
 
-export const maxInludedUsersInFreePlan = 3;
+export const maxInludedUsersInBasicPlan = 3;
 export const storageWarningThresholdMB = PricingPlanEnum.Basic ? 5000 : 10000;
 
 export function getActiveUserCount(users: APIUser[]): number {

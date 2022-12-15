@@ -45,13 +45,13 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
 
 class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AnnotationPrivateLink, AnnotationPrivatelinksRow, AnnotationPrivatelinks](sqlClient) {
-  val collection = AnnotationPrivatelinks
+  protected val collection = AnnotationPrivatelinks
 
-  def idColumn(x: AnnotationPrivatelinks): Rep[String] = x._Id
+  protected def idColumn(x: AnnotationPrivatelinks): Rep[String] = x._Id
 
-  def isDeletedColumn(x: AnnotationPrivatelinks): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: AnnotationPrivatelinks): Rep[Boolean] = x.isdeleted
 
-  def parse(r: AnnotationPrivatelinksRow): Fox[AnnotationPrivateLink] =
+  protected def parse(r: AnnotationPrivatelinksRow): Fox[AnnotationPrivateLink] =
     Fox.successful(
       AnnotationPrivateLink(
         ObjectId(r._Id),
@@ -62,7 +62,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
       )
     )
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
+  override protected def readAccessQ(requestingUserId: ObjectId): String =
     s"""(_annotation in (select _id from webknossos.annotations_ where _user = '${requestingUserId.id}'))"""
 
   def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] =

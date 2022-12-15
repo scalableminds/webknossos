@@ -78,12 +78,12 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
 
 class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
-  val collection = Tasktypes
+  protected val collection = Tasktypes
 
-  def idColumn(x: Tasktypes): Rep[String] = x._Id
-  def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Tasktypes): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TasktypesRow): Fox[TaskType] =
+  protected def parse(r: TasktypesRow): Fox[TaskType] =
     for {
       tracingType <- TracingType.fromString(r.tracingtype) ?~> "failed to parse tracing type"
       settingsAllowedModes <- Fox.combined(parseArrayTuple(r.settingsAllowedmodes).map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"
@@ -108,11 +108,11 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isdeleted
       )
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
        or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
-  override def updateAccessQ(requestingUserId: ObjectId) =
+  override protected def updateAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
        or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 

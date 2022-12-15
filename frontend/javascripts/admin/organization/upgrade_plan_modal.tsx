@@ -127,7 +127,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
     if (storageInputRef.current) {
       const requestedStorage = parseInt(storageInputRef.current.value);
       await sendUpgradePricingPlanStorageEmail(requestedStorage);
-      Toast.success("An email with your request has been send to the webKnossos team.");
+      Toast.success("An email with your request has been sent to the webKnossos team.");
     }
 
     destroy();

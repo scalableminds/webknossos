@@ -4,10 +4,8 @@ import {
   RocketOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
-import { getOrganizationStorageSpace } from "admin/admin_rest_api";
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import { useFetch } from "libs/react_helpers";
 import moment from "moment";
 import Constants from "oxalis/constants";
 import React from "react";
@@ -18,7 +16,6 @@ import {
   hasPricingPlanExceededUsers,
   hasPricingPlanExpired,
   powerPlanFeatures,
-  storageWarningThresholdMB,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";

@@ -1,9 +1,9 @@
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { ContextRouter } from "react-router-dom";
+import type { ContextRouter, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
-import React, { lazy, Suspense } from "react";
+import React, { ErrorInfo, lazy, Suspense } from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
@@ -11,6 +11,7 @@ import { TracingTypeEnum, APICompoundTypeEnum, APIUser } from "types/api_flow_ty
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
+import ErrorHandling from "libs/error_handling";
 import {
   getAnnotationInformation,
   getOrganizationForDataset,
@@ -57,6 +58,8 @@ import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { coalesce } from "libs/utils";
 import HelpButton from "oxalis/view/help_modal";
+import ErrorBoundary from "components/error_boundary";
+
 const { Content } = Layout;
 
 function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
@@ -116,6 +119,27 @@ function PageNotFoundView() {
     </div>
   );
 }
+
+type GetComponentProps<T> = T extends React.ComponentType<infer P> | React.Component<infer P>
+  ? P
+  : never;
+
+const RouteWithErrorBoundary: React.FC<RouteProps> = (props) => {
+  return (
+    <ErrorBoundary key={props.location?.pathname}>
+      <Route {...props} />
+    </ErrorBoundary>
+  );
+};
+
+const SecuredRouteWithErrorBoundary: React.FC<GetComponentProps<typeof SecuredRoute>> = (props) => {
+  return (
+    // @ts-expect-error Accessing props.location works as intended.
+    <ErrorBoundary key={props.location?.pathname}>
+      <SecuredRoute {...props} />
+    </ErrorBoundary>
+  );
+};
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
@@ -186,7 +210,7 @@ class ReactRouter extends React.Component<Props> {
           <HelpButton />
           <Content>
             <Switch>
-              <Route
+              <RouteWithErrorBoundary
                 exact
                 path="/"
                 render={() => {
@@ -201,7 +225,7 @@ class ReactRouter extends React.Component<Props> {
                   return <Redirect to="/auth/login" />;
                 }}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
@@ -219,7 +243,7 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
 
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/datasets/:folderIdWithName"
                 render={({ match }: ContextRouter) => {
@@ -234,7 +258,7 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
 
-              <Route
+              <RouteWithErrorBoundary
                 // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 isAuthenticated={isAuthenticated}
                 path="/dashboard"
@@ -248,7 +272,7 @@ class ReactRouter extends React.Component<Props> {
                   return null;
                 }}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
                 render={({ match }: ContextRouter) => (
@@ -259,52 +283,52 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/users"
                 component={UserListView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/statistics"
                 component={StatisticView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/reports/openTasks"
                 component={OpenTasksReportView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks"
                 component={TaskListView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/create"
                 component={TaskCreateView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
                 render={({ match }: ContextRouter) => (
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
                 render={({ match }: ContextRouter) => (
@@ -315,7 +339,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects"
                 render={(
@@ -323,12 +347,12 @@ class ReactRouter extends React.Component<Props> {
                 ) => <ProjectListView initialSearchValue={location.hash.slice(1)} />}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
                 render={() => <ProjectCreateView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
                 render={({ match }: ContextRouter) => (
@@ -339,7 +363,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
                 render={({ match }: ContextRouter) => (
@@ -370,12 +394,12 @@ class ReactRouter extends React.Component<Props> {
                 render={this.tracingView}
                 serverAuthenticationCallback={this.serverAuthenticationCallback}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
                 render={() => <DatasetAddView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/import"
                 render={({ match }: ContextRouter) => (
@@ -392,7 +416,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
@@ -407,7 +431,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
                 render={(
@@ -415,19 +439,19 @@ class ReactRouter extends React.Component<Props> {
                 ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/create"
                 component={TaskTypeCreateView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/edit"
                 render={({ match }: ContextRouter) => (
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/tasks"
                 render={({ match }: ContextRouter) => (
@@ -438,37 +462,37 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/projects"
                 render={({ match }: ContextRouter) => (
                   <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
                 render={({ match }: ContextRouter) => (
                   <ScriptCreateView scriptId={match.params.scriptId} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts"
                 component={ScriptListView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/jobs"
                 render={() => <JobListView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/organizations/:organizationName/edit"
                 render={({ match }) => (
@@ -476,30 +500,30 @@ class ReactRouter extends React.Component<Props> {
                   <OrganizationEditView organizationName={match.params.organizationName || ""} />
                 )}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/help/keyboardshortcuts"
                 render={() => (
                   <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
                 render={() => <TimeLineView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
                 component={AuthTokenView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/changePassword"
                 component={ChangePasswordView}
               />
-              <Route path="/login" render={() => <Redirect to="/auth/login" />} />
+              <RouteWithErrorBoundary path="/login" render={() => <Redirect to="/auth/login" />} />
 
-              <Route
+              <RouteWithErrorBoundary
                 path="/invite/:token"
                 render={({ match }: ContextRouter) => (
                   <AcceptInviteView
@@ -509,20 +533,32 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
 
-              <Route path="/signup" render={() => <Redirect to="/auth/signup" />} />
-              <Route path="/register" render={() => <Redirect to="/auth/signup" />} />
-              <Route path="/auth/register" render={() => <Redirect to="/auth/signup" />} />
-              <Route
+              <RouteWithErrorBoundary
+                path="/signup"
+                render={() => <Redirect to="/auth/signup" />}
+              />
+              <RouteWithErrorBoundary
+                path="/register"
+                render={() => <Redirect to="/auth/signup" />}
+              />
+              <RouteWithErrorBoundary
+                path="/auth/register"
+                render={() => <Redirect to="/auth/signup" />}
+              />
+              <RouteWithErrorBoundary
                 path="/auth/login"
                 render={() => (isAuthenticated ? <Redirect to="/" /> : <LoginView />)}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/auth/signup"
                 render={() => (isAuthenticated ? <Redirect to="/" /> : <RegistrationView />)}
               />
 
-              <Route path="/auth/resetPassword" component={StartResetPasswordView} />
-              <Route
+              <RouteWithErrorBoundary
+                path="/auth/resetPassword"
+                component={StartResetPasswordView}
+              />
+              <RouteWithErrorBoundary
                 path="/auth/finishResetPassword"
                 render={({ location }: ContextRouter) => {
                   const params = Utils.getUrlParamsObjectFromString(location.search);
@@ -533,7 +569,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationName/:datasetName/view"
                 render={this.tracingViewMode}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
                   <AsyncRedirect
@@ -545,11 +581,11 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/datasets/:organizationName/:datasetName/sandbox/:type"
                 render={this.tracingSandbox}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
@@ -616,27 +652,27 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationName/:datasetName"
                 render={this.tracingViewMode}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/publications/:id"
                 render={({ match }: ContextRouter) => (
                   <PublicationDetailView publicationId={match.params.id || ""} />
                 )}
               />
               <Redirect from="/publication/:id" to="/publications/:id" />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
                 component={AsyncWorkflowListView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/workflows/:workflowName"
                 component={AsyncWorkflowView}
               />
-              <Route path="/imprint" component={Imprint} />
-              <Route path="/privacy" component={Privacy} />
-              <Route
+              <RouteWithErrorBoundary path="/imprint" component={Imprint} />
+              <RouteWithErrorBoundary path="/privacy" component={Privacy} />
+              <RouteWithErrorBoundary
                 path="/links/:key"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
@@ -648,8 +684,10 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
-              <Route component={PageNotFoundView} />
+              {!features().isDemoInstance && (
+                <RouteWithErrorBoundary path="/onboarding" component={Onboarding} />
+              )}
+              <RouteWithErrorBoundary component={PageNotFoundView} />
             </Switch>
           </Content>
         </Layout>

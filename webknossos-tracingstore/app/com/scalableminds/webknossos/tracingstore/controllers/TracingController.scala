@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.controllers.Controller
@@ -12,8 +13,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.{
-  TracingStoreAccessTokenService,
   TSRemoteWebKnossosClient,
+  TracingStoreAccessTokenService,
   TracingUpdatesReport
 }
 import play.api.i18n.Messages
@@ -194,7 +195,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     val currentVersion = tracingService.currentVersion(tracingId)
     val report = TracingUpdatesReport(
       tracingId,
-      timestamps = updateGroups.map(_.timestamp),
+      timestamps = updateGroups.map(g => Instant(g.timestamp)),
       statistics = updateGroups.flatMap(_.stats).lastOption,
       significantChangesCount = updateGroups.map(_.significantChangesCount).sum,
       viewChangesCount = updateGroups.map(_.viewChangesCount).sum,

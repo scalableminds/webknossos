@@ -268,7 +268,14 @@ function DatasetView(props: Props) {
               {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
             </Dropdown.Button>
           </Tooltip>
-          <Link to="/datasets/upload" style={margin}>
+          <Link
+            to={
+              "activeFolderId" in context && context.activeFolderId != null
+                ? `/datasets/upload?to=${context.activeFolderId}`
+                : "/datasets/upload"
+            }
+            style={margin}
+          >
             <Button type="primary" icon={<PlusOutlined />}>
               Add Dataset
             </Button>

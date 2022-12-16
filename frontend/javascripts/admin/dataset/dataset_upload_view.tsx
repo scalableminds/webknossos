@@ -34,6 +34,8 @@ import {
   startConvertToWkwJob,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
+  updateDataset,
+  getDataset,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -332,6 +334,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
                 );
               }
+            } else {
+              const params = new URLSearchParams(location.search);
+              const targetFolderId = params.get("to");
+              if (targetFolderId) {
+                const datasetId = {
+                  owningOrganization: activeUser.organization,
+                  name: formValues.name,
+                };
+                const dataset = await getDataset(datasetId);
+                await updateDataset(datasetId, dataset, targetFolderId, true);
+              }
             }
 
             this.setState({
@@ -467,7 +480,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             percent={Math.round(uploadProgress * 1000) / 10}
             status="active"
           />
-          {isFinishing ? <Spin tip="Processing uploaded files …" /> : null}
+          {isFinishing ? <Spin style={{ marginTop: 4 }} tip="Processing uploaded files …" /> : null}
         </div>
       </Modal>
     );

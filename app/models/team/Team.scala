@@ -98,12 +98,12 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
 
 class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
-  val collection = Teams
+  protected val collection = Teams
 
-  def idColumn(x: Teams): Rep[String] = x._Id
-  def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Teams): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TeamsRow): Fox[Team] =
+  protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(
       Team(
         ObjectId(r._Id),
@@ -114,11 +114,11 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""(_id in (select _team from webknossos.user_team_roles where _user = '$requestingUserId')
        or _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
 
-  override def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(not isorganizationteam
           and _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
 

@@ -57,12 +57,12 @@ object Project {
 
 class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
-  val collection = Projects
+  protected val collection = Projects
 
-  def idColumn(x: Projects): Rep[String] = x._Id
-  def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Projects): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
 
-  def parse(r: ProjectsRow): Fox[Project] =
+  protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
       Project(
         ObjectId(r._Id),
@@ -77,13 +77,13 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""(
         (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
         or _owner = '${requestingUserId.id}'
         or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
         )"""
-  override def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
+  override protected def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
 
   // read operations
 

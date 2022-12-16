@@ -29,7 +29,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
                             multiUserDAO: MultiUserDAO,
-                            userTeamRolesDAO: UserTeamRolesDAO,
                             userExperiencesDAO: UserExperiencesDAO,
                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                             userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
@@ -117,7 +116,7 @@ class UserService @Inject()(conf: WkConf,
         lastTaskTypeId = None
       )
       _ <- userDAO.insertOne(user)
-      _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
+      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
     } yield user
   }
 
@@ -155,7 +154,7 @@ class UserService @Inject()(conf: WkConf,
         created = Instant.now
       )
       _ <- userDAO.insertOne(user)
-      _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
+      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
       _ = logger.info(
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user
@@ -189,7 +188,7 @@ class UserService @Inject()(conf: WkConf,
                                 isDatasetManager,
                                 isDeactivated = !activated,
                                 lastTaskTypeId)
-      _ <- userTeamRolesDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
+      _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
       _ = userCache.invalidateUser(user._id)
       _ <- if (oldEmail == email) Fox.successful(()) else tokenDAO.updateEmail(oldEmail, email)
@@ -259,7 +258,7 @@ class UserService @Inject()(conf: WkConf,
     userExperiencesDAO.findAllExperiencesForUser(_user)
 
   def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
-    userTeamRolesDAO.findTeamMembershipsForUser(_user)
+    userDAO.findTeamMembershipsForUser(_user)
 
   def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
     for {

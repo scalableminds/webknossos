@@ -288,9 +288,6 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    if (Math.random() > -1) {
-      throw new Error("Dummy error to test error boundary");
-    }
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
       preserveSelectedRowKeys: true,

@@ -14,6 +14,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class MeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
+    dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
+    dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     binaryDataServiceHolder: BinaryDataServiceHolder
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -53,18 +55,19 @@ class MeshController @Inject()(
       }
     }
 
-  def listMeshChunksForSegmentForVersion(token: Option[String],
-                                         organizationName: String,
-                                         dataSetName: String,
-                                         dataLayerName: String,
-                                         formatVersion: Int,
-                                         /* If targetMappingName is set, assume that meshfile contains meshes for
+  def listMeshChunksForSegmentForVersion(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      formatVersion: Int,
+      /* If targetMappingName is set, assume that meshfile contains meshes for
                                            the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
                                            belonging to the supplied agglomerate id.
                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
-                                          */
-                                         targetMappingName: Option[String],
-                                         targetMappingIsEditable: Option[Boolean] = None): Action[ListMeshChunksRequest] =
+       */
+      targetMappingName: Option[String],
+      targetMappingIsEditable: Option[Boolean] = None): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
@@ -115,7 +118,15 @@ class MeshController @Inject()(
                                          agglomerateId: Long,
                                          token: Option[String]): Fox[List[Long]] =
     if (isEditableMapping) {
-      Fox.successful(List.empty)
+      for {
+        tracingstoreUri <- dsRemoteWebKnossosClient.getTracingstoreUri
+        // TODO tracing id?
+        segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
+          mappingName,
+                                                                                                  agglomerateId,
+                                                                                                  token)
+        // TODO fall back to on-disk mapping if agglomerate id was not present.
+      } yield segmentIdsResult.segmentIds
     } else {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox

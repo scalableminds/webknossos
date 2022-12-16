@@ -1755,12 +1755,12 @@ export function makeMappingEditable(
   );
 }
 
-export function getEditableMapping(
+export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/info${tracingId}?token=${token}`),
   );
 }
 

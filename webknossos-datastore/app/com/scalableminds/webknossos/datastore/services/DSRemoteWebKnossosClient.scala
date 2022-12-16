@@ -106,6 +106,16 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryStringOptional("token", userToken)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
+  private lazy val tracingstoreUriCache: AlfuFoxCache[String, String] = AlfuFoxCache()
+  def getTracingstoreUri: Fox[String] =
+    tracingstoreUriCache.getOrLoad(
+      "tracingStore",
+      _ =>
+        rpc(s"$webKnossosUri/api/datastores/tracingStoreUri")
+          .addQueryString("key" -> dataStoreKey)
+          .getWithJsonResponse[String]
+    )
+
   // The annotation source needed for every chunk request. 5 seconds gets updates to the user fast enough,
   // while still limiting the number of remote lookups during streaming
   private lazy val annotationSourceCache: AlfuFoxCache[(String, Option[String]), AnnotationSource] =

@@ -160,7 +160,6 @@ export function FolderTreeSidebar({
           paddingLeft: 6,
           paddingRight: 6,
           paddingTop: 2,
-          // maxWidth: "20vw",
           flex: 0,
         }}
       >

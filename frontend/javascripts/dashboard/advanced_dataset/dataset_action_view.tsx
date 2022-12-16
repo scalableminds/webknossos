@@ -252,13 +252,30 @@ const onClearCache = async (
 
 export function getDatasetActionContextMenu({
   reloadDataset,
-  dataset,
+  datasets,
   hideContextMenu,
 }: {
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  dataset: APIMaybeUnimportedDataset;
+  datasets: APIMaybeUnimportedDataset[];
   hideContextMenu: () => void;
 }) {
+  if (datasets.length !== 1) {
+    return (
+      <Menu
+        onClick={hideContextMenu}
+        style={{
+          borderRadius: 6,
+        }}
+        mode="vertical"
+      >
+        <Menu.Item key="view" disabled>
+          No actions available.
+        </Menu.Item>
+      </Menu>
+    );
+  }
+  const dataset = datasets[0];
+
   return (
     <Menu
       onClick={hideContextMenu}

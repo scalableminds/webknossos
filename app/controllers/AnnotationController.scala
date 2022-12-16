@@ -4,6 +4,7 @@ import akka.util.Timeout
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
@@ -68,7 +69,7 @@ class AnnotationController @Inject()(
     with FoxImplicits {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
-  private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
+  private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
   @ApiOperation(value = "Information about an annotation, supplying the type explicitly",
                 nickname = "annotationInfoByType")
@@ -98,7 +99,8 @@ class AnnotationController @Inject()(
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
           if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
-            timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
+            timeSpanService
+              .logUserInteraction(Instant(timestamp), user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
@@ -187,7 +189,7 @@ class AnnotationController @Inject()(
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         _ <- bool2Fox(annotation.state == AnnotationState.Finished) ?~> "annotation.reopen.notFinished"
         _ <- bool2Fox(isAdminOrTeamManager || annotation._user == user._id) ?~> "annotation.reopen.notAllowed"
-        _ <- bool2Fox(isAdminOrTeamManager || System.currentTimeMillis - annotation.modified < taskReopenAllowed) ?~> "annotation.reopen.tooLate"
+        _ <- bool2Fox(isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast) ?~> "annotation.reopen.tooLate"
       } yield ()
 
     for {
@@ -345,7 +347,7 @@ class AnnotationController @Inject()(
       } yield result
   }
 
-  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(
+  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
@@ -360,7 +362,7 @@ class AnnotationController @Inject()(
     implicit request =>
       log() {
         for {
-          (updated, message) <- finishAnnotation(typ, id, request.identity, timestamp) ?~> "annotation.finish.failed"
+          (updated, message) <- finishAnnotation(typ, id, request.identity, Instant(timestamp)) ?~> "annotation.finish.failed"
           restrictions <- provider.restrictionsFor(typ, id)
           json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
         } yield JsonOk(json, Messages(message))
@@ -373,7 +375,7 @@ class AnnotationController @Inject()(
       log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
           val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
-            jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, timestamp))
+            jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, Instant(timestamp)))
           }
 
           results.map { _ =>

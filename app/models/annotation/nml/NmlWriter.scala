@@ -1,6 +1,7 @@
 package models.annotation.nml
 
 import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -11,7 +12,6 @@ import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import models.annotation.Annotation
 import models.task.Task
 import models.user.User
-import org.joda.time.DateTime
 import play.api.libs.iteratee.Enumerator
 
 import javax.inject.Inject
@@ -329,7 +329,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "timestamp")
-      writer.writeAttribute("content", DateTime.now().getMillis.toString)
+      writer.writeAttribute("content", Instant.now.epochMillis.toString)
     }
     annotationOpt.foreach { annotation =>
       Xml.withinElementSync("meta") {

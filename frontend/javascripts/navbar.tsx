@@ -316,10 +316,6 @@ function HelpSubMenu({
 } & SubMenuProps) {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
-  if (isHelpModalOpen) {
-    throw new Error("Throwing dummy error because you clicked on Help > Ask a question.");
-  }
-
   return (
     <SubMenu
       title={

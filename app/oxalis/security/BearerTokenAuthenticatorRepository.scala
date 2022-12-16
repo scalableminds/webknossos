@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.repositories.AuthenticatorRepository
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import oxalis.security.TokenType.TokenType
 
@@ -24,11 +25,13 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       oldAuthenticatorSQL <- tokenDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID,
                                                          newAuthenticator.loginInfo.providerKey,
                                                          TokenType.Authentication)
-      _ <- tokenDAO.updateValues(oldAuthenticatorSQL._id,
-                                 newAuthenticator.id,
-                                 newAuthenticator.lastUsedDateTime,
-                                 newAuthenticator.expirationDateTime,
-                                 newAuthenticator.idleTimeout)
+      _ <- tokenDAO.updateValues(
+        oldAuthenticatorSQL._id,
+        newAuthenticator.id,
+        Instant.fromJoda(newAuthenticator.lastUsedDateTime),
+        Instant.fromJoda(newAuthenticator.expirationDateTime),
+        newAuthenticator.idleTimeout
+      )
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException(
       "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")

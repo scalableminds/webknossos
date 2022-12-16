@@ -7,6 +7,7 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessCo
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -104,8 +105,7 @@ class AnnotationService @Inject()(
     nmlWriter: NmlWriter,
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
-    meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO
+    meshService: MeshService
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
@@ -387,7 +387,7 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[String] = {
     def executeFinish: Fox[String] =
       for {
-        _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)
+        _ <- annotationDAO.updateModified(annotation._id, Instant.now)
         _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
       } yield {
         if (annotation._task.isEmpty)
@@ -458,8 +458,8 @@ class AnnotationService @Inject()(
           annotationLayers = annotationLayers,
           state = Active,
           typ = AnnotationType.Task,
-          created = System.currentTimeMillis,
-          modified = System.currentTimeMillis
+          created = Instant.now,
+          modified = Instant.now
         )
         _ <- annotationDAO.updateInitialized(newAnnotation)
       } yield newAnnotation
@@ -588,11 +588,11 @@ class AnnotationService @Inject()(
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def sharedAnnotationsFor(userTeams: List[ObjectId]): Fox[List[Annotation]] =
-    sharedAnnotationsDAO.findAllSharedForTeams(userTeams)
+    annotationDAO.findAllSharedForTeams(userTeams)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] =
-    sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
+    annotationDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
       implicit

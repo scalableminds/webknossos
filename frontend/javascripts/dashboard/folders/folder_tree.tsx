@@ -7,12 +7,11 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Menu } from "antd";
+import { Dropdown, Menu, Modal } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
-import { MenuInfo } from "rc-menu/lib/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";
@@ -148,7 +147,7 @@ export function FolderTreeSidebar({
         ref={drop}
         className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
         style={{
-          height: 400,
+          minHeight: 400,
           marginRight: 4,
           borderRadius: 2,
           paddingLeft: 6,
@@ -260,17 +259,63 @@ function FolderItemAsDropTarget(props: {
   isEditable: boolean;
 }) {
   const context = useDatasetCollectionContext();
+  const { selectedDatasets, setSelectedDatasets } = context;
   const { folderId, className, isEditable, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
     accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
-      const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
+      if (selectedDatasets.length > 1) {
+        if (selectedDatasets.every((ds) => ds.folderId === folderId)) {
+          Toast.warning(
+            "The selected datasets are already in the specified folder. No dataset was moved.",
+          );
+          return;
+        }
 
-      if (dataset) {
-        context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+        // Show a modal so that the user cannot do anything else while the datasets are being moved.
+        const modal = Modal.info({
+          title: "Moving Datasets",
+          content: `Preparing to move ${selectedDatasets.length} datasets...`,
+          onCancel: (_close) => {},
+          onOk: (_close) => {},
+          okText: null,
+        });
+
+        let successCounter = 0;
+        Promise.all(
+          selectedDatasets.map((ds) =>
+            context.queries.updateDatasetMutation.mutateAsync([ds, folderId]).then(() => {
+              successCounter++;
+              modal.update({
+                content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
+              });
+            }),
+          ),
+        )
+          .then(
+            () => Toast.success(`Successfully moved ${selectedDatasets.length} datasets.`),
+            (err) => {
+              Toast.error(
+                `Couldn't move all ${selectedDatasets.length} datasets. See console for details`,
+              );
+              console.error(err);
+            },
+          )
+          .finally(() => {
+            // The datasets are not in the active folder anymore. Clear the selection to avoid
+            // that stale instances are mutated during the next bulk action.
+            setSelectedDatasets([]);
+            modal.destroy();
+          });
       } else {
-        Toast.error("Could not move dataset. Please try again.");
+        const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
+
+        if (dataset) {
+          context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+        } else {
+          Toast.error("Could not move dataset. Please try again.");
+        }
       }
     },
     canDrop: () => isEditable,

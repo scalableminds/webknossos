@@ -141,19 +141,27 @@ export function FolderTreeSidebar({
     [context],
   );
 
+  const createMenu = () => (
+    <Menu>
+      <Menu.Item disabled>Please rightclick an existing folder.</Menu.Item>
+    </Menu>
+  );
+
   return (
-    <div>
+    <div
+      style={{ display: "flex", flexDirection: "column", height: "100%" }}
+      className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
+    >
       <div
         ref={drop}
-        className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
         style={{
-          minHeight: 400,
           marginRight: 4,
           borderRadius: 2,
           paddingLeft: 6,
           paddingRight: 6,
           paddingTop: 2,
-          maxWidth: "20vw",
+          // maxWidth: "20vw",
+          flex: 0,
         }}
       >
         {!isLoading && treeData.length === 0 ? (
@@ -176,6 +184,21 @@ export function FolderTreeSidebar({
           expandedKeys={expandedKeys}
         />
       </div>
+      <Dropdown
+        overlay={createMenu}
+        placement="bottom"
+        // The overlay is generated lazily. By default, this would make the overlay
+        // re-render on each parent's render() after it was shown for the first time.
+        // The reason for this is that it's not destroyed after closing.
+        // Therefore, autoDestroy is passed.
+        // destroyPopupOnHide should also be an option according to the docs, but
+        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+        autoDestroy
+        trigger={["contextMenu"]}
+      >
+        <div style={{ flex: 1 }} />
+      </Dropdown>
     </div>
   );
 }

@@ -55,6 +55,8 @@ import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
 import type { Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
+import FolderSelection from "dashboard/folders/folder_selection";
+
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
@@ -84,6 +86,7 @@ type State = {
   uploadId: string;
   resumableUpload: any;
   datastoreUrl: string;
+  targetFolderId: string | null;
 };
 
 function WkwExample() {
@@ -156,6 +159,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     uploadId: "",
     resumableUpload: {},
     datastoreUrl: "",
+    targetFolderId: null,
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
@@ -164,6 +168,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
+    const params = new URLSearchParams(location.search);
+    const targetFolderId = params.get("to");
+    this.setState({ targetFolderId });
   }
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
@@ -335,15 +342,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 );
               }
             } else {
-              const params = new URLSearchParams(location.search);
-              const targetFolderId = params.get("to");
-              if (targetFolderId) {
+              if (this.state.targetFolderId) {
                 const datasetId = {
                   owningOrganization: activeUser.organization,
                   name: formValues.name,
                 };
                 const dataset = await getDataset(datasetId);
-                await updateDataset(datasetId, dataset, targetFolderId, true);
+                await updateDataset(datasetId, dataset, this.state.targetFolderId, true);
               }
             }
 
@@ -719,6 +724,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 </FormItem>
               </Col>
             </Row>
+
+            <FormItemWithInfo
+              name="targetFolder"
+              label="Target Folder"
+              info="The folder into which the dataset will be uploaded."
+            >
+              <FolderSelection
+                folderId={this.state.targetFolderId}
+                onChange={(targetFolderId) => this.setState({ targetFolderId })}
+              />
+            </FormItemWithInfo>
+
             <DatastoreFormItem
               // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: FormInstance<any> | null; datastores... Remove this comment to see the full error message
               form={form}

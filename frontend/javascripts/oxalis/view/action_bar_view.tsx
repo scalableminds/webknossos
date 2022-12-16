@@ -12,7 +12,7 @@ import {
 import { trackAction } from "oxalis/model/helpers/analytics";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import type { ViewMode, ControlMode } from "oxalis/constants";
+import { ViewMode, ControlMode, MappingStatusEnum } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import type { OxalisState } from "oxalis/store";
@@ -26,6 +26,7 @@ import {
   is2dDataset,
   doesSupportVolumeWithFallback,
   getVisibleSegmentationLayer,
+  getMappingInfoForSupportedLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
 
@@ -96,7 +97,22 @@ class ActionBarView extends React.PureComponent<Props, State> {
       maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
         ? maybeSegmentationLayer.name
         : null;
-    const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName);
+
+    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
+    let maybeMappingName = null;
+    if (
+      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+      mappingInfo.mappingType === "HDF5"
+    ) {
+      maybeMappingName = mappingInfo.mappingName;
+    }
+
+    const annotation = await createExplorational(
+      dataset,
+      "hybrid",
+      fallbackLayerName,
+      maybeMappingName,
+    );
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };

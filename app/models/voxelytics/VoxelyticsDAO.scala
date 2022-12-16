@@ -1,12 +1,12 @@
 package models.voxelytics
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLClient, SimpleSQLDAO}
 
-import java.sql.Timestamp
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -62,16 +62,17 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       r.toList.map(row =>
         TaskEntry(ObjectId(row._1), ObjectId(row._2), row._3, row._4, Json.parse(row._5).as[JsObject]))
 
-  def findWorkflowsByHash(organizationId: ObjectId, workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
+  def findWorkflowsByHashAndOrganization(organizationId: ObjectId,
+                                         workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
     for {
       r <- run(sql"""
           SELECT name, hash
           FROM webknossos.voxelytics_workflows
           WHERE hash IN #${writeEscapedTuple(workflowHashes.toList)} AND _organization = $organizationId
           """.as[(String, String)])
-    } yield r.toList.map(row => WorkflowEntry(row._1, row._2))
+    } yield r.toList.map(row => WorkflowEntry(row._1, row._2, organizationId))
 
-  def findWorkflowByHash(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
+  def findWorkflowByHashAndOrganization(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
     for {
       r <- run(sql"""
           SELECT name, hash
@@ -79,7 +80,17 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           WHERE hash = $workflowHash AND _organization = $organizationId
           """.as[(String, String)])
       (name, hash) <- r.headOption
-    } yield WorkflowEntry(name, hash)
+    } yield WorkflowEntry(name, hash, organizationId)
+
+  def findWorkflowByHash(workflowHash: String): Fox[WorkflowEntry] =
+    for {
+      r <- run(sql"""
+          SELECT name, hash, _organization
+          FROM webknossos.voxelytics_workflows
+          WHERE hash = $workflowHash
+          """.as[(String, String, String)])
+      (name, hash, organizationId) <- r.headOption // Could have multiple entries; picking the first.
+    } yield WorkflowEntry(name, hash, ObjectId(organizationId))
 
   def findTaskRuns(organizationId: ObjectId, runIds: List[ObjectId], staleTimeout: Duration): Fox[List[TaskRunEntry]] =
     for {
@@ -159,8 +170,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         WHERE
           r._organization = $organizationId AND
           r._id IN #${writeEscapedTuple(runIds.map(_.id))}
-        """
-        .as[(String, String, String, String, String, Option[Timestamp], Option[Timestamp], Option[String], Long, Long)])
+        """.as[(String, String, String, String, String, Option[Instant], Option[Instant], Option[String], Long, Long)])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -173,8 +183,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                 ObjectId(row._3),
                 row._4,
                 state,
-                row._6.map(_.toInstant),
-                row._7.map(_.toInstant),
+                row._6,
+                row._7,
                 row._8,
                 row._9,
                 row._10
@@ -184,9 +194,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def findRuns(currentUser: User,
                runIds: Option[List[ObjectId]],
                workflowHash: Option[String],
-               staleTimeout: Duration): Fox[List[RunEntry]] = {
+               staleTimeout: Duration,
+               allowUnlisted: Boolean): Fox[List[RunEntry]] = {
     val organizationId = currentUser._organization
-    val readAccessQ = if (currentUser.isAdmin) { "" } else { s" AND (r._user = ${escapeLiteral(currentUser._id.id)})" }
+    val readAccessQ =
+      if (currentUser.isAdmin || allowUnlisted) "" else { s" AND (r._user = ${escapeLiteral(currentUser._id.id)})" }
     val runIdsQ = runIds.map(runIds => s" AND r._id IN ${writeEscapedTuple(runIds.map(_.id))}").getOrElse("")
     val workflowHashQ =
       workflowHash.map(workflowHash => s" AND r.workflow_hash = ${escapeLiteral(workflowHash)}").getOrElse("")
@@ -238,7 +250,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           #$runIdsQ
           #$workflowHashQ
           #$readAccessQ
-        """.as[(String, String, String, String, String, String, String, String, String, Timestamp, Option[Timestamp])])
+        """.as[(String, String, String, String, String, String, String, String, String, Instant, Option[Instant])])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -255,8 +267,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                 row._7,
                 Json.parse(row._8).as[JsObject],
                 state,
-                row._10.toInstant,
-                row._11.map(_.toInstant)
+                row._10,
+                row._11
             )))
     } yield results
 
@@ -266,8 +278,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       _ <- run(
         sqlu"""INSERT INTO webknossos.voxelytics_artifactFileChecksumEvents (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp)
-               VALUES ($artifactId, ${ev.path}, ${ev.resolvedPath}, ${ev.checksumMethod}, ${ev.checksum}, ${ev.fileSize}, ${Timestamp
-          .from(ev.lastModified)}, ${Timestamp.from(ev.timestamp)})
+               VALUES ($artifactId, ${ev.path}, ${ev.resolvedPath}, ${ev.checksumMethod}, ${ev.checksum}, ${ev.fileSize}, ${ev.lastModified}, ${ev.timestamp})
                ON CONFLICT (_artifact, path, timestamp)
                  DO UPDATE SET
                    resolvedPath = EXCLUDED.resolvedPath,
@@ -282,8 +293,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       _ <- run(
         sqlu"""INSERT INTO webknossos.voxelytics_chunkProfilingEvents (_chunk, hostname, pid, memory, cpuUser, cpuSystem, timestamp)
-                 VALUES ($chunkId, ${ev.hostname}, ${ev.pid}, ${ev.memory}, ${ev.cpuUser}, ${ev.cpuSystem}, ${Timestamp
-          .from(ev.timestamp)})
+                 VALUES ($chunkId, ${ev.hostname}, ${ev.pid}, ${ev.memory}, ${ev.cpuUser}, ${ev.cpuSystem}, ${ev.timestamp})
                  ON CONFLICT (_chunk, timestamp)
                    DO UPDATE SET
                      hostname = EXCLUDED.hostname,
@@ -297,7 +307,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertRunHeartbeatEvent(runId: ObjectId, ev: RunHeartbeatEvent): Fox[Unit] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_runHeartbeatEvents (_run, timestamp)
-                     VALUES ($runId, ${Timestamp.from(ev.timestamp)})
+                     VALUES ($runId, ${ev.timestamp})
                      ON CONFLICT (_run)
                        DO UPDATE SET timestamp = EXCLUDED.timestamp
                      """)
@@ -306,8 +316,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertChunkStateChangeEvent(chunkId: ObjectId, ev: ChunkStateChangeEvent): Fox[Unit] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_chunkStateChangeEvents (_chunk, timestamp, state)
-                      VALUES ($chunkId, ${Timestamp
-        .from(ev.timestamp)}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
+                      VALUES ($chunkId, ${ev.timestamp}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
                       ON CONFLICT (_chunk, timestamp)
                         DO UPDATE SET state = EXCLUDED.state
                       """)
@@ -316,7 +325,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertTaskStateChangeEvent(taskId: ObjectId, ev: TaskStateChangeEvent): Fox[Unit] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_taskStateChangeEvents (_task, timestamp, state)
-                VALUES ($taskId, ${Timestamp.from(ev.timestamp)}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
+                VALUES ($taskId, ${ev.timestamp}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
                 ON CONFLICT (_task, timestamp)
                   DO UPDATE SET state = EXCLUDED.state
                 """)
@@ -325,7 +334,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertRunStateChangeEvent(runId: ObjectId, ev: RunStateChangeEvent): Fox[Unit] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_runStateChangeEvents (_run, timestamp, state)
-                VALUES ($runId, ${Timestamp.from(ev.timestamp)}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
+                VALUES ($runId, ${ev.timestamp}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
                 ON CONFLICT (_run, timestamp)
                   DO UPDATE SET state = EXCLUDED.state
                 """)
@@ -601,8 +610,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           (String,
            Int,
            Int,
-           Timestamp,
-           Timestamp,
+           Instant,
+           Instant,
            Double,
            Double,
            Double,
@@ -623,8 +632,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
             row._1,
             row._2,
             row._3,
-            row._4.toInstant,
-            row._5.toInstant,
+            row._4,
+            row._5,
             StatisticsEntry(row._6, row._7, row._8),
             StatisticsEntry(row._9, row._10, row._11),
             StatisticsEntry(row._12, row._13, row._14),
@@ -656,17 +665,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         WHERE
           a._task = $taskId #${artifactName.map(a => s"AND a.name = ${escapeLiteral(a)}").getOrElse("")}
         ORDER BY af.path
-        """.as[(String, String, String, String, Timestamp, String, String, Long, Timestamp)])
+        """.as[(String, String, String, String, Instant, String, String, Long, Instant)])
     } yield
-      r.toList.map(
-        row =>
-          ArtifactChecksumEntry(row._1,
-                                row._2,
-                                row._3,
-                                row._4,
-                                row._5.toInstant,
-                                row._6,
-                                row._7,
-                                row._8,
-                                row._9.toInstant))
+      r.toList.map(row => ArtifactChecksumEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7, row._8, row._9))
 }

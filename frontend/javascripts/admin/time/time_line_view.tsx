@@ -114,7 +114,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
     });
 
     if (this.state.user != null) {
-      /* eslint-disable react/no-access-state-in-setstate */
       const timeTrackingData = compressTimeLogs(
         await getTimeTrackingForUser(
           this.state.user.id,
@@ -128,7 +127,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
         },
         this.calculateStats,
       );
-      /* eslint-enable react/no-access-state-in-setstate */
     }
 
     this.setState({

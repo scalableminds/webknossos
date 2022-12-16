@@ -1,7 +1,5 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import { Table, Spin, Button, Input, Modal, Alert } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -17,9 +15,7 @@ import messages from "messages";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APITeam[] = [];
-type Props = {
-  history: RouteComponentProps["history"];
-};
+type Props = {};
 type State = {
   isLoading: boolean;
   teams: Array<APITeam>;
@@ -43,12 +39,12 @@ class TeamListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchData();
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(): Promise<void> {
@@ -211,4 +207,4 @@ class TeamListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TeamListView);
+export default TeamListView;

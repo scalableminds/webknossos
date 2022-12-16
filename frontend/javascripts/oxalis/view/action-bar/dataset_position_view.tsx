@@ -71,7 +71,7 @@ class DatasetPositionView extends PureComponent<Props> {
     const isOutOfDatasetBounds = isPositionOutOfBounds(datasetMin, datasetMax);
     let isOutOfTaskBounds = false;
 
-    if (task && task.boundingBox) {
+    if (task?.boundingBox) {
       const bbox = task.boundingBox;
       const bboxMax = [
         bbox.topLeft[0] + bbox.width,

@@ -20,7 +20,7 @@ import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import ContourGeometry from "oxalis/geometries/contourgeometry";
+import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import Cube from "oxalis/geometries/cube";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
@@ -54,10 +54,13 @@ class SceneController {
   userBoundingBoxGroup: THREE.Group;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxes' has no initializer an... Remove this comment to see the full error message
   userBoundingBoxes: Array<Cube>;
+  annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectGeometry' has no initializer and is not d... Remove this comment to see the full error message
+  quickSelectGeometry: QuickSelectGeometry;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
@@ -199,7 +202,7 @@ class SceneController {
     return color;
   }
 
-  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
+  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry) {
     const color = this.getColorObjectForSegment(cellId);
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
@@ -210,14 +213,13 @@ class SceneController {
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    mesh.renderOrder = passive ? 1 : 0;
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
     });
     tweenAnimation
       .to(
         {
-          opacity: passive ? 0.4 : 1,
+          opacity: 1,
         },
         500,
       )
@@ -242,33 +244,25 @@ class SceneController {
 
     const meshNumber = _.size(this.stlMeshes);
 
-    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry, false);
+    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry);
     this.meshesRootGroup.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
   }
 
-  addIsosurfaceFromVertices(
-    vertices: Float32Array,
-    segmentationId: number,
-    // Passive isosurfaces are ignored during picking, are shown more transparently, and are rendered
-    // last so that all non-passive isosurfaces are rendered before them. This makes sure that non-passive
-    // isosurfaces are not skipped during rendering if they are overlapped by passive ones.
-    passive: boolean,
-  ): void {
+  addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
 
-    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, passive);
+    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
   }
 
   addIsosurfaceFromGeometry(
     geometry: THREE.BufferGeometry,
     segmentationId: number,
-    passive: boolean = false,
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
   ): void {
@@ -278,13 +272,11 @@ class SceneController {
       this.isosurfacesRootGroup.add(newGroup);
       // @ts-ignore
       newGroup.cellId = segmentationId;
-      // @ts-ignore
-      newGroup.passive = passive;
       if (scale != null) {
         newGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
-    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry, passive);
+    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry);
     if (offset) {
       mesh.translateX(offset[0]);
       mesh.translateY(offset[1]);
@@ -308,7 +300,6 @@ class SceneController {
   addLights(): void {
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-
     const AMBIENT_INTENSITY = 30;
     const DIRECTIONAL_INTENSITY = 5;
     const POINT_INTENSITY = 5;
@@ -373,6 +364,8 @@ class SceneController {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
+    this.annotationToolsGeometryGroup = new THREE.Group();
+    this.rootNode.add(this.annotationToolsGeometryGroup);
     this.userBoundingBoxes = [];
     const state = Store.getState();
     // Cubes
@@ -388,10 +381,11 @@ class SceneController {
     const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (state.tracing.volumes.length > 0) {
-      this.contour = new ContourGeometry();
-      this.contour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
-    }
+    this.contour = new ContourGeometry();
+    this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
+
+    this.quickSelectGeometry = new QuickSelectGeometry();
+    this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
 
     if (state.tracing.skeleton != null) {
       this.addSkeleton((_state) => getSkeletonTracing(_state.tracing), true);
@@ -450,7 +444,7 @@ class SceneController {
       this.taskBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
-        Utils.__guard__(this.taskBoundingBox, (bb) => bb.setVisibility(false));
+        this.taskBoundingBox?.setVisibility(false);
       }
     }
   }
@@ -467,34 +461,34 @@ class SceneController {
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.updateForCam(id));
+    this.taskBoundingBox?.updateForCam(id);
 
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
+    this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
+    const originalPosition = getPosition(Store.getState().flycam);
     if (id !== OrthoViews.TDView) {
-      let ind;
-
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
-          const originalPosition = getPosition(Store.getState().flycam);
 
           const pos = _.clone(originalPosition);
 
-          ind = Dimensions.getIndices(planeId);
+          const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
+
+          this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
           this.planes[planeId].setVisible(false);
         }
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        const pos = getPosition(Store.getState().flycam);
-        this.planes[planeId].setPosition(pos);
+        this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
@@ -627,7 +621,7 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(false);
     this.userBoundingBoxGroup.visible = false;
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(false));
+    this.taskBoundingBox?.setVisibility(false);
 
     if (this.isosurfacesRootGroup != null) {
       this.isosurfacesRootGroup.visible = false;
@@ -642,7 +636,7 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(true);
     this.userBoundingBoxGroup.visible = true;
 
-    Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(true));
+    this.taskBoundingBox?.setVisibility(true);
   }
 
   bindToEvents(): void {

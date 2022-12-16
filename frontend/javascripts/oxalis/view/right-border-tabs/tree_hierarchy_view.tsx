@@ -4,15 +4,22 @@ import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons"
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import React from "react";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tree";
+import {
+  ExtendedNodeData,
+  FullTree,
+  NodeData,
+  OnDragPreviousAndNextLocation,
+  OnMovePreviousAndNextLocation,
+  SortableTreeWithoutDndContext as SortableTree,
+} from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
 
-import type { TreeNode } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import {
+  getGroupByIdWithSubgroups,
+  TreeNode,
   MISSING_GROUP_ID,
   TYPE_GROUP,
   TYPE_TREE,
@@ -39,12 +46,14 @@ import {
   setTreeGroupAction,
   deleteTreeAction,
   toggleInactiveTreesAction,
+  shuffleAllTreeColorsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-const CHECKBOX_STYLE = {};
+
+const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
   width: 16,
   display: "inline-block",
@@ -73,6 +82,7 @@ type Props = OwnProps & {
   onUpdateTreeGroups: (arg0: Array<TreeGroup>) => void;
   onBatchActions: (arg0: Array<Action>, arg1: string) => void;
   onToggleHideInactiveTrees: () => void;
+  onShuffleAllTreeColors: () => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -80,6 +90,13 @@ type State = {
   groupTree: Array<TreeNode>;
   searchFocusOffset: number;
   activeTreeDropdownId: number | null | undefined;
+  activeGroupDropdownId: number | null | undefined;
+};
+
+export type GenerateNodePropsType = {
+  title?: JSX.Element;
+  className?: string;
+  style?: React.CSSProperties;
 };
 
 const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
@@ -96,6 +113,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     prevProps: null,
     searchFocusOffset: 0,
     activeTreeDropdownId: null,
+    activeGroupDropdownId: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -236,14 +254,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
-  onMoveNode = (params: {
-    nextParentNode: TreeNode;
-    node: TreeNode;
-    treeData: Array<TreeNode>;
-  }) => {
+  onMoveNode = (
+    params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
+  ) => {
     const { nextParentNode, node, treeData } = params;
 
-    if (node.type === TYPE_TREE) {
+    if (node.type === TYPE_TREE && nextParentNode) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
       const moveActions = allTreesToMove.map((treeId) =>
@@ -284,6 +300,35 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onDeleteGroup(groupId);
   }
 
+  shuffleTreeGroupColors(groupId: number) {
+    const groupToTreeMap = createGroupToTreesMap(this.props.trees);
+    const groupIdWithSubgroups = getGroupByIdWithSubgroups(this.props.treeGroups, groupId);
+    const shuffleTreeColorActions = groupIdWithSubgroups.flatMap((subGroupId) => {
+      if (subGroupId in groupToTreeMap)
+        return groupToTreeMap[subGroupId].map((tree) => shuffleTreeColorAction(tree.treeId));
+      return [];
+    });
+    this.props.onBatchActions(shuffleTreeColorActions, "SHUFFLE_TREE_COLOR");
+  }
+
+  setTreeGroupColor(groupId: number, color: Vector3) {
+    const groupToTreeMap = createGroupToTreesMap(this.props.trees);
+    const groupIdWithSubgroups = getGroupByIdWithSubgroups(this.props.treeGroups, groupId);
+    const setTreeColorActions = groupIdWithSubgroups.flatMap((subGroupId) => {
+      if (subGroupId in groupToTreeMap)
+        return groupToTreeMap[subGroupId].map((tree) => setTreeColorAction(tree.treeId, color));
+      return [];
+    });
+    this.props.onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
+  }
+
+  setAllTreesColor(color: Vector3) {
+    const setTreeColorActions = Object.values(this.props.trees).map((tree) =>
+      setTreeColorAction(tree.treeId, color),
+    );
+    this.props.onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
+  }
+
   handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
     if (isVisible) {
       this.setState({
@@ -297,6 +342,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     });
   };
 
+  handleGroupDropdownMenuVisibility = (groupId: number, isVisible: boolean) => {
+    if (isVisible) {
+      this.setState({
+        activeGroupDropdownId: groupId,
+      });
+      return;
+    }
+
+    this.setState({
+      activeGroupDropdownId: null,
+    });
+  };
+
   getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
 
@@ -304,7 +362,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       return "selected-tree-node";
     }
 
-    return null;
+    return undefined;
   };
 
   handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
@@ -384,6 +442,27 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         >
           <i className="fas fa-eye" /> Hide/Show all other trees
         </Menu.Item>
+        <Menu.Item
+          key="shuffleTreeGroupColors"
+          onClick={() => {
+            if (id === MISSING_GROUP_ID) this.props.onShuffleAllTreeColors();
+            else this.shuffleTreeGroupColors(id);
+          }}
+          title="Shuffle Tree Colors"
+        >
+          <i className="fas fa-adjust" /> Shuffle Tree Group Colors
+        </Menu.Item>
+        <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
+          <ChangeColorMenuItemContent
+            title="Change Tree Group Color"
+            isDisabled={isEditingDisabled}
+            onSetColor={(color) => {
+              if (id === MISSING_GROUP_ID) this.setAllTreesColor(color);
+              else this.setTreeGroupColor(id, color);
+            }}
+            rgb={[0.5, 0.5, 0.5]}
+          />
+        </Menu.Item>
       </Menu>
     );
 
@@ -401,6 +480,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
+          visible={this.state.activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+          onVisibleChange={(isVisible) => this.handleGroupDropdownMenuVisibility(id, isVisible)}
           trigger={["contextMenu"]}
         >
           <span>
@@ -431,15 +512,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   };
 
-  generateNodeProps = (params: { node: TreeNode }) => {
+  generateNodeProps = (params: ExtendedNodeData<TreeNode>): GenerateNodePropsType => {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
-    const nodeProps = {};
+    const nodeProps: GenerateNodePropsType = {};
 
     if (node.type === TYPE_GROUP) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'title' does not exist on type '{}'.
       nodeProps.title = this.renderGroupActionsDropdown(node);
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'className' does not exist on type '{}'.
       nodeProps.className = "group-type";
     } else {
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
@@ -498,9 +577,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Menu>
       );
 
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'title' does not exist on type '{}'.
       nodeProps.title = (
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
         <div className={styleClass}>
           <Dropdown
             overlay={createMenu} // The overlay is generated lazily. By default, this would make the overlay
@@ -538,9 +615,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Dropdown>
         </div>
       );
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'className' does not exist on type '{}'.
       nodeProps.className = "tree-type";
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type '{}'.
       nodeProps.style = {
         color: `rgb(${rgbColorString})`,
       };
@@ -569,13 +644,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
-  canDrop = (params: { nextParent: TreeNode }) => {
+  canDrop = (params: OnDragPreviousAndNextLocation<TreeNode> & NodeData<TreeNode>) => {
     const { nextParent } = params;
     return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
   };
 
-  canDrag = (params: { node: TreeNode }) => {
-    const { node } = params;
+  canDrag = (params: ExtendedNodeData): boolean => {
+    const node = params.node as TreeNode;
     return this.props.allowUpdate && node.id !== MISSING_GROUP_ID;
   };
 
@@ -671,6 +746,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onToggleHideInactiveTrees() {
     dispatch(toggleInactiveTreesAction());
+  },
+
+  onShuffleAllTreeColors() {
+    dispatch(shuffleAllTreeColorsAction());
   },
 });
 

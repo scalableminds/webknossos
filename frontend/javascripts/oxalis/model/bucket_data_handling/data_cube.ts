@@ -2,12 +2,7 @@
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import {
-  DataBucket,
-  NULL_BUCKET,
-  NULL_BUCKET_OUT_OF_BB,
-  NullBucket,
-} from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
@@ -21,7 +16,6 @@ import {
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
@@ -66,7 +60,6 @@ const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
-  arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
@@ -122,8 +115,6 @@ class DataCube {
       Math.ceil(this.upperBoundary[1] / constants.BUCKET_WIDTH),
       Math.ceil(this.upperBoundary[2] / constants.BUCKET_WIDTH),
     ];
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
-    this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
     for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
       const zoomedCubeBoundary = [
@@ -165,12 +156,8 @@ class DataCube {
     this.temporalBucketManager = new TemporalBucketManager(this.pullQueue, this.pushQueue);
   }
 
-  getNullBucket(address: Vector4): Bucket {
-    if (this.boundingBox.containsBucket(address)) {
-      return NULL_BUCKET;
-    } else {
-      return NULL_BUCKET_OUT_OF_BB;
-    }
+  getNullBucket(): Bucket {
+    return NULL_BUCKET;
   }
 
   isMappingEnabled(): boolean {
@@ -214,16 +201,12 @@ class DataCube {
     return mappedId != null ? mappedId : idToMap;
   }
 
-  getArbitraryCube(): ArbitraryCubeAdapter {
-    return this.arbitraryCube;
-  }
-
   isWithinBounds([x, y, z, zoomStep]: Vector4): boolean {
     if (this.cubes[zoomStep] == null) {
       return false;
     }
 
-    return this.boundingBox.containsBucket([x, y, z, zoomStep]);
+    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.resolutionInfo);
   }
 
   getBucketIndex([x, y, z, zoomStep]: Vector4): number | null | undefined {
@@ -244,7 +227,7 @@ class DataCube {
   // outside the dataset's bounding box.
   getOrCreateBucket(address: Vector4): Bucket {
     if (!this.isWithinBounds(address)) {
-      return this.getNullBucket(address);
+      return this.getNullBucket();
     }
 
     let bucket = this.getBucket(address, true);
@@ -259,7 +242,7 @@ class DataCube {
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
   getBucket(address: Vector4, skipBoundsCheck: boolean = false): Bucket {
     if (!skipBoundsCheck && !this.isWithinBounds(address)) {
-      return this.getNullBucket(address);
+      return this.getNullBucket();
     }
 
     const bucketIndex = this.getBucketIndex(address);
@@ -273,7 +256,7 @@ class DataCube {
       }
     }
 
-    return this.getNullBucket(address);
+    return this.getNullBucket();
   }
 
   createBucket(address: Vector4): Bucket {
@@ -563,8 +546,10 @@ class DataCube {
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
-      const resolutions = getResolutions(Store.getState().dataset);
-      const currentResolution = resolutions[currentBucket.zoomedAddress[3]];
+
+      const currentResolution = this.resolutionInfo.getResolutionByIndexOrThrow(
+        currentBucket.zoomedAddress[3],
+      );
 
       const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]: Vector3) => {
         // Convert bucket local W coordinate to global W (both mag-dependent)

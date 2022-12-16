@@ -19,7 +19,6 @@ trait N5Layer extends DataLayer {
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
   def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
-
 }
 
 case class N5DataLayer(

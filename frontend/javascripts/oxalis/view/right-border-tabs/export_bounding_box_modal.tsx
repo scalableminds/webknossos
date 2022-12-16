@@ -71,7 +71,7 @@ export function getLayerInfos(
   // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
   // must exist.
   if (tracing == null) {
-    // Satisfy flow.
+    // Satisfy TS.
     throw new Error("Tracing is null, but layer.tracingId is defined.");
   }
   const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";
@@ -211,7 +211,7 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
     startedExports.length > 0 ? (
       <p>
         Go to{" "}
-        <a href="/jobs" target="_blank">
+        <a href="/jobs" target="_blank" rel="noreferrer">
           Jobs Overview Page
         </a>{" "}
         to see running exports and to download the results.

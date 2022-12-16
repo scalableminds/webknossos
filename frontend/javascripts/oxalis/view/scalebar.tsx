@@ -11,7 +11,6 @@ import type { OrthoView } from "oxalis/constants";
 import constants, { Unicode, OUTER_CSS_BORDER, OrthoViews } from "oxalis/constants";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 type OwnProps = {
-  // eslint-disable-next-line react/no-unused-prop-types
   viewportID: OrthoView;
 };
 type StateProps = {

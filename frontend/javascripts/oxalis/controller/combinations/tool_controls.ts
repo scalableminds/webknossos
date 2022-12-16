@@ -1,15 +1,28 @@
 import type { ModifierKeys } from "libs/input";
-import type { OrthoView, Point2, ShowContextMenuFunction, AnnotationTool } from "oxalis/constants";
+import * as THREE from "three";
+import type {
+  OrthoView,
+  Point2,
+  ShowContextMenuFunction,
+  AnnotationTool,
+  Vector3,
+} from "oxalis/constants";
 import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
   getContourTracingMode,
+  getSegmentColorAsHSL,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   handleAgglomerateSkeletonAtClick,
   handleClickSegment,
 } from "oxalis/controller/combinations/segmentation_handlers";
-import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  computeQuickSelectForRectAction,
+  confirmQuickSelectAction,
+  hideBrushAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
@@ -27,8 +40,13 @@ import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
-import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
+import {
+  minCutAgglomerateWithPositionAction,
+  proofreadAtPosition,
+  proofreadMerge,
+} from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { V3 } from "libs/mjs";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -622,6 +640,111 @@ export class BoundingBoxTool {
     getSceneController().highlightUserBoundingBox(null);
   }
 }
+
+export class QuickSelectTool {
+  static getPlaneMouseControls(
+    planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): any {
+    let startPos: Vector3 | null = null;
+    let currentPos: Vector3 | null = null;
+    let isDragging = false;
+    const SceneController = getSceneController();
+    const { quickSelectGeometry } = SceneController;
+    return {
+      leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        // Potentially confirm earlier quick select actions. That way, the user
+        // can draw multiple rectangles even in preview mode. When starting a new
+        // rectangle, the old one is confirmed. If no quick select rectangle exists,
+        // this is a noop effectively.
+        Store.dispatch(confirmQuickSelectAction());
+        quickSelectGeometry.detachTextureMask();
+
+        const state = Store.getState();
+        quickSelectGeometry.rotateToViewport();
+
+        const volumeTracing = getActiveSegmentationTracing(state);
+        if (!volumeTracing) {
+          return;
+        }
+
+        const [h, s, l] = getSegmentColorAsHSL(state, volumeTracing.activeCellId);
+        const activeCellColor = new THREE.Color().setHSL(h, s, l);
+        quickSelectGeometry.setColor(activeCellColor);
+        startPos = V3.floor(calculateGlobalPos(state, pos));
+        currentPos = startPos;
+        isDragging = true;
+      },
+      leftMouseUp: () => {
+        isDragging = false;
+        // Identity equality is enough, since we want to catch the case
+        // in which the user didn't move the mouse at all
+        if (startPos === currentPos) {
+          // clear rectangle because user didn't drag
+          return;
+        }
+        if (startPos != null && currentPos != null) {
+          Store.dispatch(
+            computeQuickSelectForRectAction(startPos, currentPos, quickSelectGeometry),
+          );
+        }
+      },
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        _id: string | null | undefined,
+        event: MouseEvent,
+      ) => {
+        if (!isDragging || startPos == null) {
+          return;
+        }
+        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
+        if (event.shiftKey) {
+          // If shift is held, the rectangle is resized on topLeft and bottomRight
+          // so that the center is constant.
+          // We don't use the passed _delta variable, because that is given in pixel-space
+          // instead of the physical space.
+          if (currentPos) {
+            const delta3D = V3.sub(newCurrentPos, currentPos);
+            // Pseudo: startPos -= delta3D;
+            V3.sub(startPos, delta3D, startPos);
+          }
+        }
+
+        currentPos = newCurrentPos;
+
+        quickSelectGeometry.setCoordinates(startPos, currentPos);
+      },
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
+      rightClick: "Context Menu",
+    };
+  }
+
+  static onToolDeselected() {}
+}
+
 export class ProofreadTool {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
@@ -632,37 +755,47 @@ export class ProofreadTool {
   }
 
   static onLeftClick(
-    planeView: PlaneView,
+    _planeView: PlaneView,
     pos: Point2,
     plane: OrthoView,
-    _event: MouseEvent,
-    isTouch: boolean,
+    event: MouseEvent,
+    _isTouch: boolean,
   ) {
-    const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-    if (didSelectNode) {
-      // Don't do anything else
-      return;
-    }
-
     if (plane === OrthoViews.TDView) {
       // The click position cannot be mapped to a 3D coordinate in the
-      // 3D viewport (unless a node was clicked which is already handled above).
+      // 3D viewport.
       return;
     }
 
     const globalPosition = calculateGlobalPos(Store.getState(), pos);
-    Store.dispatch(proofreadAtPosition(globalPosition));
+
+    if (event.shiftKey) {
+      Store.dispatch(proofreadMerge(globalPosition));
+    } else if (event.ctrlKey) {
+      Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
+    } else {
+      Store.dispatch(proofreadAtPosition(globalPosition));
+      VolumeHandlers.handlePickCell(pos);
+    }
   }
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
-    _shiftKey: boolean,
-    _ctrlKey: boolean,
+    shiftKey: boolean,
+    ctrlKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
+    let leftClick = "Select Segment to Proofread";
+
+    if (shiftKey) {
+      leftClick = "Merge with active Segment";
+    } else if (ctrlKey) {
+      leftClick = "Split from active Segment";
+    }
+
     return {
-      leftClick: "Select Segment to Proofread",
+      leftClick,
       rightClick: "Context Menu",
     };
   }
@@ -673,6 +806,7 @@ const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
+  [AnnotationToolEnum.QUICK_SELECT]: QuickSelectTool,
   [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,

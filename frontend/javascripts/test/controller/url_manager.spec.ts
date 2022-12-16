@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import test from "ava";
 import UrlManager, { updateTypeAndId, encodeUrlHash } from "oxalis/controller/url_manager";
 import { location } from "libs/window";

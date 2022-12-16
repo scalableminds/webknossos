@@ -23,7 +23,7 @@ import Constants, {
   Unicode,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 import Model from "oxalis/model";
 import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -43,7 +43,6 @@ import {
   getMaximumBrushSize,
   getRenderableResolutionForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
-  getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -52,7 +51,6 @@ import type {
   AddPrecomputedIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import type { UpdateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   updateTemporarySettingAction,
   updateUserSettingAction,
@@ -73,6 +71,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
+import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
@@ -608,7 +607,6 @@ function* ensureSegmentExists(
     | AddAdHocIsosurfaceAction
     | AddPrecomputedIsosurfaceAction
     | SetActiveCellAction
-    | UpdateTemporarySettingAction
     | ClickSegmentAction,
 ): Saga<void> {
   const layer = yield* select((store) =>
@@ -620,15 +618,9 @@ function* ensureSegmentExists(
   }
 
   const layerName = layer.name;
-  const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
-  const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
+  const cellId = action.cellId;
 
-  if (
-    cellId === 0 ||
-    cellId == null ||
-    // If the segment was already registered with a position, don't do anything
-    segments.getNullable(cellId)?.somePosition != null
-  ) {
+  if (cellId === 0 || cellId == null) {
     return;
   }
 
@@ -644,10 +636,14 @@ function* ensureSegmentExists(
       ),
     );
   } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
+    // Update the position even if the cell is already registered with a position.
+    // This way the most up-to-date position of a cell is used to jump to when a
+    // segment is selected in the segment list. Also, the position of the active
+    // cell is used in the proofreading mode.
     const { somePosition } = action;
 
     if (somePosition == null) {
-      // Not all SetActiveCell provide a position (e.g., when simply setting the ID)
+      // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
       // via the UI.
       return;
     }
@@ -657,22 +653,6 @@ function* ensureSegmentExists(
         cellId,
         {
           somePosition,
-        },
-        layerName,
-      ),
-    );
-  } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
-    const globalMousePosition = yield* call(getGlobalMousePosition);
-
-    if (globalMousePosition == null) {
-      return;
-    }
-
-    yield* put(
-      updateSegmentAction(
-        cellId,
-        {
-          somePosition: globalMousePosition,
         },
         layerName,
       ),
@@ -799,6 +779,7 @@ export default [
   maintainSegmentsMap,
   maintainHoveredSegmentId,
   listenToMinCut,
+  listenToQuickSelect,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,

@@ -324,20 +324,20 @@ function HelpSubMenu({
       {...other}
     >
       <Menu.Item key="user-documentation">
-        <a target="_blank" href="https://docs.webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="https://docs.webknossos.org" rel="noreferrer noopener">
           User Documentation
         </a>
       </Menu.Item>
       {(!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
       features().discussionBoard !== false ? (
         <Menu.Item key="discussion-board">
-          <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
+          <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
             Community Support
           </a>
         </Menu.Item>
       ) : null}
       <Menu.Item key="frontend-api">
-        <a target="_blank" href="/assets/docs/frontend-api/index.html">
+        <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
           Frontend API Documentation
         </a>
       </Menu.Item>
@@ -462,6 +462,16 @@ function LoggedInAvatar({
 
   const switchTo = async (org: APIOrganization) => {
     Toast.info(`Switching to ${org.displayName || org.name}`);
+
+    // If the user is currently at the datasets tab, the active folder is encoded
+    // in the URI. Switching to another organization means that the folder id
+    // becomes invalid. That's why, we are removing any identifiers from the
+    // current datasets path before reloading the page (which is done in
+    // switchToOrganization).
+    if (window.location.pathname.startsWith("/dashboard/datasets/")) {
+      window.history.replaceState({}, "", "/dashboard/datasets/");
+    }
+
     await switchToOrganization(org.name);
   };
 

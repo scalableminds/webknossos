@@ -2,10 +2,11 @@ import play.sbt.PlayImport._
 import sbt._
 
 object Dependencies {
-  private val akkaVersion = "2.6.14"
+  private val akkaVersion = "2.6.19"
   private val akkaHttpVersion = "10.2.6"
   private val log4jVersion = "2.17.0"
   private val webknossosWrapVersion = "1.1.15"
+  private val silhouetteVersion = "7.0.7"
 
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   private val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
@@ -24,16 +25,17 @@ object Dependencies {
   private val liftUtil = "net.liftweb" %% "lift-util" % "3.0.2"
   private val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion % Provided
   private val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion % Provided
-  private val playFramework = "com.typesafe.play" %% "play" % "2.8.8"
-  private val playJson = "com.typesafe.play" %% "play-json" % "2.8.1"
+  private val playFramework = "com.typesafe.play" %% "play" % "2.8.16"
+  private val playJson = "com.typesafe.play" %% "play-json" % "2.8.2"
   private val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
   private val playIterateesStreams = "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1"
   private val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.12.7"
   private val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.7"
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
   private val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
-  private val silhouette = "com.mohiva" %% "play-silhouette" % "6.0.0"
-  private val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.7" % "test"
+  private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion
+  private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test"
+  private val silhouetteCrypto = "io.github.honeycomb-cheesecake" %% "play-silhouette-crypto-jca" % silhouetteVersion
   private val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
   private val triremeNode = "io.apigee.trireme" % "trireme-node12src" % "0.9.3"
   private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
@@ -52,6 +54,7 @@ object Dependencies {
   private val tika = "org.apache.tika" % "tika-core" % "1.5"
   private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.7"
   private val commonsCompress = "org.apache.commons" % "commons-compress" % "1.21"
+  private val jwt = "com.github.jwt-scala" %% "jwt-play-json" % "9.1.1"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -115,11 +118,13 @@ object Dependencies {
     scalaTestPlusPlay,
     silhouette,
     silhouetteTestkit,
+    silhouetteCrypto,
     specs2 % Test,
     trireme,
     triremeNode,
     xmlWriter,
-    woodstoxXml
+    woodstoxXml,
+    jwt
   ) ++ sql
 
 }

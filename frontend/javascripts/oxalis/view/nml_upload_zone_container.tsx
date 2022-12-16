@@ -182,7 +182,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
 
   renderDropzoneModal() {
     return (
-      <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
+      <Modal open footer={null} onCancel={this.props.hideDropzoneModal}>
         {this.props.isUpdateAllowed ? (
           <Alert
             message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
@@ -215,7 +215,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     return (
       <Modal
         title={`Import ${this.state.files.length} Annotation${pluralS}`}
-        visible={this.state.files.length > 0}
+        open={this.state.files.length > 0}
         onCancel={() =>
           this.setState({
             files: [],
@@ -272,8 +272,9 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {...getRootProps()}
             style={{
               position: "relative",
-              minHeight: `calc(100vh - ${navbarHeight}px)`,
+              height: `calc(100vh - ${navbarHeight}px)`,
             }}
+            className="flex-column"
           >
             {
               // While dragging files over the view, the OverlayDropZone is rendered

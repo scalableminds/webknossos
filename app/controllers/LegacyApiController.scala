@@ -407,11 +407,10 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       logVersioned(request)
-      val oldRequest = request.request
+      val oldRequest = request
       val newRequest =
         if (request.body.as[JsObject].keys.contains("isPublic"))
-          request.copy(
-            request = oldRequest.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject]))))
+          request.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject])))
         else request
 
       for {
@@ -428,6 +427,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         Some(
           AnnotationLayerParameters(AnnotationLayerType.Skeleton,
                                     request.body.fallbackLayerName,
+                                    None,
                                     request.body.resolutionRestrictions,
                                     name = AnnotationLayer.defaultSkeletonLayerName))
     val volumeParameters =
@@ -436,6 +436,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         Some(
           AnnotationLayerParameters(AnnotationLayerType.Volume,
                                     request.body.fallbackLayerName,
+                                    None,
                                     request.body.resolutionRestrictions,
                                     name = AnnotationLayer.defaultVolumeLayerName))
     List(skeletonParameters, volumeParameters).flatten

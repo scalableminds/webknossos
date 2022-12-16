@@ -59,11 +59,6 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
 
 export class NullBucket {
   type: "null" = "null";
-  isOutOfBoundingBox: boolean;
-
-  constructor(isOutOfBoundingBox: boolean) {
-    this.isOutOfBoundingBox = isOutOfBoundingBox;
-  }
 
   hasData(): boolean {
     return false;
@@ -119,8 +114,7 @@ export const getConstructorForElementClass = (
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);
   }
 };
-export const NULL_BUCKET = new NullBucket(false);
-export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
+export const NULL_BUCKET = new NullBucket();
 // The type is used within the DataBucket class which is why
 // we have to define it here.
 export type Bucket = DataBucket | NullBucket;
@@ -199,9 +193,10 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const resolutions = getResolutions(Store.getState().dataset);
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
-    const bucketResolution = resolutions[this.zoomedAddress[3]];
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
+    const bucketResolution = this.cube.resolutionInfo.getResolutionByIndexOrThrow(
+      this.zoomedAddress[3],
+    );
     const max: Vector3 = [
       min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
       min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
@@ -214,8 +209,7 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    const resolutions = getResolutions(Store.getState().dataset);
-    return bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -540,9 +534,10 @@ export class DataBucket {
 
   markAsPulled(): void {
     switch (this.state) {
-      case BucketStateEnum.UNREQUESTED:
+      case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -551,7 +546,7 @@ export class DataBucket {
 
   markAsFailed(isMissing: boolean): void {
     switch (this.state) {
-      case BucketStateEnum.REQUESTED:
+      case BucketStateEnum.REQUESTED: {
         this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
 
         if (isMissing) {
@@ -559,6 +554,7 @@ export class DataBucket {
         }
 
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -611,9 +607,10 @@ export class DataBucket {
   markAsPushed(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
-      case BucketStateEnum.MISSING:
+      case BucketStateEnum.MISSING: {
         this.dirty = false;
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -697,10 +694,9 @@ export class DataBucket {
     const zoomStep = getRequestLogZoomStep(Store.getState());
 
     if (this.zoomedAddress[3] === zoomStep) {
-      const resolutions = getResolutions(Store.getState().dataset);
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
         this.zoomedAddress[3],
         this.visualizationColor,
       );

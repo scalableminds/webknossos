@@ -14,17 +14,21 @@ import java.nio.ByteOrder
 import java.util
 import scala.concurrent.{ExecutionContext, Future}
 
-class DatasetArray(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder)
+class DatasetArray(relativePath: DatasetPath,
+                   store: FileSystemStore,
+                   header: DatasetHeader,
+                   axisOrder: AxisOrder,
+                   channelIndex: Option[Int])
     extends LazyLogging {
 
   protected val chunkReader: ChunkReader =
     ChunkReader.create(store, header)
 
-  // cache currently limited to 100 MB per array
+  // cache currently limited to 1 GB per array
   private lazy val chunkContentsCache: Cache[String, MultiArray] = {
-    val maxSizeBytes = 1000 * 1000 * 100
+    val maxSizeBytes = 1000L * 1000 * 1000
     val maxEntries = maxSizeBytes / header.bytesPerChunk
-    AlfuCache(maxEntries)
+    AlfuCache(maxEntries.toInt)
   }
 
   // @return Byte array in fortran-order with little-endian values
@@ -32,7 +36,11 @@ class DatasetArray(relativePath: DatasetPath, store: FileSystemStore, header: Da
   @throws[InvalidRangeException]
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val paddingDimensionsCount = header.rank - 3
-    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
+    val offsetArray = channelIndex match {
+      case Some(c) if header.rank >= 4 =>
+        Array.fill(paddingDimensionsCount - 1)(0) :+ c :+ offset.x :+ offset.y :+ offset.z
+      case _ => Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
+    }
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
     readBytes(shapeArray, offsetArray)
@@ -122,5 +130,5 @@ class DatasetArray(relativePath: DatasetPath, store: FileSystemStore, header: Da
 }
 
 object DatasetArray {
-  val chunkSizeLimitBytes: Int = 64 * 1024 * 1024
+  val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
 }

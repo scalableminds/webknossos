@@ -166,10 +166,9 @@ class PlaneView {
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    const intersectableObjects = isosurfacesRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
-    // @ts-ignore
-    const intersectableObjects = isosurfacesRootGroup.children.filter((obj) => !obj.passive);
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
     const hitObject = intersections.length > 0 ? intersections[0].object : null;
 
@@ -180,7 +179,7 @@ class PlaneView {
     }
 
     // Undo highlighting of old hit
-    if (oldRaycasterHit != null && oldRaycasterHit.parent != null) {
+    if (oldRaycasterHit?.parent != null) {
       oldRaycasterHit.parent.children.forEach((meshPart) => {
         // @ts-ignore
         meshPart.material.emissive.setHex("#000000");

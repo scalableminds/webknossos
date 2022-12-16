@@ -8,6 +8,7 @@ import {
   SettingOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import window from "libs/window";
 import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
 import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
@@ -19,7 +20,7 @@ import {
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { Modal } from "antd";
+import { Menu, Modal } from "antd";
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
   color: "var(--ant-disabled)",
@@ -42,8 +43,6 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal: () => void;
   onCloseCreateExplorativeModal: () => void;
 }) {
-  if (isReloading) return null;
-
   const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
   const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
     ? "true"
@@ -57,11 +56,9 @@ function NewAnnotationLink({
     <div>
       <LinkWithDisabled
         to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
-        style={
-          {
-            display: "inline-block",
-          } as React.CSSProperties
-        }
+        style={{
+          display: "inline-block",
+        }}
         title="New Annotation (Skeleton + Volume)"
         disabled={isReloading}
       >
@@ -80,7 +77,7 @@ function NewAnnotationLink({
       <a
         title="New Annotation With Custom Properties"
         className="ant-dropdown-link"
-        onClick={() => onShowCreateExplorativeModal()}
+        onClick={() => !isReloading && onShowCreateExplorativeModal()}
       >
         <EllipsisOutlined
           style={{
@@ -138,7 +135,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     isCreateExplorativeModalVisible: false,
   };
 
-  clearCache = async (dataset: APIMaybeUnimportedDataset) => {
+  onClearCache = async (dataset: APIMaybeUnimportedDataset) => {
     this.setState({
       isReloading: true,
     });
@@ -161,7 +158,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
     const reloadLink = (
       <a
-        onClick={() => this.clearCache(dataset)}
+        onClick={() => this.onClearCache(dataset)}
         title="Reload Dataset"
         style={disabledWhenReloadingStyle}
         type="link"
@@ -239,6 +236,94 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       </div>
     );
   }
+}
+const onClearCache = async (
+  dataset: APIDataset,
+  reloadDataset: (arg0: APIDatasetId) => Promise<void>,
+) => {
+  await clearCache(dataset);
+  await reloadDataset(dataset);
+  Toast.success(
+    messages["dataset.clear_cache_success"]({
+      datasetName: dataset.name,
+    }),
+  );
+};
+
+export function getDatasetActionContextMenu({
+  reloadDataset,
+  datasets,
+  hideContextMenu,
+}: {
+  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
+  datasets: APIMaybeUnimportedDataset[];
+  hideContextMenu: () => void;
+}) {
+  if (datasets.length !== 1) {
+    return (
+      <Menu
+        onClick={hideContextMenu}
+        style={{
+          borderRadius: 6,
+        }}
+        mode="vertical"
+      >
+        <Menu.Item key="view" disabled>
+          No actions available.
+        </Menu.Item>
+      </Menu>
+    );
+  }
+  const dataset = datasets[0];
+
+  return (
+    <Menu
+      onClick={hideContextMenu}
+      style={{
+        borderRadius: 6,
+      }}
+      mode="vertical"
+    >
+      {dataset.isActive && (
+        <Menu.Item
+          key="view"
+          onClick={() => {
+            window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/view`;
+          }}
+        >
+          View
+        </Menu.Item>
+      )}
+      {dataset.isEditable && dataset.isActive ? (
+        <Menu.Item
+          key="edit"
+          onClick={() => {
+            window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/edit`;
+          }}
+        >
+          Open Settings
+        </Menu.Item>
+      ) : null}
+
+      {dataset.isEditable && !dataset.isActive ? (
+        <Menu.Item
+          key="import"
+          onClick={() => {
+            window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/import`;
+          }}
+        >
+          Import
+        </Menu.Item>
+      ) : null}
+
+      <Menu.Item
+        key="reload"
+        onClick={() => (dataset.isActive ? onClearCache(dataset, reloadDataset) : null)}
+      >
+        Reload
+      </Menu.Item>
+    </Menu>
+  );
 }
 
 export default withRouter<RouteComponentProps & Props, any>(DatasetActionView);

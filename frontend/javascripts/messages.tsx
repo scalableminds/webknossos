@@ -235,7 +235,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
-    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
+    "The WebGL context was lost. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
+  "webgl.context_recovery":
+    "The WebGL context has been recovered. If you experience unusual behavior, consider reloading the page.",
   "webgl.too_many_active_layers": _.template(
     "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
@@ -272,6 +274,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.upload_cancel": "The dataset upload was cancelled.",
   "dataset.unsupported_file_type":
     "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
+  "dataset.upload_zip_with_nml":
+    "The archive you attached contains an NML file. If the archive is an annotation, please use the Annotations tab in the dashboard to upload it. Uploading annotations here won't succeed.",
   "dataset.upload_invalid_zip":
     "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":

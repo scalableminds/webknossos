@@ -1,7 +1,7 @@
 import { Task } from "redux-saga";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import type { Action } from "oxalis/model/actions/actions";
-import type {
+import {
   AddBucketToUndoAction,
   FinishAnnotationStrokeAction,
   ImportVolumeTracingAction,
@@ -9,8 +9,7 @@ import type {
   UpdateSegmentAction,
   InitializeVolumeTracingAction,
   InitializeEditableMappingAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import {
+  cancelQuickSelectAction,
   VolumeTracingSaveRelevantActions,
   setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -109,7 +108,7 @@ import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
-// This function is needed so that Flow is satisfied
+// This function is needed so that TS is satisfied
 // with how a mere promise is awaited within a saga.
 function unpackPromise<T>(p: Promise<T>): Promise<T> {
   return p;
@@ -200,11 +199,10 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   throw new Error("Could not unpack redux action from channel");
 }
 
-export function* collectUndoStates(): Saga<void> {
+export function* collectUndoStates(): Saga<never> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
-  // This variable must be any (no Action) as otherwise cyclic dependencies are created which flow cannot handle.
-  let previousAction: any | null | undefined = null;
+  let previousAction: Action | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   let pendingCompressions: Array<Task> = [];
@@ -362,15 +360,18 @@ export function* collectUndoStates(): Saga<void> {
         reason: messages["undo.import_volume_tracing"],
       } as WarnUndoState);
     } else if (undo) {
-      previousAction = null;
-      yield* call(
-        applyStateOfStack,
-        undoStack,
-        redoStack,
-        prevSkeletonTracingOrNull,
-        prevUserBoundingBoxes,
-        "undo",
-      );
+      const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
+      if (!wasInterpreted) {
+        previousAction = null;
+        yield* call(
+          applyStateOfStack,
+          undoStack,
+          redoStack,
+          prevSkeletonTracingOrNull,
+          prevUserBoundingBoxes,
+          "undo",
+        );
+      }
 
       if (undo.callback != null) {
         undo.callback();
@@ -414,6 +415,20 @@ export function* collectUndoStates(): Saga<void> {
     prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
     prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   }
+}
+
+function* maybeInterpretUndoAsDiscardUiAction() {
+  // Sometimes the user hits undo because they want to undo something
+  // which isn't really undoable yet. For example, the quick select preview
+  // can be such a case.
+  // In that case, we re-interpret the undo action accordingly.
+  // The return value of this function signals whether undo was re-interpreted.
+  const isQuickSelectActive = yield* select((state) => state.uiInformation.isQuickSelectActive);
+  if (!isQuickSelectActive) {
+    return false;
+  }
+  yield* put(cancelQuickSelectAction());
+  return true;
 }
 
 function* getSkeletonTracingToUndoState(
@@ -1131,6 +1146,25 @@ function* watchForSaveConflicts() {
         tracing.tracingId,
         tracing.type,
       );
+
+      // There is a rare chance of a race condition happening
+      // which can result in an incorrect toast warning.
+      // It occurs if certain saga effects run in the following order:
+      // 1) a new version is pushed to the server (in sendRequestToServer)
+      // 2) the current server version is fetched (in this saga here)
+      // 3) the server version is compared with the client version (in this saga here)
+      // 4) only now is the local version number updated because the
+      //    sendRequestToServer saga was scheduled now.
+      // Since (4) is happening too late, the comparison in (3) will assume
+      // that client and server are out of sync.
+      // The chance of this happening is relatively low, but from time to time it
+      // happened. To mitigate this problem, we introduce a simple sleep here which
+      // means that the chance of (4) being scheduled after (2) should be close to
+      // 0 (hopefully).
+      // Note that a false-positive warning in this saga doesn't have serious side-effects
+      // (except for potentially confusing the user). This is why a more complex mutex- or
+      // semaphore-based solution to this problem was not chosen.
+      yield* call(sleep, 2000);
 
       // Read the tracing version again from the store, since the
       // old reference to tracing might be outdated now due to the

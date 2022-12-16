@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import test from "ava";
 import { AnnotationToolEnum, AnnotationTool } from "oxalis/constants";
 import mockRequire from "mock-require";
@@ -21,6 +22,7 @@ const {
   EraseTool,
   FillCellTool,
   PickCellTool,
+  QuickSelectTool,
   ProofreadTool,
 } = mockRequire.reRequire("oxalis/controller/combinations/tool_controls");
 const UiReducer = mockRequire.reRequire("oxalis/model/reducers/ui_reducer").default;
@@ -35,6 +37,7 @@ const allTools = [
   EraseTool,
   FillCellTool,
   PickCellTool,
+  QuickSelectTool,
   ProofreadTool,
 ];
 const spies = allTools.map((tool) => sinon.spy(tool, "onToolDeselected"));
@@ -73,6 +76,8 @@ test.serial(
     t.true(FillCellTool.onToolDeselected.calledOnce);
     cycleTool();
     t.true(PickCellTool.onToolDeselected.calledOnce);
+    cycleTool();
+    t.true(QuickSelectTool.onToolDeselected.calledOnce);
     cycleTool();
     t.true(BoundingBoxTool.onToolDeselected.calledOnce);
     cycleTool();

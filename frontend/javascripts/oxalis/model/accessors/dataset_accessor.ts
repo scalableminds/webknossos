@@ -26,6 +26,7 @@ import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils"
 import messages from "messages";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { DataLayer } from "types/schemas/datasource.types";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
   smaller: boolean;
@@ -53,14 +54,12 @@ function minValue(array: Array<number>): number {
 }
 
 export class ResolutionInfo {
-  resolutions: ReadonlyArray<Vector3>;
-  resolutionMap: Map<number, Vector3>;
+  readonly resolutions: ReadonlyArray<Vector3>;
+  readonly resolutionMap: ReadonlyMap<number, Vector3>;
 
   constructor(resolutions: Array<Vector3>) {
     this.resolutions = resolutions;
-    this.resolutionMap = new Map();
-
-    this._buildResolutionMap();
+    this.resolutionMap = this._buildResolutionMap();
   }
 
   _buildResolutionMap() {
@@ -70,23 +69,21 @@ export class ResolutionInfo {
     // Therefore, the largest dim for each resolution has to be unique across all resolutions.
     // This function creates a map which maps from powerOfTwo (2**index) to resolution.
     const { resolutions } = this;
+    const resolutionMap = new Map();
 
     if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
       throw new Error("Max dimension in resolutions is not unique.");
     }
 
     for (const resolution of resolutions) {
-      this.resolutionMap.set(maxValue(resolution), resolution);
+      resolutionMap.set(maxValue(resolution), resolution);
     }
+    return resolutionMap;
   }
 
-  getDenseResolutions(): Array<Vector3> {
-    return convertToDenseResolution(this.getResolutionList());
-  }
+  getDenseResolutions = memoizeOne(() => convertToDenseResolution(this.getResolutionList()));
 
-  getResolutionList(): Array<Vector3> {
-    return Array.from(this.resolutionMap.values());
-  }
+  getResolutionList = memoizeOne(() => Array.from(this.resolutionMap.values()));
 
   getResolutionsWithIndices(): Array<[number, Vector3]> {
     return _.sortBy(
@@ -196,7 +193,7 @@ export class ResolutionInfo {
     return this.getResolutionsWithIndices().map((entry) => entry[0]);
   }
 
-  getClosestExistingIndex(index: number): number {
+  getClosestExistingIndex(index: number, errorMessage: string | null = null): number {
     if (this.hasIndex(index)) {
       return index;
     }
@@ -219,7 +216,7 @@ export class ResolutionInfo {
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
     if (bestIndexWithDistance == null) {
-      throw new Error("Couldn't find any resolution.");
+      throw new Error(errorMessage || "Couldn't find any resolution.");
     }
 
     return bestIndexWithDistance[0];
@@ -507,13 +504,21 @@ export type Boundary = {
 export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
   const lowerBoundary = topLeft;
-  const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
+  const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth] as Vector3;
   return {
     lowerBoundary,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     upperBoundary,
   };
 }
+
+export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {
+  const { lowerBoundary, upperBoundary } = getLayerBoundaries(dataset, layerName);
+  return new BoundingBox({
+    min: lowerBoundary,
+    max: upperBoundary,
+  });
+}
+
 export function getBoundaries(dataset: APIDataset): Boundary {
   const lowerBoundary = [Infinity, Infinity, Infinity];
   const upperBoundary = [-Infinity, -Infinity, -Infinity];
@@ -599,7 +604,7 @@ export function determineAllowedModes(
     : ViewModeValues;
   let preferredMode = null;
 
-  if (settings && settings.preferredMode != null) {
+  if (settings?.preferredMode != null) {
     const modeId = settings.preferredMode;
 
     if (allowedModes.includes(modeId)) {
@@ -802,6 +807,14 @@ export function getEnabledLayers(
 
     return settings.isDisabled === Boolean(options.invert);
   });
+}
+
+export function getEnabledColorLayers(
+  dataset: APIDataset,
+  datasetConfiguration: DatasetConfiguration,
+) {
+  const enabledLayers = getEnabledLayers(dataset, datasetConfiguration);
+  return enabledLayers.filter((layer) => isColorLayer(dataset, layer.name));
 }
 
 /*

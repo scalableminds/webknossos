@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.schema.Tables._
@@ -18,6 +19,7 @@ import slick.sql.SqlAction
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class Annotation(
     _id: ObjectId,
@@ -36,8 +38,8 @@ case class Annotation(
     tracingTime: Option[Long] = None,
     typ: AnnotationType.Value = AnnotationType.Explorational,
     othersMayEdit: Boolean = false,
-    created: Long = System.currentTimeMillis,
-    modified: Long = System.currentTimeMillis,
+    created: Instant = Instant.now,
+    modified: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -109,6 +111,12 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
     sqlu"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
             values($annotationId, ${a.tracingId}, '#${a.typ}', ${a.name})"""
 
+  def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""delete from webknossos.annotation_layers where _annotation = $annotationId and
+             name = $layerName""")
+    } yield ()
+
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {
       rList <- run(sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
@@ -136,16 +144,16 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
 class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayerDAO)(
     implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
-  val collection = Annotations
+  protected val collection = Annotations
 
-  def idColumn(x: Annotations): Rep[String] = x._Id
-  def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Annotations): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
-  def parse(r: AnnotationsRow): Fox[Annotation] =
+  protected def parse(r: AnnotationsRow): Fox[Annotation] =
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
-      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseJsonToFox[JsObject](_))
+      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAndValidateJson[JsObject](_))
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
     } yield {
@@ -166,13 +174,14 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         r.tracingtime,
         typ,
         r.othersmayedit,
-        r.created.getTime,
-        r.modified.getTime,
+        Instant.fromSql(r.created),
+        Instant.fromSql(r.modified),
         r.isdeleted
       )
     }
 
-  override def anonymousReadAccessQ(sharingToken: Option[String]) = s"visibility = '${AnnotationVisibility.Public}'"
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]) =
+    s"visibility = '${AnnotationVisibility.Public}'"
 
   private def listAccessQ(requestingUserId: ObjectId): String =
     s"""
@@ -198,7 +207,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         )
        """
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
+  override protected def readAccessQ(requestingUserId: ObjectId): String =
     s"""(
               visibility = '${AnnotationVisibility.Public}'
            or (visibility = '${AnnotationVisibility.Internal}'
@@ -210,12 +219,12 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
              in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin)
          )"""
 
-  override def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '$requestingUserId') or _user = '$requestingUserId'
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)
         in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
 
-  override def updateAccessQ(requestingUserId: ObjectId): String =
+  override protected def updateAccessQ(requestingUserId: ObjectId): String =
     deleteAccessQ(requestingUserId)
 
   // read operations
@@ -399,7 +408,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
          '#${a.state}', '#${sanitize(a.statistics.toString)}',
          '#${writeArrayTuple(a.tags.toList)}', ${a.tracingTime}, '#${a.typ}',
          ${a.othersMayEdit},
-         ${new java.sql.Timestamp(a.created)}, ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
+         ${a.created}, ${a.modified}, ${a.isDeleted})
          """
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
     for {
@@ -426,8 +435,8 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
                tracingTime = ${a.tracingTime},
                typ = '#${a.typ}',
                othersMayEdit = ${a.othersMayEdit},
-               created = ${new java.sql.Timestamp(a.created)},
-               modified = ${new java.sql.Timestamp(a.modified)},
+               created = ${a.created},
+               modified = ${a.modified},
                isDeleted = ${a.isDeleted}
              where _id = ${a._id}
           """
@@ -458,10 +467,11 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         sqlu"delete from webknossos.annotations where state = '#${AnnotationState.Initializing}' and created < (now() - interval '1 hour')")
     } yield ()
 
-  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: FiniteDuration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
-      _ <- run(sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + $time where _id = $id") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
+      _ <- run(
+        sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + ${time.toMillis} where _id = $id") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
     } yield ()
 
   def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -500,10 +510,10 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       _ <- run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags)}' where _id = $id")
     } yield ()
 
-  def updateModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateModified(id: ObjectId, modified: Instant)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = $id")
+      _ <- run(sqlu"update webknossos.annotations set modified = $modified where _id = $id")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -534,20 +544,16 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       _ <- run(
         sqlu"insert into webknossos.annotation_contributors (_annotation, _user) values($id, $userId) on conflict do nothing")
     } yield ()
-}
-
-class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient) {
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllSharedForTeams(teams: List[ObjectId]): Fox[List[Annotation]] =
     for {
       result <- run(
-        sql"""select distinct #${annotationDAO.columnsWithPrefix("a.")} from webknossos.annotations_ a
+        sql"""select distinct #${columnsWithPrefix("a.")} from webknossos.annotations_ a
                             join webknossos.annotation_sharedTeams l on a._id = l._annotation
                             where l._team in #${writeStructTupleWithQuotes(teams.map(t => sanitize(t.toString)))}"""
           .as[AnnotationsRow])
-      parsed <- Fox.combined(result.toList.map(annotationDAO.parse))
+      parsed <- Fox.combined(result.toList.map(parse))
     } yield parsed
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
@@ -559,11 +565,10 @@ class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQ
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
-      _ <- annotationDAO.assertUpdateAccess(annotationId)
+      _ <- assertUpdateAccess(annotationId)
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
-
 }

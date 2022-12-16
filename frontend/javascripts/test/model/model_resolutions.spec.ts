@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import test from "ava";
 import mockRequire from "mock-require";
 import {

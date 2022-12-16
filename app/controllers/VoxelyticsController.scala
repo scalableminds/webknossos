@@ -61,7 +61,7 @@ class VoxelyticsController @Inject()(
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         // Auth is implemented in `voxelyticsDAO.findRuns`
-        runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout)
+        runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout, allowUnlisted = false)
         result <- if (runs.nonEmpty) {
           listWorkflowsWithRuns(request, runs)
         } else {
@@ -75,7 +75,8 @@ class VoxelyticsController @Inject()(
       _ <- bool2Fox(runs.nonEmpty) // just asserting once more
       taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.id), conf.staleTimeout)
       _ <- bool2Fox(taskRuns.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
-      workflows <- voxelyticsDAO.findWorkflowsByHash(request.identity._organization, runs.map(_.workflow_hash).toSet)
+      workflows <- voxelyticsDAO.findWorkflowsByHashAndOrganization(request.identity._organization,
+                                                                    runs.map(_.workflow_hash).toSet)
       _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
 
       workflowsAsJson = JsArray(workflows.flatMap(workflow => {
@@ -106,15 +107,21 @@ class VoxelyticsController @Inject()(
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         runIdValidatedOpt <- Fox.runOptional(runId)(ObjectId.fromString(_))
         // Auth is implemented in `voxelyticsDAO.findRuns`
-        workflow <- voxelyticsDAO.findWorkflowByHash(request.identity._organization, workflowHash) ?~> "voxelytics.workflowNotFound" ~> NOT_FOUND
+        workflow <- voxelyticsDAO.findWorkflowByHashAndOrganization(request.identity._organization, workflowHash) ?~> "voxelytics.workflowNotFound" ~> NOT_FOUND
 
         // Fetching all runs for this workflow or specified run
         // If all runs are fetched, a combined version of the workflow report
         // will be returned that contains the information of the most recent task runs
         runs <- runIdValidatedOpt
-          .map(runIdValidated =>
-            voxelyticsDAO.findRuns(request.identity, Some(List(runIdValidated)), Some(workflowHash), conf.staleTimeout))
-          .getOrElse(voxelyticsDAO.findRuns(request.identity, None, Some(workflowHash), conf.staleTimeout))
+          .map(
+            runIdValidated =>
+              voxelyticsDAO.findRuns(request.identity,
+                                     Some(List(runIdValidated)),
+                                     Some(workflowHash),
+                                     conf.staleTimeout,
+                                     allowUnlisted = true))
+          .getOrElse(
+            voxelyticsDAO.findRuns(request.identity, None, Some(workflowHash), conf.staleTimeout, allowUnlisted = true))
         _ <- bool2Fox(runs.nonEmpty) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
         sortedRuns = runs.sortBy(_.beginTime).reverse
         // All workflows have at least one run, because they are created at the same time

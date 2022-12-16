@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import update from "immutability-helper";
 import { getFirstVolumeTracingOrFail } from "test/helpers/apiHelpers";
 import { AnnotationToolEnum } from "oxalis/constants";
@@ -156,6 +157,8 @@ test("VolumeTracing should cycle trace/view/brush tool", (t) => {
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.FILL_CELL);
   newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.PICK_CELL);
+  newState = UiReducer(newState, cycleToolAction());
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.QUICK_SELECT);
   newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BOUNDING_BOX);
   // Cycle tool back to MOVE

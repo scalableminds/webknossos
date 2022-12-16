@@ -1,6 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
@@ -15,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
+import models.folder.{FolderDAO, FolderService}
 
 import javax.inject.Inject
 import models.job.WorkerDAO
@@ -35,10 +37,11 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
+                               folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
-                               dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                               folderService: FolderService,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
                                conf: WkConf)(implicit ec: ExecutionContext)
@@ -76,12 +79,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
       organization <- organizationDAO.findOneByName(owningOrganization)
+      orbanizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataSet = DataSet(
         newId,
         dataStore.name,
         organization._id,
         publication,
         None,
+        orbanizationRootFolder._id,
         dataSourceHash,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
@@ -98,7 +103,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       )
       _ <- dataSetDAO.insertOne(dataSet)
       _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
-      _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
+      _ <- teamDAO.updateAllowedTeamsForDataset(newId, List())
     } yield dataSet
   }
 
@@ -253,25 +258,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore <- dataStoreFor(dataSet)
     } yield new WKRemoteDataStoreClient(dataStore, dataSet, rpc)
 
-  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Long] =
+  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Instant] =
     userOpt match {
       case Some(user) =>
         (for {
           lastUsedTime <- dataSetLastUsedTimesDAO.findForDataSetAndUser(_dataSet, user._id).futureBox
-        } yield lastUsedTime.toOption.getOrElse(0L)).toFox
-      case _ => Fox.successful(0L)
+        } yield lastUsedTime.toOption.getOrElse(Instant.zero)).toFox
+      case _ => Fox.successful(Instant.zero)
     }
-
-  def allowedTeamIdsFor(_dataSet: ObjectId): Fox[List[ObjectId]] =
-    dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet) ?~> "allowedTeams.notFound"
-
-  def allowedTeamsFor(_dataSet: ObjectId, requestingUser: Option[User])(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teams <- teamDAO.findAllForDataSet(_dataSet) ?~> "allowedTeams.notFound"
-      // dont leak team names of other organizations
-      teamsFiltered = teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
-    } yield teamsFiltered
 
   def allLayersFor(dataSet: DataSet): Fox[List[DataLayer]] =
     for {
@@ -285,7 +279,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     userOpt match {
       case Some(user) =>
         for {
-          dataSetAllowedTeams <- dataSetAllowedTeamsDAO.findAllForDataSet(dataSet._id)
+          dataSetAllowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true)
           teamManagerMemberships <- Fox.fillOption(userTeamManagerMemberships)(
             userService.teamManagerMembershipsFor(user._id))
         } yield
@@ -300,14 +294,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
+      previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = false) ?~> "allowedTeams.notFound"
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable
       userTeamIds = userTeams.map(_._id)
       teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
       _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- dataSetDAO.assertUpdateAccess(dataSet._id) ?~> "dataset.initialTeams.forbidden"
-      _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
+      _ <- teamDAO.updateAllowedTeamsForDataset(dataSet._id, teamIdsValidated)
     } yield ()
 
   def addUploader(dataSet: DataSet, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -330,8 +324,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore <- Fox.fillOption(dataStore) {
         dataStoreFor(dataSet)
       }
-      teams <- allowedTeamsFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
+      teams <- teamService.allowedTeamsForDataset(dataSet, cumulative = false, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
+      teamsCumulative <- teamService.allowedTeamsForDataset(dataSet, cumulative = true, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
+      teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
       logoUrl <- logoUrlFor(dataSet, Some(organization)) ?~> "dataset.list.fetchLogoUrlFailed"
       isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
@@ -346,6 +342,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization.name,
         "allowedTeams" -> teamsJs,
+        "allowedTeamsCumulative" -> teamsCumulativeJs,
         "isActive" -> dataSet.isUsable,
         "isPublic" -> dataSet.isPublic,
         "description" -> dataSet.description,
@@ -359,6 +356,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "jobsEnabled" -> jobsEnabled,
         "tags" -> dataSet.tags,
+        "folderId" -> dataSet._folder,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
         "publication" -> None
       )

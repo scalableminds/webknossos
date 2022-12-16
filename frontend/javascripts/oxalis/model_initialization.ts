@@ -28,7 +28,7 @@ import {
   isElementClassSupported,
   isSegmentationLayer,
   getSegmentationLayers,
-  getSegmentationLayerByNameOrFallbackName,
+  getLayerByNameOrFallbackName,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -56,6 +56,7 @@ import {
   setControlModeAction,
   setViewModeAction,
   setMappingAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   initializeEditableMappingAction,
@@ -65,6 +66,7 @@ import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
   loadAgglomerateSkeletonAction,
+  setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -329,18 +331,11 @@ function initializeTracing(
     }
   }
 
-  // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+  // Initialize 'flight', 'oblique' or 'orthogonal' mode
   if (allowedModes.length === 0) {
     Toast.error(messages["tracing.no_allowed_mode"]);
   } else {
     const maybeUrlViewMode = UrlManager.initialState.mode;
-    // todo: refactor MODE_VOLUME away or make this logic compatible
-    // const isHybridTracing = serverTracings.skeleton != null && serverTracings.volume != null;
-    // let maybeUrlViewMode = UrlManager.initialState.mode;
-    // if (isHybridTracing && UrlManager.initialState.mode === constants.MODE_VOLUME) {
-    //   // Here we avoid going into volume mode in hybrid tracings.
-    //   maybeUrlViewMode = constants.MODE_PLANE_TRACING;
-    // }
     const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
@@ -668,9 +663,16 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
     let effectiveLayerName;
 
     const { dataset } = Store.getState();
+
+    if (layerName === "Skeleton" && layerState.isDisabled != null) {
+      Store.dispatch(setShowSkeletonsAction(!layerState.isDisabled));
+      // The remaining options are only valid for data layers
+      continue;
+    }
+
     try {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-      effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+      effectiveLayerName = getLayerByNameOrFallbackName(dataset, layerName).name;
     } catch (e) {
       console.error(e);
       Toast.error(
@@ -681,6 +683,17 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
       });
+      continue;
+    }
+
+    if (layerState.isDisabled != null) {
+      Store.dispatch(
+        updateLayerSettingAction(effectiveLayerName, "isDisabled", layerState.isDisabled),
+      );
+    }
+
+    if (!isSegmentationLayer(dataset, effectiveLayerName)) {
+      // The remaining options are only valid for segmentation layers
       continue;
     }
 

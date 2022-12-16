@@ -20,13 +20,16 @@ GET           /auth/token                                                       
 DELETE        /auth/token                                                               controllers.AuthenticationController.deleteToken
 GET           /auth/switch                                                              controllers.AuthenticationController.switchMultiUser(to: String)
 POST          /auth/switchOrganization/:organizationName                                controllers.AuthenticationController.switchOrganization(organizationName: String)
-GET           /auth/accessibleBySwitching                                               controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationId: Option[String])
+GET           /auth/accessibleBySwitching                                               controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationId: Option[String], workflowHash: Option[String])
 POST          /auth/sendInvites                                                         controllers.AuthenticationController.sendInvites
 POST          /auth/startResetPassword                                                  controllers.AuthenticationController.handleStartResetPassword
 POST          /auth/changePassword                                                      controllers.AuthenticationController.changePassword
 POST          /auth/resetPassword                                                       controllers.AuthenticationController.handleResetPassword
 GET           /auth/logout                                                              controllers.AuthenticationController.logout
 GET           /auth/sso                                                                 controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
+GET           /auth/oidc/login                                                          controllers.AuthenticationController.loginViaOpenIdConnect
+# /auth/oidc/callback route is used literally in code
+GET           /auth/oidc/callback                                                       controllers.AuthenticationController.openIdCallback
 POST          /auth/createOrganizationWithAdmin                                         controllers.AuthenticationController.createOrganizationWithAdmin
 
 # Configurations
@@ -66,12 +69,12 @@ GET           /teams/:id/progressOverview                                       
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational              controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                     controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String])
+GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int])
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
 POST          /datasets/exploreRemote                                                   controllers.DataSetController.exploreRemoteDataset
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                           controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
-PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String)
+PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String, skipResolutions: Option[Boolean])
 GET           /datasets/:organizationName/:dataSetName/accessList                       controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
 DELETE        /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
@@ -81,12 +84,21 @@ PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache      
 GET           /datasets/:organizationName/:dataSetName/isValidNewName                   controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
+# Folders
+GET           /folders/root                                                             controllers.FolderController.getRoot
+GET           /folders/tree                                                             controllers.FolderController.getTree
+POST          /folders/create                                                           controllers.FolderController.create(parentId: String, name: String)
+GET           /folders/:id                                                              controllers.FolderController.get(id: String)
+PUT           /folders/:id                                                              controllers.FolderController.update(id: String)
+PUT           /folders/:id/move                                                         controllers.FolderController.move(id: String, newParentId: String)
+DELETE        /folders/:id                                                              controllers.FolderController.delete(id: String)
+
 # Datastores
 GET           /datastores                                                               controllers.DataStoreController.list
 PUT           /datastores/:name/datasource                                              controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
 PUT           /datastores/:name/datasources                                             controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
 PATCH         /datastores/:name/status                                                  controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
-POST          /datastores/:name/verifyUpload                                            controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
+POST          /datastores/:name/reserveUpload                                           controllers.WKRemoteDataStoreController.reserveDataSetUpload(name: String, key: String, token: String)
 POST          /datastores/:name/reportDatasetUpload                                     controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteDataset                                           controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                                     controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
@@ -123,6 +135,7 @@ GET           /annotations/:id/info                                             
 PATCH         /annotations/:id/makeHybrid                                               controllers.AnnotationController.makeHybridWithoutType(id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:id/downsample                                               controllers.AnnotationController.downsampleWithoutType(id: String, tracingId: String)
 PATCH         /annotations/:id/addAnnotationLayer                                       controllers.AnnotationController.addAnnotationLayerWithoutType(id: String)
+PATCH         /annotations/:id/deleteAnnotationLayer                                    controllers.AnnotationController.deleteAnnotationLayerWithoutType(id: String, layerName: String)
 DELETE        /annotations/:id                                                          controllers.AnnotationController.cancelWithoutType(id: String)
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                               controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                 controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
@@ -131,6 +144,7 @@ GET           /annotations/:typ/:id/info                                        
 PATCH         /annotations/:typ/:id/makeHybrid                                          controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:typ/:id/downsample                                          controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
 PATCH         /annotations/:typ/:id/addAnnotationLayer                                  controllers.AnnotationController.addAnnotationLayer(typ: String, id: String)
+PATCH         /annotations/:typ/:id/deleteAnnotationLayer                               controllers.AnnotationController.deleteAnnotationLayer(typ: String, id: String, layerName: String)
 DELETE        /annotations/:typ/:id                                                     controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                          controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:typ/:id/download                                            controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
@@ -226,13 +240,14 @@ GET           /time/user/:userId                                                
 GET           /jobs/request                                                             controllers.WKRemoteWorkerController.requestJobs(key: String)
 GET           /jobs                                                                     controllers.JobsController.list
 GET           /jobs/status                                                              controllers.JobsController.status
-POST          /jobs/run/convertToWkw/:organizationName/:dataSetName                     controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String, dataStoreName: String)
+POST          /jobs/run/convertToWkw/:organizationName/:dataSetName                     controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String)
 POST          /jobs/run/computeMeshFile/:organizationName/:dataSetName                  controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/exportTiff/:organizationName/:dataSetName                       controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], annotationLayerName: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
 POST          /jobs/run/inferNuclei/:organizationName/:dataSetName                      controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: String, newDatasetName: String)
 POST          /jobs/run/inferNeurons/:organizationName/:dataSetName                     controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/globalizeFloodfills/:organizationName/:dataSetName              controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, volumeLayerName: Option[String])
 POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:dataSetName      controllers.JobsController.runMaterializeVolumeAnnotationJob(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String])
+POST          /jobs/run/findLargestSegmentId/:organizationName/:dataSetName             controllers.JobsController.runFindLargestSegmentIdJob(organizationName: String, dataSetName: String, layerName: String)
 GET           /jobs/:id                                                                 controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                          controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                          controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

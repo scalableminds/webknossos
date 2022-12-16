@@ -29,7 +29,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
-      val inviteExpiry: Duration = get[Duration]("webKnossos.user.inviteExpiry")
+      val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
     }
 
@@ -52,6 +52,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
       object User {
         val email: String = get[String]("webKnossos.sampleOrganization.user.email")
+        val email2: String = get[String]("webKnossos.sampleOrganization.user.email2")
         val password: String = get[String]("webKnossos.sampleOrganization.user.password")
         val token: String = get[String]("webKnossos.sampleOrganization.user.token")
         val isSuperUser: Boolean = get[Boolean]("webKnossos.sampleOrganization.user.isSuperUser")
@@ -64,6 +65,15 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val children = List(User, Tasks, Cache, SampleOrganization)
   }
 
+  object SingleSignOn {
+    object OpenIdConnect {
+      val providerUrl: String = get[String]("singleSignOn.openIdConnect.providerUrl")
+      val clientId: String = get[String]("singleSignOn.openIdConnect.clientId")
+      val publicKey: String = get[String]("singleSignOn.openIdConnect.publicKey")
+      val publicKeyAlgorithm: String = get[String]("singleSignOn.openIdConnect.publicKeyAlgorithm")
+    }
+  }
+
   object Features {
     val isDemoInstance: Boolean = get[Boolean]("features.isDemoInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
@@ -73,6 +83,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
+    val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
   }
 
   object Datastore {
@@ -118,10 +129,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Silhouette {
     object TokenAuthenticator {
-      val resetPasswordExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
-      val dataStoreExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.dataStoreExpiry")
-      val authenticatorExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorExpiry")
-      val authenticatorIdleTimeout: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
+      val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
+      val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
+      val authenticatorIdleTimeout: FiniteDuration =
+        get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
     }
 
     object CookieAuthenticator {
@@ -130,8 +142,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val secureCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
       val httpOnlyCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
-      val authenticatorExpiry: Duration = get[Duration]("silhouette.cookieAuthenticator.authenticatorExpiry")
-      val cookieMaxAge: Duration = get[Duration]("silhouette.cookieAuthenticator.cookieMaxAge")
+      val authenticatorExpiry: FiniteDuration =
+        get[FiniteDuration]("silhouette.cookieAuthenticator.authenticatorExpiry")
+      val cookieMaxAge: FiniteDuration = get[FiniteDuration]("silhouette.cookieAuthenticator.cookieMaxAge")
+      val signerSecret: String = get[String]("silhouette.cookieAuthenticator.signerSecret")
     }
 
     val children = List(TokenAuthenticator, CookieAuthenticator)
@@ -173,6 +187,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
   }
 
+  object Slick {
+    val checkSchemaOnStartup: Boolean = get[Boolean]("slick.checkSchemaOnStartup")
+  }
+
   object Voxelytics {
     val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
@@ -200,60 +218,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Airbrake,
       GoogleAnalytics,
       BackendAnalytics,
+      Slick,
       Voxelytics
     )
 
-  val removedConfigKeys = List(
-    "actor.defaultTimeout",
-    "js.defaultTimeout",
-    "application.name",
-    "application.branch",
-    "application.version",
-    "application.title",
-    "application.insertInitialData",
-    "application.insertLocalConnectDatastore",
-    "application.authentication.defaultuser.email",
-    "application.authentication.defaultUser.password",
-    "application.authentication.defaultUser.token",
-    "application.authentication.defaultUser.isSuperUser",
-    "application.authentication.ssoKey",
-    "application.authentication.inviteExpiry",
-    "webKnossos.user.time.tracingPauseInSeconds",
-    "webKnossos.query.maxResults",
-    "user.cacheTimeoutInMinutes",
-    "tracingstore.enabled",
-    "datastore.enabled",
-    "datastore.webKnossos.pingIntervalMinutes",
-    "braingames.binary.cacheMaxSize",
-    "braingames.binary.mappingCacheMaxSize",
-    "braingames.binary.agglomerateFileCacheMaxSize",
-    "braingames.binary.agglomerateCacheMaxSize",
-    "braingames.binary.agglomerateStandardBlockSize",
-    "braingames.binary.agglomerateMaxReaderRange",
-    "braingames.binary.loadTimeout",
-    "braingames.binary.saveTimeout",
-    "braingames.binary.isosurfaceTimeout",
-    "braingames.binary.isosurfaceActorPoolSize",
-    "braingames.binary.baseFolder",
-    "braingames.binary.agglomerateSkeletonEdgeLimit",
-    "braingames.binary.changeHandler.enabled",
-    "braingames.binary.tickerInterval",
-    "mail.enabled",
-    "jobs.username",
-    "braintracing.active",
-    "braintracing.url",
-    "airbrake.apiKey",
-    "airbrake.ssl",
-    "airbrake.enabled",
-    "airbrake.endpoint",
-    "slackNotifications.url",
-    "google.analytics.trackingId",
-    "operatorData"
-  )
-
-  def warnIfOldKeysPresent(): Unit = removedConfigKeys.foreach { key =>
-    if (getOptional[String](key).isDefined) {
-      logger.warn(s"Removed config key $key is still supplied. Did you migrate your config?")
-    }
-  }
 }

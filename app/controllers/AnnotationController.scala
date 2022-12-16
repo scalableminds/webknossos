@@ -4,23 +4,24 @@ import akka.util.Timeout
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
@@ -28,15 +29,12 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import models.organization.OrganizationDAO
-import oxalis.mail.{MailchimpClient, MailchimpTag}
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
+                                     mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
                                      name: String)
 object AnnotationLayerParameters {
@@ -71,7 +69,7 @@ class AnnotationController @Inject()(
     with FoxImplicits {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
-  private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
+  private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
   @ApiOperation(value = "Information about an annotation, supplying the type explicitly",
                 nickname = "annotationInfoByType")
@@ -101,7 +99,8 @@ class AnnotationController @Inject()(
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
           if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
-            timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
+            timeSpanService
+              .logUserInteraction(Instant(timestamp), user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
@@ -190,7 +189,7 @@ class AnnotationController @Inject()(
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         _ <- bool2Fox(annotation.state == AnnotationState.Finished) ?~> "annotation.reopen.notFinished"
         _ <- bool2Fox(isAdminOrTeamManager || annotation._user == user._id) ?~> "annotation.reopen.notAllowed"
-        _ <- bool2Fox(isAdminOrTeamManager || System.currentTimeMillis - annotation.modified < taskReopenAllowed) ?~> "annotation.reopen.tooLate"
+        _ <- bool2Fox(isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast) ?~> "annotation.reopen.tooLate"
       } yield ()
 
     for {
@@ -222,6 +221,31 @@ class AnnotationController @Inject()(
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         result <- addAnnotationLayer(annotation.typ.toString, id)(request)
+      } yield result
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
+          "annotation.layer.notFound",
+          layerName)
+        _ <- bool2Fox(annotation.annotationLayers.length != 1) ?~> "annotation.deleteLayer.onlyLayer"
+        _ = logger.info(s"Deleting annotation layer $layerName for annotation $id")
+        _ <- annotationService.deleteAnnotationLayer(annotation, layerName)
+      } yield Ok
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def deleteAnnotationLayerWithoutType(id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- deleteAnnotationLayer(annotation.typ.toString, id, layerName)(request)
       } yield result
     }
 
@@ -323,7 +347,7 @@ class AnnotationController @Inject()(
       } yield result
   }
 
-  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(
+  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
@@ -338,7 +362,7 @@ class AnnotationController @Inject()(
     implicit request =>
       log() {
         for {
-          (updated, message) <- finishAnnotation(typ, id, request.identity, timestamp) ?~> "annotation.finish.failed"
+          (updated, message) <- finishAnnotation(typ, id, request.identity, Instant(timestamp)) ?~> "annotation.finish.failed"
           restrictions <- provider.restrictionsFor(typ, id)
           json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
         } yield JsonOk(json, Messages(message))
@@ -351,7 +375,7 @@ class AnnotationController @Inject()(
       log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
           val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
-            jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, timestamp))
+            jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, Instant(timestamp)))
           }
 
           results.map { _ =>

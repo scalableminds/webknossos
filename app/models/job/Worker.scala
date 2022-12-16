@@ -3,11 +3,12 @@ package models.job
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
+import models.binary.DataStoreDAO
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
@@ -15,6 +16,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -23,18 +25,18 @@ case class Worker(_id: ObjectId,
                   key: String,
                   maxParallelJobs: Int,
                   lastHeartBeat: Long = 0,
-                  created: Long = System.currentTimeMillis,
+                  created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
 class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
-  val collection = Workers
+  protected val collection = Workers
 
-  def idColumn(x: Workers): Rep[String] = x._Id
+  protected def idColumn(x: Workers): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
 
-  def parse(r: WorkersRow): Fox[Worker] =
+  protected def parse(r: WorkersRow): Fox[Worker] =
     Fox.successful(
       Worker(
         ObjectId(r._Id),
@@ -42,7 +44,7 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.key,
         r.maxparalleljobs,
         r.lastheartbeat.getTime,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     )
@@ -67,7 +69,7 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   }
 }
 
-class WorkerService @Inject()(conf: WkConf) {
+class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDAO: WorkerDAO) {
 
   def lastHeartBeatIsRecent(worker: Worker): Boolean =
     System.currentTimeMillis() - worker.lastHeartBeat < conf.Jobs.workerLivenessTimeout.toMillis

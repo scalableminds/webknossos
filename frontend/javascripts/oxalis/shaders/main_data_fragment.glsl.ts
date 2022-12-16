@@ -2,7 +2,12 @@ import _ from "lodash";
 import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import type { Vector3 } from "oxalis/constants";
 import constants, { ViewModeValuesIndices, OrthoViewIndices } from "oxalis/constants";
-import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
+import {
+  convertCellIdToRGB,
+  getBrushOverlay,
+  getCrossHairOverlay,
+  getSegmentationId,
+} from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
@@ -64,6 +69,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform vec4 activeCellIdLow;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
+  uniform bool isProofreading;
   uniform float segmentationPatternOpacity;
 
   uniform bool isMappingEnabled;
@@ -81,6 +87,7 @@ uniform vec3 bboxMin;
 uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
+uniform vec3 activeSegmentPosition;
 uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
@@ -122,6 +129,7 @@ ${compileShader(
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentationId : null,
+  hasSegmentation ? getCrossHairOverlay : null,
 )}
 
 void main() {
@@ -176,7 +184,8 @@ void main() {
       // Keep the color in bounds of min and max
       color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
       // Scale the color value according to the histogram settings.
-      // Note: max == min would cause a division by 0. Thus we add 1 in this case and filter out the whole value below.
+      // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
+      // via mixing.
       float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
       color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 
@@ -197,25 +206,35 @@ void main() {
   <% if (hasSegmentation) { %>
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
-     // Color map (<= to fight rounding mistakes)
-     if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
-       // Increase cell opacity when cell is hovered
-       float hoverAlphaIncrement =
-         // Hover cell only if it's the active one
-         // and if segmentation opacity is not zero
-         hoveredSegmentIdLow == <%= segmentationName%>_id_low
-          && hoveredSegmentIdHigh == <%= segmentationName%>_id_high
-          && <%= segmentationName%>_alpha > 0.0
-         ? 0.2 : 0.0;
+    // Color map (<= to fight rounding mistakes)
+    if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
+      // Increase cell opacity when cell is hovered or if it is the active activeCell
+      bool isHoveredCell = hoveredSegmentIdLow == <%= segmentationName%>_id_low
+        && hoveredSegmentIdHigh == <%= segmentationName%>_id_high;
+      bool isActiveCell = activeCellIdLow == <%= segmentationName%>_id_low
+         && activeCellIdHigh == <%= segmentationName%>_id_high;
+      // Highlight cell only if it's hovered or active during proofreading
+      // and if segmentation opacity is not zero
+      float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
+      float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
+      gl_FragColor = vec4(mix(
+        data_color,
+        convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low),
+        <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
+      ), 1.0);
+    }
+    vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
+    <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
+    gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+    gl_FragColor.a = 1.0;
 
-       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
-     }
-
-     vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-     <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
-     gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
-     gl_FragColor.a = 1.0;
   <% }) %>
+
+  // This will only have an effect in proofreading mode
+  vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
+  gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
+  gl_FragColor.a = 1.0;
+
   <% } %>
 }
 

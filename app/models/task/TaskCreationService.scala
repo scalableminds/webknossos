@@ -1,7 +1,6 @@
 package models.task
 
 import java.io.File
-
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,13 +9,14 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.{Project, ProjectDAO}
-import models.team.{Team, TeamDAO}
-import models.user.{User, UserExperiencesDAO, UserService, UserTeamRolesDAO}
+import models.team.{Team, TeamDAO, TeamService}
+import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
@@ -32,7 +32,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     taskService: TaskService,
                                     userService: UserService,
                                     teamDAO: TeamDAO,
-                                    userTeamRolesDAO: UserTeamRolesDAO,
+                                    teamService: TeamService,
+                                    userDAO: UserDAO,
                                     slackNotificationService: SlackNotificationService,
                                     projectDAO: ProjectDAO,
                                     annotationDAO: AnnotationDAO,
@@ -71,7 +72,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       taskParameters: TaskParameters,
       organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
-      taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeIdOrSummary) ?~> "taskType.id.invalid"
+      taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       dataSet <- dataSetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
@@ -169,7 +170,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       implicit ctx: DBAccessContext): Fox[List[Option[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
-        taskTypeIdValidated <- ObjectId.fromString(params.taskTypeIdOrSummary) ?~> "taskType.id.invalid"
+        taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         skeletonTracingOpt = if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           Some(
@@ -189,7 +190,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       m: MessagesProvider): Fox[List[Option[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
-        taskTypeIdValidated <- ObjectId.fromString(params.taskTypeIdOrSummary) ?~> "taskType.id.invalid"
+        taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         volumeTracingOpt <- if ((taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           annotationService
@@ -390,7 +391,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           "dataSet.notFound",
           firstDatasetName)
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
-          slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeIdOrSummary).distinct,
+          slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
                                                                     fullTasks.count(_._1.baseAnnotation.isDefined))
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         savedSkeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
@@ -475,7 +476,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     } match {
       case Full((params: TaskParameters, Some((tracing, initialFile)))) =>
         for {
-          taskTypeIdValidated <- ObjectId.fromString(params.taskTypeIdOrSummary) ?~> "taskType.id.invalid"
+          taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
           saveResult <- tracingStoreClient
             .saveVolumeTracing(tracing, initialFile, resolutionRestrictions = taskType.settings.resolutionRestrictions)
@@ -491,10 +492,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(
         projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> "project.notFound"
-      dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
-      noAccessTeamIds = projects.map(_._team).diff(dataSetTeams.map(_._id))
+      dataSetTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true)
+      noAccessTeamIds = projects.map(_._team).diff(dataSetTeamIds)
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
-        filterOutTransitiveSubteam(id, dataSetTeams.map(_._id)))
+        filterOutTransitiveSubteam(id, dataSetTeamIds))
       noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIdsTransitive.flatten)(id => teamDAO.findOne(id))
       warnings = noAccessTeams.map(team =>
         s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")
@@ -505,7 +506,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     if (dataSetTeams.isEmpty) Fox.successful(Some(subteamId))
     else {
       for {
-        memberDifference <- userTeamRolesDAO.findMemberDifference(subteamId, dataSetTeams)
+        memberDifference <- userDAO.findTeamMemberDifference(subteamId, dataSetTeams)
       } yield if (memberDifference.isEmpty) None else Some(subteamId)
     }
 
@@ -528,7 +529,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
-      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeIdOrSummary)
+      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId)
       project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))
@@ -561,9 +562,4 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       js <- taskService.publicWrites(task)
     } yield js
 
-  def normalizeTaskTypeId(taskParameters: TaskParameters, organization: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[TaskParameters] =
-    for {
-      taskTypeIdString <- taskTypeService.idOrSummaryToId(taskParameters.taskTypeIdOrSummary, organization)
-    } yield taskParameters.copy(taskTypeIdOrSummary = taskTypeIdString)
 }

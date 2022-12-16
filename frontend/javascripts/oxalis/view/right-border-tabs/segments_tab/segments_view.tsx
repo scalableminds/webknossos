@@ -129,7 +129,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setHoveredSegmentId(segmentId: number | null | undefined) {
-    dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
+    dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
   loadAdHocMesh(cellId: number, seedPosition: Vector3) {
@@ -321,11 +321,9 @@ class SegmentsView extends React.Component<Props, State> {
       title =
         "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
     } else if (this.props.hasVolumeTracing) {
-      title =
-        this.props.visibleSegmentationLayer != null &&
-        this.props.visibleSegmentationLayer.fallbackLayer
-          ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
-          : "Meshes cannot be precomputed for volume annotations.";
+      title = this.props.visibleSegmentationLayer?.fallbackLayer
+        ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
+        : "Meshes cannot be precomputed for volume annotations.";
     } else if (this.props.visibleSegmentationLayer == null) {
       title = "There is no segmentation layer for which meshes could be precomputed.";
     } else {
@@ -371,6 +369,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   startComputingMeshfile = async () => {
     const {
+      mappingInfo,
       preferredQualityForMeshPrecomputation,
       resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
     } = this.props;
@@ -387,11 +386,19 @@ class SegmentsView extends React.Component<Props, State> {
     );
 
     if (this.props.visibleSegmentationLayer != null) {
+      const maybeMappingName =
+        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+        mappingInfo.mappingType === "HDF5" &&
+        mappingInfo.mappingName != null
+          ? mappingInfo.mappingName
+          : undefined;
+
       const job = await startComputeMeshFileJob(
         this.props.organization,
         this.props.datasetName,
         getBaseSegmentationName(this.props.visibleSegmentationLayer),
         meshfileResolution,
+        maybeMappingName,
       );
       this.setState({
         activeMeshJobId: job.id,

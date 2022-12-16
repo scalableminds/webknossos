@@ -2,16 +2,16 @@ package com.scalableminds.util.tools
 
 import java.io.FileNotFoundException
 import java.nio.file._
-
 import com.scalableminds.util.io.FileIO
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
-import scala.concurrent.ExecutionContext.Implicits._
 
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
@@ -102,8 +102,11 @@ object JsonHelper extends BoxImplicits with LazyLogging {
     }
   }
 
-  def parseJsonToFox[T: Reads](s: String): Box[T] =
-    Json.parse(s).validate[T] match {
+  def parseAndValidateJson[T: Reads](s: String): Box[T] =
+    tryo(Json.parse(s)).flatMap(parsed => validateJsValue[T](parsed))
+
+  def validateJsValue[T: Reads](o: JsValue): Box[T] =
+    o.validate[T] match {
       case JsSuccess(parsed, _) =>
         Full(parsed)
       case errors: JsError =>

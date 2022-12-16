@@ -7,6 +7,7 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessCo
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -104,8 +105,7 @@ class AnnotationService @Inject()(
     nmlWriter: NmlWriter,
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
-    meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO
+    meshService: MeshService
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
@@ -118,7 +118,7 @@ class AnnotationService @Inject()(
   private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
-      datasetAllowedTeamIds <- dataSetService.allowedTeamIdsFor(dataSet._id)
+      datasetAllowedTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true) ?~> "allowedTeams.notFound"
     } yield {
       val selectedTeamOpt = datasetAllowedTeamIds.intersect(userTeamIds).headOption
       selectedTeamOpt match {
@@ -139,7 +139,8 @@ class AnnotationService @Inject()(
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
       startRotation: Option[Vec3Double] = None,
-      resolutionRestrictions: ResolutionRestrictions
+      resolutionRestrictions: ResolutionRestrictions,
+      mappingName: Option[String]
   ): Fox[VolumeTracing] = {
     val resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
@@ -160,6 +161,7 @@ class AnnotationService @Inject()(
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(datasetOrganizationName),
+        mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto)
       )
   }
@@ -191,6 +193,11 @@ class AnnotationService @Inject()(
                                                             organizationName,
                                                             annotation.annotationLayers)
       _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
+    } yield ()
+
+  def deleteAnnotationLayer(annotation: Annotation, layerName: String): Fox[Unit] =
+    for {
+      _ <- annotationLayersDAO.deleteOne(annotation._id, layerName)
     } yield ()
 
   private def createTracingsForExplorational(dataSet: DataSet,
@@ -244,7 +251,8 @@ class AnnotationService @Inject()(
                 datasetOrganizationName,
                 fallbackLayer,
                 resolutionRestrictions =
-                  annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
+                  annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty),
+                mappingName = annotationLayerParameters.mappingName
               )
               volumeTracingAdapted = oldPrecedenceLayerProperties.map { p =>
                 volumeTracing.copy(
@@ -356,6 +364,7 @@ class AnnotationService @Inject()(
       newAnnotationLayerParameters = AnnotationLayerParameters(
         newAnnotationLayerType,
         usedFallbackLayerName,
+        None,
         Some(ResolutionRestrictions.empty),
         AnnotationLayer.defaultNameForType(newAnnotationLayerType))
       _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
@@ -378,7 +387,7 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[String] = {
     def executeFinish: Fox[String] =
       for {
-        _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)
+        _ <- annotationDAO.updateModified(annotation._id, Instant.now)
         _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
       } yield {
         if (annotation._task.isEmpty)
@@ -449,8 +458,8 @@ class AnnotationService @Inject()(
           annotationLayers = annotationLayers,
           state = Active,
           typ = AnnotationType.Task,
-          created = System.currentTimeMillis,
-          modified = System.currentTimeMillis
+          created = Instant.now,
+          modified = Instant.now
         )
         _ <- annotationDAO.updateInitialized(newAnnotation)
       } yield newAnnotation
@@ -519,7 +528,8 @@ class AnnotationService @Inject()(
         },
         startPosition = Some(startPosition),
         startRotation = Some(startRotation),
-        resolutionRestrictions = resolutionRestrictions
+        resolutionRestrictions = resolutionRestrictions,
+        mappingName = None
       )
     } yield volumeTracing
 
@@ -578,11 +588,11 @@ class AnnotationService @Inject()(
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def sharedAnnotationsFor(userTeams: List[ObjectId]): Fox[List[Annotation]] =
-    sharedAnnotationsDAO.findAllSharedForTeams(userTeams)
+    annotationDAO.findAllSharedForTeams(userTeams)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] =
-    sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
+    annotationDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
       implicit

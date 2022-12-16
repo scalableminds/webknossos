@@ -14,14 +14,14 @@ import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { formatDateInLocalTimeZone } from "./formatted_date";
 
-const SNOOZE_DURATION_IN_SECONDS = 20;
-const LAST_TERM_OF_SERVICE_WARNING_KEY = "lastTermOfServiceWarning";
+const SNOOZE_DURATION_IN_DAYS = 3;
+const LAST_TERMS_OF_SERVICE_WARNING_KEY = "lastTermsOfServiceWarning";
 
 export function CheckTermsOfServices() {
-  const [isModalOpen, _setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const closeModal = () => {
-    UserLocalStorage.setItem(LAST_TERM_OF_SERVICE_WARNING_KEY, String(Date.now()));
-    _setIsModalOpen(false);
+    UserLocalStorage.setItem(LAST_TERMS_OF_SERVICE_WARNING_KEY, String(Date.now()));
+    setIsModalOpen(false);
   };
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [recheckCounter, setRecheckCounter] = useState(0);
@@ -43,14 +43,14 @@ export function CheckTermsOfServices() {
       return;
     }
     if (acceptanceInfo.acceptanceNeeded && acceptanceInfo.acceptanceDeadlinePassed) {
-      _setIsModalOpen(true);
+      setIsModalOpen(true);
       return;
     }
 
-    const lastWarningString = UserLocalStorage.getItem(LAST_TERM_OF_SERVICE_WARNING_KEY);
+    const lastWarningString = UserLocalStorage.getItem(LAST_TERMS_OF_SERVICE_WARNING_KEY);
     const lastWarning = moment(lastWarningString ? parseInt(lastWarningString) : 0);
-    const isLastWarningOld = moment().diff(lastWarning, "seconds") > SNOOZE_DURATION_IN_SECONDS;
-    _setIsModalOpen(isLastWarningOld);
+    const isLastWarningOld = moment().diff(lastWarning, "days") > SNOOZE_DURATION_IN_DAYS;
+    setIsModalOpen(isLastWarningOld);
   }, [acceptanceInfo]);
   const onAccept = async (version: number) => {
     await acceptTermsOfService(version);

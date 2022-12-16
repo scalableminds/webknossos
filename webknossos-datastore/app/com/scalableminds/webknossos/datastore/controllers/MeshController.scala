@@ -63,7 +63,8 @@ class MeshController @Inject()(
                                            belonging to the supplied agglomerate id.
                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
                                           */
-                                         targetMappingName: Option[String]): Action[ListMeshChunksRequest] =
+                                         targetMappingName: Option[String],
+                                         targetMappingIsEditable: Option[Boolean] = None): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
@@ -82,19 +83,13 @@ class MeshController @Inject()(
                     request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
                 case Some(mapping) =>
                   for {
-                    agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-                    segmentIds: List[Long] <- agglomerateService
-                      .segmentIdsForAgglomerateId(
-                        AgglomerateFileKey(
-                          organizationName,
-                          dataSetName,
-                          dataLayerName,
-                          mapping
-                        ),
-                        request.body.segmentId
-                      )
-                      .toFox
-
+                    segmentIds: List[Long] <- segmentIdsForAgglomerateId(organizationName,
+                                                                         dataSetName,
+                                                                         dataLayerName,
+                                                                         mapping,
+                                                                         targetMappingIsEditable.getOrElse(false),
+                                                                         request.body.segmentId,
+                                                                         urlOrHeaderToken(token, request))
                     meshChunksForUnmappedSegments = segmentIds.map(
                       segmentId =>
                         meshFileService
@@ -110,6 +105,30 @@ class MeshController @Inject()(
           }
         } yield Ok(Json.toJson(positions))
       }
+    }
+
+  private def segmentIdsForAgglomerateId(organizationName: String,
+                                         dataSetName: String,
+                                         dataLayerName: String,
+                                         mappingName: String,
+                                         isEditableMapping: Boolean,
+                                         agglomerateId: Long,
+                                         token: Option[String]): Fox[List[Long]] =
+    if (isEditableMapping) {
+      Fox.successful(List.empty)
+    } else {
+      for {
+        agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+        segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+          AgglomerateFileKey(
+            organizationName,
+            dataSetName,
+            dataLayerName,
+            mappingName
+          ),
+          agglomerateId
+        )
+      } yield segmentIds
     }
 
   def readMeshChunkV0(token: Option[String],

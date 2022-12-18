@@ -762,7 +762,7 @@ export type VoxelyticsTaskConfigWithHierarchy =
 export type VoxelyticsArtifactConfig = {
   fileSize: number;
   inodeCount: number;
-  createdAt: Date;
+  createdAt: number;
   path: string;
   version: string;
   metadata: {
@@ -775,7 +775,7 @@ export type VoxelyticsArtifactConfig = {
 export type VoxelyticsRunInfo = (
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
+      beginTime: number;
       endTime: null;
     }
   | {
@@ -784,8 +784,8 @@ export type VoxelyticsRunInfo = (
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
+      beginTime: number;
+      endTime: number;
     }
 ) & {
   id: string;
@@ -823,7 +823,7 @@ export type VoxelyticsTaskInfo = {
     }
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
+      beginTime: number;
       endTime: null;
     }
   | {
@@ -832,8 +832,8 @@ export type VoxelyticsTaskInfo = {
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
+      beginTime: number;
+      endTime: number;
     }
 );
 
@@ -928,8 +928,8 @@ export type VoxelyticsWorkflowListingRun = (
 export type VoxelyticsWorkflowListing = {
   name: string;
   hash: string;
-  beginTime: Date;
-  endTime: Date | null;
+  beginTime: number;
+  endTime: number | null;
   state: VoxelyticsRunState;
   taskStatistics: {
     total: number;
@@ -952,8 +952,8 @@ export type VoxelyticsChunkStatistics = {
   executionId: string;
   countTotal: number;
   countFinished: number;
-  beginTime: Date | null;
-  endTime: Date | null;
+  beginTime: number | null;
+  endTime: number | null;
   memory: Statistics | null;
   cpuUser: Statistics | null;
   cpuSystem: Statistics | null;

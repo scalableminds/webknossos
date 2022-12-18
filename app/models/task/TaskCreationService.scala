@@ -16,7 +16,7 @@ import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
-import models.user.{User, UserExperiencesDAO, UserService, UserTeamRolesDAO}
+import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
@@ -33,7 +33,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     userService: UserService,
                                     teamDAO: TeamDAO,
                                     teamService: TeamService,
-                                    userTeamRolesDAO: UserTeamRolesDAO,
+                                    userDAO: UserDAO,
                                     slackNotificationService: SlackNotificationService,
                                     projectDAO: ProjectDAO,
                                     annotationDAO: AnnotationDAO,
@@ -506,7 +506,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     if (dataSetTeams.isEmpty) Fox.successful(Some(subteamId))
     else {
       for {
-        memberDifference <- userTeamRolesDAO.findMemberDifference(subteamId, dataSetTeams)
+        memberDifference <- userDAO.findTeamMemberDifference(subteamId, dataSetTeams)
       } yield if (memberDifference.isEmpty) None else Some(subteamId)
     }
 

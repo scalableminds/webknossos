@@ -1,8 +1,10 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import models.annotation.{AnnotationDAO, AnnotationService}
 import play.api.http.Status.NOT_FOUND
@@ -15,11 +17,11 @@ import utils.{ObjectId, SQLClient, SQLDAO}
 import scala.concurrent.ExecutionContext
 
 case class Publication(_id: ObjectId,
-                       publicationDate: Option[Long],
+                       publicationDate: Option[Instant],
                        imageUrl: Option[String],
                        title: Option[String],
                        description: Option[String],
-                       created: Long = System.currentTimeMillis(),
+                       created: Instant = Instant.now,
                        isDeleted: Boolean = false)
 
 class PublicationService @Inject()(dataSetService: DataSetService,
@@ -52,21 +54,21 @@ class PublicationService @Inject()(dataSetService: DataSetService,
 
 class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Publication, PublicationsRow, Publications](sqlClient) {
-  val collection = Publications
+  protected val collection = Publications
 
-  def idColumn(x: Publications): Rep[String] = x._Id
+  protected def idColumn(x: Publications): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Publications): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Publications): Rep[Boolean] = x.isdeleted
 
-  def parse(r: PublicationsRow): Fox[Publication] =
+  protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(
       Publication(
         ObjectId(r._Id),
-        r.publicationdate.map(_.getTime),
+        r.publicationdate.map(Instant.fromSql),
         r.imageurl,
         r.title,
         r.description,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     )
@@ -87,8 +89,6 @@ class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionConte
     for {
       _ <- run(
         sqlu"""insert into webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
-                         values(${p._id.id}, ${p.publicationDate
-          .map(new java.sql.Timestamp(_))}, ${p.imageUrl}, ${p.title}, ${p.description}, ${new java.sql.Timestamp(
-          p.created)}, ${p.isDeleted})""")
+                         values(${p._id.id}, ${p.publicationDate}, ${p.imageUrl}, ${p.title}, ${p.description}, ${p.created}, ${p.isDeleted})""")
     } yield ()
 }

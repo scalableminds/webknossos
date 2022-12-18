@@ -25,11 +25,7 @@ function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflow
 function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
   return {
     ...workflowInfo,
-    beginTime: new Date(workflowInfo.beginTime),
-    endTime: workflowInfo.endTime != null ? new Date(workflowInfo.endTime) : null,
-    runs: workflowInfo.runs
-      .map(parseRunInfo)
-      .sort((a, b) => b.beginTime.getTime() - a.beginTime.getTime()),
+    runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => b.beginTime - a.beginTime),
   };
 }
 
@@ -194,14 +190,14 @@ export default function WorkflowListView() {
             key: "begin",
             defaultSortOrder: "descend",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.beginTime?.getTime() ?? Infinity) - (b.beginTime?.getTime() ?? Infinity),
+              (a.beginTime ?? Infinity) - (b.beginTime ?? Infinity),
             render: (run: RenderRunInfo) => run.beginTime && formatDateMedium(run.beginTime),
           },
           {
             title: "End",
             key: "end",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.endTime?.getTime() ?? Infinity) - (b.endTime?.getTime() ?? Infinity),
+              (a.endTime ?? Infinity) - (b.endTime ?? Infinity),
             render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
           },
         ]}

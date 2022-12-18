@@ -2,6 +2,7 @@ package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -14,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import models.organization.OrganizationDAO
 import play.api.libs.json._
@@ -45,10 +47,10 @@ case class DataSet(
     sharingToken: Option[String],
     status: String,
     logoUrl: Option[String],
-    sortingKey: Long = System.currentTimeMillis(),
+    sortingKey: Instant = Instant.now,
     details: Option[JsObject] = None,
     tags: Set[String] = Set.empty,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -60,11 +62,11 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                            dataSetDataLayerDAO: DataSetDataLayerDAO,
                            organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
-  val collection = Datasets
+  protected val collection = Datasets
 
-  def idColumn(x: Datasets): Rep[String] = x._Id
+  protected def idColumn(x: Datasets): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
@@ -77,7 +79,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   private def writeScaleLiteral(scale: Vec3Double): String =
     writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
 
-  def parse(r: DatasetsRow): Fox[DataSet] =
+  protected def parse(r: DatasetsRow): Fox[DataSet] =
     for {
       scale <- parseScaleOpt(r.scale)
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
@@ -105,10 +107,10 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         r.sharingtoken,
         r.status,
         r.logourl,
-        r.sortingkey.getTime,
+        Instant.fromSql(r.sortingkey),
         details,
         parseArrayTuple(r.tags).toSet,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
@@ -287,14 +289,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   def updateFields(_id: ObjectId,
                    description: Option[String],
                    displayName: Option[String],
-                   sortingKey: Long,
+                   sortingKey: Instant,
                    isPublic: Boolean,
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield
       (row.description, row.displayname, row.sortingkey, row.ispublic, row._Folder)
     for {
       _ <- assertUpdateAccess(_id)
-      _ <- run(q.update(description, displayName, new java.sql.Timestamp(sortingKey), isPublic, folderId.toString))
+      _ <- run(q.update(description, displayName, sortingKey.toSql, isPublic, folderId.toString))
     } yield ()
   }
 
@@ -327,17 +329,16 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     val defaultViewConfiguration: Option[String] = d.defaultViewConfiguration.map(Json.toJson(_).toString)
     val details: Option[String] = d.details.map(_.toString)
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, _uploader, _folder, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
+      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, _uploader, _folder, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, tags, created, isDeleted)
                values(${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
                ${d._uploader}, ${d._folder},
                 #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(
-          defaultViewConfiguration.map(sanitize))}, #${optionLiteral(adminViewConfiguration.map(sanitize))},
+        defaultViewConfiguration.map(sanitize))}, #${optionLiteral(adminViewConfiguration.map(sanitize))},
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
-          .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(details.map(
-          sanitize))}, '#${writeArrayTuple(d.tags.toList)}', ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+        .take(1024)}, ${d.sharingToken}, ${d.sortingKey}, #${optionLiteral(details.map(sanitize))}, '#${writeArrayTuple(
+        d.tags.toList)}', ${d.created}, ${d.isDeleted})
             """)
     } yield ()
   }
@@ -404,7 +405,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
 class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-  def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
+  private def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
     for {
       resolution <- Vec3Int.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
     } yield resolution
@@ -446,7 +447,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def parseRow(row: DatasetLayersRow, dataSetId: ObjectId, skipResolutions: Boolean = false): Fox[DataLayer] = {
+  private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId, skipResolutions: Boolean): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
@@ -554,13 +555,13 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
 
 class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-  def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Long] =
+  def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Instant] =
     for {
       rList <- run(
         sql"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = $dataSetId and _user = $userId"
-          .as[java.sql.Timestamp])
+          .as[Instant])
       r <- rList.headOption.toFox
-    } yield r.getTime
+    } yield r
 
   def updateForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Unit] = {
     val clearQuery =

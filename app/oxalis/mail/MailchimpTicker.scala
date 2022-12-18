@@ -2,6 +2,7 @@ package oxalis.mail
 
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
@@ -48,10 +49,9 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
     for {
       isActivated <- multiUserDAO.hasAtLeastOneActiveUser(multiUser._id) ?~> "Could not determine isActivated"
       lastActivity <- if (isActivated) multiUserDAO.lastActivity(multiUser._id) ?~> "Could not determine lastActivity"
-      else Fox.successful(0L)
-      now = System.currentTimeMillis()
-      registeredAtLeast21DaysAgo = multiUser.created < now - (21 days).toMillis
-      registeredAtMost22DaysAgo = multiUser.created > now - (22 days).toMillis
+      else Fox.successful(Instant.zero)
+      registeredAtLeast21DaysAgo = (multiUser.created + (21 days)).isPast
+      registeredAtMost22DaysAgo = !(multiUser.created + (22 days)).isPast
       shouldBeTaggedNow = isActivated && registeredAtLeast21DaysAgo && registeredAtMost22DaysAgo
       _ <- if (shouldBeTaggedNow) {
         for {
@@ -60,7 +60,7 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
             MailchimpTag.WasActiveInWeeksTwoOrThree)
         } yield
           if (!alreadyTagged) {
-            if (lastActivity < now - (14 days).toMillis) {
+            if ((lastActivity + (14 days)).isPast) {
               logger.info(s"Tagging multiuser ${multiUser._id} as ${MailchimpTag.WasInactiveInWeeksTwoAndThree}...")
               mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasInactiveInWeeksTwoAndThree)
             } else {

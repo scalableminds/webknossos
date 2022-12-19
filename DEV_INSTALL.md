@@ -139,10 +139,10 @@ For upgrades, please check the [changelog](CHANGELOG.released.md) & [migration g
 yarn run lint
 
 # Format frontend code
-yarn run pretty
+yarn format-frontend
 
 # Format backend code
-yarn format
+yarn format-backend
 
 # Frontend type checking
 yarn flow

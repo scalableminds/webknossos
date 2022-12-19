@@ -3,7 +3,6 @@ package models.binary.explore
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemCredentials
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
@@ -19,7 +18,7 @@ case class MagWithAttributes(mag: MagLocator,
 
 trait RemoteLayerExplorer extends FoxImplicits {
 
-  def explore(remotePath: Path, credentials: Option[FileSystemCredentials]): Fox[List[(DataLayer, Vec3Double)]]
+  def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]]
 
   def name: String
 

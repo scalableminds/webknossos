@@ -4,7 +4,6 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  FileSystemCredentials,
   ZarrDataLayer,
   ZarrLayer,
   ZarrSegmentationLayer
@@ -21,16 +20,16 @@ class NgffExplorer extends RemoteLayerExplorer {
   override def name: String = "OME NGFF Zarr v0.4"
 
   override def explore(remotePath: Path,
-                       credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
+                       credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       zattrsPath <- Fox.successful(remotePath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS))
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      labelLayers <- exploreLabelLayers(remotePath, credentials).orElse(Fox.successful(List[(ZarrLayer, Vec3Double)]()))
+      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(Fox.successful(List[(ZarrLayer, Vec3Double)]()))
 
       layerLists: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiscale => {
         for {
           channelCount: Int <- getNgffMultiscaleChannelCount(multiscale, remotePath)
-          layers <- layersFromNgffMultiscale(multiscale, remotePath, credentials, channelCount)
+          layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount)
         } yield layers
       })
       layers: List[(ZarrLayer, Vec3Double)] = layerLists.flatten
@@ -51,7 +50,7 @@ class NgffExplorer extends RemoteLayerExplorer {
 
   private def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                        remotePath: Path,
-                                       credentials: Option[FileSystemCredentials],
+                                       credentialId: Option[String],
                                        channelCount: Int,
                                        isSegmentation: Boolean = false): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
@@ -66,7 +65,7 @@ class NgffExplorer extends RemoteLayerExplorer {
       layerTuples <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
         for {
           magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
-            zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials, Some(channelIndex)))
+            zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentialId, Some(channelIndex)))
           _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
           elementClassRaw <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
           elementClass = if (isSegmentation) ensureElementClassForSegmentationLayer(elementClassRaw)
@@ -84,18 +83,18 @@ class NgffExplorer extends RemoteLayerExplorer {
     } yield layerTuples
 
   private def exploreLabelLayers(remotePath: Path,
-                                 credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
+                                 credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       labelDescriptionPath <- Fox.successful(remotePath.resolve(NgffLabelsGroup.LABEL_PATH))
       labelGroup <- parseJsonFromPath[NgffLabelsGroup](labelDescriptionPath)
       layerTuples <- Fox.serialCombined(labelGroup.labels) { labelPath =>
-        layersForLabel(remotePath, labelPath, credentials)
+        layersForLabel(remotePath, labelPath, credentialId)
       }
     } yield layerTuples.flatten
 
   private def layersForLabel(remotePath: Path,
                              labelPath: String,
-                             credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
+                             credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath.resolve("labels").resolve(labelPath))
       zattrsPath = fullLabelPath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS)
@@ -104,7 +103,7 @@ class NgffExplorer extends RemoteLayerExplorer {
         multiscale =>
           layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
                                    fullLabelPath,
-                                   credentials,
+                                   credentialId,
                                    1,
                                    isSegmentation = true))
     } yield layers.flatten
@@ -122,7 +121,7 @@ class NgffExplorer extends RemoteLayerExplorer {
                                      layerPath: Path,
                                      voxelSizeInAxisUnits: Vec3Double,
                                      axisOrder: AxisOrder,
-                                     credentials: Option[FileSystemCredentials],
+                                     credentialId: Option[String],
                                      channelIndex: Option[Int]): Fox[MagWithAttributes] =
     for {
       mag <- magFromTransforms(ngffDataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
@@ -132,7 +131,7 @@ class NgffExplorer extends RemoteLayerExplorer {
       elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
       boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toString), credentials, Some(axisOrder), channelIndex, None),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toString), None, Some(axisOrder), channelIndex, credentialId),
                         magPath,
                         elementClass,
                         boundingBox)

@@ -6,16 +6,18 @@ import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
 export default function FolderSelection({
   folderId,
   onChange,
+  width,
 }: {
   folderId: string | null;
   onChange: (id: string | null) => void;
+  width?: string | number | null;
 }) {
   const { data: hierarchy } = useFolderHierarchyQuery();
 
   return (
     <TreeSelect
       showSearch
-      style={{ width: 150 }}
+      style={{ width: width || "100%" }}
       value={folderId || undefined}
       dropdownStyle={{ maxHeight: 500, overflow: "auto" }}
       placeholder="Select Folder"

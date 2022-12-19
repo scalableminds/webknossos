@@ -401,20 +401,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         ) tasks ON tasks._run = r._id
         WHERE r._organization = $organizationId
           #$readAccessQ
-        """.as[(String,
-                String,
-                String,
-                String,
-                String,
-                String,
-                String,
-                Timestamp,
-                Option[Timestamp],
-                Int,
-                Int,
-                Int,
-                Int,
-                Int)])
+        """.as[
+          (String, String, String, String, String, String, String, Instant, Option[Instant], Int, Int, Int, Int, Int)])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -429,8 +417,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                 voxelyticsVersion = row._5,
                 workflow_hash = row._6,
                 state = state,
-                beginTime = row._8.toInstant,
-                endTime = row._9.map(_.toInstant),
+                beginTime = row._8,
+                endTime = row._9,
                 taskStatistics = TaskStatistics(
                   total = row._10,
                   failed = row._11,

@@ -119,7 +119,7 @@
     "lintd": "node_modules/.bin/eslint_d --cache --quiet --ext .ts,.tsx frontend/javascripts/ # lintd uses a daemon for better speed (especially useful for hooking up to editors)",
     "lint-no-cache": "node_modules/.bin/eslint --quiet --ext .ts,.tsx frontend/javascripts/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
-    "format": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
+    "pretty-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "lint-backend": "sbt \";scapegoat\"",
     "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.ts frontend/javascripts/oxalis/api/api_latest.ts --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",

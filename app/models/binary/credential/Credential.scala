@@ -59,19 +59,19 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.credentials(_id, type, name, identifier, secret, scope, user, organization)
+      _ <- run(sqlu"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
                      values(${_id}, '#${CredentialType.HTTP_Basic_Auth}', ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""")
     } yield ()
 
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.credentials(_id, type, name, identifier, secret, user, organization)
+      _ <- run(sqlu"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
                      values(${_id}, '#${CredentialType.S3_Access_Key}', ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.user}, ${credential.organization})""")
     } yield ()
 
   def findOne(id: ObjectId): Fox[AnyCredential] =
     for {
-      r <- run(sql"select #$columns from webknossos._credentials where _id = $id".as[CredentialsRow])
+      r <- run(sql"select #$columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed

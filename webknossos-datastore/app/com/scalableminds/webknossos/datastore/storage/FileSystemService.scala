@@ -25,7 +25,12 @@ class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCl
           credential <- dSRemoteWebKnossosClient.findCredential(credentialId)
           descriptor = remoteSourceDescriptorFromCredential(magLocator.uri, credential)
         } yield descriptor
-      case None => Fox.empty
+      case None =>
+        magLocator.credentials match {
+          case Some(credentials) =>
+            Fox.successful(RemoteSourceDescriptor(magLocator.uri, Some(credentials.user), credentials.password))
+          case None => Fox.successful(RemoteSourceDescriptor(magLocator.uri, None, None))
+        }
     }
 
 }

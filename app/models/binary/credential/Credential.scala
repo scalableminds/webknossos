@@ -22,16 +22,16 @@ case class Credential(_id: ObjectId,
 
 class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Credential, CredentialsRow, Credentials](sqlClient) {
-  val collection = Credentials
+  protected val collection = Credentials
 
-  def idColumn(x: Credentials): Rep[String] = x._Id
-  override def isDeletedColumn(x: Tables.Credentials): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Credentials): Rep[String] = x._Id
+  override protected def isDeletedColumn(x: Tables.Credentials): Rep[Boolean] = x.isdeleted
 
   // use parseAnyCredential instead
-  def parse(row: com.scalableminds.webknossos.schema.Tables.Credentials#TableElementType)
+  protected def parse(row: com.scalableminds.webknossos.schema.Tables.Credentials#TableElementType)
     : com.scalableminds.util.tools.Fox[models.binary.credential.Credential] = ???
 
-  def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =
+  private def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =
     for {
       username <- r.identifier.toFox
       password <- r.secret.toFox
@@ -44,7 +44,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         r._Organization
       )
 
-  def parseAsS3AccessKeyCredential(r: CredentialsRow): Fox[S3AccessKeyCredential] =
+  private def parseAsS3AccessKeyCredential(r: CredentialsRow): Fox[S3AccessKeyCredential] =
     for {
       keyId <- r.identifier.toFox
       key <- r.secret.toFox
@@ -76,7 +76,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       parsed <- parseAnyCredential(firstRow)
     } yield parsed
 
-  def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential] =
+  private def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential] =
     r.`type` match {
       case "HTTP_Basic_Auth" =>
         for {

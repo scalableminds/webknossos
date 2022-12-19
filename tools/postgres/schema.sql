@@ -425,8 +425,6 @@ CREATE TABLE webknossos.annotation_privateLinks(
   _annotation CHAR(24) NOT NULL,
   accessToken Text NOT NULL UNIQUE,
   expirationDateTime TIMESTAMPTZ,
-  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -445,6 +443,7 @@ CREATE TABLE webknossos.credentials(
   secret Text,
   _user CHAR(24) NOT NULL,
   _organization CHAR(24) NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 

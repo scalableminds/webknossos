@@ -16,6 +16,6 @@ CREATE TABLE webknossos.credentials(
 CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation
-SET schemaVersion = 93;
+SET schemaVersion = 94;
 
 COMMIT TRANSACTION;

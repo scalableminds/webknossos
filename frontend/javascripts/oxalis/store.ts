@@ -482,6 +482,7 @@ type UiInformation = {
   readonly theme: Theme;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly isQuickSelectActive: boolean;
+  readonly areQuickSelectSettingsOpen: boolean;
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

@@ -234,6 +234,7 @@ const defaultState: OxalisState = {
       isBusy: false,
     },
     isQuickSelectActive: false,
+    areQuickSelectSettingsOpen: false,
   },
   localSegmentationData: {},
 };

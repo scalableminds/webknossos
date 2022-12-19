@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 - webKnossos is now able to recover from a lost webGL context. [#6663](https://github.com/scalableminds/webknossos/pull/6663)
 - Bulk task creation now needs the taskTypeId, the task type summary will no longer be accepted. [#6640](https://github.com/scalableminds/webknossos/pull/6640)
+- Error handling and reporting is more robust now. [#6700](https://github.com/scalableminds/webknossos/pull/6700)
 
 ### Fixed
 - Fixed import of N5 datasets. [#6668](https://github.com/scalableminds/webknossos/pull/6668)
@@ -30,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed access of remote datasets using the Amazon S3 protocol [#6679](https://github.com/scalableminds/webknossos/pull/6679)
 - Fixed a bug in line measurement that would lead to an infinite loop. [#6689](https://github.com/scalableminds/webknossos/pull/6689)
 - Fixed a bug where malformed json files could lead to uncaught exceptions.[#6691](https://github.com/scalableminds/webknossos/pull/6691)
+- Fixed rare crash in publications page. [#6700](https://github.com/scalableminds/webknossos/pull/6700)
 - Respect the config value mail.smtp.auth (used to be ignored, always using true) [#6692](https://github.com/scalableminds/webknossos/pull/6692)
 
 ### Removed

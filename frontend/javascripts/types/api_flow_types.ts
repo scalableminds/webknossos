@@ -181,6 +181,7 @@ export type NovelUserExperienceInfoType = {
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
+  readonly isOrganizationOwner: boolean;
   readonly created: number;
   readonly experiences: ExperienceMap;
   readonly isSuperUser: boolean;

@@ -83,7 +83,8 @@ class UserService @Inject()(conf: WkConf,
              lastName: String,
              isActive: Boolean,
              passwordInfo: PasswordInfo,
-             isAdmin: Boolean = false): Fox[User] = {
+             isAdmin: Boolean,
+             isOrganizationOwner: Boolean): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -108,6 +109,7 @@ class UserService @Inject()(conf: WkConf,
         Json.obj(),
         LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
+        isOrganizationOwner,
         isDatasetManager = false,
         isDeactivated = !isActive,
         isUnlisted = false,
@@ -320,6 +322,7 @@ class UserService @Inject()(conf: WkConf,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName,
         "isAdmin" -> user.isAdmin,
+        "isOrganizationOwner" -> user.isOrganizationOwner,
         "isDatasetManager" -> user.isDatasetManager,
         "isActive" -> !user.isDeactivated,
         "teams" -> teamMembershipsJs,

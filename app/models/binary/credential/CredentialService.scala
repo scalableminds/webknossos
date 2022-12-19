@@ -41,7 +41,9 @@ class CredentialService @Inject()(credentialDao: CredentialDAO) {
                     S3AccessKeyCredential(uri.toString, keyId, secretKey, user, organization))
                   _ <- credentialDao.findOne(_id)
                 } yield Some(_id)
+              case None => Fox.empty
             }
+          case None => Fox.empty
         }
     }
   }

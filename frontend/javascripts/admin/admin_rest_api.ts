@@ -1538,13 +1538,15 @@ export async function storeRemoteDataset(
   datasetName: string,
   organizationName: string,
   datasource: string,
-): Promise<Response> {
+): Promise<void> {
   return doWithToken((token) =>
-    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: datasource,
-    }),
+    Request.sendJSONReceiveJSON(
+      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`,
+      {
+        method: "PUT",
+        data: datasource,
+      },
+    ),
   );
 }
 

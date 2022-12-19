@@ -76,7 +76,15 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      request.dataLayer.bucketProvider.load(readInstruction, cache)
+      try{
+        request.dataLayer.bucketProvider.load(readInstruction, cache)
+      } catch {
+        case e: InternalError => {
+          logger.warn("SIGBUS encountered")
+          Fox.failure(e.getMessage)
+        }
+      }
+
     } else {
       Fox.empty
     }

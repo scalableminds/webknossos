@@ -330,9 +330,17 @@ class BinaryDataController @Inject()(
       dataLayer: DataLayer,
       dataRequests: DataRequestCollection
   ): Fox[(Array[Byte], List[Int])] = {
-    val requests =
-      dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, None, r.cuboid(dataLayer), r.settings))
-    binaryDataService.handleDataRequests(requests)
+    try {
+      val requests =
+        dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, None, r.cuboid(dataLayer), r.settings))
+      binaryDataService.handleDataRequests(requests)
+    }
+    catch {
+      case e: InternalError => {
+        logger.warn("SIGBUS encountered")
+        Fox.failure(e.getMessage)
+      }
+    }
   }
 
 }

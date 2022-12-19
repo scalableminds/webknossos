@@ -231,6 +231,9 @@ GET           /organizations/:organizationName                                  
 PATCH         /organizations/:organizationName                                          controllers.OrganizationController.update(organizationName: String)
 DELETE        /organizations/:organizationName                                          controllers.OrganizationController.delete(organizationName: String)
 GET           /operatorData                                                             controllers.OrganizationController.getOperatorData
+GET           /termsOfService                                                           controllers.OrganizationController.getTermsOfService
+POST          /termsOfService/accept                                                    controllers.OrganizationController.acceptTermsOfService(version: Int)
+GET           /termsOfService/acceptanceNeeded                                          controllers.OrganizationController.termsOfServiceAcceptanceNeeded
 
 # Timelogging
 GET           /time/allusers/:year/:month                                               controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

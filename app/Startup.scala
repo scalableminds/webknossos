@@ -120,6 +120,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
       conf.Mail.Smtp.host,
       conf.Mail.Smtp.port,
       conf.Mail.Smtp.tls,
+      conf.Mail.Smtp.auth,
       conf.Mail.Smtp.user,
       conf.Mail.Smtp.pass,
     )

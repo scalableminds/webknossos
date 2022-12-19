@@ -728,7 +728,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             <FormItemWithInfo
               name="targetFolder"
               label="Target Folder"
-              info="The folder into which the dataset will be uploaded."
+              info="The folder into which the dataset will be uploaded. The dataset can be moved later after upload, too. When not selecting a folder, the dataset will be placed into the root folder."
             >
               <FolderSelection
                 folderId={this.state.targetFolderId}

@@ -33,6 +33,7 @@ case class User(
     userConfiguration: JsObject,
     loginInfo: LoginInfo,
     isAdmin: Boolean,
+    isOrganizationOwner: Boolean,
     isDatasetManager: Boolean,
     isDeactivated: Boolean,
     isUnlisted: Boolean,
@@ -79,6 +80,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         userConfiguration,
         LoginInfo(User.default_login_provider_id, r._Id),
         r.isadmin,
+        r.isorganizationowner,
         r.isdatasetmanager,
         r.isdeactivated,
         r.isunlisted,
@@ -213,12 +215,20 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def insertOne(u: User): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity,
-                                            userConfiguration, isDeactivated, isAdmin, isDatasetManager, isUnlisted, created, isDeleted)
-                     values(${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
-                            ${u.lastActivity}, '#${sanitize(Json.toJson(u.userConfiguration).toString)}',
-                     ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isUnlisted}, ${u.created}, ${u.isDeleted})
-          """)
+      _ <- run(sqlu"""INSERT INTO webknossos.users(
+                               _id, _multiUser, _organization, firstName, lastName,
+                               lastActivity, userConfiguration,
+                               isDeactivated, isAdmin, isOrganizationOwner,
+                               isDatasetManager, isUnlisted,
+                               created, isDeleted
+                             )
+                             VALUES(
+                               ${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
+                               ${u.lastActivity}, '#${sanitize(Json.toJson(u.userConfiguration).toString)}',
+                               ${u.isDeactivated}, ${u.isAdmin}, ${u.isOrganizationOwner},
+                               ${u.isDatasetManager}, ${u.isUnlisted},
+                               ${u.created}, ${u.isDeleted}
+                             )""")
     } yield ()
 
   def updateLastActivity(userId: ObjectId, lastActivity: Instant = Instant.now)(

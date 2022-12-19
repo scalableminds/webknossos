@@ -7,9 +7,12 @@ CREATE TABLE webknossos.credentials(
    name VARCHAR(256) NOT NULL,
    identifier Text,
    secret Text,
-   scope Text,
-   filePath Text
+   _user CHAR(24) NOT NULL,
+   _organization CHAR(24) NOT NULL,
+   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
+
+CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation
 SET schemaVersion = 93;

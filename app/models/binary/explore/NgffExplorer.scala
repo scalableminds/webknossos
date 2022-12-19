@@ -3,11 +3,7 @@ package models.binary.explore
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  ZarrDataLayer,
-  ZarrLayer,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
@@ -19,12 +15,12 @@ class NgffExplorer extends RemoteLayerExplorer {
 
   override def name: String = "OME NGFF Zarr v0.4"
 
-  override def explore(remotePath: Path,
-                       credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       zattrsPath <- Fox.successful(remotePath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS))
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(Fox.successful(List[(ZarrLayer, Vec3Double)]()))
+      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
+        Fox.successful(List[(ZarrLayer, Vec3Double)]()))
 
       layerLists: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiscale => {
         for {
@@ -82,8 +78,7 @@ class NgffExplorer extends RemoteLayerExplorer {
       })
     } yield layerTuples
 
-  private def exploreLabelLayers(remotePath: Path,
-                                 credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  private def exploreLabelLayers(remotePath: Path, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       labelDescriptionPath <- Fox.successful(remotePath.resolve(NgffLabelsGroup.LABEL_PATH))
       labelGroup <- parseJsonFromPath[NgffLabelsGroup](labelDescriptionPath)

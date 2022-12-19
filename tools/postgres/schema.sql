@@ -425,6 +425,8 @@ CREATE TABLE webknossos.annotation_privateLinks(
   _annotation CHAR(24) NOT NULL,
   accessToken Text NOT NULL UNIQUE,
   expirationDateTime TIMESTAMPTZ,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -441,8 +443,9 @@ CREATE TABLE webknossos.credentials(
   name VARCHAR(256) NOT NULL,
   identifier Text,
   secret Text,
-  scope Text,
-  filePath Text
+  _user CHAR(24) NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.folders(
@@ -597,6 +600,7 @@ CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT is
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.annotation_privateLinks WHERE NOT isDeleted;
 CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
+CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

@@ -35,11 +35,14 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
       val _id = ObjectId.generate
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- credentialDAO.insertOne(_id,
-                                     HttpBasicAuthCredential(request.body.name,
-                                                             request.body.username,
-                                                             request.body.password,
-                                                             request.body.domain)) ?~> "create.failed"
+        _ <- credentialDAO.insertOne(
+          _id,
+          HttpBasicAuthCredential(request.body.name,
+                                  request.body.username,
+                                  request.body.password,
+                                  request.identity._id.toString,
+                                  request.identity._organization.toString)
+        ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }
 
@@ -48,11 +51,14 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
       val _id = ObjectId.generate
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- credentialDAO.insertOne(_id,
-                                     S3AccessKeyCredential(request.body.name,
-                                                           request.body.keyId,
-                                                           request.body.key,
-                                                           request.body.bucket)) ?~> "create.failed"
+        _ <- credentialDAO.insertOne(
+          _id,
+          S3AccessKeyCredential(request.body.name,
+                                request.body.keyId,
+                                request.body.key,
+                                request.identity._id.toString,
+                                request.identity._organization.toString)
+        ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }
 

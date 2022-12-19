@@ -13,9 +13,9 @@ class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCl
 
   private def remoteSourceDescriptorFromCredential(uri: URI, credential: AnyCredential): RemoteSourceDescriptor =
     credential match {
-      case HttpBasicAuthCredential(name, username, password, domain) =>
+      case HttpBasicAuthCredential(name, username, password, _, _) =>
         RemoteSourceDescriptor(uri, Some(username), Some(password))
-      case S3AccessKeyCredential(name, keyId, key, bucket) => RemoteSourceDescriptor(uri, Some(keyId), Some(key))
+      case S3AccessKeyCredential(name, keyId, key, _, _) => RemoteSourceDescriptor(uri, Some(keyId), Some(key))
     }
 
   def remoteSourceFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =

@@ -7,11 +7,12 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.{FileSystemsHolder}
+import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.credential.CredentialService
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
@@ -31,10 +32,16 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
 
   def exploreRemoteDatasource(
       urisWithCredentials: List[ExploreRemoteDatasetParameters],
+      requestIdentity: WkEnv#I,
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
     for {
-      exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(parameters =>
-        exploreRemoteLayersForUri(parameters.remoteUri, parameters.user, parameters.password, reportMutable))
+      exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(
+        parameters =>
+          exploreRemoteLayersForUri(parameters.remoteUri,
+                                    parameters.user,
+                                    parameters.password,
+                                    reportMutable,
+                                    requestIdentity))
       layersWithVoxelSizes = exploredLayersNested.flatten
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
       rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes) ?~> "Could not extract common voxel size from layers"
@@ -132,10 +139,15 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
       layerUri: String,
       user: Option[String],
       password: Option[String],
-      reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+      reportMutable: ListBuffer[String],
+      requestIdentity: WkEnv#I)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
       remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
-      credentialId <- credentialService.createCredential(new URI(normalizeUri(layerUri)), user, password)
+      credentialId <- credentialService.createCredential(new URI(normalizeUri(layerUri)),
+                                                         user,
+                                                         password,
+                                                         requestIdentity._id.toString,
+                                                         requestIdentity._organization.toString)
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
@@ -154,10 +166,10 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
     else uri
 
   private def exploreRemoteLayersForRemotePath(
-                                                remotePath: Path,
-                                                credentialId: Option[String],
-                                                reportMutable: ListBuffer[String],
-                                                explorers: List[RemoteLayerExplorer])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+      remotePath: Path,
+      credentialId: Option[String],
+      reportMutable: ListBuffer[String],
+      explorers: List[RemoteLayerExplorer])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     explorers match {
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>

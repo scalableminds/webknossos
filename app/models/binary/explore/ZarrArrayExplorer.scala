@@ -15,8 +15,7 @@ class ZarrArrayExplorer extends RemoteLayerExplorer {
 
   override def name: String = "Zarr Array"
 
-  override def explore(remotePath: Path,
-                       credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       zarrayPath <- Fox.successful(remotePath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY))
       name <- guessNameFromPath(remotePath)

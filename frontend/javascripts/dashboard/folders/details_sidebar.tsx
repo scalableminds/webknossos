@@ -13,7 +13,7 @@ import React, { useEffect } from "react";
 import { APIMaybeUnimportedDataset, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
-import { SEARCH_RESULTS_LIMIT, useFolderQuery } from "../dataset/queries";
+import { SEARCH_RESULTS_LIMIT } from "../dataset/queries";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -31,7 +31,7 @@ export function DetailsSidebar({
   setFolderIdForEditModal: (value: string | null) => void;
 }) {
   const context = useDatasetCollectionContext();
-  const { data: folder, error } = useFolderQuery(activeFolderId);
+  const { data: folder, error } = context.queries.activeFolderQuery;
 
   useEffect(() => {
     if (

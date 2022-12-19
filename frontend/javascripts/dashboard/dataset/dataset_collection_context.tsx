@@ -1,6 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
-import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
+import type {
+  APIMaybeUnimportedDataset,
+  APIDatasetId,
+  APIDataset,
+  Folder,
+} from "types/api_flow_types";
 import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
@@ -47,6 +52,7 @@ export type DatasetCollectionContextValue = {
   getBreadcrumbs: (dataset: APIMaybeUnimportedDataset) => string[] | null;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
+    activeFolderQuery: ReturnType<typeof useFolderQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
     datasetSearchQuery: ReturnType<typeof useDatasetSearchQuery>;
     createFolderMutation: ReturnType<typeof useCreateFolderMutation>;
@@ -77,13 +83,25 @@ export default function DatasetCollectionContextProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(
+  const [activeFolderId, _setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
+  // isInitialFolderId encodes whether the activeFolderId is still at its
+  // initial value (which is derived from localStorage).
+  // If this is the case, no error toast will be shown when opening the
+  // dashboard if the dataset does not exist anymore.
+  // Since opening the most recently used folder is not a hard requirement,
+  // the error would do more harm than good.
+  const [isInitialFolderId, setIsInitialFolderId] = useState(true);
+  const setActiveFolderId = (id: React.SetStateAction<string | null>) => {
+    setIsInitialFolderId(false);
+    _setActiveFolderId(id);
+  };
+
   const mostRecentlyUsedActiveFolderId = usePrevious(activeFolderId, true);
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
-  const { data: folder } = useFolderQuery(activeFolderId);
+  const activeFolderQuery = useFolderQuery(activeFolderId, !isInitialFolderId);
 
   const [selectedDatasets, setSelectedDatasets] = useState<APIMaybeUnimportedDataset[]>([]);
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
@@ -102,6 +120,7 @@ export default function DatasetCollectionContextProvider({
     setActiveFolderId,
     globalSearchQuery,
     activeFolderId,
+    activeFolderQuery.data,
     searchRecursively,
     setSearchRecursively,
   );
@@ -109,12 +128,12 @@ export default function DatasetCollectionContextProvider({
   useEffect(() => {
     // Persist last active folder to localStorage. We
     // check folder against null to avoid that invalid ids are persisted.
-    if (activeFolderId != null && folder != null) {
+    if (activeFolderId != null && activeFolderQuery.data != null) {
       UserLocalStorage.setItem(ACTIVE_FOLDER_ID_STORAGE_KEY, activeFolderId);
     } else {
       UserLocalStorage.removeItem(ACTIVE_FOLDER_ID_STORAGE_KEY);
     }
-  }, [folder, activeFolderId]);
+  }, [activeFolderQuery.data, activeFolderId]);
 
   const folderHierarchyQuery = useFolderHierarchyQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(
@@ -213,6 +232,7 @@ export default function DatasetCollectionContextProvider({
       searchRecursively,
       setSearchRecursively,
       queries: {
+        activeFolderQuery,
         folderHierarchyQuery,
         datasetsInFolderQuery,
         datasetSearchQuery,
@@ -233,6 +253,7 @@ export default function DatasetCollectionContextProvider({
       activeFolderId,
       setActiveFolderId,
       mostRecentlyUsedActiveFolderId,
+      activeFolderQuery,
       folderHierarchyQuery,
       datasetsInFolderQuery,
       datasetSearchQuery,
@@ -259,11 +280,10 @@ function useManagedUrlParams(
   setActiveFolderId: React.Dispatch<React.SetStateAction<string | null>>,
   globalSearchQuery: string | null,
   activeFolderId: string | null,
+  activeFolder: Folder | undefined,
   searchRecursively: boolean,
   setSearchRecursively: (val: boolean) => void,
 ) {
-  const { data: folder } = useFolderQuery(activeFolderId);
-
   // Read params upon component mount.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -294,7 +314,7 @@ function useManagedUrlParams(
   // Update folderId
   useEffect(() => {
     if (!globalSearchQuery && activeFolderId) {
-      let folderName = folder?.name || "";
+      let folderName = activeFolder?.name || "";
       // The replacement of / and space is only done to make the URL
       // nicer to read for a human.
       // encodeURIComponent is used so that special characters, such as # and ?
@@ -339,5 +359,5 @@ function useManagedUrlParams(
         `/dashboard/datasets${paramStr === "" ? "" : "?"}${paramStr}`,
       );
     }
-  }, [globalSearchQuery, activeFolderId, folder, searchRecursively]);
+  }, [globalSearchQuery, activeFolderId, activeFolder, searchRecursively]);
 }

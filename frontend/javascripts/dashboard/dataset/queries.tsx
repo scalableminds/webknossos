@@ -27,7 +27,7 @@ export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
 const FOLDER_TREE_REFETCH_INTERVAL = 30000;
 
-export function useFolderQuery(folderId: string | null) {
+export function useFolderQuery(folderId: string | null, showErrorToast: boolean = true) {
   const queryKey = ["folders", folderId];
   return useQuery(
     queryKey,
@@ -35,7 +35,7 @@ export function useFolderQuery(folderId: string | null) {
       if (folderId == null) {
         throw new Error("No folder id provided");
       }
-      return getFolder(folderId);
+      return getFolder(folderId, showErrorToast);
     },
     {
       refetchOnWindowFocus: false,

@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Filter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataLayerLike, GenericDataSource}
 import io.swagger.annotations._
@@ -54,7 +55,7 @@ class DataSetController @Inject()(userService: UserService,
   private val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
-      (__ \ 'sortingKey).readNullable[Long] and
+      (__ \ 'sortingKey).readNullable[Instant] and
       (__ \ 'isPublic).read[Boolean] and
       (__ \ 'tags).read[List[String]] and
       (__ \ 'folderId).readNullable[ObjectId]).tupled
@@ -178,6 +179,10 @@ class DataSetController @Inject()(userService: UserService,
       uploaderId: Option[String],
       @ApiParam(value = "Optional filtering: List only datasets in the folder with this id")
       folderId: Option[String],
+      @ApiParam(
+        value =
+          "Optional filtering: If a folderId was specified, this parameter controls whether subfolders should be considered, too (default: false)")
+      recursive: Option[Boolean],
       @ApiParam(value = "Optional filtering: List only datasets with names matching this search query")
       searchQuery: Option[String],
       @ApiParam(value = "Optional limit, return only the first n matching datasets.")
@@ -210,7 +215,8 @@ class DataSetController @Inject()(userService: UserService,
     ) { filter =>
       for {
         folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-        dataSets <- dataSetDAO.findAllWithSearch(folderIdValidated, searchQuery) ?~> "dataSet.list.failed"
+        dataSets <- dataSetDAO
+          .findAllWithSearch(folderIdValidated, searchQuery, recursive.getOrElse(false)) ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
         limited = limit.map(l => filtered.take(l)).getOrElse(filtered)
         js <- listGrouped(limited, request.identity) ?~> "dataSet.list.failed"

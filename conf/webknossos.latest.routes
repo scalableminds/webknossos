@@ -69,7 +69,7 @@ GET           /teams/:id/progressOverview                                       
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational              controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                     controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], searchQuery: Option[String], limit: Option[Int])
+GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int])
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
 POST          /datasets/exploreRemote                                                   controllers.DataSetController.exploreRemoteDataset
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
@@ -230,6 +230,9 @@ GET           /organizations/:organizationName                                  
 PATCH         /organizations/:organizationName                                          controllers.OrganizationController.update(organizationName: String)
 DELETE        /organizations/:organizationName                                          controllers.OrganizationController.delete(organizationName: String)
 GET           /operatorData                                                             controllers.OrganizationController.getOperatorData
+GET           /termsOfService                                                           controllers.OrganizationController.getTermsOfService
+POST          /termsOfService/accept                                                    controllers.OrganizationController.acceptTermsOfService(version: Int)
+GET           /termsOfService/acceptanceNeeded                                          controllers.OrganizationController.termsOfServiceAcceptanceNeeded
 
 # Timelogging
 GET           /time/allusers/:year/:month                                               controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

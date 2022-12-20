@@ -35,7 +35,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "pricingPlan" -> organization.pricingPlan,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
-        "includedStorage" -> organization.includedStorage.map(bytes => bytes / 1000000)
+        "includedStorage" -> organization.includedStorage.map(bytes => bytes / 1000000),
+        "lastTermsOfServiceAcceptanceTime" -> organization.lastTermsOfServiceAcceptanceTime,
+        "lastTermsOfServiceAcceptanceVersion" -> organization.lastTermsOfServiceAcceptanceVersion
       )
     } else Json.obj()
     Fox.successful(

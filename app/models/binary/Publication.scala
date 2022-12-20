@@ -54,13 +54,13 @@ class PublicationService @Inject()(dataSetService: DataSetService,
 
 class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Publication, PublicationsRow, Publications](sqlClient) {
-  val collection = Publications
+  protected val collection = Publications
 
-  def idColumn(x: Publications): Rep[String] = x._Id
+  protected def idColumn(x: Publications): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Publications): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Publications): Rep[Boolean] = x.isdeleted
 
-  def parse(r: PublicationsRow): Fox[Publication] =
+  protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(
       Publication(
         ObjectId(r._Id),

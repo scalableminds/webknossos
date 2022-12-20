@@ -84,13 +84,13 @@ class InviteService @Inject()(conf: WkConf,
 
 class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Invite, InvitesRow, Invites](sqlClient) {
-  val collection = Invites
+  protected val collection = Invites
 
-  def idColumn(x: Invites): Rep[String] = x._Id
+  protected def idColumn(x: Invites): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Invites): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Invites): Rep[Boolean] = x.isdeleted
 
-  def parse(r: InvitesRow): Fox[Invite] =
+  protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(
       Invite(
         ObjectId(r._Id),

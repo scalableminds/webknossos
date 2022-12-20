@@ -235,6 +235,9 @@ POST          /pricing/requestUpgrade                                           
 POST          /pricing/requestUsers                                                     controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
 POST          /pricing/requestStorage                                                   controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
 GET           /pricing/status                                                           controllers.OrganizationController.pricingStatus
+GET           /termsOfService                                                           controllers.OrganizationController.getTermsOfService
+POST          /termsOfService/accept                                                    controllers.OrganizationController.acceptTermsOfService(version: Int)
+GET           /termsOfService/acceptanceNeeded                                          controllers.OrganizationController.termsOfServiceAcceptanceNeeded
 
 # Timelogging
 GET           /time/allusers/:year/:month                                               controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

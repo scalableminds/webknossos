@@ -38,7 +38,6 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
                                    multiUserDAO: MultiUserDAO,
-                                   userTeamRolesDAO: UserTeamRolesDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
@@ -102,6 +101,7 @@ Samplecountry
     Json.obj(),
     userService.createLoginInfo(userId),
     isAdmin = true,
+    isOrganizationOwner = true,
     isDatasetManager = true,
     isUnlisted = false,
     isDeactivated = false,
@@ -123,6 +123,7 @@ Samplecountry
     Json.obj(),
     userService.createLoginInfo(userId2),
     isAdmin = false,
+    isOrganizationOwner = false,
     isDatasetManager = false,
     isUnlisted = false,
     isDeactivated = false,
@@ -187,9 +188,8 @@ Samplecountry
             _ <- multiUserDAO.insertOne(multiUser)
             _ <- userDAO.insertOne(user)
             _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-            _ <- userTeamRolesDAO.insertTeamMembership(
-              user._id,
-              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
+            _ <- userDAO.insertTeamMembership(user._id,
+                                              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
             _ = logger.info("Inserted default user")
           } yield ()
       }

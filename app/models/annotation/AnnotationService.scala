@@ -105,8 +105,7 @@ class AnnotationService @Inject()(
     nmlWriter: NmlWriter,
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
-    meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO
+    meshService: MeshService
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
@@ -589,11 +588,11 @@ class AnnotationService @Inject()(
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def sharedAnnotationsFor(userTeams: List[ObjectId]): Fox[List[Annotation]] =
-    sharedAnnotationsDAO.findAllSharedForTeams(userTeams)
+    annotationDAO.findAllSharedForTeams(userTeams)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] =
-    sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
+    annotationDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
       implicit

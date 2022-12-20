@@ -40,6 +40,8 @@ organization.alreadyJoined=Your account is already associated with the selected 
 organization.users.userLimitReached=Cannot add user because it would exceed the limit of included users in this plan.
 organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization webKnossos plan. Please ask the organization owner for permission.
 
+termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
+
 user.notFound=User not found
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.

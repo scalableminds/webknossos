@@ -36,12 +36,12 @@ case class Task(
 
 class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
-  val collection = Tasks
+  protected val collection = Tasks
 
-  def idColumn(x: Tasks): profile.api.Rep[String] = x._Id
-  def isDeletedColumn(x: Tasks): profile.api.Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Tasks): profile.api.Rep[String] = x._Id
+  protected def isDeletedColumn(x: Tasks): profile.api.Rep[Boolean] = x.isdeleted
 
-  def parse(r: TasksRow): Fox[Task] =
+  protected def parse(r: TasksRow): Fox[Task] =
     for {
       editPosition <- Vec3Int.fromList(parseArrayTuple(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
       editRotation <- Vec3Double.fromList(parseArrayTuple(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
@@ -64,11 +64,11 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       )
     }
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
       or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
-  override def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId) =
     s"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
       or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""

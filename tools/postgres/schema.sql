@@ -289,6 +289,8 @@ CREATE TABLE webknossos.organizations(
   paidUntil TIMESTAMPTZ DEFAULT NULL,
   includedUsers INTEGER DEFAULT NULL,
   includedStorage BIGINT DEFAULT NULL,
+  lastTermsOfServiceAcceptanceTime TIMESTAMPTZ,
+  lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -304,6 +306,7 @@ CREATE TABLE webknossos.users(
   userConfiguration JSONB NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isAdmin BOOLEAN NOT NULL DEFAULT false,
+  isOrganizationOwner BOOLEAN NOT NULL DEFAULT false,
   isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,

@@ -128,10 +128,11 @@ const modelData = {
 
 const { default: Store, startSagas } = require("oxalis/store");
 const rootSaga = require("oxalis/model/sagas/root_saga").default;
-const { setStore } = require("oxalis/singletons");
+const { setStore, setModel } = require("oxalis/singletons");
 startSagas(rootSaga);
 
 setStore(Store);
+setModel(Model);
 
 export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volumes.length > 0) {

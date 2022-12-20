@@ -95,7 +95,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
       onOk={handleUserUpgrade}
       onCancel={destroy}
       width={800}
-      visible
+      open
     >
       <div
         style={{
@@ -191,8 +191,10 @@ function upgradePricingPlan(
   }
 
   let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
-  let okButtonCallback: (() => Promise<void>) | undefined = () =>
+  let okButtonCallback: (() => void) | undefined = () => {
     sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+    Toast.success("An email with your request has been send to the webKnossos team.");
+  };
   let modalBody = (
     <>
       <p>Upgrade Highlights include:</p>
@@ -206,7 +208,10 @@ function upgradePricingPlan(
 
   if (target === PricingPlanEnum.Power) {
     title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
-    okButtonCallback = () => sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+    okButtonCallback = () => {
+      sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+      Toast.success("An email with your request has been send to the webKnossos team.");
+    };
     modalBody = (
       <>
         <p>Upgrade Highlights include:</p>
@@ -257,7 +262,7 @@ function UpgradePricingPlanModal({
   title: string;
   modalBody: React.ReactElement;
   destroy: () => void;
-  okButtonCallback: (() => Promise<void>) | undefined;
+  okButtonCallback: (() => void) | undefined;
 }) {
   const introSentence =
     "Upgrading your webKnossos plan will unlock more advanced features and increase your user and storage quotas.";

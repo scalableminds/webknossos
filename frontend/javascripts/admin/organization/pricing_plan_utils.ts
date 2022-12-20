@@ -40,3 +40,8 @@ export function hasPricingPlanExceededStorage(
 ): boolean {
   return usedStorageSpaceMB > organization.includedStorage;
 }
+
+export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
+  // ToDo add owners
+  return user.isAdmin;
+}

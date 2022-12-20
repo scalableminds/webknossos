@@ -32,10 +32,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
         "newUserMailingList" -> organization.newUserMailingList,
-        "pricingPlan" -> organization.pricingPlan,
-        "paidUntil" -> organization.paidUntil,
-        "includedUsers" -> organization.includedUsers,
-        "includedStorage" -> organization.includedStorage.map(bytes => bytes / 1000000),
         "lastTermsOfServiceAcceptanceTime" -> organization.lastTermsOfServiceAcceptanceTime,
         "lastTermsOfServiceAcceptanceVersion" -> organization.lastTermsOfServiceAcceptanceVersion
       )
@@ -46,7 +42,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "name" -> organization.name,
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
-        "displayName" -> organization.displayName
+        "displayName" -> organization.displayName,
+        "pricingPlan" -> organization.pricingPlan,
+        "paidUntil" -> organization.paidUntil,
+        "includedUsers" -> organization.includedUsers,
+        "includedStorage" -> organization.includedStorage.map(bytes => bytes / 1000000)
       ) ++ adminOnlyInfo
     )
   }

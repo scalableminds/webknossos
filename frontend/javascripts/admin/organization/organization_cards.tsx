@@ -8,13 +8,16 @@ import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import moment from "moment";
 import Constants from "oxalis/constants";
+import { OxalisState } from "oxalis/store";
 import React from "react";
-import { APIOrganization } from "types/api_flow_types";
+import { useSelector } from "react-redux";
+import { APIOrganization, APIUser } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
 import {
   hasPricingPlanExceededStorage,
   hasPricingPlanExceededUsers,
   hasPricingPlanExpired,
+  isUserAllowedToRequestUpgrades,
   powerPlanFeatures,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
@@ -293,6 +296,7 @@ export function PlanDashboardCard({
 
 export function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
   const hasPlanExpired = hasPricingPlanExpired(organization);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
   const message = hasPlanExpired
     ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
@@ -320,7 +324,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
       showIcon
       type="error"
       message={message}
-      action={actionButton}
+      action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
       style={{ marginBottom: 20 }}
     />
   );
@@ -328,6 +332,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
 
 export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
   const alerts = [];
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isAboutToExpire =
     moment.duration(moment(organization.paidUntil).diff(moment())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);
@@ -370,7 +375,9 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
           showIcon
           type="warning"
           message={alert.message}
-          action={alert.actionButton}
+          action={
+            activeUser && isUserAllowedToRequestUpgrades(activeUser) ? alert.actionButton : null
+          }
           style={{ marginBottom: 20 }}
         />
       ))}

@@ -550,8 +550,8 @@ const combinedReducers = reduceReducers(
   UiReducer,
   ConnectomeReducer,
 );
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 1 type arguments, but got 3.
-const store = createStore<OxalisState, Action, Dispatch<any>>(
+
+const store = createStore<OxalisState>(
   enableBatching(combinedReducers),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),

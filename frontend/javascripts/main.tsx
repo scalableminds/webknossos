@@ -3,7 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import { startSagas } from "oxalis/store";
+import UnthrottledStore, { startSagas } from "oxalis/store";
 
 import { getActiveUser, checkAnyOrganizationExists } from "admin/admin_rest_api";
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
@@ -21,8 +21,10 @@ import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persist
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
 import ErrorBoundary from "components/error_boundary";
+import { setStore } from "oxalis/singletons";
 
 startSagas(rootSaga);
+setStore(UnthrottledStore);
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {

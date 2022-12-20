@@ -260,5 +260,10 @@
       "public-test/test-bundle/test/**/*.*",
       "frontend/javascripts/test/**/*.*"
     ]
+  },
+  "madge": {
+    "ts": {
+      "skipTypeImports": true
+    }
   }
 }

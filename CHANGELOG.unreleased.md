@@ -32,6 +32,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where malformed json files could lead to uncaught exceptions.[#6691](https://github.com/scalableminds/webknossos/pull/6691)
 - Fixed rare crash in publications page. [#6700](https://github.com/scalableminds/webknossos/pull/6700)
 - Respect the config value mail.smtp.auth (used to be ignored, always using true) [#6692](https://github.com/scalableminds/webknossos/pull/6692)
+- Fixed performance for brushing in a coarse magnifications. [#6708](https://github.com/scalableminds/webknossos/pull/6708)
 
 ### Removed
 

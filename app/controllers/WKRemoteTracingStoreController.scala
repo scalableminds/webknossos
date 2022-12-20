@@ -1,6 +1,7 @@
 package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
@@ -48,7 +49,7 @@ class WKRemoteTracingStoreController @Inject()(
           _ <- Fox.runOptional(report.statistics) { statistics =>
             annotationDAO.updateStatistics(annotation._id, statistics)
           }
-          _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)
+          _ <- annotationDAO.updateModified(annotation._id, Instant.now)
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
           _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(report.timestamps, user, annotation))
           _ <- Fox.runOptional(userBox)(user =>

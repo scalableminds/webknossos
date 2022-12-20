@@ -78,7 +78,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type {
   OxalisState,
   SkeletonTracing,

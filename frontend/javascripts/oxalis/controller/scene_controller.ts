@@ -23,7 +23,7 @@ import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import Cube from "oxalis/geometries/cube";
 import Dimensions from "oxalis/model/dimensions";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import type { UserBoundingBox, OxalisState, SkeletonTracing } from "oxalis/store";

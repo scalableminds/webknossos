@@ -79,7 +79,7 @@ import type { Vector3, ControlMode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type {
   VolumeTracing,
   DatasetConfiguration,

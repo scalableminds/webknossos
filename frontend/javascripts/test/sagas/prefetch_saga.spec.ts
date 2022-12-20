@@ -1,5 +1,5 @@
 import "test/mocks/lz4";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import constants from "oxalis/constants";
 import mockRequire from "mock-require";
 import test from "ava";

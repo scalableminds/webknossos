@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import {

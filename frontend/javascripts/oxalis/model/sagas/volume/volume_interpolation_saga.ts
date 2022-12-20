@@ -13,7 +13,7 @@ import {
   TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {

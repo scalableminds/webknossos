@@ -54,7 +54,7 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import DownloadModalView from "oxalis/view/action-bar/download_modal_view";

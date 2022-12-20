@@ -1,62 +1,12 @@
 import * as THREE from "three";
-import { document } from "libs/window";
 import _ from "lodash";
-import { TypedArray } from "oxalis/constants";
 
-const lazyGetCanvas = _.memoize(() => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1;
-  canvas.height = 1;
-  return canvas;
-});
+let originalTexSubImage2D: WebGL2RenderingContext["texSubImage2D"] | null = null;
 
-const getImageData = _.memoize(
-  (
-    width: number,
-    height: number,
-    isInt: boolean,
-  ): { width: number; height: number; data: TypedArray } => {
-    const canvas = lazyGetCanvas();
-    const ctx = canvas.getContext("2d");
-    if (ctx == null) {
-      throw new Error("Could not get context for texture.");
-    }
-
-    // Integer textures cannot be used with four channels, which is why
-    // we are creating an image-like object here which can be used
-    // with ThreeJS if isDataTexture = true is given.
-    if (isInt) {
-      return { width, height, data: new Uint32Array(4) };
-      return { width, height, data: new Uint32Array(4 * width * height) };
-    }
-
-    return { width, height, data: new Uint32Array(1) };
-
-    // const imageData = ctx.createImageData(width, height);
-    const imageData = ctx.createImageData(1, 1);
-
-    // Explicitly "release" canvas. Necessary for iOS.
-    // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
-    canvas.width = 1;
-    canvas.height = 1;
-    ctx.clearRect(0, 0, 1, 1);
-
-    return imageData;
-  },
-  (width: number, height: number, isInt: boolean) => `${width}_${height}_${isInt}`,
-);
-
-let originalTexSubImage2D = null;
-
-const noop = () => {
-  console.log("noop");
-};
 class UpdatableTexture extends THREE.Texture {
   isUpdatableTexture: boolean = true;
-  // Needs to be set to true for integer textures:
-  isDataTexture: boolean = false;
   renderer!: THREE.WebGLRenderer;
-  gl: any;
+  gl!: WebGL2RenderingContext;
   utils!: THREE.WebGLUtils;
   width: number | undefined;
   height: number | undefined;
@@ -74,7 +24,7 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    const imageData = getImageData(width, height, type === THREE.UnsignedIntType);
+    const imageData = { width, height, data: new Uint32Array(1) };
 
     super(
       // @ts-ignore
@@ -100,36 +50,12 @@ class UpdatableTexture extends THREE.Texture {
 
   setRenderer(renderer: THREE.WebGLRenderer) {
     this.renderer = renderer;
-    this.gl = this.renderer.getContext();
+    this.gl = this.renderer.getContext() as WebGL2RenderingContext;
     this.utils = new THREE.WebGLUtils(
       this.gl,
       this.renderer.extensions,
       this.renderer.capabilities,
     );
-  }
-
-  setSize(width: number, height: number) {
-    if (width === this.width && height === this.height) return;
-    if (!this.isInitialized()) return;
-    this.width = width;
-    this.height = height;
-    const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
-    const textureProperties = this.renderer.properties.get(this);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
-    if (!this.isInitialized()) this.width = undefined;
-
-    this.gl.texImage2D(
-      this.gl.TEXTURE_2D,
-      0,
-      this.utils.convert(this.format),
-      width,
-      height,
-      0,
-      this.utils.convert(this.format),
-      this.utils.convert(this.type),
-      null,
-    );
-    this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
   }
 
   isInitialized() {
@@ -143,30 +69,28 @@ class UpdatableTexture extends THREE.Texture {
     width: number,
     height: number,
   ) {
+    if (originalTexSubImage2D == null) {
+      originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
+      this.gl.texSubImage2D = _.noop;
+    }
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
-    if (originalTexSubImage2D == null) {
-      originalTexSubImage2D = this.gl.texSubImage2D;
-      this.gl.texSubImage2D = noop;
-    }
-    // this.setSize(width, width);
     const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
     const textureProperties = this.renderer.properties.get(this);
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
-    this.gl.texSubImage2D = originalTexSubImage2D;
-    this.gl.texSubImage2D(
+
+    originalTexSubImage2D(
       this.gl.TEXTURE_2D,
       0,
       x,
       y,
       width,
       height,
-      this.utils.convert(this.format),
-      this.utils.convert(this.type),
+      this.utils.convert(this.format) as number,
+      this.utils.convert(this.type) as number,
       src,
     );
-    this.gl.texSubImage2D = noop;
     this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
   }
 }

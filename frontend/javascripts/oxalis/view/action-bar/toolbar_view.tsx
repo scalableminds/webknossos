@@ -28,7 +28,7 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
@@ -970,17 +970,19 @@ function ToolSpecificSettings({
 }
 
 function QuickSelectSettingsPopover() {
-  const [isOpen, setIsOpen] = useState(false);
-  const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.isQuickSelectActive,
+  const dispatch = useDispatch();
+  const { isQuickSelectActive, areQuickSelectSettingsOpen } = useSelector(
+    (state: OxalisState) => state.uiInformation,
   );
   return (
     <Popover
       trigger="click"
       placement="bottom"
-      open={isOpen}
-      content={<QuickSelectControls setIsOpen={setIsOpen} />}
-      onOpenChange={(open: boolean) => setIsOpen(open)}
+      open={areQuickSelectSettingsOpen}
+      content={<QuickSelectControls />}
+      onOpenChange={(open: boolean) => {
+        dispatch(showQuickSelectSettingsAction(open));
+      }}
     >
       <ButtonComponent
         title="Configure Quick Select"

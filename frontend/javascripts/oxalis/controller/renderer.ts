@@ -23,5 +23,18 @@ function getRenderer(): THREE.WebGLRenderer {
   return renderer;
 }
 
+function testContextLoss() {
+  const renderer = getRenderer();
+  const ext = renderer.getContext().getExtension("WEBGL_lose_context");
+  if (ext == null) {
+    return;
+  }
+  ext.loseContext();
+  setTimeout(() => ext.restoreContext(), 2500);
+}
+
+// @ts-ignore
+window.testContextLoss = testContextLoss;
+
 export { getRenderer };
 export default {};

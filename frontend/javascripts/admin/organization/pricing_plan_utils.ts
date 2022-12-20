@@ -42,6 +42,5 @@ export function hasPricingPlanExceededStorage(
 }
 
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
-  // ToDo add owners
-  return user.isAdmin;
+  return user.isAdmin || user.isOrganizationOwner;
 }

@@ -11,11 +11,11 @@ import {
   getDatasetExtentInLength,
   getDatasetCenter,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
 import {
+  getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
+} from "oxalis/model/accessors/view_mode_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraWithoutTimeTrackingAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";

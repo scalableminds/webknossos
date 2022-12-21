@@ -124,7 +124,7 @@ function AcceptTermsOfServiceModal({
       {terms == null ? (
         <Spin spinning />
       ) : (
-        <iframe style={{ width: 800, height: "66vh", border: "none" }} src={terms.url} />
+        <iframe style={{ width: 800, height: "55vh", border: "none" }} src={terms.url} />
       )}
     </Modal>
   );

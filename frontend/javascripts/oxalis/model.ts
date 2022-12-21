@@ -23,7 +23,6 @@ import * as Utils from "libs/utils";
 import { APICompoundType } from "types/api_flow_types";
 
 import { initialize } from "./model_initialization";
-import { setModel } from "./singletons";
 
 // TODO: Non-reactive
 export class OxalisModel {
@@ -329,7 +328,5 @@ export class OxalisModel {
   };
 }
 const model = new OxalisModel(); // export the model as a singleton
-
-setModel(model);
 
 export default model;

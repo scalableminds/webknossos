@@ -21,10 +21,12 @@ import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persist
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
 import ErrorBoundary from "components/error_boundary";
-import { setStore } from "oxalis/singletons";
+import { setStore, setModel } from "oxalis/singletons";
+import Model from "oxalis/model";
 
-startSagas(rootSaga);
+setModel(Model);
 setStore(UnthrottledStore);
+startSagas(rootSaga);
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {

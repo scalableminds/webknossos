@@ -77,7 +77,11 @@ module.exports = function (env = {}) {
         {
           test: /\.tsx?$/,
           exclude: /(node_modules|bower_components)/,
-          use: "babel-loader",
+          loader: "esbuild-loader",
+          options: {
+            loader: "tsx", // Or 'ts' if you don't need tsx
+            target: "chrome80",
+          },
         },
         {
           test: /\.less$/,

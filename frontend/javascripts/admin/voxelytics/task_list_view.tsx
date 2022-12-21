@@ -109,7 +109,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
         </Tag>
       );
     case VoxelyticsRunState.RUNNING: {
-      const currentDuration = Date.now() - taskInfo.beginTime.getTime();
+      const currentDuration = Date.now() - taskInfo.beginTime;
       if (taskInfo.chunksFinished > 0) {
         const estimatedRemainingDuration =
           (currentDuration / taskInfo.chunksFinished) * taskInfo.chunksTotal - currentDuration;
@@ -580,8 +580,8 @@ export default function TaskListView({
 
 function aggregateTimes(taskInfos: Array<VoxelyticsTaskInfo>): [Date, Date] {
   return [
-    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime?.getTime() ?? Infinity), Infinity)),
-    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime?.getTime() ?? -Infinity), -Infinity)),
+    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime ?? Infinity), Infinity)),
+    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime ?? -Infinity), -Infinity)),
   ];
 }
 

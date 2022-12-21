@@ -2,6 +2,7 @@ package controllers
 
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
@@ -12,7 +13,6 @@ import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import org.joda.time.DateTime
 import oxalis.security._
 import play.api.libs.json.Json
 import utils.{ObjectId, StoreModules, WkConf}
@@ -38,7 +38,6 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
                                    multiUserDAO: MultiUserDAO,
-                                   userTeamRolesDAO: UserTeamRolesDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
@@ -93,10 +92,11 @@ Samplecountry
     defaultOrganization._id,
     "Sample",
     "User",
-    System.currentTimeMillis(),
+    Instant.now,
     Json.obj(),
     userService.createLoginInfo(userId),
     isAdmin = true,
+    isOrganizationOwner = true,
     isDatasetManager = true,
     isUnlisted = false,
     isDeactivated = false,
@@ -114,10 +114,11 @@ Samplecountry
     defaultOrganization._id,
     "Non-Admin",
     "User",
-    System.currentTimeMillis(),
+    Instant.now,
     Json.obj(),
     userService.createLoginInfo(userId2),
     isAdmin = false,
+    isOrganizationOwner = false,
     isDatasetManager = false,
     isUnlisted = false,
     isDeactivated = false,
@@ -125,7 +126,7 @@ Samplecountry
   )
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
-    Some(System.currentTimeMillis()),
+    Some(Instant.now),
     Some("https://static.webknossos.org/images/oxalis.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(
@@ -143,8 +144,8 @@ Samplecountry
       _ <- insertRootFolder()
       _ <- insertOrganization()
       _ <- insertTeams()
-      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, true)
-      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, false)
+      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
+      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
       _ <- insertToken()
       _ <- insertTaskType()
       _ <- insertProject()
@@ -182,16 +183,15 @@ Samplecountry
             _ <- multiUserDAO.insertOne(multiUser)
             _ <- userDAO.insertOne(user)
             _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-            _ <- userTeamRolesDAO.insertTeamMembership(
-              user._id,
-              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
+            _ <- userDAO.insertTeamMembership(user._id,
+                                              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
             _ = logger.info("Inserted default user")
           } yield ()
       }
       .toFox
 
   private def insertToken(): Fox[Unit] = {
-    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
+    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
     tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
@@ -199,8 +199,8 @@ Samplecountry
           ObjectId.generate,
           defaultUserToken,
           LoginInfo("credentials", defaultUser._id.id),
-          new DateTime(System.currentTimeMillis()),
-          new DateTime(System.currentTimeMillis() + expiryTime),
+          Instant.now,
+          Instant.in(expiryTime),
           None,
           TokenType.Authentication
         )

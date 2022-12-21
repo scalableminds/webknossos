@@ -70,7 +70,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken)
-      _ <- bool2Fox(invite.expirationDateTime.isAfterNow)
+      _ <- bool2Fox(!invite.expirationDateTime.isPast)
       organization <- organizationDAO.findOne(invite._organization)
       organizationJson <- organizationService.publicWrites(organization)
     } yield Ok(organizationJson)
@@ -78,6 +78,41 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
 
   def getOperatorData: Action[AnyContent] = Action {
     Ok(Json.toJson(conf.WebKnossos.operatorData))
+  }
+
+  def getTermsOfService: Action[AnyContent] = Action {
+    Ok(
+      Json.obj(
+        "version" -> conf.WebKnossos.TermsOfService.version,
+        "enabled" -> conf.WebKnossos.TermsOfService.enabled,
+        "url" -> conf.WebKnossos.TermsOfService.url
+      ))
+  }
+
+  def termsOfServiceAcceptanceNeeded: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      organization <- organizationDAO.findOne(request.identity._organization)
+      needsAcceptance = conf.WebKnossos.TermsOfService.enabled &&
+        organization.lastTermsOfServiceAcceptanceVersion < conf.WebKnossos.TermsOfService.version
+      acceptanceDeadline = conf.WebKnossos.TermsOfService.acceptanceDeadline
+      deadlinePassed = acceptanceDeadline.toEpochMilli < System.currentTimeMillis()
+    } yield
+      Ok(
+        Json.obj(
+          "acceptanceNeeded" -> needsAcceptance,
+          "acceptanceDeadline" -> acceptanceDeadline.toEpochMilli,
+          "acceptanceDeadlinePassed" -> deadlinePassed
+        ))
+  }
+
+  def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"
+      _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      requiredVersion = conf.WebKnossos.TermsOfService.version
+      _ <- bool2Fox(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
+      _ <- organizationDAO.acceptTermsOfService(request.identity._organization, version, System.currentTimeMillis())
+    } yield Ok
   }
 
   def update(organizationName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>

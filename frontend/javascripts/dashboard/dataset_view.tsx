@@ -50,8 +50,8 @@ const { Group: InputGroup } = Input;
 type Props = {
   user: APIUser;
   context: DatasetCacheContextValue | DatasetCollectionContextValue;
-  onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
-  selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
+  onSelectDataset: (dataset: APIMaybeUnimportedDataset | null) => void;
+  selectedDatasets: APIMaybeUnimportedDataset[];
   hideDetailsColumns: boolean;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
@@ -165,7 +165,7 @@ function DatasetView(props: Props) {
         context={props.context}
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
-        selectedDataset={props.selectedDataset}
+        selectedDatasets={props.selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}

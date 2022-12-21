@@ -4,9 +4,8 @@ import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
+import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getEnabledLayers,
   getMaxZoomStep,
@@ -34,6 +33,8 @@ import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+
+export const ZOOM_STEP_INTERVAL = 1.1;
 
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,

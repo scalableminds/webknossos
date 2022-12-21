@@ -22,7 +22,7 @@ import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/ad
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import TaskListView from "./task_list_view";
 
-export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
+export const VX_POLLING_INTERVAL = 30 * 1000; // 30s
 
 type LoadingState =
   | { status: "PENDING" }

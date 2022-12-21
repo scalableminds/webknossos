@@ -542,9 +542,8 @@ function ChangeBrushSizeButton() {
               roundTo={0}
               min={userSettings.brushSize.minimum}
               max={maximumBrushSize}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              step={5}
-              spans={[0, 14, 10]}
+              precision={0}
+              spans={[0, 16, 8]}
               value={brushSize}
               onChange={handleUpdateBrushSize}
             />

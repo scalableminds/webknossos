@@ -18,14 +18,31 @@ import {
 } from "oxalis/controller/combinations/volume_handlers";
 import { setActiveConnectomeAgglomerateIdsAction } from "oxalis/model/actions/connectome_actions";
 import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
+
+const AGGLOMERATE_STATES = {
+  NO_SEGMENTATION: {
+    value: false,
+    reason: "A segmentation layer needs to be visible to load an agglomerate skeleton.",
+  },
+  NO_MAPPING: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_mapping"],
+  },
+  NO_AGGLOMERATE_FILE: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file"],
+  },
+  YES: {
+    value: true,
+    reason: "",
+  },
+};
+
 export function hasAgglomerateMapping(state: OxalisState) {
   const segmentation = Model.getVisibleSegmentationLayer();
 
   if (!segmentation) {
-    return {
-      value: false,
-      reason: "A segmentation layer needs to be visible to load an agglomerate skeleton.",
-    };
+    return AGGLOMERATE_STATES.NO_SEGMENTATION;
   }
 
   const { mappingName, mappingType, mappingStatus } = getMappingInfo(
@@ -34,48 +51,46 @@ export function hasAgglomerateMapping(state: OxalisState) {
   );
 
   if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
-    return {
-      value: false,
-      reason: messages["tracing.agglomerate_skeleton.no_mapping"],
-    };
+    return AGGLOMERATE_STATES.NO_MAPPING;
   }
 
   if (mappingType !== "HDF5") {
-    return {
-      value: false,
-      reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file"],
-    };
+    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE;
   }
 
-  return {
+  return AGGLOMERATE_STATES.YES;
+}
+
+const CONNECTOME_STATES = {
+  NO_SEGMENTATION: {
+    value: false,
+    reason: "A segmentation layer needs to be visible to load the synapses of a segment.",
+  },
+  NO_CONNECTOME_FILE: {
+    value: false,
+    reason: "A connectome file needs to be available to load the synapses of a segment.",
+  },
+  YES: {
     value: true,
     reason: "",
-  };
-}
+  },
+};
+
 export function hasConnectomeFile(state: OxalisState) {
   const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
 
   if (segmentationLayer == null) {
-    return {
-      value: false,
-      reason: "A segmentation layer needs to be visible to load the synapses of a segment.",
-    };
+    return CONNECTOME_STATES.NO_SEGMENTATION;
   }
 
   const { currentConnectomeFile } =
     state.localSegmentationData[segmentationLayer.name].connectomeData;
 
   if (currentConnectomeFile == null) {
-    return {
-      value: false,
-      reason: "A connectome file needs to be available to load the synapses of a segment.",
-    };
+    return CONNECTOME_STATES.NO_CONNECTOME_FILE;
   }
 
-  return {
-    value: true,
-    reason: "",
-  };
+  return CONNECTOME_STATES.YES;
 }
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const state = Store.getState();

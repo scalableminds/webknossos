@@ -135,7 +135,8 @@
     "typecheck": "yarn tsc",
     "ts": "yarn tsc",
     "ts-watch": "yarn tsc --watch",
-    "ts-coverage": "typescript-coverage-report"
+    "ts-coverage": "typescript-coverage-report",
+    "find-cyclic-dependencies": "madge --circular --extensions ts,tsx frontend/javascripts/main.tsx"
   },
   "lint-staged": {
     "*.ts": [

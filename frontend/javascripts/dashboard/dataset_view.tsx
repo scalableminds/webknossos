@@ -30,7 +30,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIMaybeUnimportedDataset, APIUser, FolderItem } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
-import { DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
+import { type DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";

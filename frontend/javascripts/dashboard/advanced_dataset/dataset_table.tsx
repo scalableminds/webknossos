@@ -18,7 +18,7 @@ import type {
   APIDatasetId,
   APIDataset,
 } from "types/api_flow_types";
-import type { DatasetFilteringMode } from "dashboard/dataset_view";
+import { type DatasetFilteringMode } from "dashboard/dataset_view";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
 import { stringToColor, formatScale } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -36,8 +36,8 @@ import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/con
 import Shortcut from "libs/shortcut_component";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import { useSelector } from "react-redux";
-import { DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
-import { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
+import { type DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
+import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
 
 const { ThinSpace } = Unicode;

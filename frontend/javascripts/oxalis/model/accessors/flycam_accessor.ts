@@ -13,7 +13,6 @@ import {
   getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
-import { userSettings } from "types/schemas/user_settings.schema";
 import Dimensions from "oxalis/model/dimensions";
 import type {
   OrthoView,
@@ -30,6 +29,7 @@ import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
@@ -307,7 +307,7 @@ export function getValidTaskZoomRange(
   state: OxalisState,
   respectRestriction: boolean = false,
 ): [number, number] {
-  const defaultRange = [userSettings.zoom.minimum, Infinity];
+  const defaultRange = [baseDatasetViewConfiguration.zoom.minimum, Infinity];
   const { resolutionRestrictions } = state.tracing.restrictions;
 
   if (!respectRestriction) {

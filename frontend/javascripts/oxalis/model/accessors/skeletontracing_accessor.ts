@@ -17,7 +17,6 @@ import type {
   Node,
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 export type SkeletonTracingStats = {
   treeCount: number;
@@ -232,3 +231,17 @@ export const getTreeNameForAgglomerateSkeleton = (
   agglomerateId: number,
   mappingName: string,
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;
+
+// Helper
+export function* mapGroups<R>(
+  groups: Array<TreeGroup>,
+  callback: (arg0: TreeGroup) => R,
+): Generator<R, void, void> {
+  for (const group of groups) {
+    yield callback(group);
+
+    if (group.children) {
+      yield* mapGroups(group.children, callback);
+    }
+  }
+}

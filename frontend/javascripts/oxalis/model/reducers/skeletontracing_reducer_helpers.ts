@@ -32,6 +32,7 @@ import {
   getActiveTree,
   getActiveGroup,
   findTreeByNodeId,
+  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import type { Vector3 } from "oxalis/constants";
@@ -93,18 +94,6 @@ function getNearestTreeId(treeId: number, trees: TreeMap): number {
   return sortedTreeIds[higherOrNearestId];
 }
 
-export function* mapGroups<R>(
-  groups: Array<TreeGroup>,
-  callback: (arg0: TreeGroup) => R,
-): Generator<R, void, void> {
-  for (const group of groups) {
-    yield callback(group);
-
-    if (group.children) {
-      yield* mapGroups(group.children, callback);
-    }
-  }
-}
 export function getMaximumGroupId(groups: Array<TreeGroup>): number {
   const maxGroupId = _.max(Array.from(mapGroups(groups, (group) => group.groupId)));
 

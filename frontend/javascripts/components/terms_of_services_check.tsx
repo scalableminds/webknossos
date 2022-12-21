@@ -121,13 +121,11 @@ function AcceptTermsOfServiceModal({
         </b>
       </p>
 
-      <div style={{ maxHeight: "66vh", overflow: "auto" }}>
-        {terms == null ? (
-          <Spin spinning />
-        ) : (
-          <iframe style={{ width: 800, height: 800, border: "none" }} src={terms.url} />
-        )}
-      </div>
+      {terms == null ? (
+        <Spin spinning />
+      ) : (
+        <iframe style={{ width: 800, height: "66vh", border: "none" }} src={terms.url} />
+      )}
     </Modal>
   );
 }

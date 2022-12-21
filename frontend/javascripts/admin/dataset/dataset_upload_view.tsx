@@ -583,10 +583,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             using{" "}
             <a
               target="_blank"
-              href="https://github.com/scalableminds/webknossos-cuber/"
+              href="https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber#webknossos-cuber-wkcuber"
               rel="noopener noreferrer"
             >
               webknossos-cuber
+            </a>
+            , the{" "}
+            <a
+              target="_blank"
+              href="https://github.com/scalableminds/webknossos-libs/tree/master/webknossos#webknossos-python-library"
+              rel="noopener noreferrer"
+            >
+              webknossos Python library
             </a>{" "}
             or use a webKnossos instance which integrates a conversion service, such as{" "}
             <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
@@ -729,8 +737,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name="targetFolder"
               label="Target Folder"
               info="The folder into which the dataset will be uploaded. The dataset can be moved later after upload, too. When not selecting a folder, the dataset will be placed into the root folder."
+              validateStatus={needsConversion ? "warning" : "success"}
+              help={
+                needsConversion
+                  ? "The dataset will be put into the root folder after the import, because specifying a target folder for non-native file formats is not supported, yet."
+                  : ""
+              }
             >
               <FolderSelection
+                disabled={needsConversion}
                 width="50%"
                 folderId={this.state.targetFolderId}
                 onChange={(targetFolderId) => this.setState({ targetFolderId })}

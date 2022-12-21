@@ -7,15 +7,18 @@ export default function FolderSelection({
   folderId,
   onChange,
   width,
+  disabled,
 }: {
   folderId: string | null;
   onChange: (id: string | null) => void;
   width?: string | number | null;
+  disabled?: boolean;
 }) {
   const { data: hierarchy } = useFolderHierarchyQuery();
 
   return (
     <TreeSelect
+      disabled={disabled || false}
       showSearch
       style={{ width: width || "100%" }}
       value={folderId || undefined}

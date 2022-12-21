@@ -280,7 +280,7 @@ function DatasetView(props: Props) {
               Add Dataset
             </Button>
           </Link>
-          {"queries" in context && context.activeFolderId != null && (
+          {"activeFolderId" in context && context.activeFolderId != null && (
             <Button
               style={margin}
               icon={<PlusOutlined />}

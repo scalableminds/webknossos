@@ -12,7 +12,7 @@ import {
 import { usePolling } from "libs/react_hooks";
 import { formatDateMedium } from "libs/format_utils";
 import Toast from "libs/toast";
-import { VX_POLLING_INTERVAL } from "./workflow_view";
+import { VX_POLLING_INTERVAL } from "./utils";
 
 function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
@@ -25,7 +25,9 @@ function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflow
 function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
   return {
     ...workflowInfo,
-    runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => b.beginTime - a.beginTime),
+    runs: workflowInfo.runs
+      .map(parseRunInfo)
+      .sort((a, b) => b.beginTime.getTime() - a.beginTime.getTime()),
   };
 }
 
@@ -190,14 +192,14 @@ export default function WorkflowListView() {
             key: "begin",
             defaultSortOrder: "descend",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.beginTime ?? Infinity) - (b.beginTime ?? Infinity),
+              (a.beginTime?.getTime() ?? Infinity) - (b.beginTime?.getTime() ?? Infinity),
             render: (run: RenderRunInfo) => run.beginTime && formatDateMedium(run.beginTime),
           },
           {
             title: "End",
             key: "end",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.endTime ?? Infinity) - (b.endTime ?? Infinity),
+              (a.endTime?.getTime() ?? Infinity) - (b.endTime?.getTime() ?? Infinity),
             render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
           },
         ]}

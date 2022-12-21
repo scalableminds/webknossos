@@ -21,8 +21,7 @@ import { OxalisState } from "oxalis/store";
 import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import TaskListView from "./task_list_view";
-
-export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
+import { VX_POLLING_INTERVAL } from "./utils";
 
 type LoadingState =
   | { status: "PENDING" }
@@ -74,7 +73,7 @@ function lexicographicalTopologicalSort(
 
 function parseDag(
   tasks: Record<string, VoxelyticsTaskConfig>,
-  run: VoxelyticsRunInfo,
+  taskInfos: Array<VoxelyticsTaskInfo>,
 ): VoxelyticsWorkflowDag {
   const dag: VoxelyticsWorkflowDag = {
     nodes: [],
@@ -85,7 +84,7 @@ function parseDag(
     dag.nodes.push({
       id: taskName,
       label: taskName,
-      state: run.tasks.find((t) => t.taskName === taskName)?.state ?? VoxelyticsRunState.PENDING,
+      state: taskInfos.find((t) => t.taskName === taskName)?.state ?? VoxelyticsRunState.PENDING,
       isMetaTask: task.isMetaTask,
     });
     for (const [key, input] of Object.entries(task.inputs)) {
@@ -117,7 +116,16 @@ function parseDag(
 }
 
 function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport {
-  const dag = parseDag(report.config.tasks, report.run);
+  const tasks = report.tasks.map(
+    (t) =>
+      ({
+        ...t,
+        beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
+        endTime: t.endTime != null ? new Date(t.endTime) : null,
+        state: t.state,
+      } as VoxelyticsTaskInfo),
+  );
+  const dag = parseDag(report.config.tasks, tasks);
   return {
     ...report,
     config: {
@@ -125,18 +133,15 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
       tasks: Object.fromEntries(dag.nodes.map((t) => [t.id, report.config.tasks[t.id]])),
     },
     dag,
-    run: {
-      ...report.run,
-      tasks: report.run.tasks.map(
-        (t) =>
-          ({
-            ...t,
-            beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
-            endTime: t.endTime != null ? new Date(t.endTime) : null,
-            state: t.state,
-          } as VoxelyticsTaskInfo),
-      ),
-    },
+    runs: report.runs.map(
+      (run) =>
+        ({
+          ...run,
+          beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
+          endTime: run.endTime != null ? new Date(run.endTime) : null,
+        } as VoxelyticsRunInfo),
+    ),
+    tasks,
   };
 }
 
@@ -391,7 +396,9 @@ export default function WorkflowView() {
   usePolling(
     loadData,
     // Only poll while the workflow is still running
-    report == null || report.run.state === VoxelyticsRunState.RUNNING ? VX_POLLING_INTERVAL : null,
+    report == null || report.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
+      ? VX_POLLING_INTERVAL
+      : null,
   );
 
   if (loadingState.status === "FAILED" && user != null) {

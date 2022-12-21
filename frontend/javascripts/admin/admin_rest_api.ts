@@ -2385,14 +2385,16 @@ export function getVoxelyticsChunkStatistics(
 }
 export function getVoxelyticsArtifactChecksums(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
   artifactName?: string,
 ): Promise<Array<Record<string, string | number>>> {
   const params = new URLSearchParams({
-    runId,
     taskName,
   });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
   if (artifactName != null) {
     params.append("artifactName", artifactName);
   }

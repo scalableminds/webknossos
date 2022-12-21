@@ -4,7 +4,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.User
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -53,9 +53,11 @@ object WorkflowEntry {
 }
 
 case class TaskStatistics(total: Int, failed: Int, skipped: Int, complete: Int, cancelled: Int)
+
 object TaskStatistics {
   implicit val jsonFormat: OFormat[TaskStatistics] = Json.format[TaskStatistics]
 }
+
 case class WorkflowListingRunEntry(id: ObjectId,
                                    name: String,
                                    username: String,
@@ -66,6 +68,7 @@ case class WorkflowListingRunEntry(id: ObjectId,
                                    beginTime: Instant,
                                    endTime: Option[Instant],
                                    taskStatistics: TaskStatistics)
+
 object WorkflowListingRunEntry {
   implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]
 }
@@ -140,6 +143,35 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
     Json.toJson(run).as[JsObject] ++ Json.obj(
       "tasks" -> tasks.map(Json.toJson(_))
     )
+
+  def taskRunsPublicWrites(taskRuns: List[TaskRunEntry]): JsArray = {
+    val groupedTaskRuns = taskRuns.groupBy(_.taskName)
+    JsArray(
+      groupedTaskRuns
+        .map(group => {
+          val sortedTaskRuns = group._2.sortBy(_.beginTime).reverse
+          Json.obj(
+            "taskName" -> group._1,
+            "state" -> sortedTaskRuns.head.state,
+            "beginTime" -> sortedTaskRuns.head.beginTime,
+            "endTime" -> sortedTaskRuns.head.endTime,
+            "currentExecutionId" -> sortedTaskRuns.head.currentExecutionId,
+            "chunksTotal" -> sortedTaskRuns.head.chunksTotal,
+            "chunksFinished" -> sortedTaskRuns.head.chunksFinished,
+            "runs" -> sortedTaskRuns.map(run =>
+              Json.obj(
+                "runId" -> run.runId,
+                "state" -> run.state,
+                "beginTime" -> run.beginTime,
+                "endTime" -> run.endTime,
+                "currentExecutionId" -> run.currentExecutionId,
+                "chunksTotal" -> run.chunksTotal,
+                "chunksFinished" -> run.chunksFinished
+            ))
+          )
+        })
+        .toList)
+  }
 
   def artifactsPublicWrites(artifacts: List[ArtifactEntry]): JsObject = {
     val artifactsByTask = artifacts.groupBy(_.taskName)

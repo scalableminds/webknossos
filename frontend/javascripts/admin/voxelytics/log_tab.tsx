@@ -9,8 +9,7 @@ import { AutoSizer, List } from "react-virtualized";
 import { usePolling } from "libs/react_hooks";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import { VX_POLLING_INTERVAL } from "./workflow_view";
-import { Result } from "./task_view";
+import { Result, VX_POLLING_INTERVAL } from "./utils";
 
 type LogResult = Result<Array<any>>;
 
@@ -140,10 +139,12 @@ function LogContent({
 }
 
 export default function LogTab({
+  workflowHash,
   runId,
   taskName,
   isRunning,
 }: {
+  workflowHash: string;
   runId: string;
   taskName: string;
   isRunning: boolean;

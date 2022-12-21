@@ -5,8 +5,7 @@ import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
 import { usePolling } from "libs/react_hooks";
 import { formatBytes, formatCPU, formatDistanceStrict } from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
-import { Result } from "./task_view";
-import { VX_POLLING_INTERVAL } from "./workflow_view";
+import { Result, VX_POLLING_INTERVAL } from "./utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
 
@@ -33,7 +32,7 @@ export default function StatisticsTab({
   isRunning,
 }: {
   workflowHash: string;
-  runId: string;
+  runId: string | null;
   taskName: string;
   isRunning: boolean;
 }) {

@@ -129,9 +129,7 @@ class VoxelyticsController @Inject()(
         mostRecentRun <- sortedRuns.headOption ?~> "voxelytics.zeroRunWorkflow"
 
         // Fetch task runs for all runs
-        allTaskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization,
-                                                  sortedRuns.map(_.id),
-                                                  conf.staleTimeout)
+        allTaskRuns <- voxelyticsDAO.findTaskRuns(request.identity, sortedRuns.map(_.id), conf.staleTimeout)
 
         // Select one representative "task run" for each task
         // This will be the most recent run that is running or finished or the most recent run
@@ -142,14 +140,11 @@ class VoxelyticsController @Inject()(
         tasks <- voxelyticsDAO.findTasks(combinedTaskRuns)
 
         // Assemble workflow report JSON
-        (state, beginTime, endTime) = voxelyticsService.aggregateBeginEndTime(
-          runs.map(r => (r.state, r.beginTime, r.endTime)))
         result = Json.obj(
           "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflow_config, tasks),
           "artifacts" -> voxelyticsService.artifactsPublicWrites(artifacts),
-          "run" -> voxelyticsService.runPublicWrites(
-            mostRecentRun.copy(state = state, beginTime = beginTime, endTime = endTime),
-            combinedTaskRuns),
+          "runs" -> sortedRuns,
+          "tasks" -> voxelyticsService.taskRunsPublicWrites(allTaskRuns),
           "workflow" -> Json.obj(
             "name" -> workflow.name,
             "hash" -> workflowHash,
@@ -217,12 +212,12 @@ class VoxelyticsController @Inject()(
       } yield Ok
     }
 
-  def getChunkStatistics(workflowHash: String, runId: String, taskName: String): Action[AnyContent] =
+  def getChunkStatistics(workflowHash: String, runIdOpt: Option[String], taskName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
         for {
           _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-          runIdValidated <- ObjectId.fromString(runId)
+          runIdValidated <- option2Fox(runIdOpt).flatMap(ObjectId.fromString)
           _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
           taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "voxelytics.taskNotFound" ~> NOT_FOUND
           results <- voxelyticsDAO.getChunkStatistics(taskId)
@@ -231,14 +226,14 @@ class VoxelyticsController @Inject()(
     }
 
   def getArtifactChecksums(workflowHash: String,
-                           runId: String,
+                           runIdOpt: Option[String],
                            taskName: String,
                            artifactName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
         for {
           _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-          runIdValidated <- ObjectId.fromString(runId)
+          runIdValidated <- option2Fox(runIdOpt).flatMap(ObjectId.fromString)
           _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
           taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "voxelytics.taskNotFound" ~> NOT_FOUND
           results <- voxelyticsDAO.getArtifactChecksums(taskId, artifactName)

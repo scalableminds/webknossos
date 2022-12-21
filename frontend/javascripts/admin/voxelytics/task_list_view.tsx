@@ -11,6 +11,7 @@ import {
   message,
   Tag,
   Tooltip,
+  Select,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -91,11 +92,19 @@ function removeUrlParam(location: ReturnType<typeof useLocation>, key: string) {
   return `${location.pathname}?${search.toString()}`;
 }
 
-function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
+function TaskStateTag({ taskInfo, runId }: { taskInfo: VoxelyticsTaskInfo; runId: string | null }) {
+  const currentTaskInfo =
+    runId == null
+      ? taskInfo
+      : ({
+          taskName: taskInfo.taskName,
+          ...taskInfo.runs.find((r) => r.runId === runId),
+          runs: [],
+        } as VoxelyticsTaskInfo);
   // Re-render every 10s so that the durations that are relative to the current time
   // are updated regularly.
   useUpdateEvery(10000);
-  switch (taskInfo.state) {
+  switch (currentTaskInfo.state) {
     case VoxelyticsRunState.PENDING:
       return (
         <Tag icon={<ClockCircleOutlined />} color="default">
@@ -109,16 +118,17 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
         </Tag>
       );
     case VoxelyticsRunState.RUNNING: {
-      const currentDuration = Date.now() - taskInfo.beginTime;
-      if (taskInfo.chunksFinished > 0) {
+      const currentDuration = Date.now() - currentTaskInfo.beginTime.getTime();
+      if (currentTaskInfo.chunksFinished > 0) {
         const estimatedRemainingDuration =
-          (currentDuration / taskInfo.chunksFinished) * taskInfo.chunksTotal - currentDuration;
+          (currentDuration / currentTaskInfo.chunksFinished) * currentTaskInfo.chunksTotal -
+          currentDuration;
         const estimatedEndTime = new Date(Date.now() + estimatedRemainingDuration);
         return (
           <Tooltip
             title={
               <>
-                Begin Time: {formatDateMedium(taskInfo.beginTime)}
+                Begin Time: {formatDateMedium(currentTaskInfo.beginTime)}
                 <br />
                 Current Duration: {formatDurationStrict(moment.duration(currentDuration))}
                 <br />
@@ -132,7 +142,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <Tag icon={<SyncOutlined spin />} color="processing">
               running
             </Tag>
-            started {moment(taskInfo.beginTime).fromNow()}, probably finishes{" "}
+            started {moment(currentTaskInfo.beginTime).fromNow()}, probably finishes{" "}
             {moment(estimatedEndTime).fromNow()}
           </Tooltip>
         );
@@ -141,7 +151,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tooltip
             title={
               <>
-                Begin Time: {formatDateMedium(taskInfo.beginTime)}
+                Begin Time: {formatDateMedium(currentTaskInfo.beginTime)}
                 <br />
                 Current Duration: {formatDurationStrict(moment.duration(currentDuration))}
               </>
@@ -150,7 +160,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <Tag icon={<SyncOutlined spin />} color="processing">
               running
             </Tag>
-            started {moment(taskInfo.beginTime).fromNow()}
+            started {moment(currentTaskInfo.beginTime).fromNow()}
           </Tooltip>
         );
       }
@@ -160,17 +170,17 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
         <Tooltip
           title={
             <>
-              Begin Time: {formatDateMedium(taskInfo.beginTime)}
+              Begin Time: {formatDateMedium(currentTaskInfo.beginTime)}
               <br />
-              Last Heartbeat: {formatDateMedium(taskInfo.endTime)}
+              Last Heartbeat: {formatDateMedium(currentTaskInfo.endTime)}
             </>
           }
         >
           <Tag icon={<CloseCircleOutlined />} color="error">
             timed out
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {moment(currentTaskInfo.endTime).fromNow()}, after{" "}
+          {formatDistance(currentTaskInfo.endTime, currentTaskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -178,17 +188,17 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
         <Tooltip
           title={
             <>
-              End Time: {formatDateMedium(taskInfo.endTime)}
+              End Time: {formatDateMedium(currentTaskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatDistanceStrict(currentTaskInfo.endTime, currentTaskInfo.beginTime)}
             </>
           }
         >
           <Tag icon={<ExclamationCircleOutlined />} color="error">
             cancelled
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {moment(currentTaskInfo.endTime).fromNow()}, after{" "}
+          {formatDistance(currentTaskInfo.endTime, currentTaskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -196,17 +206,17 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
         <Tooltip
           title={
             <>
-              End Time: {formatDateMedium(taskInfo.endTime)}
+              End Time: {formatDateMedium(currentTaskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatDistanceStrict(currentTaskInfo.endTime, currentTaskInfo.beginTime)}
             </>
           }
         >
           <Tag icon={<CloseCircleOutlined />} color="error">
             failed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {moment(currentTaskInfo.endTime).fromNow()}, after{" "}
+          {formatDistance(currentTaskInfo.endTime, currentTaskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -214,17 +224,17 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
         <Tooltip
           title={
             <>
-              End Time: {formatDateMedium(taskInfo.endTime)}
+              End Time: {formatDateMedium(currentTaskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatDistanceStrict(currentTaskInfo.endTime, currentTaskInfo.beginTime)}
             </>
           }
         >
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()},{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {moment(currentTaskInfo.endTime).fromNow()},{" "}
+          {formatDistance(currentTaskInfo.endTime, currentTaskInfo.beginTime)}
         </Tooltip>
       );
     default:
@@ -250,6 +260,7 @@ export default function TaskListView({
   onReload: () => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
@@ -358,14 +369,18 @@ export default function TaskListView({
 
   async function downloadLog() {
     try {
-      const logText = (await getVoxelyticsLogs(report.run.id, null, "DEBUG"))
+      if (currentRunId == null) {
+        message.error("Please select a specific run for log download.");
+        return;
+      }
+      const logText = (await getVoxelyticsLogs(currentRunId, null, "DEBUG"))
         .map((line: any) =>
           formatLog(line, { timestamps: true, pid: true, level: true, logger: true }),
         )
         .join("\n");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([logText], { type: "plain/text" }));
-      a.download = `${report.run.id}.log`;
+      a.download = `${report.workflow.hash}_${currentRunId}.log`;
       a.click();
     } catch (error) {
       message.error("Could not fetch log for download.");
@@ -385,7 +400,7 @@ export default function TaskListView({
       <Menu.Item key="3" onClick={downloadWorkflowYAML}>
         Download Workflow YAML
       </Menu.Item>
-      <Menu.Item key="4" onClick={downloadLog}>
+      <Menu.Item key="4" onClick={downloadLog} disabled={currentRunId == null}>
         Download Log
       </Menu.Item>
     </Menu>
@@ -401,7 +416,7 @@ export default function TaskListView({
         return null;
       }
 
-      const taskInfo = aggregateTaskInfos(taskGroup, report.run.tasks);
+      const taskInfo = aggregateTaskInfos(taskGroup, report.tasks);
       return (
         <Panel
           header={
@@ -420,7 +435,7 @@ export default function TaskListView({
               {taskGroup.key}
 
               <span className="task-panel-state">
-                <TaskStateTag taskInfo={taskInfo} />
+                <TaskStateTag taskInfo={taskInfo} runId={currentRunId} />
               </span>
             </div>
           }
@@ -453,9 +468,7 @@ export default function TaskListView({
       return null;
     }
 
-    const taskInfo = report.run.tasks.find(
-      (t) => t.taskName === task.taskName,
-    ) as VoxelyticsTaskInfo;
+    const taskInfo = report.tasks.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
 
     return (
       <Panel
@@ -476,7 +489,7 @@ export default function TaskListView({
               <span className="task-panel-name">{task.config.name}</span>
             )}
             <span className="task-panel-state">
-              <TaskStateTag taskInfo={taskInfo} />
+              <TaskStateTag taskInfo={taskInfo} runId={currentRunId} />
             </span>
           </div>
         }
@@ -486,6 +499,7 @@ export default function TaskListView({
         <TaskView
           taskName={task.taskName}
           workflowHash={report.workflow.hash}
+          runId={currentRunId}
           task={task}
           artifacts={report.artifacts[task.taskName] || []}
           dag={report.dag}
@@ -496,7 +510,7 @@ export default function TaskListView({
     );
   };
 
-  const totalRuntime = report.run.tasks.reduce((sum, t) => {
+  const totalRuntime = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
       return sum.add(moment.duration(moment().diff(moment(t.beginTime))));
     } else if (t.beginTime != null && t.endTime != null) {
@@ -508,8 +522,11 @@ export default function TaskListView({
 
   const {
     workflow: { name: readableWorkflowName },
-    run: { beginTime: runBeginTimeString },
   } = report;
+  const runBeginTimeString = report.runs.reduce(
+    (r, a) => Math.min(r, a.beginTime.getTime()),
+    Infinity,
+  );
 
   return (
     <Row
@@ -563,6 +580,14 @@ export default function TaskListView({
           <Button onClick={() => onReload()}>
             <SyncOutlined spin={isLoading} /> Refresh
           </Button>
+          <Select value={currentRunId ?? ""} onChange={(e) => setCurrentRunId(e === "" ? null : e)}>
+            <Select.Option value="">Consolidated</Select.Option>
+            {report.runs.map((run) => (
+              <Select.Option value={run.id} key={run.id}>
+                {run.name}
+              </Select.Option>
+            ))}
+          </Select>
           <Dropdown.Button overlay={overflowMenu} onClick={() => setExpandedTasks([])}>
             Collapse All
           </Dropdown.Button>
@@ -580,8 +605,8 @@ export default function TaskListView({
 
 function aggregateTimes(taskInfos: Array<VoxelyticsTaskInfo>): [Date, Date] {
   return [
-    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime ?? Infinity), Infinity)),
-    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime ?? -Infinity), -Infinity)),
+    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime?.getTime() ?? Infinity), Infinity)),
+    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime?.getTime() ?? -Infinity), -Infinity)),
   ];
 }
 
@@ -594,15 +619,24 @@ function aggregateTaskInfos(
 
     if (taskInfos.length === 0) {
       return {
-        runId: "",
-        runName: "",
         taskName: task.key,
         state: VoxelyticsRunState.SKIPPED,
-        beginTime: null,
-        endTime: null,
         currentExecutionId: null,
         chunksTotal: 0,
         chunksFinished: 0,
+        beginTime: null,
+        endTime: null,
+        runs: [
+          {
+            runId: "",
+            currentExecutionId: null,
+            chunksTotal: 0,
+            chunksFinished: 0,
+            state: VoxelyticsRunState.SKIPPED,
+            beginTime: null,
+            endTime: null,
+          },
+        ],
       };
     }
 
@@ -650,12 +684,14 @@ function aggregateTaskInfos(
     }
 
     return {
-      runId: taskInfos[0].runId,
-      runName: taskInfos[0].runName,
       taskName: task.key,
       state,
       beginTime,
       endTime,
+      currentExecutionId: null,
+      chunksTotal: taskInfos.reduce((r, a) => r + a.chunksTotal, 0),
+      chunksFinished: taskInfos.reduce((r, a) => r + a.chunksFinished, 0),
+      runs: [],
     } as VoxelyticsTaskInfo;
   }
 

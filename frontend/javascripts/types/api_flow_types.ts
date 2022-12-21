@@ -775,7 +775,7 @@ export type VoxelyticsArtifactConfig = {
 export type VoxelyticsRunInfo = (
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: number;
+      beginTime: Date;
       endTime: null;
     }
   | {
@@ -784,8 +784,8 @@ export type VoxelyticsRunInfo = (
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: number;
-      endTime: number;
+      beginTime: Date;
+      endTime: Date;
     }
 ) & {
   id: string;
@@ -793,7 +793,6 @@ export type VoxelyticsRunInfo = (
   username: string;
   hostname: string;
   voxelyticsVersion: string;
-  tasks: Array<VoxelyticsTaskInfo>;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
@@ -808,14 +807,7 @@ export type VoxelyticsWorkflowDag = {
   nodes: Array<VoxelyticsWorkflowDagNode>;
 };
 
-export type VoxelyticsTaskInfo = {
-  runId: string;
-  runName: string;
-  taskName: string;
-  currentExecutionId: string | null;
-  chunksTotal: number;
-  chunksFinished: number;
-} & (
+type StatePartial =
   | {
       state: VoxelyticsRunState.PENDING | VoxelyticsRunState.SKIPPED;
       beginTime: null;
@@ -823,7 +815,7 @@ export type VoxelyticsTaskInfo = {
     }
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: number;
+      beginTime: Date;
       endTime: null;
     }
   | {
@@ -832,10 +824,23 @@ export type VoxelyticsTaskInfo = {
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: number;
-      endTime: number;
-    }
-);
+      beginTime: Date;
+      endTime: Date;
+    };
+export type VoxelyticsTaskInfo = {
+  taskName: string;
+  currentExecutionId: string | null;
+  chunksTotal: number;
+  chunksFinished: number;
+  runs: Array<
+    {
+      runId: string;
+      currentExecutionId: string | null;
+      chunksTotal: number;
+      chunksFinished: number;
+    } & StatePartial
+  >;
+} & StatePartial;
 
 export type VoxelyticsWorkflowReport = {
   config: {
@@ -856,38 +861,7 @@ export type VoxelyticsWorkflowReport = {
   dag: VoxelyticsWorkflowDag;
   artifacts: Record<string, Record<string, VoxelyticsArtifactConfig>>;
   runs: Array<VoxelyticsRunInfo>;
-  tasks: Array<{
-    taskName: string;
-    state: VoxelyticsRunState;
-    currentExecutionId: string | null;
-    chunksTotal: number;
-    chunksFinished: number;
-    runs: Array<
-      {
-        runId: string;
-      } & (
-        | {
-            state: VoxelyticsRunState.PENDING | VoxelyticsRunState.SKIPPED;
-            beginTime: null;
-            endTime: null;
-          }
-        | {
-            state: VoxelyticsRunState.RUNNING;
-            beginTime: Date;
-            endTime: null;
-          }
-        | {
-            state:
-              | VoxelyticsRunState.COMPLETE
-              | VoxelyticsRunState.FAILED
-              | VoxelyticsRunState.CANCELLED
-              | VoxelyticsRunState.STALE;
-            beginTime: Date;
-            endTime: Date;
-          }
-      )
-    >;
-  }>;
+  tasks: Array<VoxelyticsTaskInfo>;
   workflow: {
     name: string;
     hash: string;

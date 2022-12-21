@@ -33,8 +33,7 @@ import {
   mergeAgglomerate,
   UpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import { Model } from "oxalis/singletons";
-import api from "oxalis/api/internal_api";
+import { Model, api } from "oxalis/singletons";
 import {
   getActiveSegmentationTracingLayer,
   getActiveSegmentationTracing,

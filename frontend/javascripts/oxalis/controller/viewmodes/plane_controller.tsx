@@ -3,7 +3,6 @@ import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
-import api from "oxalis/api/internal_api";
 import dimensions from "oxalis/model/dimensions";
 import {
   deleteActiveNodeAsUserAction,
@@ -21,7 +20,7 @@ import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flyca
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { Model } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import PlaneView from "oxalis/view/plane_view";
 import type { OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";

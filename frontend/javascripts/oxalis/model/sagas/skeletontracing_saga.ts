@@ -67,7 +67,7 @@ import Store from "oxalis/store";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";

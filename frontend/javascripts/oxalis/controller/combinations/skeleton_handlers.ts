@@ -42,7 +42,7 @@ import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import type { Edge, Tree, Node } from "oxalis/store";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";

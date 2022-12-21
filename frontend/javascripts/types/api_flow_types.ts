@@ -8,7 +8,7 @@ import type {
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
-import { PricingPlan } from "admin/organization/organization_edit_view";
+import { type PricingPlan } from "admin/organization/organization_edit_view";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =

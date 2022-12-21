@@ -21,7 +21,8 @@ import { setTDCameraWithoutTimeTrackingAction } from "oxalis/model/actions/view_
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import type { CameraData } from "oxalis/store";
 import Store from "oxalis/store";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
+
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   onCameraPositionChanged: () => void;

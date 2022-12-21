@@ -19,7 +19,7 @@ import type { OxalisState, MutableTreeMap, TreeGroup } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { makeComponentLazy } from "libs/react_helpers";
 type ProjectInfo = {

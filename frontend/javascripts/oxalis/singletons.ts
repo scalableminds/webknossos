@@ -1,4 +1,5 @@
 import { Store as ReduxStore } from "redux";
+import { ApiInterface } from "./api/api_latest";
 import { type OxalisModel } from "./model";
 import { type OxalisState } from "./store";
 
@@ -12,4 +13,10 @@ export let Model: OxalisModel;
 
 export const setModel = (_model: OxalisModel) => {
   Model = _model;
+};
+
+export let api: ApiInterface;
+
+export const setApi = (_api: ApiInterface) => {
+  api = _api;
 };

@@ -23,9 +23,11 @@ import { compress, decompress } from "lz-string";
 import ErrorBoundary from "components/error_boundary";
 import { setStore, setModel } from "oxalis/singletons";
 import Model from "oxalis/model";
+import { setupApi } from "oxalis/api/internal_api";
 
 setModel(Model);
 setStore(UnthrottledStore);
+setupApi();
 startSagas(rootSaga);
 
 const reactQueryClient = new QueryClient({

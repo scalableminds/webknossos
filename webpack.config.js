@@ -4,6 +4,7 @@ module.exports = function (env = {}) {
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const TerserPlugin = require("terser-webpack-plugin");
+  const browserslistToEsbuild = require("browserslist-to-esbuild");
 
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
@@ -80,7 +81,13 @@ module.exports = function (env = {}) {
           loader: "esbuild-loader",
           options: {
             loader: "tsx", // Or 'ts' if you don't need tsx
-            target: "chrome80",
+            target: browserslistToEsbuild([
+              "last 3 Chrome versions",
+              "last 3 Firefox versions",
+              "last 2 Edge versions",
+              "last 1 Safari versions",
+              "last 1 iOS versions",
+            ]),
           },
         },
         {

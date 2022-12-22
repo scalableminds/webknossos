@@ -19,7 +19,7 @@ function prepare {
   # Webpack with the proto loader isn't used when running the tests, so the proto files need to be prepared manually
   pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
-  # if [ -f "$FILE" ]; then
+
   node_modules/.bin/esbuild \
     --platform=node \
     --format=cjs \
@@ -41,13 +41,6 @@ function prepare {
     cmp --silent $from $to && echo skip $from to $to
     cmp --silent $from $to || mkdir -p $to_dir && cp $from $to
   ' find-sh {} \;
-
-
-  # else
-  #   # --copy-files will copy files that are present in the source dir but are not transpiled (e.g.: json files)
-  #   # "$@" inside this function refers to all arguments of the prepare function, not all arguments of this bash script
-  #   BABEL_ENV=test babel --extensions .ts,.tsx "$jsPath" --out-dir "$testBundlePath" --copy-files "$@"
-  # fi
 }
 
 function ensureUpToDateTests {

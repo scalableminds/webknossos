@@ -31,6 +31,7 @@
     "@typescript-eslint/parser": "^5.40.1",
     "abort-controller": "^3.0.0",
     "ava": "^3.13.0",
+    "browserslist-to-esbuild": "^1.2.0",
     "commander": "^2.17.1",
     "coveralls": "^3.0.2",
     "css-loader": "^6.5.1",

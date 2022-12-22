@@ -20,17 +20,24 @@ function prepare {
   pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
   # if [ -f "$FILE" ]; then
-  node_modules/.bin/esbuild  --platform=node --format=cjs --target=node10.4 --sourcemap --outdir="$testBundlePath" $($FIND frontend/javascripts \( -name "*.ts" -o -name "*.tsx" \))
+  node_modules/.bin/esbuild \
+    --platform=node \
+    --format=cjs \
+    --define:process.env.BABEL_ENV=\"test\" \
+    --target=node10.4 \
+    --outdir="$testBundlePath" $($FIND frontend/javascripts \( -name "*.ts" -o -name "*.tsx" \))
 
+  # Copy files which were not compiled by esbuild (e.g., snapshots).
   find frontend/javascripts -type f -not \( -name "*.ts" -o -name "*.tsx" -o -name "*.png" \) -exec sh -c '
     testBundlePath="public-test/test-bundle"
     file="$1"
     from="$file"
     to="$file"
-    to=${to#*/}
-    to=${to#*/}
-    to="$testBundlePath/$to"
-    to_dir=${to%/*}
+    to=${to#*/}              # Remove everything until (and including) the first / to trim the first folder
+    to=${to#*/}              # Also remove the second folder
+    to="$testBundlePath/$to" # Add new bundle path as parent
+    to_dir=${to%/*}          # Remove the file name from the path in $to
+    # Only copy when src and dst differ
     cmp --silent $from $to && echo skip $from to $to
     cmp --silent $from $to || mkdir -p $to_dir && cp $from $to
   ' find-sh {} \;
@@ -63,27 +70,27 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "*.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "temporal_bucket_manager.spec.js") "$@"
 elif [ $cmd == "test-debug" ]
 then
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-changed" ]
 then
   ensureUpToDateTests
   # Find modified *.spec.* files, trim their extension (since ts != js) and look them up in the compiled bundle
   changed_files=$(git ls-files --modified | grep \.spec\. | xargs -i basename {} | sed -r 's|^(.*?)\.\w+$|\1|' | xargs -i find public-test/test-bundle -name "{}*")
   echo Only running $changed_files
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test c8 --silent --no-clean --exclude binaryData ava \
+  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava \
     $changed_files \
     "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test c8 --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
+  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
 elif [ $cmd == "test-screenshot" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava $(find "$testBundlePath" -name "*.screenshot.js") "$@"
+  export NODE_PATH="$testBundlePath" && ava $(find "$testBundlePath" -name "*.screenshot.js") "$@"
 elif [ $cmd == "prepare" ]
 then
   prepare "$@"

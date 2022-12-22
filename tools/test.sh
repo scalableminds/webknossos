@@ -59,7 +59,6 @@ function ensureUpToDateTests {
 }
 
 # For faster, local testing, you may want to remove the `c8` part of the following statement.
-# Also, removing `istanbul` from .babelrc, allows to debug uninstrumented source code.
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests

@@ -55,7 +55,6 @@
     "merge-img": "^2.1.2",
     "mock-require": "^1.2.1",
     "node-fetch": "^2.6.7",
-    "nyc": "^13.3.0",
     "pg": "^7.4.1",
     "pixelmatch": "^5.2.0",
     "pngjs": "^3.3.3",
@@ -242,14 +241,6 @@
     ],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8
-  },
-  "nyc": {
-    "sourceMap": false,
-    "instrument": false,
-    "exclude": [
-      "public-test/test-bundle/test/**/*.*",
-      "frontend/javascripts/test/**/*.*"
-    ]
   },
   "c8": {
     "exclude": [

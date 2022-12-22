@@ -70,7 +70,7 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "temporal_bucket_manager.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-debug" ]
 then
   export NODE_PATH="$testBundlePath" && ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"

@@ -24,7 +24,7 @@ function prepare {
     --platform=node \
     --format=cjs \
     --define:process.env.BABEL_ENV=\"test\" \
-    --target=node10.4 \
+    --target=node16 \
     --outdir="$testBundlePath" $($FIND frontend/javascripts \( -name "*.ts" -o -name "*.tsx" \))
 
   # Copy files which were not compiled by esbuild (e.g., snapshots).

@@ -11,7 +11,7 @@ import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.{GetResult, PositionedParameters, PositionedResult, PostgresProfile, SetParameter}
+import slick.jdbc._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
 import javax.inject.Inject
@@ -148,6 +148,12 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       escaped.toString
     }
   }
+
+  protected def escapeLiteral(anId: ObjectId): String =
+    escapeLiteral(anId.id)
+
+  protected def escapeLiteral(anInstant: Instant): String =
+    s"${escapeLiteral(anInstant.toString)}::timestamptz"
 
   protected def writeEscapedTuple(seq: List[String]): String =
     "(" + seq.map(escapeLiteral).mkString(", ") + ")"

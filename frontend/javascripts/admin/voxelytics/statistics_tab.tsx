@@ -3,9 +3,15 @@ import { Button } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
 import { usePolling } from "libs/react_hooks";
-import { formatBytes, formatCPU, formatDistanceStrict } from "libs/format_utils";
+import {
+  formatBytes,
+  formatCPU,
+  formatDistanceStrict,
+  formatDurationStrict,
+} from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
 import { Result, VX_POLLING_INTERVAL } from "./utils";
+import moment from "moment";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
 
@@ -56,7 +62,7 @@ export default function StatisticsTab({
     }
   }
 
-  usePolling(loadStatistics, isRunning ? VX_POLLING_INTERVAL : null);
+  usePolling(loadStatistics, isRunning ? VX_POLLING_INTERVAL : null, [runId, taskName]);
 
   function renderContent() {
     if (statisticsResult.type === "LOADING") {
@@ -184,10 +190,10 @@ export default function StatisticsTab({
                   </>
                 )}
                 <br />
-                {row.beginTime != null && row.endTime != null && (
+                {row.wallTime != null && (
                   <>
                     <span className="stats-label">Wall</span>{" "}
-                    {formatDistanceStrict(row.endTime, row.beginTime)}
+                    {formatDurationStrict(moment.duration(row.wallTime, "seconds"))}
                   </>
                 )}
               </td>

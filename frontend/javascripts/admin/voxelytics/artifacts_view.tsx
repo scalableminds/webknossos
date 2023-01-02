@@ -109,7 +109,11 @@ function ArtifactsView({
       const keys = Object.keys(checksums[0]);
       const csv = [
         keys.join(","),
-        ...checksums.map((row) => keys.map((key) => row[key]).join(",")),
+        ...checksums.map((row) =>
+          keys
+            .map((key) => (key === "timestamp" ? new Date(row[key]).toISOString() : row[key]))
+            .join(","),
+        ),
       ].join("\n");
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
       a.download = `${workflowHash}_${taskName}_${artifactName}_checksums.csv`;

@@ -9,7 +9,6 @@ import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.util.Try
 
 case class RunEntry(id: ObjectId,
                     name: String,
@@ -36,7 +35,8 @@ case class TaskRunEntry(runName: String,
                         endTime: Option[Instant],
                         currentExecutionId: Option[String],
                         chunksTotal: Long,
-                        chunksFinished: Long)
+                        chunksFinished: Long,
+                        chunksSkipped: Long)
 
 object TaskRunEntry {
   implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
@@ -104,6 +104,7 @@ case class ChunkStatisticsEntry(executionId: String,
                                 countFinished: Long,
                                 beginTime: Instant,
                                 endTime: Instant,
+                                wallTime: Double,
                                 memory: StatisticsEntry,
                                 cpuUser: StatisticsEntry,
                                 cpuSystem: StatisticsEntry,
@@ -158,6 +159,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
             "currentExecutionId" -> sortedTaskRuns.head.currentExecutionId,
             "chunksTotal" -> sortedTaskRuns.head.chunksTotal,
             "chunksFinished" -> sortedTaskRuns.head.chunksFinished,
+            "chunksSkipped" -> sortedTaskRuns.head.chunksSkipped,
             "runs" -> sortedTaskRuns.map(run =>
               Json.obj(
                 "runId" -> run.runId,
@@ -166,7 +168,8 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
                 "endTime" -> run.endTime,
                 "currentExecutionId" -> run.currentExecutionId,
                 "chunksTotal" -> run.chunksTotal,
-                "chunksFinished" -> run.chunksFinished
+                "chunksFinished" -> run.chunksFinished,
+                "chunksSkipped" -> run.chunksSkipped
             ))
           )
         })
@@ -185,25 +188,6 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
   def workflowConfigPublicWrites(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
     workflowConfig ++
       Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
-
-  def aggregateBeginEndTime(
-      runs: List[(VoxelyticsRunState, Instant, Option[Instant])]): (VoxelyticsRunState, Instant, Option[Instant]) = {
-    // The calling code needs to make sure that runs is non-empty, otherwise the next lines will throw exceptions
-    val state = runs.maxBy(_._2)._1
-    val beginTime = runs.map(_._2).min
-    val endTime = Try(runs.flatMap(_._3).max).toOption
-
-    (state, beginTime, endTime)
-  }
-
-  def combineTaskRuns(allTaskRuns: List[TaskRunEntry], mostRecentRunId: ObjectId): List[TaskRunEntry] =
-    allTaskRuns
-      .filter(task => task.runId == mostRecentRunId)
-      .map(task => {
-        val thisTaskRuns = allTaskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime).reverse
-        val nonWaitingTaskRuns = thisTaskRuns.filter(t => VoxelyticsRunState.nonWaitingStates.contains(t.state))
-        nonWaitingTaskRuns.headOption.getOrElse(thisTaskRuns.head)
-      })
 
   def upsertTaskWithArtifacts(runId: ObjectId,
                               taskName: String,

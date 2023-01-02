@@ -928,6 +928,7 @@ export type VoxelyticsChunkStatistics = {
   countFinished: number;
   beginTime: number | null;
   endTime: number | null;
+  wallTime: number | null;
   memory: Statistics | null;
   cpuUser: Statistics | null;
   cpuSystem: Statistics | null;

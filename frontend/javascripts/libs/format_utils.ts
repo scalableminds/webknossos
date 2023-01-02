@@ -198,6 +198,9 @@ export function formatDurationStrict(duration: Duration): string {
   if (duration.seconds() > 0) {
     parts.push(`${duration.seconds()}s`);
   }
+  if (duration.asSeconds() < 1) {
+    parts.push("0s");
+  }
   return parts.join(" ");
 }
 

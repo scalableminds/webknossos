@@ -12,6 +12,7 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 class VoxelyticsController @Inject()(
     organizationDAO: OrganizationDAO,
@@ -60,7 +61,7 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-        // Auth is implemented in `voxelyticsDAO.findRuns`
+        // Auth is implemented in `voxelyticsDAO.findRunsForWorkflowListing`
         runs <- voxelyticsDAO.findRunsForWorkflowListing(request.identity, conf.staleTimeout)
         result <- if (runs.nonEmpty) {
           listWorkflowsWithRuns(request, runs)
@@ -84,8 +85,9 @@ class VoxelyticsController @Inject()(
       workflowsAsJson = JsArray(workflows.flatMap(workflow => {
         val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
         if (workflowRuns.nonEmpty) {
-          val state, beginTime, endTime =
-            voxelyticsService.aggregateBeginEndTime(workflowRuns.map(r => (r.state, r.beginTime, r.endTime)))
+          val state = workflowRuns.maxBy(_.beginTime).state
+          val beginTime = workflowRuns.map(_.beginTime).min
+          val endTime = Try(workflowRuns.flatMap(_.endTime).max).toOption
           Some(
             Json.obj(
               "name" -> workflow.name,
@@ -129,15 +131,13 @@ class VoxelyticsController @Inject()(
         mostRecentRun <- sortedRuns.headOption ?~> "voxelytics.zeroRunWorkflow"
 
         // Fetch task runs for all runs
-        allTaskRuns <- voxelyticsDAO.findTaskRuns(request.identity, sortedRuns.map(_.id), conf.staleTimeout)
+        allTaskRuns <- voxelyticsDAO.findTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
 
-        // Select one representative "task run" for each task
-        // This will be the most recent run that is running or finished or the most recent run
-        combinedTaskRuns = voxelyticsService.combineTaskRuns(allTaskRuns, mostRecentRun.id)
+        // Fetch artifact data for task runs
+        artifacts <- voxelyticsDAO.findArtifacts(sortedRuns.map(_.id))
 
-        // Fetch artifact data for selected/combined task runs
-        artifacts <- voxelyticsDAO.findArtifacts(combinedTaskRuns.map(_.taskId))
-        tasks <- voxelyticsDAO.findTasks(combinedTaskRuns)
+        // Fetch task configs
+        tasks <- voxelyticsDAO.findTasks(mostRecentRun.id)
 
         // Assemble workflow report JSON
         result = Json.obj(
@@ -156,59 +156,55 @@ class VoxelyticsController @Inject()(
 
   def storeWorkflowEvents(workflowHash: String, runName: String): Action[List[WorkflowEvent]] =
     sil.SecuredAction.async(validateJson[List[WorkflowEvent]]) { implicit request =>
-      def createWorkflowEvent(runId: ObjectId, event: WorkflowEvent): Fox[Unit] =
-        event match {
-          case ev: RunStateChangeEvent => voxelyticsDAO.upsertRunStateChangeEvent(runId, ev)
+      def createWorkflowEvent(runId: ObjectId, events: List[WorkflowEvent]): Fox[Unit] =
+        if (events.nonEmpty) {
+          events.head match {
+            case _: RunStateChangeEvent =>
+              voxelyticsDAO.upsertRunStateChangeEvents(runId, events.map(_.asInstanceOf[RunStateChangeEvent]))
 
-          case ev: TaskStateChangeEvent =>
-            for {
-              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
-              _ <- voxelyticsDAO.upsertTaskStateChangeEvent(taskId, ev)
-              _ <- Fox.combined(
-                ev.artifacts
-                  .map(artifactKV => {
-                    val artifactName = artifactKV._1
-                    val artifact = artifactKV._2
-                    voxelyticsDAO.upsertArtifact(taskId,
-                                                 artifactName,
-                                                 artifact.path,
-                                                 artifact.file_size,
-                                                 artifact.inode_count,
-                                                 artifact.version,
-                                                 artifact.metadataAsJson)
-                  })
-                  .toList)
-            } yield ()
+            case _: TaskStateChangeEvent =>
+              val taskEvents = events.map(_.asInstanceOf[TaskStateChangeEvent])
+              val artifactEvents =
+                taskEvents.flatMap(ev => ev.artifacts.map(artifact => (ev.taskName, artifact._1, artifact._2)))
+              for {
+                _ <- voxelyticsDAO.upsertTaskStateChangeEvents(runId, taskEvents)
+                _ <- if (artifactEvents.nonEmpty) { voxelyticsDAO.upsertArtifacts(runId, artifactEvents) } else {
+                  Fox.successful(())
+                }
+              } yield ()
 
-          case ev: ChunkStateChangeEvent =>
-            for {
-              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
-              chunkId <- voxelyticsDAO.upsertChunk(taskId, ev.executionId, ev.chunkName)
-              _ <- voxelyticsDAO.upsertChunkStateChangeEvent(chunkId, ev)
-            } yield ()
+            case _: ChunkStateChangeEvent =>
+              voxelyticsDAO.upsertChunkStateChangeEvents(runId, events.map(_.asInstanceOf[ChunkStateChangeEvent]))
 
-          case ev: RunHeartbeatEvent => voxelyticsDAO.upsertRunHeartbeatEvent(runId, ev)
+            case _: RunHeartbeatEvent =>
+              voxelyticsDAO.upsertRunHeartbeatEvents(runId, events.map(_.asInstanceOf[RunHeartbeatEvent]))
 
-          case ev: ChunkProfilingEvent =>
-            for {
-              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
-              chunkId <- voxelyticsDAO.getChunkIdByName(taskId, ev.executionId, ev.chunkName)
-              _ <- voxelyticsDAO.upsertChunkProfilingEvent(chunkId, ev)
-            } yield ()
+            case _: ChunkProfilingEvent =>
+              voxelyticsDAO.upsertChunkProfilingEvents(runId, events.map(_.asInstanceOf[ChunkProfilingEvent]))
 
-          case ev: ArtifactFileChecksumEvent =>
-            for {
-              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
-              artifactId <- voxelyticsDAO.getArtifactIdByName(taskId, ev.artifactName)
-              _ <- voxelyticsDAO.upsertArtifactChecksumEvent(artifactId, ev)
-            } yield ()
-        }
+            case _: ArtifactFileChecksumEvent =>
+              for {
+                _ <- Fox.combined(
+                  events
+                    .map(_.asInstanceOf[ArtifactFileChecksumEvent])
+                    .map(ev => {
+                      for {
+                        taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
+                        artifactId <- voxelyticsDAO.getArtifactIdByName(taskId, ev.artifactName)
+                        _ <- voxelyticsDAO.upsertArtifactChecksumEvent(artifactId, ev)
+                      } yield ()
+                    }))
+              } yield ()
+          }
+        } else { Fox.successful(()) }
+
+      val groupedEvents = request.body.groupBy(_.getClass)
 
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-        runId <- voxelyticsDAO.getRunIdByName(runName, request.identity._organization) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
-        _ <- voxelyticsService.checkAuth(runId, request.identity) ~> UNAUTHORIZED
-        _ <- Fox.serialCombined(request.body)(event => createWorkflowEvent(runId, event))
+        // Also checks authorization
+        runId <- voxelyticsDAO.getRunIdByNameAndWorkflowHash(runName, workflowHash, request.identity) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
+        _ <- Fox.serialCombined(groupedEvents.values.toList)(eventGroup => createWorkflowEvent(runId, eventGroup)) ~> INTERNAL_SERVER_ERROR
       } yield Ok
     }
 
@@ -217,10 +213,13 @@ class VoxelyticsController @Inject()(
       {
         for {
           _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-          runIdValidated <- option2Fox(runIdOpt).flatMap(ObjectId.fromString)
-          _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
-          taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "voxelytics.taskNotFound" ~> NOT_FOUND
-          results <- voxelyticsDAO.getChunkStatistics(taskId)
+          runIdOptValidated <- Fox.runOptional(runIdOpt)(ObjectId.fromString)
+          runs <- voxelyticsDAO.findRuns(request.identity,
+                                         runIdOptValidated.map(List(_)),
+                                         Some(workflowHash),
+                                         conf.staleTimeout,
+                                         true)
+          results <- voxelyticsDAO.getChunkStatistics(runs.map(_.id), taskName)
         } yield JsonOk(Json.toJson(results))
       }
     }
@@ -233,10 +232,13 @@ class VoxelyticsController @Inject()(
       {
         for {
           _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-          runIdValidated <- option2Fox(runIdOpt).flatMap(ObjectId.fromString)
-          _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
-          taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "voxelytics.taskNotFound" ~> NOT_FOUND
-          results <- voxelyticsDAO.getArtifactChecksums(taskId, artifactName)
+          runIdOptValidated <- Fox.runOptional(runIdOpt)(ObjectId.fromString)
+          runs <- voxelyticsDAO.findRuns(request.identity,
+                                         runIdOptValidated.map(List(_)),
+                                         Some(workflowHash),
+                                         conf.staleTimeout,
+                                         true)
+          results <- voxelyticsDAO.getArtifactChecksums(runs.map(_.id), taskName, artifactName)
         } yield JsonOk(Json.toJson(results))
       }
     }

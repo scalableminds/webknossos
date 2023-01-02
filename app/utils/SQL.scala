@@ -2,19 +2,21 @@ package utils
 
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
-import slick.jdbc.PositionedParameters
+import slick.dbio.Effect
+import slick.jdbc._
+import slick.sql.SqlStreamingAction
 
-import java.sql.Types
+import java.sql.{PreparedStatement, Types}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class CustomSQLInterpolation(val s: StringContext) extends AnyVal {
-  def nsql(param: Any*): SQLToken = {
+  def nsql(param: Any*): SqlToken = {
     val parts = s.parts.toList
     val values = param.toList
 
     val outputSql = mutable.StringBuilder.newBuilder
-    val outputValues = ListBuffer[SQLLiteral]()
+    val outputValues = ListBuffer[SqlValue]()
 
     assert(parts.length == values.length + 1)
     for (i <- parts.indices) {
@@ -23,20 +25,20 @@ class CustomSQLInterpolation(val s: StringContext) extends AnyVal {
       if (i < values.length) {
         val value = values(i)
         value match {
-          case x: SQLToken => {
+          case x: SqlToken => {
             outputSql ++= x.sql
             outputValues ++= x.values
           }
           case x => {
-            val literal = SQLLiteral.makeLiteral(x)
-            outputSql ++= literal.getPlaceholder()
-            outputValues += literal
+            val sqlValue = SqlValue.makeSqlValue(x)
+            outputSql ++= sqlValue.getPlaceholder()
+            outputValues += sqlValue
           }
         }
       }
     }
 
-    SQLToken(sql = outputSql.toString, values = outputValues.toList)
+    SqlToken(sql = outputSql.toString, values = outputValues.toList)
   }
 }
 
@@ -44,18 +46,38 @@ object CustomSQLInterpolation2 {
   implicit def customSQLInterpolation(s: StringContext): CustomSQLInterpolation = new CustomSQLInterpolation(s)
 }
 
-case class SQLToken(sql: String, values: List[SQLLiteral] = List()) {
+case class SqlToken(sql: String, values: List[SqlValue] = List()) {
   def debug(): String = {
     val parts = sql.split("\\?", -1)
     assert(parts.tail.length == values.length)
     parts.tail.zip(values).foldLeft(parts.head)((acc, x) => acc + x._2.debug() + x._1)
   }
+
+  def as[R](implicit rconv: GetResult[R]): SqlStreamingAction[Vector[R], R, Effect] =
+    new StreamingInvokerAction[Vector[R], R, Effect] {
+      def statements = List(sql)
+
+      protected[this] def createInvoker(statements: Iterable[String]) = new StatementInvoker[R] {
+        val getStatement = statements.head
+
+        protected def setParam(st: PreparedStatement) = {
+          val pp = new PositionedParameters(st);
+          values.foreach(_.setParameter(pp))
+        }
+
+        protected def extractValue(rs: PositionedResult): R = rconv(rs)
+      }
+
+      protected[this] def createBuilder = Vector.newBuilder[R]
+    }
+
+  def asUpdate = as[Int](GetUpdateValue).head
 }
 
-object SQLToken {
-  def join(values: List[Either[SQLLiteral, SQLToken]], sep: String): SQLToken = {
+object SqlToken {
+  def join(values: List[Either[SqlValue, SqlToken]], sep: String): SqlToken = {
     val outputSql = mutable.StringBuilder.newBuilder
-    val outputValues = ListBuffer[SQLLiteral]()
+    val outputValues = ListBuffer[SqlValue]()
     for (i <- values.indices) {
       val value = values(i);
       value match {
@@ -72,28 +94,28 @@ object SQLToken {
         outputSql ++= sep;
       }
     }
-    SQLToken(sql = outputSql.toString, values = outputValues.toList)
+    SqlToken(sql = outputSql.toString, values = outputValues.toList)
   }
 
-  def tuple(values: List[Any]): SQLToken = {
-    val literals = values.map(SQLLiteral.makeLiteral)
-    SQLToken(sql = s"(${literals.map(_.getPlaceholder()).mkString(", ")})", values = literals)
+  def tuple(values: List[Any]): SqlToken = {
+    val sqlValues = values.map(SqlValue.makeSqlValue)
+    SqlToken(sql = s"(${sqlValues.map(_.getPlaceholder()).mkString(", ")})", values = sqlValues)
   }
 
-  def tupleList(values: List[List[Any]]): SQLToken = {
-    val literalLists = values.map(list => list.map(SQLLiteral.makeLiteral))
-    SQLToken(sql = literalLists.map(list => s"(${list.map(_.getPlaceholder()).mkString(", ")})").mkString(", "),
-             values = literalLists.flatten)
+  def tupleList(values: List[List[Any]]): SqlToken = {
+    val sqlValueLists = values.map(list => list.map(SqlValue.makeSqlValue))
+    SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.getPlaceholder()).mkString(", ")})").mkString(", "),
+             values = sqlValueLists.flatten)
   }
 
-  def raw(s: String) = SQLToken(s)
+  def raw(s: String) = SqlToken(s)
 
   def empty() = raw("")
 
   def identifier(id: String) = raw('"' + id + '"')
 }
 
-trait SQLLiteral {
+trait SqlValue {
   def setParameter(pp: PositionedParameters): Unit
 
   def getPlaceholder(): String = "?"
@@ -101,74 +123,74 @@ trait SQLLiteral {
   def debug(): String
 }
 
-object SQLLiteral {
+object SqlValue {
 
-  def makeLiteral(p: Any): SQLLiteral =
+  def makeSqlValue(p: Any): SqlValue =
     p match {
-      case x: SQLLiteral => x
-      case x: String     => StringLiteral(x)
+      case x: SqlValue => x
+      case x: String   => StringValue(x)
       case x: Option[_] =>
         x match {
-          case Some(y) => makeLiteral(y)
-          case None    => NoneLiteral()
+          case Some(y) => makeSqlValue(y)
+          case None    => NoneValue()
         }
-      case x: Short    => ShortLiteral(x)
-      case x: Int      => IntLiteral(x)
-      case x: Long     => LongLiteral(x)
-      case x: Float    => FloatLiteral(x)
-      case x: Double   => DoubleLiteral(x)
-      case x: Boolean  => BooleanLiteral(x)
-      case x: Instant  => InstantLiteral(x)
-      case x: ObjectId => ObjectIdLiteral(x)
-      case x: JsObject => JsonLiteral(x)
-      case x: JsArray  => JsonLiteral(x)
-      case x: JsValue  => JsonLiteral(x)
+      case x: Short    => ShortValue(x)
+      case x: Int      => IntValue(x)
+      case x: Long     => LongValue(x)
+      case x: Float    => FloatValue(x)
+      case x: Double   => DoubleValue(x)
+      case x: Boolean  => BooleanValue(x)
+      case x: Instant  => InstantValue(x)
+      case x: ObjectId => ObjectIdValue(x)
+      case x: JsObject => JsonValue(x)
+      case x: JsArray  => JsonValue(x)
+      case x: JsValue  => JsonValue(x)
     }
 }
 
-case class StringLiteral(v: String) extends SQLLiteral {
+case class StringValue(v: String) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v)
 
   override def debug(): String = "'" + v + "'"
 }
 
-case class ShortLiteral(v: Short) extends SQLLiteral {
+case class ShortValue(v: Short) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setShort(v)
 
   override def debug(): String = s"$v"
 }
 
-case class IntLiteral(v: Int) extends SQLLiteral {
+case class IntValue(v: Int) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setInt(v)
 
   override def debug(): String = s"$v"
 }
 
-case class LongLiteral(v: Long) extends SQLLiteral {
+case class LongValue(v: Long) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setLong(v)
 
   override def debug(): String = s"$v"
 }
 
-case class FloatLiteral(v: Float) extends SQLLiteral {
+case class FloatValue(v: Float) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setFloat(v)
 
   override def debug(): String = s"$v"
 }
 
-case class DoubleLiteral(v: Double) extends SQLLiteral {
+case class DoubleValue(v: Double) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setDouble(v)
 
   override def debug(): String = s"$v"
 }
 
-case class BooleanLiteral(v: Boolean) extends SQLLiteral {
+case class BooleanValue(v: Boolean) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setBoolean(v)
 
   override def debug(): String = s"$v"
 }
 
-case class InstantLiteral(v: Instant) extends SQLLiteral {
+case class InstantValue(v: Instant) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
 
   override def getPlaceholder(): String = "?::TIMESTAMPTZ"
@@ -176,13 +198,13 @@ case class InstantLiteral(v: Instant) extends SQLLiteral {
   override def debug(): String = s"'${v.toString}'"
 }
 
-case class ObjectIdLiteral(v: ObjectId) extends SQLLiteral {
+case class ObjectIdValue(v: ObjectId) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v.id)
 
   override def debug(): String = s"'${v.id}'"
 }
 
-case class JsonLiteral(v: JsValue) extends SQLLiteral {
+case class JsonValue(v: JsValue) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(Json.stringify(v))
 
   override def getPlaceholder(): String = "?::JSONB"
@@ -190,7 +212,13 @@ case class JsonLiteral(v: JsValue) extends SQLLiteral {
   override def debug(): String = s"'${Json.stringify(v)}'"
 }
 
-case class NoneLiteral() extends SQLLiteral {
+case class NoneValue() extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setNull(Types.BOOLEAN)
+
   override def debug(): String = "NULL"
+}
+
+private object GetUpdateValue extends GetResult[Int] {
+  def apply(pr: PositionedResult) =
+    throw new Exception("Update statements should not return a ResultSet")
 }

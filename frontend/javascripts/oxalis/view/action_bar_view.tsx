@@ -179,7 +179,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
-          visible={this.state.isNewLayoutModalVisible}
+          open={this.state.isNewLayoutModalVisible}
           onCancel={() =>
             this.setState({
               isNewLayoutModalVisible: false,

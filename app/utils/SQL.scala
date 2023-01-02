@@ -1,16 +1,19 @@
 package utils
 
 import com.scalableminds.util.time.Instant
-import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.libs.json.{JsValue, Json}
 import slick.dbio.Effect
 import slick.jdbc._
 import slick.sql.SqlStreamingAction
+import slick.util.DumpInfo
 
 import java.sql.{PreparedStatement, Types}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration
+import scala.concurrent.duration.Duration
 
-class CustomSQLInterpolation(val s: StringContext) extends AnyVal {
+class NestedSQLInterpolator(val s: StringContext) extends AnyVal {
   def nsql(param: Any*): SqlToken = {
     val parts = s.parts.toList
     val values = param.toList
@@ -42,12 +45,12 @@ class CustomSQLInterpolation(val s: StringContext) extends AnyVal {
   }
 }
 
-object CustomSQLInterpolation2 {
-  implicit def customSQLInterpolation(s: StringContext): CustomSQLInterpolation = new CustomSQLInterpolation(s)
+object NestedSQLInterpolation {
+  implicit def nestedSQLInterpolation(s: StringContext): NestedSQLInterpolator = new NestedSQLInterpolator(s)
 }
 
 case class SqlToken(sql: String, values: List[SqlValue] = List()) {
-  def debug(): String = {
+  def debug: String = {
     val parts = sql.split("\\?", -1)
     assert(parts.tail.length == values.length)
     parts.tail.zip(values).foldLeft(parts.head)((acc, x) => acc + x._2.debug() + x._1)
@@ -68,10 +71,15 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
         protected def extractValue(rs: PositionedResult): R = rconv(rs)
       }
 
+      override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[${debug}]")
+
       protected[this] def createBuilder = Vector.newBuilder[R]
     }
 
   def asUpdate = as[Int](GetUpdateValue).head
+
+  def stripMargin(marginChar: Char): SqlToken = copy(sql = sql.stripMargin(marginChar))
+  def stripMargin: SqlToken = copy(sql = sql.stripMargin)
 }
 
 object SqlToken {
@@ -110,9 +118,9 @@ object SqlToken {
 
   def raw(s: String) = SqlToken(s)
 
-  def empty() = raw("")
+  def empty(): SqlToken = raw("")
 
-  def identifier(id: String) = raw('"' + id + '"')
+  def identifier(id: String): SqlToken = raw('"' + id + '"')
 }
 
 trait SqlValue {
@@ -141,9 +149,8 @@ object SqlValue {
       case x: Double   => DoubleValue(x)
       case x: Boolean  => BooleanValue(x)
       case x: Instant  => InstantValue(x)
+      case x: Duration => DurationValue(x)
       case x: ObjectId => ObjectIdValue(x)
-      case x: JsObject => JsonValue(x)
-      case x: JsArray  => JsonValue(x)
       case x: JsValue  => JsonValue(x)
     }
 }
@@ -195,7 +202,27 @@ case class InstantValue(v: Instant) extends SqlValue {
 
   override def getPlaceholder(): String = "?::TIMESTAMPTZ"
 
-  override def debug(): String = s"'${v.toString}'"
+  override def debug(): String = s"'${v.toString}'::TIMESTAMPTZ"
+}
+
+case class DurationValue(v: Duration) extends SqlValue {
+
+  private def stringifyDuration = v.unit match {
+    case duration.NANOSECONDS  => s"${v.length.toDouble / 1000.0} MICROSECONDS"
+    case duration.MICROSECONDS => s"${v.length} MICROSECONDS"
+    case duration.MILLISECONDS => s"${v.length} MILLISECONDS"
+    case duration.SECONDS      => s"${v.length} SECONDS"
+    case duration.MINUTES      => s"${v.length} MINUTES"
+    case duration.HOURS        => s"${v.length} HOURS"
+    case duration.DAYS         => s"${v.length} DAYS"
+  }
+
+  override def setParameter(pp: PositionedParameters): Unit =
+    pp.setString(stringifyDuration)
+
+  override def getPlaceholder(): String = "?::INTERVAL"
+
+  override def debug(): String = s"'${stringifyDuration}'::INTERVAL"
 }
 
 case class ObjectIdValue(v: ObjectId) extends SqlValue {

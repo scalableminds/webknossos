@@ -80,7 +80,7 @@ module.exports = function (env = {}) {
           exclude: /(node_modules|bower_components)/,
           loader: "esbuild-loader",
           options: {
-            loader: "tsx", // Or 'ts' if you don't need tsx
+            loader: "tsx", // also supports 'ts'
             target: browserslistToEsbuild([
               "last 3 Chrome versions",
               "last 3 Firefox versions",

@@ -38,6 +38,8 @@ organization.name.invalid=This organization name contains illegal characters. Pl
 organization.name.alreadyInUse=This name is already claimed by a different organization and not available anymore. Please choose a different name.
 organization.alreadyJoined=Your account is already associated with the selected organization.
 
+termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
+
 user.notFound=User not found
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.

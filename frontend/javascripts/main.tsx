@@ -17,6 +17,7 @@ import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
+import ErrorBoundary from "components/error_boundary";
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {
@@ -69,18 +70,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (containerElement) {
     ReactDOM.render(
-      // @ts-ignore
-      <Provider store={Store}>
-        <QueryClientProvider client={reactQueryClient}>
-          {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
+      <ErrorBoundary>
+        {/* @ts-ignore */}
+        <Provider store={Store}>
+          <QueryClientProvider client={reactQueryClient}>
+            {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
         certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
         The fix is inspired by:
         https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
-          <DndProvider backend={HTML5Backend}>
-            <Router />
-          </DndProvider>
-        </QueryClientProvider>
-      </Provider>,
+            <DndProvider backend={HTML5Backend}>
+              <Router />
+            </DndProvider>
+          </QueryClientProvider>
+        </Provider>
+      </ErrorBoundary>,
       containerElement,
     );
   }

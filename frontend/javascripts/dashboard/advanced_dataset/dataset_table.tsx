@@ -59,8 +59,8 @@ type Props = {
   reloadDataset: (arg0: APIDatasetId, arg1?: Array<APIMaybeUnimportedDataset>) => Promise<void>;
   updateDataset: (arg0: APIDataset) => Promise<void>;
   addTagToSearch: (tag: string) => void;
-  onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
-  selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
+  onSelectDataset: (dataset: APIMaybeUnimportedDataset | null, multiSelect?: boolean) => void;
+  selectedDatasets: APIMaybeUnimportedDataset[];
   hideDetailsColumns?: boolean;
   context: DatasetCacheContextValue | DatasetCollectionContextValue;
 };
@@ -68,27 +68,27 @@ type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
   contextMenuPosition: [number, number] | null | undefined;
-  datasetForContextMenu: APIMaybeUnimportedDataset | null;
+  datasetsForContextMenu: APIMaybeUnimportedDataset[];
 };
 
 type ContextMenuProps = {
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
-  dataset: APIMaybeUnimportedDataset | null;
+  datasets: APIMaybeUnimportedDataset[];
   reloadDataset: Props["reloadDataset"];
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
-  const { dataset, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
+  const { datasets, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
   let overlay = <div />;
 
-  if (contextMenuPosition != null && dataset != null) {
+  if (contextMenuPosition != null) {
     // getDatasetActionContextMenu should not be turned into <DatasetActionMenu />
     // as this breaks antd's styling of the menu within the dropdown.
     overlay = getDatasetActionContextMenu({
       hideContextMenu,
-      dataset,
+      datasets,
       reloadDataset,
     });
   }
@@ -239,8 +239,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
     },
     prevSearchQuery: "",
     contextMenuPosition: null,
-    datasetForContextMenu: null,
+    datasetsForContextMenu: [],
   };
+  // currentPageData is only used for range selection (and not during
+  // rendering). That's why it's not included in this.state (also it
+  // would lead to infinite loops, too).
+  currentPageData: APIMaybeUnimportedDataset[] = [];
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
     const maybeSortedInfo: SorterResult<string> | {} = // Clear the sorting exactly when the search box is initially filled
@@ -263,7 +267,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
     sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
-    _extra: TableCurrentDataSource<RecordType>,
   ) => {
     this.setState({
       // @ts-ignore
@@ -407,7 +410,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           hideContextMenu={() => {
             this.setState({ contextMenuPosition: null });
           }}
-          dataset={this.state.datasetForContextMenu}
+          datasets={this.state.datasetsForContextMenu}
           reloadDataset={this.props.reloadDataset}
           contextMenuPosition={this.state.contextMenuPosition}
         />
@@ -423,7 +426,19 @@ class DatasetTable extends React.PureComponent<Props, State> {
           locale={{
             emptyText: this.renderEmptyText(),
           }}
+          summary={(currentPageData) => {
+            // Workaround to get to the currently rendered entries (since the ordering
+            // is managed by antd).
+            // Also see https://github.com/ant-design/ant-design/issues/24022.
+            this.currentPageData = currentPageData as APIMaybeUnimportedDataset[];
+            return null;
+          }}
           onRow={(record: APIMaybeUnimportedDataset) => ({
+            onDragStart: () => {
+              if (!this.props.selectedDatasets.includes(record)) {
+                this.props.onSelectDataset(record);
+              }
+            },
             onClick: (event) => {
               // @ts-expect-error
               if (event.target?.tagName !== "TD") {
@@ -432,11 +447,38 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 // (e.g., the link action and a (de)selection).
                 return;
               }
-              if (this.props.onSelectDataset) {
-                if (this.props.selectedDataset === record) {
-                  this.props.onSelectDataset(null);
-                } else {
-                  this.props.onSelectDataset(record);
+
+              if (!event.shiftKey || this.props.selectedDatasets.length === 0) {
+                this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
+              } else {
+                // Shift was pressed and there's already another selected dataset that was not
+                // clicked just now.
+                // We are using the current page data as there is no way to get the currently
+                // rendered datasets otherwise. Also see
+                // https://github.com/ant-design/ant-design/issues/24022.
+                const renderedDatasets = this.currentPageData;
+
+                const clickedDatasetIdx = renderedDatasets.indexOf(record);
+                const selectedIndices = this.props.selectedDatasets.map((selectedDS) =>
+                  renderedDatasets.indexOf(selectedDS),
+                );
+                const closestSelectedDatasetIdx = _.minBy(selectedIndices, (idx) =>
+                  Math.abs(idx - clickedDatasetIdx),
+                );
+
+                if (clickedDatasetIdx == null || closestSelectedDatasetIdx == null) {
+                  return;
+                }
+
+                const [start, end] = [closestSelectedDatasetIdx, clickedDatasetIdx].sort(
+                  (a, b) => a - b,
+                );
+
+                for (let idx = start; idx <= end; idx++) {
+                  // closestSelectedDatasetIdx is already selected (don't deselect it).
+                  if (idx !== closestSelectedDatasetIdx) {
+                    this.props.onSelectDataset(renderedDatasets[idx], true);
+                  }
                 }
               }
             },
@@ -466,15 +508,25 @@ class DatasetTable extends React.PureComponent<Props, State> {
               const y = event.clientY - bounds.top;
 
               this.showContextMenuAt(x, y);
-              this.setState({ datasetForContextMenu: record });
+              if (this.props.selectedDatasets.includes(record)) {
+                this.setState({
+                  datasetsForContextMenu: this.props.selectedDatasets,
+                });
+              } else {
+                // If dataset is clicked which is not selected, ignore the selected
+                // datasets.
+                this.setState({
+                  datasetsForContextMenu: [record],
+                });
+              }
             },
             onDoubleClick: () => {
               window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
             },
           })}
           rowSelection={{
-            selectedRowKeys: this.props.selectedDataset ? [this.props.selectedDataset.name] : [],
-            onSelectNone: () => this.props.onSelectDataset?.(null),
+            selectedRowKeys: this.props.selectedDatasets.map((ds) => ds.name),
+            onSelectNone: () => this.props.onSelectDataset(null),
           }}
         >
           <Column
@@ -644,7 +696,7 @@ export function DatasetTags({
   };
 
   return (
-    <div style={{ maxWidth: 280 }}>
+    <div className="tags-container">
       {dataset.tags.map((tag) => (
         <CategorizationLabel
           tag={tag}

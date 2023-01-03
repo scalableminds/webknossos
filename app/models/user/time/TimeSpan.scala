@@ -47,12 +47,12 @@ object TimeSpan {
 
 class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
-  val collection = Timespans
+  protected val collection = Timespans
 
-  def idColumn(x: Timespans): Rep[String] = x._Id
-  def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Timespans): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TimespansRow): Fox[TimeSpan] =
+  protected def parse(r: TimespansRow): Fox[TimeSpan] =
     Fox.successful(
       TimeSpan(
         ObjectId(r._Id),

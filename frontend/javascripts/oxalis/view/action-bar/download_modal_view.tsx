@@ -285,9 +285,11 @@ with wk.webknossos_context(
 `;
 
   const alertTokenIsPrivate = () => {
-    Toast.warning(
-      "The clipboard contains private data. Do not share this information with anyone you do not trust!",
-    );
+    if (authToken) {
+      Toast.warning(
+        "The clipboard contains private data. Do not share this information with anyone you do not trust!",
+      );
+    }
   };
 
   const hasVolumes = hasVolumeTracings(tracing);

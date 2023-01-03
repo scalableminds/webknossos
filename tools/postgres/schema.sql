@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(93);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(94);
 COMMIT TRANSACTION;
 
 
@@ -287,6 +287,8 @@ CREATE TABLE webknossos.organizations(
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
+  lastTermsOfServiceAcceptanceTime TIMESTAMPTZ,
+  lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0,
   lastStorageScanTime TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
@@ -314,6 +316,7 @@ CREATE TABLE webknossos.users(
   userConfiguration JSONB NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isAdmin BOOLEAN NOT NULL DEFAULT false,
+  isOrganizationOwner BOOLEAN NOT NULL DEFAULT false,
   isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,

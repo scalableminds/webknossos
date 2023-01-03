@@ -30,13 +30,13 @@ case class Worker(_id: ObjectId,
 
 class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
-  val collection = Workers
+  protected val collection = Workers
 
-  def idColumn(x: Workers): Rep[String] = x._Id
+  protected def idColumn(x: Workers): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
 
-  def parse(r: WorkersRow): Fox[Worker] =
+  protected def parse(r: WorkersRow): Fox[Worker] =
     Fox.successful(
       Worker(
         ObjectId(r._Id),

@@ -625,6 +625,11 @@ export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {
   return _maybe.isJust ? _maybe.get() : null;
 }
 
+export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
+  // @ts-ignore
+  return arr.filter((el) => el != null);
+}
+
 // TODO: Remove this function as it's currently unused
 // Filters an array given a search string. Supports searching for several words as OR query.
 // Supports nested properties

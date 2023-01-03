@@ -22,7 +22,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[UserService]).asEagerSingleton()
     bind(classOf[TaskService]).asEagerSingleton()
     bind(classOf[UserDAO]).asEagerSingleton()
-    bind(classOf[UserTeamRolesDAO]).asEagerSingleton()
     bind(classOf[UserExperiencesDAO]).asEagerSingleton()
     bind(classOf[UserDataSetConfigurationDAO]).asEagerSingleton()
     bind(classOf[UserCache]).asEagerSingleton()

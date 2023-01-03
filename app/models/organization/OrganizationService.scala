@@ -31,7 +31,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
         "newUserMailingList" -> organization.newUserMailingList,
-        "pricingPlan" -> organization.pricingPlan
+        "pricingPlan" -> organization.pricingPlan,
+        "lastTermsOfServiceAcceptanceTime" -> organization.lastTermsOfServiceAcceptanceTime,
+        "lastTermsOfServiceAcceptanceVersion" -> organization.lastTermsOfServiceAcceptanceVersion
       )
     } else Json.obj()
     for {

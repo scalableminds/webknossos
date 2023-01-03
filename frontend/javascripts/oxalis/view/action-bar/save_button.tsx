@@ -145,7 +145,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         </Tooltip>
         {showUnsavedWarning ? (
           <Tooltip
-            visible
+            open
             title={`There are unsaved changes which are older than ${Math.ceil(
               UNSAVED_WARNING_THRESHOLD / 1000 / 60,
             )} minutes. Please ensure that your Internet connection works and wait until this warning disappears.`}

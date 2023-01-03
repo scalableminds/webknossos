@@ -55,19 +55,18 @@ class MeshController @Inject()(
       }
     }
 
-  def listMeshChunksForSegmentForVersion(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      formatVersion: Int,
-      /* If targetMappingName is set, assume that meshfile contains meshes for
+  def listMeshChunksForSegmentForVersion(token: Option[String],
+                                         organizationName: String,
+                                         dataSetName: String,
+                                         dataLayerName: String,
+                                         formatVersion: Int,
+                                         /* If targetMappingName is set, assume that meshfile contains meshes for
                                            the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
                                            belonging to the supplied agglomerate id.
                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
-       */
-      targetMappingName: Option[String],
-      editableMappingTracingId: Option[String] = None): Action[ListMeshChunksRequest] =
+                                          */
+                                         targetMappingName: Option[String],
+                                         editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {

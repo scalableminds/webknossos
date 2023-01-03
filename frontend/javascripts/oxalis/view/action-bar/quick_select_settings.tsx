@@ -12,13 +12,14 @@ import Shortcut from "libs/shortcut_component";
 import { Radio, RadioChangeEvent } from "antd";
 import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 import ButtonComponent from "../components/button_component";
+import { showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
   { label: "Light Segment", value: "light" },
 ];
 
-export function QuickSelectControls({ setIsOpen }: { setIsOpen: (val: boolean) => void }) {
+export function QuickSelectControls() {
   const isQuickSelectActive = useSelector(
     (state: OxalisState) => state.uiInformation.isQuickSelectActive,
   );
@@ -78,11 +79,11 @@ export function QuickSelectControls({ setIsOpen }: { setIsOpen: (val: boolean) =
 
   const onDiscard = () => {
     dispatch(cancelQuickSelectAction());
-    setIsOpen(false);
+    dispatch(showQuickSelectSettingsAction(false));
   };
   const onConfirm = () => {
     dispatch(confirmQuickSelectAction());
-    setIsOpen(false);
+    dispatch(showQuickSelectSettingsAction(false));
   };
 
   return (

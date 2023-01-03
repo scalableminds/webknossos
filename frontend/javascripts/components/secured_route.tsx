@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import React from "react";
 import LoginView from "admin/auth/login_view";
 
-type Props = RouteComponentProps & {
+export type SecuredRouteProps = RouteComponentProps & {
   component?: ComponentType<any>;
   path: string;
   render?: (arg0: RouteComponentProps) => React.ReactNode;
@@ -16,7 +16,7 @@ type State = {
   isAdditionallyAuthenticated: boolean;
 };
 
-class SecuredRoute extends React.PureComponent<Props, State> {
+class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
   state: State = {
     isAdditionallyAuthenticated: false,
   };
@@ -70,4 +70,4 @@ class SecuredRoute extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<Props, any>(SecuredRoute);
+export default withRouter<SecuredRouteProps, any>(SecuredRoute);

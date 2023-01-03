@@ -465,8 +465,8 @@ function _SegmentListItem({
         // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
         autoDestroy
         placement="bottom"
-        visible={activeDropdownSegmentId === segment.id}
-        onVisibleChange={(isVisible) => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
+        open={activeDropdownSegmentId === segment.id}
+        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>

@@ -28,7 +28,7 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
@@ -391,24 +391,28 @@ function AdditionalSkeletonModesButtons() {
   );
 }
 
-const mapId = (volumeTracing: VolumeTracing | null | undefined, id: number) => {
-  if (!volumeTracing) {
+const mapId = (volumeTracingId: string | null | undefined, id: number) => {
+  if (!volumeTracingId) {
     return null;
   }
-  const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+  const { cube } = Model.getSegmentationTracingLayer(volumeTracingId);
   return cube.mapId(id);
 };
 
 function CreateCellButton() {
-  const volumeTracing = useSelector((state: OxalisState) => getActiveSegmentationTracing(state));
-  const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
+  const volumeTracingId = useSelector(
+    (state: OxalisState) => getActiveSegmentationTracing(state)?.tracingId,
+  );
+  const unmappedActiveCellId = useSelector(
+    (state: OxalisState) => getActiveSegmentationTracing(state)?.activeCellId || 0,
+  );
   const { mappingStatus } = useSelector((state: OxalisState) =>
-    getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
+    getMappingInfoForVolumeTracing(state, volumeTracingId),
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
 
   const activeCellId = isMappingEnabled
-    ? mapId(volumeTracing, unmappedActiveCellId)
+    ? mapId(volumeTracingId, unmappedActiveCellId)
     : unmappedActiveCellId;
 
   const activeCellColor = useSelector((state: OxalisState) => {
@@ -538,9 +542,8 @@ function ChangeBrushSizeButton() {
               roundTo={0}
               min={userSettings.brushSize.minimum}
               max={maximumBrushSize}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              step={5}
-              spans={[0, 14, 10]}
+              precision={0}
+              spans={[0, 16, 8]}
               value={brushSize}
               onChange={handleUpdateBrushSize}
             />
@@ -970,17 +973,19 @@ function ToolSpecificSettings({
 }
 
 function QuickSelectSettingsPopover() {
-  const [isOpen, setIsOpen] = useState(false);
-  const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.isQuickSelectActive,
+  const dispatch = useDispatch();
+  const { isQuickSelectActive, areQuickSelectSettingsOpen } = useSelector(
+    (state: OxalisState) => state.uiInformation,
   );
   return (
     <Popover
       trigger="click"
       placement="bottom"
-      open={isOpen}
-      content={<QuickSelectControls setIsOpen={setIsOpen} />}
-      onOpenChange={(open: boolean) => setIsOpen(open)}
+      open={areQuickSelectSettingsOpen}
+      content={<QuickSelectControls />}
+      onOpenChange={(open: boolean) => {
+        dispatch(showQuickSelectSettingsAction(open));
+      }}
     >
       <ButtonComponent
         title="Configure Quick Select"

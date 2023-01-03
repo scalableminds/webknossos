@@ -1,20 +1,21 @@
-package utils
+package utils.sql
 
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsValue, Json}
-import slick.dbio.Effect
+import slick.dbio.{Effect, NoStream}
 import slick.jdbc._
-import slick.sql.SqlStreamingAction
+import slick.sql.{SqlAction, SqlStreamingAction}
 import slick.util.DumpInfo
+import utils.ObjectId
 
 import java.sql.{PreparedStatement, Types}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
 
-class NestedSQLInterpolator(val s: StringContext) extends AnyVal {
-  def nsql(param: Any*): SqlToken = {
+class SqlInterpolator(val s: StringContext) extends AnyVal {
+  def q(param: Any*): SqlToken = {
     val parts = s.parts.toList
     val values = param.toList
 
@@ -28,15 +29,13 @@ class NestedSQLInterpolator(val s: StringContext) extends AnyVal {
       if (i < values.length) {
         val value = values(i)
         value match {
-          case x: SqlToken => {
+          case x: SqlToken =>
             outputSql ++= x.sql
             outputValues ++= x.values
-          }
-          case x => {
+          case x =>
             val sqlValue = SqlValue.makeSqlValue(x)
-            outputSql ++= sqlValue.getPlaceholder()
+            outputSql ++= sqlValue.placeholder
             outputValues += sqlValue
-          }
         }
       }
     }
@@ -45,41 +44,39 @@ class NestedSQLInterpolator(val s: StringContext) extends AnyVal {
   }
 }
 
-object NestedSQLInterpolation {
-  implicit def nestedSQLInterpolation(s: StringContext): NestedSQLInterpolator = new NestedSQLInterpolator(s)
+object SqlInterpolation {
+  implicit def sqlInterpolation(s: StringContext): SqlInterpolator = new SqlInterpolator(s)
 }
 
 case class SqlToken(sql: String, values: List[SqlValue] = List()) {
-  def debug: String = {
+  def debugInfo: String = {
+    // The debugInfo should be pastable in an SQL client
     val parts = sql.split("\\?", -1)
     assert(parts.tail.length == values.length)
-    parts.tail.zip(values).foldLeft(parts.head)((acc, x) => acc + x._2.debug() + x._1)
+    parts.tail.zip(values).foldLeft(parts.head)((acc, x) => acc + x._2.debugInfo + x._1)
   }
 
-  def as[R](implicit rconv: GetResult[R]): SqlStreamingAction[Vector[R], R, Effect] =
+  def as[R](implicit resultConverter: GetResult[R]): SqlStreamingAction[Vector[R], R, Effect] =
     new StreamingInvokerAction[Vector[R], R, Effect] {
-      def statements = List(sql)
+      def statements: List[String] = List(sql)
 
-      protected[this] def createInvoker(statements: Iterable[String]) = new StatementInvoker[R] {
-        val getStatement = statements.head
+      protected[this] def createInvoker(statements: Iterable[String]): StatementInvoker[R] = new StatementInvoker[R] {
+        val getStatement: String = statements.head
 
-        protected def setParam(st: PreparedStatement) = {
+        protected def setParam(st: PreparedStatement): Unit = {
           val pp = new PositionedParameters(st);
           values.foreach(_.setParameter(pp))
         }
 
-        protected def extractValue(rs: PositionedResult): R = rconv(rs)
+        protected def extractValue(rs: PositionedResult): R = resultConverter(rs)
       }
 
-      override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[${debug}]")
+      override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[${debugInfo}]")
 
-      protected[this] def createBuilder = Vector.newBuilder[R]
+      protected[this] def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }
 
-  def asUpdate = as[Int](GetUpdateValue).head
-
-  def stripMargin(marginChar: Char): SqlToken = copy(sql = sql.stripMargin(marginChar))
-  def stripMargin: SqlToken = copy(sql = sql.stripMargin)
+  def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](GetUpdateValue).head
 }
 
 object SqlToken {
@@ -90,7 +87,7 @@ object SqlToken {
       val value = values(i);
       value match {
         case Left(x) => {
-          outputSql ++= x.getPlaceholder()
+          outputSql ++= x.placeholder
           outputValues += x
         }
         case Right(x) => {
@@ -105,20 +102,20 @@ object SqlToken {
     SqlToken(sql = outputSql.toString, values = outputValues.toList)
   }
 
-  def tuple(values: List[Any]): SqlToken = {
+  def tuple(values: Seq[Any]): SqlToken = {
     val sqlValues = values.map(SqlValue.makeSqlValue)
-    SqlToken(sql = s"(${sqlValues.map(_.getPlaceholder()).mkString(", ")})", values = sqlValues)
+    SqlToken(sql = s"(${sqlValues.map(_.placeholder).mkString(", ")})", values = sqlValues.toList)
   }
 
-  def tupleList(values: List[List[Any]]): SqlToken = {
+  def tupleList(values: Seq[Seq[Any]]): SqlToken = {
     val sqlValueLists = values.map(list => list.map(SqlValue.makeSqlValue))
-    SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.getPlaceholder()).mkString(", ")})").mkString(", "),
-             values = sqlValueLists.flatten)
+    SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.placeholder).mkString(", ")})").mkString(", "),
+             values = sqlValueLists.flatten.toList)
   }
 
   def raw(s: String) = SqlToken(s)
 
-  def empty(): SqlToken = raw("")
+  def empty: SqlToken = raw("")
 
   def identifier(id: String): SqlToken = raw('"' + id + '"')
 }
@@ -126,9 +123,9 @@ object SqlToken {
 trait SqlValue {
   def setParameter(pp: PositionedParameters): Unit
 
-  def getPlaceholder(): String = "?"
+  def placeholder: String = "?"
 
-  def debug(): String
+  def debugInfo: String
 }
 
 object SqlValue {
@@ -142,70 +139,70 @@ object SqlValue {
           case Some(y) => makeSqlValue(y)
           case None    => NoneValue()
         }
-      case x: Short    => ShortValue(x)
-      case x: Int      => IntValue(x)
-      case x: Long     => LongValue(x)
-      case x: Float    => FloatValue(x)
-      case x: Double   => DoubleValue(x)
-      case x: Boolean  => BooleanValue(x)
-      case x: Instant  => InstantValue(x)
-      case x: Duration => DurationValue(x)
-      case x: ObjectId => ObjectIdValue(x)
-      case x: JsValue  => JsonValue(x)
+      case x: Short          => ShortValue(x)
+      case x: Int            => IntValue(x)
+      case x: Long           => LongValue(x)
+      case x: Float          => FloatValue(x)
+      case x: Double         => DoubleValue(x)
+      case x: Boolean        => BooleanValue(x)
+      case x: Instant        => InstantValue(x)
+      case x: FiniteDuration => DurationValue(x)
+      case x: ObjectId       => ObjectIdValue(x)
+      case x: JsValue        => JsonValue(x)
     }
 }
 
 case class StringValue(v: String) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v)
 
-  override def debug(): String = "'" + v + "'"
+  override def debugInfo: String = "'" + v + "'"
 }
 
 case class ShortValue(v: Short) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setShort(v)
 
-  override def debug(): String = s"$v"
+  override def debugInfo: String = s"$v"
 }
 
 case class IntValue(v: Int) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setInt(v)
 
-  override def debug(): String = s"$v"
+  override def debugInfo: String = s"$v"
 }
 
 case class LongValue(v: Long) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setLong(v)
 
-  override def debug(): String = s"$v"
+  override def debugInfo: String = s"$v"
 }
 
 case class FloatValue(v: Float) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setFloat(v)
 
-  override def debug(): String = s"$v"
+  override def debugInfo: String = s"$v"
 }
 
 case class DoubleValue(v: Double) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setDouble(v)
 
-  override def debug(): String = s"$v"
+  override def debugInfo: String = s"$v"
 }
 
 case class BooleanValue(v: Boolean) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setBoolean(v)
 
-  override def debug(): String = s"$v"
+  override def debugInfo: String = s"$v"
 }
 
 case class InstantValue(v: Instant) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
 
-  override def getPlaceholder(): String = "?::TIMESTAMPTZ"
+  override def placeholder: String = "?::TIMESTAMPTZ"
 
-  override def debug(): String = s"'${v.toString}'::TIMESTAMPTZ"
+  override def debugInfo: String = s"'${v.toString}'"
 }
 
-case class DurationValue(v: Duration) extends SqlValue {
+case class DurationValue(v: FiniteDuration) extends SqlValue {
 
   private def stringifyDuration = v.unit match {
     case duration.NANOSECONDS  => s"${v.length.toDouble / 1000.0} MICROSECONDS"
@@ -220,29 +217,29 @@ case class DurationValue(v: Duration) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit =
     pp.setString(stringifyDuration)
 
-  override def getPlaceholder(): String = "?::INTERVAL"
+  override def placeholder: String = "?::INTERVAL"
 
-  override def debug(): String = s"'${stringifyDuration}'::INTERVAL"
+  override def debugInfo: String = s"'${stringifyDuration}'"
 }
 
 case class ObjectIdValue(v: ObjectId) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v.id)
 
-  override def debug(): String = s"'${v.id}'"
+  override def debugInfo: String = s"'${v.id}'"
 }
 
 case class JsonValue(v: JsValue) extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(Json.stringify(v))
 
-  override def getPlaceholder(): String = "?::JSONB"
+  override def placeholder: String = "?::JSONB"
 
-  override def debug(): String = s"'${Json.stringify(v)}'"
+  override def debugInfo: String = s"'${Json.stringify(v)}'"
 }
 
 case class NoneValue() extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setNull(Types.BOOLEAN)
 
-  override def debug(): String = "NULL"
+  override def debugInfo: String = "NULL"
 }
 
 private object GetUpdateValue extends GetResult[Int] {

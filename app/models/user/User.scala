@@ -15,7 +15,8 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.sql.{SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 

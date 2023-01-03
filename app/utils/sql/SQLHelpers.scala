@@ -1,4 +1,4 @@
-package utils
+package utils.sql
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
@@ -11,8 +11,9 @@ import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.{GetResult, PositionedParameters, PositionedResult, PostgresProfile, SetParameter}
+import slick.jdbc._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import utils.ObjectId
 
 import javax.inject.Inject
 import scala.annotation.nowarn

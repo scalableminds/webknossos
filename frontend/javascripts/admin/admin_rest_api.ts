@@ -1459,6 +1459,7 @@ type ReserveUploadInformation = {
   name: string;
   totalFileCount: number;
   initialTeams: Array<string>;
+  folderId: string | null;
 };
 
 export function reserveDatasetUpload(

@@ -276,6 +276,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         totalFileCount: formValues.zipFile.length,
         layersToLink: [],
         initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
+        folderId: this.state.targetFolderId,
       };
       const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
@@ -737,15 +738,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name="targetFolder"
               label="Target Folder"
               info="The folder into which the dataset will be uploaded. The dataset can be moved later after upload, too. When not selecting a folder, the dataset will be placed into the root folder."
-              validateStatus={needsConversion ? "warning" : "success"}
-              help={
-                needsConversion
-                  ? "The dataset will be put into the root folder after the import, because specifying a target folder for non-native file formats is not supported, yet."
-                  : ""
-              }
             >
               <FolderSelection
-                disabled={needsConversion}
                 width="50%"
                 folderId={this.state.targetFolderId}
                 onChange={(targetFolderId) => this.setState({ targetFolderId })}

@@ -67,7 +67,7 @@ class MeshController @Inject()(
                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
        */
       targetMappingName: Option[String],
-      targetMappingIsEditable: Option[Boolean] = None): Action[ListMeshChunksRequest] =
+      editableMappingTracingId: Option[String] = None): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
@@ -90,7 +90,7 @@ class MeshController @Inject()(
                                                                          dataSetName,
                                                                          dataLayerName,
                                                                          mapping,
-                                                                         targetMappingIsEditable.getOrElse(false),
+                                                                         editableMappingTracingId,
                                                                          request.body.segmentId,
                                                                          urlOrHeaderToken(token, request))
                     meshChunksForUnmappedSegments = segmentIds.map(
@@ -114,33 +114,44 @@ class MeshController @Inject()(
                                          dataSetName: String,
                                          dataLayerName: String,
                                          mappingName: String,
-                                         isEditableMapping: Boolean,
+                                         editableMappingTracingId: Option[String],
                                          agglomerateId: Long,
-                                         token: Option[String]): Fox[List[Long]] =
-    if (isEditableMapping) {
-      for {
-        tracingstoreUri <- dsRemoteWebKnossosClient.getTracingstoreUri
-        // TODO tracing id?
-        segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
-          mappingName,
-                                                                                                  agglomerateId,
-                                                                                                  token)
-        // TODO fall back to on-disk mapping if agglomerate id was not present.
-      } yield segmentIdsResult.segmentIds
-    } else {
-      for {
-        agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
-          AgglomerateFileKey(
-            organizationName,
-            dataSetName,
-            dataLayerName,
-            mappingName
-          ),
-          agglomerateId
-        )
-      } yield segmentIds
+                                         token: Option[String]): Fox[List[Long]] = {
+    val agglomerateFileKey = AgglomerateFileKey(
+      organizationName,
+      dataSetName,
+      dataLayerName,
+      mappingName
+    )
+    editableMappingTracingId match {
+      case Some(tracingId) =>
+        for {
+          tracingstoreUri <- dsRemoteWebKnossosClient.getTracingstoreUri
+          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
+                                                                                                    tracingId,
+                                                                                                    agglomerateId,
+                                                                                                    token)
+          segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
+            Fox.successful(segmentIdsResult.segmentIds)
+          else
+            for {
+              agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+                agglomerateFileKey,
+                agglomerateId
+              )
+            } yield localSegmentIds
+        } yield segmentIds
+      case _ =>
+        for {
+          agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+          segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+            agglomerateFileKey,
+            agglomerateId
+          )
+        } yield segmentIds
     }
+  }
 
   def readMeshChunkV0(token: Option[String],
                       organizationName: String,

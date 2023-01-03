@@ -62,6 +62,8 @@ class WKRemoteDataStoreController @Inject()(
           dataSet <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataSet.name.alreadyTaken"
           _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user))
           _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
+          _ <- Fox.runOptional(uploadInfo.folderId)(fId =>
+            dataSetService.moveToFolder(dataSet._id, fId)(AuthorizedAccessContext(user)))
         } yield Ok
       }
     }

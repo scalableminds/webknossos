@@ -310,6 +310,13 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- dataSetDAO.updateUploader(dataSet._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
+  def moveToFolder(datasetId: ObjectId, folderId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      folderIdValidated <- ObjectId.fromString(folderId)
+      _ <- folderDAO.assertUpdateAccess(folderIdValidated) ?~> "folder.noWriteAccess"
+      _ <- dataSetDAO.updateFolder(datasetId, folderIdValidated)
+    } yield ()
+
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
                    organization: Option[Organization],

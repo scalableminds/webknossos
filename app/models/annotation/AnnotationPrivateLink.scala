@@ -3,14 +3,15 @@ package models.annotation
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{AnnotationPrivatelinks, _}
+import com.scalableminds.webknossos.schema.Tables._
 import oxalis.security.RandomIDGenerator
 
 import javax.inject.Inject
 import play.api.libs.json.{JsValue, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 

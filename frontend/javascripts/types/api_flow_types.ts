@@ -907,7 +907,7 @@ export type FolderItem = {
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
-  // Can be set to that the antd tree component can disable
+  // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
 };

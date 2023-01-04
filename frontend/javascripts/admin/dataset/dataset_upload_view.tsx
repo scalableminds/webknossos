@@ -342,15 +342,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
                 );
               }
-            } else {
-              if (this.state.targetFolderId) {
-                const datasetId = {
-                  owningOrganization: activeUser.organization,
-                  name: formValues.name,
-                };
-                const dataset = await getDataset(datasetId);
-                await updateDataset(datasetId, dataset, this.state.targetFolderId, true);
-              }
             }
 
             this.setState({

@@ -8,7 +8,8 @@ import models.user.{UserDAO, UserService}
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

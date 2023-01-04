@@ -80,7 +80,7 @@ trait Escaping {
       escaped.toString
     }
   }
-  
+
   protected def writeEscapedTuple(seq: List[String]): String =
     "(" + seq.map(escapeLiteral).mkString(", ") + ")"
 

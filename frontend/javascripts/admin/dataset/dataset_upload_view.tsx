@@ -668,17 +668,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   name="initialTeams"
                   label="Teams allowed to access this dataset"
                   hasFeedback
-                  rules={[
-                    {
-                      required: !isDatasetManagerOrAdmin,
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
-                      message: !isDatasetManagerOrAdmin
-                        ? messages["dataset.import.required.initialTeam"]
-                        : null,
-                    },
-                  ]}
                 >
-                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
+                  <Tooltip title="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here.">
                     <TeamSelectionComponent
                       mode="multiple"
                       value={this.state.selectedTeams}
@@ -728,12 +719,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             <FormItemWithInfo
               name="targetFolder"
               label="Target Folder"
-              info="The folder into which the dataset will be uploaded. The dataset can be moved later after upload, too. When not selecting a folder, the dataset will be placed into the root folder."
+              info="The folder into which the dataset will be uploaded. The dataset can be moved after upload. Note that teams that have access to the specified folder will be able to see the uploaded dataset."
+              rules={[
+                {
+                  required: true,
+                  message: messages["dataset.import.required.folder"],
+                },
+              ]}
             >
               <FolderSelection
                 width="50%"
                 folderId={this.state.targetFolderId}
                 onChange={(targetFolderId) => this.setState({ targetFolderId })}
+                disableNotEditableFolders
               />
             </FormItemWithInfo>
 

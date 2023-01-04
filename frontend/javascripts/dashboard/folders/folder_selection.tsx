@@ -1,20 +1,51 @@
 import { TreeSelect } from "antd";
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
+
+function addDisabledProperty(tree) {
+  const newTree = _.cloneDeep(tree);
+
+  function traverse(element) {
+    if (Array.isArray(element.children)) {
+      element.children.forEach(traverse);
+    }
+    if (typeof element.isEditable === "boolean") {
+      element.disabled = !element.isEditable;
+    }
+  }
+
+  newTree.forEach(traverse);
+
+  return newTree;
+}
 
 export default function FolderSelection({
   folderId,
   onChange,
   width,
   disabled,
+  disableNotEditableFolders,
 }: {
   folderId: string | null;
   onChange: (id: string | null) => void;
   width?: string | number | null;
   disabled?: boolean;
+  disableNotEditableFolders?: boolean;
 }) {
+  const [treeData, setTreeData] = useState([]);
   const { data: hierarchy } = useFolderHierarchyQuery();
+
+  useEffect(() => {
+    if (hierarchy) {
+      const newTree = disableNotEditableFolders
+        ? addDisabledProperty(hierarchy.tree)
+        : hierarchy.tree;
+      setTreeData(newTree);
+    } else {
+      setTreeData([]);
+    }
+  }, [hierarchy]);
 
   return (
     <TreeSelect
@@ -28,7 +59,7 @@ export default function FolderSelection({
       dropdownMatchSelectWidth={false}
       treeDefaultExpandAll
       onChange={onChange}
-      treeData={hierarchy?.tree || []}
+      treeData={treeData}
       fieldNames={{ label: "title", value: "key", children: "children" }}
       treeNodeLabelProp="title"
     />

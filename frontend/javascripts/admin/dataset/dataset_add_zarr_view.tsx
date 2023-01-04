@@ -217,6 +217,7 @@ function DatasetAddZarrView(props: Props) {
                     width="50%"
                     folderId={targetFolderId}
                     onChange={setTargetFolderId}
+                    disableNotEditableFolders
                   />
                 </FormItemWithInfo>{" "}
               </List.Item>

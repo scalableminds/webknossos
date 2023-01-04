@@ -23,7 +23,7 @@ function prepare {
   node_modules/.bin/esbuild \
     --platform=node \
     --format=cjs \
-    --define:process.env.BABEL_ENV=\"test\" \
+    --define:process.env.IS_TESTING=\"true\" \
     --target=node10.4 \
     --outdir="$testBundlePath" $($FIND frontend/javascripts \( -name "*.ts" -o -name "*.tsx" \))
 

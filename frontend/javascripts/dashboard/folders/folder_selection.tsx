@@ -1,12 +1,14 @@
+import _ from "lodash";
 import { TreeSelect } from "antd";
 import React, { useState, useEffect } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
+import { FolderItem } from "types/api_flow_types";
 
-function addDisabledProperty(tree) {
+function addDisabledProperty(tree: FolderItem[]) {
   const newTree = _.cloneDeep(tree);
 
-  function traverse(element) {
+  function traverse(element: FolderItem) {
     if (Array.isArray(element.children)) {
       element.children.forEach(traverse);
     }
@@ -33,7 +35,7 @@ export default function FolderSelection({
   disabled?: boolean;
   disableNotEditableFolders?: boolean;
 }) {
-  const [treeData, setTreeData] = useState([]);
+  const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const { data: hierarchy } = useFolderHierarchyQuery();
 
   useEffect(() => {

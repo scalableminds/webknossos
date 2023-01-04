@@ -200,7 +200,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       else { q" AND (r._user = ${currentUser._id})" }
     val runIdsQ = runIds.map(runIds => q" AND r._id IN ${SqlToken.tuple(runIds)}").getOrElse(SqlToken.empty)
     val workflowHashQ =
-      workflowHash.map(workflowHash => q" AND r.workflow_hash = ${workflowHash}").getOrElse(SqlToken.empty)
+      workflowHash.map(workflowHash => q" AND r.workflow_hash = $workflowHash").getOrElse(SqlToken.empty)
     for {
       r <- run(q"""
         SELECT
@@ -381,7 +381,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertTask(runId: ObjectId, name: String, task: String, config: JsValue): Fox[ObjectId] =
     for {
       _ <- run(q"""INSERT INTO webknossos.voxelytics_tasks (_id, _run, name, task, config)
-                VALUES (${ObjectId.generate}, $runId, $name, $task, ${config})
+                VALUES (${ObjectId.generate}, $runId, $name, $task, $config)
                 ON CONFLICT (_run, name)
                   DO UPDATE SET
                     task = EXCLUDED.task,

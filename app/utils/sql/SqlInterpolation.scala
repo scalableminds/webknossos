@@ -9,6 +9,7 @@ import slick.util.DumpInfo
 import utils.ObjectId
 
 import java.sql.{PreparedStatement, Types}
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration
@@ -24,7 +25,7 @@ class SqlInterpolator(val s: StringContext) extends AnyVal {
 
     assert(parts.length == values.length + 1)
     for (i <- parts.indices) {
-      outputSql ++= parts(i);
+      outputSql ++= parts(i)
 
       if (i < values.length) {
         val value = values(i)
@@ -64,14 +65,14 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
         val getStatement: String = statements.head
 
         protected def setParam(st: PreparedStatement): Unit = {
-          val pp = new PositionedParameters(st);
+          val pp = new PositionedParameters(st)
           values.foreach(_.setParameter(pp))
         }
 
         protected def extractValue(rs: PositionedResult): R = resultConverter(rs)
       }
 
-      override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[${debugInfo}]")
+      override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
 
       protected[this] def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }
@@ -84,19 +85,17 @@ object SqlToken {
     val outputSql = mutable.StringBuilder.newBuilder
     val outputValues = ListBuffer[SqlValue]()
     for (i <- values.indices) {
-      val value = values(i);
+      val value = values(i)
       value match {
-        case Left(x) => {
+        case Left(x) =>
           outputSql ++= x.placeholder
           outputValues += x
-        }
-        case Right(x) => {
+        case Right(x) =>
           outputSql ++= x.sql
           outputValues ++= x.values
-        }
       }
       if (i < values.length - 1) {
-        outputSql ++= sep;
+        outputSql ++= sep
       }
     }
     SqlToken(sql = outputSql.toString, values = outputValues.toList)
@@ -113,7 +112,7 @@ object SqlToken {
              values = sqlValueLists.flatten.toList)
   }
 
-  def raw(s: String) = SqlToken(s)
+  def raw(s: String): SqlToken = SqlToken(s)
 
   def empty: SqlToken = raw("")
 
@@ -130,6 +129,7 @@ trait SqlValue {
 
 object SqlValue {
 
+  @tailrec
   def makeSqlValue(p: Any): SqlValue =
     p match {
       case x: SqlValue => x
@@ -219,7 +219,7 @@ case class DurationValue(v: FiniteDuration) extends SqlValue {
 
   override def placeholder: String = "?::INTERVAL"
 
-  override def debugInfo: String = s"'${stringifyDuration}'"
+  override def debugInfo: String = s"'$stringifyDuration'"
 }
 
 case class ObjectIdValue(v: ObjectId) extends SqlValue {

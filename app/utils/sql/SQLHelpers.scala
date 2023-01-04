@@ -11,6 +11,7 @@ import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
+import utils.sql.SqlInterpolation.sqlInterpolation
 import slick.jdbc._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 import utils.ObjectId
@@ -59,6 +60,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     extends FoxImplicits
     with LazyLogging
     with SQLTypeImplicits {
+
+  implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)
 
   protected lazy val transactionSerializationError = "could not serialize access"
 

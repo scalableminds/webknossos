@@ -4,7 +4,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json._
-import utils.sql.SqlInterpolation.sqlInterpolation
 import utils.sql.{SQLClient, SimpleSQLDAO, SqlToken}
 import utils.ObjectId
 

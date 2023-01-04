@@ -61,7 +61,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
+  def createPreliminaryDataset(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
     val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), notYetUploadedStatus)
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }
@@ -308,13 +308,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- bool2Fox(dataSet._uploader.isEmpty) ?~> "dataSet.uploader.notEmpty"
       _ <- dataSetDAO.updateUploader(dataSet._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
-    } yield ()
-
-  def moveToFolder(datasetId: ObjectId, folderId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      folderIdValidated <- ObjectId.fromString(folderId)
-      _ <- folderDAO.assertUpdateAccess(folderIdValidated) ?~> "folder.noWriteAccess"
-      _ <- dataSetDAO.updateFolder(datasetId, folderIdValidated)
     } yield ()
 
   def publicWrites(dataSet: DataSet,

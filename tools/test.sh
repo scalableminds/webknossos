@@ -20,11 +20,13 @@ function prepare {
   pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
 
+  # Beginning from target==node13, dynamic imports are not converted anymore by esbuild. Tests which use code
+  # that relies on dynamic imports fails then because the module cannot be found for some reason.
   node_modules/.bin/esbuild \
     --platform=node \
     --format=cjs \
     --define:process.env.IS_TESTING=\"true\" \
-    --target=node10.4 \
+    --target=node12 \
     --outdir="$testBundlePath" $($FIND frontend/javascripts \( -name "*.ts" -o -name "*.tsx" \))
 
   # Copy files which were not compiled by esbuild (e.g., snapshots).

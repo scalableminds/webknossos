@@ -517,7 +517,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
               );
               const needsConversion = wkwFile == null;
-              this.handleNeedsConversionInfo(!needsConversion);
+              this.handleNeedsConversionInfo(needsConversion);
 
               const nmlFile = entries.find((entry: Entry) =>
                 Utils.isFileExtensionEqualTo(entry.filename, "nml"),

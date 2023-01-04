@@ -32,13 +32,13 @@ function prepare {
   # Copy files which were not compiled by esbuild (e.g., snapshots).
   find frontend/javascripts -type f -not \( -name "*.ts" -o -name "*.tsx" -o -name "*.png" \) -exec sh -c '
     testBundlePath="public-test/test-bundle"
-    file="$1"
+    file="$1"                # E.g., frontend/javascripts/test/snapshots/public-test/test-bundle/test/libs/nml.spec.js.snap
     from="$file"
     to="$file"
-    to=${to#*/}              # Remove everything until (and including) the first / to trim the first folder
-    to=${to#*/}              # Also remove the second folder
-    to="$testBundlePath/$to" # Add new bundle path as parent
-    to_dir=${to%/*}          # Remove the file name from the path in $to
+    to=${to#*/}              # Remove everything until (and including) the first / to trim the first folder. E.g., javascripts/test/snapshots/public-test/test-bundle/test/libs/nml.spec.js.snap
+    to=${to#*/}              # Also remove the second folder. E.g., test/snapshots/public-test/test-bundle/test/libs/nml.spec.js.snap
+    to="$testBundlePath/$to" # Add new bundle path as parent. E.g. public-test/test-bundle/test/snapshots/public-test/test-bundle/test/libs/nml.spec.js.snap
+    to_dir=${to%/*}          # Remove the file name from the path in $to. E.g., public-test/test-bundle/test/snapshots/public-test/test-bundle/test/libs
     # Only copy when src and dst differ
     cmp --silent $from $to && echo skip $from to $to
     cmp --silent $from $to || mkdir -p $to_dir && cp $from $to

@@ -152,10 +152,10 @@ object SqlValue {
     }
 }
 
-case class StringValue(v: String) extends SqlValue {
+case class StringValue(v: String) extends SqlValue with Escaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v)
 
-  override def debugInfo: String = "'" + v + "'"
+  override def debugInfo: String = escapeLiteral(v)
 }
 
 case class ShortValue(v: Short) extends SqlValue {
@@ -194,15 +194,15 @@ case class BooleanValue(v: Boolean) extends SqlValue {
   override def debugInfo: String = s"$v"
 }
 
-case class InstantValue(v: Instant) extends SqlValue {
+case class InstantValue(v: Instant) extends SqlValue with Escaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
 
   override def placeholder: String = "?::TIMESTAMPTZ"
 
-  override def debugInfo: String = s"'${v.toString}'"
+  override def debugInfo: String = escapeLiteral(v.toString)
 }
 
-case class DurationValue(v: FiniteDuration) extends SqlValue {
+case class DurationValue(v: FiniteDuration) extends SqlValue with Escaping {
 
   private def stringifyDuration = v.unit match {
     case duration.NANOSECONDS  => s"${v.length.toDouble / 1000.0} MICROSECONDS"
@@ -219,21 +219,21 @@ case class DurationValue(v: FiniteDuration) extends SqlValue {
 
   override def placeholder: String = "?::INTERVAL"
 
-  override def debugInfo: String = s"'$stringifyDuration'"
+  override def debugInfo: String = escapeLiteral(stringifyDuration)
 }
 
-case class ObjectIdValue(v: ObjectId) extends SqlValue {
+case class ObjectIdValue(v: ObjectId) extends SqlValue with Escaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v.id)
 
-  override def debugInfo: String = s"'${v.id}'"
+  override def debugInfo: String = escapeLiteral(v.id)
 }
 
-case class JsonValue(v: JsValue) extends SqlValue {
+case class JsonValue(v: JsValue) extends SqlValue with Escaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(Json.stringify(v))
 
   override def placeholder: String = "?::JSONB"
 
-  override def debugInfo: String = s"'${Json.stringify(v)}'"
+  override def debugInfo: String = escapeLiteral(Json.stringify(v))
 }
 
 case class NoneValue() extends SqlValue {

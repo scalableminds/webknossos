@@ -9,7 +9,7 @@ import utils.sql._
 
 import scala.concurrent.duration.DurationInt
 
-class SQLTestSuite extends PlaySpec {
+class SqlInterpolationTestSuite extends PlaySpec {
   "SQL query creation" should {
     "construct an SQLToken with null value" in {
       val sql = q"""SELECT $None"""
@@ -23,6 +23,11 @@ class SQLTestSuite extends PlaySpec {
     "construct an SQLToken with string" in {
       val sql = q"""SELECT * FROM test WHERE name = ${"Amy"}"""
       assert(sql == SqlToken("SELECT * FROM test WHERE name = ?", List(StringValue("Amy"))))
+    }
+    "construct an SQLToken with escaped string" in {
+      val sql = q"""SELECT * FROM test WHERE name = ${"'; DROP TABLE test; --"}"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE name = ?", List(StringValue("'; DROP TABLE test; --"))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE name = '''; DROP TABLE test; --'")
     }
     "construct an SQLToken with numbers" in {
       val sql0 = q"""SELECT * FROM test WHERE age = ${3.shortValue}"""

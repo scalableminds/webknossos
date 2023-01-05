@@ -4,6 +4,6 @@ DROP TABLE webknossos.credentials;
 DROP TYPE webknossos.CREDENTIAL_TYPE;
 DROP VIEW webknossos.credentials_;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 93;
+UPDATE webknossos.releaseInformation SET schemaVersion = 94;
 
 COMMIT TRANSACTION;

@@ -68,7 +68,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("maxTextureImageUnits", maxTextureImageUnits);
   }
 
@@ -291,7 +291,7 @@ export function computeDataTexturesSetup<
     hasSegmentation,
   );
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("maximumLayerCountToRender", maximumLayerCountToRender);
   }
 

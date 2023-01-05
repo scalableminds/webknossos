@@ -40,7 +40,7 @@ object Instant extends FoxImplicits {
     fromStringSync(instantLiteral).toFox
   def fromJoda(jodaDateTime: org.joda.time.DateTime): Instant = Instant(jodaDateTime.getMillis)
   def fromSql(sqlTime: java.sql.Timestamp): Instant = Instant(sqlTime.getTime)
-  def fromCalendar(calendarTime: java.util.Calendar) = Instant(calendarTime.getTimeInMillis)
+  def fromCalendar(calendarTime: java.util.Calendar): Instant = Instant(calendarTime.getTimeInMillis)
   private def fromStringSync(instantLiteral: String): Option[Instant] =
     tryo(java.time.Instant.parse(instantLiteral).toEpochMilli).toOption.map(timestamp => Instant(timestamp))
 

@@ -44,9 +44,20 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     const jsonConfig = url.slice(delimiterIndex + 2);
     // This will throw an error if the URL did not contain valid JSON. The error will be handled by the caller.
     const config = JSON.parse(decodeURIComponent(jsonConfig));
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
-    config.layers.forEach((layer) => {
-      if (!layer.source.startsWith("precomputed://")) {
+
+    if (!("layers" in config && Array.isArray(config.layers))) {
+      throw new Error("Invalid config in URL. No 'layers' array found.");
+    }
+
+    config.layers.forEach((layer: any, index: number) => {
+      if (!("source" in layer)) {
+        throw new Error(`No source property found in a layer ${index + 1}.`);
+      }
+      const isIncompatibleString =
+        typeof layer.source === "string" && !layer.source.startsWith("precomputed://");
+      const isIncompatibleObject =
+        typeof layer.source === "object" && !layer.source.url.startsWith("precomputed://");
+      if (isIncompatibleString || isIncompatibleObject) {
         throw new Error(
           "This dataset contains layers that are not supported. wk-connect supports only 'precomputed://' neuroglancer layers.",
         );

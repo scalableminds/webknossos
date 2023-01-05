@@ -79,14 +79,18 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}".as[TasksRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}"
+          .as[TasksRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}".as[TasksRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
+          .as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -97,7 +101,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
       implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _project = ${projectId.id} and #${accessQuery.debugInfo}
+      r <- run(
+        sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _project = ${projectId.id} and #${accessQuery.debugInfo}
               order by _id desc limit $limit offset ${pageNumber * limit}""".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed

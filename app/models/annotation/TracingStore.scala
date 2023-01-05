@@ -96,7 +96,8 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #${columns.debugInfo} from webknossos.tracingstores_ where url = $url and #${accessQuery.debugInfo}".as[TracingstoresRow])
+        sql"select #${columns.debugInfo} from webknossos.tracingstores_ where url = $url and #${accessQuery.debugInfo}"
+          .as[TracingstoresRow])
       parsed <- parseFirst(r, url)
     } yield parsed
 

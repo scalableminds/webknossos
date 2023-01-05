@@ -88,7 +88,8 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from webknossos.scripts_ where #${accessQuery.debugInfo}".as[ScriptsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from webknossos.scripts_ where #${accessQuery.debugInfo}".as[ScriptsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 }

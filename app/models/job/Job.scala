@@ -127,14 +127,18 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} order by created".as[JobsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} order by created"
+          .as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} and _id = $jobId".as[JobsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} and _id = $jobId"
+          .as[JobsRow])
       parsed <- parseFirst(r, jobId)
     } yield parsed
 

@@ -126,7 +126,9 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Team] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}".as[TeamsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}"
+          .as[TeamsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
@@ -141,7 +143,9 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}".as[TeamsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
+          .as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -170,7 +174,9 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       accessQuery <- readAccessQuery
       idsLiteral = writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))
       idPredicate = if (teamIds.isEmpty) "false" else s"_id IN $idsLiteral"
-      r <- run(sql"SELECT #${columns.debugInfo} FROM #${existingCollectionName.debugInfo} WHERE #$idPredicate AND #${accessQuery.debugInfo}".as[TeamsRow])
+      r <- run(
+        sql"SELECT #${columns.debugInfo} FROM #${existingCollectionName.debugInfo} WHERE #$idPredicate AND #${accessQuery.debugInfo}"
+          .as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 

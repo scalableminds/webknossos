@@ -91,14 +91,18 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}".as[ProjectsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}"
+          .as[ProjectsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} order by created".as[ProjectsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} order by created"
+          .as[ProjectsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -120,9 +124,8 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = '#${sanitize(name)}' and _organization = $organizationId and #${accessQuery.debugInfo}"
-          .as[ProjectsRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = '#${sanitize(
+        name)}' and _organization = $organizationId and #${accessQuery.debugInfo}".as[ProjectsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
 

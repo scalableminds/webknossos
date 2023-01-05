@@ -121,7 +121,8 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}".as[TasktypesRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}"
+          .as[TasktypesRow])
       parsed <- parseFirst(r, id.toString)
     } yield parsed
 
@@ -129,16 +130,17 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where summary = '#${sanitize(summary)}' and _organization = $organizationId and #${accessQuery.debugInfo}"
-          .as[TasktypesRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where summary = '#${sanitize(
+        summary)}' and _organization = $organizationId and #${accessQuery.debugInfo}".as[TasktypesRow])
       parsed <- parseFirst(r, summary)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}".as[TasktypesRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
+          .as[TasktypesRow])
       parsed <- parseAll(r)
     } yield parsed
 

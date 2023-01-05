@@ -9,9 +9,8 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-
 class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-  extends FoxImplicits
+    extends FoxImplicits
     with LazyLogging
     with SqlTypeImplicits
     with SqlEscaping {

@@ -109,21 +109,27 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from webknossos.datastores_ where name = $name and #${accessQuery.debugInfo}".as[DatastoresRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from webknossos.datastores_ where name = $name and #${accessQuery.debugInfo}"
+          .as[DatastoresRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from webknossos.datastores_ where url = $url and #${accessQuery.debugInfo}".as[DatastoresRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from webknossos.datastores_ where url = $url and #${accessQuery.debugInfo}"
+          .as[DatastoresRow])
       parsed <- parseFirst(r, url)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from webknossos.datastores_ where #${accessQuery.debugInfo} order by name".as[DatastoresRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from webknossos.datastores_ where #${accessQuery.debugInfo} order by name"
+          .as[DatastoresRow])
       parsed <- parseAll(r)
     } yield parsed
 

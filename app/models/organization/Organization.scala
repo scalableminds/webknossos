@@ -74,7 +74,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}".as[OrganizationsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
+          .as[OrganizationsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -82,7 +84,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = $name and #${accessQuery.debugInfo}".as[OrganizationsRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = $name and #${accessQuery.debugInfo}"
+          .as[OrganizationsRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 

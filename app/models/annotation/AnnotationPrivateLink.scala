@@ -83,8 +83,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        q"""select $columns from $existingCollectionName where $accessQuery""".as[AnnotationPrivatelinksRow])
+      r <- run(q"""select $columns from $existingCollectionName where $accessQuery""".as[AnnotationPrivatelinksRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -100,8 +99,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
   def findOneByAccessToken(accessToken: String): Fox[AnnotationPrivateLink] =
     for {
       r <- run(
-        q"select $columns from $existingCollectionName where accessToken = $accessToken"
-          .as[AnnotationPrivatelinksRow])
+        q"select $columns from $existingCollectionName where accessToken = $accessToken".as[AnnotationPrivatelinksRow])
       parsed <- parseFirst(r, accessToken)
     } yield parsed
 }

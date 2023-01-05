@@ -116,14 +116,18 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}".as[UsersRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}"
+          .as[UsersRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}".as[UsersRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
+          .as[UsersRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -142,7 +146,9 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findAllByMultiUser(multiUserId: ObjectId): Fox[List[User]] =
     for {
-      r <- run(sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _multiUser = $multiUserId""".as[UsersRow])
+      r <- run(
+        sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _multiUser = $multiUserId"""
+          .as[UsersRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -210,7 +216,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
     for {
-      resultList <- run(sql"select count(_id) from #${existingCollectionName.debugInfo} where _multiUser = $multiUserId".as[Int])
+      resultList <- run(
+        sql"select count(_id) from #${existingCollectionName.debugInfo} where _multiUser = $multiUserId".as[Int])
       result <- resultList.headOption
     } yield result
 

@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 import slick.jdbc.PostgresProfile.api._
 
 abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-  extends SecuredSQLDAO(sqlClient) {
+    extends SecuredSQLDAO(sqlClient) {
   protected def collection: TableQuery[X]
   override protected def collectionName: String =
     collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
@@ -66,7 +66,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
   }
 
   protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(
-    implicit ctx: DBAccessContext): Fox[Unit] = {
+      implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)
@@ -75,11 +75,11 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
   }
 
   protected def updateObjectIdCol(id: ObjectId, column: X => Rep[String], newValue: ObjectId)(
-    implicit ctx: DBAccessContext): Fox[Unit] =
+      implicit ctx: DBAccessContext): Fox[Unit] =
     updateStringCol(id, column, newValue.id)
 
   protected def updateBooleanCol(id: ObjectId, column: X => Rep[Boolean], newValue: Boolean)(
-    implicit ctx: DBAccessContext): Fox[Unit] = {
+      implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)
@@ -88,7 +88,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
   }
 
   protected def updateTimestampCol(id: ObjectId, column: X => Rep[java.sql.Timestamp], newValue: Instant)(
-    implicit ctx: DBAccessContext): Fox[Unit] = {
+      implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)

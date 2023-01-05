@@ -312,7 +312,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllFinishedForProject(projectId: ObjectId): Fox[List[Annotation]] =
     for {
-      r <- run(q"""select ${columnsWithPrefix("a.")} from $existingCollectionName a
+      r <- run(
+        q"""select ${columnsWithPrefix("a.")} from $existingCollectionName a
                    join webknossos.tasks_ t on a._task = t._id
                    where t._project = $projectId and a.typ = ${AnnotationType.Task} and a.state = ${AnnotationState.Finished}"""
           .as[AnnotationsRow])
@@ -336,7 +337,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"""select $columns from $existingCollectionName
+      r <- run(
+        q"""select $columns from $existingCollectionName
                    where _task = $taskId and typ = $typ and state != ${AnnotationState.Cancelled} and $accessQuery"""
           .as[AnnotationsRow])
       parsed <- parseAll(r)
@@ -345,7 +347,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def findAllByPublication(publicationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where _publication = $publicationId and $accessQuery"
+      r <- run(
+        q"select $columns from $existingCollectionName where _publication = $publicationId and $accessQuery"
           .as[AnnotationsRow]).map(_.toList)
       parsed <- parseAll(r)
     } yield parsed
@@ -377,10 +380,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def countActiveByTask(taskId: ObjectId, typ: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
-      countList <- run(
-        q"""select count(*) from $existingCollectionName
-              where _task = $taskId and typ = $typ and state = ${AnnotationState.Active} and $accessQuery"""
-          .as[Int])
+      countList <- run(q"""select count(*) from $existingCollectionName
+              where _task = $taskId and typ = $typ and state = ${AnnotationState.Active} and $accessQuery""".as[Int])
       count <- countList.headOption
     } yield count
 
@@ -473,8 +474,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
       _ <- run(
-        q"update webknossos.annotations set state = $state where _id = $id".asUpdate.withTransactionIsolation(
-          Serializable),
+        q"update webknossos.annotations set state = $state where _id = $id".asUpdate
+          .withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)
       ) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
@@ -524,13 +525,11 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     updateBooleanCol(id, _.othersmayedit, othersMayEdit)
 
   def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(
-        q"update webknossos.annotations set viewConfiguration = $viewConfiguration where _id = $id".asUpdate)
+      _ <- run(q"update webknossos.annotations set viewConfiguration = $viewConfiguration where _id = $id".asUpdate)
     } yield ()
-  }
 
   def addContributor(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -542,11 +541,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllSharedForTeams(teams: List[ObjectId]): Fox[List[Annotation]] =
     for {
-      result <- run(
-        q"""select distinct ${columnsWithPrefix("a.")} from webknossos.annotations_ a
+      result <- run(q"""select distinct ${columnsWithPrefix("a.")} from webknossos.annotations_ a
                             join webknossos.annotation_sharedTeams l on a._id = l._annotation
-                            where l._team in ${SqlToken.tuple(teams)}"""
-          .as[AnnotationsRow])
+                            where l._team in ${SqlToken.tuple(teams)}""".as[AnnotationsRow])
       parsed <- Fox.combined(result.toList.map(parse))
     } yield parsed
 

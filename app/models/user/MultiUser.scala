@@ -122,14 +122,17 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where email = $email and #${accessQuery.debugInfo}".as[MultiusersRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where email = $email and #${accessQuery.debugInfo}"
+          .as[MultiusersRow])
       parsed <- parseFirst(r, email)
     } yield parsed
 
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
-      idList <- run(sql"select _id from #${existingCollectionName.debugInfo} where email = $email and #${accessQuery.debugInfo}".as[String])
+      idList <- run(
+        sql"select _id from #${existingCollectionName.debugInfo} where email = $email and #${accessQuery.debugInfo}"
+          .as[String])
     } yield idList.isEmpty
 
   def hasAtLeastOneActiveUser(multiUserId: ObjectId): Fox[Boolean] =

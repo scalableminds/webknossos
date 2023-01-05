@@ -10,9 +10,8 @@ import utils.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-
 abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-  extends SimpleSQLDAO(sqlClient) {
+    extends SimpleSQLDAO(sqlClient) {
   protected def collectionName: String
   protected def existingCollectionName: SqlToken = SqlToken.raw(collectionName + "_")
 
@@ -67,7 +66,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     }
 
   protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, String) => SqlToken, prefix: String)(
-    implicit ctx: DBAccessContext): Fox[SqlToken] =
+      implicit ctx: DBAccessContext): Fox[SqlToken] =
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
@@ -102,7 +101,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     }
 
   private def readAccessFromUserOrToken(userId: ObjectId, tokenOption: Option[String])(
-    implicit ctx: DBAccessContext): SqlToken =
+      implicit ctx: DBAccessContext): SqlToken =
     tokenOption match {
       case Some(_) => q"((${anonymousReadAccessQ(sharingTokenFromCtx)}) OR (${readAccessQ(userId)}))"
       case _       => q"(${readAccessQ(userId)})"

@@ -1,6 +1,6 @@
 import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
@@ -355,10 +355,7 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 
 function Infos() {
   const activeResolution = useSelector((state: OxalisState) => getCurrentResolution(state));
-  const mousePosition = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.mousePosition,
-  );
-  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
+
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
@@ -380,35 +377,24 @@ function Infos() {
   );
   const dispatch = useDispatch();
 
-  const onChangeActiveCellId = (id: number) => dispatch(setActiveCellAction(id));
-  const onChangeActiveNodeId = (id: number) => dispatch(setActiveNodeAction(id));
-  const onChangeActiveTreeId = (id: number) => dispatch(setActiveTreeAction(id));
-
-  const hasVisibleSegmentation = useSelector(
-    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
+  const onChangeActiveCellId = useCallback(
+    (id: number) => dispatch(setActiveCellAction(id)),
+    [dispatch],
   );
+  const onChangeActiveNodeId = useCallback(
+    (id: number) => dispatch(setActiveNodeAction(id)),
+    [dispatch],
+  );
+  const onChangeActiveTreeId = useCallback(
+    (id: number) => dispatch(setActiveTreeAction(id)),
+    [dispatch],
+  );
+
   const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
-  const globalMousePosition = useSelector((state: OxalisState) => {
-    const { activeViewport } = state.viewModeData.plane;
 
-    if (mousePosition && activeViewport !== OrthoViews.TDView) {
-      const [x, y] = mousePosition;
-      return calculateGlobalPos(state, {
-        x,
-        y,
-      });
-    }
-
-    return undefined;
-  });
   return (
     <React.Fragment>
-      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
-      {isPlaneMode ? (
-        <span className="info-element">
-          Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
-        </span>
-      ) : null}
+      <SegmentAndMousePosition />
       <span className="info-element">
         <Tooltip
           title={`Downloaded ${formatCountToDataAmountUnit(
@@ -462,6 +448,41 @@ function Infos() {
         {activeResolution.join("-")}{" "}
       </span>
     </React.Fragment>
+  );
+}
+
+function SegmentAndMousePosition() {
+  // This component depends on the mouse position which is a fast-changing property.
+  // For the sake of performance, it is isolated as a single component.
+  const hasVisibleSegmentation = useSelector(
+    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
+  );
+  const mousePosition = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.mousePosition,
+  );
+  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
+  const globalMousePosition = useSelector((state: OxalisState) => {
+    const { activeViewport } = state.viewModeData.plane;
+
+    if (mousePosition && activeViewport !== OrthoViews.TDView) {
+      const [x, y] = mousePosition;
+      return calculateGlobalPos(state, {
+        x,
+        y,
+      });
+    }
+
+    return undefined;
+  });
+  return (
+    <>
+      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
+      {isPlaneMode ? (
+        <span className="info-element">
+          Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
+        </span>
+      ) : null}
+    </>
   );
 }
 

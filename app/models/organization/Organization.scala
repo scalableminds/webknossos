@@ -10,7 +10,8 @@ import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -21,6 +22,9 @@ case class Organization(
     logoUrl: String,
     displayName: String,
     pricingPlan: PricingPlan,
+    paidUntil: Option[Instant],
+    includedUsers: Option[Int], // None means unlimited
+    includedStorage: Option[Long], // None means unlimited
     _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
@@ -50,6 +54,9 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.logourl,
         r.displayname,
         pricingPlan,
+        r.paiduntil.map(Instant.fromSql),
+        r.includedusers,
+        r.includedstorage,
         ObjectId(r._Rootfolder),
         r.newusermailinglist,
         r.overtimemailinglist,
@@ -87,18 +94,15 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def insertOne(o: Organization): Fox[Unit] =
     for {
-      _ <- run(sqlu"""INSERT INTO webknossos.organizations(
-                        _id, name, additionalInformation, logoUrl, displayName, _rootFolder, newUserMailingList, overTimeMailingList,
-                        enableAutoVerify, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion,
-                        created, isDeleted
-                      )
-                      VALUES(
-                        ${o._id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName},
-                        ${o._rootFolder}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
-                        ${o.lastTermsOfServiceAcceptanceTime},
-                        ${o.lastTermsOfServiceAcceptanceVersion},
-                        ${o.created}, ${o.isDeleted}
-                      )
+      _ <- run(sqlu"""INSERT INTO webknossos.organizations
+                      (_id, name, additionalInformation, logoUrl, displayName, _rootFolder,
+                      newUserMailingList, overTimeMailingList, enableAutoVerify,
+                      pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
+                      VALUES
+                      (${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
+                      ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
+                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${o.lastTermsOfServiceAcceptanceTime},
+                        ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
             """)
     } yield ()
 

@@ -13,10 +13,11 @@ import models.team.TeamDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Json, _}
+import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 

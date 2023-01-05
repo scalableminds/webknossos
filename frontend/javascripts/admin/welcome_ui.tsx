@@ -121,10 +121,15 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               {isUserAdminOrTeamManager(activeUser) ? (
                 <WhatsNextAction
                   title="Invite Your Colleagues"
-                  description="Send invites to your colleagues and ask them to join your organization."
+                  description="Send email invites to your colleagues and ask them to join your organization."
                   icon={<MailOutlined className="action-icon" />}
                   onClick={() => {
-                    renderIndependently((destroy) => <InviteUsersModal destroy={destroy} />);
+                    renderIndependently((destroy) => (
+                      <InviteUsersModal
+                        organizationName={activeUser.organization}
+                        destroy={destroy}
+                      />
+                    ));
                   }}
                 />
               ) : null}

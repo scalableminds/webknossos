@@ -215,7 +215,10 @@ export function deleteNode(
 
     const newActiveNodeId = neighborIds.length > 0 ? Math.min(...neighborIds) : null;
     const newActiveTree =
-      newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId).get() : activeTree;
+      newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId) : activeTree;
+    if (newActiveTree == null) {
+      throw new Error(`Could not find node with id ${newActiveNodeId}`);
+    }
     const newActiveTreeId = newActiveTree.treeId;
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
   });
@@ -227,7 +230,7 @@ export function deleteEdge(
   targetTree: Tree,
   targetNode: Node,
   timestamp: number,
-): Maybe<[TreeMap, number | null]> {
+): Maybe<[TreeMap, number | null | undefined]> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     if (sourceTree.treeId !== targetTree.treeId) {
       // The two selected nodes are in different trees
@@ -257,9 +260,7 @@ export function deleteEdge(
     );
     // The treeId of the tree the active node belongs to could have changed
     const activeNodeId = skeletonTracing.activeNodeId;
-    const newActiveTreeId = activeNodeId
-      ? findTreeByNodeId(newTrees, activeNodeId).get().treeId
-      : null;
+    const newActiveTreeId = activeNodeId ? findTreeByNodeId(newTrees, activeNodeId)?.treeId : null;
     return Maybe.Just([newTrees, newActiveTreeId]);
   });
 }
@@ -647,8 +648,8 @@ export function mergeTrees(
   targetNodeId: number,
 ): Maybe<[TreeMap, number, number]> {
   const { trees } = skeletonTracing;
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();
-  const targetTree = findTreeByNodeId(trees, targetNodeId).get(); // should be activeTree
+  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
+  const targetTree = findTreeByNodeId(trees, targetNodeId); // should be activeTree
 
   if (sourceTree == null || targetTree == null || sourceTree === targetTree) {
     return Maybe.Nothing();

@@ -36,7 +36,7 @@ class Api {
    * });
    */
   apiReady(version: number = latestVersion): Promise<Record<string, any>> {
-    if (process.env.BABEL_ENV !== "test") {
+    if (!process.env.IS_TESTING) {
       if (version !== latestVersion) {
         console.warn(`
           Attention! You requested api version: ${version} which is

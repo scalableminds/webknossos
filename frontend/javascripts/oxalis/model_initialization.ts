@@ -439,7 +439,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     maximumTextureCountForLayer,
   } = validateSpecsForLayers(dataset, requiredBucketCapacity);
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 

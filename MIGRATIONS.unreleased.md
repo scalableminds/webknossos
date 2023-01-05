@@ -10,4 +10,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 
+- [094-pricing-plans.sql](conf/evolutions/reversions/094-pricing-plans.sql)
 - [094-credentials.sql](conf/evolutions/094-credentials.sql)

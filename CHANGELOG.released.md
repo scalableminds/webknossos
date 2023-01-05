@@ -59,7 +59,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When creating an annotation from the dataset view, a previously selected mapping of the segmentation layer is now automatically selected in the volume annotation layer fallback segmentation as well. [#6647](https://github.com/scalableminds/webknossos/pull/6647)
 
 ### Changed
-- The log viewer in the Voxelytics workflow reporting now uses a “alized list. [#6579](https://github.com/scalableminds/webknossos/pull/6579)
+- The log viewer in the Voxelytics workflow reporting now uses a virtualized list. [#6579](https://github.com/scalableminds/webknossos/pull/6579)
 - Node positions are always handled as integers. They have always been persisted as integers by the server, anyway, but the session in which a node was created handled the position as floating point in earlier versions. [#6589](https://github.com/scalableminds/webknossos/pull/6589)
 - Jobs can no longer be started on datastores without workers. [#6595](https://github.com/scalableminds/webknossos/pull/6595)
 - When downloading volume annotations with volume data skipped, the nml volume tag is now included anyway (but has no location attribute in this case). [#6566](https://github.com/scalableminds/webknossos/pull/6566)

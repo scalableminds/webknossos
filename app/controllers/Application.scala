@@ -12,8 +12,9 @@ import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
-import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
+import utils.{StoreModules, WkConf}
 import oxalis.mail.{DefaultMails, Send}
+import utils.sql.{SQLClient, SimpleSQLDAO}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

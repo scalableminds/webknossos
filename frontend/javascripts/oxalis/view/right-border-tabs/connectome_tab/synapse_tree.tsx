@@ -235,10 +235,8 @@ class SynapseTree extends React.Component<Props, State> {
             overlay={() => this.createSegmentDropdownMenu(data.id)}
             autoDestroy
             placement="bottom"
-            visible={this.state.activeSegmentDropdownKey === key}
-            onVisibleChange={(isVisible) =>
-              this.handleSegmentDropdownMenuVisibility(key, isVisible)
-            }
+            open={this.state.activeSegmentDropdownKey === key}
+            onOpenChange={(isVisible) => this.handleSegmentDropdownMenuVisibility(key, isVisible)}
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'string[]' is not assignable to type '("conte... Remove this comment to see the full error message
             trigger={contextMenuTrigger}
           >

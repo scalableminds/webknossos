@@ -13,7 +13,8 @@ import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 

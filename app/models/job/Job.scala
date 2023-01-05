@@ -21,7 +21,8 @@ import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration

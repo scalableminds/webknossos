@@ -86,7 +86,6 @@ type State = {
   uploadId: string;
   resumableUpload: any;
   datastoreUrl: string;
-  targetFolderId: string | null;
 };
 
 function WkwExample() {
@@ -159,7 +158,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     uploadId: "",
     resumableUpload: {},
     datastoreUrl: "",
-    targetFolderId: null,
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
@@ -168,9 +166,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
-    const params = new URLSearchParams(location.search);
-    const targetFolderId = params.get("to");
-    this.setState({ targetFolderId });
   }
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
@@ -276,7 +271,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         totalFileCount: formValues.zipFile.length,
         layersToLink: [],
         initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
-        folderId: this.state.targetFolderId,
+        folderId: formValues.targetFolderId,
       };
       const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
@@ -640,6 +635,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               initialTeams: [],
               scale: [0, 0, 0],
               zipFile: [],
+              targetFolderId: new URLSearchParams(location.search).get("to"),
             }}
           >
             {features().isDemoInstance && (
@@ -716,9 +712,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             </Row>
 
             <FormItemWithInfo
-              name="targetFolder"
+              name="targetFolderId"
               label="Target Folder"
               info="The folder into which the dataset will be uploaded. The dataset can be moved after upload. Note that teams that have access to the specified folder will be able to see the uploaded dataset."
+              valuePropName="folderId"
               rules={[
                 {
                   required: true,
@@ -726,12 +723,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
               ]}
             >
-              <FolderSelection
-                width="50%"
-                folderId={this.state.targetFolderId}
-                onChange={(targetFolderId) => this.setState({ targetFolderId })}
-                disableNotEditableFolders
-              />
+              <FolderSelection width="50%" disableNotEditableFolders />
             </FormItemWithInfo>
 
             <DatastoreFormItem

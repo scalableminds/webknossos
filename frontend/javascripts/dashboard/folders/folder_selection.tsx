@@ -29,8 +29,8 @@ export default function FolderSelection({
   disabled,
   disableNotEditableFolders,
 }: {
-  folderId: string | null;
-  onChange: (id: string | null) => void;
+  folderId?: string | null;
+  onChange?: (id: string | null) => void;
   width?: string | number | null;
   disabled?: boolean;
   disableNotEditableFolders?: boolean;

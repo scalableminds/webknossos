@@ -86,7 +86,7 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #$infoColumns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[InfoTuple])
+        sql"select #$infoColumns from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}".as[InfoTuple])
       r <- rList.headOption.toFox
       parsed <- parseInfo(r)
     } yield parsed
@@ -95,7 +95,7 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       resultTuples <- run(
-        sql"select #$infoColumns from #$existingCollectionName where _annotation = ${_annotation} and #$accessQuery"
+        sql"select #$infoColumns from #${existingCollectionName.debugInfo} where _annotation = ${_annotation} and #${accessQuery.debugInfo}"
           .as[InfoTuple])
       resultsParsed <- Fox.serialCombined(resultTuples.toList)(parseInfo)
     } yield resultsParsed
@@ -120,7 +120,7 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def getData(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Array[Byte]] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select data from webknossos.meshes where _id = $id and #$accessQuery".as[Option[String]])
+      rList <- run(sql"select data from webknossos.meshes where _id = $id and #${accessQuery.debugInfo}".as[Option[String]])
       r <- rList.headOption.flatten.toFox
       binary = BaseEncoding.base64().decode(r)
     } yield binary

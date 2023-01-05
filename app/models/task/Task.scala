@@ -66,27 +66,27 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     }
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    s"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
+    q"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where _user = $requestingUserId)
       or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
-        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
+        in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin)))"""
   override protected def deleteAccessQ(requestingUserId: ObjectId) =
-    s"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
+    q"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where isTeamManager and _user = $requestingUserId)
       or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
-        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
+        in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin)))"""
 
   private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasksRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}".as[TasksRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TasksRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -97,7 +97,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
       implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"""select #$columns from #$existingCollectionName where _project = ${projectId.id} and #$accessQuery
+      r <- run(sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _project = ${projectId.id} and #${accessQuery.debugInfo}
               order by _id desc limit $limit offset ${pageNumber * limit}""".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -106,7 +106,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"""select count(*) from #$existingCollectionName where _project = ${projectId.id} and #$accessQuery"""
+        sql"""select count(*) from #${existingCollectionName.debugInfo} where _project = ${projectId.id} and #${accessQuery.debugInfo}"""
           .as[Int])
       parsed <- r.headOption
     } yield parsed
@@ -235,7 +235,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      q = sql"""select #$columns
+      q = sql"""select #${columns.debugInfo}
                 from webknossos.tasks_
                 where _id in
                 (select distinct t._id
@@ -245,7 +245,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
                  and #$taskTypeFilter
                  and #$taskIdsFilter
                  and #$userFilter
-                 and #$accessQuery
+                 and #${accessQuery.debugInfo}
                 )
                 #$orderRandom
                 limit 1000
@@ -316,7 +316,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     for {
       accessQuery <- readAccessQuery
       _ <- run(
-        sqlu"update webknossos.tasks set totalInstances = totalInstances + $delta where _project = ${projectId.id} and #$accessQuery"
+        sqlu"update webknossos.tasks set totalInstances = totalInstances + $delta where _project = ${projectId.id} and #${accessQuery.debugInfo}"
           .withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)

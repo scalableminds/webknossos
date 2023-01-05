@@ -139,16 +139,17 @@ object SqlValue {
           case Some(y) => makeSqlValue(y)
           case None    => NoneValue()
         }
-      case x: Short          => ShortValue(x)
-      case x: Int            => IntValue(x)
-      case x: Long           => LongValue(x)
-      case x: Float          => FloatValue(x)
-      case x: Double         => DoubleValue(x)
-      case x: Boolean        => BooleanValue(x)
-      case x: Instant        => InstantValue(x)
-      case x: FiniteDuration => DurationValue(x)
-      case x: ObjectId       => ObjectIdValue(x)
-      case x: JsValue        => JsonValue(x)
+      case x: Short             => ShortValue(x)
+      case x: Int               => IntValue(x)
+      case x: Long              => LongValue(x)
+      case x: Float             => FloatValue(x)
+      case x: Double            => DoubleValue(x)
+      case x: Boolean           => BooleanValue(x)
+      case x: Instant           => InstantValue(x)
+      case x: FiniteDuration    => DurationValue(x)
+      case x: ObjectId          => ObjectIdValue(x)
+      case x: JsValue           => JsonValue(x)
+      case x: Enumeration#Value => EnumerationValue(x)
     }
 }
 
@@ -234,6 +235,15 @@ case class JsonValue(v: JsValue) extends SqlValue with SqlEscaping {
   override def placeholder: String = "?::JSONB"
 
   override def debugInfo: String = escapeLiteral(Json.stringify(v))
+}
+
+case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscaping {
+
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v, Types.OTHER)
+
+  override def placeholder: String = "?"
+
+  override def debugInfo: String = escapeLiteral(v.toString)
 }
 
 case class NoneValue() extends SqlValue {

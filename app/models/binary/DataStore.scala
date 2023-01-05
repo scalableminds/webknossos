@@ -3,13 +3,14 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -88,8 +89,8 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected def idColumn(x: Datastores): Rep[String] = x.name
   protected def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
-  override protected def readAccessQ(requestingUserId: ObjectId): String =
-    s"(onlyAllowedOrganization is null) OR (onlyAllowedOrganization in (select _organization from webknossos.users_ where _id = '$requestingUserId'))"
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"(onlyAllowedOrganization is null) OR (onlyAllowedOrganization in (select _organization from webknossos.users_ where _id = $requestingUserId))"
 
   protected def parse(r: DatastoresRow): Fox[DataStore] =
     Fox.successful(
@@ -108,21 +109,21 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from webknossos.datastores_ where name = $name and #$accessQuery".as[DatastoresRow])
+      r <- run(sql"select #${columns.debugInfo} from webknossos.datastores_ where name = $name and #${accessQuery.debugInfo}".as[DatastoresRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from webknossos.datastores_ where url = $url and #$accessQuery".as[DatastoresRow])
+      r <- run(sql"select #${columns.debugInfo} from webknossos.datastores_ where url = $url and #${accessQuery.debugInfo}".as[DatastoresRow])
       parsed <- parseFirst(r, url)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from webknossos.datastores_ where #$accessQuery order by name".as[DatastoresRow])
+      r <- run(sql"select #${columns.debugInfo} from webknossos.datastores_ where #${accessQuery.debugInfo} order by name".as[DatastoresRow])
       parsed <- parseAll(r)
     } yield parsed
 

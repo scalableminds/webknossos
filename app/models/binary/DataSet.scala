@@ -7,13 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractDataLayer,
-  AbstractSegmentationLayer,
-  Category,
-  ElementClass,
-  DataLayerLike => DataLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, ElementClass, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
@@ -24,7 +18,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.sql.{SqlClient, SQLDAO, SimpleSQLDAO}
+import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -116,23 +110,26 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       )
     }
 
-  override def anonymousReadAccessQ(token: Option[String]): String =
-    // token can either be a dataset sharingToken or a matching annotation’s private link token
-    "isPublic" + token.map(t => s""" OR sharingToken = '$t'
+  override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
+    val tokenAccess = token.map(t =>
+      q"""sharingToken = $t
           OR _id in (
             SELECT a._dataset
             FROM webknossos.annotation_privateLinks_ apl
             JOIN webknossos.annotations_ a ON apl._annotation = a._id
-            WHERE apl.accessToken = '$t'
-          )""").getOrElse("")
+            WHERE apl.accessToken = $t
+          )""").getOrElse(q"false")
+    // token can either be a dataset sharingToken or a matching annotation’s private link token
+    q"isPublic OR ($tokenAccess)"
+  }
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""isPublic
+    q"""isPublic
         OR ( -- user is matching orga admin or dataset manager
           _organization IN (
             SELECT _organization
             FROM webknossos.users_
-            WHERE _id = '$requestingUserId'
+            WHERE _id = $requestingUserId
             AND (isAdmin OR isDatasetManager)
           )
         )
@@ -141,7 +138,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
             SELECT _dataSet
             FROM webknossos.dataSet_allowedTeams dt
             JOIN webknossos.user_team_roles utr ON dt._team = utr._team
-            WHERE utr._user = '$requestingUserId'
+            WHERE utr._user = $requestingUserId
           )
         )
         OR ( -- user is in a team that is allowed for the folder or its ancestors
@@ -152,7 +149,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
               SELECT at._folder
               FROM webknossos.folder_allowedTeams at
               JOIN webknossos.user_team_roles utr ON at._team = utr._team
-              WHERE utr._user = '$requestingUserId'
+              WHERE utr._user = $requestingUserId
             )
           )
         )
@@ -162,7 +159,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[DatasetsRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}".as[DatasetsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
@@ -177,11 +174,11 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         case None           => "true"
       }
       searchPredicate = buildSearchPredicate(searchQuery)
-      r <- run(sql"""SELECT #$columns
-              FROM #$existingCollectionName
+      r <- run(sql"""SELECT #${columns.debugInfo}
+              FROM #${existingCollectionName.debugInfo}
               WHERE #$folderPredicate
               AND (#$searchPredicate)
-              AND #$accessQuery
+              AND #${accessQuery.debugInfo}
               """.as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -196,19 +193,19 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
 
   def countByFolder(folderId: ObjectId): Fox[Int] =
     for {
-      rows <- run(sql"SELECT COUNT(*) FROM #$existingCollectionName WHERE _folder = $folderId".as[Int])
+      rows <- run(sql"SELECT COUNT(*) FROM #${existingCollectionName.debugInfo} WHERE _folder = $folderId".as[Int])
       firstRow <- rows.headOption
     } yield firstRow
 
   def isEmpty: Fox[Boolean] =
     for {
-      r <- run(sql"select count(*) from #$existingCollectionName limit 1".as[Int])
+      r <- run(sql"select count(*) from #${existingCollectionName.debugInfo} limit 1".as[Int])
       firstRow <- r.headOption
     } yield firstRow == 0
 
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
-      rList <- run(sql"select count(_id) from #$existingCollectionName where _organization = $organizationId".as[Int])
+      rList <- run(sql"select count(_id) from #${existingCollectionName.debugInfo} where _organization = $organizationId".as[Int])
       r <- rList.headOption
     } yield r
 
@@ -224,7 +221,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where name = $name and _organization = $organizationId and #$accessQuery"
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = $name and _organization = $organizationId and #${accessQuery.debugInfo}"
           .as[DatasetsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
@@ -233,11 +230,11 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""SELECT #$columns
-                     FROM #$existingCollectionName
+      r <- run(sql"""SELECT #${columns.debugInfo}
+                     FROM #${existingCollectionName.debugInfo}
                      WHERE name IN #${writeEscapedTuple(names)}
                      AND _organization = $organizationId
-                     AND #$accessQuery""".as[DatasetsRow]).map(_.toList)
+                     AND #${accessQuery.debugInfo}""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
     } yield parsed
 
@@ -245,7 +242,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _publication = $publicationId and #$accessQuery"
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _publication = $publicationId and #${accessQuery.debugInfo}"
           .as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
     } yield parsed
@@ -256,7 +253,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select _organization from #$existingCollectionName where name = $dataSetName and #$accessQuery order by created asc"
+        sql"select _organization from #${existingCollectionName.debugInfo} where name = $dataSetName and #${accessQuery.debugInfo} order by created asc"
           .as[String])
       r <- rList.headOption.toFox
       parsed <- ObjectId.fromString(r)
@@ -265,7 +262,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
   def getNameById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select name from #$existingCollectionName where _id = $id and #$accessQuery".as[String])
+      rList <- run(sql"select name from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}".as[String])
       r <- rList.headOption.toFox
     } yield r
 
@@ -274,7 +271,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select sharingToken from webknossos.datasets_ where name = $name and _organization = $organizationId and #$accessQuery"
+        sql"select sharingToken from webknossos.datasets_ where name = $name and _organization = $organizationId and #${accessQuery.debugInfo}"
           .as[Option[String]])
       r <- rList.headOption.toFox
     } yield r
@@ -284,7 +281,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       _ <- run(
-        sqlu"update webknossos.datasets_ set sharingToken = $sharingToken where name = $name and _organization = $organizationId and #$accessQuery")
+        sqlu"update webknossos.datasets_ set sharingToken = $sharingToken where name = $name and _organization = $organizationId and #${accessQuery.debugInfo}")
     } yield ()
 
   def updateFields(_id: ObjectId,

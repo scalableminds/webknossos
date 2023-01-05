@@ -110,18 +110,18 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       )
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
-       or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+    q"""(_team in (select _team from webknossos.user_team_roles where _user = $requestingUserId)
+       or _organization = (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))"""
 
   override protected def updateAccessQ(requestingUserId: ObjectId) =
-    s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
-       or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+    q"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = $requestingUserId)
+       or _organization = (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasktypesRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}".as[TasktypesRow])
       parsed <- parseFirst(r, id.toString)
     } yield parsed
 
@@ -130,7 +130,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where summary = '#${sanitize(summary)}' and _organization = $organizationId and #$accessQuery"
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where summary = '#${sanitize(summary)}' and _organization = $organizationId and #${accessQuery.debugInfo}"
           .as[TasktypesRow])
       parsed <- parseFirst(r, summary)
     } yield parsed
@@ -138,7 +138,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TasktypesRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}".as[TasktypesRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -191,7 +191,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
-      countList <- run(sql"select count(_id) from #$existingCollectionName where _team = $teamId".as[Int])
+      countList <- run(sql"select count(_id) from #${existingCollectionName.debugInfo} where _team = $teamId".as[Int])
       count <- countList.headOption
     } yield count
 }

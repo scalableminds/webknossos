@@ -79,26 +79,26 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       ))
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    s"""(
-        (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
-        or _owner = '${requestingUserId.id}'
-        or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
+    q"""(
+        (_team in (select _team from webknossos.user_team_roles where _user = $requestingUserId))
+        or _owner = $requestingUserId
+        or _organization = (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin)
         )"""
-  override protected def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
+  override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
 
   // read operations
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[ProjectsRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}".as[ProjectsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery order by created".as[ProjectsRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} order by created".as[ProjectsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -121,7 +121,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where name = '#${sanitize(name)}' and _organization = $organizationId and #$accessQuery"
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = '#${sanitize(name)}' and _organization = $organizationId and #${accessQuery.debugInfo}"
           .as[ProjectsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
@@ -175,7 +175,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
-      countList <- run(sql"select count(_id) from #$existingCollectionName where _team = $teamId".as[Int])
+      countList <- run(sql"select count(_id) from #${existingCollectionName.debugInfo} where _team = $teamId".as[Int])
       count <- countList.headOption
     } yield count
 

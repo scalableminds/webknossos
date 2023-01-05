@@ -66,7 +66,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       case _ => Fox.failure("Access denied.")
     }
 
-  protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, String) => String, prefix: String)(
+  protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, String) => SqlToken, prefix: String)(
     implicit ctx: DBAccessContext): Fox[SqlToken] =
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {

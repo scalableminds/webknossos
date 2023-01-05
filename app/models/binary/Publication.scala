@@ -76,13 +76,13 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
     for {
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = ${id.id}".as[PublicationsRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id}".as[PublicationsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
     for {
-      r <- run(sql"select #$columns from #$existingCollectionName".as[PublicationsRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo}".as[PublicationsRow])
       parsed <- parseAll(r)
     } yield parsed
 

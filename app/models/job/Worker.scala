@@ -52,14 +52,14 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByKey(key: String): Fox[Worker] =
     for {
-      r: Seq[WorkersRow] <- run(sql"select #$columns from #$existingCollectionName where key = $key".as[WorkersRow])
+      r: Seq[WorkersRow] <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where key = $key".as[WorkersRow])
       parsed <- parseFirst(r, "key")
     } yield parsed
 
   def findOneByDataStore(dataStoreName: String): Fox[Worker] =
     for {
       r: Seq[WorkersRow] <- run(
-        sql"select #$columns from #$existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _dataStore = $dataStoreName".as[WorkersRow])
       parsed <- parseFirst(r, "dataStoreName")
     } yield parsed
 

@@ -12,7 +12,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -6,14 +6,12 @@ import {
 } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import Toast from "libs/toast";
-import messages from "messages";
 import moment from "moment";
 import Constants from "oxalis/constants";
 import { OxalisState } from "oxalis/store";
 import React from "react";
 import { useSelector } from "react-redux";
-import { APIOrganization, APIUser } from "types/api_flow_types";
+import { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
 import {
   hasPricingPlanExceededStorage,
@@ -83,14 +81,12 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
   let title = "Upgrade to unlock more features";
   let cardBody = (
     <TeamAndPowerPlanUpgradeCards
-      teamUpgradeCallback={() => {
-        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Team);
-        Toast.success(messages["organization.plan.upgrage_request_sent"]);
-      }}
-      powerUpgradeCallback={() => {
-        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power);
-        Toast.success(messages["organization.plan.upgrage_request_sent"]);
-      }}
+      teamUpgradeCallback={() =>
+        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Team)
+      }
+      powerUpgradeCallback={() =>
+        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
+      }
     />
   );
 

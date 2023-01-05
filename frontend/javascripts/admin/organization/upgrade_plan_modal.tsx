@@ -82,7 +82,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
     if (userInputRef.current) {
       const requestedUsers = parseInt(userInputRef.current.value);
       await sendUpgradePricingPlanUserEmail(requestedUsers);
-      Toast.success("An email with your request has been send to the webKnossos team.");
+      Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
 
     destroy();
@@ -148,7 +148,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
       onOk={handleStorageUpgrade}
       onCancel={destroy}
       width={800}
-      visible
+      open
     >
       <div
         style={{
@@ -197,7 +197,7 @@ function upgradePricingPlan(
   let title = `Upgrade to ${PricingPlanEnum.Team} Plan`;
   let okButtonCallback: (() => void) | undefined = () => {
     sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
-    Toast.success("An email with your request has been send to the webKnossos team.");
+    Toast.success(messages["organization.plan.upgrage_request_sent"]);
   };
   let modalBody = (
     <>
@@ -214,7 +214,7 @@ function upgradePricingPlan(
     title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
     okButtonCallback = () => {
       sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
-      Toast.success("An email with your request has been send to the webKnossos team.");
+      Toast.success(messages["organization.plan.upgrage_request_sent"]);
     };
     modalBody = (
       <>

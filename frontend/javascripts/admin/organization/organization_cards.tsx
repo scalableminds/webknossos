@@ -351,21 +351,21 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
         </Button>
       ),
     });
-  else {
-    alerts.push({
-      message:
-        "Your organization is about to exceed the storage space included in your current plan. Upgrade now to avoid your account from being blocked.",
-      actionButton: (
-        <Button
-          size="small"
-          type="primary"
-          onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
-        >
-          Upgrade Now
-        </Button>
-      ),
-    });
-  }
+  // else {
+  //   alerts.push({
+  //     message:
+  //       "Your organization is about to exceed the storage space included in your current plan. Upgrade now to avoid your account from being blocked.",
+  //     actionButton: (
+  //       <Button
+  //         size="small"
+  //         type="primary"
+  //         onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+  //       >
+  //         Upgrade Now
+  //       </Button>
+  //     ),
+  //   });
+  // }
 
   return (
     <>

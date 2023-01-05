@@ -14,7 +14,7 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
@@ -29,7 +29,7 @@ case class Worker(_id: ObjectId,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
-class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
   protected val collection = Workers
 

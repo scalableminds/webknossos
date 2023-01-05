@@ -152,7 +152,7 @@ object SqlValue {
     }
 }
 
-case class StringValue(v: String) extends SqlValue with Escaping {
+case class StringValue(v: String) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v)
 
   override def debugInfo: String = escapeLiteral(v)
@@ -194,7 +194,7 @@ case class BooleanValue(v: Boolean) extends SqlValue {
   override def debugInfo: String = s"$v"
 }
 
-case class InstantValue(v: Instant) extends SqlValue with Escaping {
+case class InstantValue(v: Instant) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
 
   override def placeholder: String = "?::TIMESTAMPTZ"
@@ -202,7 +202,7 @@ case class InstantValue(v: Instant) extends SqlValue with Escaping {
   override def debugInfo: String = escapeLiteral(v.toString)
 }
 
-case class DurationValue(v: FiniteDuration) extends SqlValue with Escaping {
+case class DurationValue(v: FiniteDuration) extends SqlValue with SqlEscaping {
 
   private def stringifyDuration = v.unit match {
     case duration.NANOSECONDS  => s"${v.length.toDouble / 1000.0} MICROSECONDS"
@@ -222,13 +222,13 @@ case class DurationValue(v: FiniteDuration) extends SqlValue with Escaping {
   override def debugInfo: String = escapeLiteral(stringifyDuration)
 }
 
-case class ObjectIdValue(v: ObjectId) extends SqlValue with Escaping {
+case class ObjectIdValue(v: ObjectId) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v.id)
 
   override def debugInfo: String = escapeLiteral(v.id)
 }
 
-case class JsonValue(v: JsValue) extends SqlValue with Escaping {
+case class JsonValue(v: JsValue) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(Json.stringify(v))
 
   override def placeholder: String = "?::JSONB"

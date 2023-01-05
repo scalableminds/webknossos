@@ -12,7 +12,7 @@ import models.team.TeamDAO
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -77,7 +77,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
     } yield taskTypeId.toString)
 }
 
-class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
   protected val collection = Tasktypes
 

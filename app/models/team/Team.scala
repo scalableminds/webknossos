@@ -17,7 +17,7 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -97,7 +97,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
 }
 
-class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   protected val collection = Teams
 

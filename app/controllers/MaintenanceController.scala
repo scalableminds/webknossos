@@ -10,7 +10,7 @@ import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
-import utils.sql.{SQLClient, SimpleSQLDAO}
+import utils.sql.{SqlClient, SimpleSQLDAO}
 import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext
@@ -48,7 +48,7 @@ class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
 
 }
 
-class MaintenanceDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def getExpirationTime: Fox[Instant] =
     for {

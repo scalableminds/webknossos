@@ -10,7 +10,7 @@ import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
-import utils.sql.{SQLClient, SimpleSQLDAO}
+import utils.sql.{SqlClient, SimpleSQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -31,7 +31,7 @@ object ProjectProgressEntry {
   implicit val jsonFormat: OFormat[ProjectProgressEntry] = Json.format[ProjectProgressEntry]
 }
 
-class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
+class ReportDAO @Inject()(sqlClient: SqlClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def projectProgress(teamId: ObjectId): Fox[List[ProjectProgressEntry]] =

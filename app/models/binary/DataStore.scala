@@ -9,7 +9,7 @@ import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -81,7 +81,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
 
 }
 
-class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   protected val collection = Datastores
 

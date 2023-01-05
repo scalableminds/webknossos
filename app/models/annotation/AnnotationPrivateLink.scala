@@ -10,7 +10,7 @@ import javax.inject.Inject
 import play.api.libs.json.{JsValue, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -44,7 +44,7 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
   def generateToken: String = RandomIDGenerator.generateBlocking(12)
 }
 
-class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AnnotationPrivateLink, AnnotationPrivatelinksRow, AnnotationPrivatelinks](sqlClient) {
   protected val collection = AnnotationPrivatelinks
 

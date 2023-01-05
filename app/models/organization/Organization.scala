@@ -10,7 +10,7 @@ import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -32,7 +32,7 @@ case class Organization(
     isDeleted: Boolean = false
 )
 
-class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
   protected val collection = Organizations
 

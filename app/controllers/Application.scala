@@ -14,7 +14,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
 import utils.{StoreModules, WkConf}
 import oxalis.mail.{DefaultMails, Send}
-import utils.sql.{SQLClient, SimpleSQLDAO}
+import utils.sql.{SqlClient, SimpleSQLDAO}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -86,7 +86,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
 
 }
 
-class ReleaseInformationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ReleaseInformationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient)
     with FoxImplicits {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =

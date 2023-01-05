@@ -16,7 +16,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -56,7 +56,7 @@ object Project {
 
 }
 
-class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   protected val collection = Projects
 

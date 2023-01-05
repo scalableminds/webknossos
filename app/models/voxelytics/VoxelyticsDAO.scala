@@ -4,14 +4,16 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json._
-import utils.sql.{SQLClient, SimpleSQLDAO, SqlToken}
+import utils.sql.{SqlClient, SimpleSQLDAO, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
-class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+
+  val a = q"true"
 
   def findArtifacts(taskIds: List[ObjectId]): Fox[List[ArtifactEntry]] =
     for {

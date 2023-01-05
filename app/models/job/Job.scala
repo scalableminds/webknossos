@@ -21,7 +21,7 @@ import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -91,7 +91,7 @@ case class Job(
     } yield resultLinkFormatted
 }
 
-class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
   protected val collection = Jobs
 

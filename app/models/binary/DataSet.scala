@@ -24,7 +24,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.sql.{SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.sql.{SqlClient, SQLDAO, SimpleSQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -59,7 +59,7 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 }
 
-class DataSetDAO @Inject()(sqlClient: SQLClient,
+class DataSetDAO @Inject()(sqlClient: SqlClient,
                            dataSetDataLayerDAO: DataSetDataLayerDAO,
                            organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
@@ -404,7 +404,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   }
 }
 
-class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   private def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
     for {
@@ -444,7 +444,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executi
 
 }
 
-class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO: DataSetResolutionsDAO)(
+class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO: DataSetResolutionsDAO)(
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
@@ -554,7 +554,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
   }
 }
 
-class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class DataSetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Instant] =
     for {

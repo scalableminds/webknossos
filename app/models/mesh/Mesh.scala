@@ -12,7 +12,7 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -54,7 +54,7 @@ class MeshService @Inject()()(implicit ec: ExecutionContext) {
       ))
 }
 
-class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MeshInfo, MeshesRow, Meshes](sqlClient) {
   protected val collection = Meshes
 

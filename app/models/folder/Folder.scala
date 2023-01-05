@@ -10,7 +10,7 @@ import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -73,7 +73,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
 
 }
 
-class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Folder, FoldersRow, Folders](sqlClient) {
 
   protected val collection = Folders

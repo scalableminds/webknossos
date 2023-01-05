@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import oxalis.security.TokenType.TokenType
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -53,7 +53,7 @@ object Token {
       ))
 }
 
-class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
   protected val collection = Tokens
 

@@ -15,7 +15,7 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.sql.{SqlClient, SQLDAO, SimpleSQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -60,7 +60,7 @@ case class User(
 
 }
 
-class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
   protected val collection = Users
 
@@ -327,7 +327,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
 }
 
-class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findAllExperiencesForUser(userId: ObjectId): Fox[Map[String, Int]] =
@@ -359,7 +359,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
 
 }
 
-class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDataSetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DataSetViewConfiguration] =
@@ -391,7 +391,7 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
     } yield ()
 }
 
-class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findAllByLayerNameForUserAndDataset(layerNames: List[String],

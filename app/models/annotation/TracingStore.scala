@@ -12,7 +12,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -57,7 +57,7 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
     } yield new WKRemoteTracingStoreClient(tracingStore, dataSet, rpc)
 }
 
-class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
   protected val collection = Tracingstores
 

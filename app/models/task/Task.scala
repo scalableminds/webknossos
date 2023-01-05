@@ -12,7 +12,7 @@ import models.project.ProjectDAO
 import models.user.Experience
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -35,7 +35,7 @@ case class Task(
     isDeleted: Boolean = false
 )
 
-class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
+class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   protected val collection = Tasks
 

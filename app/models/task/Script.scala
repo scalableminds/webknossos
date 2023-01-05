@@ -8,7 +8,7 @@ import models.user.{UserDAO, UserService}
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -46,7 +46,7 @@ object Script {
     Script(ObjectId.generate, _owner, name, gist)
 }
 
-class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   protected val collection = Scripts
 

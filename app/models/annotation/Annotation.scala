@@ -16,7 +16,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.sql.{SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.sql.{SqlClient, SQLDAO, SimpleSQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -70,7 +70,7 @@ case class Annotation(
 
 }
 
-class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionContext)
+class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(SQLClient) {
 
   private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] =
@@ -142,7 +142,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
 
 }
 
-class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayerDAO)(
+class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO)(
     implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations

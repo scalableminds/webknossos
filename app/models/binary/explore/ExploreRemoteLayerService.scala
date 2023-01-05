@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.credential.CredentialService
+import models.user.User
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import oxalis.security.WkEnv
@@ -140,19 +141,19 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
       user: Option[String],
       password: Option[String],
       reportMutable: ListBuffer[String],
-      requestIdentity: WkEnv#I)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+      requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
       remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
       credentialId <- credentialService.createCredential(new URI(normalizeUri(layerUri)),
                                                          user,
                                                          password,
-                                                         requestIdentity._id.toString,
-                                                         requestIdentity._organization.toString)
+                                                         requestingUser._id.toString,
+                                                         requestingUser._organization.toString)
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
-        credentialId.map(o => o.toString),
+        credentialId.map(_.toString),
         reportMutable,
         List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer, new N5MultiscalesExplorer))
     } yield layersWithVoxelSizes

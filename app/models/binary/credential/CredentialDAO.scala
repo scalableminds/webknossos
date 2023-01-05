@@ -2,34 +2,20 @@ package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{AnyCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
-import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SecuredSQLDAO, SQLClient}
+import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-// Generic credential as it appears in the database
-case class Credential(_id: ObjectId,
-                      credentialType: CredentialType.Value,
-                      name: String,
-                      identifier: Option[String],
-                      secret: Option[String],
-                      scope: Option[String],
-                      filePath: Option[String])
-
-class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
-    extends SQLDAO[Credential, CredentialsRow, Credentials](sqlClient) {
+class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SecuredSQLDAO(sqlClient) {
   protected val collection = Credentials
 
-  protected def idColumn(x: Credentials): Rep[String] = x._Id
-  override protected def isDeletedColumn(x: Tables.Credentials): Rep[Boolean] = x.isdeleted
-
-  // use parseAnyCredential instead
-  protected def parse(row: com.scalableminds.webknossos.schema.Tables.Credentials#TableElementType)
-    : com.scalableminds.util.tools.Fox[models.binary.credential.Credential] = ???
+  protected def columnsList: List[String] = collection.baseTableRow.create_*.map(_.name).toList
+  override protected def collectionName: String = "credentials"
+  def columns: String = columnsList.mkString(", ")
 
   private def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =
     for {
@@ -78,13 +64,7 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   private def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential] =
     r.`type` match {
-      case "HTTP_Basic_Auth" =>
-        for {
-          parsed <- parseAsHttpBasicAuthCredential(r)
-        } yield parsed
-      case "S3_Access_Key" =>
-        for {
-          parsed <- parseAsS3AccessKeyCredential(r)
-        } yield parsed
+      case "HTTP_Basic_Auth" => parseAsHttpBasicAuthCredential(r)
+      case "S3_Access_Key"   => parseAsS3AccessKeyCredential(r)
     }
 }

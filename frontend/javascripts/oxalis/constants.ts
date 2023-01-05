@@ -271,6 +271,7 @@ export type ShowContextMenuFunction = (
   arg4: Vector3 | null | undefined,
   arg5: OrthoView,
 ) => void;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
   DEFAULT_BORDER_WIDTH: 400,
@@ -314,6 +315,7 @@ const Constants = {
     _2D: (process.env.IS_TESTING ? [512, 512, 1] : [768, 768, 1]) as Vector3,
     _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
+  MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
 };
 export default Constants;
 

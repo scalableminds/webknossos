@@ -8,7 +8,7 @@ import type {
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
-import { PricingPlan } from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
@@ -511,10 +511,22 @@ export type APIOrganization = {
   readonly name: string;
   readonly additionalInformation: string;
   readonly displayName: string;
-  readonly pricingPlan: PricingPlan;
+  readonly pricingPlan: PricingPlanEnum;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
+  readonly paidUntil: number;
+  readonly includedUsers: number;
+  readonly includedStorage: number; // megabytes
 };
+export type APIOrganizationStorageInfo = {
+  readonly usedStorageSpace: number;
+};
+export type APIPricingPlanStatus = {
+  readonly pricingPlan: PricingPlanEnum;
+  readonly isExceeded: boolean;
+  readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
+};
+
 export type APIBuildInfo = {
   webknossos: {
     name: string;

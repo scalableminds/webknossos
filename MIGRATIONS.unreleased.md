@@ -9,3 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/23.01.0...HEAD)
 
 ### Postgres Evolutions:
+
+- [094-pricing-plans.sql](conf/evolutions/reversions/094-pricing-plans.sql)

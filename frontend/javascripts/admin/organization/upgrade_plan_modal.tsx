@@ -20,12 +20,13 @@ import { PricingPlanEnum } from "./organization_edit_view";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
+import messages from "messages";
 
 const ModalInformationFooter = (
   <>
     <Divider style={{ marginTop: 40 }} />
     <p style={{ color: "#aaa", fontSize: 12 }}>
-      Requesting an upgrade to your organization&apos;s user quota will send an email to the
+      Requesting an upgrade to your organization&apos;s webKnossos plan will send an email to the
       webKnossos sales team. We typically respond within one business day. See our{" "}
       <a href="https://webknossos.org/faq">FAQ</a> for more information.
     </p>
@@ -38,7 +39,10 @@ function extendPricingPlan(organization: APIOrganization) {
   Modal.confirm({
     title: "Extend Current Plan",
     okText: "Request Extension",
-    onOk: sendExtendPricingPlanEmail,
+    onOk: () => {
+      sendExtendPricingPlanEmail();
+      Toast.success(messages["organization.plan.upgrage_request_sent"]);
+    },
     icon: <FieldTimeOutlined style={{ color: "var(--ant-primary-color)" }} />,
     width: 1000,
     content: (
@@ -127,7 +131,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
     if (storageInputRef.current) {
       const requestedStorage = parseInt(storageInputRef.current.value);
       await sendUpgradePricingPlanStorageEmail(requestedStorage);
-      Toast.success("An email with your request has been sent to the webKnossos team.");
+      Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
 
     destroy();
@@ -232,10 +236,12 @@ function upgradePricingPlan(
         <TeamAndPowerPlanUpgradeCards
           teamUpgradeCallback={() => {
             sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+            Toast.success(messages["organization.plan.upgrage_request_sent"]);
             destroyCallback();
           }}
           powerUpgradeCallback={() => {
             sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+            Toast.success(messages["organization.plan.upgrage_request_sent"]);
             destroyCallback();
           }}
         />

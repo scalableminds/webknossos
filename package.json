@@ -10,16 +10,6 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "@babel/cli": "^7.1.0",
-    "@babel/core": "^7.1.0",
-    "@babel/plugin-proposal-class-properties": "^7.1.0",
-    "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
-    "@babel/plugin-syntax-dynamic-import": "^7.0.0",
-    "@babel/polyfill": "^7.0.0",
-    "@babel/preset-env": "^7.1.0",
-    "@babel/preset-react": "^7.0.0",
-    "@babel/preset-typescript": "^7.16.7",
-    "@babel/register": "^7.0.0",
     "@shaderfrog/glsl-parser": "^0.2.2",
     "@types/color-hash": "^1.0.2",
     "@types/cwise": "^1.0.4",
@@ -41,10 +31,7 @@
     "@typescript-eslint/parser": "^5.40.1",
     "abort-controller": "^3.0.0",
     "ava": "^3.13.0",
-    "babel-eslint": "^9.0.0",
-    "babel-loader": "^8.2.3",
-    "babel-plugin-import": "^1.9.1",
-    "babel-plugin-istanbul": "^5.1.0",
+    "browserslist-to-esbuild": "^1.2.0",
     "commander": "^2.17.1",
     "coveralls": "^3.0.2",
     "css-loader": "^6.5.1",
@@ -68,7 +55,6 @@
     "merge-img": "^2.1.2",
     "mock-require": "^1.2.1",
     "node-fetch": "^2.6.7",
-    "nyc": "^13.3.0",
     "pg": "^7.4.1",
     "pixelmatch": "^5.2.0",
     "pngjs": "^3.3.3",
@@ -121,13 +107,14 @@
     "format-frontend": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
     "format-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "lint-backend": "sbt \";scapegoat\"",
+    "licenses-backend": "sbt dumpLicenseReport",
     "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.ts frontend/javascripts/oxalis/api/api_latest.ts --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/set_jobs.sh true",
     "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; ./tools/postgres/set_jobs.sh false",
-    "coverage-local": "nyc report --reporter=html && echo Success! Open coverage/index.html",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "coverage-local": "c8 report --reporter=html && echo Success! Open coverage/index.html",
+    "coverage": "c8 report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated typescript files...' && rm -f frontend/javascripts/test/snapshots/type-check/*.ts",
     "apply-evolutions": "tools/postgres/apply_evolutions.sh",
     "postinstall": "cd tools/proxy && yarn install",
@@ -165,6 +152,7 @@
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^3.11.1",
+    "c8": "^7.12.0",
     "chalk": "^5.0.1",
     "classnames": "^2.2.5",
     "color-hash": "^2.0.1",
@@ -177,6 +165,8 @@
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^2.1.0",
     "distance-transform": "^1.0.2",
+    "esbuild": "^0.16.10",
+    "esbuild-loader": "^2.20.0",
     "file-saver": "^2.0.1",
     "flexlayout-react": "^0.5.5",
     "hammerjs": "^2.0.8",
@@ -253,12 +243,11 @@
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8
   },
-  "nyc": {
-    "sourceMap": false,
-    "instrument": false,
+  "c8": {
     "exclude": [
       "public-test/test-bundle/test/**/*.*",
       "frontend/javascripts/test/**/*.*"
-    ]
+    ],
+    "reporter": "lcov"
   }
 }

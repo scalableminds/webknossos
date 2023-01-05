@@ -664,55 +664,54 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem activeUser={activeUser} />
               </Col>
               <Col span={12}>
-                <FormItem
+                <FormItemWithInfo
                   name="initialTeams"
                   label="Teams allowed to access this dataset"
+                  info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
                   hasFeedback
                 >
-                  <Tooltip title="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here.">
-                    <TeamSelectionComponent
-                      mode="multiple"
-                      value={this.state.selectedTeams}
-                      allowNonEditableTeams={isDatasetManagerOrAdmin}
-                      onChange={(selectedTeams) => {
-                        if (this.formRef.current == null) return;
+                  <TeamSelectionComponent
+                    mode="multiple"
+                    value={this.state.selectedTeams}
+                    allowNonEditableTeams={isDatasetManagerOrAdmin}
+                    onChange={(selectedTeams) => {
+                      if (this.formRef.current == null) return;
 
-                        if (!Array.isArray(selectedTeams)) {
-                          // Making sure that we always have an array even when only one team is selected.
-                          selectedTeams = [selectedTeams];
-                        }
+                      if (!Array.isArray(selectedTeams)) {
+                        // Making sure that we always have an array even when only one team is selected.
+                        selectedTeams = [selectedTeams];
+                      }
 
-                        this.formRef.current.setFieldsValue({
-                          initialTeams: selectedTeams,
-                        });
-                        this.setState({
-                          selectedTeams,
-                        });
-                      }}
-                      afterFetchedTeams={(fetchedTeams) => {
-                        if (!features().isDemoInstance) {
-                          return;
-                        }
+                      this.formRef.current.setFieldsValue({
+                        initialTeams: selectedTeams,
+                      });
+                      this.setState({
+                        selectedTeams,
+                      });
+                    }}
+                    afterFetchedTeams={(fetchedTeams) => {
+                      if (!features().isDemoInstance) {
+                        return;
+                      }
 
-                        const teamOfOrganisation = fetchedTeams.find(
-                          (team) => team.name === team.organization,
-                        );
+                      const teamOfOrganisation = fetchedTeams.find(
+                        (team) => team.name === team.organization,
+                      );
 
-                        if (teamOfOrganisation == null) {
-                          return;
-                        }
+                      if (teamOfOrganisation == null) {
+                        return;
+                      }
 
-                        if (this.formRef.current == null) return;
-                        this.formRef.current.setFieldsValue({
-                          initialTeams: [teamOfOrganisation],
-                        });
-                        this.setState({
-                          selectedTeams: [teamOfOrganisation],
-                        });
-                      }}
-                    />
-                  </Tooltip>
-                </FormItem>
+                      if (this.formRef.current == null) return;
+                      this.formRef.current.setFieldsValue({
+                        initialTeams: [teamOfOrganisation],
+                      });
+                      this.setState({
+                        selectedTeams: [teamOfOrganisation],
+                      });
+                    }}
+                  />
+                </FormItemWithInfo>
               </Col>
             </Row>
 

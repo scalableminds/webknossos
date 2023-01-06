@@ -1,5 +1,6 @@
 package utils.sql
 
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsValue, Json}
 import slick.dbio.{Effect, NoStream}
@@ -150,6 +151,8 @@ object SqlValue {
       case x: ObjectId          => ObjectIdValue(x)
       case x: JsValue           => JsonValue(x)
       case x: Enumeration#Value => EnumerationValue(x)
+      case x: Vec3Double        => Vec3DoubleValue(x)
+      case x: List[_]           => ArrayValue(x)
     }
 }
 
@@ -244,6 +247,18 @@ case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscap
   override def placeholder: String = "?"
 
   override def debugInfo: String = escapeLiteral(v.toString)
+}
+
+case class ArrayValue(v: List[Any]) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
+
+  override def debugInfo: String = "{" + v.map(i => escapeLiteral(i.toString)).mkString(",") + "}"
+}
+
+case class Vec3DoubleValue(v: Vec3Double) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v, Types.OTHER)
+
+  override def debugInfo: String = "" // TODO
 }
 
 case class NoneValue() extends SqlValue {

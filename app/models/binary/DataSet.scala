@@ -163,9 +163,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        q"select ${columns.debugInfo} from $existingCollectionName where _id = ${id.id} and $accessQuery"
-          .as[DatasetsRow])
+      r <- run(q"select $columns from $existingCollectionName where _id = $id and $accessQuery".as[DatasetsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
@@ -183,7 +181,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       r <- run(q"""SELECT $columns
               FROM $existingCollectionName
               WHERE $folderPredicate
-              AND (#$searchPredicate)
+              AND ($searchPredicate)
               AND $accessQuery
               """.as[DatasetsRow])
       parsed <- parseAll(r)
@@ -239,7 +237,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                      FROM $existingCollectionName
-                     WHERE name IN #${writeEscapedTuple(names)}
+                     WHERE name IN ${SqlToken.tuple(names)}
                      AND _organization = $organizationId
                      AND $accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)

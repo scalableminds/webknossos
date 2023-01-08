@@ -109,7 +109,7 @@ object SqlToken {
   def tupleList(values: Iterable[Iterable[Any]]): SqlToken = {
     val sqlValueLists = values.map(list => list.map(SqlValue.makeSqlValue))
     SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.placeholder).mkString(", ")})").mkString(", "),
-      values = sqlValueLists.flatten.toList)
+             values = sqlValueLists.flatten.toList)
   }
 
   def condition(token: SqlToken): SqlToken = SqlToken(sql = s"(${token.sql})", values = token.values)
@@ -135,22 +135,23 @@ object SqlValue {
   def makeSqlValue(p: Any): SqlValue =
     p match {
       case x: SqlValue => x
-      case x: String => StringValue(x)
+      case x: String   => StringValue(x)
       case x: Option[_] =>
         x match {
           case Some(y) => makeSqlValue(y)
-          case None => NoneValue()
+          case None    => NoneValue()
         }
-      case x: Short => ShortValue(x)
-      case x: Int => IntValue(x)
-      case x: Long => LongValue(x)
-      case x: Float => FloatValue(x)
-      case x: Double => DoubleValue(x)
-      case x: Boolean => BooleanValue(x)
-      case x: Instant => InstantValue(x)
-      case x: FiniteDuration => DurationValue(x)
-      case x: ObjectId => ObjectIdValue(x)
-      case x: JsValue => JsonValue(x)
+      case x: Short             => ShortValue(x)
+      case x: Int               => IntValue(x)
+      case x: Long              => LongValue(x)
+      case x: Float             => FloatValue(x)
+      case x: Double            => DoubleValue(x)
+      case x: Boolean           => BooleanValue(x)
+      case x: Instant           => InstantValue(x)
+      case x: FiniteDuration    => DurationValue(x)
+      case x: ObjectId          => ObjectIdValue(x)
+      case x: JsValue           => JsonValue(x)
+      case x: Enumeration#Value => EnumerationValue(x)
     }
 }
 
@@ -207,13 +208,13 @@ case class InstantValue(v: Instant) extends SqlValue with Escaping {
 case class DurationValue(v: FiniteDuration) extends SqlValue with Escaping {
 
   private def stringifyDuration = v.unit match {
-    case duration.NANOSECONDS => s"${v.length.toDouble / 1000.0} MICROSECONDS"
+    case duration.NANOSECONDS  => s"${v.length.toDouble / 1000.0} MICROSECONDS"
     case duration.MICROSECONDS => s"${v.length} MICROSECONDS"
     case duration.MILLISECONDS => s"${v.length} MILLISECONDS"
-    case duration.SECONDS => s"${v.length} SECONDS"
-    case duration.MINUTES => s"${v.length} MINUTES"
-    case duration.HOURS => s"${v.length} HOURS"
-    case duration.DAYS => s"${v.length} DAYS"
+    case duration.SECONDS      => s"${v.length} SECONDS"
+    case duration.MINUTES      => s"${v.length} MINUTES"
+    case duration.HOURS        => s"${v.length} HOURS"
+    case duration.DAYS         => s"${v.length} DAYS"
   }
 
   override def setParameter(pp: PositionedParameters): Unit =
@@ -242,6 +243,13 @@ case class NoneValue() extends SqlValue {
   override def setParameter(pp: PositionedParameters): Unit = pp.setNull(Types.BOOLEAN)
 
   override def debugInfo: String = "NULL"
+}
+
+case class EnumerationValue(v: Enumeration#Value) extends SqlValue with Escaping {
+
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v, Types.OTHER)
+
+  override def debugInfo: String = escapeLiteral(v.toString)
 }
 
 private object GetUpdateValue extends GetResult[Int] {

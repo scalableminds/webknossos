@@ -76,7 +76,8 @@ class VoxelyticsController @Inject()(
     for {
       _ <- bool2Fox(runs.nonEmpty) // just asserting once more
       workflowTaskStatistics <- voxelyticsDAO.findWorkflowTaskStatistics(request.identity,
-                                                                         runs.map(_.workflow_hash).toSet)
+                                                                         runs.map(_.workflow_hash).toSet,
+                                                                         conf.staleTimeout)
       _ <- bool2Fox(workflowTaskStatistics.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
       workflows <- voxelyticsDAO.findWorkflowsByHashAndOrganization(request.identity._organization,
                                                                     runs.map(_.workflow_hash).toSet)
@@ -132,9 +133,10 @@ class VoxelyticsController @Inject()(
 
         // Fetch task runs for all runs
         allTaskRuns <- voxelyticsDAO.findTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
+        combinedTaskRuns <- voxelyticsDAO.findCombinedTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
 
         // Fetch artifact data for task runs
-        artifacts <- voxelyticsDAO.findArtifacts(sortedRuns.map(_.id))
+        artifacts <- voxelyticsDAO.findArtifacts(sortedRuns.map(_.id), conf.staleTimeout)
 
         // Fetch task configs
         tasks <- voxelyticsDAO.findTasks(mostRecentRun.id)
@@ -144,7 +146,7 @@ class VoxelyticsController @Inject()(
           "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflow_config, tasks),
           "artifacts" -> voxelyticsService.artifactsPublicWrites(artifacts),
           "runs" -> sortedRuns,
-          "tasks" -> voxelyticsService.taskRunsPublicWrites(allTaskRuns),
+          "tasks" -> voxelyticsService.taskRunsPublicWrites(combinedTaskRuns, allTaskRuns),
           "workflow" -> Json.obj(
             "name" -> workflow.name,
             "hash" -> workflowHash,
@@ -183,18 +185,7 @@ class VoxelyticsController @Inject()(
               voxelyticsDAO.upsertChunkProfilingEvents(runId, events.map(_.asInstanceOf[ChunkProfilingEvent]))
 
             case _: ArtifactFileChecksumEvent =>
-              for {
-                _ <- Fox.combined(
-                  events
-                    .map(_.asInstanceOf[ArtifactFileChecksumEvent])
-                    .map(ev => {
-                      for {
-                        taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
-                        artifactId <- voxelyticsDAO.getArtifactIdByName(taskId, ev.artifactName)
-                        _ <- voxelyticsDAO.upsertArtifactChecksumEvent(artifactId, ev)
-                      } yield ()
-                    }))
-              } yield ()
+              voxelyticsDAO.upsertArtifactChecksumEvents(runId, events.map(_.asInstanceOf[ArtifactFileChecksumEvent]))
           }
         } else { Fox.successful(()) }
 
@@ -218,8 +209,8 @@ class VoxelyticsController @Inject()(
                                          runIdOptValidated.map(List(_)),
                                          Some(workflowHash),
                                          conf.staleTimeout,
-                                         true)
-          results <- voxelyticsDAO.getChunkStatistics(runs.map(_.id), taskName)
+                                         allowUnlisted = true)
+          results <- voxelyticsDAO.getChunkStatistics(runs.map(_.id), taskName, conf.staleTimeout)
         } yield JsonOk(Json.toJson(results))
       }
     }
@@ -237,8 +228,8 @@ class VoxelyticsController @Inject()(
                                          runIdOptValidated.map(List(_)),
                                          Some(workflowHash),
                                          conf.staleTimeout,
-                                         true)
-          results <- voxelyticsDAO.getArtifactChecksums(runs.map(_.id), taskName, artifactName)
+                                         allowUnlisted = true)
+          results <- voxelyticsDAO.getArtifactChecksums(runs.map(_.id), taskName, artifactName, conf.staleTimeout)
         } yield JsonOk(Json.toJson(results))
       }
     }

@@ -26,19 +26,23 @@ object RunEntry {
   implicit val jsonFormat: OFormat[RunEntry] = Json.format[RunEntry]
 }
 
-case class TaskRunEntry(runName: String,
-                        runId: ObjectId,
+case class TaskRunEntry(runId: ObjectId,
+                        runName: String,
                         taskId: ObjectId,
                         taskName: String,
                         state: VoxelyticsRunState,
                         beginTime: Option[Instant],
                         endTime: Option[Instant],
                         currentExecutionId: Option[String],
-                        chunksTotal: Long,
-                        chunksFinished: Long,
-                        chunksSkipped: Long)
+                        chunks: ChunkStatistics)
 
 object TaskRunEntry {
+  implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
+}
+
+case class CombinedTaskRunEntry(taskName: String, currentExecutionId: Option[String], chunks: ChunkStatistics)
+
+object CombinedTaskRunEntry {
   implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
 }
 
@@ -52,10 +56,16 @@ object WorkflowEntry {
   implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
 }
 
-case class TaskStatistics(total: Int, failed: Int, skipped: Int, complete: Int, cancelled: Int)
+case class TaskStatistics(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long)
 
 object TaskStatistics {
   implicit val jsonFormat: OFormat[TaskStatistics] = Json.format[TaskStatistics]
+}
+
+case class ChunkStatistics(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long)
+
+object ChunkStatistics {
+  implicit val jsonFormat: OFormat[ChunkStatistics] = Json.format[ChunkStatistics]
 }
 
 case class WorkflowListingRunEntry(id: ObjectId,
@@ -100,8 +110,7 @@ object StatisticsEntry {
 }
 
 case class ChunkStatisticsEntry(executionId: String,
-                                countTotal: Long,
-                                countFinished: Long,
+                                counts: ChunkStatistics,
                                 beginTime: Instant,
                                 endTime: Instant,
                                 wallTime: Double,
@@ -140,26 +149,20 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
       runUserId <- voxelyticsDAO.getUserIdForRunOpt(runName, user._organization)
     } yield bool2Fox(user.isAdmin || runUserId.forall(_ == user._id))
 
-  def runPublicWrites(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
-    Json.toJson(run).as[JsObject] ++ Json.obj(
-      "tasks" -> tasks.map(Json.toJson(_))
-    )
-
-  def taskRunsPublicWrites(taskRuns: List[TaskRunEntry]): JsArray = {
+  def taskRunsPublicWrites(combinedTaskRuns: List[CombinedTaskRunEntry], taskRuns: List[TaskRunEntry]): JsArray = {
     val groupedTaskRuns = taskRuns.groupBy(_.taskName)
     JsArray(
       groupedTaskRuns
         .map(group => {
           val sortedTaskRuns = group._2.sortBy(_.beginTime).reverse
+          val combinedTaskRun = combinedTaskRuns.find(_.taskName == group._1)
           Json.obj(
             "taskName" -> group._1,
             "state" -> sortedTaskRuns.head.state,
             "beginTime" -> sortedTaskRuns.head.beginTime,
             "endTime" -> sortedTaskRuns.head.endTime,
-            "currentExecutionId" -> sortedTaskRuns.head.currentExecutionId,
-            "chunksTotal" -> sortedTaskRuns.head.chunksTotal,
-            "chunksFinished" -> sortedTaskRuns.head.chunksFinished,
-            "chunksSkipped" -> sortedTaskRuns.head.chunksSkipped,
+            "currentExecutionId" -> combinedTaskRun.flatMap(_.currentExecutionId),
+            "chunks" -> combinedTaskRun.map(_.chunks).getOrElse(ChunkStatistics(0, 0, 0, 0, 0)),
             "runs" -> sortedTaskRuns.map(run =>
               Json.obj(
                 "runId" -> run.runId,
@@ -167,9 +170,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
                 "beginTime" -> run.beginTime,
                 "endTime" -> run.endTime,
                 "currentExecutionId" -> run.currentExecutionId,
-                "chunksTotal" -> run.chunksTotal,
-                "chunksFinished" -> run.chunksFinished,
-                "chunksSkipped" -> run.chunksSkipped
+                "chunks" -> run.chunks
             ))
           )
         })

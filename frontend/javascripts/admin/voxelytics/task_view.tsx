@@ -51,7 +51,11 @@ function TaskView({
 
   return (
     <div>
-      {taskInfo.state === VoxelyticsRunState.RUNNING && (
+      {[
+        VoxelyticsRunState.RUNNING,
+        VoxelyticsRunState.CANCELLED,
+        VoxelyticsRunState.FAILED,
+      ].includes(taskInfo.state) && (
         <div style={{ display: "flex", flexDirection: "row" }}>
           Approx. Chunk Progress:
           <Tooltip

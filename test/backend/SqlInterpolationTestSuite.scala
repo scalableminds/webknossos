@@ -1,6 +1,7 @@
 package backend
 
 import com.scalableminds.util.time.Instant
+import models.voxelytics.VoxelyticsRunState
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import utils.ObjectId
@@ -57,6 +58,11 @@ class SqlInterpolationTestSuite extends PlaySpec {
       val sql = q"""SELECT * FROM test WHERE created < $time"""
       assert(sql == SqlToken("SELECT * FROM test WHERE created < ?::TIMESTAMPTZ", List(InstantValue(time))))
       assert(sql.debugInfo == "SELECT * FROM test WHERE created < '2022-12-24T12:31:00Z'::TIMESTAMPTZ")
+    }
+    "construct an SQLToken with enumeration" in {
+      val sql = q"""SELECT * FROM test WHERE state = ${VoxelyticsRunState.RUNNING}"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE state = ?", List(EnumerationValue(VoxelyticsRunState.RUNNING))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE state = 'RUNNING")
     }
     "construct an SQLToken with duration" in {
       val duration0 = 12 nanos

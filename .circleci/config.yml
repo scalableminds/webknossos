@@ -293,6 +293,8 @@ workflows:
   circleci_build:
     jobs:
       - build_test_deploy:
+          context:
+            - DockerHub
           filters:
             tags:
               only: /.*/

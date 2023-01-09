@@ -55,8 +55,7 @@ type State = {
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
   keyboardNoLoop: InputKeyboardNoLoop;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isMounted' has no initializer and is not... Remove this comment to see the full error message
-  isMounted: boolean;
+  _isMounted: boolean = false;
   state: State = {
     gotUnhandledError: false,
     organizationToSwitchTo: null,
@@ -80,7 +79,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     // The annotation view should be rendered without the special mobile-friendly
     // viewport meta tag.
     Utils.disableViewportMetatag();
-    this.isMounted = true;
+    this._isMounted = true;
     Store.dispatch(setIsInAnnotationViewAction(true));
     UrlManager.initialize();
 
@@ -92,7 +91,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   componentWillUnmount() {
-    this.isMounted = false;
+    this._isMounted = false;
     Store.dispatch(setIsInAnnotationViewAction(false));
   }
 
@@ -155,7 +154,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
           setTimeout(() => {
-            if (!this.isMounted) {
+            if (!this._isMounted) {
               return;
             }
 

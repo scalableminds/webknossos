@@ -100,9 +100,12 @@ const { setSlowCompression } = mockRequire.reRequire(
 );
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
-const wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
+let wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
 
-wkstoreAdapter.requestFromStore = () => new Uint8Array();
+wkstoreAdapter = {
+  ...wkstoreAdapter,
+  requestFromStore: () => new Uint8Array(),
+};
 
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
 

@@ -96,11 +96,11 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 
   return Maybe.Nothing();
 }
-export function findTreeByNodeId(trees: TreeMap, nodeId: number): Maybe<Tree> {
-  return Maybe.fromNullable(_.values(trees).find((tree) => tree.nodes.has(nodeId)));
+export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
+  return _.values(trees).find((tree) => tree.nodes.has(nodeId));
 }
-export function findTreeByName(trees: TreeMap, treeName: string): Maybe<Tree> {
-  return Maybe.fromNullable(_.values(trees).find((tree: Tree) => tree.name === treeName));
+export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
+  return _.values(trees).find((tree: Tree) => tree.name === treeName);
 }
 export function getTree(
   skeletonTracing: SkeletonTracing,

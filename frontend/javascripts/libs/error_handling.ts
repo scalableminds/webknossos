@@ -180,7 +180,7 @@ class ErrorHandling {
     optParams: Record<string, any> = {},
     severity: "error" | "warning" = "error",
   ) {
-    if (process.env.BABEL_ENV === "test") {
+    if (process.env.IS_TESTING) {
       return;
     }
 

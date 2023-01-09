@@ -331,8 +331,8 @@ export function maybeGetNodeIdFromPosition(
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because WebGL has its origin bottom-left :/
   const index = (x + (height - y) * width) * 4;
-  // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
-  const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
+  // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-256 number
+  const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 256 + b, 0);
   skeleton.stopPicking();
   // prevent flickering sometimes caused by picking
   planeView.renderFunction(true);

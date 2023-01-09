@@ -16,7 +16,8 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.sql.{SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration

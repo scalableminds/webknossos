@@ -10,7 +10,7 @@ import { usePolling } from "libs/react_hooks";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import { VX_POLLING_INTERVAL } from "./workflow_view";
-import { Result } from "./task_view";
+import { type Result } from "./task_view";
 
 type LogResult = Result<Array<any>>;
 

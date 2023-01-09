@@ -136,7 +136,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     else
       for {
         accessQuery <- accessQueryFromAccessQ(listAccessQ)
-        r <- run(sql"""select #${columnsWithPrefix("u.")}
+        r <- run(sql"""select #${columnsWithPrefix("u.").debugInfo}
                          from (select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teamIds.map(_.id))}
                                and not u.isDeactivated
@@ -320,7 +320,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findTeamMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =
     for {
-      r <- run(sql"""select #${columnsWithPrefix("u.")} from webknossos.users_ u
+      r <- run(sql"""select #${columnsWithPrefix("u.").debugInfo} from webknossos.users_ u
                      join webknossos.user_team_roles tr on u._id = tr._user
                      where not u.isAdmin
                      and not u.isDeactivated

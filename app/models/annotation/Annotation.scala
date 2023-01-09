@@ -427,7 +427,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                viewConfiguration = ${a.viewConfiguration},
                state = ${a.state},
                statistics = ${a.statistics},
-               tags = ${a.tags.toList}',
+               tags = ${a.tags.toList},
                tracingTime = ${a.tracingTime},
                typ = ${a.typ},
                othersMayEdit = ${a.othersMayEdit},

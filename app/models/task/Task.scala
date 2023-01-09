@@ -118,7 +118,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
 
   private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean) =
     s"""
-          select ${columnsWithPrefix("webknossos.tasks_.")}
+          select ${columnsWithPrefix("webknossos.tasks_.").debugInfo}
              from
                webknossos.tasks_
                join
@@ -138,7 +138,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
 
   private def findNextTaskByIdQ(taskId: ObjectId) =
     s"""
-        select $columns
+        select ${columns.debugInfo}
         from webknossos.tasks_
         where _id = '${taskId.id}' and openInstances > 0
         limit 1
@@ -173,7 +173,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
 
   private def findTaskOfInsertedAnnotationQ(annotationId: ObjectId) =
     sql"""
-         select #${columnsWithPrefix("t.")}
+         select #${columnsWithPrefix("t.").debugInfo}
          from webknossos.annotations_ a
          join webknossos.tasks_ t on a._task = t._id
          where a._id = $annotationId

@@ -110,7 +110,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllWithTaskType(taskTypeId: String): Fox[List[Project]] =
     for {
       r <- run(
-        sql"""select distinct #${columnsWithPrefix("p.")}
+        sql"""select distinct #${columnsWithPrefix("p.").debugInfo}
               from webknossos.projects_ p
               join webknossos.tasks_ t on t._project = p._id
               join webknossos.taskTypes_ tt on t._taskType = tt._id

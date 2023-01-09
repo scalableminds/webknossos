@@ -206,8 +206,8 @@ function* splitOrMergeOrMinCutAgglomerate(
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
 
   const { trees } = skeletonTracing;
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId).getOrElse(null);
-  const targetTree = findTreeByNodeId(trees, targetNodeId).getOrElse(null);
+  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
+  const targetTree = findTreeByNodeId(trees, targetNodeId);
 
   if (sourceTree == null || targetTree == null) {
     yield* put(setBusyBlockingInfoAction(false));

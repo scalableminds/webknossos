@@ -372,7 +372,22 @@ function NodeContextMenuOptions({
 
   const { userBoundingBoxes } = skeletonTracing;
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
-  const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
+  const clickedTree = findTreeByNodeId(trees, clickedNodeId);
+
+  if (clickedTree == null) {
+    return (
+      <Menu
+        onClick={hideContextMenu}
+        style={{
+          borderRadius: 6,
+        }}
+        mode="vertical"
+      >
+        <Menu.Item disabled>Error: Could not find clicked node</Menu.Item>
+      </Menu>
+    );
+  }
+
   const areInSameTree = activeTreeId === clickedTree.treeId;
   const isBranchpoint = clickedTree.branchPoints.find((bp) => bp.nodeId === clickedNodeId) != null;
   const isTheSameNode = activeNodeId === clickedNodeId;

@@ -37,6 +37,8 @@ organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=This organization name contains illegal characters. Please only use letters and numbers.
 organization.name.alreadyInUse=This name is already claimed by a different organization and not available anymore. Please choose a different name.
 organization.alreadyJoined=Your account is already associated with the selected organization.
+organization.users.userLimitReached=Cannot add user because it would exceed the limit of included users in this plan.
+organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization webKnossos plan. Please ask the organization owner for permission.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 

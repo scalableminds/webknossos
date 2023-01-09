@@ -2,7 +2,7 @@ package models.folder
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{Folders, _}
+import com.scalableminds.webknossos.schema.Tables._
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
@@ -10,7 +10,8 @@ import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

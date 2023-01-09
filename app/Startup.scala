@@ -14,7 +14,8 @@ import oxalis.mail.{Mailer, MailerConfig}
 import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
-import utils.{SQLClient, WkConf}
+import utils.WkConf
+import utils.sql.SQLClient
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

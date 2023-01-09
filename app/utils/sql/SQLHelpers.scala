@@ -1,4 +1,4 @@
-package utils
+package utils.sql
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
@@ -14,6 +14,8 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 import slick.util.{Dumpable, TreePrinter}
+import utils.ObjectId
+import utils.sql.SqlInterpolation.sqlInterpolation
 
 import java.io.{ByteArrayOutputStream, PrintWriter}
 import java.nio.charset.StandardCharsets
@@ -57,84 +59,7 @@ trait SQLTypeImplicits {
   }
 }
 
-class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
-    with SQLTypeImplicits {
-
-  protected lazy val transactionSerializationError = "could not serialize access"
-
-  protected def run[R](query: DBIOAction[R, NoStream, Nothing],
-                       retryCount: Int = 0,
-                       retryIfErrorContains: List[String] = List()): Fox[R] = {
-    val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
-      result match {
-        case Success(res) =>
-          Fox.successful(res)
-        case Failure(e: Throwable) =>
-          val msg = e.getMessage
-          if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
-            logger.debug(s"Retrying SQL Query ($retryCount remaining) due to $msg")
-            Thread.sleep(20)
-            run(query, retryCount - 1, retryIfErrorContains)
-          } else {
-            logError(e, query)
-            reportErrorToSlack(e, query)
-            Fox.failure("SQL Failure: " + e.getMessage)
-          }
-      }
-    }
-    foxFuture.toFox.flatten
-  }
-
-  private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
-    logger.error("SQL Error: " + ex)
-    logger.debug("Caused by query:\n" + querySummary(query).take(4000))
-  }
-
-  private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
-    sqlClient.getSlackNotificationService.warnWithException(
-      "SQL Error",
-      ex,
-      s"Causing query: ${querySummary(query).take(4000)}"
-    )
-
-  private def querySummary(query: Dumpable): String = {
-    val treePrinter = new TreePrinter()
-    val os = new ByteArrayOutputStream()
-    treePrinter.print(query, new PrintWriter(os))
-    new String(os.toByteArray, StandardCharsets.UTF_8)
-  }
-
-  protected def writeArrayTuple(elements: List[String]): String = {
-    val commaSeparated = elements.map(sanitizeInArrayTuple).map(e => s""""$e"""").mkString(",")
-    s"{$commaSeparated}"
-  }
-
-  protected def writeStructTuple(elements: List[String]): String = {
-    val commaSeparated = elements.mkString(",")
-    s"($commaSeparated)"
-  }
-
-  protected def writeStructTupleWithQuotes(elements: List[String]): String = {
-    val commaSeparated = elements.map(e => s"'$e'").mkString(",")
-    s"($commaSeparated)"
-  }
-
-  protected def parseArrayTuple(literal: String): List[String] = {
-    val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty)
-      List.empty
-    else {
-      val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
-      split.map { item =>
-        if (item.startsWith("\"") && item.endsWith("\"")) {
-          item.drop(1).dropRight(1)
-        } else item
-      }
-    }
-  }
-
+trait Escaping {
   protected def escapeLiteral(aString: String): String = {
     // Ported from PostgreSQL 9.2.4 source code in src/interfaces/libpq/fe-exec.c
     var hasBackslash = false
@@ -178,6 +103,87 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   protected def optionLiteralSanitized(aStringOpt: Option[String]): String = optionLiteral(aStringOpt.map(sanitize))
 
+  protected def writeArrayTuple(elements: List[String]): String = {
+    val commaSeparated = elements.map(sanitizeInArrayTuple).map(e => s""""$e"""").mkString(",")
+    s"{$commaSeparated}"
+  }
+
+  protected def writeStructTuple(elements: List[String]): String = {
+    val commaSeparated = elements.mkString(",")
+    s"($commaSeparated)"
+  }
+
+  protected def writeStructTupleWithQuotes(elements: List[String]): String = {
+    val commaSeparated = elements.map(e => s"'$e'").mkString(",")
+    s"($commaSeparated)"
+  }
+
+  protected def parseArrayTuple(literal: String): List[String] = {
+    val trimmed = literal.drop(1).dropRight(1)
+    if (trimmed.isEmpty)
+      List.empty
+    else {
+      val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
+      split.map { item =>
+        if (item.startsWith("\"") && item.endsWith("\"")) {
+          item.drop(1).dropRight(1)
+        } else item
+      }
+    }
+  }
+}
+
+class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging
+    with SQLTypeImplicits
+    with Escaping {
+
+  implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)
+
+  protected lazy val transactionSerializationError = "could not serialize access"
+
+  protected def run[R](query: DBIOAction[R, NoStream, Nothing],
+                       retryCount: Int = 0,
+                       retryIfErrorContains: List[String] = List()): Fox[R] = {
+    val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
+      result match {
+        case Success(res) =>
+          Fox.successful(res)
+        case Failure(e: Throwable) =>
+          val msg = e.getMessage
+          if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
+            logger.debug(s"Retrying SQL Query ($retryCount remaining) due to $msg")
+            Thread.sleep(20)
+            run(query, retryCount - 1, retryIfErrorContains)
+          } else {
+            logError(e, query)
+            reportErrorToSlack(e, query)
+            Fox.failure("SQL Failure: " + e.getMessage)
+          }
+      }
+    }
+    foxFuture.toFox.flatten
+  }
+
+  private def querySummary(query: Dumpable): String = {
+    val treePrinter = new TreePrinter()
+    val os = new ByteArrayOutputStream()
+    treePrinter.print(query, new PrintWriter(os))
+    new String(os.toByteArray, StandardCharsets.UTF_8)
+  }
+
+  private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
+    logger.error("SQL Error: " + ex)
+    logger.debug("Caused by query:\n" + querySummary(query).take(4000))
+  }
+
+  private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
+    sqlClient.getSlackNotificationService.warnWithException(
+      "SQL Error",
+      ex,
+      s"Causing query: ${querySummary(query).take(4000)}"
+    )
 }
 
 abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

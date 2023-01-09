@@ -53,9 +53,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       const activeTreeIdMaybe = activeNodeIdMaybe
         .chain((nodeId) => {
           // use activeNodeId to find active tree
-          const treeIdMaybe = findTreeByNodeId(trees, nodeId).map((tree) => tree.treeId);
+          const treeIdMaybe = findTreeByNodeId(trees, nodeId)?.treeId;
 
-          if (treeIdMaybe.isNothing) {
+          if (treeIdMaybe == null) {
             // There is an activeNodeId without a corresponding tree.
             // Warn the user, since this shouldn't happen, but clear the activeNodeId
             // so that wk is usable.
@@ -68,7 +68,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             activeNodeId = null;
           }
 
-          return treeIdMaybe;
+          return Maybe.fromNullable(treeIdMaybe);
         })
         .orElse(() => {
           // use last tree for active tree
@@ -127,25 +127,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       switch (action.type) {
         case "SET_ACTIVE_NODE": {
           const { nodeId } = action;
-          return findTreeByNodeId(skeletonTracing.trees, nodeId)
-            .map((tree) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    activeNodeId: {
-                      $set: nodeId,
-                    },
-                    activeTreeId: {
-                      $set: tree.treeId,
-                    },
-                    activeGroupId: {
-                      $set: null,
-                    },
+          const tree = findTreeByNodeId(skeletonTracing.trees, nodeId);
+          if (tree) {
+            return update(state, {
+              tracing: {
+                skeleton: {
+                  activeNodeId: {
+                    $set: nodeId,
+                  },
+                  activeTreeId: {
+                    $set: tree.treeId,
+                  },
+                  activeGroupId: {
+                    $set: null,
                   },
                 },
-              }),
-            )
-            .getOrElse(state);
+              },
+            });
+          } else {
+            return state;
+          }
         }
 
         case "SET_NODE_RADIUS": {

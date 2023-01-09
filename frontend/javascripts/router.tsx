@@ -261,8 +261,6 @@ class ReactRouter extends React.Component<Props> {
               />
 
               <RouteWithErrorBoundary
-                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-                isAuthenticated={isAuthenticated}
                 path="/dashboard"
                 render={() => {
                   if (isAuthenticated) {
@@ -496,7 +494,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/organizations/:organizationName/edit"
+                path="/organizations/:organizationName"
                 render={({ match }) => (
                   // @ts-expect-error ts-migrate(2339) FIXME: Property 'organizationName' does not exist on type... Remove this comment to see the full error message
                   <OrganizationEditView organizationName={match.params.organizationName || ""} />

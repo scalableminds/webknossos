@@ -243,7 +243,7 @@ function AdministrationSubMenu({
       </Menu.Item>
       {isAdmin && (
         <Menu.Item key="/organization">
-          <Link to={`/organizations/${organization}/edit`}>Organization</Link>
+          <Link to={`/organizations/${organization}`}>Organization</Link>
         </Menu.Item>
       )}
       {features().voxelyticsEnabled && (
@@ -537,6 +537,11 @@ function LoggedInAvatar({
         <Menu.Item disabled key="organization">
           {orgDisplayName}
         </Menu.Item>
+        {activeOrganization && Utils.isUserAdmin(activeUser) ? (
+          <Menu.Item key="manage-organization">
+            <Link to={`/organizations/${activeOrganization.name}`}>Manage Organization</Link>
+          </Menu.Item>
+        ) : null}
         {isMultiMember ? (
           /* The explicit width is a workaround for a layout bug (probably in antd) */
           <Menu.SubMenu

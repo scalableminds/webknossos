@@ -3,33 +3,17 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.{Compressor, DatasetHeader}
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 import play.api.libs.json.Json.WithDefaultValues
 
 import java.nio.ByteOrder
 
-
 case class PrecomputedHeader(`type`: String, data_type: String, num_channels: Int, scales: List[PrecomputedScale]) {
-  /*override def datasetShape: Array[Int] = (scales.head.resolution, scales.head.size).zipped.map(_ * _)
 
-  override def chunkSize: Array[Int] = scales.head.chunk_sizes.head
-
-  override def dimension_separator: DimensionSeparator = ???
-
-  override def dataType: String = data_type
-
-  override def fill_value: Either[String, Number] = ???
-
-  override def order: ArrayOrder = ???
-
-  override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
-
-  lazy val resolvedDataType: ArrayDataType =
-    PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(dataType.toLowerCase).get)
-
-  override def compressorImpl: Compressor = ???*/
+  def getScale(key: String): Option[PrecomputedScale] =
+    scales.find(s => s.key == key)
 }
 
 case class PrecomputedScale(key: String,
@@ -37,24 +21,32 @@ case class PrecomputedScale(key: String,
                             resolution: Array[Int],
                             chunk_sizes: Array[Array[Int]],
                             encoding: String,
-                            voxel_offset: Option[Array[Int]]) extends DatasetHeader {
-  override def datasetShape: Array[Int] = ???
+                            voxel_offset: Option[Array[Int]],
+                            compressed_segmentation_block_size: Option[Array[Int]])
+//sharding: Option[ShardingSpecification])
 
-  override def chunkSize: Array[Int] = chunk_sizes.head
+case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
+    extends DatasetHeader {
+  override def datasetShape: Array[Int] = (precomputedScale.resolution, precomputedScale.size).zipped.map(_ * _)
 
-  override def dimension_separator: DimensionSeparator = ???
+  override def chunkSize: Array[Int] = precomputedScale.chunk_sizes.head
 
-  override def dataType: String = ???
+  override def dimension_separator: DimensionSeparator = DimensionSeparator.UNDERSCORE
 
-  override def fill_value: Either[String, Number] = ???
+  override def dataType: String = precomputedHeader.data_type
 
-  override def order: ArrayOrder = ???
+  override def fill_value: Either[String, Number] = Right(0)
 
-  override def resolvedDataType: ArrayDataType = ???
+  override def order: ArrayOrder = ArrayOrder.F
 
-  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(encoding)
+  override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
+
+  override def resolvedDataType: ArrayDataType =
+    PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(dataType.toLowerCase).get)
+
+  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(precomputedScale.encoding)
 }
-//compressed_segmentation_block_size, sharding)
+//
 
 object PrecomputedScale extends JsonImplicits {
   implicit object PrecomputedScaleFormat extends Format[PrecomputedScale] {
@@ -77,5 +69,3 @@ object PrecomputedHeader extends JsonImplicits {
       Json.writes[PrecomputedHeader].writes(precomputedHeader)
   }
 }
-
-

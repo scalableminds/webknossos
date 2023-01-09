@@ -1,6 +1,11 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader, FileSystemStore, TypedChunkReader}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  ChunkReader,
+  DatasetHeader,
+  FileSystemStore,
+  TypedChunkReader
+}
 
 object PrecomputedChunkReader {
   def create(store: FileSystemStore, header: DatasetHeader): ChunkReader =
@@ -8,6 +13,6 @@ object PrecomputedChunkReader {
 }
 
 class PrecomputedChunkReader(header: DatasetHeader, store: FileSystemStore, typedChunkReader: TypedChunkReader)
-  extends ChunkReader(header, store, typedChunkReader){
+    extends ChunkReader(header, store, typedChunkReader) {
   // TODO
 }

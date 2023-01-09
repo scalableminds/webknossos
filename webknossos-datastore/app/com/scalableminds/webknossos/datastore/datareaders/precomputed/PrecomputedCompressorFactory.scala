@@ -5,13 +5,12 @@ import com.scalableminds.webknossos.datastore.datareaders.{Compressor, NullCompr
 object PrecomputedCompressorFactory {
   val nullCompressor = new NullCompressor
 
-  def create(encoding: String): Compressor = {
+  def create(encoding: String): Compressor =
     encoding.toLowerCase match {
-      case "raw" => nullCompressor
-      case "jpeg" => throw new NotImplementedError
+      case "raw"                     => nullCompressor
+      case "jpeg"                    => throw new NotImplementedError
       case "compressed_segmentation" => throw new NotImplementedError
-      case _      => throw new IllegalArgumentException(s"Chunk encoding '$encoding' not supported.")
+      case _                         => throw new IllegalArgumentException(s"Chunk encoding '$encoding' not supported.")
     }
-  }
 
 }

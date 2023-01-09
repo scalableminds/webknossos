@@ -47,7 +47,7 @@ trait DataSetDeleter extends LazyLogging with DirectoryConstants {
     } else {
       Fox.successful(
         logger.info(
-          s"Dataset deletion requested for dataset at $dataSourcePath, but it does not exist. Skipping this step."))
+          s"Dataset deletion requested for dataset at $dataSourcePath, but it does not exist. Skipping deletion on disk."))
     }
 
   }

@@ -182,8 +182,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       resultList <- run(sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo}
-                              where _multiUser = $multiUserId and #${accessQuery.debugInfo}
-                               limit 1""".as[UsersRow])
+                              where _multiUser = $multiUserId and not isDeactivated and #${accessQuery.debugInfo}
+                              limit 1""".as[UsersRow])
       result <- resultList.headOption.toFox
       parsed <- parse(result)
     } yield parsed

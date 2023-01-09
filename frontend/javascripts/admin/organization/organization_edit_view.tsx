@@ -1,29 +1,56 @@
 import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Button, Card, Input, Row, FormInstance } from "antd";
-import { MailOutlined, TagOutlined, CopyOutlined, KeyOutlined } from "@ant-design/icons";
+import { Form, Button, Card, Input, Row, FormInstance, Col, Skeleton } from "antd";
+import {
+  MailOutlined,
+  TagOutlined,
+  CopyOutlined,
+  SaveOutlined,
+  IdcardOutlined,
+} from "@ant-design/icons";
 import React from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
+import {
+  getOrganization,
+  deleteOrganization,
+  updateOrganization,
+  getUsers,
+  getPricingPlanStatus,
+  getOrganizationStorageSpace,
+} from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { coalesce } from "libs/utils";
+import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import {
+  PlanAboutToExceedAlert,
+  PlanDashboardCard,
+  PlanExceededAlert,
+  PlanExpirationCard,
+  PlanUpgradeCard,
+} from "./organization_cards";
+import { getActiveUserCount } from "./pricing_plan_utils";
 
 const FormItem = Form.Item;
 export enum PricingPlanEnum {
   Basic = "Basic",
-  Premium = "Premium",
-  Pilot = "Pilot",
+  Team = "Team",
+  Power = "Power",
+  TeamTrial = "Team_Trial",
+  PowerTrial = "Power_Trial",
   Custom = "Custom",
 }
-export type PricingPlan = keyof typeof PricingPlanEnum;
 type Props = {
   organizationName: string;
 };
 type State = {
   displayName: string;
   newUserMailingList: string;
-  pricingPlan: PricingPlan | null | undefined;
+  pricingPlan: PricingPlanEnum | null | undefined;
   isFetchingData: boolean;
   isDeleting: boolean;
+  organization: APIOrganization | null;
+  activeUsersCount: number;
+  pricingPlanStatus: APIPricingPlanStatus | null;
+  usedStorageSpace: number | null;
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
@@ -33,6 +60,10 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     pricingPlan: null,
     isFetchingData: false,
     isDeleting: false,
+    organization: null,
+    activeUsersCount: 1,
+    pricingPlanStatus: null,
+    usedStorageSpace: null,
   };
   formRef = React.createRef<FormInstance>();
 
@@ -70,14 +101,23 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingData: true,
     });
-    const { displayName, newUserMailingList, pricingPlan } = await getOrganization(
-      this.props.organizationName,
-    );
+    const [organization, users, pricingPlanStatus, usedStorageSpace] = await Promise.all([
+      getOrganization(this.props.organizationName),
+      getUsers(),
+      getPricingPlanStatus(),
+      getOrganizationStorageSpace(this.props.organizationName),
+    ]);
+
+    const { displayName, newUserMailingList, pricingPlan } = organization;
     this.setState({
       displayName,
       pricingPlan: coalesce(PricingPlanEnum, pricingPlan),
       newUserMailingList,
       isFetchingData: false,
+      organization,
+      pricingPlanStatus,
+      activeUsersCount: getActiveUserCount(users),
+      usedStorageSpace: usedStorageSpace.usedStorageSpace,
     });
   }
 
@@ -88,8 +128,9 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       formValues.displayName,
       formValues.newUserMailingList,
     );
-    window.location.replace(`${window.location.origin}/dashboard/`);
+    Toast.success("Organization settings were saved successfully.");
   };
+
   handleDeleteButtonClicked = async (): Promise<void> => {
     const isDeleteConfirmed = await confirmAsync({
       title: (
@@ -99,7 +140,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
           Attention: You will be logged out.
         </p>
       ),
-      okText: "Yes, Delete Organization now",
+      okText: "Yes, delete this organization now.",
     });
 
     if (isDeleteConfirmed) {
@@ -113,25 +154,66 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       window.location.replace(`${window.location.origin}/dashboard`);
     }
   };
+
   handleCopyNameButtonClicked = async (): Promise<void> => {
     await navigator.clipboard.writeText(this.props.organizationName);
-    Toast.success("Organization name copied to clipboard");
+    Toast.success("Copied organization name to the clipboard.");
   };
 
   render() {
+    if (
+      this.state.isFetchingData ||
+      !this.state.organization ||
+      !this.state.pricingPlan ||
+      !this.state.pricingPlanStatus ||
+      this.state.usedStorageSpace === null
+    )
+      return (
+        <div
+          className="container"
+          style={{
+            paddingTop: 40,
+            margin: "auto",
+            maxWidth: 800,
+          }}
+        >
+          <Skeleton active />
+        </div>
+      );
+
+    const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
+
     return (
       <div
         className="container"
         style={{
           paddingTop: 20,
+          margin: "auto",
+          maxWidth: 800,
         }}
       >
+        <Row style={{ color: "#aaa", fontSize: "12" }}>Your Organization</Row>
+        <Row style={{ marginBottom: 20 }}>
+          <h2>{this.state.displayName}</h2>
+        </Row>
+        {this.state.pricingPlanStatus.isExceeded ? (
+          <PlanExceededAlert organization={this.state.organization} />
+        ) : null}
+        {this.state.pricingPlanStatus.isAlmostExceeded &&
+        !this.state.pricingPlanStatus.isExceeded ? (
+          <PlanAboutToExceedAlert organization={this.state.organization} />
+        ) : null}
+        <PlanDashboardCard
+          organization={this.state.organization}
+          activeUsersCount={this.state.activeUsersCount}
+          usedStorageSpace={this.state.usedStorageSpace}
+        />
+        <PlanExpirationCard organization={this.state.organization} />
+        <PlanUpgradeCard organization={this.state.organization} />
         <Card
-          title={<h3>Edit {this.state.displayName} </h3>}
-          style={{
-            margin: "auto",
-            maxWidth: 800,
-          }}
+          title="Settings"
+          style={{ marginBottom: 20 }}
+          headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
         >
           <Form
             onFinish={this.onFinish}
@@ -142,10 +224,10 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               newUserMailingList: this.state.newUserMailingList,
             }}
           >
-            <FormItem label="ID">
+            <FormItem label="Organization ID">
               <Input.Group compact>
                 <Input
-                  prefix={<KeyOutlined />}
+                  prefix={<IdcardOutlined />}
                   value={this.props.organizationName}
                   style={{
                     width: "calc(100% - 31px)",
@@ -159,21 +241,19 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               </Input.Group>
             </FormItem>
             <FormItem
-              label="Display Name"
+              label="Organization Name"
               name="displayName"
               rules={[
                 {
                   required: true,
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'RegExp | ... Remove this comment to see the full error message
-                  pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
+                  pattern: OrgaNameRegexPattern,
                   message:
-                    "The organization name must not contain any special characters and can not be empty.",
+                    "Organization names must not contain any special characters and can not be empty.",
                 },
               ]}
             >
               <Input
                 prefix={<TagOutlined />}
-                autoFocus
                 disabled={this.state.isFetchingData}
                 placeholder="Display Name"
               />
@@ -185,6 +265,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 {
                   required: false,
                   type: "email",
+                  message: "Please provide a valid email address.",
                 },
               ]}
             >
@@ -200,40 +281,27 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 placeholder="mail@example.com"
               />
             </FormItem>
-            <FormItem>
-              <div
-                className="ant-form-item-label"
-                style={{
-                  paddingTop: 5,
-                }}
-              >
-                <label
-                  style={{
-                    paddingRight: 20,
-                  }}
-                >
-                  Pricing Plan
-                </label>
-                <span
-                  className="bordered"
-                  style={{
-                    cursor: "default",
-                  }}
-                >
-                  {this.state.pricingPlan}
-                </span>
-              </div>
-            </FormItem>
-            <Row justify="center">
-              <FormItem
-                style={{
-                  marginRight: 20,
-                }}
-              >
-                <Button type="primary" htmlType="submit" disabled={this.state.isFetchingData}>
-                  Save
-                </Button>
-              </FormItem>
+            <Button
+              type="primary"
+              htmlType="submit"
+              disabled={this.state.isFetchingData}
+              icon={<SaveOutlined />}
+            >
+              Save
+            </Button>
+          </Form>
+        </Card>
+        <Card
+          title="Danger Zone"
+          style={{ marginBottom: 20 }}
+          headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
+        >
+          <Row>
+            <Col span={18}>
+              Delete this organization including all annotations, uploaded datasets, and associated
+              user accounts. Careful, this action can NOT be undone.
+            </Col>
+            <Col span={6}>
               <Button
                 danger
                 loading={this.state.isDeleting}
@@ -242,8 +310,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               >
                 Delete Organization
               </Button>
-            </Row>
-          </Form>
+            </Col>
+          </Row>
         </Card>
       </div>
     );

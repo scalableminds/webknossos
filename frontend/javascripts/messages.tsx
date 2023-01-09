@@ -433,4 +433,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
+  "organization.plan.upgrage_request_sent":
+    "An email with your upgrade request has been sent to the webKnossos sales team.",
 };

@@ -77,9 +77,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     case None => Fox.successful(None)
   }
 
-  private def writeScaleLiteral(scale: Vec3Double): String =
-    writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
-
   protected def parse(r: DatasetsRow): Fox[DataSet] =
     for {
       scale <- parseScaleOpt(r.scale)
@@ -172,7 +169,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
-        case Some(folderId) if (includeSubfolders) =>
+        case Some(folderId) if includeSubfolders =>
           q"_folder IN (select _descendant FROM webknossos.folder_paths fp WHERE fp._ancestor = $folderId)"
         case Some(folderId) => q"_folder = $folderId"
         case None           => q"true"
@@ -306,8 +303,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      query = writeArrayTuple(tags)
-      _ <- run(sqlu"update webknossos.datasets set tags = '#$query' where _id = $id") // TODO
+      _ <- run(q"update webknossos.datasets set tags = $tags where _id = $id".asUpdate)
     } yield ()
 
   def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DataSetViewConfiguration)(
@@ -333,16 +329,15 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       _ <- run(
         q"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, _uploader, _folder, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
-                                                             isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, tags, created, isDeleted)
-               values(${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
-               ${d._uploader}, ${d._folder},
-               ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
-               ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
-               ${d.name}, ${SqlToken.raw(optionLiteral(d.scale.map(s => writeScaleLiteral(s))))}, ${d.status
-          .take(1024)},
-               ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${SqlToken.tuple(d.tags.toList)},
-               ${d.created}, ${d.isDeleted})
-               """.asUpdate) // TODO Vec3Double, tags
+                                                         isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, tags, created, isDeleted)
+           values(${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
+           ${d._uploader}, ${d._folder},
+           ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
+           ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
+           ${d.name}, ${d.scale}, ${d.status.take(1024)},
+           ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags.toList},
+           ${d.created}, ${d.isDeleted})
+           """.asUpdate)
     } yield ()
   }
 
@@ -353,17 +348,18 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                                                 isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOneByName(source.id.team)
-      defaultViewConfiguration: Option[String] = source.defaultViewConfiguration.map(Json.toJson(_).toString)
+      defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
       q = q"""update webknossos.dataSets
                     set _dataStore = $dataStoreName,
                         _organization = ${organization._id},
                         inboxSourceHash = $inboxSourceHash,
                         defaultViewConfiguration = $defaultViewConfiguration,
                         isUsable = $isUsable,
-                        scale = ${SqlToken.raw(optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s))))},
+                        scale = ${source.scaleOpt},
                         status = ${source.statusOpt.getOrElse("").take(1024)}
-                   where _id = $id""".asUpdate
-      _ <- run(q)
+                   where _id = $id"""
+      _ = logger.info(q.debugInfo)
+      _ <- run(q.asUpdate)
       _ <- dataSetDataLayerDAO.updateLayers(id, source)
     } yield ()
 
@@ -372,17 +368,17 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
-      if (existingDataSetIds.isEmpty) "true"
-      else s"_id not in ${writeStructTupleWithQuotes(existingDataSetIds.map(_.id))}"
-    val statusNotAlreadyInactive = s"status not in ${writeStructTupleWithQuotes(inactiveStatusList)}"
+      if (existingDataSetIds.isEmpty) q"true"
+      else q"_id not in ${SqlToken.tuple(existingDataSetIds)}"
+    val statusNotAlreadyInactive = q"status not in ${SqlToken.tuple(inactiveStatusList)}"
     val deleteResolutionsQuery =
-      sqlu"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and #$inclusionPredicate)"""
+      q"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
     val deleteLayersQuery =
-      sqlu"""delete from webknossos.dataSet_layers where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and #$inclusionPredicate)"""
+      q"""delete from webknossos.dataSet_layers where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
     val setToUnusableQuery =
-      sqlu"""update webknossos.datasets
-             set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
-             where _dataStore = $dataStoreName and #$inclusionPredicate and #$statusNotAlreadyInactive"""
+      q"""update webknossos.datasets
+          set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
+          where _dataStore = $dataStoreName and $inclusionPredicate and $statusNotAlreadyInactive""".asUpdate
     for {
       _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
@@ -390,12 +386,12 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
 
   def deleteDataset(datasetId: ObjectId): Fox[Unit] = {
     val deleteResolutionsQuery =
-      sqlu"delete from webknossos.dataSet_resolutions where _dataset = $datasetId"
+      q"delete from webknossos.dataSet_resolutions where _dataset = $datasetId".asUpdate
     val deleteLayersQuery =
-      sqlu"delete from webknossos.dataSet_layers where _dataset = $datasetId"
-    val deleteAllowedTeamsQuery = sqlu"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId"
+      q"delete from webknossos.dataSet_layers where _dataset = $datasetId".asUpdate
+    val deleteAllowedTeamsQuery = q"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
-      sqlu"delete from webknossos.datasets where _id = $datasetId"
+      q"delete from webknossos.datasets where _id = $datasetId".asUpdate
 
     for {
       _ <- run(
@@ -422,14 +418,14 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield rowsParsed
 
   def updateResolutions(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.dataSet_resolutions where _dataSet = $dataSetId"
+    val clearQuery = q"delete from webknossos.dataSet_resolutions where _dataSet = $dataSetId".asUpdate
     val insertQueries = dataLayersOpt match {
       case Some(dataLayers: List[DataLayer]) =>
         dataLayers.flatMap { layer =>
-          layer.resolutions.map { resolution =>
+          layer.resolutions.map { resolution: Vec3Int =>
             {
-              sqlu"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
-                       values($dataSetId, ${layer.name}, '#${writeStructTuple(resolution.toList.map(_.toString))}')"""
+              q"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
+                  values($dataSetId, ${layer.name}, $resolution""".asUpdate
             }
           }
         }
@@ -506,33 +502,33 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
   private def insertLayerQuery(dataSetId: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =
     layer match {
       case s: AbstractSegmentationLayer =>
-        val mappings = s.mappings.getOrElse(Set())
-        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
-                    values($dataSetId, ${s.name}, '#${s.category.toString}', '#${s.elementClass.toString}',
-                     '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(
-          mappings.toList)}', #${optionLiteral(s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
-          s.adminViewConfiguration.map(d => Json.toJson(d).toString))})
-          on conflict (_dataSet, name) do update set category = '#${s.category.toString}', elementClass = '#${s.elementClass.toString}',
-                     boundingBox = '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', largestSegmentId = ${s.largestSegmentId},
-                     mappings = '#${writeArrayTuple(mappings.toList)}',
-            defaultViewConfiguration = #${optionLiteral(s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
+        val mappings = s.mappings.getOrElse(Set()).toList
+        q"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
+                    values($dataSetId, ${s.name}, ${s.category}, ${s.elementClass},
+                    ${s.boundingBox}, ${s.largestSegmentId}, $mappings,
+                    ${s.defaultViewConfiguration.map(Json.toJson(_))},
+                    ${s.adminViewConfiguration.map(Json.toJson(_))})
+          on conflict (_dataSet, name) do update
+                     set category = ${s.category}, elementClass = ${s.elementClass},
+                     boundingBox = ${s.boundingBox}, largestSegmentId = ${s.largestSegmentId},
+                     mappings = $mappings,
+                     defaultViewConfiguration = ${s.defaultViewConfiguration.map(d => Json.toJson(d))}""".asUpdate
       case d: AbstractDataLayer =>
-        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
-                    values($dataSetId, ${d.name}, '#${d.category.toString}', '#${d.elementClass.toString}',
-                     '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}', #${optionLiteral(
-          d.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
-          d.adminViewConfiguration.map(d => Json.toJson(d).toString))})
-          on conflict (_dataSet, name) do update set category = '#${d.category.toString}', elementClass = '#${d.elementClass.toString}',
-                     boundingBox = '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}',
-            defaultViewConfiguration = #${optionLiteral(d.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
+        q"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
+                    values($dataSetId, ${d.name}, ${d.category}, ${d.elementClass},
+                    ${d.boundingBox},
+                    ${d.defaultViewConfiguration.map(Json.toJson(_))},
+                    ${d.adminViewConfiguration.map(Json.toJson(_))})
+          on conflict (_dataSet, name) do update
+                    set category = ${d.category}, elementClass = ${d.elementClass}, boundingBox = ${d.boundingBox},
+                    defaultViewConfiguration = ${d.defaultViewConfiguration.map(Json.toJson(_))}""".asUpdate
       case _ => throw new Exception("DataLayer type mismatch")
-    }
+    } // TODO bounding box
 
   def updateLayers(dataSetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =
-      sqlu"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in #${writeStructTupleWithQuotes(
-        dataLayers.map(d => sanitize(d.name)))}"
-    val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = $dataSetId"
+      q"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in ${dataLayers.map(_.name)}".asUpdate
+    val clearQuery = q"delete from webknossos.dataset_layers where _dataSet = $dataSetId".asUpdate
 
     val queries = source.toUsable match {
       case Some(usable) =>
@@ -547,13 +543,12 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
 
   def updateLayerAdminViewConfiguration(dataSetId: ObjectId,
                                         layerName: String,
-                                        adminViewConfiguration: LayerViewConfiguration): Fox[Unit] = {
-    val q =
-      sqlu"""update webknossos.dataset_layers
-            set adminViewConfiguration = '#${sanitize(Json.toJson(adminViewConfiguration).toString)}'
-            where _dataSet = $dataSetId and name = $layerName"""
-    run(q).map(_ => ())
-  }
+                                        adminViewConfiguration: LayerViewConfiguration): Fox[Unit] =
+    for {
+      _ <- run(q"""update webknossos.dataset_layers
+                   set adminViewConfiguration = ${Json.toJson(adminViewConfiguration)}
+                   where _dataSet = $dataSetId and name = $layerName""".asUpdate)
+    } yield ()
 }
 
 class DataSetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -568,9 +563,9 @@ class DataSetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 
   def updateForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Unit] = {
     val clearQuery =
-      sqlu"delete from webknossos.dataSet_lastUsedTimes where _dataSet = $dataSetId and _user = $userId"
+      q"delete from webknossos.dataSet_lastUsedTimes where _dataSet = $dataSetId and _user = $userId".asUpdate
     val insertQuery =
-      sqlu"insert into webknossos.dataSet_lastUsedTimes(_dataSet, _user, lastUsedTime) values($dataSetId, $userId, NOW())"
+      q"insert into webknossos.dataSet_lastUsedTimes(_dataSet, _user, lastUsedTime) values($dataSetId, $userId, NOW())".asUpdate
     val composedQuery = DBIO.sequence(List(clearQuery, insertQuery))
     for {
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),

@@ -1,6 +1,6 @@
 package utils.sql
 
-import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsValue, Json}
 import slick.dbio.{Effect, NoStream}
@@ -133,13 +133,8 @@ object SqlValue {
   @tailrec
   def makeSqlValue(p: Any): SqlValue =
     p match {
-      case x: SqlValue => x
-      case x: String   => StringValue(x)
-      case x: Option[_] =>
-        x match {
-          case Some(y) => makeSqlValue(y)
-          case None    => NoneValue()
-        }
+      case x: SqlValue          => x
+      case x: String            => StringValue(x)
       case x: Short             => ShortValue(x)
       case x: Int               => IntValue(x)
       case x: Long              => LongValue(x)
@@ -151,8 +146,15 @@ object SqlValue {
       case x: ObjectId          => ObjectIdValue(x)
       case x: JsValue           => JsonValue(x)
       case x: Enumeration#Value => EnumerationValue(x)
-      case x: Vec3Double        => Vec3DoubleValue(x)
-      case x: List[_]           => ArrayValue(x)
+      case x: Vec3Double        => Vector3Value(x)
+      case x: Vec3Int           => Vector3Value(x.toVec3Double)
+      case x: BoundingBox       => BoundingBoxValue(x)
+      case x: Option[_] =>
+        x match {
+          case Some(y) => makeSqlValue(y)
+          case None    => NoneValue()
+        }
+      case x: List[_] => ArrayValue(x)
     }
 }
 
@@ -241,7 +243,6 @@ case class JsonValue(v: JsValue) extends SqlValue with SqlEscaping {
 }
 
 case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscaping {
-
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v, Types.OTHER)
 
   override def placeholder: String = "?"
@@ -252,17 +253,33 @@ case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscap
 case class ArrayValue(v: List[Any]) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
 
-  override def debugInfo: String = "{" + v.map(i => escapeLiteral(i.toString)).mkString(",") + "}"
+  override def debugInfo: String = "'{" + v.map(i => escapeLiteral(i.toString)).mkString(",") + "}'"
 }
 
-case class Vec3DoubleValue(v: Vec3Double) extends SqlValue with SqlEscaping {
+case class Vector3Value(v: Vec3Double) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v, Types.OTHER)
 
-  override def debugInfo: String = "" // TODO
+  override def debugInfo: String = v.toString
+}
+
+case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
+  case class BoundingBoxSql(x: Double, y: Double, z: Double, width: Double, height: Double, depth: Double)
+
+  override def setParameter(pp: PositionedParameters): Unit =
+    pp.setObject(BoundingBoxSql(v.topLeft.x.toDouble,
+                                v.topLeft.y.toDouble,
+                                v.topLeft.z.toDouble,
+                                v.width.toDouble,
+                                v.height.toDouble,
+                                v.depth.toDouble),
+                 Types.OTHER)
+
+  override def debugInfo: String =
+    s"'(${v.topLeft.x}, ${v.topLeft.y}, ${v.topLeft.z}, ${v.width}, ${v.height}, ${v.depth})'"
 }
 
 case class NoneValue() extends SqlValue {
-  override def setParameter(pp: PositionedParameters): Unit = pp.setNull(Types.BOOLEAN)
+  override def setParameter(pp: PositionedParameters): Unit = pp.setNull(Types.OTHER)
 
   override def debugInfo: String = "NULL"
 }

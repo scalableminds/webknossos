@@ -86,15 +86,16 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   private def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
     Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
 
-  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQWithPrefix(requestingUserId, "")
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
+    readAccessQWithPrefix(requestingUserId, q"")
 
-  private def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: String): SqlToken =
+  private def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
     rawAccessQ(write = false, requestingUserId, prefix)
 
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
-    rawAccessQ(write = true, requestingUserId, prefix = "")
+    rawAccessQ(write = true, requestingUserId, prefix = q"")
 
-  private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: String): SqlToken = {
+  private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: SqlToken): SqlToken = {
     val writeAccessPredicate = if (write) q"tr.isTeamManager" else q"true"
     val breadCrumbsAccessForFolder =
       if (write) q"false"
@@ -213,7 +214,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findTreeOf(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[FolderWithParent]] =
     for {
-      accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = "f.")
+      accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = q"f.")
       accessQuery <- readAccessQuery
       rows <- run(q"""SELECT f._id, f.name, fp._ancestor
               FROM webknossos.folders_ f

@@ -83,7 +83,7 @@ class ReportDAO @Inject()(sqlClient: SqlClient, annotationDAO: AnnotationDAO)(im
            FROM
              filteredProjects p
              join webknossos.tasks_ t on p._id = t._project
-             left join (select #${annotationDAO.columns} from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
+             left join (select #${annotationDAO.columns.debugInfo} from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
            group by p._id
            )
 

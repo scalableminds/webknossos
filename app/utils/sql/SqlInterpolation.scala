@@ -155,6 +155,7 @@ object SqlValue {
           case None    => NoneValue()
         }
       case x: List[_] => ArrayValue(x)
+      case x: Set[_]  => ArrayValue(x.toList)
     }
 }
 

@@ -523,7 +523,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
                     set category = ${d.category}, elementClass = ${d.elementClass}, boundingBox = ${d.boundingBox},
                     defaultViewConfiguration = ${d.defaultViewConfiguration.map(Json.toJson(_))}""".asUpdate
       case _ => throw new Exception("DataLayer type mismatch")
-    } // TODO bounding box
+    }
 
   def updateLayers(dataSetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =

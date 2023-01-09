@@ -403,7 +403,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
          ${a._user}, ${a.description}, ${a.visibility}, ${a.name},
          ${a.viewConfiguration},
          ${a.state}, ${a.statistics},
-         ${SqlToken.tuple(a.tags.toList)}, ${a.tracingTime}, ${a.typ},
+         ${a.tags}, ${a.tracingTime}, ${a.typ},
          ${a.othersMayEdit},
          ${a.created}, ${a.modified}, ${a.isDeleted})
          """.asUpdate
@@ -503,7 +503,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"update webknossos.annotations set tags = $tags where _id = $id".asUpdate) // TODO type error
+      _ <- run(q"update webknossos.annotations set tags = $tags where _id = $id".asUpdate)
     } yield ()
 
   def updateModified(id: ObjectId, modified: Instant)(implicit ctx: DBAccessContext): Fox[Unit] =

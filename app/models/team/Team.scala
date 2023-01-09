@@ -1,6 +1,7 @@
 package models.team
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 
@@ -16,7 +17,8 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -25,7 +27,7 @@ case class Team(
     _organization: ObjectId,
     name: String,
     isOrganizationTeam: Boolean = false,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -97,27 +99,27 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
 
 class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
-  val collection = Teams
+  protected val collection = Teams
 
-  def idColumn(x: Teams): Rep[String] = x._Id
-  def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Teams): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TeamsRow): Fox[Team] =
+  protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(
       Team(
         ObjectId(r._Id),
         ObjectId(r._Organization),
         r.name,
         r.isorganizationteam,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""(_id in (select _team from webknossos.user_team_roles where _user = '$requestingUserId')
        or _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
 
-  override def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(not isorganizationteam
           and _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
 
@@ -184,7 +186,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(t: Team): Fox[Unit] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
-                  VALUES(${t._id}, ${t._organization}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isOrganizationTeam}, ${t.isDeleted})
+                  VALUES(${t._id}, ${t._organization}, ${t.name}, ${t.created}, ${t.isOrganizationTeam}, ${t.isDeleted})
             """)
     } yield ()
 

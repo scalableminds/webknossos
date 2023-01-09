@@ -2,7 +2,7 @@ package models.folder
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{Folders, _}
+import com.scalableminds.webknossos.schema.Tables._
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
@@ -10,7 +10,8 @@ import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -75,22 +76,22 @@ class FolderService @Inject()(teamDAO: TeamDAO,
 class FolderDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Folder, FoldersRow, Folders](sqlClient) {
 
-  val collection = Folders
-  def idColumn(x: Folders): Rep[String] = x._Id
-  def isDeletedColumn(x: Folders): Rep[Boolean] = x.isdeleted
+  protected val collection = Folders
+  protected def idColumn(x: Folders): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Folders): Rep[Boolean] = x.isdeleted
 
-  def parse(r: FoldersRow): Fox[Folder] =
+  protected def parse(r: FoldersRow): Fox[Folder] =
     Fox.successful(Folder(ObjectId(r._Id), r.name))
 
-  def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
+  private def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
     Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
 
-  override def readAccessQ(requestingUserId: ObjectId): String = readAccessQWithPrefix(requestingUserId, "")
+  override protected def readAccessQ(requestingUserId: ObjectId): String = readAccessQWithPrefix(requestingUserId, "")
 
-  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: String): String =
+  private def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: String): String =
     rawAccessQ(write = false, requestingUserId, prefix)
 
-  override def updateAccessQ(requestingUserId: ObjectId): String =
+  override protected def updateAccessQ(requestingUserId: ObjectId): String =
     rawAccessQ(write = true, requestingUserId, prefix = "")
 
   private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: String): String = {

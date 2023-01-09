@@ -11,7 +11,7 @@ import models.voxelytics.ElasticsearchClient
 import oxalis.files.TempFileService
 import oxalis.mail.MailchimpTicker
 import oxalis.telemetry.SlackNotificationService
-import utils.SQLClient
+import utils.sql.SQLClient
 
 class WebKnossosModule extends AbstractModule {
   override def configure(): Unit = {
@@ -21,7 +21,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[UserService]).asEagerSingleton()
     bind(classOf[TaskService]).asEagerSingleton()
     bind(classOf[UserDAO]).asEagerSingleton()
-    bind(classOf[UserTeamRolesDAO]).asEagerSingleton()
     bind(classOf[UserExperiencesDAO]).asEagerSingleton()
     bind(classOf[UserDataSetConfigurationDAO]).asEagerSingleton()
     bind(classOf[UserCache]).asEagerSingleton()

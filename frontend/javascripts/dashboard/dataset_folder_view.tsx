@@ -1,23 +1,12 @@
-import {
-  FileOutlined,
-  FolderOpenOutlined,
-  SearchOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
-import { Result, Spin, Tag, Tooltip } from "antd";
-import { stringToColor } from "libs/format_utils";
-import { pluralize } from "libs/utils";
-import _ from "lodash";
-import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import { filterNullValues } from "libs/utils";
 import React, { useEffect, useState } from "react";
-import { APIMaybeUnimportedDataset, APIUser, Folder } from "types/api_flow_types";
-import { DatasetLayerTags, DatasetTags, TeamTags } from "./advanced_dataset/dataset_table";
+import { APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-import { SEARCH_RESULTS_LIMIT, useFolderQuery } from "./dataset/queries";
 
 import DatasetView from "./dataset_view";
+import { DetailsSidebar } from "./folders/details_sidebar";
 import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
 
@@ -34,17 +23,51 @@ export function DatasetFolderView(props: Props) {
 }
 
 function DatasetFolderViewInner(props: Props) {
-  const [selectedDataset, setSelectedDataset] = useState<APIMaybeUnimportedDataset | null>(null);
   const context = useDatasetCollectionContext();
+  const { selectedDatasets, setSelectedDatasets } = context;
   const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
 
+  const setSelectedDataset = (ds: APIMaybeUnimportedDataset | null, multiSelect?: boolean) => {
+    if (!ds) {
+      setSelectedDatasets([]);
+      return;
+    }
+
+    setSelectedDatasets((oldSelectedDatasets) => {
+      const set = new Set(oldSelectedDatasets);
+
+      if (multiSelect) {
+        if (set.has(ds)) {
+          set.delete(ds);
+        } else {
+          set.add(ds);
+        }
+      } else {
+        if (set.has(ds) && set.size === 1) {
+          set.clear();
+        } else {
+          set.clear();
+          set.add(ds);
+        }
+      }
+      return Array.from(set);
+    });
+  };
+
   useEffect(() => {
-    if (!selectedDataset || !context.datasets) {
+    if (selectedDatasets.length === 0 || !context.datasets) {
       return;
     }
     // If the cache changed (e.g., because a dataset was updated), we need to update
     // the selectedDataset instance, too, to avoid that it refers to stale data.
-    setSelectedDataset(context.datasets.find((ds) => ds.name === selectedDataset.name) ?? null);
+    setSelectedDatasets(
+      filterNullValues(
+        selectedDatasets.map(
+          (selectedDataset) =>
+            context.datasets.find((ds) => ds.name === selectedDataset.name) ?? null,
+        ),
+      ),
+    );
   }, [context.datasets]);
 
   return (
@@ -76,7 +99,7 @@ function DatasetFolderViewInner(props: Props) {
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
-          selectedDataset={selectedDataset}
+          selectedDatasets={selectedDatasets}
           context={context}
           hideDetailsColumns
         />
@@ -90,7 +113,7 @@ function DatasetFolderViewInner(props: Props) {
         }}
       >
         <DetailsSidebar
-          selectedDataset={selectedDataset}
+          selectedDatasets={selectedDatasets}
           setSelectedDataset={setSelectedDataset}
           activeFolderId={context.activeFolderId}
           datasetCount={context.datasets.length}
@@ -99,182 +122,5 @@ function DatasetFolderViewInner(props: Props) {
         />
       </div>
     </div>
-  );
-}
-
-function DetailsSidebar({
-  selectedDataset,
-  setSelectedDataset,
-  datasetCount,
-  searchQuery,
-  activeFolderId,
-  setFolderIdForEditModal,
-}: {
-  selectedDataset: APIMaybeUnimportedDataset | null;
-  setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
-  datasetCount: number;
-  searchQuery: string | null;
-  activeFolderId: string | null;
-  setFolderIdForEditModal: (value: string | null) => void;
-}) {
-  const context = useDatasetCollectionContext();
-  const { data: folder, error } = useFolderQuery(activeFolderId);
-
-  useEffect(() => {
-    if (selectedDataset == null || !("folderId" in selectedDataset)) {
-      return;
-    }
-    if (selectedDataset.folderId !== context.activeFolderId && context.activeFolderId != null) {
-      // Ensure that the selected dataset is in the active folder. If not,
-      // clear the sidebar. When there is no active folder, a search page is shown. In that case,
-      // clearing the selection should not happen.
-      setSelectedDataset(null);
-    }
-  }, [selectedDataset, context.activeFolderId]);
-
-  const maybeSelectMsg = datasetCount > 0 ? "Select one to see details." : "";
-
-  return (
-    <div style={{ width: 300, padding: 16 }}>
-      {selectedDataset != null ? (
-        <>
-          <h4 style={{ wordBreak: "break-all" }}>
-            <FileOutlined style={{ marginRight: 4 }} />{" "}
-            {selectedDataset.displayName || selectedDataset.name}
-          </h4>
-          {selectedDataset.isActive && (
-            <div>
-              <span className="sidebar-label">Voxel Size & Extent</span>
-              <div className="info-tab-block" style={{ marginTop: -6 }}>
-                <table
-                  style={{
-                    fontSize: 14,
-                  }}
-                >
-                  <tbody>
-                    <DatasetExtentRow dataset={selectedDataset} />
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          {selectedDataset.description && (
-            <div style={{ marginBottom: 4 }}>
-              <span className="sidebar-label">Description</span>
-              <div>{selectedDataset.description}</div>
-            </div>
-          )}
-          <div style={{ marginBottom: 4 }}>
-            <span className="sidebar-label">Access Permissions</span>
-            <br />
-            <TeamTags dataset={selectedDataset} emptyValue="Administrators & Dataset Managers" />
-          </div>
-          <div style={{ marginBottom: 4 }}>
-            <span className="sidebar-label">Layers</span>
-            <br /> <DatasetLayerTags dataset={selectedDataset} />
-          </div>
-          {selectedDataset.isActive ? (
-            <div style={{ marginBottom: 4 }}>
-              <span className="sidebar-label">Tags</span>
-              <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
-            </div>
-          ) : null}
-        </>
-      ) : (
-        <div style={{ textAlign: "center" }}>
-          {searchQuery ? (
-            <Result
-              icon={<SearchOutlined style={{ fontSize: 50 }} />}
-              subTitle={
-                datasetCount !== SEARCH_RESULTS_LIMIT ? (
-                  <>
-                    {datasetCount} {pluralize("dataset", datasetCount)} were found. {maybeSelectMsg}
-                  </>
-                ) : (
-                  <>
-                    At least {SEARCH_RESULTS_LIMIT} datasets match your search criteria.{" "}
-                    {maybeSelectMsg}
-                  </>
-                )
-              }
-            />
-          ) : (
-            <>
-              {folder ? (
-                <div style={{ textAlign: "left" }}>
-                  <h4 style={{ wordBreak: "break-all" }}>
-                    <span
-                      style={{
-                        float: "right",
-                        fontSize: 16,
-                        marginTop: 2,
-                        marginLeft: 2,
-                        color: "var(--ant-text-secondary)",
-                      }}
-                    >
-                      <SettingOutlined onClick={() => setFolderIdForEditModal(folder.id)} />
-                    </span>
-                    <FolderOpenOutlined style={{ marginRight: 8 }} />
-                    {folder.name}
-                  </h4>
-                  <p>
-                    This folder contains{" "}
-                    <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
-                      {datasetCount} {pluralize("dataset", datasetCount)}*
-                    </Tooltip>
-                    . {maybeSelectMsg}
-                  </p>
-                  <span className="sidebar-label">Access Permissions</span>
-                  <br />
-                  <FolderTeamTags folder={folder} />
-                </div>
-              ) : error ? (
-                "Could not load folder."
-              ) : activeFolderId != null ? (
-                <Spin spinning />
-              ) : null}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FolderTeamTags({ folder }: { folder: Folder }) {
-  if (folder.allowedTeamsCumulative.length === 0) {
-    return <Tag>Administrators & Dataset Managers</Tag>;
-  }
-  const allowedTeamsById = _.keyBy(folder.allowedTeams, "id");
-
-  return (
-    <>
-      {folder.allowedTeamsCumulative.map((team) => {
-        const isCumulative = !allowedTeamsById[team.id];
-        return (
-          <Tooltip
-            title={
-              isCumulative
-                ? "This team may access this folder, because of the permissions of the parent folders."
-                : null
-            }
-            key={team.name}
-          >
-            <Tag
-              style={{
-                maxWidth: 200,
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-                textOverflow: "ellipsis",
-              }}
-              color={stringToColor(team.name)}
-            >
-              {team.name}
-              {isCumulative ? "*" : ""}
-            </Tag>
-          </Tooltip>
-        );
-      })}
-    </>
   );
 }

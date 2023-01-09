@@ -12,7 +12,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -59,12 +59,12 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
 
 class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
-  val collection = Tracingstores
+  protected val collection = Tracingstores
 
-  def idColumn(x: Tracingstores): Rep[String] = x.name
-  def isDeletedColumn(x: Tracingstores): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Tracingstores): Rep[String] = x.name
+  protected def isDeletedColumn(x: Tracingstores): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TracingstoresRow): Fox[TracingStore] =
+  protected def parse(r: TracingstoresRow): Fox[TracingStore] =
     Fox.successful(
       TracingStore(
         r.name,

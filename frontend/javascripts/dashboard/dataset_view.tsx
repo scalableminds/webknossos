@@ -12,7 +12,7 @@ import {
   Spin,
   Tooltip,
   Alert,
-  MenuProps,
+  Select,
 } from "antd";
 import {
   CloudUploadOutlined,
@@ -27,7 +27,7 @@ import {
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
+import type { APIJob, APIMaybeUnimportedDataset, APIUser, FolderItem } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import { DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
@@ -45,13 +45,13 @@ import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
 
-const { Search, Group: InputGroup } = Input;
+const { Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
   context: DatasetCacheContextValue | DatasetCollectionContextValue;
-  onSelectDataset?: (dataset: APIMaybeUnimportedDataset | null) => void;
-  selectedDataset?: APIMaybeUnimportedDataset | null | undefined;
+  onSelectDataset: (dataset: APIMaybeUnimportedDataset | null) => void;
+  selectedDatasets: APIMaybeUnimportedDataset[];
   hideDetailsColumns: boolean;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
@@ -84,7 +84,7 @@ function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[
 const refreshMenuItems = [
   {
     key: "1",
-    label: "Refresh from disk",
+    label: "Scan disk for new datasets",
   },
 ];
 
@@ -162,9 +162,10 @@ function DatasetView(props: Props) {
   function renderTable(filteredDatasets: APIMaybeUnimportedDataset[]) {
     return (
       <DatasetTable
+        context={props.context}
         datasets={filteredDatasets}
         onSelectDataset={props.onSelectDataset}
-        selectedDataset={props.selectedDataset}
+        selectedDatasets={props.selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
@@ -197,18 +198,25 @@ function DatasetView(props: Props) {
   );
 
   const filterMenu = (
-    <Menu onClick={() => {}}>
-      <Menu.Item>{createFilteringModeRadio("showAllDatasets", "Show all datasets")}</Menu.Item>
-      <Menu.Item>
-        {createFilteringModeRadio("onlyShowReported", "Only show available datasets")}
-      </Menu.Item>
-      <Menu.Item>
-        {createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets")}
-      </Menu.Item>
-    </Menu>
+    <Menu
+      onClick={() => {}}
+      items={[
+        { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
+        {
+          label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
+          key: "available",
+        },
+        {
+          label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
+          key: "missing",
+        },
+      ]}
+    />
   );
   const searchBox = (
-    <Search
+    <Input
+      prefix={<SearchOutlined />}
+      allowClear
       style={{
         width: 200,
       }}
@@ -286,21 +294,16 @@ function DatasetView(props: Props) {
       {activeTab === renderingTab && (
         <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
       )}
-      {searchQuery &&
-        // Render a header for the search.
-        (searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
-          <h3>
-            <SearchOutlined /> Search Results for &quot;{searchQuery}&quot;
-            {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-              <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
-                (only showing the first {SEARCH_RESULTS_LIMIT} results)
-              </span>
-            ) : null}
-          </h3>
-        ) : (
-          // No results are shown because the search query is too short
-          isEmpty && <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
-        ))}
+
+      {searchQuery && "queries" in context && (
+        <GlobalSearchHeader
+          searchQuery={searchQuery}
+          isEmpty={isEmpty}
+          filteredDatasets={filteredDatasets}
+          context={context}
+        />
+      )}
+
       <CategorizationSearch
         itemName="datasets"
         searchTags={searchTags}
@@ -312,6 +315,82 @@ function DatasetView(props: Props) {
         {content}
       </Spin>
     </div>
+  );
+}
+
+const SEARCH_OPTIONS = [
+  { label: "Search everywhere", value: "everywhere" },
+  { label: "Search current folder", value: "folder" },
+  { label: "Search current folder and its subfolders", value: "folder-with-subfolders" },
+];
+
+function GlobalSearchHeader({
+  searchQuery,
+  filteredDatasets,
+  isEmpty,
+  context,
+}: {
+  searchQuery: string;
+  filteredDatasets: APIMaybeUnimportedDataset[];
+  isEmpty: boolean;
+  context: DatasetCollectionContextValue;
+}) {
+  const { data: folderHierarchy } = context.queries.folderHierarchyQuery;
+  const [treeData, setTreeData] = useState<FolderItem[]>([]);
+  const { activeFolderId, setActiveFolderId } = context;
+
+  useEffect(() => {
+    const newTreeData = folderHierarchy?.tree || [];
+    setTreeData(newTreeData);
+  }, [folderHierarchy]);
+
+  if (searchQuery.length < MINIMUM_SEARCH_QUERY_LENGTH) {
+    // No results are shown because the search query is too short (at least
+    // when the back-end search is used. The frontend search doesn't have
+    // this restriction which is why isEmpty is checked, too).
+    return isEmpty ? (
+      <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+    ) : null;
+  }
+
+  return (
+    <>
+      <div style={{ float: "right" }}>
+        <Select
+          options={SEARCH_OPTIONS}
+          dropdownMatchSelectWidth={false}
+          onChange={(value) => {
+            if (value === "everywhere") {
+              setActiveFolderId(null);
+            } else {
+              if (
+                activeFolderId == null &&
+                (context.mostRecentlyUsedActiveFolderId != null || treeData.length > 0)
+              ) {
+                setActiveFolderId(context.mostRecentlyUsedActiveFolderId || treeData[0]?.key);
+              }
+              context.setSearchRecursively(value === "folder-with-subfolders");
+            }
+          }}
+          value={
+            activeFolderId == null
+              ? "everywhere"
+              : context.searchRecursively
+              ? "folder-with-subfolders"
+              : "folder"
+          }
+        />
+      </div>
+      <h3>
+        <SearchOutlined />
+        Search Results for &quot;{searchQuery}&quot;
+        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+          <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+            (only showing the first {SEARCH_RESULTS_LIMIT} results)
+          </span>
+        ) : null}
+      </h3>
+    </>
   );
 }
 
@@ -407,9 +486,7 @@ function renderPlaceholder(
   }
 
   if (searchQuery) {
-    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH
-      ? "No datasets found. All folders have been searched."
-      : null;
+    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? "No datasets found." : null;
   }
 
   const openPublicDatasetCard = (

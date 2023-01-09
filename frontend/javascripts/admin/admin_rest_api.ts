@@ -63,10 +63,12 @@ import type {
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
   ShortLink,
+  APIOrganizationStorageInfo,
+  APIPricingPlanStatus,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
-import { ControlModeEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   PartialDatasetConfiguration,
@@ -1025,13 +1027,14 @@ export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
   searchQuery: string | null = null,
+  includeSubfolders: boolean | null = null,
   limit: number | null = null,
 ): Promise<Array<APIMaybeUnimportedDataset>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
     params.append("isUnreported", String(isUnreported));
   }
-  if (folderId != null) {
+  if (folderId != null && folderId !== "") {
     params.append("folderId", folderId);
   }
   if (searchQuery != null) {
@@ -1039,6 +1042,9 @@ export async function getDatasets(
   }
   if (limit != null) {
     params.append("limit", String(limit));
+  }
+  if (includeSubfolders != null) {
+    params.append("includeSubfolders", includeSubfolders ? "true" : "false");
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
@@ -1924,8 +1930,14 @@ export function sendInvitesForOrganization(
   });
 }
 
-export function getOrganization(organizationName: string): Promise<APIOrganization> {
-  return Request.receiveJSON(`/api/organizations/${organizationName}`);
+export async function getOrganization(organizationName: string): Promise<APIOrganization> {
+  const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
+  return {
+    ...organization,
+    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorage: organization.includedStorage ?? Number.POSITIVE_INFINITY,
+    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {
@@ -1976,6 +1988,42 @@ export async function isWorkflowAccessibleBySwitching(
   workflowHash: string,
 ): Promise<APIOrganization | null> {
   return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
+}
+
+export async function getOrganizationStorageSpace(
+  _organizationName: string,
+): Promise<APIOrganizationStorageInfo> {
+  // TODO switch to a real API. See PR #6614
+  const usedStorageMB = 0;
+  return Promise.resolve({ usedStorageSpace: usedStorageMB });
+}
+
+export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestUpgrade?requestedPlan=${requestedPlan}`, {
+    method: "POST",
+  });
+}
+
+export async function sendExtendPricingPlanEmail(): Promise<void> {
+  return Request.receiveJSON("/api/pricing/requestExtension", {
+    method: "POST",
+  });
+}
+
+export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestUsers?requestedUsers=${requestedUsers}`, {
+    method: "POST",
+  });
+}
+
+export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
+    method: "POST",
+  });
+}
+
+export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
+  return Request.receiveJSON("/api/pricing/status");
 }
 
 // ### BuildInfo webknossos

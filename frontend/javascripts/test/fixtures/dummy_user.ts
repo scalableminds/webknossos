@@ -9,6 +9,7 @@ const dummyUser: APIUser = {
   teams: [],
   isAdmin: false,
   isDatasetManager: false,
+  isOrganizationOwner: true,
   created: 1,
   experiences: {},
   isSuperUser: false,

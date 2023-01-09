@@ -221,6 +221,8 @@ This is because the access permissions are handled cumulatively.
 In addition to the folder organization, datasets can also be tagged.
 Use the tags column to do so or select a dataset with a click and use the right sidebar.
 
+To move multiple datasets to a folder at once, you can make use of multi-selection. As in typical file explorers, CTRL + left click adds individual datasets to the current selection. Shift + left click selects a range of datasets.
+
 ## Dataset Sharing
 Read more in the [Sharing guide](./sharing.md#dataset-sharing)
 

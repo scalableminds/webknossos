@@ -1,9 +1,11 @@
 package models.project
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
@@ -11,10 +13,11 @@ import models.team.TeamDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Json, _}
+import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,7 +30,7 @@ case class Project(
     paused: Boolean,
     expectedTime: Option[Long],
     isBlacklistedFromReport: Boolean,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -55,12 +58,12 @@ object Project {
 
 class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
-  val collection = Projects
+  protected val collection = Projects
 
-  def idColumn(x: Projects): Rep[String] = x._Id
-  def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Projects): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
 
-  def parse(r: ProjectsRow): Fox[Project] =
+  protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
       Project(
         ObjectId(r._Id),
@@ -71,17 +74,17 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.paused,
         r.expectedtime,
         r.isblacklistedfromreport,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""(
         (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
         or _owner = '${requestingUserId.id}'
         or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
         )"""
-  override def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
+  override protected def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
 
   // read operations
 
@@ -148,7 +151,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                                      paused, expectedTime, isblacklistedfromreport, created, isDeleted)
                          values(${p._id}, $organizationId, ${p._team}, ${p._owner}, ${p.name}, ${p.priority},
                          ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport},
-                         ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
+                         ${p.created}, ${p.isDeleted})""")
     } yield ()
 
   def updateOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =

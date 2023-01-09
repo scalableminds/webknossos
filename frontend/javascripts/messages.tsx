@@ -274,6 +274,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.upload_cancel": "The dataset upload was cancelled.",
   "dataset.unsupported_file_type":
     "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
+  "dataset.upload_zip_with_nml":
+    "The archive you attached contains an NML file. If the archive is an annotation, please use the Annotations tab in the dashboard to upload it. Uploading annotations here won't succeed.",
   "dataset.upload_invalid_zip":
     "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":
@@ -431,4 +433,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
+  "organization.plan.upgrage_request_sent":
+    "An email with your upgrade request has been sent to the webKnossos sales team.",
 };

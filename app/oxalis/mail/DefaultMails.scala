@@ -100,4 +100,56 @@ class DefaultMails @Inject()(conf: WkConf) {
       bodyHtml = html.mail.help(user.name, organizationDisplayName, message).body,
       recipients = List("hello@webknossos.org", userEmail)
     )
+
+  def extendPricingPlanMail(user: User, userEmail: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "webKnossos Plan Extension Request",
+      bodyHtml = html.mail.extendPricingPlan(user.name).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanToTeamMail(user: User, userEmail: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "webKnossos Plan Upgrade Request",
+      bodyHtml = html.mail.upgradePricingPlanToTeam(user.name).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanToPowerMail(user: User, userEmail: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "webKnossos Plan Upgrade Request",
+      bodyHtml = html.mail.upgradePricingPlanToPower(user.name).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to upgrade webKnossos users",
+      bodyHtml = html.mail.upgradePricingPlanUsers(user.name, requestedUsers).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanStorageMail(user: User, userEmail: String, requestedStorage: Int): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to upgrade webKnossos storage",
+      bodyHtml = html.mail.upgradePricingPlanStorage(user.name, requestedStorage).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanRequestMail(user: User,
+                                    userEmail: String,
+                                    organizationDisplayName: String,
+                                    messageBody: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to upgrade webKnossos plan",
+      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, organizationDisplayName, messageBody).body,
+      recipients = List("hello@webknossos.org")
+    )
+
 }

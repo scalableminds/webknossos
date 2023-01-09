@@ -2,7 +2,9 @@ package models.user
 
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+
 import javax.inject.Inject
 import slick.jdbc.PostgresProfile.api._
 import com.scalableminds.webknossos.schema.Tables._
@@ -10,7 +12,8 @@ import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -22,18 +25,18 @@ case class MultiUser(
     _lastLoggedInIdentity: Option[ObjectId] = None,
     novelUserExperienceInfos: JsObject = Json.obj(),
     selectedTheme: Theme = Theme.auto,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
 class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
-  val collection = Multiusers
+  protected val collection = Multiusers
 
-  def idColumn(x: Multiusers): Rep[String] = x._Id
-  def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Multiusers): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted
 
-  def parse(r: MultiusersRow): Fox[MultiUser] =
+  protected def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
       novelUserExperienceInfos <- JsonHelper.parseAndValidateJson[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox
@@ -46,7 +49,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r._Lastloggedinidentity.map(ObjectId(_)),
         novelUserExperienceInfos,
         theme,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
@@ -58,7 +61,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
                        isSuperUser, novelUserExperienceInfos, selectedTheme, created, isDeleted)
                      values(${u._id}, ${u.email}, '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password},
                       ${u.isSuperUser}, '#$novelUserExperienceInfosString', '#${u.selectedTheme}',
-                     ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
+                     ${u.created}, ${u.isDeleted})
           """)
     } yield ()
   }
@@ -138,7 +141,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
              and not u.isDeactivated""".as[String])
     } yield idList.nonEmpty
 
-  def lastActivity(multiUserId: ObjectId): Fox[Long] =
+  def lastActivity(multiUserId: ObjectId): Fox[Instant] =
     for {
       lastActivityList <- run(sql"""select max(u.lastActivity)
              from webknossos.multiUsers_ m
@@ -146,7 +149,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
              where m._id = $multiUserId
              and not u.isDeactivated
              group by m._id
-             """.as[java.sql.Timestamp])
+             """.as[Instant])
       head <- lastActivityList.headOption.toFox
-    } yield head.getTime
+    } yield head
 }

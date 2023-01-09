@@ -8,7 +8,7 @@ import type {
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
-import { PricingPlan } from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
@@ -181,6 +181,7 @@ export type NovelUserExperienceInfoType = {
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
+  readonly isOrganizationOwner: boolean;
   readonly created: number;
   readonly experiences: ExperienceMap;
   readonly isSuperUser: boolean;
@@ -510,10 +511,22 @@ export type APIOrganization = {
   readonly name: string;
   readonly additionalInformation: string;
   readonly displayName: string;
-  readonly pricingPlan: PricingPlan;
+  readonly pricingPlan: PricingPlanEnum;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
+  readonly paidUntil: number;
+  readonly includedUsers: number;
+  readonly includedStorage: number; // megabytes
 };
+export type APIOrganizationStorageInfo = {
+  readonly usedStorageSpace: number;
+};
+export type APIPricingPlanStatus = {
+  readonly pricingPlan: PricingPlanEnum;
+  readonly isExceeded: boolean;
+  readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
+};
+
 export type APIBuildInfo = {
   webknossos: {
     name: string;
@@ -762,7 +775,7 @@ export type VoxelyticsTaskConfigWithHierarchy =
 export type VoxelyticsArtifactConfig = {
   fileSize: number;
   inodeCount: number;
-  createdAt: Date;
+  createdAt: number;
   path: string;
   version: string;
   metadata: {
@@ -775,7 +788,7 @@ export type VoxelyticsArtifactConfig = {
 export type VoxelyticsRunInfo = (
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
+      beginTime: number;
       endTime: null;
     }
   | {
@@ -784,8 +797,8 @@ export type VoxelyticsRunInfo = (
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
+      beginTime: number;
+      endTime: number;
     }
 ) & {
   id: string;
@@ -823,7 +836,7 @@ export type VoxelyticsTaskInfo = {
     }
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
+      beginTime: number;
       endTime: null;
     }
   | {
@@ -832,8 +845,8 @@ export type VoxelyticsTaskInfo = {
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
+      beginTime: number;
+      endTime: number;
     }
 );
 
@@ -866,8 +879,8 @@ export type VoxelyticsWorkflowReport = {
 export type VoxelyticsWorkflowInfo = {
   name: string;
   hash: string;
-  beginTime: Date;
-  endTime: Date | null;
+  beginTime: number;
+  endTime: number | null;
   state: VoxelyticsRunState;
   runs: Array<VoxelyticsRunInfo>;
 };
@@ -883,18 +896,28 @@ export type VoxelyticsChunkStatistics = {
   executionId: string;
   countTotal: number;
   countFinished: number;
-  beginTime: Date | null;
-  endTime: Date | null;
+  beginTime: number | null;
+  endTime: number | null;
   memory: Statistics | null;
   cpuUser: Statistics | null;
   cpuSystem: Statistics | null;
   duration: Statistics | null;
 };
 
+// Backend type
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
+  isEditable: boolean;
+};
+
+// Frontend type
+export type FolderItem = {
+  title: string;
+  key: string;
+  parent: string | null | undefined;
+  children: FolderItem[];
   isEditable: boolean;
 };
 

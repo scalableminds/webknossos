@@ -139,8 +139,14 @@ class ErrorHandling {
       });
     });
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'onerror' does not exist on type '(Window... Remove this comment to see the full error message
-    window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
+    window.onerror = (
+      message: Event | string,
+      _file?: string,
+      _line?: number,
+      _colno?: number,
+      error?: Error,
+    ) => {
+      message = message.toString();
       if (BLACKLISTED_ERROR_MESSAGES.indexOf(message) > -1) {
         console.warn("Ignoring", message);
         return;
@@ -174,7 +180,7 @@ class ErrorHandling {
     optParams: Record<string, any> = {},
     severity: "error" | "warning" = "error",
   ) {
-    if (process.env.BABEL_ENV === "test") {
+    if (process.env.IS_TESTING) {
       return;
     }
 

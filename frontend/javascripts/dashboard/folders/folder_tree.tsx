@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { DropTargetMonitor, useDrop } from "react-dnd";
-import { FlatFolderTreeItem } from "types/api_flow_types";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
   DatasetCollectionContextValue,
@@ -8,24 +7,16 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Menu } from "antd";
+import { Dropdown, Menu, Modal } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
-import { MenuInfo } from "rc-menu/lib/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
+import { FolderItem } from "types/api_flow_types";
 
 const { DirectoryTree } = Tree;
-
-type FolderItem = {
-  title: string;
-  key: string;
-  parent: string | null | undefined;
-  children: FolderItem[];
-  isEditable: boolean;
-};
 
 const isNodeDraggable = (node: DataNode): boolean => (node as FolderItem).isEditable;
 const draggableConfig = { icon: false, nodeDraggable: isNodeDraggable };
@@ -40,11 +31,14 @@ export function FolderTreeSidebar({
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const itemByIdRef = useRef<Record<string, FolderItem>>({});
 
-  const { data: folderTree, isLoading } = context.queries.folderTreeQuery;
+  const { data: folderHierarchy, isLoading } = context.queries.folderHierarchyQuery;
 
   useEffect(() => {
-    const [newTreeData, newExpandedKeys, itemById] = getFolderHierarchy(
-      folderTree,
+    const newTreeData = folderHierarchy?.tree || [];
+    const itemById = folderHierarchy?.itemById || {};
+    const newExpandedKeys = deriveExpandedTrees(
+      newTreeData,
+      itemById,
       expandedKeys,
       context.activeFolderId,
     );
@@ -59,16 +53,14 @@ export function FolderTreeSidebar({
     }
     setTreeData(newTreeData);
     setExpandedKeys(newExpandedKeys);
-  }, [folderTree]);
+  }, [folderHierarchy]);
 
   useEffect(() => {
     if (context.activeFolderId == null && !context.globalSearchQuery) {
-      // No search is active and no folder is selected. For example, this happens
-      // after clearing the search box.
-      // Activate the root folder.
-      if (treeData.length > 0) {
-        context.setActiveFolderId(treeData[0].key);
-      }
+      // No search is active and no folder is selected. For example, this can happen
+      // after clearing the search box (when the search was global).
+      // Activate the most recently used folder or the root folder.
+      context.setActiveFolderId(context.mostRecentlyUsedActiveFolderId || treeData[0]?.key);
     }
   }, [context.activeFolderId, context.globalSearchQuery, treeData.length]);
 
@@ -155,7 +147,7 @@ export function FolderTreeSidebar({
         ref={drop}
         className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
         style={{
-          height: 400,
+          minHeight: 400,
           marginRight: 4,
           borderRadius: 2,
           paddingLeft: 6,
@@ -171,7 +163,6 @@ export function FolderTreeSidebar({
           </div>
         ) : null}
         <DirectoryTree
-          autoExpandParent
           blockNode
           expandAction="doubleClick"
           selectedKeys={nullableIdToArray(context.activeFolderId)}
@@ -187,66 +178,6 @@ export function FolderTreeSidebar({
       </div>
     </div>
   );
-}
-
-function getFolderHierarchy(
-  folderTree: FlatFolderTreeItem[] | undefined,
-  prevExpandedKeys: string[],
-  activeFolderId: string | null,
-): [FolderItem[], string[], Record<string, FolderItem>] {
-  if (folderTree == null) {
-    return [[], prevExpandedKeys, {}];
-  }
-  const roots: FolderItem[] = [];
-  const itemById: Record<string, FolderItem> = {};
-  for (const folderTreeItem of folderTree) {
-    const treeItem = {
-      key: folderTreeItem.id,
-      title: folderTreeItem.name,
-      isEditable: folderTreeItem.isEditable,
-      parent: folderTreeItem.parent,
-      children: [],
-    };
-    if (folderTreeItem.parent == null) {
-      roots.push(treeItem);
-    }
-    itemById[folderTreeItem.id] = treeItem;
-  }
-
-  for (const folderTreeItem of folderTree) {
-    if (folderTreeItem.parent != null) {
-      itemById[folderTreeItem.parent].children.push(itemById[folderTreeItem.id]);
-    }
-  }
-
-  for (const folderTreeItem of folderTree) {
-    if (folderTreeItem.parent != null) {
-      itemById[folderTreeItem.parent].children.sort((a, b) => a.title.localeCompare(b.title));
-    }
-  }
-
-  const newExpandedKeySet = new Set<string>();
-  if (roots.length > 0) {
-    newExpandedKeySet.add(roots[0].key);
-  }
-
-  for (const oldExpandedKey of prevExpandedKeys) {
-    const maybeItem = itemById[oldExpandedKey];
-    if (maybeItem != null) {
-      newExpandedKeySet.add(oldExpandedKey);
-    }
-  }
-
-  // Expand the parent chain of the active folder.
-  if (activeFolderId != null) {
-    let currentFolder = itemById[activeFolderId];
-    while (currentFolder?.parent != null) {
-      newExpandedKeySet.add(currentFolder.parent as string);
-      currentFolder = itemById[currentFolder.parent];
-    }
-  }
-
-  return [roots, Array.from(newExpandedKeySet), itemById];
 }
 
 function generateTitle(
@@ -328,17 +259,63 @@ function FolderItemAsDropTarget(props: {
   isEditable: boolean;
 }) {
   const context = useDatasetCollectionContext();
+  const { selectedDatasets, setSelectedDatasets } = context;
   const { folderId, className, isEditable, ...restProps } = props;
 
   const [collectedProps, drop] = useDrop({
     accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
-      const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
+      if (selectedDatasets.length > 1) {
+        if (selectedDatasets.every((ds) => ds.folderId === folderId)) {
+          Toast.warning(
+            "The selected datasets are already in the specified folder. No dataset was moved.",
+          );
+          return;
+        }
 
-      if (dataset) {
-        context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+        // Show a modal so that the user cannot do anything else while the datasets are being moved.
+        const modal = Modal.info({
+          title: "Moving Datasets",
+          content: `Preparing to move ${selectedDatasets.length} datasets...`,
+          onCancel: (_close) => {},
+          onOk: (_close) => {},
+          okText: null,
+        });
+
+        let successCounter = 0;
+        Promise.all(
+          selectedDatasets.map((ds) =>
+            context.queries.updateDatasetMutation.mutateAsync([ds, folderId]).then(() => {
+              successCounter++;
+              modal.update({
+                content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
+              });
+            }),
+          ),
+        )
+          .then(
+            () => Toast.success(`Successfully moved ${selectedDatasets.length} datasets.`),
+            (err) => {
+              Toast.error(
+                `Couldn't move all ${selectedDatasets.length} datasets. See console for details`,
+              );
+              console.error(err);
+            },
+          )
+          .finally(() => {
+            // The datasets are not in the active folder anymore. Clear the selection to avoid
+            // that stale instances are mutated during the next bulk action.
+            setSelectedDatasets([]);
+            modal.destroy();
+          });
       } else {
-        Toast.error("Could not move dataset. Please try again.");
+        const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
+
+        if (dataset) {
+          context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+        } else {
+          Toast.error("Could not move dataset. Please try again.");
+        }
       }
     },
     canDrop: () => isEditable,
@@ -367,3 +344,33 @@ function _nullableIdToArray(activeFolderId: string | null): string[] {
 }
 
 const nullableIdToArray = memoizeOne(_nullableIdToArray);
+
+function deriveExpandedTrees(
+  roots: FolderItem[],
+  itemById: Record<string, FolderItem>,
+  prevExpandedKeys: string[],
+  activeFolderId: string | null,
+) {
+  const newExpandedKeySet = new Set<string>();
+  if (roots.length > 0) {
+    newExpandedKeySet.add(roots[0].key);
+  }
+
+  for (const oldExpandedKey of prevExpandedKeys) {
+    const maybeItem = itemById[oldExpandedKey];
+    if (maybeItem != null) {
+      newExpandedKeySet.add(oldExpandedKey);
+    }
+  }
+
+  // Expand the parent chain of the active folder.
+  if (activeFolderId != null) {
+    let currentFolder = itemById[activeFolderId];
+    while (currentFolder?.parent != null) {
+      newExpandedKeySet.add(currentFolder.parent as string);
+      currentFolder = itemById[currentFolder.parent];
+    }
+  }
+
+  return Array.from(newExpandedKeySet);
+}

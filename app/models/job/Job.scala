@@ -1,10 +1,10 @@
 package models.job
 
-import java.sql.Timestamp
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
@@ -21,7 +21,8 @@ import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
@@ -40,7 +41,7 @@ case class Job(
     returnValue: Option[String] = None,
     started: Option[Long] = None,
     ended: Option[Long] = None,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) {
   def isEnded: Boolean = {
@@ -92,12 +93,12 @@ case class Job(
 
 class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
-  val collection = Jobs
+  protected val collection = Jobs
 
-  def idColumn(x: Jobs): Rep[String] = x._Id
-  def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Jobs): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
 
-  def parse(r: JobsRow): Fox[Job] =
+  protected def parse(r: JobsRow): Fox[Job] =
     for {
       manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString)
       state <- JobState.fromString(r.state)
@@ -115,12 +116,12 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.returnvalue,
         r.started.map(_.getTime),
         r.ended.map(_.getTime),
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId) =
     s"""_owner = '$requestingUserId'"""
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
@@ -196,7 +197,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                           #${optionLiteralSanitized(j.returnValue)},
                           #${optionLiteral(j.started.map(_.toString))},
                           #${optionLiteral(j.ended.map(_.toString))},
-                          ${new java.sql.Timestamp(j.created)}, ${j.isDeleted})""")
+                          ${j.created}, ${j.isDeleted})""")
     } yield ()
 
   def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -205,20 +206,16 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- run(sqlu"""update webknossos.jobs set manualState = '#${manualState.toString}' where _id = $id""")
     } yield ()
 
-  def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] = {
-    val format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
-    val startedTimestamp = s.started.map(started => format.format(new Timestamp(started)))
-    val endedTimestamp = s.ended.map(ended => format.format(new Timestamp(ended)))
+  def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.jobs set
               latestRunId = #${optionLiteralSanitized(s.latestRunId)},
               state = '#${s.state.toString}',
               returnValue = #${optionLiteralSanitized(s.returnValue)},
-              started = #${optionLiteralSanitized(startedTimestamp)},
-              ended = #${optionLiteralSanitized(endedTimestamp)}
+              started = ${s.started},
+              ended = ${s.ended}
               where _id = $jobId""")
     } yield ()
-  }
 
   def reserveNextJob(worker: Worker): Fox[Unit] = {
     val query =

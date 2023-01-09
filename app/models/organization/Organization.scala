@@ -1,14 +1,17 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLClient, SQLDAO}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -19,23 +22,28 @@ case class Organization(
     logoUrl: String,
     displayName: String,
     pricingPlan: PricingPlan,
+    paidUntil: Option[Instant],
+    includedUsers: Option[Int], // None means unlimited
+    includedStorage: Option[Long], // None means unlimited
     _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
-    created: Long = System.currentTimeMillis(),
+    lastTermsOfServiceAcceptanceTime: Option[Instant] = None,
+    lastTermsOfServiceAcceptanceVersion: Int = 0,
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
 class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
-  val collection = Organizations
+  protected val collection = Organizations
 
-  def idColumn(x: Organizations): Rep[String] = x._Id
+  protected def idColumn(x: Organizations): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
-  def parse(r: OrganizationsRow): Fox[Organization] =
+  protected def parse(r: OrganizationsRow): Fox[Organization] =
     for {
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
     } yield {
@@ -46,20 +54,25 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.logourl,
         r.displayname,
         pricingPlan,
+        r.paiduntil.map(Instant.fromSql),
+        r.includedusers,
+        r.includedstorage,
         ObjectId(r._Rootfolder),
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
-        r.created.getTime,
+        r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
+        r.lasttermsofserviceacceptanceversion,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
     }
 
-  override def readAccessQ(requestingUserId: ObjectId): String =
+  override protected def readAccessQ(requestingUserId: ObjectId): String =
     s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))" +
       s"or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))"
 
-  override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
     case Some(_) => "true"
     case _       => "false"
   }
@@ -81,10 +94,15 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def insertOne(o: Organization): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, _rootFolder, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${new java.sql.Timestamp(
-          o.created)}, ${o.isDeleted})
+      _ <- run(sqlu"""INSERT INTO webknossos.organizations
+                      (_id, name, additionalInformation, logoUrl, displayName, _rootFolder,
+                      newUserMailingList, overTimeMailingList, enableAutoVerify,
+                      pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
+                      VALUES
+                      (${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
+                      ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
+                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${o.lastTermsOfServiceAcceptanceTime},
+                        ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
             """)
     } yield ()
 
@@ -112,6 +130,18 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       _ <- run(sqlu"""update webknossos.organizations
                       set displayName = $displayName, newUserMailingList = $newUserMailingList
                       where _id = $organizationId""")
+    } yield ()
+
+  def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Long)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(organizationId)
+      _ <- run(sqlu"""UPDATE webknossos.organizations
+                      SET
+                        lastTermsOfServiceAcceptanceTime = ${new java.sql.Timestamp(timestamp)},
+                        lastTermsOfServiceAcceptanceVersion = $version
+                      WHERE _id = $organizationId
+                   """)
     } yield ()
 
 }

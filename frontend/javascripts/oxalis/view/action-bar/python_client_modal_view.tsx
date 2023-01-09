@@ -68,9 +68,11 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contex
 `;
 
   const alertTokenIsPrivate = () => {
-    Toast.warning(
-      "The clipboard contains private data. Do not share this information with anyone you do not trust!",
-    );
+    if (authToken) {
+      Toast.warning(
+        "The clipboard contains private data. Do not share this information with anyone you do not trust!",
+      );
+    }
   };
 
   return (

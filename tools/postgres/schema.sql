@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(92);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(95);
 COMMIT TRANSACTION;
 
 
@@ -274,7 +274,7 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY,
   name VARCHAR(256) NOT NULL UNIQUE,
@@ -286,6 +286,11 @@ CREATE TABLE webknossos.organizations(
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
+  paidUntil TIMESTAMPTZ DEFAULT NULL,
+  includedUsers INTEGER DEFAULT NULL,
+  includedStorage BIGINT DEFAULT NULL,
+  lastTermsOfServiceAcceptanceTime TIMESTAMPTZ,
+  lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -301,6 +306,7 @@ CREATE TABLE webknossos.users(
   userConfiguration JSONB NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isAdmin BOOLEAN NOT NULL DEFAULT false,
+  isOrganizationOwner BOOLEAN NOT NULL DEFAULT false,
   isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,
@@ -700,7 +706,8 @@ ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runs
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
-  ADD FOREIGN KEY (_organization, workflow_hash) REFERENCES webknossos.voxelytics_workflows(_organization, hash) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+  -- explicit naming for this constraint, as different postgres versions give different names to tuple key constraints
+  ADD CONSTRAINT voxelytics_runs__organization_workflow_hash_fkey FOREIGN KEY (_organization, workflow_hash) REFERENCES webknossos.voxelytics_workflows(_organization, hash) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_tasks
   ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_chunks

@@ -16,7 +16,7 @@ class ApplicationHealthService @Inject()(slackNotificationService: DSSlackNotifi
     slackNotificationService.notifyForInternalError(e)
   }
 
-  def getRecentProblem(duration: FiniteDuration = 30 seconds): Option[HealthProblem] =
+  def getRecentProblem(duration: FiniteDuration = 1 minute): Option[HealthProblem] =
     encounteredProblems.headOption.filter(problem => !(problem.timestamp + duration).isPast)
 
 }

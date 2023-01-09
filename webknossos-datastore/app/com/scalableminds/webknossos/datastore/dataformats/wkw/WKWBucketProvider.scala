@@ -5,12 +5,11 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.wrap.WKWFile
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext
 
-class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits with LazyLogging {
+class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits {
 
   def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
@@ -18,8 +17,6 @@ class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits w
     val blockOffsetY = bucket.bucketY % numBlocksPerCubeDimension
     val blockOffsetZ = bucket.bucketZ % numBlocksPerCubeDimension
     try {
-      logger.info("throwing InternalError")
-      throw new InternalError("Oh my!");
       wkwFile.readBlock(blockOffsetX, blockOffsetY, blockOffsetZ)
     } catch {
       case e: InternalError => Failure(e.getMessage, Full(e), Empty).toFox
@@ -30,7 +27,7 @@ class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits w
     wkwFile.close()
 }
 
-class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper with LazyLogging {
+class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCubeHandle] = {
     val wkwFile = wkwFilePath(

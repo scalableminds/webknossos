@@ -53,6 +53,9 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
   def debugInfo: String = {
     // The debugInfo should be pastable in an SQL client
     val parts = sql.split("\\?", -1)
+    if (parts.tail.length != values.length) {
+      println(s"[$sql] {${values}}")
+    }
     assert(parts.tail.length == values.length)
     parts.tail.zip(values).foldLeft(parts.head)((acc, x) => acc + x._2.debugInfo + x._1)
   }
@@ -102,8 +105,8 @@ object SqlToken {
   }
 
   def tuple(values: Iterable[Any]): SqlToken = {
-    val sqlValues = values.map(SqlValue.makeSqlValue)
-    SqlToken(sql = s"(${sqlValues.map(_.placeholder).mkString(", ")})", values = sqlValues.toList)
+    val sqlValues = values.map(SqlValue.makeSqlValue).toList
+    SqlToken(sql = s"(${sqlValues.map(_.placeholder).mkString(", ")})", values = sqlValues)
   }
 
   def tupleList(values: Iterable[Iterable[Any]]): SqlToken = {

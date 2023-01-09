@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button } from "antd";
+import { Button, Tooltip } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
 import { usePolling } from "libs/react_hooks";
@@ -90,12 +90,27 @@ export default function StatisticsTab({
           {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => (
             <tr key={row.executionId}>
               <td>
-                {row.executionId}
-                <br />
-                <span className="stats-label">
-                  {row.countFinished !== row.countTotal && <>{row.countFinished} of </>}
-                  {row.countTotal} chunk{row.countTotal !== 1 && "s"} completed
-                </span>
+                <Tooltip
+                  overlay={
+                    <>
+                      {row.counts.complete}/{row.counts.total - row.counts.skipped} complete,{" "}
+                      {row.counts.cancelled} cancelled, {row.counts.failed} failed,{" "}
+                      {row.counts.skipped} skipped
+                    </>
+                  }
+                >
+                  <span>
+                    {row.executionId}
+                    <br />
+                    <span className="stats-label">
+                      {row.counts.complete !== row.counts.total - row.counts.skipped && (
+                        <>{row.counts.complete} of </>
+                      )}
+                      {row.counts.total - row.counts.skipped} chunk
+                      {row.counts.total - row.counts.skipped !== 1 && "s"} completed
+                    </span>
+                  </span>
+                </Tooltip>
               </td>
               <td>
                 {row.memory?.max != null && (
@@ -158,7 +173,7 @@ export default function StatisticsTab({
                 )}
               </td>
               <td>
-                {row.countTotal === 1 ? (
+                {row.counts.total === 1 ? (
                   row.duration?.max != null && (
                     <>
                       <span className="stats-label">Sum</span>{" "}

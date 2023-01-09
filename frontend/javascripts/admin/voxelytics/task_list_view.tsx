@@ -119,9 +119,9 @@ function TaskStateTag({ taskInfo, runId }: { taskInfo: VoxelyticsTaskInfo; runId
       );
     case VoxelyticsRunState.RUNNING: {
       const currentDuration = Date.now() - currentTaskInfo.beginTime.getTime();
-      if (currentTaskInfo.chunksFinished > 0) {
+      if (currentTaskInfo.chunks.complete > 0) {
         const estimatedRemainingDuration =
-          (currentDuration / currentTaskInfo.chunksFinished) * currentTaskInfo.chunksTotal -
+          (currentDuration / currentTaskInfo.chunks.complete) * currentTaskInfo.chunks.total -
           currentDuration;
         const estimatedEndTime = new Date(Date.now() + estimatedRemainingDuration);
         return (
@@ -622,16 +622,14 @@ function aggregateTaskInfos(
         taskName: task.key,
         state: VoxelyticsRunState.SKIPPED,
         currentExecutionId: null,
-        chunksTotal: 0,
-        chunksFinished: 0,
+        chunks: { total: 0, failed: 0, skipped: 0, complete: 0, cancelled: 0 },
         beginTime: null,
         endTime: null,
         runs: [
           {
             runId: "",
             currentExecutionId: null,
-            chunksTotal: 0,
-            chunksFinished: 0,
+            chunks: { total: 0, failed: 0, skipped: 0, complete: 0, cancelled: 0 },
             state: VoxelyticsRunState.SKIPPED,
             beginTime: null,
             endTime: null,
@@ -689,8 +687,13 @@ function aggregateTaskInfos(
       beginTime,
       endTime,
       currentExecutionId: null,
-      chunksTotal: taskInfos.reduce((r, a) => r + a.chunksTotal, 0),
-      chunksFinished: taskInfos.reduce((r, a) => r + a.chunksFinished, 0),
+      chunks: {
+        total: taskInfos.reduce((r, a) => r + a.chunks.total, 0),
+        failed: taskInfos.reduce((r, a) => r + a.chunks.failed, 0),
+        skipped: taskInfos.reduce((r, a) => r + a.chunks.skipped, 0),
+        complete: taskInfos.reduce((r, a) => r + a.chunks.complete, 0),
+        cancelled: taskInfos.reduce((r, a) => r + a.chunks.cancelled, 0),
+      },
       runs: [],
     } as VoxelyticsTaskInfo;
   }

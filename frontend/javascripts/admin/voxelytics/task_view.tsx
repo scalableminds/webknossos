@@ -61,7 +61,9 @@ function TaskView({
           <Tooltip
             overlay={
               <>
-                Finished chunks: {taskInfo.chunksFinished}, Total chunks: {taskInfo.chunksTotal}
+                Completed chunks: {taskInfo.chunks.complete}, Failed chunks:{" "}
+                {taskInfo.chunks.failed}, Cancelled chunks: {taskInfo.chunks.cancelled}, Total
+                chunks: {taskInfo.chunks.total}
               </>
             }
           >
@@ -75,13 +77,13 @@ function TaskView({
               }}
             >
               <Progress
-                percent={(taskInfo.chunksFinished / taskInfo.chunksTotal) * 100}
+                percent={(taskInfo.chunks.complete / taskInfo.chunks.total) * 100}
                 size="small"
                 showInfo={false}
                 style={{ flex: 1 }}
               />
               <span style={{ fontSize: "0.9em", marginLeft: "1em" }}>
-                {taskInfo.chunksFinished} / {taskInfo.chunksTotal}
+                {taskInfo.chunks.complete} / {taskInfo.chunks.total}
               </span>
             </span>
           </Tooltip>

@@ -111,8 +111,8 @@ object StatisticsEntry {
 
 case class ChunkStatisticsEntry(executionId: String,
                                 counts: ChunkStatistics,
-                                beginTime: Instant,
-                                endTime: Instant,
+                                beginTime: Option[Instant],
+                                endTime: Option[Instant],
                                 wallTime: Double,
                                 memory: StatisticsEntry,
                                 cpuUser: StatisticsEntry,
@@ -162,7 +162,10 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
             "beginTime" -> sortedTaskRuns.head.beginTime,
             "endTime" -> sortedTaskRuns.head.endTime,
             "currentExecutionId" -> combinedTaskRun.flatMap(_.currentExecutionId),
-            "chunks" -> combinedTaskRun.map(_.chunks).getOrElse(ChunkStatistics(0, 0, 0, 0, 0)),
+            "chunks" -> combinedTaskRun
+              .map(_.chunks)
+              .getOrElse(ChunkStatistics(0, 0, 0, 0, 0))
+              .asInstanceOf[ChunkStatistics],
             "runs" -> sortedTaskRuns.map(run =>
               Json.obj(
                 "runId" -> run.runId,

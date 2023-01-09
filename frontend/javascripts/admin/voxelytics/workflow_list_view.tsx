@@ -106,9 +106,11 @@ export default function WorkflowListView() {
     return (
       <Tooltip title={label}>
         <Progress
-          percent={Math.round(((completeCount + failedCount) / runnableCount) * 100)}
+          percent={Math.round(
+            ((completeCount + cancelledCount + failedCount) / run.taskStatistics.total) * 100,
+          )}
           status={runStateToStatus(run.state)}
-          success={{ percent: Math.round((completeCount / runnableCount) * 100) }}
+          success={{ percent: Math.round((completeCount / run.taskStatistics.total) * 100) }}
           size="small"
         />
       </Tooltip>

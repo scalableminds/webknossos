@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Path
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,10 +10,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateServiceOpt: Option[AgglomerateService])
+class BinaryDataService(val dataBaseDir: Path,
+                        maxCacheSize: Int,
+                        val agglomerateServiceOpt: Option[AgglomerateService],
+                        val applicationHealthService: Option[ApplicationHealthService])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
@@ -76,10 +79,14 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      request.dataLayer.bucketProvider.load(readInstruction, cache)
-    } else {
-      Fox.empty
-    }
+      request.dataLayer.bucketProvider.load(readInstruction, cache).futureBox.flatMap {
+        case Failure(_, Full(e: InternalError), _) =>
+          applicationHealthService.foreach(a => a.pushError(e))
+          logger.warn(s"Caught internal error: $e")
+          Fox.failure(e.getMessage)
+        case other => other.toFox
+      }
+    } else Fox.empty
 
   /**
     * Given a list of loaded buckets, cutout the data of the cuboid

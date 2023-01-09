@@ -104,8 +104,9 @@ function DatasetView(props: Props) {
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
-  const { data: folder } =
-    "activeFolderId" in context ? useFolderQuery(context.activeFolderId) : { data: null };
+  const { data: folder } = useFolderQuery(
+    "activeFolderId" in context ? context.activeFolderId : null,
+  );
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;

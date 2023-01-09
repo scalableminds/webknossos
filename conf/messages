@@ -308,3 +308,4 @@ folder.update.notAllowed=No write access on this folder
 folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location
+folder.noWriteAccess=No write access in this folder

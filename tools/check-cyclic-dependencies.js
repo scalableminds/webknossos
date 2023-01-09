@@ -35,9 +35,11 @@ madge("frontend/javascripts/main.tsx", {
   const knownCycleStrings = new Set(KNOWN_CYCLES.map((el) => el.toString()));
   const newCycles = cyclicDependencies.filter((el) => !knownCycleStrings.has(el.toString()));
 
-  if (newCycles.length > 0) {
+  if (cyclicDependencies.length > knownCycleStrings.length) {
     throw new Error(
-      `Too many cyclic dependencies. Please run "yarn find-cyclic-dependencies" and remove the dependencies you find. The following ones seem to be new:\n\n${newCycles
+      `Too many cyclic dependencies (${
+        cyclicDependencies.length - knownCycleStrings.length
+      } more than previously). Please run "yarn find-cyclic-dependencies" and remove the dependencies you find. The following ones seem to be new (might be too many because known cycles might have changed their structure):\n\n${newCycles
         .map((cycle) => cycle.join(" -> "))
         .join("\n")}\n`,
     );

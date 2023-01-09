@@ -49,7 +49,6 @@ export function createUpdatableTexture(
     THREE.NearestFilter,
   );
   newTexture.setRenderer(renderer);
-  newTexture.setSize(width, width);
   return newTexture;
 }
 export default {};

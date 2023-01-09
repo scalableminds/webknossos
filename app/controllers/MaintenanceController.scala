@@ -10,7 +10,7 @@ import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
-import utils.{SQLClient, SimpleSQLDAO}
+import utils.sql.{SQLClient, SimpleSQLDAO}
 import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext

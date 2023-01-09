@@ -14,7 +14,10 @@ import net.liftweb.common.{Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateServiceOpt: Option[AgglomerateService])
+class BinaryDataService(val dataBaseDir: Path,
+                        maxCacheSize: Int,
+                        val agglomerateServiceOpt: Option[AgglomerateService],
+                        val applicationHealthService: Option[ApplicationHealthService])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
@@ -78,6 +81,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       request.dataLayer.bucketProvider.load(readInstruction, cache).futureBox.flatMap {
         case Failure(_, Full(e: InternalError), _) =>
+          applicationHealthService.foreach(a => a.pushError(e))
           logger.info(s"Caught internal error: $e");
           Fox.failure("hi")
         case other => other.toFox

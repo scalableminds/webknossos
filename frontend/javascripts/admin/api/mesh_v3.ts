@@ -30,14 +30,25 @@ export function getMeshfileChunksForSegment(
   layerName: string,
   meshFile: string,
   segmentId: number,
+  // targetMappingName is the on-disk mapping name.
+  // In case of an editable mapping, this should still be the on-disk base
+  // mapping name (so that agglomerates that are untouched by the editable
+  // mapping can be looked up there without another round-trip between tracingstore
+  // and datastore)
   mappingName: string | null | undefined,
   useMeshFromMappedIds: boolean,
+  // editableMappingTracingId should be the tracing id, not the editable mapping id.
+  // If this is set, it is assumed that the request is about an editable mapping.
+  editableMappingTracingId: string | null | undefined,
 ): Promise<SegmentInfo> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
     params.append("token", token);
     if (mappingName != null) {
       params.append("targetMappingName", mappingName);
+    }
+    if (editableMappingTracingId != null) {
+      params.append("editableMappingTracingId", editableMappingTracingId);
     }
     params.append("useMeshFromMappedIds", useMeshFromMappedIds ? "true" : "false");
     return Request.sendJSONReceiveJSON(

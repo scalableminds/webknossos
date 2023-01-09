@@ -3,11 +3,11 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import type { APIDataLayer, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
-import Store from "oxalis/store";
+import Store, { OxalisState } from "oxalis/store";
 import {
   ResolutionInfo,
   getResolutionInfo,
@@ -60,7 +60,11 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getTracingForSegmentationLayer,
+  hasEditableMapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import { getDracoLoader } from "libs/draco";
@@ -591,7 +595,7 @@ function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
   meshFileName: string,
-  segmentationLayer: APIDataLayer,
+  segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
@@ -622,6 +626,11 @@ function* loadPrecomputedMeshForSegmentId(
     const mappingName = meshFile.mappingName == null ? isosurfaceExtraInfo.mappingName : null;
     const useMeshFromMappedIds = mappingName != null;
 
+    const isEditableMapping = yield* select((state) => hasEditableMapping(state, layerName));
+    const tracing = yield* select((state) =>
+      getTracingForSegmentationLayer(state, segmentationLayer),
+    );
+
     if (version >= 3) {
       const segmentInfo = yield* call(
         meshV3.getMeshfileChunksForSegment,
@@ -632,6 +641,7 @@ function* loadPrecomputedMeshForSegmentId(
         id,
         mappingName,
         useMeshFromMappedIds,
+        isEditableMapping && tracing ? tracing.tracingId : null,
       );
       scale = [
         segmentInfo.transform[0][0],

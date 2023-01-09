@@ -43,7 +43,11 @@ import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
-import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
+import {
+  MINIMUM_SEARCH_QUERY_LENGTH,
+  SEARCH_RESULTS_LIMIT,
+  useFolderQuery,
+} from "./dataset/queries";
 
 const { Group: InputGroup } = Input;
 
@@ -100,6 +104,8 @@ function DatasetView(props: Props) {
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
+  const { data: folder } =
+    "activeFolderId" in context ? useFolderQuery(context.activeFolderId) : { data: null };
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
@@ -268,9 +274,12 @@ function DatasetView(props: Props) {
               {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
             </Dropdown.Button>
           </Tooltip>
+
           <Link
             to={
-              "activeFolderId" in context && context.activeFolderId != null
+              "activeFolderId" in context &&
+              context.activeFolderId != null &&
+              (folder == null || folder.isEditable)
                 ? `/datasets/upload?to=${context.activeFolderId}`
                 : "/datasets/upload"
             }
@@ -282,6 +291,7 @@ function DatasetView(props: Props) {
           </Link>
           {"activeFolderId" in context && context.activeFolderId != null && (
             <Button
+              disabled={folder != null && !folder.isEditable}
               style={margin}
               icon={<PlusOutlined />}
               onClick={() =>

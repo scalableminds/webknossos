@@ -256,3 +256,5 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     bs
   }
 }
+
+// TODO: Jpeg (libjpeg-turbo?)

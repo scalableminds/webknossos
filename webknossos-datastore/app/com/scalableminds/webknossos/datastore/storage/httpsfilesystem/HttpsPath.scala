@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.storage.httpsfilesystem
 
 import java.io.File
 import java.net.URI
-import java.nio.file.{FileSystem, LinkOption, Path, WatchEvent, WatchKey, WatchService}
+import java.nio.file.{FileSystem, LinkOption, Path, Paths, WatchEvent, WatchKey, WatchService}
 
 class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
   override def getFileSystem: FileSystem = fileSystem
@@ -11,9 +11,10 @@ class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
 
   override def getRoot: Path = ???
 
-  override def getFileName: Path = ???
-
-  override def getParent: Path = ???
+  override def getFileName: Path = Paths.get(uri.toString.split("/").last)
+  override def getParent: Path =
+    new HttpsPath(if (uri.getPath.endsWith("/")) uri.resolve("..")
+    else uri.resolve("."), fileSystem)
 
   override def getNameCount: Int = ???
 

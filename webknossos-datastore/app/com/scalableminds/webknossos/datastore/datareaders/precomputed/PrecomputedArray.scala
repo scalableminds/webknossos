@@ -1,34 +1,28 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  ChunkReader,
-  DatasetArray,
-  DatasetHeader,
-  DatasetPath,
-  FileSystemStore
-}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader, DatasetPath, FileSystemStore, GoogleCloudFileSystemStore}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
   def open(magPath: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
 
-    val rootPath = new DatasetPath("")
+    //val rootPath = new DatasetPath("")
 
     // magPath = https://www.googleapis.com/storage/v1/b/neuroglancer-fafb-data/o/fafb_v14%2Ffafb_v14_orig%2F64_64_80
-    val basePath = magPath.toString.split("%2F").init.reduce((a, b) => s"$a$b")
+    //val basePath = magPath.toString.split("/").init.reduce((a, b) => s"$a/$b")
     // basePath = https://www.googleapis.com/storage/v1/b/neuroglancer-fafb-data/o/fafb_v14%2Ffafb_v14_orig
-    val headerPath = Paths.get(s"$basePath${PrecomputedHeader.METADATA_PATH}?alt=media")
-    // headerPath = https://www.googleapis.com/storage/v1/b/neuroglancer-fafb-data/o/fafb_v14%2Ffafb_v14_orig%2Finfo
-    // ?alt=media
-    val headerStore = new FileSystemStore(headerPath)
-    val headerBytes = headerStore.readBytes(rootPath.storeKey)
+
+    // PROBLEMS WITH / and %2F: Google Cloud does not use "/" to navigate in the bucket but "%2F".
+    val store = new GoogleCloudFileSystemStore(magPath.getParent, magPath.getFileSystem)
+    val headerPath = s"${PrecomputedHeader.METADATA_PATH}?alt=media"
+    // headerPath = info?alt=media
+    val headerBytes = store.readBytes(headerPath)
     if (headerBytes.isEmpty)
       throw new IOException(
         "'" + PrecomputedHeader.METADATA_PATH + "' expected but is not readable or missing in store.")
@@ -51,9 +45,9 @@ object PrecomputedArray extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
-    val scaleStore = new FileSystemStore(magPath)
-    new PrecomputedArray(rootPath,
-                         scaleStore,
+    val datasetPath = new DatasetPath(key.toString)
+    new PrecomputedArray(datasetPath,
+                         store,
                          scaleHeader,
                          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
                          channelIndex)

@@ -59,7 +59,7 @@ object PrecomputedScale extends JsonImplicits {
 }
 
 object PrecomputedHeader extends JsonImplicits {
-  val METADATA_PATH = "%2Finfo" // TODO: Why doesn't "/" work?
+  val METADATA_PATH = "info" // TODO: Why doesn't "/" work?
 
   implicit object PrecomputedHeaderFormat extends Format[PrecomputedHeader] {
     override def reads(json: JsValue): JsResult[PrecomputedHeader] =

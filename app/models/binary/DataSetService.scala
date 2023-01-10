@@ -61,7 +61,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
+  def createPreliminaryDataset(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
     val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), notYetUploadedStatus)
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }

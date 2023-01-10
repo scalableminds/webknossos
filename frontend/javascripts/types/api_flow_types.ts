@@ -843,12 +843,12 @@ type StatePartial =
 export type VoxelyticsTaskInfo = {
   taskName: string;
   currentExecutionId: string | null;
-  chunks: ChunkOrTaskStatistics;
+  chunkCounts: ChunkOrTaskCounts;
   runs: Array<
     {
       runId: string;
       currentExecutionId: string | null;
-      chunks: ChunkOrTaskStatistics;
+      chunkCounts: ChunkOrTaskCounts;
     } & StatePartial
   >;
 } & StatePartial;
@@ -901,7 +901,7 @@ export type VoxelyticsWorkflowListingRun = (
   username: string;
   hostname: string;
   voxelyticsVersion: string;
-  taskStatistics: ChunkOrTaskStatistics;
+  taskCounts: ChunkOrTaskCounts;
 };
 
 export type VoxelyticsWorkflowListing = {
@@ -910,7 +910,7 @@ export type VoxelyticsWorkflowListing = {
   beginTime: number;
   endTime: number | null;
   state: VoxelyticsRunState;
-  taskStatistics: ChunkOrTaskStatistics;
+  taskCounts: ChunkOrTaskCounts;
   runs: Array<VoxelyticsWorkflowListingRun>;
 };
 
@@ -921,7 +921,7 @@ type Statistics = {
   sum?: number;
 };
 
-type ChunkOrTaskStatistics = {
+type ChunkOrTaskCounts = {
   total: number;
   failed: number;
   skipped: number;
@@ -931,7 +931,7 @@ type ChunkOrTaskStatistics = {
 
 export type VoxelyticsChunkStatistics = {
   executionId: string;
-  counts: ChunkOrTaskStatistics;
+  chunkCounts: ChunkOrTaskCounts;
   beginTime: number | null;
   endTime: number | null;
   wallTime: number | null;

@@ -333,11 +333,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                 beginTime = row._6,
                 endTime = row._7,
                 currentExecutionId = row._8,
-                chunks = ChunkStatistics(total = row._9,
-                                         failed = row._10,
-                                         skipped = row._11,
-                                         complete = row._12,
-                                         cancelled = row._13)
+                chunkCounts = ChunkCounts(total = row._9,
+                                          failed = row._10,
+                                          skipped = row._11,
+                                          complete = row._12,
+                                          cancelled = row._13)
             )))
     } yield results
 
@@ -375,13 +375,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     } yield
       r.toList.map(
         row =>
-          CombinedTaskRunEntry(taskName = row._1,
-                               currentExecutionId = row._2,
-                               chunks = ChunkStatistics(total = row._3,
-                                                        failed = row._4,
-                                                        skipped = row._5,
-                                                        complete = row._6,
-                                                        cancelled = row._7)))
+          CombinedTaskRunEntry(
+            taskName = row._1,
+            currentExecutionId = row._2,
+            chunkCounts =
+              ChunkCounts(total = row._3, failed = row._4, skipped = row._5, complete = row._6, cancelled = row._7)))
 
   def findRuns(currentUser: User,
                runIds: Option[List[ObjectId]],
@@ -435,9 +433,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   }
 
-  def findWorkflowTaskStatistics(currentUser: User,
-                                 workflowHashes: Set[String],
-                                 staleTimeout: FiniteDuration): Fox[Map[String, TaskStatistics]] = {
+  def findWorkflowTaskCounts(currentUser: User,
+                             workflowHashes: Set[String],
+                             staleTimeout: FiniteDuration): Fox[Map[String, TaskCounts]] = {
     val organizationId = currentUser._organization
     for {
       r <- run(q"""
@@ -474,7 +472,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         .map(
           row =>
             (row._1,
-             TaskStatistics(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6)))
+             TaskCounts(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6)))
         .toMap
   }
 
@@ -545,7 +543,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                 state = state,
                 beginTime = row._8,
                 endTime = row._9,
-                taskStatistics = TaskStatistics(
+                taskCounts = TaskCounts(
                   total = row._10,
                   failed = row._11,
                   skipped = row._12,
@@ -720,8 +718,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         row =>
           ChunkStatisticsEntry(
             executionId = row._1,
-            counts =
-              ChunkStatistics(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6),
+            chunkCounts =
+              ChunkCounts(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6),
             beginTime = row._7,
             endTime = row._8,
             wallTime = row._9,

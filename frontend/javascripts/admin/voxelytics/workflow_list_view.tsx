@@ -12,7 +12,7 @@ import {
 import { usePolling } from "libs/react_hooks";
 import { formatDateMedium } from "libs/format_utils";
 import Toast from "libs/toast";
-import { VX_POLLING_INTERVAL } from "./utils";
+import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
 
 function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
@@ -73,7 +73,7 @@ export default function WorkflowListView() {
         username: uniqueify(workflow.runs.map((run) => run.username)).join(", "),
         hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
-        taskStatistics: workflow.taskStatistics,
+        taskCounts: workflow.taskCounts,
         children: workflow.runs.map((run) => ({
           workflowName: workflow.name,
           workflowHash: workflow.hash,
@@ -84,21 +84,20 @@ export default function WorkflowListView() {
   ) as any as Array<RenderRunInfo>;
 
   function renderProgress(run: RenderRunInfo) {
-    const skippedCount = run.taskStatistics.skipped;
-    const completeCount = run.taskStatistics.complete;
-    const cancelledCount = run.taskStatistics.cancelled;
-    const failedCount = run.taskStatistics.failed;
-    const runnableCount = run.taskStatistics.total - run.taskStatistics.skipped;
-    let label = `${completeCount}/${runnableCount} complete`;
-    if (cancelledCount > 0) {
-      label += `, ${cancelledCount} cancelled`;
+    const remainingCount = run.taskCounts.total - run.taskCounts.complete - run.taskCounts.skipped;
+    const runnableCount = run.taskCounts.total - run.taskCounts.skipped;
+
+    let label = `${remainingCount} remaining, ${run.taskCounts.complete} complete`;
+    if (run.taskCounts.cancelled > 0) {
+      label += `, ${run.taskCounts.cancelled} cancelled`;
     }
-    if (failedCount > 0) {
-      label += `, ${failedCount} failed`;
+    if (run.taskCounts.failed > 0) {
+      label += `, ${run.taskCounts.failed} failed`;
     }
-    if (skippedCount > 0) {
-      label += `, ${skippedCount} skipped`;
+    if (run.taskCounts.skipped > 0) {
+      label += `, ${run.taskCounts.skipped} skipped`;
     }
+    label += `, ${run.taskCounts.total} total`;
     if (run.state === VoxelyticsRunState.STALE) {
       label += ", timeout";
     }
@@ -107,29 +106,16 @@ export default function WorkflowListView() {
       <Tooltip title={label}>
         <Progress
           percent={Math.round(
-            ((completeCount + cancelledCount + failedCount) / run.taskStatistics.total) * 100,
+            ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
+              runnableCount) *
+              100,
           )}
           status={runStateToStatus(run.state)}
-          success={{ percent: Math.round((completeCount / run.taskStatistics.total) * 100) }}
+          success={{ percent: Math.round((run.taskCounts.complete / runnableCount) * 100) }}
           size="small"
         />
       </Tooltip>
     );
-  }
-
-  function runStateToStatus(state: VoxelyticsRunState) {
-    switch (state) {
-      case VoxelyticsRunState.COMPLETE:
-        return "success";
-      case VoxelyticsRunState.STALE:
-      case VoxelyticsRunState.FAILED:
-      case VoxelyticsRunState.CANCELLED:
-        return "exception";
-      case VoxelyticsRunState.PENDING:
-        return "active";
-      default:
-        return "normal";
-    }
   }
 
   return (

@@ -76,10 +76,10 @@ class VoxelyticsController @Inject()(
                                     runs: List[WorkflowListingRunEntry]): Fox[JsArray] =
     for {
       _ <- bool2Fox(runs.nonEmpty) // just asserting once more
-      workflowTaskStatistics <- voxelyticsDAO.findWorkflowTaskStatistics(request.identity,
-                                                                         runs.map(_.workflow_hash).toSet,
-                                                                         conf.staleTimeout)
-      _ <- bool2Fox(workflowTaskStatistics.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
+      workflowTaskCounts <- voxelyticsDAO.findWorkflowTaskCounts(request.identity,
+                                                                 runs.map(_.workflow_hash).toSet,
+                                                                 conf.staleTimeout)
+      _ <- bool2Fox(workflowTaskCounts.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
       workflows <- voxelyticsDAO.findWorkflowsByHashAndOrganization(request.identity._organization,
                                                                     runs.map(_.workflow_hash).toSet)
       _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
@@ -97,7 +97,7 @@ class VoxelyticsController @Inject()(
               "beginTime" -> beginTime,
               "endTime" -> endTime,
               "state" -> state.toString(),
-              "taskStatistics" -> workflowTaskStatistics.get(workflow.hash),
+              "taskCounts" -> workflowTaskCounts.get(workflow.hash),
               "runs" -> workflowRuns
             ))
         } else {

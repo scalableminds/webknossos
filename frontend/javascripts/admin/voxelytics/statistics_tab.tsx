@@ -12,6 +12,7 @@ import {
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
 import { Result, VX_POLLING_INTERVAL } from "./utils";
 import moment from "moment";
+import { pluralize } from "libs/utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
 
@@ -87,133 +88,137 @@ export default function StatisticsTab({
           </tr>
         </thead>
         <tbody>
-          {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => (
-            <tr key={row.executionId}>
-              <td>
-                <Tooltip
-                  overlay={
-                    <>
-                      {row.counts.complete}/{row.counts.total - row.counts.skipped} complete,{" "}
-                      {row.counts.cancelled} cancelled, {row.counts.failed} failed,{" "}
-                      {row.counts.skipped} skipped
-                    </>
-                  }
-                >
-                  <span>
-                    {row.executionId}
-                    <br />
-                    <span className="stats-label">
-                      {row.counts.complete !== row.counts.total - row.counts.skipped && (
-                        <>{row.counts.complete} of </>
-                      )}
-                      {row.counts.total - row.counts.skipped} chunk
-                      {row.counts.total - row.counts.skipped !== 1 && "s"} completed
+          {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => {
+            const remainingCount =
+              row.chunkCounts.total - row.chunkCounts.complete - row.chunkCounts.skipped;
+            const runnableCount = row.chunkCounts.total - row.chunkCounts.skipped;
+            return (
+              <tr key={row.executionId}>
+                <td>
+                  <Tooltip
+                    overlay={
+                      <>
+                        {remainingCount} remaining, {row.chunkCounts.complete} complete,{" "}
+                        {row.chunkCounts.cancelled} cancelled, {row.chunkCounts.failed} failed,{" "}
+                        {row.chunkCounts.skipped} skipped, {row.chunkCounts.total} total
+                      </>
+                    }
+                  >
+                    <span>
+                      {row.executionId}
+                      <br />
+                      <span className="stats-label">
+                        {row.chunkCounts.complete !== runnableCount && (
+                          <>{row.chunkCounts.complete} of </>
+                        )}
+                        {runnableCount} {pluralize("chunk", runnableCount)} completed
+                      </span>
                     </span>
-                  </span>
-                </Tooltip>
-              </td>
-              <td>
-                {row.memory?.max != null && (
-                  <>
-                    <span className="stats-label">Max</span>{" "}
-                    {formatBytes(row.memory.max * 1024 * 1024)}
-                  </>
-                )}
-                <br />
-                {row.memory?.median != null && (
-                  <>
-                    <span className="stats-label">Median</span>{" "}
-                    {formatBytes(row.memory.median * 1024 * 1024)}
-                  </>
-                )}
-                <br />
-                {row.memory?.stddev != null && (
-                  <>
-                    <span className="stats-label">Stddev</span>{" "}
-                    {formatBytes(row.memory.stddev * 1024 * 1024)}
-                  </>
-                )}
-              </td>
-              <td>
-                {row.cpuUser?.max != null && (
-                  <>
-                    <span className="stats-label">Max</span> {formatCPU(row.cpuUser.max)}
-                  </>
-                )}
-                <br />
-                {row.cpuUser?.median != null && (
-                  <>
-                    <span className="stats-label">Median</span> {formatCPU(row.cpuUser.median)}
-                  </>
-                )}
-                <br />
-                {row.cpuUser?.stddev != null && (
-                  <>
-                    <span className="stats-label">Stddev</span> {formatCPU(row.cpuUser.stddev)}
-                  </>
-                )}
-              </td>
-              <td>
-                {row.cpuSystem?.max != null && (
-                  <>
-                    <span className="stats-label">Max</span> {formatCPU(row.cpuSystem.max)}
-                  </>
-                )}
-                <br />
-                {row.cpuSystem?.median != null && (
-                  <>
-                    <span className="stats-label">Median</span> {formatCPU(row.cpuSystem.median)}
-                  </>
-                )}
-                <br />
-                {row.cpuSystem?.stddev != null && (
-                  <>
-                    <span className="stats-label">Stddev</span> {formatCPU(row.cpuSystem.stddev)}
-                  </>
-                )}
-              </td>
-              <td>
-                {row.counts.total === 1 ? (
-                  row.duration?.max != null && (
+                  </Tooltip>
+                </td>
+                <td>
+                  {row.memory?.max != null && (
                     <>
-                      <span className="stats-label">Sum</span>{" "}
-                      {formatDistanceStrict(row.duration.max * 1000, 0)}
+                      <span className="stats-label">Max</span>{" "}
+                      {formatBytes(row.memory.max * 1024 * 1024)}
                     </>
-                  )
-                ) : (
-                  <>
-                    {row.duration?.max != null && (
-                      <>
-                        <span className="stats-label">Max</span>{" "}
-                        {formatDistanceStrict(row.duration.max * 1000, 0)}
-                      </>
-                    )}
-                    <br />
-                    {row.duration?.median != null && (
-                      <>
-                        <span className="stats-label">Median</span>{" "}
-                        {formatDistanceStrict(row.duration.median * 1000, 0)}
-                      </>
-                    )}
-                    <br />{" "}
-                    {row.duration?.sum != null && (
+                  )}
+                  <br />
+                  {row.memory?.median != null && (
+                    <>
+                      <span className="stats-label">Median</span>{" "}
+                      {formatBytes(row.memory.median * 1024 * 1024)}
+                    </>
+                  )}
+                  <br />
+                  {row.memory?.stddev != null && (
+                    <>
+                      <span className="stats-label">Stddev</span>{" "}
+                      {formatBytes(row.memory.stddev * 1024 * 1024)}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {row.cpuUser?.max != null && (
+                    <>
+                      <span className="stats-label">Max</span> {formatCPU(row.cpuUser.max)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuUser?.median != null && (
+                    <>
+                      <span className="stats-label">Median</span> {formatCPU(row.cpuUser.median)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuUser?.stddev != null && (
+                    <>
+                      <span className="stats-label">Stddev</span> {formatCPU(row.cpuUser.stddev)}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {row.cpuSystem?.max != null && (
+                    <>
+                      <span className="stats-label">Max</span> {formatCPU(row.cpuSystem.max)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuSystem?.median != null && (
+                    <>
+                      <span className="stats-label">Median</span> {formatCPU(row.cpuSystem.median)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuSystem?.stddev != null && (
+                    <>
+                      <span className="stats-label">Stddev</span> {formatCPU(row.cpuSystem.stddev)}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {row.chunkCounts.total === 1 ? (
+                    row.duration?.max != null && (
                       <>
                         <span className="stats-label">Sum</span>{" "}
-                        {formatDistanceStrict(row.duration.sum * 1000, 0)}
+                        {formatDistanceStrict(row.duration.max * 1000, 0)}
                       </>
-                    )}
-                  </>
-                )}
-                <br />
-                {row.wallTime != null && (
-                  <>
-                    <span className="stats-label">Wall</span>{" "}
-                    {formatDurationStrict(moment.duration(row.wallTime, "seconds"))}
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
+                    )
+                  ) : (
+                    <>
+                      {row.duration?.max != null && (
+                        <>
+                          <span className="stats-label">Max</span>{" "}
+                          {formatDistanceStrict(row.duration.max * 1000, 0)}
+                        </>
+                      )}
+                      <br />
+                      {row.duration?.median != null && (
+                        <>
+                          <span className="stats-label">Median</span>{" "}
+                          {formatDistanceStrict(row.duration.median * 1000, 0)}
+                        </>
+                      )}
+                      <br />{" "}
+                      {row.duration?.sum != null && (
+                        <>
+                          <span className="stats-label">Sum</span>{" "}
+                          {formatDistanceStrict(row.duration.sum * 1000, 0)}
+                        </>
+                      )}
+                    </>
+                  )}
+                  <br />
+                  {row.wallTime != null && (
+                    <>
+                      <span className="stats-label">Wall</span>{" "}
+                      {formatDurationStrict(moment.duration(row.wallTime, "seconds"))}
+                    </>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     );

@@ -318,7 +318,7 @@ function shouldCollapseId(id: string, expandedKeys: Record<string, boolean>): [s
 
 export default function WorkflowView() {
   const { workflowName } = useParams<{ workflowName: string }>();
-  const { runId, metatask } = useSearchParams();
+  const { metatask } = useSearchParams();
   const user = useSelector((state: OxalisState) => state.activeUser);
 
   const [loadingState, setLoadingState] = useState<LoadingState>({ status: "PENDING" });
@@ -347,7 +347,7 @@ export default function WorkflowView() {
   async function loadData() {
     try {
       setLoadingState({ status: "LOADING" });
-      let _report = parseReport(await getVoxelyticsWorkflow(workflowName, runId));
+      let _report = parseReport(await getVoxelyticsWorkflow(workflowName, null));
       if (metatask != null) {
         // If a meta task is passed via a GET parameter,
         // the entire report is filtered so that only the tasks of the given

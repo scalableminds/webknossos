@@ -1,6 +1,7 @@
 import { message } from "antd";
 import { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
+import { VoxelyticsRunState } from "types/api_flow_types";
 
 export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
 
@@ -11,6 +12,21 @@ export type Result<T> =
     }
   | { type: "ERROR" }
   | { type: "LOADING" };
+
+export function runStateToStatus(state: VoxelyticsRunState) {
+  switch (state) {
+    case VoxelyticsRunState.COMPLETE:
+      return "success";
+    case VoxelyticsRunState.STALE:
+    case VoxelyticsRunState.FAILED:
+    case VoxelyticsRunState.CANCELLED:
+      return "exception";
+    case VoxelyticsRunState.PENDING:
+      return "active";
+    default:
+      return "normal";
+  }
+}
 
 // https://github.com/reduxjs/redux-devtools/blob/75322b15ee7ba03fddf10ac3399881e302848874/src/react/themes/default.js
 const theme = {

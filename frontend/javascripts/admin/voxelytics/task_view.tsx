@@ -13,7 +13,7 @@ import {
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
-import { useTheme } from "./utils";
+import { runStateToStatus, useTheme } from "./utils";
 
 const { TabPane } = Tabs;
 
@@ -61,9 +61,12 @@ function TaskView({
           <Tooltip
             overlay={
               <>
-                Completed chunks: {taskInfo.chunks.complete}, Failed chunks:{" "}
-                {taskInfo.chunks.failed}, Cancelled chunks: {taskInfo.chunks.cancelled}, Total
-                chunks: {taskInfo.chunks.total}
+                {taskInfo.chunkCounts.total -
+                  taskInfo.chunkCounts.complete -
+                  taskInfo.chunkCounts.skipped}{" "}
+                remaining, {taskInfo.chunkCounts.complete} complete,{" "}
+                {taskInfo.chunkCounts.cancelled} cancelled, {taskInfo.chunkCounts.failed} failed,{" "}
+                {taskInfo.chunkCounts.skipped} skipped, {taskInfo.chunkCounts.total} total
               </>
             }
           >
@@ -77,13 +80,28 @@ function TaskView({
               }}
             >
               <Progress
-                percent={(taskInfo.chunks.complete / taskInfo.chunks.total) * 100}
+                percent={
+                  ((taskInfo.chunkCounts.complete +
+                    taskInfo.chunkCounts.cancelled +
+                    taskInfo.chunkCounts.failed) /
+                    (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)) *
+                  100
+                }
+                status={runStateToStatus(taskInfo.state)}
+                success={{
+                  percent: Math.round(
+                    (taskInfo.chunkCounts.complete /
+                      (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)) *
+                      100,
+                  ),
+                }}
                 size="small"
                 showInfo={false}
                 style={{ flex: 1 }}
               />
               <span style={{ fontSize: "0.9em", marginLeft: "1em" }}>
-                {taskInfo.chunks.complete} / {taskInfo.chunks.total}
+                {taskInfo.chunkCounts.complete} /{" "}
+                {taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped}
               </span>
             </span>
           </Tooltip>

@@ -111,7 +111,7 @@ class DSRemoteWebKnossosClient @Inject()(
     tracingstoreUriCache.getOrLoad(
       "tracingStore",
       _ =>
-        rpc(s"$webKnossosUri/api/datastores/tracingStoreUri")
+        rpc(s"$webKnossosUri/api/datastores/$dataStoreName/tracingStoreUri")
           .addQueryString("key" -> dataStoreKey)
           .getWithJsonResponse[String]
     )

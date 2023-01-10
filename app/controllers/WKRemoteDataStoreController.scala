@@ -181,4 +181,10 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
+  def tracingStoreUri(name: String, key: String): Action[AnyContent] = Action.async { implicit request =>
+    dataStoreService.validateAccess(name, key) { _ =>
+      Fox.successful(Ok("\"http://localhost:9000\"")) // TODO
+    }
+  }
+
 }

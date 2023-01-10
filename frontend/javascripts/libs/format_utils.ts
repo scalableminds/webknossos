@@ -187,7 +187,7 @@ export function formatDistanceStrict(start: Date | number, end: Date | number): 
 export function formatDurationStrict(duration: Duration): string {
   const parts: Array<string> = [];
   if (Math.floor(duration.asDays()) > 0) {
-    parts.push(`${Math.floor(duration.asDays())}d`);
+    parts.push(`${formatNumber(Math.floor(duration.asDays()))}d`);
   }
   if (duration.hours() > 0) {
     parts.push(`${duration.hours()}h`);
@@ -236,4 +236,8 @@ export function formatBytes(nbytes: number) {
     return `${(nbytes / 2 ** 10).toPrecision(4)} KiB`;
   }
   return `${nbytes} B`;
+}
+
+export function formatNumber(num: number): string {
+  return new Intl.NumberFormat("en-US").format(num);
 }

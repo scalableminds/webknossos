@@ -14,6 +14,7 @@ import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
 import { runStateToStatus, useTheme } from "./utils";
+import { formatNumber } from "libs/format_utils";
 
 const { TabPane } = Tabs;
 
@@ -61,12 +62,16 @@ function TaskView({
           <Tooltip
             overlay={
               <>
-                {taskInfo.chunkCounts.total -
-                  taskInfo.chunkCounts.complete -
-                  taskInfo.chunkCounts.skipped}{" "}
-                remaining, {taskInfo.chunkCounts.complete} complete,{" "}
-                {taskInfo.chunkCounts.cancelled} cancelled, {taskInfo.chunkCounts.failed} failed,{" "}
-                {taskInfo.chunkCounts.skipped} skipped, {taskInfo.chunkCounts.total} total
+                {formatNumber(
+                  taskInfo.chunkCounts.total -
+                    taskInfo.chunkCounts.complete -
+                    taskInfo.chunkCounts.skipped,
+                )}{" "}
+                remaining • {formatNumber(taskInfo.chunkCounts.complete)} complete •{" "}
+                {formatNumber(taskInfo.chunkCounts.cancelled)} cancelled •{" "}
+                {formatNumber(taskInfo.chunkCounts.failed)} failed •{" "}
+                {formatNumber(taskInfo.chunkCounts.skipped)} skipped •{" "}
+                {formatNumber(taskInfo.chunkCounts.total)} total
               </>
             }
           >
@@ -100,8 +105,8 @@ function TaskView({
                 style={{ flex: 1 }}
               />
               <span style={{ fontSize: "0.9em", marginLeft: "1em" }}>
-                {taskInfo.chunkCounts.complete} /{" "}
-                {taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped}
+                {formatNumber(taskInfo.chunkCounts.complete)} /{" "}
+                {formatNumber(taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)}
               </span>
             </span>
           </Tooltip>

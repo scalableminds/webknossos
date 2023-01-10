@@ -87,19 +87,19 @@ export default function WorkflowListView() {
     const remainingCount = run.taskCounts.total - run.taskCounts.complete - run.taskCounts.skipped;
     const runnableCount = run.taskCounts.total - run.taskCounts.skipped;
 
-    let label = `${remainingCount} remaining, ${run.taskCounts.complete} complete`;
+    let label = `${remainingCount} remaining • ${run.taskCounts.complete} complete`;
     if (run.taskCounts.cancelled > 0) {
-      label += `, ${run.taskCounts.cancelled} cancelled`;
+      label += ` • ${run.taskCounts.cancelled} cancelled`;
     }
     if (run.taskCounts.failed > 0) {
-      label += `, ${run.taskCounts.failed} failed`;
+      label += ` • ${run.taskCounts.failed} failed`;
     }
     if (run.taskCounts.skipped > 0) {
-      label += `, ${run.taskCounts.skipped} skipped`;
+      label += ` • ${run.taskCounts.skipped} skipped`;
     }
-    label += `, ${run.taskCounts.total} total`;
+    label += ` • ${run.taskCounts.total} total`;
     if (run.state === VoxelyticsRunState.STALE) {
-      label += ", timeout";
+      label += " • timeout";
     }
 
     return (

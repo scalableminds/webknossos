@@ -8,6 +8,7 @@ import {
   formatCPU,
   formatDistanceStrict,
   formatDurationStrict,
+  formatNumber,
 } from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
 import { Result, VX_POLLING_INTERVAL } from "./utils";
@@ -98,9 +99,12 @@ export default function StatisticsTab({
                   <Tooltip
                     overlay={
                       <>
-                        {remainingCount} remaining, {row.chunkCounts.complete} complete,{" "}
-                        {row.chunkCounts.cancelled} cancelled, {row.chunkCounts.failed} failed,{" "}
-                        {row.chunkCounts.skipped} skipped, {row.chunkCounts.total} total
+                        {formatNumber(remainingCount)} remaining,{" "}
+                        {formatNumber(row.chunkCounts.complete)} complete,{" "}
+                        {formatNumber(row.chunkCounts.cancelled)} cancelled,{" "}
+                        {formatNumber(row.chunkCounts.failed)} failed,{" "}
+                        {formatNumber(row.chunkCounts.skipped)} skipped,{" "}
+                        {formatNumber(row.chunkCounts.total)} total
                       </>
                     }
                   >
@@ -109,9 +113,9 @@ export default function StatisticsTab({
                       <br />
                       <span className="stats-label">
                         {row.chunkCounts.complete !== runnableCount && (
-                          <>{row.chunkCounts.complete} of </>
+                          <>{formatNumber(row.chunkCounts.complete)} of </>
                         )}
-                        {runnableCount} {pluralize("chunk", runnableCount)} completed
+                        {formatNumber(runnableCount)} {pluralize("chunk", runnableCount)} completed
                       </span>
                     </span>
                   </Tooltip>

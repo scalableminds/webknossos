@@ -82,7 +82,7 @@ function getFilteredTasks(
  */
 function addUrlParam(location: ReturnType<typeof useLocation>, key: string, val: string) {
   const search = new URLSearchParams(location.search);
-  search.append(key, val);
+  search.set(key, val);
   return `${location.pathname}?${search.toString()}`;
 }
 
@@ -254,8 +254,6 @@ export default function TaskListView({
   const [searchQuery, setSearchQuery] = useState("");
   const { runId } = useSearchParams();
   const history = useHistory();
-
-  function toggleRunId(_runId: string | null) {}
 
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
@@ -696,8 +694,11 @@ function aggregateTaskInfos(
   }
 
   const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
-  return {
-    ...taskInfo.runs.find((tr) => tr.runId === runId),
-    taskName: taskInfo.taskName,
-  } as VoxelyticsTaskInfo;
+  if (runId != null) {
+    return {
+      ...taskInfo.runs.find((tr) => tr.runId === runId),
+      taskName: taskInfo.taskName,
+    } as VoxelyticsTaskInfo;
+  }
+  return taskInfo;
 }

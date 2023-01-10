@@ -159,7 +159,7 @@ class TracingApi {
       const tree =
         treeId != null
           ? skeletonTracing.trees[treeId]
-          : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+          : findTreeByNodeId(skeletonTracing.trees, nodeId);
       assertExists(tree, `Couldn't find node ${nodeId}.`);
       Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
     } else {

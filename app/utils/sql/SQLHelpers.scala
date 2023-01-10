@@ -205,7 +205,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
         resultList <- run(
-          sql"select _id from #$existingCollectionName where _id = ${id.id} and #${updateAccessQ(userId)}"
+          sql"select _id from #$existingCollectionName where _id = $id and (#${updateAccessQ(userId)})"
             .as[String]) ?~> "Failed to check write access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No update access."
       } yield ()
@@ -217,7 +217,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx
         resultList <- run(
-          sql"select _id from #$existingCollectionName where _id = ${id.id} and #${deleteAccessQ(userId)}"
+          sql"select _id from #$existingCollectionName where _id = ${id.id} and (#${deleteAccessQ(userId)})"
             .as[String]) ?~> "Failed to check delete access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No delete access."
       } yield ()

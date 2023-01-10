@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   protected def collectionName: String
-  protected def existingCollectionName: SqlToken = SqlToken.identifier(collectionName + "_")
+  protected def existingCollectionName: SqlToken = SqlToken.raw(collectionName + "_")
 
   protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"${false}"
   protected def readAccessQ(requestingUserId: ObjectId): SqlToken = q"${true}"

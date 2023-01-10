@@ -264,19 +264,22 @@ case class Vector3Value(v: Vec3Double) extends SqlValue with SqlEscaping {
 }
 
 case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
-  case class BoundingBoxSql(x: Double, y: Double, z: Double, width: Double, height: Double, depth: Double)
+  case class BoundingBoxSql(x: Double, y: Double, z: Double, width: Double, height: Double, depth: Double) {
+    override def toString: String = s"($x,$y,$z,$width,$height,$depth)"
+  }
+
+  private val bboxSql = BoundingBoxSql(v.topLeft.x.toDouble,
+                                       v.topLeft.y.toDouble,
+                                       v.topLeft.z.toDouble,
+                                       v.width.toDouble,
+                                       v.height.toDouble,
+                                       v.depth.toDouble)
 
   override def setParameter(pp: PositionedParameters): Unit =
-    pp.setObject(BoundingBoxSql(v.topLeft.x.toDouble,
-                                v.topLeft.y.toDouble,
-                                v.topLeft.z.toDouble,
-                                v.width.toDouble,
-                                v.height.toDouble,
-                                v.depth.toDouble),
-                 Types.OTHER)
+    pp.setObject(bboxSql, Types.OTHER)
 
   override def debugInfo: String =
-    s"'(${v.topLeft.x}, ${v.topLeft.y}, ${v.topLeft.z}, ${v.width}, ${v.height}, ${v.depth})'"
+    s"'$bboxSql'"
 }
 
 case class NoneValue() extends SqlValue {

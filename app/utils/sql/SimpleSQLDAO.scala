@@ -1,6 +1,6 @@
 package utils.sql
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIOAction, NoStream}
 import slick.util.{Dumpable, TreePrinter}
@@ -25,6 +25,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected def run[R](query: DBIOAction[R, NoStream, Nothing],
                        retryCount: Int = 0,
                        retryIfErrorContains: List[String] = List()): Fox[R] = {
+    val stackMarker = new Throwable()
     val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) =>
@@ -36,7 +37,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
             Thread.sleep(20)
             run(query, retryCount - 1, retryIfErrorContains)
           } else {
-            logError(e, query)
+            logError(e, stackMarker, query)
             reportErrorToSlack(e, query)
             Fox.failure("SQL Failure: " + e.getMessage)
           }
@@ -45,16 +46,17 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     foxFuture.toFox.flatten
   }
 
-  private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
+  private def logError[R](ex: Throwable, stackMarker: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
     logger.error("SQL Error: " + ex)
-    logger.debug("Caused by query:\n" + querySummary(query).take(4000))
+    logger.debug("SQL Error causing query:\n" + querySummary(query).take(8000))
+    logger.debug("SQL Error stack trace: " + TextUtils.stackTraceAsString(stackMarker))
   }
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
     sqlClient.getSlackNotificationService.warnWithException(
       "SQL Error",
       ex,
-      s"Causing query: ${querySummary(query).take(4000)}"
+      s"Causing query: ${querySummary(query).take(8000)}"
     )
 
   private def querySummary(query: Dumpable): String = {

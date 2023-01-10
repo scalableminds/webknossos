@@ -157,7 +157,7 @@ class SqlInterpolationTestSuite extends PlaySpec {
       val bbox = BoundingBox(Vec3Int(1,2,3),50,60,70)
       val sql = q"""SELECT * FROM test WHERE bounding_box = $bbox"""
       assert(sql == SqlToken("SELECT * FROM test WHERE bounding_box = ?", List(BoundingBoxValue(bbox))))
-      assert(sql.debugInfo == "SELECT * FROM test WHERE bounding_box = '(1, 2, 3, 50, 60, 70)'")
+      assert(sql.debugInfo == "SELECT * FROM test WHERE bounding_box = '(1.0,2.0,3.0,50.0,60.0,70.0)'")
     }
     "construct an SQLToken with nested-joined SQL" in {
       val fields = List("name", "age")

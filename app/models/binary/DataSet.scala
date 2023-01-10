@@ -357,17 +357,15 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       organization <- organizationDAO.findOneByName(source.id.team)
       defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
-      query = q"""update webknossos.dataSets
-                    set _dataStore = $dataStoreName,
-                        _organization = ${organization._id},
-                        inboxSourceHash = $inboxSourceHash,
-                        defaultViewConfiguration = $defaultViewConfiguration,
-                        isUsable = $isUsable,
-                        scale = ${source.scaleOpt},
-                        status = ${source.statusOpt.getOrElse("").take(1024)}
-                   where _id = $id"""
-      _ = logger.info(query.debugInfo)
-      _ <- run(query.asUpdate)
+      _ <- run(q"""update webknossos.dataSets
+                          set _dataStore = $dataStoreName,
+                              _organization = ${organization._id},
+                              inboxSourceHash = $inboxSourceHash,
+                              defaultViewConfiguration = $defaultViewConfiguration,
+                              isUsable = $isUsable,
+                              scale = ${source.scaleOpt},
+                              status = ${source.statusOpt.getOrElse("").take(1024)}
+                         where _id = $id""".asUpdate)
       _ <- dataSetDataLayerDAO.updateLayers(id, source)
     } yield ()
 
@@ -433,7 +431,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
           layer.resolutions.map { resolution: Vec3Int =>
             {
               q"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
-                  values($dataSetId, ${layer.name}, $resolution""".asUpdate
+                  values($dataSetId, ${layer.name}, $resolution)""".asUpdate
             }
           }
         }
@@ -520,7 +518,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
                      set category = ${s.category}, elementClass = ${s.elementClass},
                      boundingBox = ${s.boundingBox}, largestSegmentId = ${s.largestSegmentId},
                      mappings = $mappings,
-                     defaultViewConfiguration = ${s.defaultViewConfiguration.map(d => Json.toJson(d))}""".asUpdate
+                     defaultViewConfiguration = ${s.defaultViewConfiguration.map(Json.toJson(_))}""".asUpdate
       case d: AbstractDataLayer =>
         q"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
                     values($dataSetId, ${d.name}, ${d.category}, ${d.elementClass},
@@ -535,7 +533,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
 
   def updateLayers(dataSetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =
-      q"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in ${dataLayers.map(_.name)}".asUpdate
+      q"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in ${SqlToken.tuple(
+        dataLayers.map(_.name))}".asUpdate
     val clearQuery = q"delete from webknossos.dataset_layers where _dataSet = $dataSetId".asUpdate
 
     val queries = source.toUsable match {

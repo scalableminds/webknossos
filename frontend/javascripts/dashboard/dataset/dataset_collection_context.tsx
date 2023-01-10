@@ -45,6 +45,7 @@ export type DatasetCollectionContextValue = {
   searchRecursively: boolean;
   setSearchRecursively: (val: boolean) => void;
   getBreadcrumbs: (dataset: APIMaybeUnimportedDataset) => string[] | null;
+  showCreateFolderPrompt: (parentFolderId: string) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
@@ -134,6 +135,15 @@ export default function DatasetCollectionContextProvider({
   );
   const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
 
+  const showCreateFolderPrompt = useCallback((parentFolderId: string) => {
+    const folderName = prompt("Please input a name for the new folder", "New folder");
+    if (!folderName) {
+      // The user hit escape/cancel
+      return;
+    }
+    createFolderMutation.mutateAsync([parentFolderId, folderName]);
+  }, []);
+
   async function fetchDatasets(_options: Options = {}): Promise<void> {
     datasetsInFolderQuery.refetch();
   }
@@ -183,6 +193,7 @@ export default function DatasetCollectionContextProvider({
       activeFolderId,
       setActiveFolderId,
       mostRecentlyUsedActiveFolderId,
+      showCreateFolderPrompt,
       isChecking,
       getBreadcrumbs,
       checkDatasets: async () => {
@@ -227,6 +238,7 @@ export default function DatasetCollectionContextProvider({
       isChecking,
       datasets,
       isLoading,
+      showCreateFolderPrompt,
       fetchDatasets,
       reloadDataset,
       updateCachedDataset,

@@ -17,11 +17,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     q"""SELECT
           r._id,
           CASE
-            WHEN run_state.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - $staleTimeout
-            THEN 'STALE' ELSE run_state.state END AS state,
+            WHEN run_state.state = ${VoxelyticsRunState.RUNNING} AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - $staleTimeout
+            THEN ${VoxelyticsRunState.STALE} ELSE run_state.state END AS state,
           run_begin.timestamp AS beginTime,
           CASE
-            WHEN run_state.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - $staleTimeout
+            WHEN run_state.state = ${VoxelyticsRunState.RUNNING} AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - $staleTimeout
             THEN run_heartbeat.timestamp ELSE run_end.timestamp END AS endTime
         FROM webknossos.voxelytics_runs r
         JOIN (
@@ -32,13 +32,14 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         JOIN (
           SELECT DISTINCT ON (_run) _run, timestamp
           FROM webknossos.voxelytics_runStateChangeEvents
-          WHERE state = 'RUNNING'
+          WHERE state = ${VoxelyticsRunState.RUNNING}
           ORDER BY _run, timestamp
         ) run_begin ON r._id = run_begin._run
         LEFT JOIN (
           SELECT DISTINCT ON (_run) _run, timestamp
           FROM webknossos.voxelytics_runStateChangeEvents
-          WHERE state IN ('COMPLETE', 'FAILED', 'CANCELLED')
+          WHERE state IN ${SqlToken.tuple(
+      List(VoxelyticsRunState.COMPLETE, VoxelyticsRunState.FAILED, VoxelyticsRunState.CANCELLED))}
           ORDER BY _run, timestamp DESC
         ) run_end ON r._id = run_end._run
         LEFT JOIN (
@@ -49,9 +50,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   private def tasksWithStateQ(staleTimeout: FiniteDuration): SqlToken =
     q"""SELECT
           t._id,
-          CASE WHEN task_state.state = 'RUNNING' AND r.state = 'STALE' THEN 'STALE' ELSE task_state.state END AS state,
+          CASE WHEN task_state.state = ${VoxelyticsRunState.RUNNING} AND r.state = ${VoxelyticsRunState.STALE} THEN ${VoxelyticsRunState.STALE} ELSE task_state.state END AS state,
           task_begin.timestamp AS beginTime,
-          CASE WHEN task_state.state = 'RUNNING' AND r.state = 'STALE' THEN r.endTime ELSE task_end.timestamp END AS endTime
+          CASE WHEN task_state.state = ${VoxelyticsRunState.RUNNING} AND r.state = ${VoxelyticsRunState.STALE} THEN r.endTime ELSE task_end.timestamp END AS endTime
         FROM webknossos.voxelytics_tasks t
         JOIN (${runsWithStateQ(staleTimeout)}) r ON r._id = t._run
         JOIN (
@@ -62,22 +63,23 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         LEFT JOIN (
           SELECT DISTINCT ON (_task) _task, timestamp
           FROM webknossos.voxelytics_taskStateChangeEvents
-          WHERE state = 'RUNNING'
+          WHERE state = ${VoxelyticsRunState.RUNNING}
           ORDER BY _task, timestamp
         ) task_begin ON t._id = task_begin._task
         LEFT JOIN (
           SELECT DISTINCT ON (_task) _task, timestamp
           FROM webknossos.voxelytics_taskStateChangeEvents
-          WHERE state IN ('COMPLETE', 'FAILED', 'CANCELLED')
+          WHERE state IN ${SqlToken.tuple(
+      List(VoxelyticsRunState.COMPLETE, VoxelyticsRunState.FAILED, VoxelyticsRunState.CANCELLED))}
           ORDER BY _task, timestamp DESC
         ) task_end ON t._id = task_end._task"""
 
   private def chunksWithStateQ(staleTimeout: FiniteDuration): SqlToken =
     q"""SELECT
           c._id,
-          CASE WHEN chunk_state.state = 'RUNNING' AND r.state = 'STALE' THEN 'STALE' ELSE chunk_state.state END AS state,
+          CASE WHEN chunk_state.state = ${VoxelyticsRunState.RUNNING} AND r.state = ${VoxelyticsRunState.STALE} THEN ${VoxelyticsRunState.STALE} ELSE chunk_state.state END AS state,
           chunk_begin.timestamp AS beginTime,
-          CASE WHEN chunk_state.state = 'RUNNING' AND r.state = 'STALE' THEN r.endTime ELSE chunk_end.timestamp END AS endTime
+          CASE WHEN chunk_state.state = ${VoxelyticsRunState.RUNNING} AND r.state = ${VoxelyticsRunState.STALE} THEN r.endTime ELSE chunk_end.timestamp END AS endTime
         FROM webknossos.voxelytics_chunks c
         JOIN webknossos.voxelytics_tasks t ON t._id = c._task
         JOIN (${runsWithStateQ(staleTimeout)}) r ON r._id = t._run
@@ -90,14 +92,15 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         LEFT JOIN (
           SELECT DISTINCT ON (_chunk) _chunk, timestamp
           FROM webknossos.voxelytics_chunkStateChangeEvents
-          WHERE state = 'RUNNING'
+          WHERE state = ${VoxelyticsRunState.RUNNING}
           ORDER BY _chunk, timestamp
         ) chunk_begin
           ON c._id = chunk_begin._chunk
         LEFT JOIN (
           SELECT DISTINCT ON (_chunk) _chunk, timestamp
           FROM webknossos.voxelytics_chunkStateChangeEvents
-          WHERE state IN ('COMPLETE', 'FAILED', 'CANCELLED')
+          WHERE state IN ${SqlToken.tuple(
+      List(VoxelyticsRunState.COMPLETE, VoxelyticsRunState.FAILED, VoxelyticsRunState.CANCELLED))}
           ORDER BY _chunk, timestamp DESC
         ) chunk_end
           ON c._id = chunk_end._chunk"""
@@ -156,7 +159,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           FROM (${chunksWithStateQ(staleTimeout)}) cs
           JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
           JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-          WHERE cs.state NOT IN ('SKIPPED', 'PENDING') AND t._run IN ${SqlToken.tuple(runIds)}
+          WHERE cs.state NOT IN ${SqlToken.tuple(List(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING))} AND t._run IN ${SqlToken
+      .tuple(runIds)}
           ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC
         ) running_chunks ON running_chunks.name = tc.name AND running_chunks.executionId = tc.executionId AND running_chunks.chunkName = tc.chunkName
         WHERE TRUE ${taskName.map(t => q"AND tc.name = $t").getOrElse(SqlToken.empty)}"""
@@ -169,7 +173,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         FROM (${tasksWithStateQ(staleTimeout)}) ts
         JOIN webknossos.voxelytics_tasks t ON t._id = ts._id
         WHERE
-          ts.state = 'COMPLETE'
+          ts.state = ${VoxelyticsRunState.COMPLETE}
           AND t._run IN ${SqlToken.tuple(runIds)}
           ${taskName.map(t => q" AND t.name = $t").getOrElse(SqlToken.empty)}
         ORDER BY t.name, ts.beginTime DESC"""
@@ -284,17 +288,17 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           SELECT DISTINCT ON (c._task) c._task, c.executionId
           FROM chunk_states cs
           JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
-          WHERE cs.state = 'RUNNING'
+          WHERE cs.state = ${VoxelyticsRunState.RUNNING}
           ORDER BY c._task, cs.beginTime DESC
         ) exec ON exec._task = t._id
         LEFT JOIN (
           SELECT
             c._task AS _task,
             COUNT(c._id) AS total,
-            SUM(CASE WHEN cs.state = 'FAILED' THEN 1 ELSE 0 END) AS failed,
-            SUM(CASE WHEN cs.state = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped,
-            SUM(CASE WHEN cs.state = 'COMPLETE' THEN 1 ELSE 0 END) AS complete,
-            SUM(CASE WHEN cs.state = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled
+            SUM(CASE WHEN cs.state = ${VoxelyticsRunState.FAILED} THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN cs.state = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
+            SUM(CASE WHEN cs.state = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
+            SUM(CASE WHEN cs.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
           FROM chunk_states cs
           JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
           GROUP BY c._task
@@ -353,17 +357,17 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         LEFT JOIN (
           SELECT DISTINCT ON (l.taskName) l.taskName, l.executionId
           FROM latest_chunk_states l
-          WHERE l.state = 'RUNNING'
+          WHERE l.state = ${VoxelyticsRunState.RUNNING}
           ORDER BY l.taskName, l.beginTime DESC
         ) exec ON exec.taskName = l.taskName
         LEFT JOIN (
           SELECT
             l.taskName AS taskName,
             COUNT(l.state) AS total,
-            SUM(CASE WHEN l.state = 'FAILED' THEN 1 ELSE 0 END) AS failed,
-            SUM(CASE WHEN l.state = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped,
-            SUM(CASE WHEN l.state = 'COMPLETE' THEN 1 ELSE 0 END) AS complete,
-            SUM(CASE WHEN l.state = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled
+            SUM(CASE WHEN l.state = ${VoxelyticsRunState.FAILED} THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN l.state = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
+            SUM(CASE WHEN l.state = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
+            SUM(CASE WHEN l.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
           FROM latest_chunk_states l
           GROUP BY l.taskName
         ) chunks ON chunks.taskName = l.taskName
@@ -441,10 +445,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         SELECT
           w.hash,
           COUNT(any_tasks.state) AS total,
-          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) IN ('FAILED', 'STALE') THEN 1 ELSE 0 END) AS failed,
-          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped,
-          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = 'COMPLETE' THEN 1 ELSE 0 END) AS complete,
-          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled
+          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) IN ${SqlToken.tuple(
+        List(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE))} THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
+          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
+          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
         FROM webknossos.voxelytics_workflows w
         JOIN ( -- Aggregating the task states of workflow runs (including skipped and pending)
           SELECT DISTINCT ON (workflow_hash, taskName) r.workflow_hash workflow_hash, t.name taskName, ts.state state
@@ -458,7 +463,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           FROM webknossos.voxelytics_tasks t
           JOIN (${visibleRunsQ(currentUser, allowUnlisted = false)}) r ON t._run = r._id
           JOIN task_states ts ON ts._id = t._id
-          WHERE ts.state NOT IN ('PENDING', 'SKIPPED')
+          WHERE ts.state NOT IN ${SqlToken.tuple(List(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING))}
           ORDER BY workflow_hash, taskName, ts.beginTime DESC
         ) running_tasks ON running_tasks.workflow_hash = w.hash AND running_tasks.taskName = any_tasks.taskName
         WHERE w.hash IN ${SqlToken.tuple(workflowHashes)} AND w._organization = $organizationId
@@ -500,10 +505,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           SELECT
             t._run AS _run,
             COUNT(t._id) AS total,
-            SUM(CASE WHEN ts.state IN ('FAILED', 'STALE') THEN 1 ELSE 0 END) AS failed,
-            SUM(CASE WHEN ts.state = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped,
-            SUM(CASE WHEN ts.state = 'COMPLETE' THEN 1 ELSE 0 END) AS complete,
-            SUM(CASE WHEN ts.state = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled
+            SUM(CASE WHEN ts.state IN ${SqlToken
+          .tuple(List(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE))} THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN ts.state = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
+            SUM(CASE WHEN ts.state = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
+            SUM(CASE WHEN ts.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
           FROM webknossos.voxelytics_tasks AS t
           JOIN (${tasksWithStateQ(staleTimeout)}) ts ON ts._id = t._id
           GROUP BY t._run
@@ -631,10 +637,10 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           SELECT
             c.executionId,
             COUNT(c._chunk) AS countTotal,
-            SUM(CASE WHEN c.state = 'FAILED' THEN 1 ELSE 0 END) AS countFailed,
-            SUM(CASE WHEN c.state = 'SKIPPED' THEN 1 ELSE 0 END) AS countSkipped,
-            SUM(CASE WHEN c.state = 'COMPLETE' THEN 1 ELSE 0 END) AS countComplete,
-            SUM(CASE WHEN c.state = 'CANCELLED' THEN 1 ELSE 0 END) AS countCancelled
+            SUM(CASE WHEN c.state = ${VoxelyticsRunState.FAILED} THEN 1 ELSE 0 END) AS countFailed,
+            SUM(CASE WHEN c.state = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS countSkipped,
+            SUM(CASE WHEN c.state = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS countComplete,
+            SUM(CASE WHEN c.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS countCancelled
           FROM latest_chunk_states c
           GROUP BY c.executionId
         ) exec
@@ -682,7 +688,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
             STDDEV(EXTRACT(epoch FROM COALESCE(c.endTime, NOW()) - c.beginTime)) AS stddev_duration,
             SUM(EXTRACT(epoch FROM COALESCE(c.endTime, NOW()) - c.beginTime)) AS sum_duration
           FROM latest_chunk_states c
-          WHERE c.state = 'COMPLETE'
+          WHERE c.state = ${VoxelyticsRunState.COMPLETE}
           GROUP BY c.executionId
         ) durations ON durations.executionId = exec.executionId
         ORDER BY times.beginTime ASC NULLS LAST

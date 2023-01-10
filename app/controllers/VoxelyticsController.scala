@@ -24,6 +24,7 @@ class VoxelyticsController @Inject()(
     extends Controller
     with FoxImplicits {
 
+  private val WORKFLOW_EVENT_INSERT_BATCH_SIZE = 500
   private lazy val conf = wkConf.Voxelytics
 
   def storeWorkflow: Action[WorkflowDescription] =
@@ -159,35 +160,42 @@ class VoxelyticsController @Inject()(
   def storeWorkflowEvents(workflowHash: String, runName: String): Action[List[WorkflowEvent]] =
     sil.SecuredAction.async(validateJson[List[WorkflowEvent]]) { implicit request =>
       def createWorkflowEvent(runId: ObjectId, events: List[WorkflowEvent]): Fox[Unit] =
-        if (events.nonEmpty) {
-          events.head match {
-            case _: RunStateChangeEvent =>
-              voxelyticsDAO.upsertRunStateChangeEvents(runId, events.map(_.asInstanceOf[RunStateChangeEvent]))
+        events.headOption.map { firstEvent =>
+          for {
+            _ <- Fox.serialCombined(events.grouped(WORKFLOW_EVENT_INSERT_BATCH_SIZE).toList)(eventBatch =>
+              firstEvent match {
+                case _: RunStateChangeEvent =>
+                  voxelyticsDAO.upsertRunStateChangeEvents(runId, eventBatch.map(_.asInstanceOf[RunStateChangeEvent]))
 
-            case _: TaskStateChangeEvent =>
-              val taskEvents = events.map(_.asInstanceOf[TaskStateChangeEvent])
-              val artifactEvents =
-                taskEvents.flatMap(ev => ev.artifacts.map(artifact => (ev.taskName, artifact._1, artifact._2)))
-              for {
-                _ <- voxelyticsDAO.upsertTaskStateChangeEvents(runId, taskEvents)
-                _ <- if (artifactEvents.nonEmpty) { voxelyticsDAO.upsertArtifacts(runId, artifactEvents) } else {
-                  Fox.successful(())
-                }
-              } yield ()
+                case _: TaskStateChangeEvent =>
+                  val taskEvents = eventBatch.map(_.asInstanceOf[TaskStateChangeEvent])
+                  val artifactEvents =
+                    taskEvents.flatMap(ev => ev.artifacts.map(artifact => (ev.taskName, artifact._1, artifact._2)))
+                  for {
+                    _ <- voxelyticsDAO.upsertTaskStateChangeEvents(runId, taskEvents)
+                    _ <- if (artifactEvents.nonEmpty) {
+                      voxelyticsDAO.upsertArtifacts(runId, artifactEvents)
+                    } else {
+                      Fox.successful(())
+                    }
+                  } yield ()
 
-            case _: ChunkStateChangeEvent =>
-              voxelyticsDAO.upsertChunkStateChangeEvents(runId, events.map(_.asInstanceOf[ChunkStateChangeEvent]))
+                case _: ChunkStateChangeEvent =>
+                  voxelyticsDAO.upsertChunkStateChangeEvents(runId,
+                                                             eventBatch.map(_.asInstanceOf[ChunkStateChangeEvent]))
 
-            case _: RunHeartbeatEvent =>
-              voxelyticsDAO.upsertRunHeartbeatEvents(runId, events.map(_.asInstanceOf[RunHeartbeatEvent]))
+                case _: RunHeartbeatEvent =>
+                  voxelyticsDAO.upsertRunHeartbeatEvents(runId, eventBatch.map(_.asInstanceOf[RunHeartbeatEvent]))
 
-            case _: ChunkProfilingEvent =>
-              voxelyticsDAO.upsertChunkProfilingEvents(runId, events.map(_.asInstanceOf[ChunkProfilingEvent]))
+                case _: ChunkProfilingEvent =>
+                  voxelyticsDAO.upsertChunkProfilingEvents(runId, eventBatch.map(_.asInstanceOf[ChunkProfilingEvent]))
 
-            case _: ArtifactFileChecksumEvent =>
-              voxelyticsDAO.upsertArtifactChecksumEvents(runId, events.map(_.asInstanceOf[ArtifactFileChecksumEvent]))
-          }
-        } else { Fox.successful(()) }
+                case _: ArtifactFileChecksumEvent =>
+                  voxelyticsDAO.upsertArtifactChecksumEvents(runId,
+                                                             eventBatch.map(_.asInstanceOf[ArtifactFileChecksumEvent]))
+            })
+          } yield ()
+        }.getOrElse(Fox.successful())
 
       val groupedEvents = request.body.groupBy(_.getClass)
 

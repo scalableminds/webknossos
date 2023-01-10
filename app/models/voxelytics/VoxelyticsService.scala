@@ -157,21 +157,19 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
         .map(group => {
           val sortedTaskRuns = group._2.sortBy(_.beginTime).reverse
           val combinedTaskRun = combinedTaskRuns.find(_.taskName == group._1)
+          val state = sortedTaskRuns
+            .map(_.state)
+            .find(s => s != VoxelyticsRunState.SKIPPED && s != VoxelyticsRunState.PENDING)
+            .orElse(sortedTaskRuns.headOption.map(_.state))
+            .getOrElse(VoxelyticsRunState.SKIPPED)
+          val chunks = combinedTaskRun.map(_.chunks).getOrElse(ChunkStatistics(0, 0, 0, 0, 0))
           Json.obj(
             "taskName" -> group._1,
-            "state" -> sortedTaskRuns
-              .map(_.state)
-              .find(s => s != VoxelyticsRunState.SKIPPED && s != VoxelyticsRunState.PENDING)
-              .orElse(sortedTaskRuns.headOption.map(_.state))
-              .getOrElse(VoxelyticsRunState.SKIPPED)
-              .asInstanceOf[VoxelyticsRunState],
+            "state" -> state,
             "beginTime" -> Try(sortedTaskRuns.flatMap(_.beginTime).min).toOption,
             "endTime" -> Try(sortedTaskRuns.flatMap(_.endTime).max).toOption,
             "currentExecutionId" -> combinedTaskRun.flatMap(_.currentExecutionId),
-            "chunks" -> combinedTaskRun
-              .map(_.chunks)
-              .getOrElse(ChunkStatistics(0, 0, 0, 0, 0))
-              .asInstanceOf[ChunkStatistics],
+            "chunks" -> chunks,
             "runs" -> sortedTaskRuns.map(run =>
               Json.obj(
                 "runId" -> run.runId,

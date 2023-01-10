@@ -188,7 +188,7 @@ void main() {
       // the nodeId is encoded in the RGB channels as a 3 digit base-256 number in a number of steps:
       // - nodeId is divided by the first three powers of 256.
       // - each quotient is rounded down to the nearest integer (since the fractional part of each quotient is covered by a less significant digit)
-      // - each digit is mod'ed by 256 so that the relevant significance is encoded
+      // - each digit is mod'ed by 256 (i.e., ignore the higher significant digit)
       // - finally, the number is divided by 255 because the color values in WebglGL must be in the range [0, 1]
       color = mod(floor(nodeId / vec3(256.0 * 256.0, 256.0, 1.0)), 256.0) / 255.0;
       // Enlarge the nodes on mobile, so they're easier to select

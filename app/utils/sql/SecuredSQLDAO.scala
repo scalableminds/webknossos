@@ -13,15 +13,15 @@ import scala.concurrent.ExecutionContext
 abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   protected def collectionName: String
-  protected def existingCollectionName: SqlToken = SqlToken.raw(collectionName + "_")
+  protected def existingCollectionName: SqlToken = SqlToken.identifier(collectionName + "_")
 
-  protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"false"
-  protected def readAccessQ(requestingUserId: ObjectId): SqlToken = q"true"
+  protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"${false}"
+  protected def readAccessQ(requestingUserId: ObjectId): SqlToken = q"${true}"
   protected def updateAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
   protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
 
   protected def readAccessQuery(implicit ctx: DBAccessContext): Fox[SqlToken] =
-    if (ctx.globalAccess) Fox.successful(q"true")
+    if (ctx.globalAccess) Fox.successful(q"${true}")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
@@ -67,27 +67,27 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
 
   protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, SqlToken) => SqlToken, prefix: SqlToken)(
       implicit ctx: DBAccessContext): Fox[SqlToken] =
-    if (ctx.globalAccess) Fox.successful(q"TRUE")
+    if (ctx.globalAccess) Fox.successful(q"${true}")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
       } yield {
         userIdBox match {
           case Full(userId) => q"(${accessQ(userId, prefix)})"
-          case _            => q"FALSE"
+          case _            => q"${false}"
         }
       }
     }
 
   protected def accessQueryFromAccessQ(accessQ: ObjectId => SqlToken)(implicit ctx: DBAccessContext): Fox[SqlToken] =
-    if (ctx.globalAccess) Fox.successful(q"TRUE")
+    if (ctx.globalAccess) Fox.successful(q"${true}")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
       } yield {
         userIdBox match {
           case Full(userId) => q"(${accessQ(userId)})"
-          case _            => q"FALSE"
+          case _            => q"${false}"
         }
       }
     }

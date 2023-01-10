@@ -73,8 +73,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = $requestingUserId)))"""
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = sharingToken match {
-    case Some(_) => q"true"
-    case _       => q"false"
+    case Some(_) => q"${true}"
+    case _       => q"${false}"
   }
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =

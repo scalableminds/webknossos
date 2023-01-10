@@ -13,8 +13,6 @@ import scala.concurrent.duration.Duration
 
 class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
-  val a = q"true"
-
   def findArtifacts(taskIds: List[ObjectId]): Fox[List[ArtifactEntry]] =
     for {
       r <- run(q"""

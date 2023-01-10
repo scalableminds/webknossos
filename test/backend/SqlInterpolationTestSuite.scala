@@ -1,6 +1,8 @@
 package backend
 
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
+import models.job.JobState
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import utils.ObjectId
@@ -126,6 +128,36 @@ class SqlInterpolationTestSuite extends PlaySpec {
       assert(
         sql == SqlToken("INSERT INTO test(name, age) VALUES (?, ?), (?, ?)",
                         List(StringValue("Bob"), IntValue(5), StringValue("Amy"), IntValue(3))))
+    }
+    "construct an SQLToken with Vec3Double" in {
+      val vec = Vec3Double(10.5, 20.5, 30.5)
+      val sql = q"""SELECT * FROM test WHERE position = $vec"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE position = ?", List(Vector3Value(vec))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE position = (10.5, 20.5, 30.5)")
+    }
+    "construct an SQLToken with Vec3Int" in {
+      val vec = Vec3Int(10, 20, 30)
+      val sql = q"""SELECT * FROM test WHERE position = $vec"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE position = ?", List(Vector3Value(vec.toVec3Double))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE position = (10.0, 20.0, 30.0)")
+    }
+    "construct an SQLToken with Enumeration" in {
+      val enumVal = JobState.PENDING
+      val sql = q"""SELECT * FROM test WHERE state = $enumVal"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE state = ?", List(EnumerationValue(enumVal))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE state = 'PENDING'")
+    }
+    "construct an SQLToken with String Array" in {
+      val stringList = List("First String", "Second String")
+      val sql = q"""SELECT * FROM test WHERE tags = $stringList"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE tags = ?", List(ArrayValue(stringList))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE tags = {'First String','Second String'}")
+    }
+    "construct an SQLToken with Bounding Box" in {
+      val bbox = BoundingBox(Vec3Int(1,2,3),50,60,70)
+      val sql = q"""SELECT * FROM test WHERE bounding_box = $bbox"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE bounding_box = ?", List(BoundingBoxValue(bbox))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE bounding_box = '(1, 2, 3, 50, 60, 70)'")
     }
     "construct an SQLToken with nested-joined SQL" in {
       val fields = List("name", "age")

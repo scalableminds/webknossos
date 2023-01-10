@@ -365,7 +365,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
-      excludeTeamsQ = if (excludedTeamIds.isEmpty) q"true"
+      excludeTeamsQ = if (excludedTeamIds.isEmpty) q"${true}"
       else q"(not t._id in ${SqlToken.tuple(excludedTeamIds)})"
       countList <- run(q"""select count(*)
                          from (select a._id from

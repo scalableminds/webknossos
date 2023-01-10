@@ -96,9 +96,9 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     rawAccessQ(write = true, requestingUserId, prefix = q"")
 
   private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: SqlToken): SqlToken = {
-    val writeAccessPredicate = if (write) q"tr.isTeamManager" else q"true"
+    val writeAccessPredicate = if (write) q"tr.isTeamManager" else q"${true}"
     val breadCrumbsAccessForFolder =
-      if (write) q"false"
+      if (write) q"${false}"
       else
         q"""
        -- only for read access: you may read the ancestors of a folder you can access
@@ -114,7 +114,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        )
        """
     val breadCrumbsAccessForDataset =
-      if (write) q"false"
+      if (write) q"${false}"
       else
         q"""
        -- only for read access: you may read the ancestors of a dataset you can access

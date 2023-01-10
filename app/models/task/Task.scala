@@ -240,7 +240,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      q = sql"""select #${columns.debugInfo}
+      query = sql"""select #${columns.debugInfo}
                 from webknossos.tasks_
                 where _id in
                 (select distinct t._id
@@ -255,7 +255,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
                 #$orderRandom
                 limit 1000
                 offset #${pageNumber * 1000}"""
-      r <- run(q.as[TasksRow])
+      r <- run(query.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
@@ -307,10 +307,10 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     } yield ()
 
   def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
+    val query = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q.update(newTotalInstances).withTransactionIsolation(Serializable),
+      _ <- run(query.update(newTotalInstances).withTransactionIsolation(Serializable),
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()

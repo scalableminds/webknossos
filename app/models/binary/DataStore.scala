@@ -134,8 +134,8 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     } yield parsed
 
   def updateUrlByName(name: String, url: String): Fox[Unit] = {
-    val q = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
-    for { _ <- run(q.update(url)) } yield ()
+    val query = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
+    for { _ <- run(query.update(url)) } yield ()
   }
 
   def insertOne(d: DataStore): Fox[Unit] =

@@ -58,19 +58,19 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
     } yield parsed
 
   def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield isDeletedColumn(row)
+    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield isDeletedColumn(row)
     for {
       _ <- assertDeleteAccess(id)
-      _ <- run(q.update(true))
+      _ <- run(query.update(true))
     } yield ()
   }
 
   protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
+    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q.update(newValue))
+      _ <- run(query.update(newValue))
     } yield ()
   }
 
@@ -80,19 +80,19 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
 
   protected def updateBooleanCol(id: ObjectId, column: X => Rep[Boolean], newValue: Boolean)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
+    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q.update(newValue))
+      _ <- run(query.update(newValue))
     } yield ()
   }
 
   protected def updateTimestampCol(id: ObjectId, column: X => Rep[java.sql.Timestamp], newValue: Instant)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
+    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q.update(newValue.toSql))
+      _ <- run(query.update(newValue.toSql))
     } yield ()
   }
 

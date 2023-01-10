@@ -119,10 +119,10 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def deleteAllExpired(): Fox[Unit] = {
-    val q = for {
+    val query = for {
       row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
     } yield isDeletedColumn(row)
-    for { _ <- run(q.update(true)) } yield ()
+    for { _ <- run(query.update(true)) } yield ()
   }
 
 }

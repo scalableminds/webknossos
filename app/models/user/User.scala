@@ -258,11 +258,11 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    isDatasetManager: Boolean,
                    isDeactivated: Boolean,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
+    val query = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
       (row.firstname, row.lastname, row.isadmin, row.isdatasetmanager, row.isdeactivated, row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
+      _ <- run(query.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
     } yield ()
   }
 

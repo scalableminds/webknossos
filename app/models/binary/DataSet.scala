@@ -120,7 +120,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
             FROM webknossos.annotation_privateLinks_ apl
             JOIN webknossos.annotations_ a ON apl._annotation = a._id
             WHERE apl.accessToken = $t
-          )""").getOrElse(q"false")
+          )""").getOrElse(q"${false}")
     // token can either be a dataset sharingToken or a matching annotation’s private link token
     q"isPublic OR ($tokenAccess)"
   }
@@ -172,7 +172,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         case Some(folderId) if includeSubfolders =>
           q"_folder IN (select _descendant FROM webknossos.folder_paths fp WHERE fp._ancestor = $folderId)"
         case Some(folderId) => q"_folder = $folderId"
-        case None           => q"true"
+        case None           => q"${true}"
       }
       searchPredicate = buildSearchPredicate(searchQuery)
       r <- run(q"""SELECT $columns
@@ -186,7 +186,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
 
   private def buildSearchPredicate(searchQueryOpt: Option[String]): SqlToken =
     searchQueryOpt match {
-      case None => q"true"
+      case None => q"${true}"
       case Some(searchQuery) =>
         val queryTokens = searchQuery.toLowerCase.trim.split(" +")
         SqlToken.raw(
@@ -292,11 +292,11 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                    sortingKey: Instant,
                    isPublic: Boolean,
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield
+    val query = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield
       (row.description, row.displayname, row.sortingkey, row.ispublic, row._Folder)
     for {
       _ <- assertUpdateAccess(_id)
-      _ <- run(q.update(description, displayName, sortingKey.toSql, isPublic, folderId.toString))
+      _ <- run(query.update(description, displayName, sortingKey.toSql, isPublic, folderId.toString))
     } yield ()
   }
 
@@ -357,7 +357,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       organization <- organizationDAO.findOneByName(source.id.team)
       defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
-      q = q"""update webknossos.dataSets
+      query = q"""update webknossos.dataSets
                     set _dataStore = $dataStoreName,
                         _organization = ${organization._id},
                         inboxSourceHash = $inboxSourceHash,
@@ -366,8 +366,8 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                         scale = ${source.scaleOpt},
                         status = ${source.statusOpt.getOrElse("").take(1024)}
                    where _id = $id"""
-      _ = logger.info(q.debugInfo)
-      _ <- run(q.asUpdate)
+      _ = logger.info(query.debugInfo)
+      _ <- run(query.asUpdate)
       _ <- dataSetDataLayerDAO.updateLayers(id, source)
     } yield ()
 
@@ -376,7 +376,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
-      if (existingDataSetIds.isEmpty) q"true"
+      if (existingDataSetIds.isEmpty) q"${true}"
       else q"_id not in ${SqlToken.tuple(existingDataSetIds)}"
     val statusNotAlreadyInactive = q"status not in ${SqlToken.tuple(inactiveStatusList)}"
     val deleteResolutionsQuery =

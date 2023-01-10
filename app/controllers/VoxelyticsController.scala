@@ -195,7 +195,7 @@ class VoxelyticsController @Inject()(
                                                              eventBatch.map(_.asInstanceOf[ArtifactFileChecksumEvent]))
             })
           } yield ()
-        }.getOrElse(Fox.successful())
+        }.getOrElse(Fox.successful(()))
 
       val groupedEvents = request.body.groupBy(_.getClass)
 

@@ -34,6 +34,8 @@ import {
   startConvertToWkwJob,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
+  updateDataset,
+  getDataset,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -53,6 +55,8 @@ import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
 import type { Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
+import FolderSelection from "dashboard/folders/folder_selection";
+
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
@@ -267,6 +271,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         totalFileCount: formValues.zipFile.length,
         layersToLink: [],
         initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
+        folderId: formValues.targetFolderId,
       };
       const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
@@ -467,7 +472,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             percent={Math.round(uploadProgress * 1000) / 10}
             status="active"
           />
-          {isFinishing ? <Spin tip="Processing uploaded files …" /> : null}
+          {isFinishing ? <Spin style={{ marginTop: 4 }} tip="Processing uploaded files …" /> : null}
         </div>
       </Modal>
     );
@@ -498,7 +503,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
               );
               const needsConversion = wkwFile == null;
-              this.handleNeedsConversionInfo(!needsConversion);
+              this.handleNeedsConversionInfo(needsConversion);
 
               const nmlFile = entries.find((entry: Entry) =>
                 Utils.isFileExtensionEqualTo(entry.filename, "nml"),
@@ -565,10 +570,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             using{" "}
             <a
               target="_blank"
-              href="https://github.com/scalableminds/webknossos-cuber/"
+              href="https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber#webknossos-cuber-wkcuber"
               rel="noopener noreferrer"
             >
               webknossos-cuber
+            </a>
+            , the{" "}
+            <a
+              target="_blank"
+              href="https://github.com/scalableminds/webknossos-libs/tree/master/webknossos#webknossos-python-library"
+              rel="noopener noreferrer"
+            >
+              webknossos Python library
             </a>{" "}
             or use a webKnossos instance which integrates a conversion service, such as{" "}
             <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
@@ -622,6 +635,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               initialTeams: [],
               scale: [0, 0, 0],
               zipFile: [],
+              targetFolderId: new URLSearchParams(location.search).get("to"),
             }}
           >
             {features().isDemoInstance && (
@@ -646,66 +660,72 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem activeUser={activeUser} />
               </Col>
               <Col span={12}>
-                <FormItem
+                <FormItemWithInfo
                   name="initialTeams"
                   label="Teams allowed to access this dataset"
+                  info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
                   hasFeedback
-                  rules={[
-                    {
-                      required: !isDatasetManagerOrAdmin,
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
-                      message: !isDatasetManagerOrAdmin
-                        ? messages["dataset.import.required.initialTeam"]
-                        : null,
-                    },
-                  ]}
                 >
-                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
-                    <TeamSelectionComponent
-                      mode="multiple"
-                      value={this.state.selectedTeams}
-                      allowNonEditableTeams={isDatasetManagerOrAdmin}
-                      onChange={(selectedTeams) => {
-                        if (this.formRef.current == null) return;
+                  <TeamSelectionComponent
+                    mode="multiple"
+                    value={this.state.selectedTeams}
+                    allowNonEditableTeams={isDatasetManagerOrAdmin}
+                    onChange={(selectedTeams) => {
+                      if (this.formRef.current == null) return;
 
-                        if (!Array.isArray(selectedTeams)) {
-                          // Making sure that we always have an array even when only one team is selected.
-                          selectedTeams = [selectedTeams];
-                        }
+                      if (!Array.isArray(selectedTeams)) {
+                        // Making sure that we always have an array even when only one team is selected.
+                        selectedTeams = [selectedTeams];
+                      }
 
-                        this.formRef.current.setFieldsValue({
-                          initialTeams: selectedTeams,
-                        });
-                        this.setState({
-                          selectedTeams,
-                        });
-                      }}
-                      afterFetchedTeams={(fetchedTeams) => {
-                        if (!features().isDemoInstance) {
-                          return;
-                        }
+                      this.formRef.current.setFieldsValue({
+                        initialTeams: selectedTeams,
+                      });
+                      this.setState({
+                        selectedTeams,
+                      });
+                    }}
+                    afterFetchedTeams={(fetchedTeams) => {
+                      if (!features().isDemoInstance) {
+                        return;
+                      }
 
-                        const teamOfOrganisation = fetchedTeams.find(
-                          (team) => team.name === team.organization,
-                        );
+                      const teamOfOrganisation = fetchedTeams.find(
+                        (team) => team.name === team.organization,
+                      );
 
-                        if (teamOfOrganisation == null) {
-                          return;
-                        }
+                      if (teamOfOrganisation == null) {
+                        return;
+                      }
 
-                        if (this.formRef.current == null) return;
-                        this.formRef.current.setFieldsValue({
-                          initialTeams: [teamOfOrganisation],
-                        });
-                        this.setState({
-                          selectedTeams: [teamOfOrganisation],
-                        });
-                      }}
-                    />
-                  </Tooltip>
-                </FormItem>
+                      if (this.formRef.current == null) return;
+                      this.formRef.current.setFieldsValue({
+                        initialTeams: [teamOfOrganisation],
+                      });
+                      this.setState({
+                        selectedTeams: [teamOfOrganisation],
+                      });
+                    }}
+                  />
+                </FormItemWithInfo>
               </Col>
             </Row>
+
+            <FormItemWithInfo
+              name="targetFolderId"
+              label="Target Folder"
+              info="The folder into which the dataset will be uploaded. The dataset can be moved after upload. Note that teams that have access to the specified folder will be able to see the uploaded dataset."
+              valuePropName="folderId"
+              rules={[
+                {
+                  required: true,
+                  message: messages["dataset.import.required.folder"],
+                },
+              ]}
+            >
+              <FolderSelection width="50%" disableNotEditableFolders />
+            </FormItemWithInfo>
+
             <DatastoreFormItem
               // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: FormInstance<any> | null; datastores... Remove this comment to see the full error message
               form={form}

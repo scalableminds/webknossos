@@ -323,6 +323,14 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                       where _id = $datasetId""".asUpdate)
     } yield ()
 
+  def updateFolder(datasetId: ObjectId, folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(sqlu"""update webknossos.dataSets
+                        set _folder = $folderId
+                        where _id = $datasetId""")
+    } yield ()
+
   def insertOne(d: DataSet): Fox[Unit] = {
     val adminViewConfiguration: Option[JsValue] = d.adminViewConfiguration.map(Json.toJson(_))
     val defaultViewConfiguration: Option[JsValue] = d.defaultViewConfiguration.map(Json.toJson(_))

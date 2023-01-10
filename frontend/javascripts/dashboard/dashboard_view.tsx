@@ -192,7 +192,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         {
           label: (
             <span>
-              Datasets <sup>Beta</sup>
+              Datasets <sup>New</sup>
             </span>
           ),
           key: "datasets",

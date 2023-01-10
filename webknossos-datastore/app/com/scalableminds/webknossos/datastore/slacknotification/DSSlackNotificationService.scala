@@ -17,4 +17,10 @@ class DSSlackNotificationService @Inject()(rpc: RPC, config: DataStoreConfig) ex
       msg = msg
     )
 
+  def notifyForInternalError(e: InternalError): Unit =
+    slackClient.info(
+      title = "Internal Error",
+      msg = e.getMessage
+    )
+
 }

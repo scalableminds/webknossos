@@ -9,6 +9,7 @@ import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 case class RunEntry(id: ObjectId,
                     name: String,
@@ -158,9 +159,14 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
           val combinedTaskRun = combinedTaskRuns.find(_.taskName == group._1)
           Json.obj(
             "taskName" -> group._1,
-            "state" -> sortedTaskRuns.head.state,
-            "beginTime" -> sortedTaskRuns.head.beginTime,
-            "endTime" -> sortedTaskRuns.head.endTime,
+            "state" -> sortedTaskRuns
+              .map(_.state)
+              .find(s => s != VoxelyticsRunState.SKIPPED && s != VoxelyticsRunState.PENDING)
+              .orElse(sortedTaskRuns.headOption.map(_.state))
+              .getOrElse(VoxelyticsRunState.SKIPPED)
+              .asInstanceOf[VoxelyticsRunState],
+            "beginTime" -> Try(sortedTaskRuns.flatMap(_.beginTime).min).toOption,
+            "endTime" -> Try(sortedTaskRuns.flatMap(_.endTime).max).toOption,
             "currentExecutionId" -> combinedTaskRun.flatMap(_.currentExecutionId),
             "chunks" -> combinedTaskRun
               .map(_.chunks)

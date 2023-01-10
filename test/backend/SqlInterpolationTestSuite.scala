@@ -62,7 +62,7 @@ class SqlInterpolationTestSuite extends PlaySpec {
     "construct an SQLToken with enumeration" in {
       val sql = q"""SELECT * FROM test WHERE state = ${VoxelyticsRunState.RUNNING}"""
       assert(sql == SqlToken("SELECT * FROM test WHERE state = ?", List(EnumerationValue(VoxelyticsRunState.RUNNING))))
-      assert(sql.debugInfo == "SELECT * FROM test WHERE state = 'RUNNING")
+      assert(sql.debugInfo == "SELECT * FROM test WHERE state = 'RUNNING'")
     }
     "construct an SQLToken with duration" in {
       val duration0 = 12 nanos

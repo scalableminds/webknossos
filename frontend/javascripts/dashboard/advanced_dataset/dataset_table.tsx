@@ -326,7 +326,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
       ) : null;
     return (
       <>
-        <p>No Datasets found.</p>
+        {"queries" in this.props.context ? <p>This folder is empty.</p> : <p>No Datasets found.</p>}
+
         {maybeWarning}
       </>
     );

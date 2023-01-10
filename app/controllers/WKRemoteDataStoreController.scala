@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.services.{
 import com.typesafe.scalalogging.LazyLogging
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
+import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
@@ -38,6 +39,7 @@ class WKRemoteDataStoreController @Inject()(
     usedStorageService: UsedStorageService,
     dataSetDAO: DataSetDAO,
     userDAO: UserDAO,
+    folderDAO: FolderDAO,
     jobDAO: JobDAO,
     mailchimpClient: MailchimpClient,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -60,8 +62,11 @@ class WKRemoteDataStoreController @Inject()(
           _ <- dataSetService.assertValidDataSetName(uploadInfo.name)
           _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
+          folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
+          _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataSet.upload.invalidLinkedLayers"
-          dataSet <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataSet.name.alreadyTaken"
+          dataSet <- dataSetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataSet.name.alreadyTaken"
+          _ <- dataSetDAO.updateFolder(dataSet._id, folderId)(GlobalAccessContext)
           _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user))
           _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
         } yield Ok

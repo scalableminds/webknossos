@@ -48,7 +48,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "pricingPlan" -> organization.pricingPlan,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
-        "includedStorage" -> organization.includedStorage.map(bytes => bytes / 1000000),
+        "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes
       ) ++ adminOnlyInfo
   }

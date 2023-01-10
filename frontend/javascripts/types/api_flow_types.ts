@@ -516,10 +516,8 @@ export type APIOrganization = {
   readonly newUserMailingList: string;
   readonly paidUntil: number;
   readonly includedUsers: number;
-  readonly includedStorage: number; // megabytes
-};
-export type APIOrganizationStorageInfo = {
-  readonly usedStorageSpace: number;
+  readonly includedStorageBytes: number;
+  readonly usedStorageBytes: number;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;

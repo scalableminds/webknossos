@@ -25,7 +25,7 @@ case class Organization(
     pricingPlan: PricingPlan,
     paidUntil: Option[Instant],
     includedUsers: Option[Int], // None means unlimited
-    includedStorage: Option[Long], // None means unlimited
+    includedStorageBytes: Option[Long], // None means unlimited
     _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
@@ -102,7 +102,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                       VALUES
                       (${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
                       ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
-                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${o.lastTermsOfServiceAcceptanceTime},
+                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
                         ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
             """)
     } yield ()

@@ -62,6 +62,7 @@ import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 import {
   getActiveSegmentationTracing,
+  getEditableMappingForVolumeTracingId,
   getTracingForSegmentationLayer,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -624,9 +625,10 @@ function* loadPrecomputedMeshForSegmentId(
   try {
     const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
     const mappingName = meshFile.mappingName == null ? isosurfaceExtraInfo.mappingName : null;
-    const useMeshFromMappedIds = mappingName != null;
 
-    const isEditableMapping = yield* select((state) => hasEditableMapping(state, layerName));
+    const editableMapping = yield* select((state) =>
+      getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+    );
     const tracing = yield* select((state) =>
       getTracingForSegmentationLayer(state, segmentationLayer),
     );
@@ -639,9 +641,8 @@ function* loadPrecomputedMeshForSegmentId(
         getBaseSegmentationName(segmentationLayer),
         meshFileName,
         id,
-        mappingName,
-        useMeshFromMappedIds,
-        isEditableMapping && tracing ? tracing.tracingId : null,
+        editableMapping != null ? editableMapping.baseMappingName : mappingName,
+        editableMapping != null && tracing ? tracing.tracingId : null,
       );
       scale = [
         segmentInfo.transform[0][0],
@@ -657,8 +658,6 @@ function* loadPrecomputedMeshForSegmentId(
         getBaseSegmentationName(segmentationLayer),
         meshFileName,
         id,
-        mappingName,
-        useMeshFromMappedIds,
       );
     }
   } catch (exception) {

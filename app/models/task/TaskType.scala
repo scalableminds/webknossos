@@ -10,9 +10,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestr
 import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
 import play.api.libs.json._
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -67,14 +66,6 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
       }
       .map(_.exists(_ == true))
 
-  def idOrSummaryToId(taskTypeIdOrSummary: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[String] =
-    (for {
-      taskType <- taskTypeDAO.findOneBySummaryAndOrganization(taskTypeIdOrSummary, organizationId)
-    } yield taskType._id.toString).orElse(for {
-      taskTypeId <- ObjectId.fromString(taskTypeIdOrSummary)
-      _ <- taskTypeDAO.findOne(taskTypeId)
-    } yield taskTypeId.toString)
 }
 
 class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -120,9 +111,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id} and #${accessQuery.debugInfo}"
-          .as[TasktypesRow])
+      r <- run(q"select $columns from $existingCollectionName where _id = $id and $accessQuery".as[TasktypesRow])
       parsed <- parseFirst(r, id.toString)
     } yield parsed
 
@@ -130,70 +119,65 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where summary = '#${sanitize(
-        summary)}' and _organization = $organizationId and #${accessQuery.debugInfo}".as[TasktypesRow])
+      r <- run(
+        q"select $columns from $existingCollectionName where summary = $summary and _organization = $organizationId and $accessQuery"
+          .as[TasktypesRow])
       parsed <- parseFirst(r, summary)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
-          .as[TasktypesRow])
+      r <- run(q"select $columns from $existingCollectionName where $accessQuery".as[TasktypesRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(t: TaskType, organizationId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.taskTypes(
+      _ <- run(q"""insert into webknossos.taskTypes(
                           _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,
                           settings_branchPointsAllowed, settings_somaClickingAllowed, settings_volumeInterpolationAllowed, settings_mergerMode,
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
-                       values(${t._id.id}, $organizationId, ${t._team.id}, ${t.summary}, ${t.description},
-                              '#${writeArrayTuple(t.settings.allowedModes.map(_.toString))}',
-                              #${optionLiteral(t.settings.preferredMode.map(sanitize))},
-                              ${t.settings.branchPointsAllowed},
-                              ${t.settings.somaClickingAllowed},
-                              ${t.settings.volumeInterpolationAllowed},
-                              ${t.settings.mergerMode},
-                              #${optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))},
-                              #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
-                              #${optionLiteral(t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
-                              '#${t.tracingType.toString}',
-                              ${t.created}, ${t.isDeleted})
-                       """)
+                    values(${t._id}, $organizationId, ${t._team}, ${t.summary}, ${t.description},
+                           ${SqlToken.raw(s"${arrayLiteral(t.settings.allowedModes.map(_.toString))}")},
+                           ${t.settings.preferredMode},
+                           ${t.settings.branchPointsAllowed},
+                           ${t.settings.somaClickingAllowed},
+                           ${t.settings.volumeInterpolationAllowed},
+                           ${t.settings.mergerMode},
+                           ${t.settings.resolutionRestrictions.min},
+                           ${t.settings.resolutionRestrictions.max},
+                           ${t.recommendedConfiguration.map(Json.toJson(_))},
+                           ${t.tracingType},
+                           ${t.created}, ${t.isDeleted})
+                    """.asUpdate)
     } yield ()
 
   def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { // note that t.created is immutable, hence skipped here
       _ <- assertUpdateAccess(t._id)
-      allowedModesLiteral = sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))
-      resolutionMinLiteral = optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))
-      resolutionMaxLiteral = optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))
-      configurationLiteral = optionLiteral(t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))
-      _ <- run(sqlu"""update webknossos.taskTypes
-                        set
-                         _team = ${t._team.id},
-                         summary = ${t.summary},
-                         description = ${t.description},
-                         settings_allowedModes = '#$allowedModesLiteral',
-                         settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize))},
-                         settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
-                         settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
-                         settings_volumeInterpolationAllowed = ${t.settings.volumeInterpolationAllowed},
-                         settings_mergerMode = ${t.settings.mergerMode},
-                         settings_resolutionRestrictions_min = #$resolutionMinLiteral,
-                           settings_resolutionRestrictions_max = #$resolutionMaxLiteral,
-                           recommendedConfiguration = #$configurationLiteral,
-                           isDeleted = ${t.isDeleted}
-                          where _id = ${t._id.id}""")
+      _ <- run(q"""UPDATE webknossos.taskTypes
+                   SET
+                   _team = ${t._team},
+                   summary = ${t.summary},
+                   description = ${t.description},
+                   settings_allowedModes = ${SqlToken.raw(s"${arrayLiteral(t.settings.allowedModes.map(_.toString))}")},
+                   settings_preferredMode = ${t.settings.preferredMode},
+                   settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
+                   settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
+                   settings_volumeInterpolationAllowed = ${t.settings.volumeInterpolationAllowed},
+                   settings_mergerMode = ${t.settings.mergerMode},
+                   settings_resolutionRestrictions_min = ${t.settings.resolutionRestrictions.min},
+                   settings_resolutionRestrictions_max = ${t.settings.resolutionRestrictions.max},
+                   recommendedConfiguration = ${t.recommendedConfiguration.map(Json.toJson(_))},
+                   isDeleted = ${t.isDeleted}
+                   WHERE _id = ${t._id}""".asUpdate)
     } yield ()
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
-      countList <- run(sql"select count(_id) from #${existingCollectionName.debugInfo} where _team = $teamId".as[Int])
+      countList <- run(q"select count(_id) from $existingCollectionName where _team = $teamId".as[Int])
       count <- countList.headOption
     } yield count
 }

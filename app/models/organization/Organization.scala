@@ -188,9 +188,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findNotRecentlyScanned(scanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =
     for {
-      rows <- run(sql"""
-                  SELECT #$columns
-                  FROM #$existingCollectionName
+      rows <- run(q"""
+                  SELECT $columns
+                  FROM $existingCollectionName
                   WHERE lastStorageScanTime < ${Instant.now - scanInterval}
                   ORDER BY lastStorageScanTime
                   LIMIT $limit
@@ -198,16 +198,16 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseAll(rows)
     } yield parsed
 
-  def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Long)(
+  def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
-      _ <- run(sqlu"""UPDATE webknossos.organizations
+      _ <- run(q"""UPDATE webknossos.organizations
                       SET
-                        lastTermsOfServiceAcceptanceTime = ${new java.sql.Timestamp(timestamp)},
+                        lastTermsOfServiceAcceptanceTime = $timestamp,
                         lastTermsOfServiceAcceptanceVersion = $version
                       WHERE _id = $organizationId
-                   """)
+                   """.asUpdate)
     } yield ()
 
 }

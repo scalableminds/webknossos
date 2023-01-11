@@ -311,24 +311,24 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""update webknossos.dataSets
-                      set adminViewConfiguration = ${Json.toJson(configuration)}
-                      where _id = $datasetId""".asUpdate)
+                   set adminViewConfiguration = ${Json.toJson(configuration)}
+                   where _id = $datasetId""".asUpdate)
     } yield ()
 
   def updateUploader(datasetId: ObjectId, uploaderIdOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""update webknossos.dataSets
-                      set _uploader = $uploaderIdOpt
-                      where _id = $datasetId""".asUpdate)
+                   set _uploader = $uploaderIdOpt
+                   where _id = $datasetId""".asUpdate)
     } yield ()
 
   def updateFolder(datasetId: ObjectId, folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
-      _ <- run(sqlu"""update webknossos.dataSets
-                        set _folder = $folderId
-                        where _id = $datasetId""")
+      _ <- run(q"""update webknossos.dataSets
+                   set _folder = $folderId
+                   where _id = $datasetId""".asUpdate)
     } yield ()
 
   def insertOne(d: DataSet): Fox[Unit] = {

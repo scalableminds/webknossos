@@ -44,9 +44,9 @@ trait SqlEscaping {
 
   protected def optionLiteralSanitized(aStringOpt: Option[String]): String = optionLiteral(aStringOpt.map(sanitize))
 
-  protected def writeArrayTuple(elements: List[String]): String = {
+  protected def arrayLiteral(elements: List[String]): String = {
     val commaSeparated = elements.map(sanitizeInArrayTuple).map(e => s""""$e"""").mkString(",")
-    s"{$commaSeparated}"
+    s"'{$commaSeparated}'"
   }
 
   protected def writeStructTuple(elements: List[String]): String = {

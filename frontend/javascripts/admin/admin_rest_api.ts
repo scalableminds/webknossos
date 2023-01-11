@@ -1765,7 +1765,7 @@ export function getEditableMappingInfo(
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/info${tracingId}?token=${token}`),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
   );
 }
 

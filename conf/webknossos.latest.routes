@@ -102,7 +102,6 @@ POST          /datastores/:name/reserveUpload                                   
 POST          /datastores/:name/reportDatasetUpload                                     controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteDataset                                           controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                                     controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
-GET           /datastores/:name/tracingStoreUri                                         controllers.WKRemoteDataStoreController.tracingStoreUri(name: String, key: String)
 POST          /datastores/:name/validateUserAccess                                      controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                               controllers.DataStoreController.create
 DELETE        /datastores/:name                                                         controllers.DataStoreController.delete(name: String)
@@ -115,7 +114,7 @@ POST          /tracingstores/:name/validateUserAccess                           
 PUT           /tracingstores/:name                                                      controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource                                           controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataSourceId                                         controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
-GET           /tracingstores/:name/dataStoreURI/:dataSetName                            controllers.WKRemoteTracingStoreController.dataStoreURIForDataSet(name: String, key: String, organizationName: Option[String], dataSetName: String)
+GET           /tracingstores/:name/dataStoreUri/:dataSetName                            controllers.WKRemoteTracingStoreController.dataStoreUriForDataSet(name: String, key: String, organizationName: Option[String], dataSetName: String)
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                                       controllers.UserTokenController.generateTokenForDataStore

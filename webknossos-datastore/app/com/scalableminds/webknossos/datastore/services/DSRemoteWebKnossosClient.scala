@@ -21,9 +21,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String)
-
 object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
+}
+
+case class TracingStoreInfo(name: String, url: String)
+object TracingStoreInfo {
+  implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
 trait RemoteWebKnossosClient {
@@ -111,9 +115,11 @@ class DSRemoteWebKnossosClient @Inject()(
     tracingstoreUriCache.getOrLoad(
       "tracingStore",
       _ =>
-        rpc(s"$webKnossosUri/api/datastores/$dataStoreName/tracingStoreUri")
-          .addQueryString("key" -> dataStoreKey)
-          .getWithJsonResponse[String]
+        for {
+          tracingStoreInfo <- rpc(s"$webKnossosUri/api/tracingstore")
+            .addQueryString("key" -> dataStoreKey)
+            .getWithJsonResponse[TracingStoreInfo]
+        } yield tracingStoreInfo.url
     )
 
   // The annotation source needed for every chunk request. 5 seconds gets updates to the user fast enough,

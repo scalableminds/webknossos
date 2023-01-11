@@ -22,8 +22,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
-trait GenericJsonFormat[T] {}
-
 case class ListMeshChunksRequest(
     meshFile: String,
     segmentId: Long

@@ -37,21 +37,9 @@ trait SqlEscaping {
   protected def desanitizeFromArrayTuple(aString: String): String =
     aString.replaceAll("""\\"""", """"""").replaceAll("""\\,""", ",")
 
-  protected def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
-    case Some(aString) => "'" + aString + "'"
-    case None          => "null"
-  }
-
-  protected def optionLiteralSanitized(aStringOpt: Option[String]): String = optionLiteral(aStringOpt.map(sanitize))
-
   protected def arrayLiteral(elements: List[String]): String = {
     val commaSeparated = elements.map(sanitizeInArrayTuple).map(e => s""""$e"""").mkString(",")
     s"'{$commaSeparated}'"
-  }
-
-  protected def writeStructTuple(elements: List[String]): String = {
-    val commaSeparated = elements.mkString(",")
-    s"($commaSeparated)"
   }
 
   protected def writeStructTupleWithQuotes(elements: List[String]): String = {

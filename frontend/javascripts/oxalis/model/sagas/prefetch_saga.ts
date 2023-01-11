@@ -22,7 +22,7 @@ import {
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import DataLayer from "oxalis/model/data_layer";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 const PREFETCH_THROTTLE_TIME = 50;

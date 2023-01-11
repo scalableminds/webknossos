@@ -74,7 +74,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
         "allowsUpload" -> dataStore.allowsUpload
       ))
 
-  def validateAccess[A](name: String, key: String)(block: DataStore => Future[Result])(
+  def validateAccess(name: String, key: String)(block: DataStore => Future[Result])(
       implicit m: MessagesProvider): Fox[Result] =
     (for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)

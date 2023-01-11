@@ -78,7 +78,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type {
   OxalisState,
   SkeletonTracing,
@@ -94,7 +94,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";

@@ -4,7 +4,7 @@ import BackboneEvents from "backbone-events-standalone";
 import Maybe from "data.maybe";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import type { Tracing, VolumeTracing } from "oxalis/store";
+import { type Tracing, type VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -128,6 +128,17 @@ const modelData = {
     annotation: TASK_ANNOTATION,
   },
 };
+
+const { default: Store, startSagas } = require("oxalis/store");
+const rootSaga = require("oxalis/model/sagas/root_saga").default;
+const { setStore, setModel, setApi } = require("oxalis/singletons");
+const { setupApi } = require("oxalis/api/internal_api");
+
+setModel(Model);
+setStore(Store);
+setupApi();
+startSagas(rootSaga);
+
 export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volumes.length > 0) {
     return Maybe.Just(tracing.volumes[0]);

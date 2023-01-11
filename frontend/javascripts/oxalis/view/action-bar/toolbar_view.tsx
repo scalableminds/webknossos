@@ -48,7 +48,7 @@ import {
   InterpolationModeEnum,
   InterpolationMode,
 } from "oxalis/constants";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 
 import features from "features";

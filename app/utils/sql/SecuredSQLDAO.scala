@@ -94,9 +94,9 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
 
   private def sharingTokenFromCtx(implicit ctx: DBAccessContext): Option[String] =
     ctx.data match {
-      case Some(sharingTokenContainer: SharingTokenContainer) => Some(sanitize(sharingTokenContainer.sharingToken))
+      case Some(sharingTokenContainer: SharingTokenContainer) => Some(sharingTokenContainer.sharingToken)
       case Some(userSharingTokenContainer: UserSharingTokenContainer) =>
-        userSharingTokenContainer.sharingToken.map(sanitize)
+        userSharingTokenContainer.sharingToken
       case _ => None
     }
 

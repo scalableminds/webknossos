@@ -44,8 +44,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
 
   protected def parse(r: TasksRow): Fox[Task] =
     for {
-      editPosition <- Vec3Int.fromList(parseArrayTuple(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
-      editRotation <- Vec3Double.fromList(parseArrayTuple(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
+      editPosition <- Vec3Int.fromList(parseArrayLiteral(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
+      editRotation <- Vec3Double.fromList(parseArrayLiteral(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
     } yield {
       Task(
         ObjectId(r._Id),
@@ -56,7 +56,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
         r.totalinstances,
         r.openinstances,
         r.tracingtime,
-        r.boundingbox.map(b => parseArrayTuple(b).map(_.toInt)).flatMap(BoundingBox.fromSQL),
+        r.boundingbox.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL),
         editPosition,
         editRotation,
         r.creationinfo,
@@ -208,8 +208,6 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
       randomizeOpt: Option[Boolean],
       pageNumber: Int = 0
   )(implicit ctx: DBAccessContext): Fox[List[Task]] = {
-
-    /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
 
     val orderRandom = randomizeOpt match {
       case Some(true) => q"ORDER BY random()"

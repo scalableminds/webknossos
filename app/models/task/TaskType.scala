@@ -78,7 +78,9 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: TasktypesRow): Fox[TaskType] =
     for {
       tracingType <- TracingType.fromString(r.tracingtype) ?~> "failed to parse tracing type"
-      settingsAllowedModes <- Fox.combined(parseArrayTuple(r.settingsAllowedmodes).map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"
+      settingsAllowedModes <- Fox.combined(
+        parseArrayLiteral(r.settingsAllowedmodes)
+          .map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"
     } yield
       TaskType(
         ObjectId(r._Id),
@@ -140,7 +142,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
                     values(${t._id}, $organizationId, ${t._team}, ${t.summary}, ${t.description},
-                           ${SqlToken.raw(s"${arrayLiteral(t.settings.allowedModes.map(_.toString))}")},
+                           ${SqlToken.raw(s"${enumArrayLiteral(t.settings.allowedModes)}")},
                            ${t.settings.preferredMode},
                            ${t.settings.branchPointsAllowed},
                            ${t.settings.somaClickingAllowed},
@@ -162,7 +164,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    _team = ${t._team},
                    summary = ${t.summary},
                    description = ${t.description},
-                   settings_allowedModes = ${SqlToken.raw(s"${arrayLiteral(t.settings.allowedModes.map(_.toString))}")},
+                   settings_allowedModes = ${SqlToken.raw(s"${enumArrayLiteral(t.settings.allowedModes)}")},
                    settings_preferredMode = ${t.settings.preferredMode},
                    settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                    settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},

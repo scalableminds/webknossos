@@ -72,7 +72,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
       for {
-        scale <- Vec3Double.fromList(parseArrayTuple(literal).map(_.toDouble)) ?~> "could not parse dataset scale"
+        scale <- Vec3Double.fromList(parseArrayLiteral(literal).map(_.toDouble)) ?~> "could not parse dataset scale"
       } yield Some(scale)
     case None => Fox.successful(None)
   }
@@ -107,7 +107,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         r.logourl,
         Instant.fromSql(r.sortingkey),
         details,
-        parseArrayTuple(r.tags).toSet,
+        parseArrayLiteral(r.tags).toSet,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -412,7 +412,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     extends SimpleSQLDAO(sqlClient) {
   private def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
     for {
-      resolution <- Vec3Int.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
+      resolution <- Vec3Int.fromList(parseArrayLiteral(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
     } yield resolution
 
   def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
@@ -456,7 +456,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
-        .fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt))
+        .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
       standinResolutions: Option[List[Vec3Int]] = if (skipResolutions) Some(List.empty[Vec3Int]) else None
@@ -469,7 +469,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     } yield {
       category match {
         case Category.segmentation =>
-          val mappingsAsSet = row.mappings.map(parseArrayTuple(_).toSet)
+          val mappingsAsSet = row.mappings.map(parseArrayLiteral(_).toSet)
           Fox.successful(
             AbstractSegmentationLayer(
               row.name,

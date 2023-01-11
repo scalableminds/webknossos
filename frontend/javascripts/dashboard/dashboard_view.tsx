@@ -7,17 +7,11 @@ import React, { PureComponent, useContext } from "react";
 import _ from "lodash";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { WhatsNextHeader } from "admin/welcome_ui";
-import type {
-  APIOrganization,
-  APIOrganizationStorageInfo,
-  APIPricingPlanStatus,
-  APIUser,
-} from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getOrganization,
-  getOrganizationStorageSpace,
   getPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
@@ -192,7 +186,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         {
           label: (
             <span>
-              Datasets <sup>Beta</sup>
+              Datasets <sup>New</sup>
             </span>
           ),
           key: "datasets",

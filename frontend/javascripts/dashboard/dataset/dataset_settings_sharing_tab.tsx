@@ -18,31 +18,19 @@ type Props = {
   form: FormInstance | null;
   datasetId: APIDatasetId;
   dataset: APIDataset | null | undefined;
-  hasNoAllowedTeams: boolean;
   activeUser: APIUser | null | undefined;
 };
 
-function DatasetSettingsSharingTab({
-  form,
-  datasetId,
-  dataset,
-  hasNoAllowedTeams,
-  activeUser,
-}: Props) {
+function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Props) {
   const [sharingToken, setSharingToken] = useState("");
   const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);
 
   const allowedTeamsComponent = (
     <FormItemWithInfo
       name={["dataset", "allowedTeams"]}
-      label="Teams allowed to access this dataset"
-      info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
-      validateStatus={hasNoAllowedTeams ? "warning" : "success"}
-      help={
-        hasNoAllowedTeams
-          ? "If this field is empty, only administrators, dataset managers and users with a valid sharing link (see below) will be able to view this dataset."
-          : null
-      }
+      label="Additional team access permissions for this dataset"
+      info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder in which the dataset is located. If you want to grant additional teams access, define these teams here."
+      validateStatus="success"
     >
       <TeamSelectionComponent mode="multiple" allowNonEditableTeams={isDatasetManagerOrAdmin} />
     </FormItemWithInfo>

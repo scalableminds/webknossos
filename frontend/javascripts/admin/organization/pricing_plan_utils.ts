@@ -1,4 +1,4 @@
-import { APIOrganization, APIOrganizationStorageInfo, APIUser } from "types/api_flow_types";
+import { APIOrganization, APIUser } from "types/api_flow_types";
 import { PricingPlanEnum } from "./organization_edit_view";
 
 export const teamPlanFeatures = [
@@ -34,11 +34,8 @@ export function hasPricingPlanExceededUsers(
   return activeUserCount > organization.includedUsers;
 }
 
-export function hasPricingPlanExceededStorage(
-  organization: APIOrganization,
-  usedStorageSpaceMB: number,
-): boolean {
-  return usedStorageSpaceMB > organization.includedStorage;
+export function hasPricingPlanExceededStorage(organization: APIOrganization): boolean {
+  return organization.usedStorageBytes > organization.includedStorageBytes;
 }
 
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {

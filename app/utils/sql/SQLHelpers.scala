@@ -13,9 +13,12 @@ import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import slick.util.{Dumpable, TreePrinter}
 import utils.ObjectId
 import utils.sql.SqlInterpolation.sqlInterpolation
 
+import java.io.{ByteArrayOutputStream, PrintWriter}
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
@@ -163,16 +166,23 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     foxFuture.toFox.flatten
   }
 
+  private def querySummary(query: Dumpable): String = {
+    val treePrinter = new TreePrinter()
+    val os = new ByteArrayOutputStream()
+    treePrinter.print(query, new PrintWriter(os))
+    new String(os.toByteArray, StandardCharsets.UTF_8)
+  }
+
   private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
     logger.error("SQL Error: " + ex)
-    logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
+    logger.debug("Caused by query:\n" + querySummary(query).take(4000))
   }
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
     sqlClient.getSlackNotificationService.warnWithException(
       "SQL Error",
       ex,
-      s"Causing query: ${query.getDumpInfo.mainInfo}"
+      s"Causing query: ${querySummary(query).take(4000)}"
     )
 }
 
@@ -205,7 +215,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
         resultList <- run(
-          sql"select _id from #$existingCollectionName where _id = ${id.id} and #${updateAccessQ(userId)}"
+          sql"select _id from #$existingCollectionName where _id = $id and (#${updateAccessQ(userId)})"
             .as[String]) ?~> "Failed to check write access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No update access."
       } yield ()
@@ -217,7 +227,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx
         resultList <- run(
-          sql"select _id from #$existingCollectionName where _id = ${id.id} and #${deleteAccessQ(userId)}"
+          sql"select _id from #$existingCollectionName where _id = ${id.id} and (#${deleteAccessQ(userId)})"
             .as[String]) ?~> "Failed to check delete access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No delete access."
       } yield ()

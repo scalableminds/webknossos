@@ -3,9 +3,8 @@ package models.organization
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.scalableminds.webknossos.schema.Tables._
-
-import javax.inject.Inject
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.jdbc.PostgresProfile.api._
@@ -13,7 +12,9 @@ import slick.lifted.Rep
 import utils.sql.{SQLClient, SQLDAO}
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class Organization(
     _id: ObjectId,
@@ -24,7 +25,7 @@ case class Organization(
     pricingPlan: PricingPlan,
     paidUntil: Option[Instant],
     includedUsers: Option[Int], // None means unlimited
-    includedStorage: Option[Long], // None means unlimited
+    includedStorageBytes: Option[Long], // None means unlimited
     _rootFolder: ObjectId,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
@@ -101,7 +102,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                       VALUES
                       (${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
                       ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
-                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorage}, ${o.lastTermsOfServiceAcceptanceTime},
+                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
                         ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
             """)
     } yield ()
@@ -131,6 +132,68 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                       set displayName = $displayName, newUserMailingList = $newUserMailingList
                       where _id = $organizationId""")
     } yield ()
+
+  def deleteUsedStorage(organizationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId")
+    } yield ()
+
+  def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _dataSet = $datasetId")
+    } yield ()
+
+  def updateLastStorageScanTime(organizationId: ObjectId, time: Instant): Fox[Unit] =
+    for {
+      _ <- run(sqlu"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId")
+    } yield ()
+
+  def upsertUsedStorage(organizationId: ObjectId,
+                        dataStoreName: String,
+                        usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
+    val queries = usedStorageEntries.map(entry => sqlu"""
+               WITH ds AS (
+                 SELECT _id
+                 FROM webknossos.datasets_
+                 WHERE _organization = $organizationId
+                 AND name = ${entry.dataSetName}
+                 LIMIT 1
+               )
+               INSERT INTO webknossos.organization_usedStorage(
+                  _organization, _dataStore, _dataSet, layerName,
+                  magOrDirectoryName, usedStorageBytes, lastUpdated)
+               SELECT
+                $organizationId, $dataStoreName, ds._id, ${entry.layerName},
+                ${entry.magOrDirectoryName}, ${entry.usedStorageBytes}, NOW()
+               FROM ds
+               ON CONFLICT (_organization, _dataStore, _dataSet, layerName, magOrDirectoryName)
+               DO UPDATE
+                 SET usedStorageBytes = ${entry.usedStorageBytes}, lastUpdated = NOW()
+               """)
+    for {
+      _ <- Fox.serialCombined(queries)(q => run(q))
+    } yield ()
+  }
+
+  def getUsedStorage(organizationId: ObjectId): Fox[Long] =
+    for {
+      rows <- run(
+        sql"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
+          .as[Long])
+      firstRow <- rows.headOption
+    } yield firstRow
+
+  def findNotRecentlyScanned(scanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =
+    for {
+      rows <- run(sql"""
+                  SELECT #$columns
+                  FROM #$existingCollectionName
+                  WHERE lastStorageScanTime < ${Instant.now - scanInterval}
+                  ORDER BY lastStorageScanTime
+                  LIMIT $limit
+                  """.as[OrganizationsRow])
+      parsed <- parseAll(rows)
+    } yield parsed
 
   def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Long)(
       implicit ctx: DBAccessContext): Fox[Unit] =

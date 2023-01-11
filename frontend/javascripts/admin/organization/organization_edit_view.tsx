@@ -15,7 +15,6 @@ import {
   updateOrganization,
   getUsers,
   getPricingPlanStatus,
-  getOrganizationStorageSpace,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { coalesce } from "libs/utils";
@@ -50,7 +49,6 @@ type State = {
   organization: APIOrganization | null;
   activeUsersCount: number;
   pricingPlanStatus: APIPricingPlanStatus | null;
-  usedStorageSpace: number | null;
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
@@ -63,7 +61,6 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     organization: null,
     activeUsersCount: 1,
     pricingPlanStatus: null,
-    usedStorageSpace: null,
   };
   formRef = React.createRef<FormInstance>();
 
@@ -101,11 +98,10 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingData: true,
     });
-    const [organization, users, pricingPlanStatus, usedStorageSpace] = await Promise.all([
+    const [organization, users, pricingPlanStatus] = await Promise.all([
       getOrganization(this.props.organizationName),
       getUsers(),
       getPricingPlanStatus(),
-      getOrganizationStorageSpace(this.props.organizationName),
     ]);
 
     const { displayName, newUserMailingList, pricingPlan } = organization;
@@ -117,7 +113,6 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       organization,
       pricingPlanStatus,
       activeUsersCount: getActiveUserCount(users),
-      usedStorageSpace: usedStorageSpace.usedStorageSpace,
     });
   }
 
@@ -165,8 +160,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       this.state.isFetchingData ||
       !this.state.organization ||
       !this.state.pricingPlan ||
-      !this.state.pricingPlanStatus ||
-      this.state.usedStorageSpace === null
+      !this.state.pricingPlanStatus
     )
       return (
         <div
@@ -206,7 +200,6 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         <PlanDashboardCard
           organization={this.state.organization}
           activeUsersCount={this.state.activeUsersCount}
-          usedStorageSpace={this.state.usedStorageSpace}
         />
         <PlanExpirationCard organization={this.state.organization} />
         <PlanUpgradeCard organization={this.state.organization} />

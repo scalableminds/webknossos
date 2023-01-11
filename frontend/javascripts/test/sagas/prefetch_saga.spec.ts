@@ -6,6 +6,10 @@ import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import DATASET from "../fixtures/dataset_server_object";
 
+const { setModel } = require("oxalis/singletons");
+
+setModel(Model);
+
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });

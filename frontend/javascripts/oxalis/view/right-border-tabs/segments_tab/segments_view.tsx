@@ -39,7 +39,7 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import type {
   ActiveMappingInfo,

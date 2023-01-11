@@ -185,6 +185,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     getRequestLogZoomStep(state) > threshold + lowestExistingResolutionIndex;
   return isZoomStepTooHigh;
 }
+
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
 export function getMaximumBrushSize(state: OxalisState) {
   const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);

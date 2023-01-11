@@ -14,7 +14,7 @@ import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type { TraceOrViewCommand } from "oxalis/store";

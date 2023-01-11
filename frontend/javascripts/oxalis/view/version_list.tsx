@@ -19,11 +19,11 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { EditableMapping, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 

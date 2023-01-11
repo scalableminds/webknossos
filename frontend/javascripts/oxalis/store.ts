@@ -1,7 +1,7 @@
 import type { Dispatch } from "redux";
 import { createStore, applyMiddleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
-import createSagaMiddleware from "redux-saga";
+import createSagaMiddleware, { Saga } from "redux-saga";
 import type {
   APIAllowedMode,
   APIAnnotationType,
@@ -64,9 +64,9 @@ import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middlewar
 import defaultState from "oxalis/default_state";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import rootSaga from "oxalis/model/sagas/root_saga";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
+
 export type MutableCommentType = {
   content: string;
   nodeId: number;
@@ -551,11 +551,15 @@ const combinedReducers = reduceReducers(
   UiReducer,
   ConnectomeReducer,
 );
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 1 type arguments, but got 3.
-const store = createStore<OxalisState, Action, Dispatch<any>>(
+
+const store = createStore<OxalisState>(
   enableBatching(combinedReducers),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
 );
-sagaMiddleware.run(rootSaga);
+
+export function startSagas(rootSaga: Saga<any[]>) {
+  sagaMiddleware.run(rootSaga);
+}
+
 export default store;

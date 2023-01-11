@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { AsyncButton } from "components/async_clickables";
 import type { Vector3 } from "oxalis/constants";
 import type { VolumeTracing } from "oxalis/store";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 export default function DownsampleVolumeModal({
   hideDownsampleVolumeModal,
   magsToDownsample,

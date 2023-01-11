@@ -79,25 +79,19 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       rOpt <- run(Tracingstores.filter(r => notdel(r) && r.key === key).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   def findOneByName(name: String): Fox[TracingStore] =
     for {
       rOpt <- run(Tracingstores.filter(r => notdel(r) && r.name === name).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from webknossos.tracingstores_ where url = $url and #${accessQuery.debugInfo}"
-          .as[TracingstoresRow])
+      r <- run(q"select $columns from webknossos.tracingstores_ where url = $url and $accessQuery".as[TracingstoresRow])
       parsed <- parseFirst(r, url)
     } yield parsed
 
@@ -109,18 +103,18 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def insertOne(t: TracingStore): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
-                         values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""")
+      _ <- run(q"""insert into webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
+                         values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =
     for {
-      _ <- run(sqlu"""update webknossos.tracingStores set isDeleted = true where name = $name""")
+      _ <- run(q"update webknossos.tracingStores set isDeleted = true where name = $name".asUpdate)
     } yield ()
 
   def updateOne(t: TracingStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu""" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}""")
+        q" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}".asUpdate)
     } yield ()
 }

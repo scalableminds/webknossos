@@ -52,12 +52,12 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def getExpirationTime: Fox[Instant] =
     for {
-      timeList <- run(sql"select maintenanceExpirationTime from webknossos.maintenance".as[Instant])
+      timeList <- run(q"select maintenanceExpirationTime from webknossos.maintenance".as[Instant])
       time <- timeList.headOption.toFox
     } yield time
 
   def updateExpirationTime(newExpirationTime: Instant): Fox[Unit] =
     for {
-      _ <- run(sqlu"update webknossos.maintenance set maintenanceExpirationTime = $newExpirationTime")
+      _ <- run(q"update webknossos.maintenance set maintenanceExpirationTime = $newExpirationTime".asUpdate)
     } yield ()
 }

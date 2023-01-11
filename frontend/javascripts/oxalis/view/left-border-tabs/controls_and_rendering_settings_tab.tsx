@@ -23,7 +23,7 @@ import messages, { settingsTooltips, settings as settingsLabels } from "messages
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ViewMode } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 const { Panel } = Collapse;
 type ControlsAndRenderingSettingsTabProps = {

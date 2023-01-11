@@ -22,7 +22,7 @@ import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_ac
 import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
 import { Unicode, type Vector3 } from "oxalis/constants";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 

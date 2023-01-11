@@ -5,7 +5,7 @@ import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import features from "features";
 import { downloadAnnotation, getAuthToken } from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";

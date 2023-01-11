@@ -28,14 +28,17 @@ import {
   getElementClass,
   getBoundaries,
   getEnabledLayers,
-  getUnrenderableLayerInfosForCurrentZoom,
   getSegmentationLayerWithMappingSupport,
   getMappingInfoForSupportedLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getRequestLogZoomStep,
+  getUnrenderableLayerInfosForCurrentZoom,
+  getZoomValue,
+} from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";

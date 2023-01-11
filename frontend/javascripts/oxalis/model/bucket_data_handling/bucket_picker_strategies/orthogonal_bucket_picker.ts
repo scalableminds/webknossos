@@ -13,9 +13,8 @@ import Dimensions from "oxalis/model/dimensions";
 import ThreeDMap from "libs/ThreeDMap";
 import { extraBucketPerEdge } from "./orthogonal_bucket_picker_constants";
 
-export const getAnchorPositionToCenterDistance = (
-  bucketPerDim: number, // Example I:
-) =>
+export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
+  // Example I:
   // - bucketPerDim is 17 (because the actual plane is 16 buckets wide and we need one extra bucket to render a "half bucket" on each side)
   // --> the bucket distance between anchorPoint and center bucket is 8
   // Example II:
@@ -31,9 +30,7 @@ export default function determineBucketsForOrthogonal(
   anchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
-  //eslint-disable-next-line @typescript-eslint/default-param-last
-  abortLimit?: number | null | undefined,
-  // @ts-expect-error ts-migrate(1016) FIXME: A required parameter cannot follow an optional par... Remove this comment to see the full error message
+  abortLimit: number | null | undefined,
   gpuFactor: number,
 ) {
   let zoomStepDiff = 0;
@@ -72,11 +69,13 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
   const isFallback = zoomStepDiff > 0;
-  const uniqueBucketMap = new ThreeDMap();
+  const uniqueBucketMap = new ThreeDMap<{
+    bucketAddress: Vector4;
+    priority: number;
+  }>();
   let currentCount = 0;
 
   const enqueueAll = () => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'bucketAddress' does not exist on type 'u... Remove this comment to see the full error message
     for (const { bucketAddress, priority } of uniqueBucketMap.values()) {
       enqueueFunction(bucketAddress, priority);
     }
@@ -86,20 +85,18 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     // If the viewport is not visible, no buckets need to be added
     if (!areas[planeId].isVisible) continue;
     const [u, v, w] = Dimensions.getIndices(planeId);
-    const topLeftVector = [0, 0, 0, 0];
+    const topLeftVector = [0, 0, 0, 0] as Vector4;
     topLeftVector[v] = areas[planeId].top;
     topLeftVector[u] = areas[planeId].left;
-    const bottomRightVector = [0, 0, 0, 0];
+    const bottomRightVector = [0, 0, 0, 0] as Vector4;
     bottomRightVector[v] = areas[planeId].bottom;
     bottomRightVector[u] = areas[planeId].right;
     const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       topLeftVector,
       resolutions,
       logZoomStep,
     );
     const scaledBottomRightVector = zoomedAddressToAnotherZoomStep(
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       bottomRightVector,
       resolutions,
       logZoomStep,
@@ -162,7 +159,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
               return;
             }
           } else {
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'priority' does not exist on type 'unknow... Remove this comment to see the full error message
             const { priority: existingPriority } = existingEntry;
 
             if (priority < existingPriority) {

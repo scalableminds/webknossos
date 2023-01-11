@@ -76,22 +76,20 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
     for {
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id}"
-          .as[PublicationsRow])
+      r <- run(sql"select $columns from $existingCollectionName where _id = $id".as[PublicationsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
     for {
-      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo}".as[PublicationsRow])
+      r <- run(q"select $columns from $existingCollectionName".as[PublicationsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(p: Publication): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
-                         values(${p._id.id}, ${p.publicationDate}, ${p.imageUrl}, ${p.title}, ${p.description}, ${p.created}, ${p.isDeleted})""")
+        q"""insert into webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
+                   values(${p._id}, ${p.publicationDate}, ${p.imageUrl}, ${p.title}, ${p.description}, ${p.created}, ${p.isDeleted})""".asUpdate)
     } yield ()
 }

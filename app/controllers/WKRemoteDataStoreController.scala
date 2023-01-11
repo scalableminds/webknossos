@@ -16,6 +16,7 @@ import models.binary._
 import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
+import models.storage.UsedStorageService
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
@@ -35,6 +36,7 @@ class WKRemoteDataStoreController @Inject()(
     analyticsService: AnalyticsService,
     userService: UserService,
     organizationDAO: OrganizationDAO,
+    usedStorageService: UsedStorageService,
     dataSetDAO: DataSetDAO,
     userDAO: UserDAO,
     folderDAO: FolderDAO,
@@ -95,6 +97,7 @@ class WKRemoteDataStoreController @Inject()(
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
+          _ <- usedStorageService.refreshStorageReportForDataset(dataSet)
           _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
           _ = mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
@@ -106,7 +109,11 @@ class WKRemoteDataStoreController @Inject()(
       request.body.validate[DataStoreStatus] match {
         case JsSuccess(status, _) =>
           logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
-          dataStoreDAO.updateUrlByName(name, status.url).map(_ => Ok)
+          for {
+            _ <- dataStoreDAO.updateUrlByName(name, status.url)
+            _ <- dataStoreDAO.updateReportUsedStorageEnabledByName(name,
+                                                                   status.reportUsedStorageEnabled.getOrElse(false))
+          } yield Ok
         case e: JsError =>
           logger.error("Data store '$name' sent invalid update. Error: " + e)
           Future.successful(JsonBadRequest(JsError.toJson(e)))
@@ -159,8 +166,12 @@ class WKRemoteDataStoreController @Inject()(
           .findOneByNameAndOrganizationName(datasourceId.name, datasourceId.team)(GlobalAccessContext)
           .futureBox
         _ <- existingDataset.flatMap {
-          case Full(dataset) => dataSetDAO.deleteDataset(dataset._id)
-          case _             => Fox.successful(())
+          case Full(dataset) => {
+            dataSetDAO
+              .deleteDataset(dataset._id)
+              .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+          }
+          case _ => Fox.successful(())
         }
       } yield Ok
     }

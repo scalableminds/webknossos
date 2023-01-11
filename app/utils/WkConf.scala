@@ -62,6 +62,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val children = List(User)
     }
 
+    object FetchUsedStorage {
+      val interval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.interval")
+    }
+
     object TermsOfService {
       val enabled: Boolean = get[Boolean]("webKnossos.termsOfService.enabled")
       val url: String = get[String]("webKnossos.termsOfService.url")
@@ -70,7 +74,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     }
 
     val operatorData: String = get[String]("webKnossos.operatorData")
-    val children = List(User, Tasks, Cache, SampleOrganization)
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
   }
 
   object SingleSignOn {

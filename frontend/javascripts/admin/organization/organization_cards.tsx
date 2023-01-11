@@ -173,32 +173,31 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
 export function PlanDashboardCard({
   organization,
   activeUsersCount,
-  usedStorageSpace,
 }: {
   organization: APIOrganization;
   activeUsersCount: number;
-  usedStorageSpace: number;
 }) {
   const usedUsersPercentage = (activeUsersCount / organization.includedUsers) * 100;
-  const usedStoragePercentage = (usedStorageSpace / organization.includedStorage) * 100;
+  const usedStoragePercentage =
+    (organization.usedStorageBytes / organization.includedStorageBytes) * 100;
 
   const hasExceededUserLimit = hasPricingPlanExceededUsers(organization, activeUsersCount);
-  const hasExceededStorageLimit = hasPricingPlanExceededStorage(organization, usedStorageSpace);
+  const hasExceededStorageLimit = hasPricingPlanExceededStorage(organization);
 
   const maxUsersCountLabel =
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
 
   let includedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(organization.includedStorage / 1000).toFixed(0)}GB`
-      : `${(organization.includedStorage / 1000 ** 2).toFixed(0)}TB`;
+      ? `${(organization.includedStorageBytes / 10 ** 9).toFixed(0)}GB`
+      : `${(organization.includedStorageBytes / 10 ** 12).toFixed(0)}TB`;
   includedStorageLabel =
-    organization.includedStorage === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
+    organization.includedStorageBytes === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
 
   const usedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(usedStorageSpace / 1000).toFixed(1)}`
-      : `${(usedStorageSpace / 1000 ** 2).toFixed(1)}`;
+      ? `${(organization.usedStorageBytes / 10 ** 9).toFixed(1)}`
+      : `${(organization.usedStorageBytes / 10 ** 12).toFixed(1)}`;
 
   const storageLabel = `${usedStorageLabel}/${includedStorageLabel}`;
 

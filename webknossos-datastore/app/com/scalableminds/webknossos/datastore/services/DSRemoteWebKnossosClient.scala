@@ -20,7 +20,7 @@ import play.api.libs.ws.WSResponse
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-case class DataStoreStatus(ok: Boolean, url: String)
+case class DataStoreStatus(ok: Boolean, url: String, reportUsedStorageEnabled: Option[Boolean] = None)
 
 object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
@@ -43,6 +43,7 @@ class DSRemoteWebKnossosClient @Inject()(
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name
   private val dataStoreUri: String = config.Http.uri
+  private val reportUsedStorageEnabled: Boolean = config.Datastore.ReportUsedStorage.enabled
 
   private val webKnossosUri: String = config.Datastore.WebKnossos.uri
 
@@ -53,7 +54,7 @@ class DSRemoteWebKnossosClient @Inject()(
   def reportStatus(ok: Boolean): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
-      .patch(DataStoreStatus(ok, dataStoreUri))
+      .patch(DataStoreStatus(ok, dataStoreUri, Some(reportUsedStorageEnabled)))
 
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/datasource")
@@ -84,7 +85,7 @@ class DSRemoteWebKnossosClient @Inject()(
 
   def reserveDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
     for {
-      userToken <- option2Fox(userTokenOpt) ?~> "validateDataSourceUpload.noUserToken"
+      userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
@@ -93,6 +94,17 @@ class DSRemoteWebKnossosClient @Inject()(
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)
+
+  def reportUsedStorage(organizationName: String,
+                        datasetName: Option[String],
+                        storageReportEntries: List[DirectoryStorageReport]): Fox[Unit] =
+    for {
+      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportUsedStorage")
+        .addQueryString("key" -> dataStoreKey)
+        .addQueryString("organizationName" -> organizationName)
+        .addQueryStringOptional("datasetName", datasetName)
+        .post(storageReportEntries)
+    } yield ()
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/jobExportProperties")

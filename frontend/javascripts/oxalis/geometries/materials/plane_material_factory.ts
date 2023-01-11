@@ -232,6 +232,15 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_unrenderable`] = {
         value: 0,
       };
+      if (dataLayer.name === "color2") {
+        this.uniforms[`${layerName}_transform`] = {
+          value: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 122, 105, 0, 1]),
+        };
+      } else {
+        this.uniforms[`${layerName}_transform`] = {
+          value: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+        };
+      }
     }
 
     for (const name of getSanitizedColorLayerNames()) {

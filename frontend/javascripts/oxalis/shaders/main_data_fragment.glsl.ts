@@ -42,6 +42,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_min;
   uniform float <%= name %>_max;
   uniform float <%= name %>_is_inverted;
+  uniform mat4 <%= name %>_transform;
 <% }) %>
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
@@ -138,10 +139,10 @@ void main() {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
-  vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
 
-  vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
   if (renderBucketIndices) {
+    vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
+    vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
     return;
   }
@@ -172,7 +173,7 @@ void main() {
           <%= formatNumberAsGLSLFloat(layerIndex) %>,
           <%= name %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
-          worldCoordUVW,
+          transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz),
           false,
           fallbackGray
         ).xyz;

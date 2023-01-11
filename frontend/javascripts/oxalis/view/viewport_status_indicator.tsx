@@ -3,7 +3,7 @@ import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";
 import { Tooltip } from "antd";
 import type { SmallerOrHigherInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/dataset_accessor";
+import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/flycam_accessor";
 import { usePolledState } from "libs/react_helpers";
 const { useState } = React;
 type UnrenderableLayerNamesInfo = {

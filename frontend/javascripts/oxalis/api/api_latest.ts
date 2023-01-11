@@ -123,7 +123,7 @@ import Constants, {
 } from "oxalis/constants";
 import DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import Request from "libs/request";
 import type {
   MappingType,
@@ -2120,7 +2120,7 @@ class UtilsApi {
   }
 }
 
-type ApiInterface = {
+export type ApiInterface = {
   tracing: TracingApi;
   data: DataApi;
   user: UserApi;

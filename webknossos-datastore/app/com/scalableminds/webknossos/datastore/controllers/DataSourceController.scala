@@ -19,6 +19,7 @@ import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
+import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -30,6 +31,7 @@ class DataSourceController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
+    storageUsageService: DSUsedStorageService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -439,6 +441,26 @@ Expects:
             BadRequest
         }
   }
+
+  @ApiOperation(hidden = true, value = "")
+  def measureUsedStorage(token: Option[String],
+                         organizationName: String,
+                         datasetName: Option[String] = None): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          before <- Fox.successful(System.currentTimeMillis())
+          usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName,
+                                                                                                 datasetName)
+          after = System.currentTimeMillis()
+          _ = if (after - before > (10 seconds).toMillis) {
+            val datasetLabel = datasetName.map(n => s" dataset $n of").getOrElse("")
+            logger.info(s"Measuring storage for$datasetLabel orga $organizationName took ${after - before} ms.")
+          }
+        } yield Ok(Json.toJson(usedStorageInBytes))
+      }
+    }
 
   @ApiOperation(hidden = true, value = "")
   def reload(token: Option[String],

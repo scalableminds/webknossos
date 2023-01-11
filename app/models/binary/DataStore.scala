@@ -24,6 +24,7 @@ case class DataStore(
     isDeleted: Boolean = false,
     isConnector: Boolean = false,
     allowsUpload: Boolean = true,
+    reportUsedStorageEnabled: Boolean = false,
     onlyAllowedOrganization: Option[ObjectId] = None
 )
 
@@ -46,6 +47,7 @@ object DataStore {
       isDeleted = false,
       isConnector.getOrElse(false),
       allowsUpload.getOrElse(true),
+      reportUsedStorageEnabled = false,
       None
     )
 
@@ -103,6 +105,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.isdeleted,
         r.isconnector,
         r.allowsupload,
+        r.reportusedstorageenabled,
         r.onlyallowedorganization.map(ObjectId(_))
       ))
 
@@ -133,16 +136,28 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseAll(r)
     } yield parsed
 
+  def findAllWithStorageReporting: Fox[List[DataStore]] =
+    for {
+      r <- run(sql"select #$columns from webknossos.datastores_ where reportUsedStorageEnabled".as[DatastoresRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def updateUrlByName(name: String, url: String): Fox[Unit] = {
     val query = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
     for { _ <- run(query.update(url)) } yield ()
   }
 
+  def updateReportUsedStorageEnabledByName(name: String, reportUsedStorageEnabled: Boolean): Fox[Unit] =
+    for {
+      _ <- run(
+        sqlu"UPDATE webknossos.dataStores SET reportUsedStorageEnabled = $reportUsedStorageEnabled WHERE name = $name")
+    } yield ()
+
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isConnector, allowsUpload)
-                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isConnector}, ${d.allowsUpload})""")
+        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isConnector, allowsUpload, reportUsedStorageEnabled)
+                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isConnector}, ${d.allowsUpload}, ${d.reportUsedStorageEnabled})""")
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =

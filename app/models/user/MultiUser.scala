@@ -11,7 +11,7 @@ import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -55,10 +55,12 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def insertOne(u: MultiUser): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher, passwordInfo_password,
+      _ <- run(q"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher,
+                                                     passwordInfo_password,
                                                      isSuperUser, novelUserExperienceInfos, selectedTheme,
                                                      created, isDeleted)
-                   values(${u._id}, ${u.email}, ${u.passwordInfo.hasher}, ${u.passwordInfo.password},
+                   values(${u._id}, ${u.email}, ${SqlToken.raw(escapeLiteral(u.passwordInfo.hasher))},
+                          ${u.passwordInfo.password},
                           ${u.isSuperUser}, ${u.novelUserExperienceInfos}, ${u.selectedTheme},
                           ${u.created}, ${u.isDeleted})""".asUpdate)
     } yield ()
@@ -67,7 +69,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""update webknossos.multiusers set
-                          passwordInfo_hasher = ${passwordInfo.hasher},
+                          passwordInfo_hasher = ${SqlToken.raw(escapeLiteral(passwordInfo.hasher))},
                           passwordInfo_password = ${passwordInfo.password}
                    where _id = $multiUserId""".asUpdate)
     } yield ()

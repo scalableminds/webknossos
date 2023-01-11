@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import oxalis.security.TokenType.TokenType
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -99,7 +99,8 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         q"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
-                    values(${t._id}, ${t.value}, ${t.loginInfo.providerID}, ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
+                    values(${t._id}, ${t.value}, ${SqlToken.raw(escapeLiteral(t.loginInfo.providerID))},
+                          ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
                           ${t.expirationDateTime}, ${t.idleTimeout.map(_.toMillis)},
                           ${t.tokenType}, ${t.created}, ${t.isDeleted})""".asUpdate)
     } yield ()

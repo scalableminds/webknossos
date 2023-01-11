@@ -91,7 +91,11 @@ export default function StatisticsTab({
         <tbody>
           {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => {
             const remainingCount =
-              row.chunkCounts.total - row.chunkCounts.complete - row.chunkCounts.skipped;
+              row.chunkCounts.total -
+              row.chunkCounts.complete -
+              row.chunkCounts.failed -
+              row.chunkCounts.cancelled -
+              row.chunkCounts.skipped;
             const runnableCount = row.chunkCounts.total - row.chunkCounts.skipped;
             return (
               <tr key={row.executionId}>
@@ -99,11 +103,11 @@ export default function StatisticsTab({
                   <Tooltip
                     overlay={
                       <>
-                        {formatNumber(remainingCount)} remaining,{" "}
-                        {formatNumber(row.chunkCounts.complete)} complete,{" "}
-                        {formatNumber(row.chunkCounts.cancelled)} cancelled,{" "}
-                        {formatNumber(row.chunkCounts.failed)} failed,{" "}
-                        {formatNumber(row.chunkCounts.skipped)} skipped,{" "}
+                        {formatNumber(remainingCount)} remaining •{" "}
+                        {formatNumber(row.chunkCounts.complete)} complete •{" "}
+                        {formatNumber(row.chunkCounts.cancelled)} cancelled •{" "}
+                        {formatNumber(row.chunkCounts.failed)} failed •{" "}
+                        {formatNumber(row.chunkCounts.skipped)} skipped •{" "}
                         {formatNumber(row.chunkCounts.total)} total
                       </>
                     }

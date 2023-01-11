@@ -84,10 +84,17 @@ export default function WorkflowListView() {
   ) as any as Array<RenderRunInfo>;
 
   function renderProgress(run: RenderRunInfo) {
-    const remainingCount = run.taskCounts.total - run.taskCounts.complete - run.taskCounts.skipped;
-    const runnableCount = run.taskCounts.total - run.taskCounts.skipped;
-
-    let label = `${remainingCount} remaining • ${run.taskCounts.complete} complete`;
+    let label = "";
+    if (run.state === VoxelyticsRunState.RUNNING) {
+      const remainingCount =
+        run.taskCounts.total -
+        run.taskCounts.complete -
+        run.taskCounts.failed -
+        run.taskCounts.cancelled -
+        run.taskCounts.skipped;
+      label += `${remainingCount} remaining • `;
+    }
+    label += `${run.taskCounts.complete} complete`;
     if (run.taskCounts.cancelled > 0) {
       label += ` • ${run.taskCounts.cancelled} cancelled`;
     }
@@ -107,11 +114,11 @@ export default function WorkflowListView() {
         <Progress
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
-              runnableCount) *
+              run.taskCounts.total) *
               100,
           )}
           status={runStateToStatus(run.state)}
-          success={{ percent: Math.round((run.taskCounts.complete / runnableCount) * 100) }}
+          success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
           size="small"
         />
       </Tooltip>

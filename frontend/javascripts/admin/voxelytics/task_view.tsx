@@ -58,13 +58,15 @@ function TaskView({
         VoxelyticsRunState.FAILED,
       ].includes(taskInfo.state) && (
         <div style={{ display: "flex", flexDirection: "row" }}>
-          Approx. Chunk Progress:
+          Chunk Progress:
           <Tooltip
             overlay={
               <>
                 {formatNumber(
                   taskInfo.chunkCounts.total -
                     taskInfo.chunkCounts.complete -
+                    taskInfo.chunkCounts.failed -
+                    taskInfo.chunkCounts.cancelled -
                     taskInfo.chunkCounts.skipped,
                 )}{" "}
                 remaining • {formatNumber(taskInfo.chunkCounts.complete)} complete •{" "}
@@ -110,7 +112,7 @@ function TaskView({
               </span>
             </span>
           </Tooltip>
-          Current Execution Id:&nbsp;
+          Current Execution ID:&nbsp;
           <span style={{ fontFamily: "monospace" }}>
             {taskInfo.currentExecutionId != null ? taskInfo.currentExecutionId : "-"}
           </span>

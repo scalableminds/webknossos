@@ -113,7 +113,11 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
       const currentDuration = Date.now() - taskInfo.beginTime.getTime();
       if (taskInfo.chunkCounts.complete > 0) {
         const estimatedRemainingDuration =
-          (currentDuration / taskInfo.chunkCounts.complete) * taskInfo.chunkCounts.total -
+          (currentDuration /
+            (taskInfo.chunkCounts.complete +
+              taskInfo.chunkCounts.failed +
+              taskInfo.chunkCounts.cancelled)) *
+            (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped) -
           currentDuration;
         const estimatedEndTime = new Date(Date.now() + estimatedRemainingDuration);
         return (

@@ -3,17 +3,15 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
-import javax.inject.Inject
 import models.user.MultiUserDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import slick.jdbc.PostgresProfile.api._
-import utils.sql.{SqlClient, SimpleSQLDAO}
-import scala.concurrent.duration._
+import utils.sql.{SimpleSQLDAO, SqlClient}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
                                       maintenanceDAO: MaintenanceDAO,

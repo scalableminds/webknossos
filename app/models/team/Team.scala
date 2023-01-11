@@ -17,7 +17,7 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -172,11 +172,8 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByIds(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      idsLiteral = writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))
-      idPredicate = if (teamIds.isEmpty) "false" else s"_id IN $idsLiteral"
-      r <- run(
-        sql"SELECT #${columns.debugInfo} FROM #${existingCollectionName.debugInfo} WHERE #$idPredicate AND #${accessQuery.debugInfo}"
-          .as[TeamsRow])
+      r <- run(q"""SELECT $columns FROM $existingCollectionName
+                   WHERE _id IN ${SqlToken.tuple(teamIds)} AND $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 

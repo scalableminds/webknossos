@@ -138,7 +138,8 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def findAllWithStorageReporting: Fox[List[DataStore]] =
     for {
-      r <- run(sql"select #$columns from webknossos.datastores_ where reportUsedStorageEnabled".as[DatastoresRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from webknossos.datastores_ where reportUsedStorageEnabled".as[DatastoresRow])
       parsed <- parseAll(r)
     } yield parsed
 

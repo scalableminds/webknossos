@@ -189,8 +189,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def findNotRecentlyScanned(scanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =
     for {
       rows <- run(sql"""
-                  SELECT #$columns
-                  FROM #$existingCollectionName
+                  SELECT #${columns.debugInfo}
+                  FROM #${existingCollectionName.debugInfo}
                   WHERE lastStorageScanTime < ${Instant.now - scanInterval}
                   ORDER BY lastStorageScanTime
                   LIMIT $limit

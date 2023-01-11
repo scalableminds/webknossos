@@ -69,7 +69,7 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   private def parseInfo(r: InfoTuple): Fox[MeshInfo] =
     for {
-      position <- Vec3Int.fromList(parseArrayTuple(r._4).map(_.toInt)) ?~> "could not parse mesh position"
+      position <- Vec3Int.fromList(parseArrayLiteral(r._4).map(_.toInt)) ?~> "could not parse mesh position"
     } yield {
       MeshInfo(
         r._1, //_id

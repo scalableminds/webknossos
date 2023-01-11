@@ -170,7 +170,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         viewconfigurationOpt,
         state,
         Json.parse(r.statistics).as[JsObject],
-        parseArrayTuple(r.tags).toSet,
+        parseArrayLiteral(r.tags).toSet,
         r.tracingtime,
         typ,
         r.othersmayedit,

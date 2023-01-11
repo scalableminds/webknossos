@@ -1,7 +1,6 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import type {
   APIAllowedMode,
   APIDataset,
@@ -9,7 +8,6 @@ import type {
   APISegmentationLayer,
   ElementClass,
 } from "types/api_flow_types";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type {
   Settings,
   DataLayerType,
@@ -24,17 +22,12 @@ import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "o
 import { aggregateBoundingBox, map3 } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
-import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
   smaller: boolean;
   higher: boolean;
-};
-type UnrenderableLayersInfos = {
-  layer: DataLayerType;
-  smallerOrHigherInfo: SmallerOrHigherInfo;
 };
 
 function maxValue(array: Array<number>): number {
@@ -817,60 +810,6 @@ export function getEnabledColorLayers(
   return enabledLayers.filter((layer) => isColorLayer(dataset, layer.name));
 }
 
-/*
-  This function returns layers that cannot be rendered (since the current resolution is missing),
-  even though they should be rendered (since they are enabled). For each layer, this method
-  additionally returns whether data of this layer can be rendered by zooming in or out.
-  The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
- */
-function _getUnrenderableLayerInfosForCurrentZoom(
-  state: OxalisState,
-): Array<UnrenderableLayersInfos> {
-  const { dataset } = state;
-  const zoomStep = getRequestLogZoomStep(state);
-  const { renderMissingDataBlack } = state.datasetConfiguration;
-  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
-  const unrenderableLayers = getEnabledLayers(dataset, state.datasetConfiguration)
-    .map((layer: DataLayerType) => ({
-      layer,
-      resolutionInfo: getResolutionInfo(layer.resolutions),
-    }))
-    .filter(({ resolutionInfo }) => {
-      const isPresent = resolutionInfo.hasIndex(zoomStep);
-
-      if (isPresent) {
-        // The layer exists. Thus, it is not unrenderable.
-        return false;
-      }
-
-      if (renderMissingDataBlack) {
-        // We already know that the layer is missing. Since `renderMissingDataBlack`
-        // is enabled, the fallback resolutions don't matter. The layer cannot be
-        // rendered.
-        return true;
-      }
-
-      // The current resolution is missing and fallback rendering
-      // is activated. Thus, check whether one of the fallback
-      // zoomSteps can be rendered.
-      return !_.range(1, maxZoomStepDiff + 1).some((diff) => {
-        const fallbackZoomStep = zoomStep + diff;
-        return resolutionInfo.hasIndex(fallbackZoomStep);
-      });
-    })
-    .map<UnrenderableLayersInfos>(({ layer, resolutionInfo }) => {
-      const smallerOrHigherInfo = resolutionInfo.hasSmallerAndOrHigherIndex(zoomStep);
-      return {
-        layer,
-        smallerOrHigherInfo,
-      };
-    });
-  return unrenderableLayers;
-}
-
-export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
-  _getUnrenderableLayerInfosForCurrentZoom,
-);
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const organizationName = dataset.owningOrganization;

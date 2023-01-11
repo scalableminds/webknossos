@@ -130,6 +130,10 @@ jobs:
           command: |
             .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
       - run:
+          name: Check for cyclic dependencies in front-end
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn check-cyclic-dependencies
+      - run:
           name: Run frontend tests
           command: |
             .circleci/not-on-master.sh docker-compose run base yarn test-verbose

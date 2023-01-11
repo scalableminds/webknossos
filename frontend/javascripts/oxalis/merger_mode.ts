@@ -6,7 +6,7 @@ import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/throttled_store";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { UnregisterHandler } from "oxalis/api/api_latest";
 import { Action } from "oxalis/model/actions/actions";

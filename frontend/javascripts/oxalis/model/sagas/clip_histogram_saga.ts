@@ -7,7 +7,7 @@ import Toast from "libs/toast";
 import { OrthoViews, Vector3 } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 
 function onThresholdChange(layerName: string, [firstVal, secVal]: [number, number]) {

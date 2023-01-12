@@ -15,7 +15,7 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO, SimpleSQLDAO}
+import utils.sql.{SqlClient, SQLDAO, SimpleSQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -60,7 +60,7 @@ case class User(
 
 }
 
-class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
   protected val collection = Users
 
@@ -92,19 +92,19 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     }
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '$requestingUserId' and isTeamManager)))
-        or (_organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))
-        or _id = '$requestingUserId'"""
+    q"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = $requestingUserId and isTeamManager)))
+        or (_organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))
+        or _id = $requestingUserId"""
   override protected def deleteAccessQ(requestingUserId: ObjectId) =
-    s"_organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin)"
+    q"_organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin)"
 
   private def listAccessQ(requestingUserId: ObjectId) =
-    s"""(${readAccessQ(requestingUserId)})
+    q"""(${readAccessQ(requestingUserId)})
         and
         (
           isUnlisted = false
           or
-          ('$requestingUserId' in
+          ($requestingUserId in
             (
               select u._id
               from webknossos.users_ u join webknossos.multiUsers_ m on u._multiUser = m._id
@@ -116,14 +116,18 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[UsersRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = $id and #${accessQuery.debugInfo}"
+          .as[UsersRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[UsersRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
+          .as[UsersRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -132,8 +136,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     else
       for {
         accessQuery <- accessQueryFromAccessQ(listAccessQ)
-        r <- run(sql"""select #${columnsWithPrefix("u.")}
-                         from (select #$columns from #$existingCollectionName where #$accessQuery) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
+        r <- run(sql"""select #${columnsWithPrefix("u.").debugInfo}
+                         from (select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teamIds.map(_.id))}
                                and not u.isDeactivated
                          order by _id""".as[UsersRow])
@@ -142,16 +146,18 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findAllByMultiUser(multiUserId: ObjectId): Fox[List[User]] =
     for {
-      r <- run(sql"""select #$columns from #$existingCollectionName where _multiUser = $multiUserId""".as[UsersRow])
+      r <- run(
+        sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _multiUser = $multiUserId"""
+          .as[UsersRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def findAdminsAndDatasetManagersByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"""select #$columns
-                     from #$existingCollectionName
-                     where #$accessQuery
+      r <- run(sql"""select #${columns.debugInfo}
+                     from #${existingCollectionName.debugInfo}
+                     where #${accessQuery.debugInfo}
                      and (isDatasetManager
                           or isAdmin)
                      and not isDeactivated
@@ -164,9 +170,9 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
-      resultList <- run(sql"""select #$columns from #$existingCollectionName
+      resultList <- run(sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo}
                               where _multiUser = $multiUserId and _organization = $organizationId
-                              and #$accessQuery
+                              and #${accessQuery.debugInfo}
                                limit 1""".as[UsersRow])
       result <- resultList.headOption.toFox
       parsed <- parse(result)
@@ -175,9 +181,9 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def findFirstByMultiUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
-      resultList <- run(sql"""select #$columns from #$existingCollectionName
-                              where _multiUser = $multiUserId and not isDeactivated and #$accessQuery
-                               limit 1""".as[UsersRow])
+      resultList <- run(sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo}
+                              where _multiUser = $multiUserId and not isDeactivated and #${accessQuery.debugInfo}
+                              limit 1""".as[UsersRow])
       result <- resultList.headOption.toFox
       parsed <- parse(result)
     } yield parsed
@@ -186,8 +192,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       result <- run(
-        sql"""select #$columns from #$existingCollectionName
-                              where _id in (select _user from webknossos.annotation_contributors where _annotation = $annotationId) and #$accessQuery"""
+        sql"""select #${columns.debugInfo} from #${existingCollectionName.debugInfo}
+                              where _id in (select _user from webknossos.annotation_contributors where _annotation = $annotationId) and #${accessQuery.debugInfo}"""
           .as[UsersRow])
       parsed <- parseAll(result)
     } yield parsed
@@ -195,7 +201,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
-        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId and not isDeactivated and not isUnlisted"
+        sql"select count(_id) from #${existingCollectionName.debugInfo} where _organization = $organizationId and not isDeactivated and not isUnlisted"
           .as[Int])
       result <- resultList.headOption
     } yield result
@@ -203,14 +209,15 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def countAdminsForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
-        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId and isAdmin and not isUnlisted"
+        sql"select count(_id) from #${existingCollectionName.debugInfo} where _organization = $organizationId and isAdmin and not isUnlisted"
           .as[Int])
       result <- resultList.headOption
     } yield result
 
   def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
     for {
-      resultList <- run(sql"select count(_id) from #$existingCollectionName where _multiUser = $multiUserId".as[Int])
+      resultList <- run(
+        sql"select count(_id) from #${existingCollectionName.debugInfo} where _multiUser = $multiUserId".as[Int])
       result <- resultList.headOption
     } yield result
 
@@ -251,11 +258,11 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                    isDatasetManager: Boolean,
                    isDeactivated: Boolean,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
+    val query = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
       (row.firstname, row.lastname, row.isadmin, row.isdatasetmanager, row.isdeactivated, row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
+      _ <- run(query.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
     } yield ()
   }
 
@@ -313,7 +320,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findTeamMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =
     for {
-      r <- run(sql"""select #${columnsWithPrefix("u.")} from webknossos.users_ u
+      r <- run(sql"""select #${columnsWithPrefix("u.").debugInfo} from webknossos.users_ u
                      join webknossos.user_team_roles tr on u._id = tr._user
                      where not u.isAdmin
                      and not u.isDeactivated
@@ -327,7 +334,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
 }
 
-class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findAllExperiencesForUser(userId: ObjectId): Fox[Map[String, Int]] =
@@ -359,7 +366,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
 
 }
 
-class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDataSetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DataSetViewConfiguration] =
@@ -391,7 +398,7 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
     } yield ()
 }
 
-class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findAllByLayerNameForUserAndDataset(layerNames: List[String],

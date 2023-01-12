@@ -12,7 +12,7 @@ import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -29,7 +29,7 @@ case class MultiUser(
     isDeleted: Boolean = false
 )
 
-class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
   protected val collection = Multiusers
 
@@ -122,14 +122,17 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where email = $email and #$accessQuery".as[MultiusersRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where email = $email and #${accessQuery.debugInfo}"
+          .as[MultiusersRow])
       parsed <- parseFirst(r, email)
     } yield parsed
 
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
-      idList <- run(sql"select _id from #$existingCollectionName where email = $email and #$accessQuery".as[String])
+      idList <- run(
+        sql"select _id from #${existingCollectionName.debugInfo} where email = $email and #${accessQuery.debugInfo}"
+          .as[String])
     } yield idList.isEmpty
 
   def hasAtLeastOneActiveUser(multiUserId: ObjectId): Fox[Boolean] =

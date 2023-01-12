@@ -5,13 +5,13 @@ import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json._
 import utils.ObjectId
-import utils.sql.{SQLClient, SimpleSQLDAO, SqlToken}
+import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   private def runsWithStateQ(staleTimeout: FiniteDuration): SqlToken =
     q"""SELECT
@@ -566,7 +566,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           name = $runName AND
           workflow_hash = $workflowHash AND
           _organization = ${currentUser._organization} AND
-          ${readAccessQ}
+          $readAccessQ
         """.as[String])
       objectId <- objectIdList.headOption
     } yield ObjectId(objectId)

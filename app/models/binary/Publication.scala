@@ -12,7 +12,7 @@ import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -53,7 +53,7 @@ class PublicationService @Inject()(dataSetService: DataSetService,
   }
 }
 
-class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Publication, PublicationsRow, Publications](sqlClient) {
   protected val collection = Publications
 
@@ -76,13 +76,15 @@ class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionConte
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
     for {
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = ${id.id}".as[PublicationsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _id = ${id.id}"
+          .as[PublicationsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
     for {
-      r <- run(sql"select #$columns from #$existingCollectionName".as[PublicationsRow])
+      r <- run(sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo}".as[PublicationsRow])
       parsed <- parseAll(r)
     } yield parsed
 

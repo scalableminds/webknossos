@@ -8,7 +8,7 @@ import models.user.{UserDAO, UserService}
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -46,15 +46,15 @@ object Script {
     Script(ObjectId.generate, _owner, name, gist)
 }
 
-class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   protected val collection = Scripts
 
   protected def idColumn(x: Scripts): Rep[String] = x._Id
   protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
-  override protected def readAccessQ(requestingUserId: ObjectId): String =
-    s"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = '$requestingUserId')"
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = $requestingUserId)"
 
   protected def parse(r: ScriptsRow): Fox[Script] =
     Fox.successful(
@@ -88,7 +88,8 @@ class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from webknossos.scripts_ where #$accessQuery".as[ScriptsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from webknossos.scripts_ where #${accessQuery.debugInfo}".as[ScriptsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 }

@@ -13,7 +13,7 @@ import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -83,7 +83,7 @@ class InviteService @Inject()(conf: WkConf,
 
 }
 
-class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Invite, InvitesRow, Invites](sqlClient) {
   protected val collection = Invites
 
@@ -119,10 +119,10 @@ class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def deleteAllExpired(): Fox[Unit] = {
-    val q = for {
+    val query = for {
       row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
     } yield isDeletedColumn(row)
-    for { _ <- run(q.update(true)) } yield ()
+    for { _ <- run(query.update(true)) } yield ()
   }
 
 }

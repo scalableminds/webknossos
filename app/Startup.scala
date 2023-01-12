@@ -15,7 +15,7 @@ import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import utils.WkConf
-import utils.sql.SQLClient
+import utils.sql.SqlClient
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -31,7 +31,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         lifecycle: ApplicationLifecycle,
                         tempFileService: TempFileService,
                         inviteService: InviteService,
-                        sqlClient: SQLClient,
+                        sqlClient: SqlClient,
                         slackNotificationService: SlackNotificationService)
     extends LazyLogging {
 

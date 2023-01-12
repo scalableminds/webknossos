@@ -21,7 +21,7 @@ import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -91,7 +91,7 @@ case class Job(
     } yield resultLinkFormatted
 }
 
-class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
   protected val collection = Jobs
 
@@ -122,25 +122,29 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     }
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    s"""_owner = '$requestingUserId'"""
+    q"""_owner = $requestingUserId"""
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery order by created".as[JobsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} order by created"
+          .as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery and _id = $jobId".as[JobsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} and _id = $jobId"
+          .as[JobsRow])
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
   def countUnassignedPendingForDataStore(_dataStore: String): Fox[Int] =
     for {
-      r <- run(sql"""select count(_id) from #$existingCollectionName
+      r <- run(sql"""select count(_id) from #${existingCollectionName.debugInfo}
               where state = '#${JobState.PENDING}'
               and manualState is null
               and _dataStore = ${_dataStore}
@@ -151,7 +155,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
     for {
       r <- run(
-        sql"select count(_id) from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null"
+        sql"select count(_id) from #${existingCollectionName.debugInfo} where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null"
           .as[Int])
       head <- r.headOption
     } yield head
@@ -159,7 +163,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null order by created"
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null order by created"
           .as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -173,7 +177,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def findAllCancellingByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}'"
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}'"
           .as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -181,7 +185,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
     for {
       results: Seq[String] <- run(
-        sql"select _id from #$existingCollectionName where _id = ${_id} and _owner = ${_user}".as[String])
+        sql"select _id from #${existingCollectionName.debugInfo} where _id = ${_id} and _owner = ${_user}".as[String])
     } yield results.nonEmpty
 
   def insertOne(j: Job): Fox[Unit] =

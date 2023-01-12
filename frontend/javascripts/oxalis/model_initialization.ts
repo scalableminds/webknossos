@@ -68,7 +68,7 @@ import {
   loadAgglomerateSkeletonAction,
   setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
+import { setDatasetAction, setLayerTransforms } from "oxalis/model/actions/dataset_actions";
 import {
   setPositionAction,
   setZoomStepAction,
@@ -99,6 +99,7 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
+import { M4x4 } from "libs/mjs";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -221,6 +222,44 @@ export async function initialize(
   if (initialFetch) {
     setInitialTool();
   }
+
+  window.makeTranslation = (x, y) =>
+    new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1]);
+  window.targetLayerName = "color";
+  window.setTransforms = (transforms) =>
+    Store.dispatch(setLayerTransforms(window.targetLayerName, transforms));
+
+  window.setTransforms(makeTranslation(122, 105));
+
+  window.setRotation = (_theta) => {
+    const theta = (_theta / 360) * 2 * Math.PI;
+    window.setTransforms(
+      M4x4.mul(
+        M4x4.mul(
+          makeTranslation(3282, 3184),
+          new Float32Array([
+            Math.cos(theta),
+            Math.sin(theta),
+            0,
+            0,
+            -Math.sin(theta),
+            Math.cos(theta),
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+          ]),
+        ),
+        makeTranslation(-3282, -3184),
+      ),
+    );
+  };
 
   return initializationInformation;
 }

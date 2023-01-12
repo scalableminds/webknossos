@@ -63,6 +63,21 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_LAYER_TRANSFORMS": {
+      const { layerName, transformMatrix } = action;
+      const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
+        if (layer.name === layerName) {
+          return { ...layer, transformMatrix };
+        } else {
+          return layer;
+        }
+      });
+
+      return updateKey2(state, "dataset", "dataSource", {
+        dataLayers: newLayers,
+      });
+    }
+
     default: // pass;
   }
 

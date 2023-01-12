@@ -108,19 +108,20 @@ export const getColorForCoords: ShaderModule = {
       vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
-      if (relativeBucketPosition.x > addressSpaceDimensions.x ||
-          relativeBucketPosition.y > addressSpaceDimensions.y ||
-          relativeBucketPosition.z > addressSpaceDimensions.z ||
-          relativeBucketPosition.x < 0.0 ||
-          relativeBucketPosition.y < 0.0 ||
-          relativeBucketPosition.z < 0.0) {
-        // In theory, the current magnification should always be selected
-        // so that we won't have to address data outside of the addresSpaceDimensions.
-        // Nevertheless, we explicitly guard against this situation here to avoid
-        // rendering wrong data.
-        returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
-        return returnValue;
-      }
+      // Check needs to be reworked. Maybe use cuckoo hashing?
+      // if (relativeBucketPosition.x > addressSpaceDimensions.x ||
+      //     relativeBucketPosition.y > addressSpaceDimensions.y ||
+      //     relativeBucketPosition.z > addressSpaceDimensions.z ||
+      //     relativeBucketPosition.x < 0.0 ||
+      //     relativeBucketPosition.y < 0.0 ||
+      //     relativeBucketPosition.z < 0.0) {
+      //   // In theory, the current magnification should always be selected
+      //   // so that we won't have to address data outside of the addresSpaceDimensions.
+      //   // Nevertheless, we explicitly guard against this situation here to avoid
+      //   // rendering wrong data.
+      //   returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
+      //   return returnValue;
+      // }
 
       float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
 

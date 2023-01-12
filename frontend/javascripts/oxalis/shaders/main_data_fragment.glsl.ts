@@ -135,10 +135,11 @@ ${compileShader(
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
-  if (isOutsideOfBoundingBox(worldCoordUVW)) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    return;
-  }
+  // todo: needs to happen per layer maybe?
+  // if (isOutsideOfBoundingBox(worldCoordUVW)) {
+  //   gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+  //   return;
+  // }
 
   if (renderBucketIndices) {
     vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);

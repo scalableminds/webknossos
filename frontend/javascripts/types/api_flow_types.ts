@@ -36,6 +36,7 @@ type APIDataLayerBase = {
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
+  readonly transformMatrix?: Float32Array; // 4x4
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";

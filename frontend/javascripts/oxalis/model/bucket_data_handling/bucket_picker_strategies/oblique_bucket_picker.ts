@@ -12,6 +12,7 @@ import type { OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import { Area } from "oxalis/model/accessors/flycam_accessor";
+import { PlaneRects } from "oxalis/store";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).
@@ -40,21 +41,18 @@ export default function determineBucketsForOblique(
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
   logZoomStep: number,
-  areas: OrthoViewMap<Area>,
+  rects: PlaneRects,
   abortLimit?: number,
 ): void {
-  debugger;
+  // debugger;
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
-  const queryMatrix = M4x4.scale1(1, matrix);
+  const queryMatrix = matrix;
   const fallbackZoomStep = logZoomStep + 1;
   const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
   const planeId = "PLANE_XY";
-  const extent = [
-    constants.BUCKET_WIDTH * (areas[planeId].right - areas[planeId].left),
-    constants.BUCKET_WIDTH * (areas[planeId].bottom - areas[planeId].top),
-  ];
+  const extent = [rects[planeId].width, rects[planeId].height];
   const enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)];
 
   // Buckets adjacent to the current viewport are also loaded so that these
@@ -80,14 +78,14 @@ export default function determineBucketsForOblique(
     _.flatten(
       _.range(steps + 1).map((idx) => [
         // Cast lines at z=-10
-        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
-        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
+        // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
+        // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
         // Cast lines at z=0
         [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
         [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
         // Cast lines at z=10
-        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
-        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
+        // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
+        // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
       ]),
     ),
   );

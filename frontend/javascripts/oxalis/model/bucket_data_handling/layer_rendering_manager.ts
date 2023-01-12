@@ -34,6 +34,7 @@ import { CuckooTable } from "./cuckoo_table";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
+import { getViewportRects } from "../accessors/view_mode_accessor";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 
@@ -201,17 +202,15 @@ export default class LayerRenderingManager {
 
     const oldMatrix = M4x4.scale1(state.flycam.zoomStep, state.flycam.currentMatrix);
 
+    const layerMatrix =
+      layer.transformMatrix || new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+
+    const invertedMatrix = M4x4.inverse(layerMatrix);
+
     const matrix = M4x4.scale1(
       state.flycam.zoomStep,
-      M4x4.mul(
-        state.flycam.currentMatrix,
-        this.name === "color2"
-          ? new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 122, 105, 0, 1])
-          : new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
-      ),
+      M4x4.mul(invertedMatrix, state.flycam.currentMatrix),
     );
-
-    console.log("matrices", { oldMatrix, matrix });
 
     const { viewMode } = state.temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
@@ -222,12 +221,13 @@ export default class LayerRenderingManager {
       isAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
       !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
-      (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
+      !_.isEqual(this.lastZoomedMatrix, matrix) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       this.needsRefresh
     ) {
+      console.log(this.name, "matrices", { oldMatrix, matrix });
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
       this.lastZoomedMatrix = matrix;
@@ -242,6 +242,8 @@ export default class LayerRenderingManager {
       if (isVisible) {
         const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
 
+        const rects = getViewportRects(Store.getState());
+
         pickingPromise = this.latestTaskExecutor.schedule(() =>
           asyncBucketPick(
             viewMode,
@@ -253,6 +255,7 @@ export default class LayerRenderingManager {
             datasetConfiguration.loadingStrategy,
             this.cachedAnchorPoint,
             areas,
+            rects,
             subBucketLocality,
             initializedGpuFactor,
           ),

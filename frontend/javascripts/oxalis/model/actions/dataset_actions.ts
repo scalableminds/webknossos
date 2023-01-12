@@ -1,8 +1,9 @@
 import type { APIDataset } from "types/api_flow_types";
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
+type SetLayerTransforms = ReturnType<typeof setLayerTransforms>;
 
-export type DatasetAction = SetDatasetAction | SetLayerMappingsAction;
+export type DatasetAction = SetDatasetAction | SetLayerMappingsAction | SetLayerTransforms;
 
 export const setDatasetAction = (dataset: APIDataset) =>
   ({
@@ -20,4 +21,11 @@ export const setLayerMappingsAction = (
     layerName,
     mappingNames,
     agglomerateNames,
+  } as const);
+
+export const setLayerTransforms = (layerName: string, transformMatrix: Float32Array) =>
+  ({
+    type: "SET_LAYER_TRANSFORMS",
+    layerName,
+    transformMatrix,
   } as const);

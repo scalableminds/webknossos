@@ -1,6 +1,6 @@
 import PriorityQueue from "js-priority-queue";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
-import type { LoadingStrategy } from "oxalis/store";
+import type { LoadingStrategy, PlaneRects } from "oxalis/store";
 import { Matrix4x4 } from "libs/mjs";
 import type { OrthoViewMap, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
@@ -50,6 +50,7 @@ function pick(
   loadingStrategy: LoadingStrategy,
   anchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
+  rects: PlaneRects,
   subBucketLocality: Vector3,
   gpuFactor: number,
 ): ArrayBuffer {
@@ -66,7 +67,7 @@ function pick(
   };
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, areas);
+    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, rects);
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
       resolutions,
@@ -78,7 +79,7 @@ function pick(
     );
   } else {
     console.log("matrix", matrix);
-    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, areas);
+    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, rects);
     // determineBucketsForOrthogonal(
     //   resolutions,
     //   enqueueFunction,

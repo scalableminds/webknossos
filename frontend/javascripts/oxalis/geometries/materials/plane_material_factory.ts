@@ -31,6 +31,7 @@ import {
   getSegmentationLayerWithMappingSupport,
   getMappingInfoForSupportedLayer,
   getVisibleSegmentationLayer,
+  getLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getRequestLogZoomStep,
@@ -232,15 +233,18 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_unrenderable`] = {
         value: 0,
       };
-      if (dataLayer.name === "color2") {
-        this.uniforms[`${layerName}_transform`] = {
-          value: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 122, 105, 0, 1]),
-        };
-      } else {
-        this.uniforms[`${layerName}_transform`] = {
-          value: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
-        };
-      }
+      const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
+
+      this.uniforms[`${layerName}_transform`] = {
+        value:
+          layer.transformMatrix ||
+          new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 122, 105, 0, 1]),
+      };
+      // } else {
+      //   this.uniforms[`${layerName}_transform`] = {
+      //     value: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+      //   };
+      // }
     }
 
     for (const name of getSanitizedColorLayerNames()) {
@@ -460,6 +464,22 @@ class PlaneMaterialFactory {
           const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
           this.uniforms.bboxMin.value.set(...lowerBoundary);
           this.uniforms.bboxMax.value.set(...upperBoundary);
+        },
+        true,
+      ),
+    );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.dataset.dataSource.dataLayers,
+        (layers) => {
+          for (const layer of layers) {
+            console.log("updating uniform");
+            const name = sanitizeName(layer.name);
+            this.uniforms[`${name}_transform`].value.set(
+              layer.transformMatrix ||
+                new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+            );
+          }
         },
         true,
       ),

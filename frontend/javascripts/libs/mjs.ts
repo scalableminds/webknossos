@@ -107,7 +107,7 @@ const M4x4 = {
     return r;
   },
 
-  inverse(mat: Matrix4x4, dest: Matrix4x4): Matrix4x4 {
+  inverse(mat: Matrix4x4, dest?: Matrix4x4): Matrix4x4 {
     // cache matrix values
     if (dest == null) {
       dest = new Float32Array(16);

@@ -47,7 +47,10 @@ import {
 import { getEdgesForAgglomerateMinCut, makeMappingEditable } from "admin/admin_rest_api";
 import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
-import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
@@ -85,21 +88,36 @@ function proofreadUsingMeshes(): boolean {
 
 let coarselyLoadedSegmentIds: number[] = [];
 
-function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
-  const mappingInfo = yield* select((state) =>
-    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
+  const currentMeshFile = yield* select(
+    (state) => state.localSegmentationData[layerName].currentMeshFile,
   );
-  const { mappingName, mappingType } = mappingInfo;
 
-  // Load the whole agglomerate mesh in a coarse resolution for performance reasons
-  const preferredQuality = proofreadCoarseResolutionIndex();
-  yield* put(
-    loadAdHocMeshAction(segmentId, position, {
-      mappingName,
-      mappingType,
-      preferredQuality,
-    }),
-  );
+  if (
+    currentMeshFile != null &&
+    currentMeshFile.formatVersion >= 3 &&
+    currentMeshFile.mappingName == null
+  ) {
+    // If a mesh file is active which was computed without a mapping, use that instead of computing
+    // meshes ad-hoc.
+    yield* put(loadPrecomputedMeshAction(segmentId, position, currentMeshFile.meshFileName));
+  } else {
+    const mappingInfo = yield* select((state) =>
+      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+    );
+    const { mappingName, mappingType } = mappingInfo;
+
+    // Load the whole agglomerate mesh in a coarse resolution for performance reasons
+    const preferredQuality = proofreadCoarseResolutionIndex();
+    yield* put(
+      loadAdHocMeshAction(segmentId, position, {
+        mappingName,
+        mappingType,
+        preferredQuality,
+      }),
+    );
+  }
+
   coarselyLoadedSegmentIds.push(segmentId);
 }
 
@@ -120,7 +138,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   if (!proofreadUsingMeshes()) return;
 
   /* Load a coarse ad hoc mesh of the agglomerate at the click position */
-  yield* call(loadCoarseAdHocMesh, layerName, segmentId, position);
+  yield* call(loadCoarseMesh, layerName, segmentId, position);
 }
 
 function* createEditableMapping(): Saga<void> {
@@ -646,9 +664,9 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
       yield* put(removeIsosurfaceAction(layerName, targetAgglomerateId));
     }
 
-    yield* call(loadCoarseAdHocMesh, layerName, newSourceAgglomerateId, sourceNodePosition);
+    yield* call(loadCoarseMesh, layerName, newSourceAgglomerateId, sourceNodePosition);
     if (newTargetAgglomerateId !== newSourceAgglomerateId) {
-      yield* call(loadCoarseAdHocMesh, layerName, newTargetAgglomerateId, targetNodePosition);
+      yield* call(loadCoarseMesh, layerName, newTargetAgglomerateId, targetNodePosition);
     }
   }
 }

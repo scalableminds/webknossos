@@ -215,7 +215,7 @@ case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscap
 case class ArrayValue(v: List[String]) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.toArray, Types.ARRAY)
 
-  override def debugInfo: String = "{" + v.mkString(",") + "}"
+  override def debugInfo: String = "{" + v.map(escapeLiteral).mkString(",") + "}"
 }
 
 case class Vector3Value(v: Vec3Double) extends SqlValue with SqlEscaping {

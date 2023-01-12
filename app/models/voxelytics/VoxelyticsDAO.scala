@@ -102,10 +102,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           FROM (${chunksWithStateQ(staleTimeout)}) cs
           JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
           JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-          WHERE cs.state NOT IN ${SqlToken.tuple(List(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING))} AND t._run IN ${
-      SqlToken
-        .tuple(runIds)
-    }
+          WHERE cs.state NOT IN ${SqlToken.tuple(List(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING))} AND t._run IN ${SqlToken
+      .tuple(runIds)}
           ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC
         ) running_chunks ON running_chunks.name = tc.name AND running_chunks.executionId = tc.executionId AND running_chunks.chunkName = tc.chunkName
         WHERE TRUE ${taskName.map(t => q"AND tc.name = $t").getOrElse(SqlToken.empty)}"""
@@ -153,7 +151,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             version = row._7,
             metadata = Json.parse(row._8).as[JsObject],
             taskName = row._9
-          ))
+        ))
 
   def findTasks(runId: ObjectId): Fox[List[TaskEntry]] =
     for {
@@ -171,10 +169,10 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       r.toList.map(
         row =>
           TaskEntry(taskId = ObjectId(row._1),
-            runId = ObjectId(row._2),
-            name = row._3,
-            task = row._4,
-            config = Json.parse(row._5).as[JsObject]))
+                    runId = ObjectId(row._2),
+                    name = row._3,
+                    task = row._4,
+                    config = Json.parse(row._5).as[JsObject]))
 
   def findWorkflowsByHashAndOrganization(organizationId: ObjectId,
                                          workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
@@ -251,18 +249,18 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         WHERE
           r._id IN ${SqlToken.tuple(runIds)}
         """.as[(String,
-          String,
-          String,
-          String,
-          String,
-          Option[Instant],
-          Option[Instant],
-          Option[String],
-          Long,
-          Long,
-          Long,
-          Long,
-          Long)])
+                String,
+                String,
+                String,
+                String,
+                Option[Instant],
+                Option[Instant],
+                Option[String],
+                Long,
+                Long,
+                Long,
+                Long,
+                Long)])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -279,11 +277,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 endTime = row._7,
                 currentExecutionId = row._8,
                 chunkCounts = ChunkCounts(total = row._9,
-                  failed = row._10,
-                  skipped = row._11,
-                  complete = row._12,
-                  cancelled = row._13)
-              )))
+                                          failed = row._10,
+                                          skipped = row._11,
+                                          complete = row._12,
+                                          cancelled = row._13)
+            )))
     } yield results
 
   def findCombinedTaskRuns(runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[CombinedTaskRunEntry]] =
@@ -374,7 +372,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 state = state,
                 beginTime = row._10,
                 endTime = row._11
-              )))
+            )))
     } yield results
   }
 
@@ -388,10 +386,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         SELECT
           w.hash,
           COUNT(any_tasks.state) AS total,
-          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) IN ${
-        SqlToken.tuple(
-          List(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE))
-      } THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) IN ${SqlToken.tuple(
+        List(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE))} THEN 1 ELSE 0 END) AS failed,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
@@ -419,7 +415,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         .map(
           row =>
             (row._1,
-              TaskCounts(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6)))
+             TaskCounts(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6)))
         .toMap
   }
 
@@ -450,10 +446,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           SELECT
             t._run AS _run,
             COUNT(t._id) AS total,
-            SUM(CASE WHEN ts.state IN ${
-          SqlToken
-            .tuple(List(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE))
-        } THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN ts.state IN ${SqlToken
+          .tuple(List(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE))} THEN 1 ELSE 0 END) AS failed,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
@@ -463,19 +457,19 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) tasks ON tasks._run = r._id
         WHERE r._organization = $organizationId
         """.as[(String,
-          String,
-          String,
-          String,
-          String,
-          String,
-          String,
-          Option[Instant],
-          Option[Instant],
-          Long,
-          Long,
-          Long,
-          Long,
-          Long)])
+                String,
+                String,
+                String,
+                String,
+                String,
+                String,
+                Option[Instant],
+                Option[Instant],
+                Long,
+                Long,
+                Long,
+                Long,
+                Long)])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -499,7 +493,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                   complete = row._13,
                   cancelled = row._14
                 )
-              )))
+            )))
     } yield results
   }
 
@@ -641,27 +635,27 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ORDER BY times.beginTime ASC NULLS LAST
         """.as[
           (String,
-            Long,
-            Long,
-            Long,
-            Long,
-            Long,
-            Option[Instant],
-            Option[Instant],
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double,
-            Double)])
+           Long,
+           Long,
+           Long,
+           Long,
+           Long,
+           Option[Instant],
+           Option[Instant],
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double,
+           Double)])
     } yield
       r.toList.map(
         row =>
@@ -676,7 +670,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             cpuUser = StatisticsEntry(max = row._13, median = row._14, stddev = row._15),
             cpuSystem = StatisticsEntry(max = row._16, median = row._17, stddev = row._18),
             duration = StatisticsEntry(max = row._19, median = row._20, stddev = row._21, sum = Some(row._22))
-          ))
+        ))
   }
 
   def getArtifactChecksums(runIds: List[ObjectId],
@@ -720,28 +714,25 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             checksum = row._7,
             fileSize = row._8,
             lastModified = row._9
-          ))
+        ))
 
   def upsertArtifactChecksumEvents(runId: ObjectId, events: List[ArtifactFileChecksumEvent]): Fox[Unit] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         WITH insert_values(_run, taskName, artifactName, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp) AS (
-          VALUES ${
-          SqlToken.tupleList(
-            events.map(
-              ev =>
-                List(runId,
-                  ev.taskName,
-                  ev.artifactName,
-                  ev.path,
-                  ev.resolvedPath,
-                  ev.checksumMethod,
-                  ev.checksum,
-                  ev.fileSize,
-                  ev.lastModified,
-                  ev.timestamp)))
-        }
+          VALUES ${SqlToken.tupleList(
+        events.map(
+          ev =>
+            List(runId,
+                 ev.taskName,
+                 ev.artifactName,
+                 ev.path,
+                 ev.resolvedPath,
+                 ev.checksumMethod,
+                 ev.checksum,
+                 ev.fileSize,
+                 ev.lastModified,
+                 ev.timestamp)))}
         )
         INSERT INTO webknossos.voxelytics_artifactFileChecksumEvents (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp)
         SELECT
@@ -768,24 +759,21 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def upsertChunkProfilingEvents(runId: ObjectId, events: List[ChunkProfilingEvent]): Fox[Unit] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         WITH insert_values(_run, taskName, executionId, chunkName, hostname, pid, memory, cpuUser, cpuSystem, timestamp) AS (
-          VALUES ${
-          SqlToken.tupleList(
-            events.map(
-              ev =>
-                List(runId,
-                  ev.taskName,
-                  ev.executionId,
-                  ev.chunkName,
-                  ev.hostname,
-                  ev.pid,
-                  ev.memory,
-                  ev.cpuUser,
-                  ev.cpuSystem,
-                  ev.timestamp)))
-        }
+          VALUES ${SqlToken.tupleList(
+        events.map(
+          ev =>
+            List(runId,
+                 ev.taskName,
+                 ev.executionId,
+                 ev.chunkName,
+                 ev.hostname,
+                 ev.pid,
+                 ev.memory,
+                 ev.cpuUser,
+                 ev.cpuSystem,
+                 ev.timestamp)))}
         )
         INSERT INTO webknossos.voxelytics_chunkProfilingEvents (_chunk, hostname, pid, memory, cpuUser, cpuSystem, timestamp)
         SELECT
@@ -811,8 +799,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def upsertRunHeartbeatEvents(runId: ObjectId, events: List[RunHeartbeatEvent]): Fox[Unit] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         INSERT INTO webknossos.voxelytics_runHeartbeatEvents (_run, timestamp)
         VALUES ${SqlToken.tupleList(events.map(ev => List(runId, ev.timestamp)))}
         ON CONFLICT (_run)
@@ -840,11 +827,10 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             None
           },
           ev.state
-        ))
+      ))
 
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         WITH insert_values(_run, taskName, _chunk, executionId, chunkName, beginTime, endTime, state) AS (
           VALUES ${SqlToken.tupleList(values)}
         )
@@ -885,10 +871,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             None
           },
           ev.state
-        ))
+      ))
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         WITH insert_values(_run, taskName, beginTime, endTime, state) AS (
           VALUES ${SqlToken.tupleList(values)}
         )
@@ -923,10 +908,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             None
           },
           ev.state
-        ))
+      ))
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         UPDATE webknossos.voxelytics_runs u
         SET
           beginTime = COALESCE(v.beginTime::TIMESTAMPTZ, u.beginTime::TIMESTAMPTZ),
@@ -942,8 +926,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def upsertWorkflow(hash: String, name: String, organizationId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         INSERT INTO webknossos.voxelytics_workflows (hash, name, _organization)
         VALUES ${SqlToken.tuple(List(hash, name, organizationId))}
         ON CONFLICT (_organization, hash)
@@ -961,22 +944,19 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 workflow_yamlContent: Option[String],
                 workflow_config: JsValue): Fox[ObjectId] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
-        VALUES ${
-          SqlToken.tuple(
-            List(ObjectId.generate,
-              organizationId,
-              userId,
-              name,
-              username,
-              hostname,
-              voxelyticsVersion,
-              workflow_hash,
-              workflow_yamlContent,
-              workflow_config))
-        }
+        VALUES ${SqlToken.tuple(
+        List(ObjectId.generate,
+             organizationId,
+             userId,
+             name,
+             username,
+             hostname,
+             voxelyticsVersion,
+             workflow_hash,
+             workflow_yamlContent,
+             workflow_config))}
         ON CONFLICT (_organization, name)
           DO UPDATE SET
             _user = EXCLUDED._user,
@@ -997,8 +977,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def upsertTask(runId: ObjectId, name: String, task: String, config: JsValue): Fox[ObjectId] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         INSERT INTO webknossos.voxelytics_tasks (_id, _run, name, task, config)
         VALUES ${SqlToken.tuple(List(ObjectId.generate, runId, name, task, config))}
         ON CONFLICT (_run, name)
@@ -1022,8 +1001,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                      version: String,
                      metadata: JsValue): Fox[ObjectId] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
         VALUES ${SqlToken.tuple(List(ObjectId.generate, taskId, name, path, fileSize, inodeCount, version, metadata))}
         ON CONFLICT (_task, name)
@@ -1044,23 +1022,20 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def upsertArtifacts(runId: ObjectId, artifacts: List[(String, String, WorkflowDescriptionArtifact)]): Fox[Unit] =
     for {
-      _ <- run(
-        q"""
+      _ <- run(q"""
         WITH insert_values(_run, _id, taskName, artifactName, path, fileSize, inodeCount, version, metadata) AS (
-          VALUES ${
-          SqlToken.tupleList(
-            artifacts.map(
-              ev =>
-                List(runId,
-                  ObjectId.generate,
-                  ev._1,
-                  ev._2,
-                  ev._3.path,
-                  ev._3.file_size,
-                  ev._3.inode_count,
-                  ev._3.version,
-                  ev._3.metadataAsJson)))
-        }
+          VALUES ${SqlToken.tupleList(
+        artifacts.map(
+          ev =>
+            List(runId,
+                 ObjectId.generate,
+                 ev._1,
+                 ev._2,
+                 ev._3.path,
+                 ev._3.file_size,
+                 ev._3.inode_count,
+                 ev._3.version,
+                 ev._3.metadataAsJson)))}
         )
         INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
         SELECT

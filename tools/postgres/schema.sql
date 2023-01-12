@@ -736,14 +736,8 @@ ALTER TABLE webknossos.voxelytics_chunks
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_workflows
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_runStateChangeEvents
-  ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runHeartbeatEvents
   ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_taskStateChangeEvents
-  ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_chunkStateChangeEvents
-  ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_chunkProfilingEvents
   ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifactFileChecksumEvents

@@ -165,14 +165,14 @@ class VoxelyticsController @Inject()(
             _ <- Fox.serialCombined(events.grouped(WORKFLOW_EVENT_INSERT_BATCH_SIZE).toList)(eventBatch =>
               firstEvent match {
                 case _: RunStateChangeEvent =>
-                  voxelyticsDAO.upsertRunStateChangeEvents(runId, eventBatch.map(_.asInstanceOf[RunStateChangeEvent]))
+                  voxelyticsDAO.updateRunStates(runId, eventBatch.map(_.asInstanceOf[RunStateChangeEvent]))
 
                 case _: TaskStateChangeEvent =>
                   val taskEvents = eventBatch.map(_.asInstanceOf[TaskStateChangeEvent])
                   val artifactEvents =
                     taskEvents.flatMap(ev => ev.artifacts.map(artifact => (ev.taskName, artifact._1, artifact._2)))
                   for {
-                    _ <- voxelyticsDAO.upsertTaskStateChangeEvents(runId, taskEvents)
+                    _ <- voxelyticsDAO.updateTaskStates(runId, taskEvents)
                     _ <- if (artifactEvents.nonEmpty) {
                       voxelyticsDAO.upsertArtifacts(runId, artifactEvents)
                     } else {
@@ -181,8 +181,7 @@ class VoxelyticsController @Inject()(
                   } yield ()
 
                 case _: ChunkStateChangeEvent =>
-                  voxelyticsDAO.upsertChunkStateChangeEvents(runId,
-                                                             eventBatch.map(_.asInstanceOf[ChunkStateChangeEvent]))
+                  voxelyticsDAO.upsertChunkStates(runId, eventBatch.map(_.asInstanceOf[ChunkStateChangeEvent]))
 
                 case _: RunHeartbeatEvent =>
                   voxelyticsDAO.upsertRunHeartbeatEvents(runId, eventBatch.map(_.asInstanceOf[RunHeartbeatEvent]))

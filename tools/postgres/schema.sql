@@ -500,6 +500,9 @@ CREATE TABLE webknossos.voxelytics_runs(
     workflow_hash VARCHAR(512) NOT NULL,
     workflow_yamlContent TEXT,
     workflow_config JSONB,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_organization, name),
     CONSTRAINT workflowConfigIsJsonObject CHECK(jsonb_typeof(workflow_config) = 'object')
@@ -511,6 +514,9 @@ CREATE TABLE webknossos.voxelytics_tasks(
     name varCHAR(2048) NOT NULL,
     task varCHAR(512) NOT NULL,
     config JSONB NOT NULL,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_run, name),
     CONSTRAINT configIsJsonObject CHECK(jsonb_typeof(config) = 'object')
@@ -521,6 +527,9 @@ CREATE TABLE webknossos.voxelytics_chunks(
     _task CHAR(24) NOT NULL,
     executionId VARCHAR(2048) NOT NULL,
     chunkName VARCHAR(2048) NOT NULL,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_task, executionId, chunkName)
 );

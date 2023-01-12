@@ -20,7 +20,7 @@ case class RunEntry(id: ObjectId,
                     workflow_yamlContent: String,
                     workflow_config: JsObject,
                     state: VoxelyticsRunState,
-                    beginTime: Instant,
+                    beginTime: Option[Instant],
                     endTime: Option[Instant])
 
 object RunEntry {
@@ -76,7 +76,7 @@ case class WorkflowListingRunEntry(id: ObjectId,
                                    voxelyticsVersion: String,
                                    workflow_hash: String,
                                    state: VoxelyticsRunState,
-                                   beginTime: Instant,
+                                   beginTime: Option[Instant],
                                    endTime: Option[Instant],
                                    taskCounts: TaskCounts)
 

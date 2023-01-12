@@ -447,18 +447,20 @@ Expects:
                          organizationName: String,
                          datasetName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          before <- Fox.successful(System.currentTimeMillis())
-          usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName,
-                                                                                                 datasetName)
-          after = System.currentTimeMillis()
-          _ = if (after - before > (10 seconds).toMillis) {
-            val datasetLabel = datasetName.map(n => s" dataset $n of").getOrElse("")
-            logger.info(s"Measuring storage for$datasetLabel orga $organizationName took ${after - before} ms.")
-          }
-        } yield Ok(Json.toJson(usedStorageInBytes))
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+                                          urlOrHeaderToken(token, request)) {
+          for {
+            before <- Fox.successful(System.currentTimeMillis())
+            usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationName,
+                                                                                                   datasetName)
+            after = System.currentTimeMillis()
+            _ = if (after - before > (10 seconds).toMillis) {
+              val datasetLabel = datasetName.map(n => s" dataset $n of").getOrElse("")
+              logger.info(s"Measuring storage for$datasetLabel orga $organizationName took ${after - before} ms.")
+            }
+          } yield Ok(Json.toJson(usedStorageInBytes))
+        }
       }
     }
 

@@ -120,6 +120,11 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
     (t) =>
       ({
         ...t,
+        runs: t.runs.map((r) => ({
+          ...r,
+          beginTime: r.beginTime != null ? new Date(r.beginTime) : null,
+          endTime: r.endTime != null ? new Date(r.endTime) : null,
+        })),
         beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
         endTime: t.endTime != null ? new Date(t.endTime) : null,
         state: t.state,

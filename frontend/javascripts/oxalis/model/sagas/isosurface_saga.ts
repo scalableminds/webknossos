@@ -624,7 +624,6 @@ function* loadPrecomputedMeshForSegmentId(
   const version = meshFile.formatVersion;
   try {
     const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
-    const mappingName = meshFile.mappingName == null ? isosurfaceExtraInfo.mappingName : null;
 
     const editableMapping = yield* select((state) =>
       getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
@@ -632,6 +631,24 @@ function* loadPrecomputedMeshForSegmentId(
     const tracing = yield* select((state) =>
       getTracingForSegmentationLayer(state, segmentationLayer),
     );
+    const mappingName =
+      // isosurfaceExtraInfo.mappingName contains the currently active mapping
+      // (can be the id of an editable mapping). However, we always need to
+      // use the mapping name of the on-disk mapping.
+      editableMapping != null ? editableMapping.baseMappingName : isosurfaceExtraInfo.mappingName;
+
+    if (version < 3) {
+      console.warn(
+        "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
+      );
+    }
+
+    // mappingName only exists for versions >= 3
+    if (meshFile.mappingName != null && meshFile.mappingName !== mappingName) {
+      throw Error(
+        `Trying to use a mesh file that was computed for mapping ${meshFile.mappingName} for a requested mapping of ${mappingName}.`,
+      );
+    }
 
     if (version >= 3) {
       const segmentInfo = yield* call(
@@ -641,7 +658,7 @@ function* loadPrecomputedMeshForSegmentId(
         getBaseSegmentationName(segmentationLayer),
         meshFileName,
         id,
-        editableMapping != null ? editableMapping.baseMappingName : mappingName,
+        mappingName,
         editableMapping != null && tracing ? tracing.tracingId : null,
       );
       scale = [

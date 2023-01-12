@@ -88,7 +88,7 @@ function proofreadUsingMeshes(): boolean {
 
 let coarselyLoadedSegmentIds: number[] = [];
 
-function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
+function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
   const currentMeshFile = yield* select(
     (state) => state.localSegmentationData[layerName].currentMeshFile,
   );
@@ -138,7 +138,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   if (!proofreadUsingMeshes()) return;
 
   /* Load a coarse ad hoc mesh of the agglomerate at the click position */
-  yield* call(loadCoarseAdHocMesh, layerName, segmentId, position);
+  yield* call(loadCoarseMesh, layerName, segmentId, position);
 }
 
 function* createEditableMapping(): Saga<void> {
@@ -664,9 +664,9 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
       yield* put(removeIsosurfaceAction(layerName, targetAgglomerateId));
     }
 
-    yield* call(loadCoarseAdHocMesh, layerName, newSourceAgglomerateId, sourceNodePosition);
+    yield* call(loadCoarseMesh, layerName, newSourceAgglomerateId, sourceNodePosition);
     if (newTargetAgglomerateId !== newSourceAgglomerateId) {
-      yield* call(loadCoarseAdHocMesh, layerName, newTargetAgglomerateId, targetNodePosition);
+      yield* call(loadCoarseMesh, layerName, newTargetAgglomerateId, targetNodePosition);
     }
   }
 }

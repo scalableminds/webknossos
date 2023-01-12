@@ -1,6 +1,6 @@
 ## Volume Annotations & Proof-Reading
 
-In addition to [skeleton annotations](./skeleton_annotation.md), webKnossos also supports volume/segmentation annotations.
+In addition to [skeleton annotations](./skeleton_annotation.md), WEBKNOSSOS also supports volume/segmentation annotations.
 With this type of annotation, you can label groups of voxels with efficient drawing tools.
 
 ![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=372s)
@@ -66,12 +66,12 @@ This button opens up a modal that starts a long-running job which will materiali
 See the section on [proofreading](./proof_reading.md).
 
 ### Volume Flood Fills
-webKnossos supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, webKnossos can do this for you. This operation allows you to fix both split and merge errors:
+WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, WEBKNOSSOS can do this for you. This operation allows you to fix both split and merge errors:
 
 - For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the `Merger Mode`, explained above.
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided. 
 
-Due to performance reasons, 3D flood-fills only work in a small, local bounding box. webKnossos will add a bounding box around the affected area. To truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a webKnossos job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
+Due to performance reasons, 3D flood-fills only work in a small, local bounding box. WEBKNOSSOS will add a bounding box around the affected area. To truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a WEBKNOSSOS job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
 
 Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as a new dataset in your dashboard.
 
@@ -90,17 +90,17 @@ This means, that you can label a segment on one slice (e.g., z=10), move a few s
 The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
 
 ### Mappings / On-Demand Agglomeration
-With webKnossos it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 
+With WEBKNOSSOS it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 
 
-This feature works well with automated machine learning segmentation workflows. We typically produce several agglomeration results based on different prediction and size thresholds leading to several possible segmentations based on one initial over-segmentation. We load these ID maps into webKnossos to quickly review these results in an interactive session.
+This feature works well with automated machine learning segmentation workflows. We typically produce several agglomeration results based on different prediction and size thresholds leading to several possible segmentations based on one initial over-segmentation. We load these ID maps into WEBKNOSSOS to quickly review these results in an interactive session.
 
 ![Video: Segmentation Mappings](https://www.youtube.com/watch?v=ZmUqyIoA9Gw)
 
-Mapping files are automatically identified by webKnossos when being placed in a `mappings` folder within the [segmentation folder](./data_formats.md#wkw-folder-structure). All available mappings can be activated from a dropdown under each `Segmentation` layer. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and webKnossos will update accordingly.
+Mapping files are automatically identified by WEBKNOSSOS when being placed in a `mappings` folder within the [segmentation folder](./data_formats.md#wkw-folder-structure). All available mappings can be activated from a dropdown under each `Segmentation` layer. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and WEBKNOSSOS will update accordingly.
 
 Mapping files are stored as JSON or HDF5 files. [Read the section on data formats for more information on the file formats](./data_formats.md#id_mappings).
 
-<!-- ![An example of applying a mapping file to agglomerate individual segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
+<!-- ![An example of applying a mapping file to agglomerate individual segments from an automated over-segmentation. WEBKNOSSOS applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
 
 ### Download File Format
 Volume annotations can be downloaded and imported using ZIP files that contain [WKW](./data_formats.md#wkw-datasets) datasets.
@@ -129,11 +129,11 @@ After unzipping the archives, the WKW files can be read or modified with the WKW
 ## Hybrid Annotations
 
 A hybrid annotation contains both skeleton and volume annotations. 
-This is the default behavior when creating a new webKnossos annotation.
+This is the default behavior when creating a new WEBKNOSSOS annotation.
 
 With hybrid annotations, you can use an existing skeleton as a guide to support volume annotation tasks.
 Alternatively, comments on skeleton nodes can be used to label/mark specific cells and positions during a volume annotation.
 
-webKnossos also supports pure skeleton or pure volume annotations for dedicated tasks/projects or backward compatibility. 
+WEBKNOSSOS also supports pure skeleton or pure volume annotations for dedicated tasks/projects or backward compatibility. 
 Those can be converted to a hybrid annotation, by clicking the `Convert to Hybrid` button in the info tab.
 This conversion cannot be reversed.

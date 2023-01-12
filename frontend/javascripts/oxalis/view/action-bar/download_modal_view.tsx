@@ -485,7 +485,7 @@ with wk.webknossos_context(
             >
               The following code snippets are suggestions to get you started quickly with the{" "}
               <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
-                webKnossos Python API
+                WEBKNOSSOS Python API
               </a>
               . To download and use this annotation in your Python project, simply copy and paste
               the code snippets to your script.

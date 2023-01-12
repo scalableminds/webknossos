@@ -141,7 +141,7 @@ class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProp
             rows={15}
             onChange={this.handleCodeChange}
             value={this.state.code}
-            placeholder="Choose an existing user script from the dropdown above or add webKnossos frontend script code here"
+            placeholder="Choose an existing user script from the dropdown above or add WEBKNOSSOS frontend script code here"
           />
         </Spin>
       </Modal>

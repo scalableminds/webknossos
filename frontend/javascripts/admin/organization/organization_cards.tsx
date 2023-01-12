@@ -99,7 +99,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       <Row gutter={24}>
         <Col span={18}>
           <p>
-            Upgrading your webKnossos plan will unlock more advanced features and increase your user
+            Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user
             and storage quotas.
           </p>
           <p>
@@ -138,7 +138,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
     >
       <p>
-        Upgrading your webKnossos plan will unlock more advanced features and increase your user and
+        Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user and
         storage quotas.
       </p>
       {cardBody}
@@ -298,7 +298,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
   const message = hasPlanExpired
-    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
+    ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
     : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account from being blocked.";
   const actionButton = hasPlanExpired ? (
     <Button
@@ -339,7 +339,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
   if (isAboutToExpire)
     alerts.push({
       message:
-        "Your webKnossos plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features.",
+        "Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features.",
       actionButton: (
         <Button
           size="small"

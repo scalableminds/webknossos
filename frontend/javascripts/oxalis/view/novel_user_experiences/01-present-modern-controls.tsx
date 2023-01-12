@@ -38,7 +38,7 @@ export default function PresentModernControls() {
     <Modal maskClosable={false} visible onCancel={closeModal} width={800} footer={null}>
       <h1>Say Hello to the Context Menu</h1>
       <p>
-        webKnossos now provides an easy-to-use context menu that allows performing even complex
+        WEBKNOSSOS now provides an easy-to-use context menu that allows performing even complex
         actions, such as merging two trees, intuitively. Simply right-click an element of interest
         (e.g., a node or segment) to see available actions.
       </p>

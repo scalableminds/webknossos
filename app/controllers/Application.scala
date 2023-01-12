@@ -35,10 +35,10 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  @ApiOperation(value = "Information about the version of webKnossos")
+  @ApiOperation(value = "Information about the version of WEBKNOSSOS")
   @ApiResponses(
     Array(
-      new ApiResponse(code = 200, message = "JSON object containing information about the version of webKnossos"),
+      new ApiResponse(code = 200, message = "JSON object containing information about the version of WEBKNOSSOS"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {

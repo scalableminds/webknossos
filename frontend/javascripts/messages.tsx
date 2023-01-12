@@ -100,16 +100,16 @@ export default {
     "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
-    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
+    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this WEBKNOSSOS instance",
   ),
   "datastore.version.too_old": _.template(
-    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
+    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
   "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
 
 A reload is necessary to return to a valid state.`,
   "react.rendering_error":
-    "Unfortunately, webKnossos encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
+    "Unfortunately, WEBKNOSSOS encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",
@@ -209,7 +209,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
-    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of WEBKNOSSOS to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "tracing.merger_mode_node_outside_segment":
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_isosurface_available_to_download":
@@ -290,7 +290,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
-    "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json was not found. The values below are guessed by WEBKNOSSOS. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.import_complete":
     "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
@@ -333,7 +333,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.export":
     "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",
   "annotation.export_no_worker":
-    "This webKnossos instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
+    "This WEBKNOSSOS instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
   "annotation.python_do_not_share":
     "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",
@@ -410,7 +410,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You selected more than one user. To change the organization permissions of users you need to select them individually.",
   "users.change_permissions_title": "Do you really want to change the permissions of this user?",
   "users.revoke_all_permissions": _.template(
-    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular webKnossos member, access to datasets will be determined by the user's team memberships.",
+    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular WEBKNOSSOS member, access to datasets will be determined by the user's team memberships.",
   ),
   "users.set_dataset_manager": _.template(
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
@@ -434,5 +434,5 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
   "organization.plan.upgrage_request_sent":
-    "An email with your upgrade request has been sent to the webKnossos sales team.",
+    "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
 };

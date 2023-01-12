@@ -92,7 +92,7 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contex
         >
           The following code snippets are suggestions to get you started quickly with the{" "}
           <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
-            webKnossos Python API
+            WEBKNOSSOS Python API
           </a>
           . To download and use this dataset in your Python project, simply copy and paste the code
           snippets to your script.

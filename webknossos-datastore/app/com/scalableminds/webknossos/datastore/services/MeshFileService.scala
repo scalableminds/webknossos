@@ -145,16 +145,16 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo) {
+case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, segmentInfo: MeshSegmentInfo) {
   def merge(that: WebknossosSegmentInfo): WebknossosSegmentInfo =
     // assume that transform, meshFormat, chunkShape, gridOrigin, scale and vertexOffset are the same
     WebknossosSegmentInfo(
       transform,
       meshFormat,
-      chunks = MeshSegmentInfo(
-        chunks.chunkShape,
-        chunks.gridOrigin,
-        lods = (chunks.lods, that.chunks.lods).zipped.map((lod1, lod2) =>
+      segmentInfo = MeshSegmentInfo(
+        segmentInfo.chunkShape,
+        segmentInfo.gridOrigin,
+        lods = (segmentInfo.lods, that.segmentInfo.lods).zipped.map((lod1, lod2) =>
           MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
       )
     )
@@ -271,14 +271,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .uint8()
         .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
       val segmentInfo = NeuroglancerSegmentInfo.fromBytes(manifest)
-      val processedSegmentInfo = getChunksFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
-      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, chunks = processedSegmentInfo)
+      val enrichedSegmentInfo = enrichSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
+      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, segmentInfo = enrichedSegmentInfo)
     }
   }
 
-  private def getChunksFromSegmentInfo(segmentInfo: NeuroglancerSegmentInfo,
-                                       lodScaleMultiplier: Double,
-                                       neuroglancerOffsetStart: Long): MeshSegmentInfo = {
+  private def enrichSegmentInfo(segmentInfo: NeuroglancerSegmentInfo,
+                                lodScaleMultiplier: Double,
+                                neuroglancerOffsetStart: Long): MeshSegmentInfo = {
     val totalMeshSize = segmentInfo.chunkByteOffsets.map(_.sum).sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
     val chunkByteOffsets = segmentInfo.chunkByteOffsets.map(_.scanLeft(0)(_ + _)) // This builds a cumulative sum

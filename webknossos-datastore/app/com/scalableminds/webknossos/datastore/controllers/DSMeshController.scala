@@ -11,7 +11,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MeshController @Inject()(
+class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
     dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
@@ -73,10 +73,6 @@ class MeshController @Inject()(
         for {
           positions <- formatVersion match {
             case 3 =>
-              meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
-                "mesh.file.listChunks.failed",
-                request.body.segmentId.toString,
-                request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
               targetMappingName match {
                 case None =>
                   meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(

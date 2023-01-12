@@ -28,7 +28,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             t.name AS taskName
           FROM webknossos.voxelytics_artifacts a
           JOIN webknossos.voxelytics_tasks t ON t._id = a._task
-          WHERE t."_id" IN ${SqlToken.tuple(taskIds)}
+          WHERE t."_id" IN ${SqlToken.tupleFromList(taskIds)}
           """.as[(String, String, String, String, Long, Long, String, String, String)])
     } yield
       r.toList.map(
@@ -67,7 +67,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       r <- run(q"""
           SELECT name, hash
           FROM webknossos.voxelytics_workflows
-          WHERE hash IN ${SqlToken.tuple(workflowHashes.toList)} AND _organization = $organizationId
+          WHERE hash IN ${SqlToken.tupleFromList(workflowHashes.toList)} AND _organization = $organizationId
           """.as[(String, String)])
     } yield r.toList.map(row => WorkflowEntry(row._1, row._2, organizationId))
 
@@ -170,7 +170,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) chunks ON chunks._task = t._id
         WHERE
           r._organization = $organizationId AND
-          r._id IN ${SqlToken.tuple(runIds.map(_.id))}
+          r._id IN ${SqlToken.tupleFromList(runIds.map(_.id))}
         """.as[(String, String, String, String, String, Option[Instant], Option[Instant], Option[String], Long, Long)])
       results <- Fox.combined(
         r.toList.map(
@@ -201,7 +201,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     val readAccessQ =
       if (currentUser.isAdmin || allowUnlisted) SqlToken.empty
       else { q" AND (r._user = ${currentUser._id})" }
-    val runIdsQ = runIds.map(runIds => q" AND r._id IN ${SqlToken.tuple(runIds)}").getOrElse(SqlToken.empty)
+    val runIdsQ = runIds.map(runIds => q" AND r._id IN ${SqlToken.tupleFromList(runIds)}").getOrElse(SqlToken.empty)
     val workflowHashQ =
       workflowHash.map(workflowHash => q" AND r.workflow_hash = $workflowHash").getOrElse(SqlToken.empty)
     for {

@@ -167,7 +167,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByIds(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      idPredicate = if (teamIds.isEmpty) q"${false}" else q"_id IN ${SqlToken.tuple(teamIds)}"
+      idPredicate = if (teamIds.isEmpty) q"${false}" else q"_id IN ${SqlToken.tupleFromList(teamIds)}"
       r <- run(q"""SELECT $columns FROM $existingCollectionName
                    WHERE $idPredicate AND $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)

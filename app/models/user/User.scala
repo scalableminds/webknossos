@@ -134,7 +134,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         accessQuery <- accessQueryFromAccessQ(listAccessQ)
         r <- run(q"""select ${columnsWithPrefix("u.")}
                      from (select $columns from $existingCollectionName where $accessQuery) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
-                     where webknossos.user_team_roles._team in ${SqlToken.tuple(teamIds)}
+                     where webknossos.user_team_roles._team in ${SqlToken.tupleFromList(teamIds)}
                      and not u.isDeactivated
                      order by _id""".as[UsersRow])
         parsed <- parseAll(r)
@@ -319,7 +319,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    and tr._team = $potentialSubteam
                    and u._id not in
                    (select _user from webknossos.user_team_roles
-                   where _team in ${SqlToken.tuple(superteams)})
+                   where _team in ${SqlToken.tupleFromList(superteams)})
                    """.as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -400,7 +400,7 @@ class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
                       from webknossos.user_dataSetLayerConfigurations
                       where _dataset = $dataSetId
                       and _user = $userId
-                      and layerName in ${SqlToken.tuple(layerNames)}""".as[(String, String)])
+                      and layerName in ${SqlToken.tupleFromList(layerNames)}""".as[(String, String)])
       parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
     } yield parsed.toMap
 

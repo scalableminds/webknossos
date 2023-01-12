@@ -124,7 +124,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
                  select _task from webknossos.annotations_ where _user = $userId and typ = ${AnnotationType.Task} and not ($isTeamManagerOrAdmin and state = ${AnnotationState.Cancelled})
                ) as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
              where webknossos.tasks_.openInstances > 0
-                   and webknossos.projects_._team in ${SqlToken.tuple(teamIds)}
+                   and webknossos.projects_._team in ${SqlToken.tupleFromList(teamIds)}
                    and userAnnotations._task is null
                    and not webknossos.projects_.paused
              order by webknossos.projects_.priority desc
@@ -216,7 +216,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     val projectFilter = projectIdOpt.map(pId => q"(t._project = $pId)").getOrElse(q"${true}")
     val taskTypeFilter = taskTypeIdOpt.map(ttId => q"(t._taskType = $ttId)").getOrElse(q"${true}")
     val taskIdsFilter = taskIdsOpt
-      .map(tIds => if (tIds.isEmpty) q"${false}" else q"(t._id in ${SqlToken.tuple(tIds)})")
+      .map(tIds => if (tIds.isEmpty) q"${false}" else q"(t._id in ${SqlToken.tupleFromList(tIds)})")
       .getOrElse(q"${true}")
     val userJoin = userIdOpt
       .map(_ => q"join webknossos.annotations_ a on a._task = t._id join webknossos.users_ u on a._user = u._id")

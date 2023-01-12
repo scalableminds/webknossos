@@ -234,7 +234,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                      FROM $existingCollectionName
-                     WHERE name IN ${SqlToken.tuple(names)}
+                     WHERE name IN ${SqlToken.tupleFromList(names)}
                      AND _organization = $organizationId
                      AND $accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
@@ -375,8 +375,8 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
       if (existingDataSetIds.isEmpty) q"${true}"
-      else q"_id not in ${SqlToken.tuple(existingDataSetIds)}"
-    val statusNotAlreadyInactive = q"status not in ${SqlToken.tuple(inactiveStatusList)}"
+      else q"_id not in ${SqlToken.tupleFromList(existingDataSetIds)}"
+    val statusNotAlreadyInactive = q"status not in ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteResolutionsQuery =
       q"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
     val deleteLayersQuery =
@@ -533,7 +533,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
 
   def updateLayers(dataSetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =
-      q"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in ${SqlToken.tuple(
+      q"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in ${SqlToken.tupleFromList(
         dataLayers.map(_.name))}".asUpdate
     val clearQuery = q"delete from webknossos.dataset_layers where _dataSet = $dataSetId".asUpdate
 

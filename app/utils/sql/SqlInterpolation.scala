@@ -94,8 +94,11 @@ object SqlToken {
     SqlToken(sql = outputSql.toString, values = outputValues.toList)
   }
 
-  def tuple(values: List[SqlValue]): SqlToken =
+  def tupleFromList(values: List[SqlValue]): SqlToken =
     SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values)
+
+  def tuple(values: SqlValue*): SqlToken =
+    SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values.toList)
 
   def tupleList(sqlValueLists: List[List[SqlValue]]): SqlToken =
     SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.placeholder).mkString(", ")})").mkString(", "),

@@ -216,7 +216,7 @@ export function getRequestedOrVisibleSegmentationLayer(
   return requestedLayer || getVisibleSegmentationLayer(state);
 }
 
-function getTracingForSegmentationLayer(
+export function getTracingForSegmentationLayer(
   state: OxalisState,
   layer: APISegmentationLayer,
 ): VolumeTracing | null | undefined {
@@ -445,7 +445,8 @@ export function hasEditableMapping(
 ): boolean {
   if (layerName != null) {
     // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
-    // as the function will throw an error if layerName is given but not a tracing layer
+    // as the function will throw an error if layerName is given but a corresponding tracing layer
+    // does not exist.
     const layer = getSegmentationLayerByName(state.dataset, layerName);
     const tracing = getTracingForSegmentationLayer(state, layer);
 

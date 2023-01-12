@@ -30,10 +30,27 @@ export function getMeshfileChunksForSegment(
   layerName: string,
   meshFile: string,
   segmentId: number,
+  // targetMappingName is the on-disk mapping name.
+  // In case of an editable mapping, this should still be the on-disk base
+  // mapping name (so that agglomerates that are untouched by the editable
+  // mapping can be looked up there without another round-trip between tracingstore
+  // and datastore)
+  targetMappingName: string | null | undefined,
+  // editableMappingTracingId should be the tracing id, not the editable mapping id.
+  // If this is set, it is assumed that the request is about an editable mapping.
+  editableMappingTracingId: string | null | undefined,
 ): Promise<SegmentInfo> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    if (targetMappingName != null) {
+      params.append("targetMappingName", targetMappingName);
+    }
+    if (editableMappingTracingId != null) {
+      params.append("editableMappingTracingId", editableMappingTracingId);
+    }
+    return Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks?${params}`,
       {
         data: {
           meshFile,
@@ -41,8 +58,8 @@ export function getMeshfileChunksForSegment(
         },
         showErrorToast: false,
       },
-    ),
-  );
+    );
+  });
 }
 
 export function getMeshfileChunkData(

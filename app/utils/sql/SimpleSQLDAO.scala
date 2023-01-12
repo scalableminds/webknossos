@@ -16,6 +16,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     extends FoxImplicits
     with LazyLogging
     with SqlTypeImplicits
+    with SqlTokenConversions
     with SqlEscaping {
 
   implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)

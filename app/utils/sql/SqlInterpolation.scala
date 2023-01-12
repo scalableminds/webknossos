@@ -17,28 +17,21 @@ import scala.concurrent.duration
 import scala.concurrent.duration.FiniteDuration
 
 class SqlInterpolator(val s: StringContext) extends AnyVal {
-  def q(param: Any*): SqlToken = {
+  def q(param: SqlToken*): SqlToken = {
     val parts = s.parts.toList
-    val values = param.toList
+    val tokens = param.toList
 
     val outputSql = mutable.StringBuilder.newBuilder
     val outputValues = ListBuffer[SqlValue]()
 
-    assert(parts.length == values.length + 1)
+    assert(parts.length == tokens.length + 1)
     for (i <- parts.indices) {
       outputSql ++= parts(i)
 
-      if (i < values.length) {
-        val value = values(i)
-        value match {
-          case x: SqlToken =>
-            outputSql ++= x.sql
-            outputValues ++= x.values
-          case x =>
-            val sqlValue = SqlValue.makeSqlValue(x)
-            outputSql ++= sqlValue.placeholder
-            outputValues += sqlValue
-        }
+      if (i < tokens.length) {
+        val token = tokens(i)
+        outputSql ++= token.sql
+        outputValues ++= token.values
       }
     }
 
@@ -126,6 +119,42 @@ trait SqlValue {
   def placeholder: String = "?"
 
   def debugInfo: String
+
+  def toToken: SqlToken = SqlToken(sql = placeholder, values = List(this))
+}
+
+trait SqlTokenConversions {
+  implicit def stringToSqlToken(v: String): SqlToken = StringValue(v).toToken
+
+  implicit def booleanToSqlToken(v: Boolean): SqlToken = BooleanValue(v).toToken
+
+  implicit def intToSqlToken(v: Int): SqlToken = IntValue(v).toToken
+
+  implicit def longValueToSqlToken(v: Long): SqlToken = LongValue(v).toToken
+
+  implicit def sqlValueToSqlToken(v: SqlValue): SqlToken = v.toToken
+
+  implicit def enumToSqlToken(v: Enumeration#Value): SqlToken = EnumerationValue(v).toToken
+
+  implicit def objectIdToSqlToken(v: ObjectId): SqlToken = ObjectIdValue(v).toToken
+
+  implicit def instantToSqlToken(v: Instant): SqlToken = InstantValue(v).toToken
+
+  implicit def jsValueToSqlToken(v: JsValue): SqlToken = JsonValue(v).toToken
+
+  implicit def optionToSqlToken[T](v: Option[T])(implicit innerConversion: T => SqlToken): SqlToken =
+    v match {
+      case Some(inner) => innerConversion(inner)
+      case None        => NoneValue()
+    }
+
+  implicit def stringIterableToSqlToken(v: Iterable[String]): SqlToken = ArrayValue(v.toList)
+
+  implicit def boundingBoxToSqlToken(v: BoundingBox): SqlToken = BoundingBoxValue(v).toToken
+
+  implicit def vec3IntToSqlToken(v: Vec3Int): SqlToken = Vector3Value(v.toVec3Double).toToken
+
+  implicit def vec3DoubleToSqlToken(v: Vec3Double): SqlToken = Vector3Value(v).toToken
 }
 
 object SqlValue {
@@ -154,8 +183,6 @@ object SqlValue {
           case Some(y) => makeSqlValue(y)
           case None    => NoneValue()
         }
-      case x: List[_] => ArrayValue(x)
-      case x: Set[_]  => ArrayValue(x.toList)
     }
 }
 
@@ -251,10 +278,10 @@ case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscap
   override def debugInfo: String = escapeLiteral(v.toString)
 }
 
-case class ArrayValue(v: List[Any]) extends SqlValue with SqlEscaping {
-  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
+case class ArrayValue(v: List[String]) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.toArray, Types.ARRAY)
 
-  override def debugInfo: String = "{" + v.map(i => escapeLiteral(i.toString)).mkString(",") + "}"
+  override def debugInfo: String = "{" + v.mkString(",") + "}"
 }
 
 case class Vector3Value(v: Vec3Double) extends SqlValue with SqlEscaping {

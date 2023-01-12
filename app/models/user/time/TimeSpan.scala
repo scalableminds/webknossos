@@ -79,7 +79,9 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByUserWithTask(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[JsValue] =
+  def findAllByUserWithTask(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[JsValue] = {
+    val startOrZero = start.getOrElse(Instant.zero)
+    val endOrMax = end.getOrElse(Instant.max)
     for {
       tuples <- run(q"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
                         from webknossos.timespans_ ts
@@ -89,10 +91,11 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                         join webknossos.taskTypes_ tt on t._taskType = tt._id
                         where ts._user = $userId
                         and ts.time > 0
-                        and ts.created >= ${start.getOrElse(Instant.zero)}
-                        and ts.created < ${end.getOrElse(Instant.max)}
+                        and ts.created >= $startOrZero
+                        and ts.created < $endOrMax
                         """.as[(Long, Instant, String, String, String, String, String, String)])
     } yield formatTimespanTuples(tuples)
+  }
 
   private def formatTimespanTuples(tuples: Vector[(Long, Instant, String, String, String, String, String, String)]) = {
 
@@ -134,15 +137,18 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] =
+  def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] = {
+    val startOrZero = start.getOrElse(Instant.zero)
+    val endOrMax = end.getOrElse(Instant.max)
     for {
       r <- run(q"""select ${columnsWithPrefix("t.")} from $existingCollectionName t
               join webknossos.users u on t._user = u._id
-              where t.created >= ${start.getOrElse(Instant.zero)} and t.created <= ${end.getOrElse(Instant.max)}
+              where t.created >= $startOrZero and t.created <= $endOrMax
               and u._organization = $organizationId
           """.as[TimespansRow])
       parsed <- parseAll(r)
     } yield parsed
+  }
 
   def insertOne(t: TimeSpan): Fox[Unit] =
     for {

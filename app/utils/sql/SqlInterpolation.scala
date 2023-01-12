@@ -1,6 +1,6 @@
 package utils.sql
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsValue, Json}
 import slick.dbio.{Effect, NoStream}
@@ -10,7 +10,6 @@ import slick.util.DumpInfo
 import utils.ObjectId
 
 import java.sql.{PreparedStatement, Types}
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration
@@ -95,16 +94,12 @@ object SqlToken {
     SqlToken(sql = outputSql.toString, values = outputValues.toList)
   }
 
-  def tuple(values: Seq[Any]): SqlToken = {
-    val sqlValues = values.map(SqlValue.makeSqlValue)
-    SqlToken(sql = s"(${sqlValues.map(_.placeholder).mkString(", ")})", values = sqlValues.toList)
-  }
+  def tuple(values: List[SqlValue]): SqlToken =
+    SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values)
 
-  def tupleList(values: Seq[Seq[Any]]): SqlToken = {
-    val sqlValueLists = values.map(list => list.map(SqlValue.makeSqlValue))
+  def tupleList(sqlValueLists: List[List[SqlValue]]): SqlToken =
     SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.placeholder).mkString(", ")})").mkString(", "),
-             values = sqlValueLists.flatten.toList)
-  }
+             values = sqlValueLists.flatten)
 
   def raw(s: String): SqlToken = SqlToken(s)
 
@@ -120,70 +115,9 @@ trait SqlValue {
 
   def debugInfo: String
 
-  def toToken: SqlToken = SqlToken(sql = placeholder, values = List(this))
-}
+  def toSqlToken: SqlToken = SqlToken(sql = placeholder, values = List(this))
 
-trait SqlTokenConversions {
-  implicit def stringToSqlToken(v: String): SqlToken = StringValue(v).toToken
-
-  implicit def booleanToSqlToken(v: Boolean): SqlToken = BooleanValue(v).toToken
-
-  implicit def intToSqlToken(v: Int): SqlToken = IntValue(v).toToken
-
-  implicit def longValueToSqlToken(v: Long): SqlToken = LongValue(v).toToken
-
-  implicit def sqlValueToSqlToken(v: SqlValue): SqlToken = v.toToken
-
-  implicit def enumToSqlToken(v: Enumeration#Value): SqlToken = EnumerationValue(v).toToken
-
-  implicit def objectIdToSqlToken(v: ObjectId): SqlToken = ObjectIdValue(v).toToken
-
-  implicit def instantToSqlToken(v: Instant): SqlToken = InstantValue(v).toToken
-
-  implicit def jsValueToSqlToken(v: JsValue): SqlToken = JsonValue(v).toToken
-
-  implicit def optionToSqlToken[T](v: Option[T])(implicit innerConversion: T => SqlToken): SqlToken =
-    v match {
-      case Some(inner) => innerConversion(inner)
-      case None        => NoneValue()
-    }
-
-  implicit def stringIterableToSqlToken(v: Iterable[String]): SqlToken = ArrayValue(v.toList)
-
-  implicit def boundingBoxToSqlToken(v: BoundingBox): SqlToken = BoundingBoxValue(v).toToken
-
-  implicit def vec3IntToSqlToken(v: Vec3Int): SqlToken = Vector3Value(v.toVec3Double).toToken
-
-  implicit def vec3DoubleToSqlToken(v: Vec3Double): SqlToken = Vector3Value(v).toToken
-}
-
-object SqlValue {
-
-  @tailrec
-  def makeSqlValue(p: Any): SqlValue =
-    p match {
-      case x: SqlValue          => x
-      case x: String            => StringValue(x)
-      case x: Short             => ShortValue(x)
-      case x: Int               => IntValue(x)
-      case x: Long              => LongValue(x)
-      case x: Float             => FloatValue(x)
-      case x: Double            => DoubleValue(x)
-      case x: Boolean           => BooleanValue(x)
-      case x: Instant           => InstantValue(x)
-      case x: FiniteDuration    => DurationValue(x)
-      case x: ObjectId          => ObjectIdValue(x)
-      case x: JsValue           => JsonValue(x)
-      case x: Enumeration#Value => EnumerationValue(x)
-      case x: Vec3Double        => Vector3Value(x)
-      case x: Vec3Int           => Vector3Value(x.toVec3Double)
-      case x: BoundingBox       => BoundingBoxValue(x)
-      case x: Option[_] =>
-        x match {
-          case Some(y) => makeSqlValue(y)
-          case None    => NoneValue()
-        }
-    }
+  def toSqlValue: SqlValue = this // to force implicit conversion
 }
 
 case class StringValue(v: String) extends SqlValue with SqlEscaping {

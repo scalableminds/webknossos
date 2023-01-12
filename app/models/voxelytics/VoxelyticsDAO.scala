@@ -4,12 +4,12 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json._
-import utils.sql.{SqlClient, SimpleSQLDAO, SqlToken}
 import utils.ObjectId
+import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
 
 class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
@@ -54,7 +54,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             t.config
           FROM webknossos.voxelytics_tasks t
           WHERE
-              ("_run", "name") IN (${SqlToken.tupleList(combinedTaskRuns.map(t => List(t.runId, t.taskName)))})
+              ("_run", "name") IN (${SqlToken.tupleList(
+        combinedTaskRuns.map(t => List(t.runId.toSqlValue, t.taskName.toSqlValue)))})
           """.as[(String, String, String, String, String)])
     } yield
       r.toList.map(row =>
@@ -90,7 +91,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       (name, hash, organizationId) <- r.headOption // Could have multiple entries; picking the first.
     } yield WorkflowEntry(name, hash, ObjectId(organizationId))
 
-  def findTaskRuns(organizationId: ObjectId, runIds: List[ObjectId], staleTimeout: Duration): Fox[List[TaskRunEntry]] =
+  def findTaskRuns(organizationId: ObjectId,
+                   runIds: List[ObjectId],
+                   staleTimeout: FiniteDuration): Fox[List[TaskRunEntry]] =
     for {
       r <- run(q"""
         WITH latest_chunk_states AS (
@@ -192,7 +195,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   def findRuns(currentUser: User,
                runIds: Option[List[ObjectId]],
                workflowHash: Option[String],
-               staleTimeout: Duration,
+               staleTimeout: FiniteDuration,
                allowUnlisted: Boolean): Fox[List[RunEntry]] = {
     val organizationId = currentUser._organization
     val readAccessQ =

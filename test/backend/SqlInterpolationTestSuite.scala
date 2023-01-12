@@ -116,7 +116,7 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       val sql = q"""SELECT * FROM test WHERE $accessQ"""
       assert(sql == SqlToken("SELECT * FROM test WHERE isAdmin = ?", List(BooleanValue(true))))
     }
-    "construct an SQLToken with tuple" in {
+    "construct an SQLToken with tuple from list" in {
       val list = List(3, 5)
       val sql = q"""SELECT * FROM test WHERE age IN ${SqlToken.tupleFromList(list)}"""
       assert(sql == SqlToken("SELECT * FROM test WHERE age IN (?, ?)", List(IntValue(3), IntValue(5))))

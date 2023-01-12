@@ -58,8 +58,7 @@ function pick(
     comparator,
   });
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucketAddress' implicitly has an 'any' ... Remove this comment to see the full error message
-  const enqueueFunction = (bucketAddress, priority) => {
+  const enqueueFunction = (bucketAddress: Vector4, priority: number) => {
     bucketQueue.queue({
       bucketAddress,
       priority,
@@ -67,7 +66,7 @@ function pick(
   };
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep);
+    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, areas);
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
       resolutions,
@@ -78,17 +77,19 @@ function pick(
       logZoomStep,
     );
   } else {
-    determineBucketsForOrthogonal(
-      resolutions,
-      enqueueFunction,
-      loadingStrategy,
-      logZoomStep,
-      anchorPoint,
-      areas,
-      subBucketLocality,
-      null,
-      gpuFactor,
-    );
+    console.log("matrix", matrix);
+    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, areas);
+    // determineBucketsForOrthogonal(
+    //   resolutions,
+    //   enqueueFunction,
+    //   loadingStrategy,
+    //   logZoomStep,
+    //   anchorPoint,
+    //   areas,
+    //   subBucketLocality,
+    //   null,
+    //   gpuFactor,
+    // );
   }
 
   return dequeueToArrayBuffer(bucketQueue);

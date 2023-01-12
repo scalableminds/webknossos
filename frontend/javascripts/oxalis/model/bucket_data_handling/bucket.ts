@@ -34,7 +34,7 @@ export type BucketDataArray =
   | BigUint64Array;
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: false,
+  visualizeBucketsOnGPU: true,
   // For visualizing buckets which are prefetched
   visualizePrefetchedBuckets: false,
   // For enforcing fallback rendering. enforcedZoomDiff == 2, means

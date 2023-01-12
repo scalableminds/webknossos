@@ -4,7 +4,7 @@ import memoizeOne from "memoize-one";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { getAreasFromState, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { Matrix4x4 } from "libs/mjs";
+import { M4x4, Matrix4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
@@ -197,7 +197,22 @@ export default class LayerRenderingManager {
       resolutionInfo.getResolutionByIndexWithFallback(logZoomStep, datasetResolutionInfo),
     );
     const areas = getAreasFromState(state);
-    const matrix = getZoomedMatrix(state.flycam);
+    // const matrix = getZoomedMatrix(state.flycam);
+
+    const oldMatrix = M4x4.scale1(state.flycam.zoomStep, state.flycam.currentMatrix);
+
+    const matrix = M4x4.scale1(
+      state.flycam.zoomStep,
+      M4x4.mul(
+        state.flycam.currentMatrix,
+        this.name === "color2"
+          ? new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 122, 105, 0, 1])
+          : new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+      ),
+    );
+
+    console.log("matrices", { oldMatrix, matrix });
+
     const { viewMode } = state.temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
     const { sphericalCapRadius } = state.userConfiguration;

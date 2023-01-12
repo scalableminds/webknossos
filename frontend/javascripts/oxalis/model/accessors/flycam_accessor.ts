@@ -67,12 +67,14 @@ function calculateTotalBucketCountForZoomLevel(
   const matrix = M4x4.scale1(zoomFactor, dummyMatrix);
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
+    // todo: pass correct areas
     determineBucketsForOblique(
       resolutions,
       position,
       enqueueFunction,
       matrix,
       logZoomStep,
+      areas,
       abortLimit,
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
@@ -86,6 +88,7 @@ function calculateTotalBucketCountForZoomLevel(
       abortLimit,
     );
   } else {
+    // todo: also use new picker
     determineBucketsForOrthogonal(
       resolutions,
       enqueueFunction,

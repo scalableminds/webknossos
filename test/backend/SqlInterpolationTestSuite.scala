@@ -149,7 +149,7 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
     "construct an SQLToken with String Array" in {
       val stringList = List("First String", "Second String")
       val sql = q"""SELECT * FROM test WHERE tags = $stringList"""
-      assert(sql == SqlToken("SELECT * FROM test WHERE tags = ?", List(ArrayValue(stringList))))
+      assert(sql == SqlToken("SELECT * FROM test WHERE tags = ?", List(StringArrayValue(stringList))))
       assert(sql.debugInfo == "SELECT * FROM test WHERE tags = {'First String','Second String'}")
     }
     "construct an SQLToken with Bounding Box" in {

@@ -11,8 +11,8 @@ import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
 import play.api.libs.json._
 import slick.lifted.Rep
-import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
+import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -142,7 +142,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
                     values(${t._id}, $organizationId, ${t._team}, ${t.summary}, ${t.description},
-                           ${SqlToken.raw(s"${enumArrayLiteral(t.settings.allowedModes)}")},
+                           ${EnumerationArrayValue(t.settings.allowedModes, "webknossos.TASKTYPE_MODES")},
                            ${t.settings.preferredMode},
                            ${t.settings.branchPointsAllowed},
                            ${t.settings.somaClickingAllowed},
@@ -164,7 +164,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    _team = ${t._team},
                    summary = ${t.summary},
                    description = ${t.description},
-                   settings_allowedModes = ${SqlToken.raw(s"${enumArrayLiteral(t.settings.allowedModes)}")},
+                   settings_allowedModes = ${EnumerationArrayValue(t.settings.allowedModes, "webknossos.TASKTYPE_MODES")},
                    settings_preferredMode = ${t.settings.preferredMode},
                    settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                    settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},

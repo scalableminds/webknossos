@@ -212,10 +212,18 @@ case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscap
   override def debugInfo: String = escapeLiteral(v.toString)
 }
 
-case class ArrayValue(v: List[String]) extends SqlValue with SqlEscaping {
+case class StringArrayValue(v: List[String]) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.toArray, Types.ARRAY)
 
   override def debugInfo: String = "{" + v.map(escapeLiteral).mkString(",") + "}"
+}
+
+case class EnumerationArrayValue(v: List[Enumeration#Value], sqlEnumName: String) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
+
+  override def placeholder = s"?::$sqlEnumName[]"
+
+  override def debugInfo: String = "{" + v.mkString(",") + "}"
 }
 
 case class Vector3Value(v: Vec3Double) extends SqlValue with SqlEscaping {

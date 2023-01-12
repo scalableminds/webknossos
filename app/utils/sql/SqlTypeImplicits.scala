@@ -52,7 +52,7 @@ trait SqlTypeImplicits {
       case None        => NoneValue()
     }
 
-  implicit def stringIterableToSqlValue(v: Iterable[String]): SqlValue = ArrayValue(v.toList)
+  implicit def stringIterableToSqlValue(v: Iterable[String]): SqlValue = StringArrayValue(v.toList)
 
   implicit def boundingBoxToSqlValue(v: BoundingBox): SqlValue = BoundingBoxValue(v)
 

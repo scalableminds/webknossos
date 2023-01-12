@@ -98,7 +98,7 @@ function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Ve
     currentMeshFile.formatVersion >= 3 &&
     currentMeshFile.mappingName == null
   ) {
-    // If a mesh file exists which was computed without a mapping, use that instead of computing
+    // If a mesh file is active which was computed without a mapping, use that instead of computing
     // meshes ad-hoc.
     yield* put(loadPrecomputedMeshAction(segmentId, position, currentMeshFile.meshFileName));
   } else {

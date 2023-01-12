@@ -63,7 +63,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     }
 
     object FetchUsedStorage {
-      val interval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.interval")
+      val rescanInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.rescanInterval")
+      val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.tickerInterval")
+      val scansPerTick: Int = get[Int]("webKnossos.fetchUsedStorage.scansPerTick")
     }
 
     object TermsOfService {

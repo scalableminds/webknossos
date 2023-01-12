@@ -9,7 +9,7 @@ import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -36,7 +36,7 @@ case class Organization(
     isDeleted: Boolean = false
 )
 
-class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
   protected val collection = Organizations
 
@@ -69,19 +69,21 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       )
     }
 
-  override protected def readAccessQ(requestingUserId: ObjectId): String =
-    s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))" +
-      s"or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))"
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"""((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = $requestingUserId)))
+      or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = $requestingUserId)))"""
 
-  override protected def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
-    case Some(_) => "true"
-    case _       => "false"
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = sharingToken match {
+    case Some(_) => q"${true}"
+    case _       => q"${false}"
   }
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[OrganizationsRow])
+      r <- run(
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
+          .as[OrganizationsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -89,7 +91,8 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where name = $name and #$accessQuery".as[OrganizationsRow])
+        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = $name and #${accessQuery.debugInfo}"
+          .as[OrganizationsRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
@@ -186,8 +189,8 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def findNotRecentlyScanned(scanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =
     for {
       rows <- run(sql"""
-                  SELECT #$columns
-                  FROM #$existingCollectionName
+                  SELECT #${columns.debugInfo}
+                  FROM #${existingCollectionName.debugInfo}
                   WHERE lastStorageScanTime < ${Instant.now - scanInterval}
                   ORDER BY lastStorageScanTime
                   LIMIT $limit

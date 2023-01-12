@@ -1,5 +1,6 @@
 package utils.sql
 
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsValue, Json}
 import slick.dbio.{Effect, NoStream}
@@ -132,27 +133,33 @@ object SqlValue {
   @tailrec
   def makeSqlValue(p: Any): SqlValue =
     p match {
-      case x: SqlValue => x
-      case x: String   => StringValue(x)
+      case x: SqlValue          => x
+      case x: String            => StringValue(x)
+      case x: Short             => ShortValue(x)
+      case x: Int               => IntValue(x)
+      case x: Long              => LongValue(x)
+      case x: Float             => FloatValue(x)
+      case x: Double            => DoubleValue(x)
+      case x: Boolean           => BooleanValue(x)
+      case x: Instant           => InstantValue(x)
+      case x: FiniteDuration    => DurationValue(x)
+      case x: ObjectId          => ObjectIdValue(x)
+      case x: JsValue           => JsonValue(x)
+      case x: Enumeration#Value => EnumerationValue(x)
+      case x: Vec3Double        => Vector3Value(x)
+      case x: Vec3Int           => Vector3Value(x.toVec3Double)
+      case x: BoundingBox       => BoundingBoxValue(x)
       case x: Option[_] =>
         x match {
           case Some(y) => makeSqlValue(y)
           case None    => NoneValue()
         }
-      case x: Short          => ShortValue(x)
-      case x: Int            => IntValue(x)
-      case x: Long           => LongValue(x)
-      case x: Float          => FloatValue(x)
-      case x: Double         => DoubleValue(x)
-      case x: Boolean        => BooleanValue(x)
-      case x: Instant        => InstantValue(x)
-      case x: FiniteDuration => DurationValue(x)
-      case x: ObjectId       => ObjectIdValue(x)
-      case x: JsValue        => JsonValue(x)
+      case x: List[_] => ArrayValue(x)
+      case x: Set[_]  => ArrayValue(x.toList)
     }
 }
 
-case class StringValue(v: String) extends SqlValue with Escaping {
+case class StringValue(v: String) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v)
 
   override def debugInfo: String = escapeLiteral(v)
@@ -194,7 +201,7 @@ case class BooleanValue(v: Boolean) extends SqlValue {
   override def debugInfo: String = s"$v"
 }
 
-case class InstantValue(v: Instant) extends SqlValue with Escaping {
+case class InstantValue(v: Instant) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setTimestamp(v.toSql)
 
   override def placeholder: String = "?::TIMESTAMPTZ"
@@ -202,7 +209,7 @@ case class InstantValue(v: Instant) extends SqlValue with Escaping {
   override def debugInfo: String = escapeLiteral(v.toString)
 }
 
-case class DurationValue(v: FiniteDuration) extends SqlValue with Escaping {
+case class DurationValue(v: FiniteDuration) extends SqlValue with SqlEscaping {
 
   private def stringifyDuration = v.unit match {
     case duration.NANOSECONDS  => s"${v.length.toDouble / 1000.0} MICROSECONDS"
@@ -222,13 +229,13 @@ case class DurationValue(v: FiniteDuration) extends SqlValue with Escaping {
   override def debugInfo: String = escapeLiteral(stringifyDuration)
 }
 
-case class ObjectIdValue(v: ObjectId) extends SqlValue with Escaping {
+case class ObjectIdValue(v: ObjectId) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(v.id)
 
   override def debugInfo: String = escapeLiteral(v.id)
 }
 
-case class JsonValue(v: JsValue) extends SqlValue with Escaping {
+case class JsonValue(v: JsValue) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setString(Json.stringify(v))
 
   override def placeholder: String = "?::JSONB"
@@ -236,8 +243,47 @@ case class JsonValue(v: JsValue) extends SqlValue with Escaping {
   override def debugInfo: String = escapeLiteral(Json.stringify(v))
 }
 
+case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v, Types.OTHER)
+
+  override def placeholder: String = "?"
+
+  override def debugInfo: String = escapeLiteral(v.toString)
+}
+
+case class ArrayValue(v: List[Any]) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
+
+  override def debugInfo: String = "{" + v.map(i => escapeLiteral(i.toString)).mkString(",") + "}"
+}
+
+case class Vector3Value(v: Vec3Double) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v, Types.OTHER)
+
+  override def debugInfo: String = v.toString
+}
+
+case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
+  case class BoundingBoxSql(x: Double, y: Double, z: Double, width: Double, height: Double, depth: Double) {
+    override def toString: String = s"($x,$y,$z,$width,$height,$depth)"
+  }
+
+  private val bboxSql = BoundingBoxSql(v.topLeft.x.toDouble,
+                                       v.topLeft.y.toDouble,
+                                       v.topLeft.z.toDouble,
+                                       v.width.toDouble,
+                                       v.height.toDouble,
+                                       v.depth.toDouble)
+
+  override def setParameter(pp: PositionedParameters): Unit =
+    pp.setObject(bboxSql, Types.OTHER)
+
+  override def debugInfo: String =
+    s"'$bboxSql'"
+}
+
 case class NoneValue() extends SqlValue {
-  override def setParameter(pp: PositionedParameters): Unit = pp.setNull(Types.BOOLEAN)
+  override def setParameter(pp: PositionedParameters): Unit = pp.setNull(Types.OTHER)
 
   override def debugInfo: String = "NULL"
 }

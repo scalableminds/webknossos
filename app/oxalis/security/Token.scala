@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import oxalis.security.TokenType.TokenType
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -53,7 +53,7 @@ object Token {
       ))
 }
 
-class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
   protected val collection = Tokens
 
@@ -121,15 +121,15 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def deleteOneByValue(value: String): Fox[Unit] = {
-    val q = for { row <- collection if notdel(row) && row.value === value } yield isDeletedColumn(row)
-    for { _ <- run(q.update(true)) } yield ()
+    val query = for { row <- collection if notdel(row) && row.value === value } yield isDeletedColumn(row)
+    for { _ <- run(query.update(true)) } yield ()
   }
 
   def deleteAllExpired(): Fox[Unit] = {
-    val q = for {
+    val query = for {
       row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
     } yield isDeletedColumn(row)
-    for { _ <- run(q.update(true)) } yield ()
+    for { _ <- run(query.update(true)) } yield ()
   }
 
   def updateEmail(oldEmail: String, newEmail: String): Fox[Unit] =

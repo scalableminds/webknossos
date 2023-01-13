@@ -1,6 +1,6 @@
 # Changelog (Released)
 
-All notable user-facing changes to webknossos are documented in this file.
+All notable user-facing changes to WEBKNOSSOS are documented in this file.
 See `CHANGELOG.unreleased.md` for the changes which are not yet part of an official release.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)

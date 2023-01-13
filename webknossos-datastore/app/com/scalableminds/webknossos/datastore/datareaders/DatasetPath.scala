@@ -30,3 +30,8 @@ class DatasetPath(storeKeyRaw: String) {
     }
 
 }
+
+class GoogleCloudStoragePath(storeKeyRaw: String) extends DatasetPath(storeKeyRaw){
+  override def resolve(name: String): GoogleCloudStoragePath =
+    new GoogleCloudStoragePath(storeKey + "%2F" + normalizeStoragePath(name))
+}

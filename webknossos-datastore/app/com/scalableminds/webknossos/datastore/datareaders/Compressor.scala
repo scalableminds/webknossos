@@ -1,18 +1,18 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.sun.jna.ptr.NativeLongByReference
-import org.apache.commons.compress.compressors.gzip.{
-  GzipCompressorInputStream,
-  GzipCompressorOutputStream,
-  GzipParameters
-}
+import org.apache.commons.compress.compressors.gzip.{GzipCompressorInputStream, GzipCompressorOutputStream, GzipParameters}
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
+import java.awt.image.BufferedImage
 import java.io._
 import java.nio.ByteBuffer
 import java.util
 import java.util.zip.{Deflater, DeflaterOutputStream, Inflater, InflaterInputStream}
+import javax.imageio.ImageIO
+import javax.imageio.ImageIO.{createImageInputStream, createImageOutputStream}
+import javax.imageio.stream.ImageInputStream
 
 sealed trait CompressionSetting
 final case class StringCompressionSetting(x: String) extends CompressionSetting
@@ -257,4 +257,22 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
   }
 }
 
-// TODO: Jpeg (libjpeg-turbo?)
+class JpegCompressor() extends Compressor {
+
+  override def getId = "jpeg"
+
+  override def toString: String = getId
+
+  @throws[IOException]
+  override def compress(is: InputStream, os: OutputStream): Unit = {
+    throw new NotImplementedError()
+  }
+
+  @throws[IOException]
+  override def uncompress(is: InputStream, os: OutputStream): Unit = {
+    val iis: ImageInputStream = createImageInputStream(is)
+    val ios = createImageOutputStream(os)
+    val bi: BufferedImage = ImageIO.read(iis: ImageInputStream)
+    ImageIO.write(bi, "bmp", ios)
+  }
+}

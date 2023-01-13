@@ -23,7 +23,7 @@ class GoogleCloudFileSystemStore(override val internalRoot: Path, fs: FileSystem
   }
 
   override def readBytes(key: String): Option[Array[Byte]] = {
-    val path = s"$normalizedInternalRoot%2F$key"
+    val path = s"$normalizedInternalRoot%2F$key?alt=media"
     tryo(Files.readAllBytes(fs.getPath(path))).toOption
   }
 }

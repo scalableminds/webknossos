@@ -96,7 +96,7 @@ class DatasetArray(relativePath: DatasetPath,
     chunkContentsCache.getOrLoad(storeKey, chunkReader.read)
   }
 
-  private def getChunkFilename(chunkIndex: Array[Int]): String =
+  protected def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int],

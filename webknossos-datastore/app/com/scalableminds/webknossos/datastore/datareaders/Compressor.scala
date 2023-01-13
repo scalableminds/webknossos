@@ -1,7 +1,11 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.sun.jna.ptr.NativeLongByReference
-import org.apache.commons.compress.compressors.gzip.{GzipCompressorInputStream, GzipCompressorOutputStream, GzipParameters}
+import org.apache.commons.compress.compressors.gzip.{
+  GzipCompressorInputStream,
+  GzipCompressorOutputStream,
+  GzipParameters
+}
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
@@ -264,9 +268,8 @@ class JpegCompressor() extends Compressor {
   override def toString: String = getId
 
   @throws[IOException]
-  override def compress(is: InputStream, os: OutputStream): Unit = {
+  override def compress(is: InputStream, os: OutputStream): Unit =
     throw new NotImplementedError()
-  }
 
   @throws[IOException]
   override def uncompress(is: InputStream, os: OutputStream): Unit = {

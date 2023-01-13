@@ -13,11 +13,12 @@ class FileSystemStore(val internalRoot: Path) {
   }
 }
 
-class GoogleCloudFileSystemStore(override val internalRoot: Path, fs: FileSystem) extends FileSystemStore(internalRoot) {
+class GoogleCloudFileSystemStore(override val internalRoot: Path, fs: FileSystem)
+    extends FileSystemStore(internalRoot) {
 
   private def normalizedInternalRoot = {
     def prefix = internalRoot.getParent.toString // This part uses "/"
-    def normalPart = prefix.substring(0, prefix.length-1)
+    def normalPart = prefix.substring(0, prefix.length - 1)
     def child = internalRoot.toString.split("/").last
     s"$normalPart%2F$child"
   }

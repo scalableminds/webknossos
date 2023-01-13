@@ -1,6 +1,14 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetPath, FileSystemStore, GoogleCloudFileSystemStore, GoogleCloudStoragePath}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  AxisOrder,
+  ChunkReader,
+  DatasetArray,
+  DatasetPath,
+  FileSystemStore,
+  GoogleCloudFileSystemStore,
+  GoogleCloudStoragePath
+}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
@@ -64,14 +72,15 @@ class PrecomputedArray(relativePath: DatasetPath,
   override protected val chunkReader: ChunkReader =
     PrecomputedChunkReader.create(store, header)
 
-  lazy val voxelOffset = header.precomputedScale.voxel_offset.getOrElse(Array(0,0,0))
+  lazy val voxelOffset = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
     val coordinates: Array[String] = chunkIndex.zipWithIndex.map(indices => {
-        val (cIndex, i) = indices
-        val beginOffset = voxelOffset(i) + cIndex * header.precomputedScale.chunk_sizes.head(i)
-        val endOffset = voxelOffset(i) + ((cIndex + 1) * header.precomputedScale.chunk_sizes.head(i)).min(header.precomputedScale.size(i))
-        s"$beginOffset-$endOffset"
+      val (cIndex, i) = indices
+      val beginOffset = voxelOffset(i) + cIndex * header.precomputedScale.chunk_sizes.head(i)
+      val endOffset = voxelOffset(i) + ((cIndex + 1) * header.precomputedScale.chunk_sizes.head(i))
+        .min(header.precomputedScale.size(i))
+      s"$beginOffset-$endOffset"
     })
     //logger.info(s"${header.precomputedScale.key}: Getting chunk ${chunkIndex(0)},${chunkIndex(1)},${chunkIndex(2)}, resulting in ${coordinates.mkString(header.dimension_separator.toString)}")
     coordinates.mkString(header.dimension_separator.toString)

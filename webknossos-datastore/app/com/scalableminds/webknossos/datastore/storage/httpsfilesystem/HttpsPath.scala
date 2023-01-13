@@ -14,7 +14,8 @@ class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
   override def getFileName: Path = Paths.get(uri.toString.split("/").last)
   override def getParent: Path =
     new HttpsPath(if (uri.getPath.endsWith("/")) uri.resolve("..")
-    else uri.resolve("."), fileSystem)
+                  else uri.resolve("."),
+                  fileSystem)
 
   override def getNameCount: Int = ???
 

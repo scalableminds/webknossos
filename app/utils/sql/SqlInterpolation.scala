@@ -115,7 +115,7 @@ object SqlToken {
   def tupleList(values: Iterable[Iterable[Any]]): SqlToken = {
     val sqlValueLists = values.map(list => list.map(SqlValue.makeSqlValue))
     SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.placeholder).mkString(", ")})").mkString(", "),
-      values = sqlValueLists.flatten.toList)
+             values = sqlValueLists.flatten.toList)
   }
 
   def raw(s: String): SqlToken = SqlToken(s)
@@ -138,40 +138,29 @@ object SqlValue {
   @tailrec
   def makeSqlValue(p: Any): SqlValue =
     p match {
-      case x: SqlValue => x
-      case x: String => StringValue(x)
-      case x: Short => ShortValue(x)
-      case x: Int => IntValue(x)
-      case x: Long => LongValue(x)
-      case x: Float => FloatValue(x)
-      case x: Double => DoubleValue(x)
-      case x: Boolean => BooleanValue(x)
-      case x: Instant => InstantValue(x)
-      case x: FiniteDuration => DurationValue(x)
-      case x: ObjectId => ObjectIdValue(x)
-      case x: JsValue => JsonValue(x)
+      case x: SqlValue          => x
+      case x: String            => StringValue(x)
+      case x: Short             => ShortValue(x)
+      case x: Int               => IntValue(x)
+      case x: Long              => LongValue(x)
+      case x: Float             => FloatValue(x)
+      case x: Double            => DoubleValue(x)
+      case x: Boolean           => BooleanValue(x)
+      case x: Instant           => InstantValue(x)
+      case x: FiniteDuration    => DurationValue(x)
+      case x: ObjectId          => ObjectIdValue(x)
+      case x: JsValue           => JsonValue(x)
       case x: Enumeration#Value => EnumerationValue(x)
-      case x: Vec3Double => Vector3Value(x)
-      case x: Vec3Int => Vector3Value(x.toVec3Double)
-      case x: BoundingBox => BoundingBoxValue(x)
+      case x: Vec3Double        => Vector3Value(x)
+      case x: Vec3Int           => Vector3Value(x.toVec3Double)
+      case x: BoundingBox       => BoundingBoxValue(x)
       case x: Option[_] =>
         x match {
           case Some(y) => makeSqlValue(y)
-          case None => NoneValue()
+          case None    => NoneValue()
         }
-      case x: Short => ShortValue(x)
-      case x: Int => IntValue(x)
-      case x: Long => LongValue(x)
-      case x: Float => FloatValue(x)
-      case x: Double => DoubleValue(x)
-      case x: Boolean => BooleanValue(x)
-      case x: Instant => InstantValue(x)
-      case x: FiniteDuration => DurationValue(x)
-      case x: ObjectId => ObjectIdValue(x)
-      case x: JsValue => JsonValue(x)
-      case x: Enumeration#Value => EnumerationValue(x)
       case x: List[_] => ArrayValue(x)
-      case x: Set[_] => ArrayValue(x.toList)
+      case x: Set[_]  => ArrayValue(x.toList)
     }
 }
 
@@ -228,13 +217,13 @@ case class InstantValue(v: Instant) extends SqlValue with SqlEscaping {
 case class DurationValue(v: FiniteDuration) extends SqlValue with SqlEscaping {
 
   private def stringifyDuration = v.unit match {
-    case duration.NANOSECONDS => s"${v.length.toDouble / 1000.0} MICROSECONDS"
+    case duration.NANOSECONDS  => s"${v.length.toDouble / 1000.0} MICROSECONDS"
     case duration.MICROSECONDS => s"${v.length} MICROSECONDS"
     case duration.MILLISECONDS => s"${v.length} MILLISECONDS"
-    case duration.SECONDS => s"${v.length} SECONDS"
-    case duration.MINUTES => s"${v.length} MINUTES"
-    case duration.HOURS => s"${v.length} HOURS"
-    case duration.DAYS => s"${v.length} DAYS"
+    case duration.SECONDS      => s"${v.length} SECONDS"
+    case duration.MINUTES      => s"${v.length} MINUTES"
+    case duration.HOURS        => s"${v.length} HOURS"
+    case duration.DAYS         => s"${v.length} DAYS"
   }
 
   override def setParameter(pp: PositionedParameters): Unit =
@@ -285,11 +274,11 @@ case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
   }
 
   private val bboxSql = BoundingBoxSql(v.topLeft.x.toDouble,
-    v.topLeft.y.toDouble,
-    v.topLeft.z.toDouble,
-    v.width.toDouble,
-    v.height.toDouble,
-    v.depth.toDouble)
+                                       v.topLeft.y.toDouble,
+                                       v.topLeft.z.toDouble,
+                                       v.width.toDouble,
+                                       v.height.toDouble,
+                                       v.depth.toDouble)
 
   override def setParameter(pp: PositionedParameters): Unit =
     pp.setObject(bboxSql, Types.OTHER)

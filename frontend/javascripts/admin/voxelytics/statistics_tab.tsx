@@ -11,7 +11,7 @@ import {
   formatNumber,
 } from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
-import { Result, VX_POLLING_INTERVAL } from "./utils";
+import { Result } from "./utils";
 import moment from "moment";
 import { pluralize } from "libs/utils";
 
@@ -64,7 +64,7 @@ export default function StatisticsTab({
     }
   }
 
-  usePolling(loadStatistics, isRunning ? VX_POLLING_INTERVAL : null, [runId, taskName]);
+  usePolling(loadStatistics, null, [runId, taskName]);
 
   function renderContent() {
     if (statisticsResult.type === "LOADING") {

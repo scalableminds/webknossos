@@ -102,11 +102,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           FROM (${chunksWithStateQ(staleTimeout)}) cs
           JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
           JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-          WHERE cs.state NOT IN ${SqlToken.tuple(List(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING))} AND t._run IN ${SqlToken
-      .tuple(runIds)}
+          WHERE cs.state NOT IN ${SqlToken.tuple(List(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING))}
+            AND t._run IN ${SqlToken.tuple(runIds)}
           ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC
         ) running_chunks ON running_chunks.name = tc.name AND running_chunks.executionId = tc.executionId AND running_chunks.chunkName = tc.chunkName
-        WHERE TRUE ${taskName.map(t => q"AND tc.name = $t").getOrElse(SqlToken.empty)}"""
+        WHERE TRUE ${taskName.map(t => q"AND tc.name = $t").getOrElse(q"")}"""
 
   private def latestCompleteTaskQ(runIds: List[ObjectId], taskName: Option[String], staleTimeout: FiniteDuration) =
     q"""SELECT
@@ -118,7 +118,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         WHERE
           ts.state = ${VoxelyticsRunState.COMPLETE}
           AND t._run IN ${SqlToken.tuple(runIds)}
-          ${taskName.map(t => q" AND t.name = $t").getOrElse(SqlToken.empty)}
+          ${taskName.map(t => q" AND t.name = $t").getOrElse(q"")}
         ORDER BY t.name, ts.beginTime DESC"""
 
   def findArtifacts(runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[ArtifactEntry]] =
@@ -330,9 +330,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                staleTimeout: FiniteDuration,
                allowUnlisted: Boolean): Fox[List[RunEntry]] = {
     val runIdsQ =
-      runIds.map(runIds => q" AND r._id IN ${SqlToken.tuple(runIds)}").getOrElse(SqlToken.empty)
+      runIds.map(runIds => q" AND r._id IN ${SqlToken.tuple(runIds)}").getOrElse(q"")
     val workflowHashQ =
-      workflowHash.map(workflowHash => q" AND r.workflow_hash = $workflowHash").getOrElse(SqlToken.empty)
+      workflowHash.map(workflowHash => q" AND r.workflow_hash = $workflowHash").getOrElse(q"")
     for {
       r <- run(q"""
         SELECT
@@ -698,7 +698,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) af
         JOIN webknossos.voxelytics_artifacts a ON a._id = af._artifact
         JOIN latest_complete_tasks t ON t._id = a._task
-        WHERE ${artifactName.map(a => q"a.name = $a").getOrElse(SqlToken.empty)}
+        WHERE ${artifactName.map(a => q"a.name = $a").getOrElse(q"")}
         ORDER BY af.path
         """.as[(String, String, String, String, Instant, String, String, Long, Instant)])
     } yield

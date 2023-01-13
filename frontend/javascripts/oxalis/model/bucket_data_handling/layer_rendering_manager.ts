@@ -205,11 +205,9 @@ export default class LayerRenderingManager {
     const layerMatrix =
       layer.transformMatrix || new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
-    const invertedMatrix = M4x4.inverse(layerMatrix);
-
     const matrix = M4x4.scale1(
       state.flycam.zoomStep,
-      M4x4.mul(invertedMatrix, state.flycam.currentMatrix),
+      M4x4.mul(layerMatrix, state.flycam.currentMatrix),
     );
 
     const { viewMode } = state.temporaryConfiguration;

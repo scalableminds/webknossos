@@ -150,7 +150,8 @@ export const getColorForCoords: ShaderModule = {
       if (bucketAddress < 0. ||
           isNan(bucketAddress)) {
         // Not-yet-existing data is encoded with a = -1.0
-        returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
+        // todo: restore gray-when-loading behavior
+        // returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
         return returnValue;
       }
 

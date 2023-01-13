@@ -236,7 +236,7 @@ export async function initialize(
     window.setTransforms(
       M4x4.mul(
         M4x4.mul(
-          makeTranslation(3282, 3184),
+          makeTranslation(3496, 3379),
           new Float32Array([
             Math.cos(theta),
             Math.sin(theta),

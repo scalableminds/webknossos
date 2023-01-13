@@ -1,3 +1,4 @@
+import { Matrix4x4 } from "mjs";
 import type { APIDataset } from "types/api_flow_types";
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
@@ -23,7 +24,7 @@ export const setLayerMappingsAction = (
     agglomerateNames,
   } as const);
 
-export const setLayerTransforms = (layerName: string, transformMatrix: Float32Array) =>
+export const setLayerTransforms = (layerName: string, transformMatrix: Matrix4x4) =>
   ({
     type: "SET_LAYER_TRANSFORMS",
     layerName,

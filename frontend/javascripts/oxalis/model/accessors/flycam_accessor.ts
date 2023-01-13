@@ -8,6 +8,7 @@ import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/dat
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getEnabledLayers,
+  getLayerByName,
   getMaxZoomStep,
   getResolutionByMax,
   getResolutionInfo,
@@ -44,6 +45,7 @@ function calculateTotalBucketCountForZoomLevel(
   logZoomStep: number,
   zoomFactor: number,
   viewportRects: OrthoViewRects,
+  unzoomedMatrix: Matrix4x4,
   abortLimit: number,
   initializedGpuFactor: number,
 ) {
@@ -64,7 +66,7 @@ function calculateTotalBucketCountForZoomLevel(
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
   const dummyMatrix: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  const matrix = M4x4.scale1(zoomFactor, dummyMatrix);
+  const matrix = M4x4.scale1(zoomFactor, unzoomedMatrix);
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
     determineBucketsForOblique(
@@ -87,17 +89,14 @@ function calculateTotalBucketCountForZoomLevel(
       abortLimit,
     );
   } else {
-    // todo: also use new picker
-    determineBucketsForOrthogonal(
+    determineBucketsForOblique(
       resolutions,
+      position,
       enqueueFunction,
-      loadingStrategy,
+      matrix,
       logZoomStep,
-      anchorPoint,
-      areas,
-      subBucketLocality,
+      viewportRects,
       abortLimit,
-      initializedGpuFactor,
     );
   }
 
@@ -134,7 +133,11 @@ export function _getMaximumZoomForAllResolutions(
   viewportRects: OrthoViewRects,
   maximumCapacity: number,
   initializedGpuFactor: number,
+  layerMatrix: Matrix4x4,
+  flycamMatrix: Matrix4x4,
 ): Array<number> {
+  const unzoomedMatrix = M4x4.mul(layerMatrix, flycamMatrix);
+
   // This function determines which zoom value ranges are valid for the given magnifications.
   // The calculation iterates through several zoom values and checks the required bucket capacity
   // against the capacity supported by the GPU.
@@ -174,7 +177,9 @@ export function _getMaximumZoomForAllResolutions(
       resolutions,
       currentResolutionIndex,
       nextZoomValue,
-      viewportRects, // The bucket picker will stop after reaching the maximum capacity.
+      viewportRects,
+      unzoomedMatrix,
+      // The bucket picker will stop after reaching the maximum capacity.
       // Increment the limit by one, so that rendering is still possible
       // when exactly meeting the limit.
       maximumCapacity + 1,
@@ -194,8 +199,14 @@ export function _getMaximumZoomForAllResolutions(
 }
 const getMaximumZoomForAllResolutions = memoizeOne(_getMaximumZoomForAllResolutions);
 
+export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+
 function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<number> {
   const { viewMode } = state.temporaryConfiguration;
+
+  const layer = getLayerByName(state.dataset, "color");
+  const layerMatrix = layer.transformMatrix || Identity4x4;
+
   return getMaximumZoomForAllResolutions(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
@@ -204,6 +215,8 @@ function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<num
     getViewportRects(state),
     state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
     state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    layerMatrix,
+    Identity4x4, // state.flycam.currentMatrix,
   );
 }
 
@@ -322,8 +335,7 @@ export function getValidTaskZoomRange(
     return defaultRange;
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-  function getMinMax(value, isMin) {
+  function getMinMax(value: number | undefined, isMin: boolean) {
     const idx = isMin ? 0 : 1;
     return (
       (value == null

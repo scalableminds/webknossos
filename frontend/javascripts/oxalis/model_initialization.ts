@@ -99,7 +99,7 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
-import { M4x4 } from "libs/mjs";
+import { M4x4, Matrix4x4 } from "libs/mjs";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -223,17 +223,16 @@ export async function initialize(
     setInitialTool();
   }
 
-  window.makeTranslation = (x, y) =>
+  const makeTranslation = (x: number, y: number): Matrix4x4 =>
     new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1]);
-  window.targetLayerName = "color";
-  window.setTransforms = (layerName, transforms) =>
+  const setTransforms = (layerName: string, transforms: Matrix4x4) =>
     Store.dispatch(setLayerTransforms(layerName, transforms));
 
-  window.setTransforms("color", makeTranslation(122, 105));
+  setTransforms("color", makeTranslation(122, 105));
 
-  window.setScale = (layerName, scale) => {
+  const setScale = (layerName: string, scale: number) => {
     const pos = [3496, 3379];
-    window.setTransforms(
+    setTransforms(
       layerName,
       M4x4.mul(
         M4x4.scale([scale, scale, 1], makeTranslation(pos[0], pos[1])),
@@ -242,10 +241,10 @@ export async function initialize(
     );
   };
 
-  window.setRotation = (layerName, _theta) => {
+  const setRotation = (layerName: string, _theta: number) => {
     const theta = (_theta / 360) * 2 * Math.PI;
     const pos = [3496, 3379];
-    window.setTransforms(
+    setTransforms(
       layerName,
       M4x4.mul(
         M4x4.mul(
@@ -272,6 +271,14 @@ export async function initialize(
         makeTranslation(-pos[0], -pos[1]),
       ),
     );
+  };
+
+  // @ts-expect-error
+  window.transformer = {
+    setScale,
+    setRotation,
+    makeTranslation,
+    setTransforms,
   };
 
   return initializationInformation;

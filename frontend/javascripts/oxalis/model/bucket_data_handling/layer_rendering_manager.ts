@@ -198,9 +198,6 @@ export default class LayerRenderingManager {
       resolutionInfo.getResolutionByIndexWithFallback(logZoomStep, datasetResolutionInfo),
     );
     const areas = getAreasFromState(state);
-    // const matrix = getZoomedMatrix(state.flycam);
-
-    const oldMatrix = M4x4.scale1(state.flycam.zoomStep, state.flycam.currentMatrix);
 
     const layerMatrix =
       layer.transformMatrix || new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);

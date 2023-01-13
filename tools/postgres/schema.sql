@@ -541,31 +541,10 @@ CREATE TABLE webknossos.voxelytics_workflows(
     PRIMARY KEY (_organization, hash)
 );
 
-CREATE TABLE webknossos.voxelytics_runStateChangeEvents(
-    _run CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_run, timestamp)
-);
-
 CREATE TABLE webknossos.voxelytics_runHeartbeatEvents(
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (_run)
-);
-
-CREATE TABLE webknossos.voxelytics_taskStateChangeEvents(
-    _task CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_task, timestamp)
-);
-
-CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents(
-    _chunk CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_chunk, timestamp)
 );
 
 CREATE TABLE webknossos.voxelytics_chunkProfilingEvents(

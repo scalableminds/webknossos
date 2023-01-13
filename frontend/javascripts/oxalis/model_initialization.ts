@@ -226,17 +226,30 @@ export async function initialize(
   window.makeTranslation = (x, y) =>
     new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1]);
   window.targetLayerName = "color";
-  window.setTransforms = (transforms) =>
-    Store.dispatch(setLayerTransforms(window.targetLayerName, transforms));
+  window.setTransforms = (layerName, transforms) =>
+    Store.dispatch(setLayerTransforms(layerName, transforms));
 
-  window.setTransforms(makeTranslation(122, 105));
+  window.setTransforms("color", makeTranslation(122, 105));
 
-  window.setRotation = (_theta) => {
-    const theta = (_theta / 360) * 2 * Math.PI;
+  window.setScale = (layerName, scale) => {
+    const pos = [3496, 3379];
     window.setTransforms(
+      layerName,
+      M4x4.mul(
+        M4x4.scale([scale, scale, 1], makeTranslation(pos[0], pos[1])),
+        makeTranslation(-pos[0], -pos[1]),
+      ),
+    );
+  };
+
+  window.setRotation = (layerName, _theta) => {
+    const theta = (_theta / 360) * 2 * Math.PI;
+    const pos = [3496, 3379];
+    window.setTransforms(
+      layerName,
       M4x4.mul(
         M4x4.mul(
-          makeTranslation(3496, 3379),
+          makeTranslation(pos[0], pos[1]),
           new Float32Array([
             Math.cos(theta),
             Math.sin(theta),
@@ -256,7 +269,7 @@ export async function initialize(
             1,
           ]),
         ),
-        makeTranslation(-3282, -3184),
+        makeTranslation(-pos[0], -pos[1]),
       ),
     );
   };

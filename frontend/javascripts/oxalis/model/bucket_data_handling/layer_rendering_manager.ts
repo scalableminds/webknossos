@@ -225,7 +225,6 @@ export default class LayerRenderingManager {
       isVisible !== this.lastIsVisible ||
       this.needsRefresh
     ) {
-      console.log(this.name, "matrices", { oldMatrix, matrix });
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
       this.lastZoomedMatrix = matrix;

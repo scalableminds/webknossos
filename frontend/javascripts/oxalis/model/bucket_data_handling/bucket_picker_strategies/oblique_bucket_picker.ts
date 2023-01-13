@@ -97,7 +97,6 @@ export default function determineBucketsForOblique(
   );
 
   traversedBuckets = makeBucketsUnique(traversedBuckets);
-  console.log("traversedBuckets.length", traversedBuckets.length);
   let traversedBucketsVec4 = traversedBuckets.map((addr): Vector4 => [...addr, logZoomStep]);
   const fallbackBuckets = getFallbackBuckets(
     traversedBucketsVec4,

@@ -78,7 +78,6 @@ function pick(
       logZoomStep,
     );
   } else {
-    console.log("matrix", matrix);
     determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, rects);
     // determineBucketsForOrthogonal(
     //   resolutions,

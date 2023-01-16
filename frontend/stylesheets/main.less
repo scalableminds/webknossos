@@ -77,7 +77,7 @@ body {
     margin-top: 1px;
     background-size: 24px 24px;
   }
-  .ant-menu-item:hover .logo {
+  .ant-menu-item .logo {
     filter: brightness(4);
   }
 
@@ -89,8 +89,14 @@ body {
     }
   }
   .ant-avatar {
-    background-color: @blue-zircon;
-    color: @black;
+    border: 1px solid @blue-zircon;
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    cursor: pointer;
+    &:hover {
+      background-color: @blue-zircon;
+      color: @black;
+    }
   }
 }
 
@@ -571,7 +577,7 @@ i.without-icon-margin,
 }
 
 .highlight-folder-sidebar {
-  background-color: @blue-2;
+  background-color: @table-selected-row-hover-bg;
 }
 
 .sidebar-label {

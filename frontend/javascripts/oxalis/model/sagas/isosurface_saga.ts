@@ -3,11 +3,11 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import type { APIDataLayer, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
-import Store from "oxalis/store";
+import Store, { OxalisState } from "oxalis/store";
 import {
   ResolutionInfo,
   getResolutionInfo,
@@ -60,7 +60,12 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getEditableMappingForVolumeTracingId,
+  getTracingForSegmentationLayer,
+  hasEditableMapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import { getDracoLoader } from "libs/draco";
@@ -191,6 +196,7 @@ function* loadAdHocIsosurface(
   }
 
   const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
+
   yield* call(
     loadIsosurfaceForSegmentId,
     cellId,
@@ -590,7 +596,7 @@ function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
   meshFileName: string,
-  segmentationLayer: APIDataLayer,
+  segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
@@ -617,6 +623,33 @@ function* loadPrecomputedMeshForSegmentId(
 
   const version = meshFile.formatVersion;
   try {
+    const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
+
+    const editableMapping = yield* select((state) =>
+      getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+    );
+    const tracing = yield* select((state) =>
+      getTracingForSegmentationLayer(state, segmentationLayer),
+    );
+    const mappingName =
+      // isosurfaceExtraInfo.mappingName contains the currently active mapping
+      // (can be the id of an editable mapping). However, we always need to
+      // use the mapping name of the on-disk mapping.
+      editableMapping != null ? editableMapping.baseMappingName : isosurfaceExtraInfo.mappingName;
+
+    if (version < 3) {
+      console.warn(
+        "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
+      );
+    }
+
+    // mappingName only exists for versions >= 3
+    if (meshFile.mappingName != null && meshFile.mappingName !== mappingName) {
+      throw Error(
+        `Trying to use a mesh file that was computed for mapping ${meshFile.mappingName} for a requested mapping of ${mappingName}.`,
+      );
+    }
+
     if (version >= 3) {
       const segmentInfo = yield* call(
         meshV3.getMeshfileChunksForSegment,
@@ -625,6 +658,8 @@ function* loadPrecomputedMeshForSegmentId(
         getBaseSegmentationName(segmentationLayer),
         meshFileName,
         id,
+        mappingName,
+        editableMapping != null && tracing ? tracing.tracingId : null,
       );
       scale = [
         segmentInfo.transform[0][0],

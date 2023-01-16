@@ -21,9 +21,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String, reportUsedStorageEnabled: Option[Boolean] = None)
-
 object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
+}
+
+case class TracingStoreInfo(name: String, url: String)
+object TracingStoreInfo {
+  implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
 trait RemoteWebKnossosClient {
@@ -117,6 +121,18 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .addQueryStringOptional("token", userToken)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
+
+  private lazy val tracingstoreUriCache: AlfuFoxCache[String, String] = AlfuFoxCache()
+  def getTracingstoreUri: Fox[String] =
+    tracingstoreUriCache.getOrLoad(
+      "tracingStore",
+      _ =>
+        for {
+          tracingStoreInfo <- rpc(s"$webKnossosUri/api/tracingstore")
+            .addQueryString("key" -> dataStoreKey)
+            .getWithJsonResponse[TracingStoreInfo]
+        } yield tracingStoreInfo.url
+    )
 
   // The annotation source needed for every chunk request. 5 seconds gets updates to the user fast enough,
   // while still limiting the number of remote lookups during streaming

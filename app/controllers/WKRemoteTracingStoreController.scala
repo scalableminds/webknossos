@@ -95,7 +95,7 @@ class WKRemoteTracingStoreController @Inject()(
       }
     }
 
-  def dataStoreURIForDataSet(name: String,
+  def dataStoreUriForDataSet(name: String,
                              key: String,
                              organizationName: Option[String],
                              dataSetName: String): Action[AnyContent] =

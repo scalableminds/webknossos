@@ -145,16 +145,16 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, segmentInfo: MeshSegmentInfo) {
+case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo) {
   def merge(that: WebknossosSegmentInfo): WebknossosSegmentInfo =
     // assume that transform, meshFormat, chunkShape, gridOrigin, scale and vertexOffset are the same
     WebknossosSegmentInfo(
       transform,
       meshFormat,
-      segmentInfo = MeshSegmentInfo(
-        segmentInfo.chunkShape,
-        segmentInfo.gridOrigin,
-        lods = (segmentInfo.lods, that.segmentInfo.lods).zipped.map((lod1, lod2) =>
+      chunks = MeshSegmentInfo(
+        chunks.chunkShape,
+        chunks.gridOrigin,
+        lods = (chunks.lods, that.chunks.lods).zipped.map((lod1, lod2) =>
           MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
       )
     )
@@ -272,7 +272,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
       val segmentInfo = NeuroglancerSegmentInfo.fromBytes(manifest)
       val enrichedSegmentInfo = enrichSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
-      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, segmentInfo = enrichedSegmentInfo)
+      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, chunks = enrichedSegmentInfo)
     }
   }
 

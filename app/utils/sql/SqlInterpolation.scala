@@ -106,6 +106,9 @@ object SqlToken {
 
   def raw(s: String): SqlToken = SqlToken(s)
 
+  def joinBySeparator(tokens: Iterable[SqlToken], sepator: String): SqlToken =
+    SqlToken(sql = tokens.map(_.sql).mkString(sepator), values = tokens.flatMap(_.values).toList)
+
   def empty: SqlToken = raw("")
 
   def identifier(id: String): SqlToken = raw('"' + id + '"')

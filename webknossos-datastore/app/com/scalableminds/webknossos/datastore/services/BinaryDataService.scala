@@ -80,9 +80,9 @@ class BinaryDataService(val dataBaseDir: Path,
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       request.dataLayer.bucketProvider.load(readInstruction, cache).futureBox.flatMap {
-        case Failure(_, Full(e: InternalError), _) =>
+        case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))
-          logger.warn(s"Caught internal error: $e")
+          logger.warn(s"Caught internal error: $msg")
           Fox.failure(e.getMessage)
         case other => other.toFox
       }

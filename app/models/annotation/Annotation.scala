@@ -170,7 +170,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         viewconfigurationOpt,
         state,
         Json.parse(r.statistics).as[JsObject],
-        parseArrayTuple(r.tags).toSet,
+        parseArrayLiteral(r.tags).toSet,
         r.tracingtime,
         typ,
         r.othersmayedit,
@@ -366,7 +366,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       accessQuery <- readAccessQuery
       excludeTeamsQ = if (excludedTeamIds.isEmpty) q"${true}"
-      else q"(not t._id in ${SqlToken.tuple(excludedTeamIds)})"
+      else q"(not t._id in ${SqlToken.tupleFromList(excludedTeamIds)})"
       countList <- run(q"""select count(*)
                          from (select a._id from
                                   (select $columns
@@ -543,7 +543,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       result <- run(q"""select distinct ${columnsWithPrefix("a.")} from webknossos.annotations_ a
                             join webknossos.annotation_sharedTeams l on a._id = l._annotation
-                            where l._team in ${SqlToken.tuple(teams)}""".as[AnnotationsRow])
+                            where l._team in ${SqlToken.tupleFromList(teams)}""".as[AnnotationsRow])
       parsed <- Fox.combined(result.toList.map(parse))
     } yield parsed
 

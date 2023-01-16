@@ -7,10 +7,9 @@ import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.scalableminds.webknossos.schema.Tables._
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -81,45 +80,41 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo}"
-          .as[OrganizationsRow])
+      r <- run(q"select $columns from $existingCollectionName where $accessQuery".as[OrganizationsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where name = $name and #${accessQuery.debugInfo}"
-          .as[OrganizationsRow])
+      r <- run(q"select $columns from $existingCollectionName where name = $name and $accessQuery".as[OrganizationsRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
   def insertOne(o: Organization): Fox[Unit] =
     for {
-      _ <- run(sqlu"""INSERT INTO webknossos.organizations
-                      (_id, name, additionalInformation, logoUrl, displayName, _rootFolder,
-                      newUserMailingList, overTimeMailingList, enableAutoVerify,
-                      pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
-                      VALUES
-                      (${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
-                      ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
-                      '#${o.pricingPlan}', ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
-                        ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
-            """)
+      _ <- run(q"""INSERT INTO webknossos.organizations
+                   (_id, name, additionalInformation, logoUrl, displayName, _rootFolder,
+                   newUserMailingList, overTimeMailingList, enableAutoVerify,
+                   pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
+                   VALUES
+                   (${o._id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
+                   ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify},
+                   ${o.pricingPlan}, ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
+                   ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
+            """.asUpdate)
     } yield ()
 
-  def findOrganizationTeamId(o: ObjectId): Fox[ObjectId] =
+  def findOrganizationTeamId(organizationId: ObjectId): Fox[ObjectId] =
     for {
-      rList <- run(sql"select _id from webknossos.organizationTeams where _organization = ${o.id}".as[String])
+      rList <- run(q"select _id from webknossos.organizationTeams where _organization = $organizationId".as[String])
       r <- rList.headOption.toFox
       parsed <- ObjectId.fromString(r)
     } yield parsed
 
   def findOrganizationNameForAnnotation(annotationId: ObjectId): Fox[String] =
     for {
-      rList <- run(sql"""select o.name
+      rList <- run(q"""select o.name
               from webknossos.annotations_ a
               join webknossos.datasets_ d on a._dataSet = d._id
               join webknossos.organizations_ o on d._organization = o._id
@@ -131,30 +126,30 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
-      _ <- run(sqlu"""update webknossos.organizations
+      _ <- run(q"""update webknossos.organizations
                       set displayName = $displayName, newUserMailingList = $newUserMailingList
-                      where _id = $organizationId""")
+                      where _id = $organizationId""".asUpdate)
     } yield ()
 
   def deleteUsedStorage(organizationId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId")
+      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId".asUpdate)
     } yield ()
 
   def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(sqlu"DELETE FROM webknossos.organization_usedStorage WHERE _dataSet = $datasetId")
+      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _dataSet = $datasetId".asUpdate)
     } yield ()
 
   def updateLastStorageScanTime(organizationId: ObjectId, time: Instant): Fox[Unit] =
     for {
-      _ <- run(sqlu"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId")
+      _ <- run(q"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId".asUpdate)
     } yield ()
 
   def upsertUsedStorage(organizationId: ObjectId,
                         dataStoreName: String,
                         usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
-    val queries = usedStorageEntries.map(entry => sqlu"""
+    val queries = usedStorageEntries.map(entry => q"""
                WITH ds AS (
                  SELECT _id
                  FROM webknossos.datasets_
@@ -172,7 +167,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                ON CONFLICT (_organization, _dataStore, _dataSet, layerName, magOrDirectoryName)
                DO UPDATE
                  SET usedStorageBytes = ${entry.usedStorageBytes}, lastUpdated = NOW()
-               """)
+               """.asUpdate)
     for {
       _ <- Fox.serialCombined(queries)(q => run(q))
     } yield ()
@@ -181,16 +176,16 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def getUsedStorage(organizationId: ObjectId): Fox[Long] =
     for {
       rows <- run(
-        sql"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
+        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
           .as[Long])
       firstRow <- rows.headOption
     } yield firstRow
 
   def findNotRecentlyScanned(rescanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =
     for {
-      rows <- run(sql"""
-                  SELECT #${columns.debugInfo}
-                  FROM #${existingCollectionName.debugInfo}
+      rows <- run(q"""
+                  SELECT $columns
+                  FROM $existingCollectionName
                   WHERE lastStorageScanTime < ${Instant.now - rescanInterval}
                   ORDER BY lastStorageScanTime
                   LIMIT $limit
@@ -198,16 +193,16 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseAll(rows)
     } yield parsed
 
-  def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Long)(
+  def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
-      _ <- run(sqlu"""UPDATE webknossos.organizations
+      _ <- run(q"""UPDATE webknossos.organizations
                       SET
-                        lastTermsOfServiceAcceptanceTime = ${new java.sql.Timestamp(timestamp)},
+                        lastTermsOfServiceAcceptanceTime = $timestamp,
                         lastTermsOfServiceAcceptanceVersion = $version
                       WHERE _id = $organizationId
-                   """)
+                   """.asUpdate)
     } yield ()
 
 }

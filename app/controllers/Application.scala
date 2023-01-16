@@ -6,15 +6,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
-import models.user.{MultiUserDAO, UserService}
 import models.organization.OrganizationDAO
+import models.user.{MultiUserDAO, UserService}
+import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import slick.jdbc.PostgresProfile.api._
+import utils.sql.{SimpleSQLDAO, SqlClient}
 import utils.{StoreModules, WkConf}
-import oxalis.mail.{DefaultMails, Send}
-import utils.sql.{SqlClient, SimpleSQLDAO}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -91,7 +90,7 @@ class ReleaseInformationDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     with FoxImplicits {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =
     for {
-      rList <- run(sql"select schemaVersion from webknossos.releaseInformation".as[Int])
+      rList <- run(q"select schemaVersion from webknossos.releaseInformation".as[Int])
       r <- rList.headOption.toFox
     } yield r
 }

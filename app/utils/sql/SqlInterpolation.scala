@@ -97,7 +97,7 @@ object SqlToken {
   def tupleFromList(values: List[SqlValue]): SqlToken =
     SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values)
 
-  def tuple(values: SqlValue*): SqlToken =
+  def tupleFromValues(values: SqlValue*): SqlToken =
     SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values.toList)
 
   def tupleList(sqlValueLists: List[List[SqlValue]]): SqlToken =

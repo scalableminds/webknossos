@@ -55,7 +55,10 @@ import {
   getResolutionInfo,
   getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getActiveMagIndicesForLayers,
+  getMaxZoomValueForResolution,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -125,6 +128,7 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
+  activeMagIndicesForLayers: { [layerName: string]: number };
 };
 
 type State = {
@@ -397,7 +401,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       }
     };
     const hasHistogram = this.props.histogramData[layerName] != null;
-    const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolutions = resolutionInfo.getResolutionList();
     const volumeDescriptor =
       "tracingId" in layer && layer.tracingId != null
         ? getVolumeDescriptorById(tracing, layer.tracingId)
@@ -460,6 +465,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             layerName
           )}
         </div>
+        {/* todo: remove or make nice */}
+        Active Resolution:{" "}
+        {resolutionInfo
+          .getResolutionByIndex(this.props.activeMagIndicesForLayers[layerName])
+          ?.join("-")}
         <div
           className="flex-container"
           style={{
@@ -571,7 +581,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
           </div>
         </div>
-
         <div className="flex-container">
           <div className="flex-item">
             {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
@@ -1124,6 +1133,7 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  activeMagIndicesForLayers: getActiveMagIndicesForLayers(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

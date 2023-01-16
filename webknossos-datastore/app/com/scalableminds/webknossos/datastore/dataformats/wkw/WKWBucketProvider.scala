@@ -18,7 +18,6 @@ class WKWCubeHandle(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle 
     val blockOffsetY = bucket.bucketY % numBlocksPerCubeDimension
     val blockOffsetZ = bucket.bucketZ % numBlocksPerCubeDimension
     try {
-      throw new InternalError("hi")
       wkwFile.readBlock(blockOffsetX, blockOffsetY, blockOffsetZ)
     } catch {
       case e: InternalError =>

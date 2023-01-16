@@ -74,26 +74,6 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
 }
 
 object SqlToken {
-  def join(values: List[Either[SqlValue, SqlToken]], sep: String): SqlToken = {
-    val outputSql = mutable.StringBuilder.newBuilder
-    val outputValues = ListBuffer[SqlValue]()
-    for (i <- values.indices) {
-      val value = values(i)
-      value match {
-        case Left(x) =>
-          outputSql ++= x.placeholder
-          outputValues += x
-        case Right(x) =>
-          outputSql ++= x.sql
-          outputValues ++= x.values
-      }
-      if (i < values.length - 1) {
-        outputSql ++= sep
-      }
-    }
-    SqlToken(sql = outputSql.toString, values = outputValues.toList)
-  }
-
   def tupleFromList(values: List[SqlValue]): SqlToken =
     SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values)
 

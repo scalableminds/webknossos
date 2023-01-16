@@ -35,12 +35,18 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
 
   def measureStorage(organizationName: String, dataSetName: Option[String])(
       implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
+    val organizationDirectory = baseDir.resolve(organizationName)
+    if (Files.exists(organizationDirectory)) {
+      measureStorage(organizationName, dataSetName, organizationDirectory)
+    } else Fox.successful(List())
+  }
+
+  def measureStorage(organizationName: String, dataSetName: Option[String], organizationDirectory: Path)(
+      implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
     def selectedDatasetFilter(p: Path) = dataSetName.forall(name => p.getFileName.toString == name)
 
     for {
-      datasetDirectories <- PathUtils.listDirectories(baseDir.resolve(organizationName),
-                                                      noSymlinksFilter,
-                                                      selectedDatasetFilter) ?~> "listdir.failed"
+      datasetDirectories <- PathUtils.listDirectories(organizationDirectory, noSymlinksFilter, selectedDatasetFilter) ?~> "listdir.failed"
       storageReportsNested <- Fox.serialCombined(datasetDirectories)(d => measureStorageForDataSet(organizationName, d))
     } yield storageReportsNested.flatten
   }

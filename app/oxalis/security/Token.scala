@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import oxalis.security.TokenType.TokenType
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -98,10 +98,11 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(t: Token): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
-                    values(${t._id.id}, ${t.value}, '#${t.loginInfo.providerID}', ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
-                          ${t.expirationDateTime}, ${t.idleTimeout
-          .map(_.toMillis)}, '#${t.tokenType}', ${t.created}, ${t.isDeleted})""")
+        q"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
+                    values(${t._id}, ${t.value}, ${SqlToken.raw(escapeLiteral(t.loginInfo.providerID))},
+                          ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
+                          ${t.expirationDateTime}, ${t.idleTimeout.map(_.toMillis)},
+                          ${t.tokenType}, ${t.created}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
   def updateValues(id: ObjectId,
@@ -111,13 +112,13 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.tokens
+      _ <- run(q"""update webknossos.tokens
                       set
                         value = $value,
                         lastUsedDateTime = $lastUsedDateTime,
                         expirationDateTime = $expirationDateTime,
                         idleTimeout = ${idleTimeout.map(_.toMillis)}
-                      where _id = ${id.id}""")
+                      where _id = $id""".asUpdate)
     } yield ()
 
   def deleteOneByValue(value: String): Fox[Unit] = {
@@ -134,8 +135,8 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def updateEmail(oldEmail: String, newEmail: String): Fox[Unit] =
     for {
-      _ <- run(sqlu"""update webknossos.tokens set
+      _ <- run(q"""update webknossos.tokens set
         logininfo_providerkey = $newEmail
-        where logininfo_providerkey = $oldEmail""")
+        where logininfo_providerkey = $oldEmail""".asUpdate)
     } yield ()
 }

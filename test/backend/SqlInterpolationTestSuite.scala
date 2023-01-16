@@ -11,10 +11,11 @@ import utils.sql._
 
 import scala.concurrent.duration.DurationInt
 
-class SqlInterpolationTestSuite extends PlaySpec {
+class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
   "SQL query creation" should {
+    val option: Option[String] = None
     "construct an SQLToken with null value" in {
-      val sql = q"""SELECT $None"""
+      val sql = q"""SELECT $option"""
       assert(sql == SqlToken("SELECT ?", List(NoneValue())))
       assert(sql.debugInfo == "SELECT NULL")
     }
@@ -32,8 +33,6 @@ class SqlInterpolationTestSuite extends PlaySpec {
       assert(sql.debugInfo == "SELECT * FROM test WHERE name = '''; DROP TABLE test; --'")
     }
     "construct an SQLToken with numbers" in {
-      val sql0 = q"""SELECT * FROM test WHERE age = ${3.shortValue}"""
-      assert(sql0 == SqlToken("SELECT * FROM test WHERE age = ?", List(ShortValue(3))))
       val sql1 = q"""SELECT * FROM test WHERE age = ${3}"""
       assert(sql1 == SqlToken("SELECT * FROM test WHERE age = ?", List(IntValue(3))))
       val sql2 = q"""SELECT * FROM test WHERE age = ${3L}"""
@@ -101,8 +100,11 @@ class SqlInterpolationTestSuite extends PlaySpec {
       assert(sql == SqlToken("SELECT * FROM test WHERE age = ? AND name = ?", List(IntValue(3), StringValue("Amy"))))
     }
     "construct an SQLToken with identifiers" in {
-      val sql = q"""SELECT * FROM ${SqlToken.identifier("test")}"""
-      assert(sql == SqlToken("SELECT * FROM \"test\""))
+      val sql0 = q"""SELECT * FROM ${SqlToken.identifier("test")}"""
+      assert(sql0 == SqlToken("SELECT * FROM \"test\""))
+
+      val sql1 = q"""SELECT * FROM ${SqlToken.identifier("webknossos.test")}"""
+      assert(sql1 == SqlToken("SELECT * FROM \"webknossos\".\"test\""))
     }
     "construct an SQLToken with raw SQL" in {
       val sql = q"""SELECT * FROM test WHERE ${SqlToken.raw("TRUE")}"""
@@ -117,14 +119,18 @@ class SqlInterpolationTestSuite extends PlaySpec {
       val sql = q"""SELECT * FROM test WHERE $accessQ"""
       assert(sql == SqlToken("SELECT * FROM test WHERE isAdmin = ?", List(BooleanValue(true))))
     }
-    "construct an SQLToken with tuple" in {
+    "construct an SQLToken with tuple from list" in {
       val list = List(3, 5)
-      val sql = q"""SELECT * FROM test WHERE age IN ${SqlToken.tuple(list)}"""
+      val sql = q"""SELECT * FROM test WHERE age IN ${SqlToken.tupleFromList(list)}"""
+      assert(sql == SqlToken("SELECT * FROM test WHERE age IN (?, ?)", List(IntValue(3), IntValue(5))))
+    }
+    "construct an SQLToken with tuple" in {
+      val sql = q"""SELECT * FROM test WHERE age IN ${SqlToken.tupleFromValues(3, 5)}"""
       assert(sql == SqlToken("SELECT * FROM test WHERE age IN (?, ?)", List(IntValue(3), IntValue(5))))
     }
     "construct an SQLToken with tuple lists" in {
-      val list = List(List("Bob", 5), List("Amy", 3))
-      val sql = q"""INSERT INTO test(name, age) VALUES ${SqlToken.tupleList(list)}"""
+      val list = List(SqlToken.tupleFromValues("Bob", 5), SqlToken.tupleFromValues("Amy", 3))
+      val sql = q"""INSERT INTO test(name, age) VALUES ${SqlToken.joinByComma(list)}"""
       assert(
         sql == SqlToken("INSERT INTO test(name, age) VALUES (?, ?), (?, ?)",
                         List(StringValue("Bob"), IntValue(5), StringValue("Amy"), IntValue(3))))
@@ -150,7 +156,7 @@ class SqlInterpolationTestSuite extends PlaySpec {
     "construct an SQLToken with String Array" in {
       val stringList = List("First String", "Second String")
       val sql = q"""SELECT * FROM test WHERE tags = $stringList"""
-      assert(sql == SqlToken("SELECT * FROM test WHERE tags = ?", List(ArrayValue(stringList))))
+      assert(sql == SqlToken("SELECT * FROM test WHERE tags = ?", List(StringArrayValue(stringList))))
       assert(sql.debugInfo == "SELECT * FROM test WHERE tags = {'First String','Second String'}")
     }
     "construct an SQLToken with Bounding Box" in {
@@ -160,14 +166,12 @@ class SqlInterpolationTestSuite extends PlaySpec {
       assert(sql.debugInfo == "SELECT * FROM test WHERE bounding_box = '(1.0,2.0,3.0,50.0,60.0,70.0)'")
     }
     "construct an SQLToken with nested-joined SQL" in {
-      val fields = List("name", "age")
-      val values = List("Bob", 5)
+      val fields = List(q"name", q"age")
+      val values = List("Bob".toSqlValue, 5.toSqlValue)
       val sql =
-        q"""INSERT INTO test(${SqlToken.join(fields.map(x => Right(SqlToken.identifier(x))), ", ")}) VALUES ${SqlToken
-          .tupleList(List(values))}"""
+        q"""INSERT INTO test(${SqlToken.joinBySeparator(fields, ", ")}) VALUES ${SqlToken.tupleFromList(values)}"""
 
-      assert(
-        sql == SqlToken("""INSERT INTO test("name", "age") VALUES (?, ?)""", List(StringValue("Bob"), IntValue(5))))
+      assert(sql == SqlToken("""INSERT INTO test(name, age) VALUES (?, ?)""", List(StringValue("Bob"), IntValue(5))))
     }
     "create debugInfo from SQLToken" in {
       val sql = q"""SELECT * FROM test WHERE age = ${3} AND name = ${"Amy"}"""

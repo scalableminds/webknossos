@@ -72,7 +72,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
       for {
-        scale <- Vec3Double.fromList(parseArrayTuple(literal).map(_.toDouble)) ?~> "could not parse dataset scale"
+        scale <- Vec3Double.fromList(parseArrayLiteral(literal).map(_.toDouble)) ?~> "could not parse dataset scale"
       } yield Some(scale)
     case None => Fox.successful(None)
   }
@@ -107,7 +107,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         r.logourl,
         Instant.fromSql(r.sortingkey),
         details,
-        parseArrayTuple(r.tags).toSet,
+        parseArrayLiteral(r.tags).toSet,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -234,7 +234,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                      FROM $existingCollectionName
-                     WHERE name IN ${SqlToken.tuple(names)}
+                     WHERE name IN ${SqlToken.tupleFromList(names)}
                      AND _organization = $organizationId
                      AND $accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
@@ -311,24 +311,24 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""update webknossos.dataSets
-                      set adminViewConfiguration = ${Json.toJson(configuration)}
-                      where _id = $datasetId""".asUpdate)
+                   set adminViewConfiguration = ${Json.toJson(configuration)}
+                   where _id = $datasetId""".asUpdate)
     } yield ()
 
   def updateUploader(datasetId: ObjectId, uploaderIdOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""update webknossos.dataSets
-                      set _uploader = $uploaderIdOpt
-                      where _id = $datasetId""".asUpdate)
+                   set _uploader = $uploaderIdOpt
+                   where _id = $datasetId""".asUpdate)
     } yield ()
 
   def updateFolder(datasetId: ObjectId, folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
-      _ <- run(sqlu"""update webknossos.dataSets
-                        set _folder = $folderId
-                        where _id = $datasetId""")
+      _ <- run(q"""update webknossos.dataSets
+                   set _folder = $folderId
+                   where _id = $datasetId""".asUpdate)
     } yield ()
 
   def insertOne(d: DataSet): Fox[Unit] = {
@@ -375,8 +375,8 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
       if (existingDataSetIds.isEmpty) q"${true}"
-      else q"_id not in ${SqlToken.tuple(existingDataSetIds)}"
-    val statusNotAlreadyInactive = q"status not in ${SqlToken.tuple(inactiveStatusList)}"
+      else q"_id not in ${SqlToken.tupleFromList(existingDataSetIds)}"
+    val statusNotAlreadyInactive = q"status not in ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteResolutionsQuery =
       q"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
     val deleteLayersQuery =
@@ -412,7 +412,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     extends SimpleSQLDAO(sqlClient) {
   private def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
     for {
-      resolution <- Vec3Int.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
+      resolution <- Vec3Int.fromList(parseArrayLiteral(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
     } yield resolution
 
   def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
@@ -456,7 +456,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
-        .fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt))
+        .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
       standinResolutions: Option[List[Vec3Int]] = if (skipResolutions) Some(List.empty[Vec3Int]) else None
@@ -469,7 +469,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     } yield {
       category match {
         case Category.segmentation =>
-          val mappingsAsSet = row.mappings.map(parseArrayTuple(_).toSet)
+          val mappingsAsSet = row.mappings.map(parseArrayLiteral(_).toSet)
           Fox.successful(
             AbstractSegmentationLayer(
               row.name,
@@ -533,7 +533,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
 
   def updateLayers(dataSetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =
-      q"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in ${SqlToken.tuple(
+      q"delete from webknossos.dataset_layers where _dataSet = $dataSetId and name not in ${SqlToken.tupleFromList(
         dataLayers.map(_.name))}".asUpdate
     val clearQuery = q"delete from webknossos.dataset_layers where _dataSet = $dataSetId".asUpdate
 

@@ -208,8 +208,14 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     for {
       r <- run(
         q"""
-        WITH task_states AS (${tasksWithStateQ(staleTimeout)}),
-          chunk_states AS (${chunksWithStateQ(staleTimeout)})
+        WITH task_states AS (
+          ${tasksWithStateQ(staleTimeout)}
+          WHERE t._run IN ${SqlToken.tupleFromList(runIds)} -- Filter here, because CTEs are materialized
+        ),
+        chunk_states AS (
+          ${chunksWithStateQ(staleTimeout)}
+          WHERE t._run IN ${SqlToken.tupleFromList(runIds)} -- Filter here, because CTEs are materialized
+        )
         SELECT
           r._id AS runId,
           r.name AS runName,

@@ -1,6 +1,6 @@
 package utils.sql
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsValue, Json}
 import slick.dbio.{Effect, NoStream}
@@ -10,35 +10,27 @@ import slick.util.DumpInfo
 import utils.ObjectId
 
 import java.sql.{PreparedStatement, Types}
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration
 import scala.concurrent.duration.FiniteDuration
 
 class SqlInterpolator(val s: StringContext) extends AnyVal {
-  def q(param: Any*): SqlToken = {
+  def q(param: SqlToken*): SqlToken = {
     val parts = s.parts.toList
-    val values = param.toList
+    val tokens = param.toList
 
     val outputSql = mutable.StringBuilder.newBuilder
     val outputValues = ListBuffer[SqlValue]()
 
-    assert(parts.length == values.length + 1)
+    assert(parts.length == tokens.length + 1)
     for (i <- parts.indices) {
       outputSql ++= parts(i)
 
-      if (i < values.length) {
-        val value = values(i)
-        value match {
-          case x: SqlToken =>
-            outputSql ++= x.sql
-            outputValues ++= x.values
-          case x =>
-            val sqlValue = SqlValue.makeSqlValue(x)
-            outputSql ++= sqlValue.placeholder
-            outputValues += sqlValue
-        }
+      if (i < tokens.length) {
+        val token = tokens(i)
+        outputSql ++= token.sql
+        outputValues ++= token.values
       }
     }
 
@@ -102,16 +94,15 @@ object SqlToken {
     SqlToken(sql = outputSql.toString, values = outputValues.toList)
   }
 
-  def tuple(values: Seq[Any]): SqlToken = {
-    val sqlValues = values.map(SqlValue.makeSqlValue)
-    SqlToken(sql = s"(${sqlValues.map(_.placeholder).mkString(", ")})", values = sqlValues.toList)
-  }
+  def tupleFromList(values: List[SqlValue]): SqlToken =
+    SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values)
 
-  def tupleList(values: Seq[Seq[Any]]): SqlToken = {
-    val sqlValueLists = values.map(list => list.map(SqlValue.makeSqlValue))
+  def tupleFromValues(values: SqlValue*): SqlToken =
+    SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values.toList)
+
+  def tupleList(sqlValueLists: List[List[SqlValue]]): SqlToken =
     SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.placeholder).mkString(", ")})").mkString(", "),
-             values = sqlValueLists.flatten.toList)
-  }
+             values = sqlValueLists.flatten)
 
   def raw(s: String): SqlToken = SqlToken(s)
 
@@ -126,37 +117,10 @@ trait SqlValue {
   def placeholder: String = "?"
 
   def debugInfo: String
-}
 
-object SqlValue {
+  def toSqlToken: SqlToken = SqlToken(sql = placeholder, values = List(this))
 
-  @tailrec
-  def makeSqlValue(p: Any): SqlValue =
-    p match {
-      case x: SqlValue          => x
-      case x: String            => StringValue(x)
-      case x: Short             => ShortValue(x)
-      case x: Int               => IntValue(x)
-      case x: Long              => LongValue(x)
-      case x: Float             => FloatValue(x)
-      case x: Double            => DoubleValue(x)
-      case x: Boolean           => BooleanValue(x)
-      case x: Instant           => InstantValue(x)
-      case x: FiniteDuration    => DurationValue(x)
-      case x: ObjectId          => ObjectIdValue(x)
-      case x: JsValue           => JsonValue(x)
-      case x: Enumeration#Value => EnumerationValue(x)
-      case x: Vec3Double        => Vector3Value(x)
-      case x: Vec3Int           => Vector3Value(x.toVec3Double)
-      case x: BoundingBox       => BoundingBoxValue(x)
-      case x: Option[_] =>
-        x match {
-          case Some(y) => makeSqlValue(y)
-          case None    => NoneValue()
-        }
-      case x: List[_] => ArrayValue(x)
-      case x: Set[_]  => ArrayValue(x.toList)
-    }
+  def toSqlValue: SqlValue = this // to force implicit conversion
 }
 
 case class StringValue(v: String) extends SqlValue with SqlEscaping {
@@ -251,10 +215,18 @@ case class EnumerationValue(v: Enumeration#Value) extends SqlValue with SqlEscap
   override def debugInfo: String = escapeLiteral(v.toString)
 }
 
-case class ArrayValue(v: List[Any]) extends SqlValue with SqlEscaping {
+case class StringArrayValue(v: List[String]) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.toArray, Types.ARRAY)
+
+  override def debugInfo: String = "{" + v.map(escapeLiteral).mkString(",") + "}"
+}
+
+case class EnumerationArrayValue(v: List[Enumeration#Value], sqlEnumName: String) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
 
-  override def debugInfo: String = "{" + v.map(i => escapeLiteral(i.toString)).mkString(",") + "}"
+  override def placeholder = s"?::$sqlEnumName[]"
+
+  override def debugInfo: String = "{" + v.mkString(",") + "}"
 }
 
 case class Vector3Value(v: Vec3Double) extends SqlValue with SqlEscaping {

@@ -1,6 +1,5 @@
 package models.job
 
-import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
@@ -8,25 +7,22 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.binary.{DataSetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO}
 import oxalis.telemetry.SlackNotificationService
-import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration._
+import scala.concurrent.duration.{FiniteDuration, _}
 
 case class Job(
     _id: ObjectId,
@@ -127,44 +123,44 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} order by created"
-          .as[JobsRow])
+      r <- run(q"select $columns from $existingCollectionName where $accessQuery order by created".as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where #${accessQuery.debugInfo} and _id = $jobId"
-          .as[JobsRow])
+      r <- run(q"select $columns from $existingCollectionName where $accessQuery and _id = $jobId".as[JobsRow])
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
-  def countUnassignedPendingForDataStore(_dataStore: String): Fox[Int] =
+  def countUnassignedPendingForDataStore(dataStoreName: String): Fox[Int] =
     for {
-      r <- run(sql"""select count(_id) from #${existingCollectionName.debugInfo}
-              where state = '#${JobState.PENDING}'
-              and manualState is null
-              and _dataStore = ${_dataStore}
-              and _worker is null""".as[Int])
+      r <- run(q"""select count(_id) from $existingCollectionName
+                   where state = ${JobState.PENDING}
+                   and manualState is null
+                   and _dataStore = $dataStoreName
+                   and _worker is null""".as[Int])
       head <- r.headOption
     } yield head
 
   def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
     for {
-      r <- run(
-        sql"select count(_id) from #${existingCollectionName.debugInfo} where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null"
-          .as[Int])
+      r <- run(q"""SELECT COUNT(_id)
+                   FROM $existingCollectionName
+                   WHERE _worker = $workerId
+                   AND state in ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND manualState IS NULL""".as[Int])
       head <- r.headOption
     } yield head
 
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null order by created"
-          .as[JobsRow])
+      r <- run(q"""SELECT $columns from $existingCollectionName
+                   WHERE _worker = $workerId and state in ${SqlToken
+        .tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND manualState IS NULL
+                   ORDER BY created""".as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -176,59 +172,52 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
    */
   def findAllCancellingByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
-      r <- run(
-        sql"select #${columns.debugInfo} from #${existingCollectionName.debugInfo} where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}'"
-          .as[JobsRow])
+      r <- run(q"""SELECT $columns from $existingCollectionName
+                   WHERE _worker = $workerId
+                   AND state != ${JobState.CANCELLED}
+                   AND manualState = ${JobState.CANCELLED}""".as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
 
-  def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
-    for {
-      results: Seq[String] <- run(
-        sql"select _id from #${existingCollectionName.debugInfo} where _id = ${_id} and _owner = ${_user}".as[String])
-    } yield results.nonEmpty
-
   def insertOne(j: Job): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.jobs(_id, _owner, _dataStore, command, commandArgs, state, manualState, _worker, latestRunId,
-               returnValue, started, ended, created, isDeleted)
-                         values(${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, '#${sanitize(
-          j.commandArgs.toString)}',
-                          '#${j.state.toString}', #${optionLiteralSanitized(j.manualState.map(_.toString))},
-                          #${optionLiteral(j._worker.map(_.toString))},
-                          #${optionLiteralSanitized(j.latestRunId)},
-                          #${optionLiteralSanitized(j.returnValue)},
-                          #${optionLiteral(j.started.map(_.toString))},
-                          #${optionLiteral(j.ended.map(_.toString))},
-                          ${j.created}, ${j.isDeleted})""")
+      _ <- run(q"""INSERT INTO webknossos.jobs(
+                    _id, _owner, _dataStore, command, commandArgs,
+                    state, manualState, _worker,
+                    latestRunId, returnValue, started, ended,
+                    created, isDeleted
+                   )
+                   VALUES(
+                    ${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, ${j.commandArgs},
+                    ${j.state}, ${j.manualState}, ${j._worker},
+                    ${j.latestRunId}, ${j.returnValue}, ${j.started}, ${j.ended},
+                    ${j.created}, ${j.isDeleted})""".asUpdate)
     } yield ()
 
   def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.jobs set manualState = '#${manualState.toString}' where _id = $id""")
+      _ <- run(q"""update webknossos.jobs set manualState = $manualState where _id = $id""".asUpdate)
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =
     for {
-      _ <- run(sqlu"""update webknossos.jobs set
-              latestRunId = #${optionLiteralSanitized(s.latestRunId)},
-              state = '#${s.state.toString}',
-              returnValue = #${optionLiteralSanitized(s.returnValue)},
-              started = ${s.started},
-              ended = ${s.ended}
-              where _id = $jobId""")
+      _ <- run(q"""UPDATE webknossos.jobs SET
+                   latestRunId = ${s.latestRunId},
+                   state = ${s.state},
+                   returnValue = ${s.returnValue},
+                   started = ${s.started},
+                   ended = ${s.ended}
+                   where _id = $jobId""".asUpdate)
     } yield ()
 
   def reserveNextJob(worker: Worker): Fox[Unit] = {
-    val query =
-      sqlu"""
+    val query = q"""
           with subquery as (
             select _id
-            from webknossos.jobs_
+            from $existingCollectionName
             where
-              state = '#${JobState.PENDING}'
+              state = ${JobState.PENDING}
               and _dataStore = ${worker._dataStore}
               and manualState is NULL
               and _worker is NULL
@@ -239,7 +228,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           set _worker = ${worker._id}
           from subquery
           where j._id = subquery._id
-          """
+          """.asUpdate
     for {
       _ <- run(
         query.withTransactionIsolation(Serializable),
@@ -251,12 +240,12 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countByState: Fox[Map[String, Int]] =
     for {
-      result <- run(sql"""select state, count(_id)
-                           from webknossos.jobs_
-                           where manualState is null
-                           group by state
-                           order by state
-                           """.as[(String, Int)])
+      result <- run(q"""select state, count(_id)
+                        from webknossos.jobs_
+                        where manualState is null
+                        group by state
+                        order by state
+                        """.as[(String, Int)])
     } yield result.toMap
 
 }
@@ -270,9 +259,7 @@ class JobService @Inject()(wkConf: WkConf,
                            organizationDAO: OrganizationDAO,
                            dataSetDAO: DataSetDAO,
                            analyticsService: AnalyticsService,
-                           slackNotificationService: SlackNotificationService,
-                           val lifecycle: ApplicationLifecycle,
-                           val system: ActorSystem)(implicit ec: ExecutionContext)
+                           slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Formatter {

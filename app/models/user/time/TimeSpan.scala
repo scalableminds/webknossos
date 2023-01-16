@@ -79,20 +79,23 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByUserWithTask(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[JsValue] =
+  def findAllByUserWithTask(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[JsValue] = {
+    val startOrZero = start.getOrElse(Instant.zero)
+    val endOrMax = end.getOrElse(Instant.max)
     for {
-      tuples <- run(sql"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
+      tuples <- run(q"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
                         from webknossos.timespans_ ts
                         join webknossos.annotations_ a on ts._annotation = a._id
                         join webknossos.tasks_ t on a._task = t._id
                         join webknossos.projects_ p on t._project = p._id
                         join webknossos.taskTypes_ tt on t._taskType = tt._id
-                        where ts._user = ${userId.id}
+                        where ts._user = $userId
                         and ts.time > 0
-                        and ts.created >= ${start.getOrElse(Instant.zero)}
-                        and ts.created < ${end
-        .getOrElse(Instant.max)}""".as[(Long, Instant, String, String, String, String, String, String)])
+                        and ts.created >= $startOrZero
+                        and ts.created < $endOrMax
+                        """.as[(Long, Instant, String, String, String, String, String, String)])
     } yield formatTimespanTuples(tuples)
+  }
 
   private def formatTimespanTuples(tuples: Vector[(Long, Instant, String, String, String, String, String, String)]) = {
 
@@ -131,38 +134,41 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                 .getOrElse(Instant.zero)
                 .toSql) && r.created <= end.getOrElse(Instant.max).toSql)
           .result)
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
-  def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] =
+  def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] = {
+    val startOrZero = start.getOrElse(Instant.zero)
+    val endOrMax = end.getOrElse(Instant.max)
     for {
-      r <- run(sql"""select #${columnsWithPrefix("t.").debugInfo} from #${existingCollectionName.debugInfo} t
+      r <- run(q"""select ${columnsWithPrefix("t.")} from $existingCollectionName t
               join webknossos.users u on t._user = u._id
-              where t.created >= ${start.getOrElse(Instant.zero)} and t.created <= ${end.getOrElse(Instant.max)}
+              where t.created >= $startOrZero and t.created <= $endOrMax
               and u._organization = $organizationId
           """.as[TimespansRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
+  }
 
   def insertOne(t: TimeSpan): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
-                values(${t._id.id}, ${t._user.id}, ${t._annotation.map(_.id)}, ${t.time}, ${t.lastUpdate},
-                ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""")
+        q"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
+                values(${t._id}, ${t._user}, ${t._annotation}, ${t.time}, ${t.lastUpdate},
+                ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
   def updateOne(t: TimeSpan): Fox[Unit] =
     for { //note that t.created is skipped
-      _ <- run(sqlu"""update webknossos.timespans
+      _ <- run(q"""update webknossos.timespans
                 set
-                  _user = ${t._user.id},
-                  _annotation = ${t._annotation.map(_.id)},
+                  _user = ${t._user},
+                  _annotation = ${t._annotation},
                   time = ${t.time},
                   lastUpdate = ${t.lastUpdate},
                   numberOfUpdates = ${t.numberOfUpdates},
                   isDeleted = ${t.isDeleted}
-                where _id = ${t._id.id}
-        """) ?~> "FAILED: run() in TimeSpanSQLDAO.updateOne"
+                where _id = ${t._id}
+        """.asUpdate)
     } yield ()
 }

@@ -3,17 +3,15 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
-import javax.inject.Inject
 import models.user.MultiUserDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import slick.jdbc.PostgresProfile.api._
-import utils.sql.{SqlClient, SimpleSQLDAO}
-import scala.concurrent.duration._
+import utils.sql.{SimpleSQLDAO, SqlClient}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
                                       maintenanceDAO: MaintenanceDAO,
@@ -52,12 +50,12 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def getExpirationTime: Fox[Instant] =
     for {
-      timeList <- run(sql"select maintenanceExpirationTime from webknossos.maintenance".as[Instant])
+      timeList <- run(q"select maintenanceExpirationTime from webknossos.maintenance".as[Instant])
       time <- timeList.headOption.toFox
     } yield time
 
   def updateExpirationTime(newExpirationTime: Instant): Fox[Unit] =
     for {
-      _ <- run(sqlu"update webknossos.maintenance set maintenanceExpirationTime = $newExpirationTime")
+      _ <- run(q"update webknossos.maintenance set maintenanceExpirationTime = $newExpirationTime".asUpdate)
     } yield ()
 }

@@ -136,7 +136,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] =
     for {
-      r <- run(sql"""select #${columnsWithPrefix("t.")} from #${existingCollectionName.debugInfo} t
+      r <- run(sql"""select #${columnsWithPrefix("t.").debugInfo} from #${existingCollectionName.debugInfo} t
               join webknossos.users u on t._user = u._id
               where t.created >= ${start.getOrElse(Instant.zero)} and t.created <= ${end.getOrElse(Instant.max)}
               and u._organization = $organizationId

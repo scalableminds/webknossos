@@ -82,7 +82,8 @@ class BinaryDataService(val dataBaseDir: Path,
       request.dataLayer.bucketProvider.load(readInstruction, cache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))
-          logger.warn(s"Caught internal error: $msg")
+          logger.warn(
+            s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
         case other => other.toFox
       }

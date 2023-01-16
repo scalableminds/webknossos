@@ -104,7 +104,7 @@ export const getColorForCoords: ShaderModule = {
       // Will hold [highValue, lowValue];
       vec4 returnValue[2];
 
-      vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
+      vec3 coords = floor(getRelativeCoords(worldPositionUVW, activeMagIndices[int(layerIndex)]));
       vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
@@ -155,6 +155,7 @@ export const getColorForCoords: ShaderModule = {
         return returnValue;
       }
 
+      float zoomStep = activeMagIndices[int(layerIndex)];
       if (renderedZoomStep != zoomStep) {
         /* We already know which fallback bucket we have to look into. However,
          * for 8 mag-1 buckets, there is usually one fallback bucket in mag-2.

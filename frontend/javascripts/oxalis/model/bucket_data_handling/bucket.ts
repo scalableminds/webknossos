@@ -9,7 +9,7 @@ import {
   bucketPositionToGlobalAddress,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
@@ -691,7 +691,7 @@ export class DataBucket {
       return;
     }
 
-    const zoomStep = getRequestLogZoomStep(Store.getState());
+    const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
 
     if (this.zoomedAddress[3] === zoomStep) {
       // @ts-ignore

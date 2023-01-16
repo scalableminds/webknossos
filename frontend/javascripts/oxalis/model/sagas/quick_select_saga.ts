@@ -57,7 +57,7 @@ import {
   getResolutionInfo,
 } from "../accessors/dataset_accessor";
 import Dimensions from "../dimensions";
-import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
@@ -151,7 +151,11 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     getSegmentationLayerForTracing(state, volumeTracing),
   );
 
-  const requestedZoomStep = yield* select((store) => getRequestLogZoomStep(store));
+  // todo: this will only work if volume layer and color layer use the same transforms.
+  // enforce this somehow?
+  const requestedZoomStep = yield* select((store) =>
+    getActiveMagIndexForLayer(store, colorLayer.name),
+  );
   const resolutionInfo = getResolutionInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.

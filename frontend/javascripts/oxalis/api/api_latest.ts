@@ -76,7 +76,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
-  getRequestLogZoomStep,
+  getActiveMagIndexForLayer,
   getRotation,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -1400,7 +1400,7 @@ class DataApi {
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
     if (maybeResolutionIndex == null) {
-      maybeResolutionIndex = getRequestLogZoomStep(state);
+      maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
     }
     const zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
 

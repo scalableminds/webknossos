@@ -117,7 +117,7 @@ type DatasetSettingsProps = {
   onChangeRadius: (value: number) => void;
   onChangeShowSkeletons: (arg0: boolean) => void;
   onSetPosition: (arg0: Vector3) => void;
-  onZoomToResolution: (arg0: Vector3) => number;
+  onZoomToResolution: (layerName: string, arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
   reloadHistogram: (layerName: string) => void;
   tracing: Tracing;
@@ -783,7 +783,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
 
     this.props.onSetPosition(foundPosition);
-    const zoomValue = this.props.onZoomToResolution(foundResolution);
+    const zoomValue = this.props.onZoomToResolution(layerName, foundResolution);
     Toast.success(
       `Jumping to position ${foundPosition.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
     );
@@ -1159,8 +1159,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setShowSkeletonsAction(showSkeletons));
   },
 
-  onZoomToResolution(resolution: Vector3) {
-    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
+  onZoomToResolution(layerName: string, resolution: Vector3) {
+    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), layerName, resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },

@@ -55,6 +55,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_unrenderable;
 <% }) %>
 
+uniform float activeMagIndices[<%= layerNamesWithSegmentation.length %>];
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
   uniform highp usampler2D custom_color_texture;
@@ -89,7 +90,6 @@ uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
 uniform vec3 activeSegmentPosition;
-uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
@@ -142,9 +142,10 @@ void main() {
   // }
 
   if (renderBucketIndices) {
-    vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
-    vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
-    gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
+    // todo: reactivate (only used for debugging, though)
+    // vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
+    // vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
+    // gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
     return;
   }
   vec3 data_color = vec3(0.0);

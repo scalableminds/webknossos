@@ -25,7 +25,7 @@ import {
 import {
   getPosition,
   getRotationOrtho,
-  getRequestLogZoomStep,
+  getZoomValue,
   isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -264,7 +264,8 @@ function addNode(
       position,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
-      getRequestLogZoomStep(Store.getState()),
+      // todo: this would be a breaking change. clarify.
+      getZoomValue(Store.getState().flycam),
       null,
       !activate,
     ),

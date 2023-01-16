@@ -34,7 +34,7 @@ import {
   getLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getRequestLogZoomStep,
+  getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
 } from "oxalis/model/accessors/flycam_accessor";
@@ -138,9 +138,6 @@ class PlaneMaterialFactory {
       anchorPoint: {
         value: new THREE.Vector3(0, 0, 0),
       },
-      zoomStep: {
-        value: 1,
-      },
       zoomValue: {
         value: 1,
       },
@@ -216,8 +213,14 @@ class PlaneMaterialFactory {
       },
     };
 
+    const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
+    this.uniforms.activeMagIndices = {
+      value: Object.values(activeMagIndices),
+    };
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
+
+      // todo: unused?
       this.uniforms[`${layerName}_maxZoomStep`] = {
         value: dataLayer.cube.resolutionInfo.getHighestResolutionIndex(),
       };
@@ -379,9 +382,9 @@ class PlaneMaterialFactory {
     this.material.side = THREE.DoubleSide;
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getRequestLogZoomStep(storeState),
-        (zoomStep) => {
-          this.uniforms.zoomStep.value = zoomStep;
+        (storeState) => getActiveMagIndicesForLayers(storeState),
+        (activeMagIndices) => {
+          this.uniforms.activeMagIndices.value = Object.values(activeMagIndices);
         },
         true,
       ),

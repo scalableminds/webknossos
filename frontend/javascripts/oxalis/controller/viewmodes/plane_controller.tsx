@@ -16,7 +16,7 @@ import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_action
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import { document } from "libs/window";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -441,7 +441,7 @@ class PlaneController extends React.PureComponent<Props> {
           const hoveredId = cube.getDataValue(
             globalMousePosition,
             mapping,
-            getRequestLogZoomStep(Store.getState()),
+            getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
           );
           navigator.clipboard
             .writeText(String(hoveredId))

@@ -10,7 +10,7 @@ import {
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { takeLatest, select, take, retry, delay } from "typed-redux-saga";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -106,7 +106,8 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
     });
     const isZoomThresholdExceeded = yield* select(
       (storeState) =>
-        getRequestLogZoomStep(storeState) > Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
+        getActiveMagIndexForLayer(storeState, segmentationLayer.name) >
+        Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
     );
 
     if (shouldDisplaySegmentationData() && isAgglomerateMappingEnabled && isZoomThresholdExceeded) {

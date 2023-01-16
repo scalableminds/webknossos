@@ -8,7 +8,7 @@ import Maybe from "data.maybe";
 import type { MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getActiveMagIndicesForLayers } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -504,10 +504,13 @@ class SceneController {
     // all buckets necessary for rendering are addressed. The anchorPoint is
     // defined with bucket indices for the coordinate system of the current zoomStep.
     let anchorPoint;
-    const zoomStep = getRequestLogZoomStep(Store.getState());
 
+    const magIndices = getActiveMagIndicesForLayers(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(globalPosition, zoomStep);
+      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(
+        globalPosition,
+        magIndices[dataLayer.name],
+      );
     }
 
     if (optArbitraryPlane) {

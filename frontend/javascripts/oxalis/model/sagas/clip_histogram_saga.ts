@@ -8,7 +8,7 @@ import { OrthoViews, Vector3 } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { api } from "oxalis/singletons";
-import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 
 function onThresholdChange(layerName: string, [firstVal, secVal]: [number, number]) {
   if (firstVal < secVal) {
@@ -31,7 +31,7 @@ async function getClippingValues(
   // Ideally, we want to avoid resolutions 1 and 2 to keep
   // the amount of data that has to be loaded small and
   // to de-noise the data
-  const desiredResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
+  const desiredResolutionIndex = Math.max(2, getActiveMagIndexForLayer(state, layerName) + 1);
 
   let dataForAllViewPorts;
   try {

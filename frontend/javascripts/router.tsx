@@ -597,7 +597,7 @@ class ReactRouter extends React.Component<Props> {
                         !match.params.dataSetName ||
                         !match.params.type
                       ) {
-                        // Typehint for flow
+                        // Typehint for TS
                         throw new Error("Invalid URL");
                       }
 
@@ -609,23 +609,19 @@ class ReactRouter extends React.Component<Props> {
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { fallbackLayerName } = getParams;
-                      const resolutionRestrictions = {};
+                      const resolutionRestrictions: { min?: number; max?: number } = {};
 
                       if (getParams.minRes !== undefined) {
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         resolutionRestrictions.min = parseInt(getParams.minRes);
 
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.min)) {
                           throw new Error("Invalid minRes parameter");
                         }
                       }
 
                       if (getParams.maxRes !== undefined) {
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         resolutionRestrictions.max = parseInt(getParams.maxRes);
 
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.max)) {
                           throw new Error("Invalid maxRes parameter");
                         }

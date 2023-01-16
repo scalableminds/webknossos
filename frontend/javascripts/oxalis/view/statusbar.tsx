@@ -354,7 +354,8 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const activeResolution = useSelector((state: OxalisState) => getCurrentResolution(state));
+  // todo: what should be shown as a summary here?
+  const activeResolution = [1, 1, 1]; // useSelector((state: OxalisState) => getCurrentResolution(state));
 
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>

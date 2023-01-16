@@ -651,7 +651,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
-  activeResolution: getCurrentResolution(state),
+  // todo:
+  activeResolution: [1, 1, 1], // getCurrentResolution(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

@@ -84,7 +84,7 @@ object SqlToken {
 
   def joinBySeparator(tokens: Iterable[SqlToken], separator: String): SqlToken =
     SqlToken(sql = tokens.map(_.sql).mkString(separator), values = tokens.flatMap(_.values).toList)
-  
+
   def joinByComma(tokens: Iterable[SqlToken]): SqlToken = joinBySeparator(tokens, ", ")
 
   def empty: SqlToken = raw("")

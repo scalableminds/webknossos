@@ -165,14 +165,14 @@ export default function DatasetCollectionContextProvider({
     }
     const { itemById } = folderHierarchyQuery.data;
 
-    let currentFolder = itemById.get(dataset.folderId);
+    let currentFolder = itemById[dataset.folderId];
     if (currentFolder == null) {
       console.warn("Breadcrumbs could not be computed.");
       return [];
     }
     const breadcrumbs = [currentFolder.title];
     while (currentFolder?.parent != null) {
-      currentFolder = itemById.get(currentFolder.parent);
+      currentFolder = itemById[currentFolder.parent];
       if (currentFolder == null) {
         console.warn("Breadcrumbs could not be computed.");
         return [];

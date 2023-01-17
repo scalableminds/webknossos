@@ -41,3 +41,20 @@ export function hasPricingPlanExceededStorage(organization: APIOrganization): bo
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
   return user.isAdmin || user.isOrganizationOwner;
 }
+
+export function isPricingPlanGreaterEqualThan(planA: PricingPlanEnum, planB: PricingPlanEnum) {
+  switch (planA) {
+    case PricingPlanEnum.Power:
+    case PricingPlanEnum.PowerTrial:
+    case PricingPlanEnum.Custom:
+      return true;
+
+    case PricingPlanEnum.Team:
+    case PricingPlanEnum.TeamTrial:
+      return planB === PricingPlanEnum.Basic;
+
+    case PricingPlanEnum.Basic:
+    default:
+      return false;
+  }
+}

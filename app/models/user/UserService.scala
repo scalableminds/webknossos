@@ -142,11 +142,11 @@ class UserService @Inject()(conf: WkConf,
                        organizationId: ObjectId,
                        autoActivate: Boolean,
                        isAdmin: Boolean = false,
-                       isUnlisted: Boolean = false)(implicit ctx: DBAccessContext): Fox[User] =
+                       isUnlisted: Boolean = false): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
+      organizationTeamMembership = TeamMembership(organizationTeamId, isTeamManager = false)
       loginInfo = LoginInfo(CredentialsProvider.ID, newUserId.id)
       user = originalUser.copy(
         _id = newUserId,
@@ -161,7 +161,7 @@ class UserService @Inject()(conf: WkConf,
         created = Instant.now
       )
       _ <- userDAO.insertOne(user)
-      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)(GlobalAccessContext)))
+      _ <- userDAO.insertTeamMembership(user._id, organizationTeamMembership)(GlobalAccessContext)
       _ = logger.info(
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user

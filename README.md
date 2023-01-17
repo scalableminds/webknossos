@@ -1,13 +1,13 @@
-# [webKnossos](https://webknossos.org/)
-<img align="right" src="https://static.webknossos.org/images/oxalis.svg" alt="webKnossos Logo" />
-webKnossos is an open-source tool for annotating and exploring large 3D image datasets.
+# [WEBKNOSSOS](https://webknossos.org/)
+<img align="right" src="https://static.webknossos.org/images/icon-only.svg" alt="WEBKNOSSOS Logo" />
+WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image datasets.
 
 * Fly through your data for fast skeletonization and proof-reading
 * Create 3D training data for automated segmentations efficiently
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
+[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
 
 [![](https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -44,9 +44,9 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 [Read more about the original publication.](https://publication.webknossos.org)
 
 ## Installation
-webKnossos is open-source, so you can install it on your own server.
+WEBKNOSSOS is open-source, so you can install it on your own server.
 
-[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install webKnossos on your own server.
+[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install WEBKNOSSOS on your own server.
 
 For development installations, please see `DEV_INSTALL.md` file.
 
@@ -61,17 +61,17 @@ For details on community contributions, please refer to our [Contributing guide]
 
 Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
 
-[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
+[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for WEBKNOSSOS.
 
 
 ## Credits
 * scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
 
-webKnossos was inspired by [KNOSSOS](https://knossos.app).
+WEBKNOSSOS was inspired by [KNOSSOS](https://knossos.app).
 
 ### Thanks
-* [Browser Stack](https://www.browserstack.com/) for letting us test webKnossos on a variety of different devices
+* [Browser Stack](https://www.browserstack.com/) for letting us test WEBKNOSSOS on a variety of different devices
   <a href="https://www.browserstack.com/"><img src="https://avatars.githubusercontent.com/u/1119453?s=200&v=4" width=100 alt="Browserstack Logo" align="right"></a>
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 

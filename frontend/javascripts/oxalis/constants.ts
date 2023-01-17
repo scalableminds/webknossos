@@ -332,3 +332,5 @@ export type TypedArray =
   | BigUint64Array;
 
 export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
+
+export const PRIMARY_COLOR = [86, 96, 255];

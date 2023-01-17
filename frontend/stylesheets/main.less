@@ -28,8 +28,19 @@
 @import "_google-charts-overwrites.less";
 @import "flex_layout_overwrites.less";
 
+@font-face {
+  font-family: "Nunito";
+  src: local("Nunito"), url("Nunito-VariableFont_wght.ttf") format("truetype") tech(variations);
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: local("Nunito"), url("Nunito-Italic-VariableFont_wght.ttf") format("truetype") tech(variations);
+  font-style: italic;
+}
+
 // ----------------------- MAIN STYLES
-@font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
+@font-family: "Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
   Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
   sans-serif;
 
@@ -59,13 +70,15 @@ body {
 
 .ant-layout-header {
   .logo {
-    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    background: url(/assets/images/icon-only.svg) 15px center no-repeat;
     padding-left: 46px;
     height: 48px;
     float: left;
     margin-top: 1px;
-    background-size: 20px 20px;
-    filter: invert(1);
+    background-size: 24px 24px;
+  }
+  .ant-menu-item .logo {
+    filter: brightness(4);
   }
 
   @media @smartphones {
@@ -73,6 +86,16 @@ body {
 
     a[href="/"] span {
       font-size: 0px; // hide text
+    }
+  }
+  .ant-avatar {
+    border: 1px solid @blue-zircon;
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    cursor: pointer;
+    &:hover {
+      background-color: @blue-zircon;
+      color: @black;
     }
   }
 }
@@ -358,14 +381,13 @@ i.without-icon-margin,
   }
 
   .logo {
-    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    background: url(/assets/images/icon-only.svg) 15px center no-repeat;
     padding-left: 105px;
     height: 140px;
     float: left;
     margin-top: 2px;
     margin-left: -15px;
     background-size: 70px 70px;
-    filter: invert(1);
   }
 
   .ant-notification-notice-content {
@@ -555,7 +577,7 @@ i.without-icon-margin,
 }
 
 .highlight-folder-sidebar {
-  background-color: @blue-2;
+  background-color: @table-selected-row-hover-bg;
 }
 
 .sidebar-label {

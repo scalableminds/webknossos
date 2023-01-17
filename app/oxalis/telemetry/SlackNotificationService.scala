@@ -10,7 +10,7 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
 
   private lazy val slackClient = new SlackClient(rpc,
                                                  config.SlackNotifications.uri,
-                                                 name = s"webKnossos at ${config.Http.uri}",
+                                                 name = s"WEBKNOSSOS at ${config.Http.uri}",
                                                  config.SlackNotifications.verboseLoggingEnabled)
 
   def warnWithException(title: String, ex: Throwable, msg: String): Unit =

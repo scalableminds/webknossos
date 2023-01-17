@@ -34,7 +34,7 @@ export default function DownsampleVolumeModal({
       <p>
         This annotation does not have volume annotation data in all resolutions. Consequently,
         annotation data cannot be rendered at all zoom values. By clicking &quot;Downsample&quot;,
-        webKnossos will use the best resolution of the volume data to create all dependent
+        WEBKNOSSOS will use the best resolution of the volume data to create all dependent
         resolutions.
       </p>
 
@@ -47,7 +47,7 @@ export default function DownsampleVolumeModal({
         The cause for the missing resolutions can be one of the following:
         <ul>
           <li>
-            The annotation was created before webKnossos supported multi-resolution volume tracings.
+            The annotation was created before WEBKNOSSOS supported multi-resolution volume tracings.
           </li>
           <li>An old annotation was uploaded which did not include all resolutions.</li>
           <li>The annotation was created in a task that was restricted to certain resolutions.</li>

@@ -162,11 +162,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   ) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
-      : "If you are having trouble finding your data, webKnossos can try to find a position which contains data.";
+      : "If you are having trouble finding your data, WEBKNOSSOS can try to find a position which contains data.";
 
     if (!isColorLayer && maybeVolumeTracing && maybeVolumeTracing.fallbackLayer) {
       tooltipText =
-        "webKnossos will try to find data in your volume tracing first and in the fallback layer afterwards.";
+        "WEBKNOSSOS will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
 
     return (

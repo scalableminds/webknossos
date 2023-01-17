@@ -5,16 +5,16 @@ A good example is the analysis of nerve cells by placing a node every few slices
 Commonly, skeleton annotations contain the reconstruction of one or more structures, often with many thousand nodes.
 All connected nodes form a tree, i.e., an undirected graph.
 
-webKnossos skeleton annotations can be downloaded, modified, and imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
+WEBKNOSSOS skeleton annotations can be downloaded, modified, and imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
 
-This article outlines commonly used features and operations for viewing, editing, or creating new skeleton annotations in webKnossos.
+This article outlines commonly used features and operations for viewing, editing, or creating new skeleton annotations in WEBKNOSSOS.
 
-![An example of a complex webKnossos skeleton annotation](images/tracing_ui_skeletontracing.jpeg)
+![An example of a complex WEBKNOSSOS skeleton annotation](images/tracing_ui_skeletontracing.jpeg)
 
 ![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=115s)
 
 ### Annotation Modes
-webKnossos supports several modes for displaying your dataset & interacting with skeleton annotations.
+WEBKNOSSOS supports several modes for displaying your dataset & interacting with skeleton annotations.
 
 #### Orthogonal Mode
 Orthogonal mode displays a dataset with the camera oriented orthogonally to each of the three main axis x, y, z.
@@ -53,7 +53,7 @@ Trained tracers can follow "tube"-like structures, e.g. dendrites/axons in a neu
 Nodes are placed automatically along the flight path, creating skeletons very efficiently.
 
 ### Tools
-The webKnossos toolbar at the top of the screen contains several tools designed to work with skeletons:
+The WEBKNOSSOS toolbar at the top of the screen contains several tools designed to work with skeletons:
 
 - `Move`: Navigate around the dataset.
 - `Skeleton`: Create skeleton annotations and place nodes with a left mouse click. Read more below.
@@ -82,7 +82,7 @@ Comments are organized in the `Comments` tab on the right-hand side of the scree
 The `Tree Viewer` tab on the right-hand side menu displays a 2D simplified tree representation of the currently active tree.
 
 Many organic structures do not follow a single, linear path but split into several individual branches instead.
-webKnossos natively supports marking nodes as branch points.
+WEBKNOSSOS natively supports marking nodes as branch points.
 Any node can be marked as a branch point using the keyboard shortcut "B" or through the right-click menu.
 Branch points are highlighted using a slightly different color.
 All branch points are stored as a first-in, first-out (FIFO) stack. Press "J" to jump to the latest branch point in FIFO-order to continue working from there and remove it from the stack.
@@ -164,7 +164,7 @@ There are also keyboard shortcuts to quickly toggle the visibility:
 ![Trees can be hidden for a better overview of the data. Toggle the visibility of an individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](images/tracing_ui_tree_visibility.jpeg)
 
 #### The Context Menu for Easy Access to Functionalities
-webKnossos has a context menu that can be opened via *Right Click* (or *Shift + Right Click* if *Classic Controls* are enabled). This context menu offers useful context-sensitive information and most operations should be available through it:
+WEBKNOSSOS has a context menu that can be opened via *Right Click* (or *Shift + Right Click* if *Classic Controls* are enabled). This context menu offers useful context-sensitive information and most operations should be available through it:
 
 ![Example of the context menu](./images/context_menu.jpeg)
 
@@ -184,7 +184,7 @@ Example operations include (but are not limited to):
 
 
 ### Importing & Exporting NML Files
-webKnossos makes it easy to import or export skeleton annotations as [NML files](./data_formats.md#nml).
+WEBKNOSSOS makes it easy to import or export skeleton annotations as [NML files](./data_formats.md#nml).
 There are several ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.
@@ -199,11 +199,11 @@ Importing a skeleton annotation can be achieved using one of two ways:
 
 1. If you already have an annotation open you can easily add more skeletons to it by *drag and dropping* an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open annotation.
 
-2. To import a skeleton annotation as a completely new webKnossos annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Annotations" section.
+2. To import a skeleton annotation as a completely new WEBKNOSSOS annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Annotations" section.
 
 ![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](images/tracing_ui_import.jpeg)
 
-If you are looking to import/export annotations through Python code, check out our [webKnossos Python library](./tooling.md ).
+If you are looking to import/export annotations through Python code, check out our [WEBKNOSSOS Python library](./tooling.md ).
 
 ### Merging Skeleton Annotations
 There are two ways for merging annotations:
@@ -213,4 +213,4 @@ There are two ways for merging annotations:
 2. If you would like to merge your current annotation with another existing annotation, select the `Merge` operation from the overflow menu next to the `Save` button (see image). Either enter the ID of an existing explorative annotation or select a whole project and proceed to merge the selection with your currently open annotation. The resulting annotation can either be created as a new explorative annotation or the merge will happen in your current annotation.
 
 ![1. Select the Merge operation from the menu](images/tracing_ui_merge_1.jpeg)
-![2. Merging can be done with the whole webKnossos project or using the ID of an existing explorative annotation](images/tracing_ui_merge_2.jpeg)
+![2. Merging can be done with the whole WEBKNOSSOS project or using the ID of an existing explorative annotation](images/tracing_ui_merge_2.jpeg)

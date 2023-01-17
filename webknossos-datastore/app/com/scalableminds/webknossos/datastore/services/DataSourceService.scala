@@ -179,7 +179,7 @@ class DataSourceService @Inject()(
       "<empty>"
     }
     val outputForLogfile =
-      f"Contents of $propertiesFileName were changed by webKnossos at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
+      f"Contents of $propertiesFileName were changed by WEBKNOSSOS at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
     val logfilePath = dataSourcePath.resolve(logFileName)
     try {
       val fileWriter = new FileWriter(logfilePath.toString, true)

@@ -1,7 +1,7 @@
 # Getting Started
 
-Welcome to the webKnossos documentation.
-webKnossos is a platform for [exploring large-scale 3D image datasets](./tracing_ui.md), [creating skeleton annotations](./skeleton_annotation.md) and [3D volume segmentations](./volume_annotation.md).
+Welcome to the WEBKNOSSOS documentation.
+WEBKNOSSOS is a platform for [exploring large-scale 3D image datasets](./tracing_ui.md), [creating skeleton annotations](./skeleton_annotation.md) and [3D volume segmentations](./volume_annotation.md).
 Since it is a web-based tool, [collaboration](./sharing.md), [crowdsourcing](./tasks.md) and [publication](https://webknossos.org) is very easy.
 
 Feel free to [contact us](mailto:hello@webknossos.org) or [create a Pull Request](https://github.com/scalableminds/webknossos/pulls) if you have any suggestions for improving the documentation.
@@ -9,7 +9,7 @@ Feel free to [contact us](mailto:hello@webknossos.org) or [create a Pull Request
 ![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI)
 
 ## Create a webknossos.org Account
-Signing up for a free account on [webknossos.org](https://webknossos.org) is the easiest and fastest way to get started with webKnossos.
+Signing up for a free account on [webknossos.org](https://webknossos.org) is the easiest and fastest way to get started with WEBKNOSSOS.
 Either upload one of your own datasets and explore one of the many community datasets.
 
 The free tier comes with 10GB of storage for private datasets.
@@ -25,10 +25,10 @@ Click on the dataset name to open the dataset.
 
 ![The list of available datasets](./images/getting_started-datasets.jpeg)
 
-Any webKnossos dataset can be opened for read-only viewing ("View" mode) or in editor-mode to create a new skeleton and/or volume annotation. 
-The main webKnossos user interface consists of three orthogonal viewports slicing the data along the major axis and a 3D viewport. Read more about the UI in the section [about the UI](./tracing_ui.md).
+Any WEBKNOSSOS dataset can be opened for read-only viewing ("View" mode) or in editor-mode to create a new skeleton and/or volume annotation. 
+The main WEBKNOSSOS user interface consists of three orthogonal viewports slicing the data along the major axis and a 3D viewport. Read more about the UI in the section [about the UI](./tracing_ui.md).
 
-![The webKnossos user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.jpeg)
+![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.jpeg)
 
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) for advanced use.
@@ -51,7 +51,7 @@ You can also change the size of the viewports to see more details in your data a
 
 ## Your First Annotation
 Click the `Create Annotation` button while in "View" mode to create your first annotation.
-webKnossos will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
+WEBKNOSSOS will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
 
 Depending on the current tool - selectable in the top bar - various actions can be performed.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
@@ -70,8 +70,8 @@ Learn more about the skeleton, volume, and hybrid annotations as well as the int
 
 
 ## Learn More
-Now you know the basics of webKnossos.
-Feel free to explore more features of webKnossos in this documentation.
+Now you know the basics of WEBKNOSSOS.
+Feel free to explore more features of WEBKNOSSOS in this documentation.
 
 * [Dashboard](./dashboard.md)
 * [Skeleton Annotations](./skeleton_annotation.md)
@@ -84,7 +84,7 @@ Feel free to explore more features of webKnossos in this documentation.
 * [Task and Project Management](./tasks.md)
 * [FAQ](./faq.md)
 
-If you need help with webKnossos, feel free to contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the forum](https://forum.image.sc/tag/webknossos).
+If you need help with WEBKNOSSOS, feel free to contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the forum](https://forum.image.sc/tag/webknossos).
 scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).
 
-[Read the installation tutorial](./installation.md) if you wish to install webKnossos on your server.
+[Read the installation tutorial](./installation.md) if you wish to install WEBKNOSSOS on your server.

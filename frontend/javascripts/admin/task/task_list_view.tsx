@@ -245,7 +245,7 @@ class TaskListView extends React.PureComponent<Props, State> {
           by clicking on the <strong>Add Task</strong> button.
         </p>
         <p>
-          To learn more about the task system in webKnossos,{" "}
+          To learn more about the task system in WEBKNOSSOS,{" "}
           <a
             href="https://docs.webknossos.org/webknossos/tasks.html"
             rel="noopener noreferrer"

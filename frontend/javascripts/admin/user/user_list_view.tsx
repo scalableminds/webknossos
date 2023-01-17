@@ -277,7 +277,7 @@ class UserListView extends React.PureComponent<Props, State> {
     return (
       <Alert
         message="You reached the maximum number of users"
-        description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your webKnossos plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
+        description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
           this.state.users,
         )} active users of ${this.state.maxUserCountPerOrganization} allowed by your plan.`}
         type="error"

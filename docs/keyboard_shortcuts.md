@@ -3,7 +3,7 @@
 The most important shortcuts are always shown in the status bar at the bottom of the screen.
 These shortcut hints depend on the active tool and also change when modifiers are pressed to allow easy exploration of available functionality.
 
-A complete listing of all available keyboard & mouse shortcuts for webKnossos can be found below.
+A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS can be found below.
 
 ## General
 
@@ -117,7 +117,7 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 | Key Binding                                            | Operation                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------- |
 | Shift + Click on a mesh in the 3D viewport          | Move the camera to the clicked position          |
-| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from webKnossos
+| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from WEBKNOSSOS
 
 ## Agglomerate File Mapping Skeleton
 
@@ -131,5 +131,5 @@ The following binding only works in skeleton/hybrid annotations and if an agglom
 
 Note that you can enable *Classic Controls* in the left sidebar. 
 Classic controls are provided for backward compatibility for long-time users and are not recommended for new user accounts.
-Hence, Classic controls are disabled by default, and webKnossos uses a more intuitive behavior which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes). The right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
+Hence, Classic controls are disabled by default, and WEBKNOSSOS uses a more intuitive behavior which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes). The right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
 With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.

@@ -1,12 +1,12 @@
 # Contributing Guide
 
-**Welcome to the webKnossos contributing guide :sparkles: **
+**Welcome to the WEBKNOSSOS contributing guide :sparkles: **
 
-Thank you for taking the time to contribute to this project! The following is a set of guidelines for contributing to webKnossos. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+Thank you for taking the time to contribute to this project! The following is a set of guidelines for contributing to WEBKNOSSOS. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
 ## Code of Conduct
 
-webKnossos and everyone contributing and collaborating on this project is expected to follow the [webKnossos Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [hello@webknossos.org](mailto:hello@webknossos.org).
+WEBKNOSSOS and everyone contributing and collaborating on this project is expected to follow the [WEBKNOSSOS Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [hello@webknossos.org](mailto:hello@webknossos.org).
 
 
 ## How can I help?
@@ -20,20 +20,20 @@ We welcome community feedback and contributions! We are happy to have
 
 ## Feedback, Observations and Questions
 
-We'd love to hear your feedback on the webKnossos!
+We'd love to hear your feedback on the WEBKNOSSOS!
 We're also interested in hearing if this tool don't work for your usecase,
 or if you have questions regarding its usage.
 
 Please leave a message on the [image.sc forum](https://forum.image.sc/tag/webknossos)
 using the `webknossos` tag to enable public communication on those topics.
-If you prefer to share information only with the webKnossos team, please write an email
+If you prefer to share information only with the WEBKNOSSOS team, please write an email
 to [hello@webknossos.org](mailto:hello@webknossos.org). For commercial support please
 reach out to [scalable minds](https://scalableminds.com).
 
 
 ## Issues: Feature Suggestions and Bug Reports
 
-We track feature requests and bug reports in the [webKnossos repository issues](https://github.com/scalableminds/webknossos/issues).
+We track feature requests and bug reports in the [WEBKNOSSOS repository issues](https://github.com/scalableminds/webknossos/issues).
 Before opening a new issue, please do a quick search of existing issues to make sure your suggestion hasn’t already been added.
 If your issue doesn’t already exist, and you’re ready to create a new one, make sure to state what you would like to implement, improve or bugfix.
 Please use one of the provided templates to make this process easier for you.
@@ -54,8 +54,8 @@ that you use the API as intended. If that's the case, please
 
 If you are missing a feature to support your use-case, please consider the following points:
 
-1. Please verify if this feature is directly related to webKnossos.
-   Does it belong into the webKnossos?
+1. Please verify if this feature is directly related to WEBKNOSSOS.
+   Does it belong into the WEBKNOSSOS?
 2. Double-check if an issue for this feature exists already. If there is one with a very similar scope,
    please considering commenting there.
 3. If possible, consider how the implementation might look like (e.g. how would the public API change),
@@ -88,7 +88,7 @@ Please include the following in your pull request:
 * Adapt or add the documentation.
 * Consider enhancing the examples.
 
-The specific coding styles, test frameworks and documentation setup of webKnossos are described
+The specific coding styles, test frameworks and documentation setup of WEBKNOSSOS are described
 in the following sections:
 
 
@@ -109,6 +109,6 @@ The [webknossos repository](https://github.com/scalableminds/webknossos) is stru
 
 ### Documentation
 
-We render a combined documentation for webKnossos itself and the webKnossos Python libraries from the webknossos-libs repository using [mkdocs](https://www.mkdocs.org/). Source-files for the documentation are stored in the `docs` directory.
+We render a combined documentation for WEBKNOSSOS itself and the WEBKNOSSOS Python libraries from the webknossos-libs repository using [mkdocs](https://www.mkdocs.org/). Source-files for the documentation are stored in the `docs` directory.
 
-The documentation is deploy automatically through GitHub actions from the [webKnossos Python libraries repository](https://github.com/scalableminds/webknossos-libs/actions).
+The documentation is deploy automatically through GitHub actions from the [WEBKNOSSOS Python libraries repository](https://github.com/scalableminds/webknossos-libs/actions).

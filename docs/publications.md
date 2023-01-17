@@ -1,12 +1,12 @@
 ## Publications
-The following publications used webKnossos for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
+The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
 ## 2022
 * Sahil Loomba, Jakob Straehle, Vijayan Gangadharan, Natalie Heike, Abdelrahman Khalifa, Alessandro Motta, Niansheng Ju, Meike Sievers, Jens Gempt, Hanno S. Meyer & Moritz Helmstaedter.  
   Connectomic comparison of mouse and human cortex.  
   [Science (2022). DOI: 10.1126/science.abo0924](https://www.science.org/doi/abs/10.1126/science.abo0924). 
   
-  [**View data**](https://webknossos.org/publication/62b979370e130578529d66ca) in webKnossos.
+  [**View data**](https://webknossos.org/publication/62b979370e130578529d66ca) in WEBKNOSSOS.
 
 * Carles Bosch, Tobias Ackels, Alexandra Pacureanu, Yuxin Zhang, Christopher J. Peddie, Manuel Berning, Norman Rzepka, Marie-Christine Zdora, Isabell Whiteley, Malte Storm, Anne Bonnin, Christoph Rau, Troy Margrie, Lucy Collinson & Andreas T. Schaefer.  
   Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron micro-tomography and volume electron microscopy.  
@@ -16,7 +16,7 @@ The following publications used webKnossos for exploring large 3D electron-micro
   Neuropathic pain caused by miswiring and abnormal end organ targeting.  
   [Nature (2022). DOI: 10.1038/s41586-022-04777-z.](https://doi.org/10.1038/s41586-022-04777-z)
   
-  [**View data**](https://webknossos.org/publication/6290b8703153034732b62f54) in webKnossos.
+  [**View data**](https://webknossos.org/publication/6290b8703153034732b62f54) in WEBKNOSSOS.
 
 * Jialei Zhou, Haibin Sheng, Haoyu Wang, Yan Lu, Fangfang Wang, Hao Wu, Yunfeng Hua.  
   Application of three-dimensional electron microscopy to morphological study of neurons in brainstem cochlear nucleus.  
@@ -32,13 +32,13 @@ The following publications used webKnossos for exploring large 3D electron-micro
   Postnatal connectomic development of inhibition in mouse barrel cortex.  
   [Science (2021) DOI: 10.1126/science.abb4534.](http://dx.doi.org/10.1126/science.abb4534)
   
-  [**View data**](https://webknossos.org/publication/601801b6d77f39e121656acf) in webKnossos.
+  [**View data**](https://webknossos.org/publication/601801b6d77f39e121656acf) in WEBKNOSSOS.
 
 * Yunfeng Hua, Xu Ding, Haoyu Wang, Fangfang Wang, Yan Lu, Jakob Neef, Yunge Gao, Tobias Moser & Hao Wu.  
   Electron Microscopic Reconstruction of Neural Circuitry in the Cochlea.  
   [Cell Reports 34 (2021) DOI: 10.1101/2020.01.04.894816.](http://dx.doi.org/10.1101/2020.01.04.894816)
   
-  [**View data**](https://webknossos.org/publication/5ff301c3d05b8265cfa51cc8) in webKnossos.
+  [**View data**](https://webknossos.org/publication/5ff301c3d05b8265cfa51cc8) in WEBKNOSSOS.
 
 * Haoyu Wang, Shengxiong Wang, Yan Lu, Ying Chen, Wenqing Huang, Miaoxin Qiu, Hao Wu & Yunfeng Hua.  
   Cytoarchitecture and innervation of the mouse cochlear amplifier revealed by large‐scale volume electron microscopy.  
@@ -67,13 +67,13 @@ The following publications used webKnossos for exploring large 3D electron-micro
   Dense connectomic reconstruction in layer 4 of the somatosensory cortex.
   [Science (2019) DOI: 10.1126/science.aay3134.](https://science.sciencemag.org/content/early/2019/10/23/science.aay3134)
   
-  [**View data**](https://webknossos.org/publication/5db1ddabdf0a57ec5ce52e0f) in webKnossos.
+  [**View data**](https://webknossos.org/publication/5db1ddabdf0a57ec5ce52e0f) in WEBKNOSSOS.
 
 * Ali Karimi, Jan Odenthal, Florian Drawitsch, Kevin M. Boergens, Moritz Helmstaedter.  
   Cell-type specific innervation of cortical pyramidal cells at their apical tufts.   
   [bioRxiv (2019) DOI:10.1101/571695.](https://www.biorxiv.org/content/10.1101/571695v1.abstract) 
   
-  [**View data**](https://webknossos.org/publication/5eec8149cfa12a93b0431df8) in webKnossos.
+  [**View data**](https://webknossos.org/publication/5eec8149cfa12a93b0431df8) in WEBKNOSSOS.
 
 * Benedikt Sebastian Staffler.  
   Machine Learning for Connectomics.  
@@ -88,14 +88,14 @@ The following publications used webKnossos for exploring large 3D electron-micro
   Full reconstruction of large lobula plate tangential cells in Drosophila from a 3D EM dataset.  
   [PLOS ONE (2018) DOI:10.1371/journal.pone.0207828.](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0207828)
   
-  [**View data**](https://webknossos.org/publication/5ca3afb48f887cf6f2b3b601) in webKnossos.
+  [**View data**](https://webknossos.org/publication/5ca3afb48f887cf6f2b3b601) in WEBKNOSSOS.
 
 * Florian Drawitsch, Ali Karimi, Kevin M Boergens, Moritz Helmstaedter.  
   FluoEM, virtual labeling of axons in threedimensional electron microscopy data for
   long-range connectomics.  
   [eLife (2018) DOI:10.7554/eLife.38976.001.](https://elifesciences.org/articles/38976)
   
-  [**View data**](https://webknossos.org/publication/5c5ab61e96ec36b84da1fd13) in webKnossos.
+  [**View data**](https://webknossos.org/publication/5c5ab61e96ec36b84da1fd13) in WEBKNOSSOS.
 
 * Alessandro Motta, Manuel Berning, Kevin M. Boergens, Benedikt Staffler, Marcel Beining, Sahil Loomba, Christian Schramm, Philipp Hennig,   Heiko Wissler, Moritz Helmstaedter.  
   Dense connectomic reconstruction in layer 4 of the somatosensory cortex.  
@@ -117,7 +117,7 @@ The following publications used webKnossos for exploring large 3D electron-micro
   Connectomics of the zebrafish's lateral-line neuromast reveals wiring and miswiring in a simple microcircuit.  
   [eLife (2018) DOI: 10.7554/eLife.33988.001.](https://doi.org/10.7554/eLife.33988.001)
   
-  [**View data**](https://webknossos.org/publication/5c5ab2a896ec36b84da1fd0e) in webKnossos.
+  [**View data**](https://webknossos.org/publication/5c5ab2a896ec36b84da1fd0e) in WEBKNOSSOS.
 
 ## 2017
 * Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler & Helmstaedter.    
@@ -128,7 +128,7 @@ The following publications used webKnossos for exploring large 3D electron-micro
   Axonal synapse sorting in medial entorhinal cortex.  
   [Nature (2017) DOI:10.1038/nature24005.](https://www.nature.com/articles/nature24005)
   
-  [**View data**](https://webknossos.org/publication/5c5ab59796ec36b84da1fd12) in webKnossos.
+  [**View data**](https://webknossos.org/publication/5c5ab59796ec36b84da1fd12) in WEBKNOSSOS.
 
 * Benedikt Staffler, Manuel Berning, Kevin M Boergens, Anjali Gour, Patrick van der Smagt & Moritz Helmstaedter.  
   SynEM, automated synapse detection for connectomics.  

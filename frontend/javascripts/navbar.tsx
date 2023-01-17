@@ -162,20 +162,7 @@ function UserInitials({
       </Avatar>
 
       {isMultiMember ? (
-        <SwapOutlined
-          style={{
-            position: "absolute",
-            top: 2,
-            right: -5,
-            marginRight: 0,
-            minWidth: 12,
-            height: 12,
-            lineHeight: "12px",
-            fontSize: 12,
-            color: "#59F8E8",
-          }}
-          title="You are member of multiple organizations. Click the avatar to switch between them."
-        />
+        <SwapOutlined title="You are member of multiple organizations. Click the avatar to switch between them." />
       ) : null}
     </div>
   );

@@ -437,9 +437,9 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       message = (
         <div>
           The current datasource-properties.json on the server seems to be in an invalid JSON format
-          (or is missing completely). The settings below are suggested by webKnossos and should be
+          (or is missing completely). The settings below are suggested by WEBKNOSSOS and should be
           adjusted. <br />
-          Be aware that webKnossos cannot guess properties like the voxel size or the largest
+          Be aware that WEBKNOSSOS cannot guess properties like the voxel size or the largest
           segment id. You must set them yourself.
         </div>
       );
@@ -460,7 +460,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           >
             Here
           </LinkButton>{" "}
-          are suggested settings from webKnossos. But be aware that properties like the voxel size
+          are suggested settings from WEBKNOSSOS. But be aware that properties like the voxel size
           or the largest segment id cannot be detected correctly. <br />
           If you want to apply those settings, click{" "}
           <LinkButton onClick={applySuggestedSettings}>here</LinkButton>.
@@ -484,7 +484,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
-          webKnossos detected additional information not yet present in the dataset’s{" "}
+          WEBKNOSSOS detected additional information not yet present in the dataset’s{" "}
           <em>datasource-properties.json</em> file:
           <div
             style={{

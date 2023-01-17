@@ -102,6 +102,7 @@ POST          /datastores/:name/reserveUpload                                   
 POST          /datastores/:name/reportDatasetUpload                                     controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteDataset                                           controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                                     controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
+GET           /datastores/:name/findCredential                                          controllers.WKRemoteDataStoreController.findCredential(name: String, key: String, credentialId: String)
 POST          /datastores/:name/validateUserAccess                                      controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                               controllers.DataStoreController.create
 DELETE        /datastores/:name                                                         controllers.DataStoreController.delete(name: String)
@@ -267,6 +268,10 @@ GET           /publications/:id                                                 
 # Shortlinks
 POST          /shortLinks                                                               controllers.ShortLinkController.create
 GET           /shortLinks/byKey/:key                                                    controllers.ShortLinkController.getByKey(key: String)
+
+# Credentials
+POST          /credentials/httpBasicAuth                                                controllers.CredentialController.createHttpBasicAuthCredential
+POST          /credentials/s3AccessKey                                                  controllers.CredentialController.createS3AccessKeyCredential
 
 # Voxelytics
 POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow

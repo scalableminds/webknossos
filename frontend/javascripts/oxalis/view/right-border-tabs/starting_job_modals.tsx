@@ -626,7 +626,7 @@ export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
       description={
         <p>
           For this annotation some floodfill operations have not run to completion, because they
-          covered a too large volume. webKnossos can finish these operations via a long-running job.
+          covered a too large volume. WEBKNOSSOS can finish these operations via a long-running job.
           This job will copy the current dataset, apply the changes of the current volume annotation
           into the volume layer and use the existing bounding boxes as seeds to continue the
           remaining floodfill operations (i.e., &quot;globalize&quot; them).

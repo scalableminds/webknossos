@@ -583,7 +583,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             >
               webknossos Python library
             </a>{" "}
-            or use a webKnossos instance which integrates a conversion service, such as{" "}
+            or use a WEBKNOSSOS instance which integrates a conversion service, such as{" "}
             <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
               webknossos.org
             </a>

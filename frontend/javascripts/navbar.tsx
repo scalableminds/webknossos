@@ -155,7 +155,6 @@ function UserInitials({
       <Avatar
         className="hover-effect-via-opacity"
         style={{
-          backgroundColor: "rgb(82, 196, 26)",
           verticalAlign: "middle",
         }}
       >
@@ -433,7 +432,7 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
         marginRight: 12,
       }}
     >
-      <Tooltip title="See what's new in webKnossos" placement="bottomLeft">
+      <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
         <Badge count={maybeUnreadReleaseCount || 0} size="small">
           <Button
             onClick={handleShowWhatsNewView}
@@ -750,10 +749,11 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
               to="/dashboard"
               style={{
                 fontWeight: 400,
+                verticalAlign: "middle",
               }}
             >
               <CollapsibleMenuTitle
-                title="webKnossos"
+                title="WEBKNOSSOS"
                 icon={<span className="logo" />}
                 collapse={collapseAllNavItems}
               />

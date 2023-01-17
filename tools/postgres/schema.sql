@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(96);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(97);
 COMMIT TRANSACTION;
 
 
@@ -453,6 +453,19 @@ CREATE TABLE webknossos.shortLinks(
   longLink Text NOT NULL
 );
 
+CREATE TYPE webknossos.CREDENTIAL_TYPE AS ENUM ('HTTP_Basic_Auth', 'S3_Access_Key', 'HTTP_Token', 'GCS');
+CREATE TABLE webknossos.credentials(
+  _id CHAR(24) PRIMARY KEY,
+  type webknossos.CREDENTIAL_TYPE NOT NULL,
+  name VARCHAR(256) NOT NULL,
+  identifier Text,
+  secret Text,
+  _user CHAR(24) NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
 CREATE TABLE webknossos.folders(
     _id CHAR(24) PRIMARY KEY,
     name TEXT NOT NULL,
@@ -593,6 +606,7 @@ CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT is
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.annotation_privateLinks WHERE NOT isDeleted;
 CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
+CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

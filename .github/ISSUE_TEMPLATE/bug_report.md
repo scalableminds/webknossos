@@ -33,4 +33,4 @@ assignees: ''
 - Operating System and version: e.g. Windows 10
 - Version of WebKnossos (Release or Commit):
 - [ ] Specific to long-running jobs (set `jobsEnabled=true` in `application.conf`)
-- [ ] Specific to webKnossos.org (set `isDemoInstance=true` in `application.conf`)
+- [ ] Specific to webknossos.org (set `isDemoInstance=true` in `application.conf`)

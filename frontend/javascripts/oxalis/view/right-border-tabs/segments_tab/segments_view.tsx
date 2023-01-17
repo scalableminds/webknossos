@@ -296,7 +296,7 @@ class SegmentsView extends React.Component<Props, State> {
       }
     } else {
       // Check whether there is an active mesh job (e.g., the user
-      // started the job earlier and reopened webKnossos in the meantime).
+      // started the job earlier and reopened WEBKNOSSOS in the meantime).
       const pendingJobs = meshJobsForDataset.filter(
         (job) => job.state === "STARTED" || job.state === "PENDING",
       );
@@ -315,7 +315,7 @@ class SegmentsView extends React.Component<Props, State> {
     let disabled = true;
 
     if (!features().jobsEnabled) {
-      title = "Computation jobs are not enabled for this webKnossos instance.";
+      title = "Computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
     } else if (!this.props.dataset.jobsEnabled) {
@@ -491,7 +491,7 @@ class SegmentsView extends React.Component<Props, State> {
       >
         <h3>Precompute Meshes</h3>
         <p>
-          Mesh visualizations can be very helpful when exploring segmentations. webKnossos can
+          Mesh visualizations can be very helpful when exploring segmentations. WEBKNOSSOS can
           precompute all meshes for a segmentation layer. Once the precomputation has finished,
           individual meshes can be loaded very quickly. As an alternative, you can use the ad-hoc
           mesh functionality which is a bit slower but does not require pre-computation.

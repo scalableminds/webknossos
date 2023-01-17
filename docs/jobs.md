@@ -1,6 +1,6 @@
 # Jobs
 
-webKnossos.org includes several compute-intensive and automated workflows that are processed in the background. Depending on the operation and dataset size, these workflows may take some time (from minutes to hours) to finish. 
+webknossos.org includes several compute-intensive and automated workflows that are processed in the background. Depending on the operation and dataset size, these workflows may take some time (from minutes to hours) to finish. 
 
 Example workflows:
 
@@ -15,7 +15,7 @@ Example workflows:
 These workflows are executed in background worker tasks as so-called *processing jobs*. 
 
 !!! info
-    These workflows are exclusive to webKnossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the webKnossos worker or [Voxelytics](https://voxelytics.com) for the job processing.
+    These workflows are exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the WEBKNOSSOS worker or [Voxelytics](https://voxelytics.com) for the job processing.
 
 ## Listing Processing Jobs
 A list of all past and currently running jobs can be found in the administration menu in the navbar (Administration -> *Processing Jobs*).

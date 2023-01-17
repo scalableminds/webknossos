@@ -26,8 +26,8 @@ const ModalInformationFooter = (
   <>
     <Divider style={{ marginTop: 40 }} />
     <p style={{ color: "#aaa", fontSize: 12 }}>
-      Requesting an upgrade to your organization&apos;s webKnossos plan will send an email to the
-      webKnossos sales team. We typically respond within one business day. See our{" "}
+      Requesting an upgrade to your organization&apos;s WEBKNOSSOS plan will send an email to the
+      WEBKNOSSOS sales team. We typically respond within one business day. See our{" "}
       <a href="https://webknossos.org/faq">FAQ</a> for more information.
     </p>
   </>
@@ -53,11 +53,11 @@ function extendPricingPlan(organization: APIOrganization) {
         }}
       >
         <p style={{ marginRight: "30%" }}>
-          Extend your plan now for uninterrupted access to webKnossos.
+          Extend your plan now for uninterrupted access to WEBKNOSSOS.
         </p>
         <p style={{ marginRight: "30%" }}>
           Expired plans will be downgraded to the Basic plan and you might lose access to some
-          webKnossos features and see restrictions on the number of permitted user accounts and your
+          WEBKNOSSOS features and see restrictions on the number of permitted user accounts and your
           included storage space quota.
         </p>
         <p>
@@ -109,7 +109,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
       >
         <p style={{ marginRight: "30%" }}>
           You can increase the number of users allowed to join your organization by either buying
-          single user upgrades or by upgrading your webKnossos plan to “Power” for unlimited users.
+          single user upgrades or by upgrading your WEBKNOSSOS plan to “Power” for unlimited users.
         </p>
         <div>Add additional user accounts:</div>
         <div>
@@ -158,7 +158,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
       >
         <p style={{ marginRight: "30%" }}>
           You can increase your storage limit for your organization by either buying additional
-          storage upgrades or by upgrading your webKnossos plan to “Power” for custom dataset
+          storage upgrades or by upgrading your WEBKNOSSOS plan to “Power” for custom dataset
           hosting solution, e.g. streaming data from your storage server / the cloud.
         </p>
         <div>Add additional storage (in Terabyte):</div>
@@ -271,7 +271,7 @@ function UpgradePricingPlanModal({
   okButtonCallback: (() => void) | undefined;
 }) {
   const introSentence =
-    "Upgrading your webKnossos plan will unlock more advanced features and increase your user and storage quotas.";
+    "Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user and storage quotas.";
 
   return (
     <Modal

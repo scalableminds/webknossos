@@ -262,7 +262,7 @@ export class InviteUsersModal extends React.Component<
       <Alert
         showIcon
         type="warning"
-        description="Inviting more users will exceed your organization's user limit. Consider upgrading your webKnossos plan."
+        description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
         style={{ marginBottom: 10 }}
         action={
           <Link to={`/organizations/${this.props.organizationName}`}>
@@ -435,7 +435,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       header="Create or Join an Organization"
       subheader={
         <React.Fragment>
-          Welcome to webKnossos! This guide will help you get started.
+          Welcome to WEBKNOSSOS! This guide will help you get started.
           <br />
           Setup your organization to manage users and datasets. Example names: &ldquo;University of
           Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
@@ -582,7 +582,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           You&apos;ve completed the initial setup.
           <br />
           <a href="/dashboard">Start to explore and annotate your data now</a> or learn more about
-          the features and concepts of webKnossos.
+          the features and concepts of WEBKNOSSOS.
         </React.Fragment>
       }
       icon={<RocketOutlined className="icon-big" />}
@@ -595,7 +595,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <FeatureCard header="More Datasets" icon={<CloudUploadOutlined />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
           <a href="https://docs.webknossos.org/webknossos/data_formats.html">Learn more</a> about
-          the formats and upload processes webKnossos supports.
+          the formats and upload processes WEBKNOSSOS supports.
         </FeatureCard>
         <FeatureCard header="User & Team Management" icon={<TeamOutlined />}>
           <LinkButton
@@ -625,7 +625,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
         </FeatureCard>
         <FeatureCard header="Scripting" icon={<CodeOutlined />}>
-          Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
+          Use the <a href="/assets/docs/frontend-api/index.html">WEBKNOSSOS API</a> to create{" "}
           <a href="/scripts">scriptable workflows</a>.{" "}
           <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
         </FeatureCard>

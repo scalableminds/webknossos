@@ -84,7 +84,7 @@ export default function EnterLargestSegmentIdModal({
   return (
     <Modal visible title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
       <p>
-        No largest segment ID was configured for this segmentation layer. This means that webKnossos
+        No largest segment ID was configured for this segmentation layer. This means that WEBKNOSSOS
         does not know which segment ID would be safe to use for annotating new segments (because it
         was not used yet).
       </p>

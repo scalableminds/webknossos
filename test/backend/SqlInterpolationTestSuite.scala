@@ -150,6 +150,14 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       assert(sql == SqlToken("SELECT * FROM test WHERE state = ?", List(EnumerationValue(enumVal))))
       assert(sql.debugInfo == "SELECT * FROM test WHERE state = 'PENDING'")
     }
+    "construct an SQLToken with Enumeration Array" in {
+      val enumVals = List(JobState.PENDING, JobState.STARTED)
+      val sql = q"""SELECT * FROM test WHERE state = ${EnumerationArrayValue(enumVals, "webknossos.JOB_STATE")}"""
+      assert(
+        sql == SqlToken("SELECT * FROM test WHERE state = ?::webknossos.JOB_STATE[]",
+                        List(EnumerationArrayValue(enumVals, "webknossos.JOB_STATE"))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE state = {PENDING,STARTED}::webknossos.JOB_STATE[]")
+    }
     "construct an SQLToken with String Array" in {
       val stringList = List("First String", "Second String")
       val sql = q"""SELECT * FROM test WHERE tags = $stringList"""
@@ -163,14 +171,12 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       assert(sql.debugInfo == "SELECT * FROM test WHERE bounding_box = '(1.0,2.0,3.0,50.0,60.0,70.0)'")
     }
     "construct an SQLToken with nested-joined SQL" in {
-      val fields = List("name", "age")
+      val fields = List(q"name", q"age")
       val values = List("Bob".toSqlValue, 5.toSqlValue)
       val sql =
-        q"""INSERT INTO test(${SqlToken.join(fields.map(x => Right(SqlToken.identifier(x))), ", ")}) VALUES ${SqlToken
-          .tupleList(List(values))}"""
+        q"""INSERT INTO test(${SqlToken.joinBySeparator(fields, ", ")}) VALUES ${SqlToken.tupleList(List(values))}"""
 
-      assert(
-        sql == SqlToken("""INSERT INTO test("name", "age") VALUES (?, ?)""", List(StringValue("Bob"), IntValue(5))))
+      assert(sql == SqlToken("""INSERT INTO test(name, age) VALUES (?, ?)""", List(StringValue("Bob"), IntValue(5))))
     }
     "create debugInfo from SQLToken" in {
       val sql = q"""SELECT * FROM test WHERE age = ${3} AND name = ${"Amy"}"""

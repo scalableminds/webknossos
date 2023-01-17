@@ -189,8 +189,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       case None => q"${true}"
       case Some(searchQuery) =>
         val queryTokens = searchQuery.toLowerCase.trim.split(" +")
-        SqlToken.raw(
-          queryTokens.map(queryToken => s"POSITION(${escapeLiteral(queryToken)} IN LOWER(name)) > 0").mkString(" AND "))
+        SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
     }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =

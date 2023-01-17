@@ -3,14 +3,15 @@ package oxalis.security
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import oxalis.security.TokenType.TokenType
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
+import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -35,6 +36,12 @@ case class Token(_id: ObjectId,
         expirationDateTime.toJodaDateTime,
         idleTimeout
       ))
+}
+
+object LoginInfoProvider extends ExtendedEnumeration {
+  type PasswordHasher = Value
+
+  val credentials: LoginInfoProvider.Value = Value
 }
 
 object Token {
@@ -97,9 +104,10 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def insertOne(t: Token): Fox[Unit] =
     for {
+      loginInfoProvider <- LoginInfoProvider.fromString(t.loginInfo.providerID).toFox
       _ <- run(
         q"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
-                    values(${t._id}, ${t.value}, ${SqlToken.raw(escapeLiteral(t.loginInfo.providerID))},
+                    values(${t._id}, ${t.value}, $loginInfoProvider,
                           ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
                           ${t.expirationDateTime}, ${t.idleTimeout.map(_.toMillis)},
                           ${t.tokenType}, ${t.created}, ${t.isDeleted})""".asUpdate)

@@ -3,7 +3,10 @@ import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
-import { DatasetExtentRow } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import {
+  DatasetExtentRow,
+  VoxelSizeRow,
+} from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
 import { APIMaybeUnimportedDataset, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
@@ -78,13 +81,14 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIMaybeUnimport
       {selectedDataset.isActive && (
         <div>
           <span className="sidebar-label">Voxel Size & Extent</span>
-          <div className="info-tab-block" style={{ marginTop: -6 }}>
+          <div className="info-tab-block" style={{ marginTop: -3 }}>
             <table
               style={{
                 fontSize: 14,
               }}
             >
               <tbody>
+                <VoxelSizeRow dataset={selectedDataset} />
                 <DatasetExtentRow dataset={selectedDataset} />
               </tbody>
             </table>

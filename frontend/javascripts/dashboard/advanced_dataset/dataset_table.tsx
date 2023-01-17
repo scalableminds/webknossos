@@ -551,9 +551,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 {"getBreadcrumbs" in this.props.context &&
                 this.props.context.globalSearchQuery != null ? (
                   <BreadcrumbsTag parts={this.props.context.getBreadcrumbs(dataset)} />
-                ) : (
-                  <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
-                )}
+                ) : null}
               </>
             )}
           />

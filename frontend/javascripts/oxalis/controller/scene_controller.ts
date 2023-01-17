@@ -505,6 +505,8 @@ class SceneController {
     // defined with bucket indices for the coordinate system of the current zoomStep.
     const anchorPoints = [];
 
+    // todo: this method is called very frequently. optimize?
+
     const magIndices = getActiveMagIndicesForLayers(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
       anchorPoints.push(

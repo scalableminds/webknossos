@@ -56,7 +56,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% }) %>
 
 uniform float activeMagIndices[<%= layerNamesWithSegmentation.length %>];
-uniform vec3 anchorPoints[<%= layerNamesWithSegmentation.length %>];
+uniform vec4 anchorPoints[<%= layerNamesWithSegmentation.length %>];
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table

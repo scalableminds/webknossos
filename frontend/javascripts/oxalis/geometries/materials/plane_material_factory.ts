@@ -350,6 +350,7 @@ class PlaneMaterialFactory {
   }
 
   setAnchorPoints = (anchorPoints: Vector4[]) => {
+    // todo: perf?
     this.uniforms.anchorPoints.value = _.flatten(anchorPoints);
   };
 

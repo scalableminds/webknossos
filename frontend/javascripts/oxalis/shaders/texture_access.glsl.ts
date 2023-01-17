@@ -174,7 +174,7 @@ export const getColorForCoords: ShaderModule = {
          */
 
         vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
-        vec3 anchorPoint = anchorPoints[int(layerIndex)];
+        vec3 anchorPoint = anchorPoints[int(layerIndex)].xyz;
         vec3 worldBucketPosition = relativeBucketPosition + anchorPoint;
         vec3 subVolumeIndex = mod(worldBucketPosition, magnificationFactors);
         offsetInBucket = floor(

@@ -143,7 +143,7 @@ export function FolderTreeSidebar({
 
   const createMenu = () => (
     <Menu>
-      <Menu.Item disabled>Please rightclick an existing folder.</Menu.Item>
+      <Menu.Item disabled>Please right-click an existing folder.</Menu.Item>
     </Menu>
   );
 

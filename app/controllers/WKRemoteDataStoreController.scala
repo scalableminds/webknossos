@@ -11,8 +11,10 @@ import com.scalableminds.webknossos.datastore.services.{
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
+import models.binary.credential.CredentialDAO
 import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
@@ -26,7 +28,6 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
-import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
@@ -41,6 +42,7 @@ class WKRemoteDataStoreController @Inject()(
     userDAO: UserDAO,
     folderDAO: FolderDAO,
     jobDAO: JobDAO,
+    credentialDAO: CredentialDAO,
     mailchimpClient: MailchimpClient,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -189,6 +191,16 @@ class WKRemoteDataStoreController @Inject()(
           exportFileName <- job.exportFileName.toFox ?~> "job.noExportFileName"
           jobExportProperties = JobExportProperties(jobId, latestRunId, organization.name, exportFileName)
         } yield Ok(Json.toJson(jobExportProperties))
+      }
+  }
+
+  def findCredential(name: String, key: String, credentialId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          credentialIdValidated <- ObjectId.fromString(credentialId)
+          credential <- credentialDAO.findOne(credentialIdValidated)
+        } yield Ok(Json.toJson(credential))
       }
   }
 

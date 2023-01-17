@@ -405,7 +405,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
               <Link to="/tasks">Create new tasks from the admin menu</Link>.
             </p>
             <p>
-              To learn more about the task system in webKnossos,{" "}
+              To learn more about the task system in WEBKNOSSOS,{" "}
               <a
                 href="https://docs.webknossos.org/webknossos/tasks.html"
                 rel="noopener noreferrer"

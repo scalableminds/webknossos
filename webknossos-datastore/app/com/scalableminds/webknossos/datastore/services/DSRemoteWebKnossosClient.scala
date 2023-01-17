@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.storage.AnyCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
@@ -21,9 +22,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String, reportUsedStorageEnabled: Option[Boolean] = None)
-
 object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
+}
+
+case class TracingStoreInfo(name: String, url: String)
+object TracingStoreInfo {
+  implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
 trait RemoteWebKnossosClient {
@@ -118,6 +123,18 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryStringOptional("token", userToken)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
+  private lazy val tracingstoreUriCache: AlfuFoxCache[String, String] = AlfuFoxCache()
+  def getTracingstoreUri: Fox[String] =
+    tracingstoreUriCache.getOrLoad(
+      "tracingStore",
+      _ =>
+        for {
+          tracingStoreInfo <- rpc(s"$webKnossosUri/api/tracingstore")
+            .addQueryString("key" -> dataStoreKey)
+            .getWithJsonResponse[TracingStoreInfo]
+        } yield tracingStoreInfo.url
+    )
+
   // The annotation source needed for every chunk request. 5 seconds gets updates to the user fast enough,
   // while still limiting the number of remote lookups during streaming
   private lazy val annotationSourceCache: AlfuFoxCache[(String, Option[String]), AnnotationSource] =
@@ -132,4 +149,11 @@ class DSRemoteWebKnossosClient @Inject()(
           .addQueryStringOptional("userToken", userToken)
           .getWithJsonResponse[AnnotationSource]
     )
+
+  def findCredential(credentialId: String): Fox[AnyCredential] =
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/findCredential")
+      .addQueryString("credentialId" -> credentialId)
+      .addQueryString("key" -> dataStoreKey)
+      .silent
+      .getWithJsonResponse[AnyCredential]
 }

@@ -230,13 +230,13 @@ function getInfoForGlobalizeFloodfill(
   if (!features().jobsEnabled) {
     return {
       disabled: true,
-      title: "Partial floodfills can only be globalized when a webknossos-worker was set up.",
+      title: "Partial floodfills can only be globalized when a WEBKNOSSOS worker was set up.",
     };
   }
 
   return {
     disabled: false,
     title:
-      "For this annotation some floodfill operations have not run to completion, because they covered a too large volume. webKnossos can finish these operations via a long-running job.",
+      "For this annotation some floodfill operations have not run to completion, because they covered a too large volume. WEBKNOSSOS can finish these operations via a long-running job.",
   };
 }

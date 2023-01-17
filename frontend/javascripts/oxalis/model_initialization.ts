@@ -42,7 +42,7 @@ import {
   getSharingTokenFromUrlParameters,
   getUserConfiguration,
   getDatasetViewConfiguration,
-  getEditableMapping,
+  getEditableMappingInfo,
   getAnnotationCompoundInformation,
 } from "admin/admin_rest_api";
 import {
@@ -302,7 +302,7 @@ async function fetchEditableMappings(
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.mappingIsEditable)
-    .map((tracing) => getEditableMapping(tracingStoreUrl, tracing.id));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
   return Promise.all(promises);
 }
 

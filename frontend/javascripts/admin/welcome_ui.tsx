@@ -80,9 +80,8 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
         </Tooltip>
       </div>
       <div className="welcome-header-content">
-        <img className="wk-logo" src="/assets/images/oxalis.svg" alt="webKnossos Logo" />
         <div className="text-and-button-container">
-          <h1>Welcome to webKnossos!</h1>
+          <h1>Welcome to WEBKNOSSOS!</h1>
           <div className="subtitle">
             <p
               style={{
@@ -92,13 +91,13 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 marginBottom: 8,
               }}
             >
-              Congratulations on your new webKnossos account! To hit the ground running, we
+              Congratulations on your new WEBKNOSSOS account! To hit the ground running, we
               recommend the following steps to you:
             </p>
             <div className="whats-next-actions-grid">
               <WhatsNextAction
                 title="Open a Demo Dataset"
-                description="Have a look at a public dataset to experience webKnossos in action."
+                description="Have a look at a public dataset to experience WEBKNOSSOS in action."
                 href={getDemoDatasetUrl()}
                 icon={<PlayCircleOutlined className="action-icon" />}
               />
@@ -114,7 +113,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
 
               <WhatsNextAction
                 title="Learn How To Create Annotations"
-                description="Watch a short video to see how data can be annotated with webKnossos."
+                description="Watch a short video to see how data can be annotated with WEBKNOSSOS."
                 icon={<PlusCircleOutlined className="action-icon" />}
                 href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
               />

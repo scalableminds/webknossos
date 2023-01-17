@@ -12,12 +12,12 @@ import models.voxelytics.ElasticsearchClient
 import oxalis.files.TempFileService
 import oxalis.mail.MailchimpTicker
 import oxalis.telemetry.SlackNotificationService
-import utils.sql.SQLClient
+import utils.sql.SqlClient
 
 class WebKnossosModule extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[Startup]).asEagerSingleton()
-    bind(classOf[SQLClient]).asEagerSingleton()
+    bind(classOf[SqlClient]).asEagerSingleton()
     bind(classOf[InitialDataService]).asEagerSingleton()
     bind(classOf[UserService]).asEagerSingleton()
     bind(classOf[TaskService]).asEagerSingleton()

@@ -8,7 +8,7 @@ import javax.inject.Inject
 class DSSlackNotificationService @Inject()(rpc: RPC, config: DataStoreConfig) extends LazyLogging {
   private lazy val slackClient = new SlackClient(rpc,
                                                  config.SlackNotifications.uri,
-                                                 name = s"webKnossos-datastore at ${config.Http.uri}",
+                                                 name = s"WEBKNOSSOS datastore at ${config.Http.uri}",
                                                  config.SlackNotifications.verboseLoggingEnabled)
 
   def noticeSlowRequest(msg: String): Unit =

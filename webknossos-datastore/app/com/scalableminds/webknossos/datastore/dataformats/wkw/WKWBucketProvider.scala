@@ -4,12 +4,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import com.scalableminds.webknossos.wrap.WKWFile
-import net.liftweb.common.{Box, Empty, Failure, Full}
-
+import net.liftweb.common.{Empty, Failure, Full}
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
-class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits {
+class WKWCubeHandle(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle with FoxImplicits {
 
   def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
@@ -19,7 +20,10 @@ class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits {
     try {
       wkwFile.readBlock(blockOffsetX, blockOffsetY, blockOffsetZ)
     } catch {
-      case e: InternalError => Failure(e.getMessage, Full(e), Empty).toFox
+      case e: InternalError =>
+        Failure(s"${e.getMessage} while reading block from $wkwFilePath, realpath ${wkwFilePath.toRealPath()}",
+                Full(e),
+                Empty).toFox
     }
   }
 
@@ -29,7 +33,10 @@ class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits {
 
 class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCubeHandle] = {
+  override def fileSystemServiceOpt: Option[FileSystemService] = None
+
+  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[WKWCubeHandle] = {
     val wkwFile = wkwFilePath(
       readInstruction.cube,
       Some(readInstruction.dataSource.id),
@@ -39,7 +46,7 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
     ).toFile
 
     if (wkwFile.exists()) {
-      WKWFile(wkwFile).map(new WKWCubeHandle(_))
+      WKWFile(wkwFile).map(new WKWCubeHandle(_, wkwFile.toPath))
     } else {
       val wkwFileAnisotropic = wkwFilePath(
         readInstruction.cube,
@@ -49,7 +56,7 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
         resolutionAsTriple = Some(true)
       ).toFile
       if (wkwFileAnisotropic.exists) {
-        WKWFile(wkwFileAnisotropic).map(new WKWCubeHandle(_))
+        WKWFile(wkwFileAnisotropic).map(new WKWCubeHandle(_, wkwFileAnisotropic.toPath))
       } else {
         Empty
       }

@@ -9,8 +9,11 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
+import models.binary.credential.CredentialService
+import models.user.User
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
@@ -26,14 +29,20 @@ object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
+class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) extends FoxImplicits with LazyLogging {
 
   def exploreRemoteDatasource(
       urisWithCredentials: List[ExploreRemoteDatasetParameters],
+      requestIdentity: WkEnv#I,
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
     for {
-      exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(parameters =>
-        exploreRemoteLayersForUri(parameters.remoteUri, parameters.user, parameters.password, reportMutable))
+      exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(
+        parameters =>
+          exploreRemoteLayersForUri(parameters.remoteUri,
+                                    parameters.user,
+                                    parameters.password,
+                                    reportMutable,
+                                    requestIdentity))
       layersWithVoxelSizes = exploredLayersNested.flatten
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
       rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes) ?~> "Could not extract common voxel size from layers"
@@ -131,14 +140,20 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       layerUri: String,
       user: Option[String],
       password: Option[String],
-      reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+      reportMutable: ListBuffer[String],
+      requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
       remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
+      credentialId <- credentialService.createCredential(new URI(normalizeUri(layerUri)),
+                                                         user,
+                                                         password,
+                                                         requestingUser._id.toString,
+                                                         requestingUser._organization.toString)
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
-        remoteSource.credentials,
+        credentialId.map(_.toString),
         reportMutable,
         List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer, new N5MultiscalesExplorer))
     } yield layersWithVoxelSizes
@@ -153,23 +168,23 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
 
   private def exploreRemoteLayersForRemotePath(
       remotePath: Path,
-      credentials: Option[FileSystemCredentials],
+      credentialId: Option[String],
       reportMutable: ListBuffer[String],
       explorers: List[RemoteLayerExplorer])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     explorers match {
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>
         reportMutable += s"\nTrying to explore $remotePath as ${currentExplorer.name}..."
-        currentExplorer.explore(remotePath, credentials).futureBox.flatMap {
+        currentExplorer.explore(remotePath, credentialId).futureBox.flatMap {
           case Full(layersWithVoxelSizes) =>
             reportMutable += s"Found ${layersWithVoxelSizes.length} ${currentExplorer.name} layers at $remotePath."
             Fox.successful(layersWithVoxelSizes)
           case f: Failure =>
             reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: ${formatFailureForReport(f)}"
-            exploreRemoteLayersForRemotePath(remotePath, credentials, reportMutable, remainingExplorers)
+            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
           case Empty =>
             reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: Empty"
-            exploreRemoteLayersForRemotePath(remotePath, credentials, reportMutable, remainingExplorers)
+            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
         }
     }
 

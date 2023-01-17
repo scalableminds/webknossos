@@ -847,7 +847,7 @@ export async function getTracingsForAnnotation(
 
   if (skeletonLayers.length > 1) {
     throw new Error(
-      "Having more than one skeleton layer is currently not supported by webKnossos.",
+      "Having more than one skeleton layer is currently not supported by WEBKNOSSOS.",
     );
   }
 
@@ -1759,12 +1759,12 @@ export function makeMappingEditable(
   );
 }
 
-export function getEditableMapping(
+export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
   );
 }
 
@@ -1892,7 +1892,7 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 
 // ### Organizations
 export async function getDefaultOrganization(): Promise<APIOrganization | null> {
-  // Only returns an organization if the webKnossos instance only has one organization
+  // Only returns an organization if the WEBKNOSSOS instance only has one organization
   return Request.receiveJSON("/api/organizations/default");
 }
 

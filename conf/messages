@@ -38,7 +38,7 @@ organization.name.invalid=This organization name contains illegal characters. Pl
 organization.name.alreadyInUse=This name is already claimed by a different organization and not available anymore. Please choose a different name.
 organization.alreadyJoined=Your account is already associated with the selected organization.
 organization.users.userLimitReached=Cannot add user because it would exceed the limit of included users in this plan.
-organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization webKnossos plan. Please ask the organization owner for permission.
+organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization WEBKNOSSOS plan. Please ask the organization owner for permission.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 
@@ -65,7 +65,7 @@ user.creation.failed=Failed to create user
 oidc.disabled=OIDC is disabled
 oidc.configuration.invalid=OIDC configuration is invalid
 
-braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
+braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on WEBKNOSSOS to login.
 braintracing.error=We could not atomatically create an account for you on braintracing.org. Please do it on your own.
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
@@ -81,7 +81,7 @@ dataSet.name.invalid.startsWithDot=Dataset name is invalid. Please use a name th
 dataSet.name.invalid.lessThanThreeCharacters=Dataset name is invalid. Please use at least three characters.
 dataSet.name.alreadyTaken=This name is already being used by a different dataset. Please choose a different name.
 dataSet.source.usableButNoScale=Dataset {0} is marked as active but has no scale.
-dataSet.import.fileAccessDenied=Cannot create organization folder. Please make sure webKnossos has write permissions in the “binaryData” directory
+dataSet.import.fileAccessDenied=Cannot create organization folder. Please make sure WEBKNOSSOS has write permissions in the “binaryData” directory
 dataSet.type.invalid=External data set of type “{0}” is not supported
 dataSet.list.failed=Failed to retrieve list of data sets.
 dataset.list.writesFailed=Failed to write json for dataset {0}
@@ -91,8 +91,8 @@ dataSet.noData=Could not get data for the requested dataset
 dataSet.initialTeams.teamsNotEmpty=Dataset already has allowed teams
 dataset.initialTeams.invalidTeams=Can only assign teams of user
 dataSet.uploader.notEmpty=Dataset already has non-empty uploader
-dataset.delete.disabled=Dataset deletion is disabled for this webKnossos instance
-dataSet.delete.webknossos.failed=Could not delete dataset from webKnossos database
+dataset.delete.disabled=Dataset deletion is disabled for this WEBKNOSSOS instance
+dataSet.delete.webknossos.failed=Could not delete dataset from WEBKNOSSOS database
 dataSet.delete.failed=Could not delete the dataset on disk.
 dataSet.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
 dataSet.upload.validation.failed=Failed to validate Dataset information for upload.
@@ -273,7 +273,7 @@ job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
 job.couldNotRunNeuronInferral = Failed to start neuron inferral job.
 job.couldNotRunGlobalizeFloodfills = Failed to start job for globalizing floodfills.
 job.couldNotRunApplyMergerMode = Failed to start job to apply merger mode annotation.
-job.disabled = Long-running jobs are not enabled for this webKnossos instance.
+job.disabled = Long-running jobs are not enabled for this WEBKNOSSOS instance.
 job.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
 job.export.tiff.invalidBoundingBox = The selected bounding box could not be parsed, must be x,y,z,width,height,depth
@@ -286,7 +286,7 @@ job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only 
 job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
 job.noWorkerForDatastore = Processing jobs are not available for the datastore this dataset belongs to.
 
-voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this webKnossos instance.
+voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found
 voxelytics.taskNotFound = Task not found
 voxelytics.workflowNotFound = Workflow not found

@@ -4,15 +4,19 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MeshController @Inject()(
+class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
+    dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
+    dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
+    binaryDataServiceHolder: BinaryDataServiceHolder
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -55,22 +59,94 @@ class MeshController @Inject()(
                                          organizationName: String,
                                          dataSetName: String,
                                          dataLayerName: String,
-                                         formatVersion: Int): Action[ListMeshChunksRequest] =
+                                         formatVersion: Int,
+                                         /* If targetMappingName is set, assume that meshfile contains meshes for
+                                           the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
+                                           belonging to the supplied agglomerate id.
+                                           If it is not set, use meshfile as is, assume passed id is present in meshfile
+                                          */
+                                         targetMappingName: Option[String],
+                                         editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           positions <- formatVersion match {
             case 3 =>
-              meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
-                "mesh.file.listChunks.failed",
-                request.body.segmentId.toString,
-                request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+              targetMappingName match {
+                case None =>
+                  meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
+                    "mesh.file.listChunks.failed",
+                    request.body.segmentId.toString,
+                    request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+                case Some(mapping) =>
+                  for {
+                    segmentIds: List[Long] <- segmentIdsForAgglomerateId(organizationName,
+                                                                         dataSetName,
+                                                                         dataLayerName,
+                                                                         mapping,
+                                                                         editableMappingTracingId,
+                                                                         request.body.segmentId,
+                                                                         urlOrHeaderToken(token, request))
+                    meshChunksForUnmappedSegments = segmentIds.map(
+                      segmentId =>
+                        meshFileService
+                          .listMeshChunksForSegmentV3(organizationName,
+                                                      dataSetName,
+                                                      dataLayerName,
+                                                      ListMeshChunksRequest(request.body.meshFile, segmentId))
+                          .toOption)
+                    chunkInfos = meshChunksForUnmappedSegments.flatten.reduce(_.merge(_))
+                  } yield chunkInfos
+              }
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
           }
         } yield Ok(Json.toJson(positions))
       }
     }
+
+  private def segmentIdsForAgglomerateId(organizationName: String,
+                                         dataSetName: String,
+                                         dataLayerName: String,
+                                         mappingName: String,
+                                         editableMappingTracingId: Option[String],
+                                         agglomerateId: Long,
+                                         token: Option[String]): Fox[List[Long]] = {
+    val agglomerateFileKey = AgglomerateFileKey(
+      organizationName,
+      dataSetName,
+      dataLayerName,
+      mappingName
+    )
+    editableMappingTracingId match {
+      case Some(tracingId) =>
+        for {
+          tracingstoreUri <- dsRemoteWebKnossosClient.getTracingstoreUri
+          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
+                                                                                                    tracingId,
+                                                                                                    agglomerateId,
+                                                                                                    token)
+          segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
+            Fox.successful(segmentIdsResult.segmentIds)
+          else
+            for {
+              agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+                agglomerateFileKey,
+                agglomerateId
+              )
+            } yield localSegmentIds
+        } yield segmentIds
+      case _ =>
+        for {
+          agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+          segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+            agglomerateFileKey,
+            agglomerateId
+          )
+        } yield segmentIds
+    }
+  }
 
   def readMeshChunkV0(token: Option[String],
                       organizationName: String,

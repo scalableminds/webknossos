@@ -6,15 +6,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
-import models.user.{MultiUserDAO, UserService}
 import models.organization.OrganizationDAO
+import models.user.{MultiUserDAO, UserService}
+import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import slick.jdbc.PostgresProfile.api._
+import utils.sql.{SimpleSQLDAO, SqlClient}
 import utils.{StoreModules, WkConf}
-import oxalis.mail.{DefaultMails, Send}
-import utils.sql.{SQLClient, SimpleSQLDAO}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -35,10 +34,10 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  @ApiOperation(value = "Information about the version of webKnossos")
+  @ApiOperation(value = "Information about the version of WEBKNOSSOS")
   @ApiResponses(
     Array(
-      new ApiResponse(code = 200, message = "JSON object containing information about the version of webKnossos"),
+      new ApiResponse(code = 200, message = "JSON object containing information about the version of WEBKNOSSOS"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {
@@ -86,12 +85,12 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
 
 }
 
-class ReleaseInformationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ReleaseInformationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient)
     with FoxImplicits {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =
     for {
-      rList <- run(sql"select schemaVersion from webknossos.releaseInformation".as[Int])
+      rList <- run(q"select schemaVersion from webknossos.releaseInformation".as[Int])
       r <- rList.headOption.toFox
     } yield r
 }

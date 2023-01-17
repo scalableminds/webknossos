@@ -29,13 +29,13 @@ export function FolderTreeSidebar({
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const context = useDatasetCollectionContext();
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
-  const itemByIdRef = useRef<Record<string, FolderItem>>({});
+  const itemByIdRef = useRef<Map<string, FolderItem>>(new Map());
 
   const { data: folderHierarchy, isLoading } = context.queries.folderHierarchyQuery;
 
   useEffect(() => {
     const newTreeData = folderHierarchy?.tree || [];
-    const itemById = folderHierarchy?.itemById || {};
+    const itemById = folderHierarchy?.itemById || new Map();
     const newExpandedKeys = deriveExpandedTrees(
       newTreeData,
       itemById,
@@ -45,7 +45,7 @@ export function FolderTreeSidebar({
     itemByIdRef.current = itemById;
     if (
       newTreeData.length > 0 &&
-      (context.activeFolderId == null || itemById[context.activeFolderId] == null)
+      (context.activeFolderId == null || itemById.get(context.activeFolderId) == null)
     ) {
       // Select the root if there's no active folder id or if the active folder id doesn't
       // exist in the tree data (e.g., happens when deleting the active folder).
@@ -117,8 +117,8 @@ export function FolderTreeSidebar({
       }
 
       function moveIfAllowed(sourceId: string, targetId: string) {
-        const sourceAllowed = itemByIdRef.current[sourceId]?.isEditable ?? false;
-        const targetAllowed = itemByIdRef.current[targetId]?.isEditable ?? false;
+        const sourceAllowed = itemByIdRef.current.get(sourceId)?.isEditable ?? false;
+        const targetAllowed = itemByIdRef.current.get(targetId)?.isEditable ?? false;
         if (sourceAllowed && targetAllowed) {
           context.queries.moveFolderMutation.mutateAsync([sourceId, targetId]);
         } else {
@@ -361,7 +361,7 @@ const nullableIdToArray = memoizeOne(_nullableIdToArray);
 
 function deriveExpandedTrees(
   roots: FolderItem[],
-  itemById: Record<string, FolderItem>,
+  itemById: Map<string, FolderItem>,
   prevExpandedKeys: string[],
   activeFolderId: string | null,
 ) {
@@ -371,7 +371,7 @@ function deriveExpandedTrees(
   }
 
   for (const oldExpandedKey of prevExpandedKeys) {
-    const maybeItem = itemById[oldExpandedKey];
+    const maybeItem = itemById.get(oldExpandedKey);
     if (maybeItem != null) {
       newExpandedKeySet.add(oldExpandedKey);
     }
@@ -379,10 +379,10 @@ function deriveExpandedTrees(
 
   // Expand the parent chain of the active folder.
   if (activeFolderId != null) {
-    let currentFolder = itemById[activeFolderId];
+    let currentFolder = itemById.get(activeFolderId);
     while (currentFolder?.parent != null) {
       newExpandedKeySet.add(currentFolder.parent as string);
-      currentFolder = itemById[currentFolder.parent];
+      currentFolder = itemById.get(currentFolder.parent);
     }
   }
 

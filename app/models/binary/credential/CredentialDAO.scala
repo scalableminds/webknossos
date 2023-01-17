@@ -3,7 +3,7 @@ package models.binary.credential
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{AnyCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
-import utils.sql.{SecuredSQLDAO, SqlClient}
+import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -14,7 +14,7 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   protected def columnsList: List[String] = collection.baseTableRow.create_*.map(_.name).toList
   override protected def collectionName: String = "credentials"
-  def columns: String = columnsList.mkString(", ")
+  def columns: SqlToken = SqlToken.raw(columnsList.mkString(", "))
 
   private def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =
     for {
@@ -56,7 +56,7 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def findOne(id: ObjectId): Fox[AnyCredential] =
     for {
-      r <- run(q"select #$columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
+      r <- run(q"select $columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed

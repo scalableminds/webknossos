@@ -1,3 +1,5 @@
+START TRANSACTION;
+
 ALTER TABLE webknossos.voxelytics_chunks
 	ADD COLUMN beginTime TIMESTAMPTZ,
 	ADD COLUMN endTime TIMESTAMPTZ,
@@ -150,6 +152,11 @@ FROM (
 WHERE
 	u._id = c._id;
 
-DROP TABLE webknossos.voxelytics_chunkStateChangeEvents;
-DROP TABLE webknossos.voxelytics_taskStateChangeEvents;
-DROP TABLE webknossos.voxelytics_runStateChangeEvents;
+-- DROP TABLE webknossos.voxelytics_chunkStateChangeEvents;
+-- DROP TABLE webknossos.voxelytics_taskStateChangeEvents;
+-- DROP TABLE webknossos.voxelytics_runStateChangeEvents;
+
+UPDATE webknossos.releaseInformation
+SET schemaVersion = 98;
+
+COMMIT TRANSACTION;

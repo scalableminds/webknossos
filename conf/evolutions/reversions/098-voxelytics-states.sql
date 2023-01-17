@@ -1,3 +1,5 @@
+START TRANSACTION;
+
 ALTER TABLE webknossos.voxelytics_chunks
 	DROP COLUMN beginTime,
 	DROP COLUMN endTime,
@@ -32,3 +34,7 @@ CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents (
     state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_chunk, timestamp)
 );
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 97;
+
+COMMIT TRANSACTION;

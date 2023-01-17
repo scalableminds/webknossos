@@ -162,7 +162,10 @@ function UserInitials({
       </Avatar>
 
       {isMultiMember ? (
-        <SwapOutlined title="You are member of multiple organizations. Click the avatar to switch between them." />
+        <SwapOutlined
+          className="switch-organization-icon"
+          title="You are member of multiple organizations. Click the avatar to switch between them."
+        />
       ) : null}
     </div>
   );

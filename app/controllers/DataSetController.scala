@@ -137,7 +137,7 @@ class DataSetController @Inject()(userService: UserService,
       val reportMutable = ListBuffer[String]()
       for {
         dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
-          .exploreRemoteDatasource(request.body, reportMutable)
+          .exploreRemoteDatasource(request.body, request.identity, reportMutable)
           .futureBox
         dataSourceOpt = dataSourceBox match {
           case Full(dataSource) if dataSource.dataLayers.nonEmpty =>

@@ -30,6 +30,8 @@ trait SqlTypeImplicits {
 
   implicit def booleanToSqlValue(v: Boolean): SqlValue = BooleanValue(v)
 
+  implicit def shortToSqlValue(v: Short): SqlValue = ShortValue(v)
+
   implicit def intToSqlValue(v: Int): SqlValue = IntValue(v)
 
   implicit def longToSqlValue(v: Long): SqlValue = LongValue(v)
@@ -67,6 +69,8 @@ trait SqlTypeImplicits {
   implicit def stringToSqlToken(v: String): SqlToken = stringToSqlValue(v).toSqlToken
 
   implicit def booleanToSqlToken(v: Boolean): SqlToken = booleanToSqlValue(v).toSqlToken
+
+  implicit def shortToSqlToken(v: Short): SqlToken = shortToSqlValue(v).toSqlToken
 
   implicit def intToSqlToken(v: Int): SqlToken = intToSqlValue(v).toSqlToken
 

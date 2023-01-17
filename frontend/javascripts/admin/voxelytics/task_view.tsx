@@ -10,48 +10,13 @@ import {
   VoxelyticsTaskInfo,
   VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
-import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
+import { runStateToStatus, useTheme } from "./utils";
+import { formatNumber } from "libs/format_utils";
 
 const { TabPane } = Tabs;
-
-export type Result<T> =
-  | {
-      type: "SUCCESS";
-      value: T;
-    }
-  | { type: "ERROR" }
-  | { type: "LOADING" };
-
-// https://github.com/reduxjs/redux-devtools/blob/75322b15ee7ba03fddf10ac3399881e302848874/src/react/themes/default.js
-const theme = {
-  scheme: "default",
-  author: "chris kempson (http://chriskempson.com)",
-  base00: "transparent",
-  base01: "#282828",
-  base02: "#383838",
-  base03: "#585858",
-  base04: "#b8b8b8",
-  base05: "#d8d8d8",
-  base06: "#e8e8e8",
-  base07: "#f8f8f8",
-  base08: "#ab4642",
-  base09: "#dc9656",
-  base0A: "#f7ca88",
-  base0B: "#a1b56c",
-  base0C: "#86c1b9",
-  base0D: "#7cafc2",
-  base0E: "#ba8baf",
-  base0F: "#a16946",
-};
-
-export function useTheme(): [typeof theme, boolean] {
-  const selectedTheme = useSelector((state: OxalisState) => state.uiInformation.theme);
-  return [theme, selectedTheme === "light"];
-}
 
 function labelRenderer(_keyPath: Array<string | number>) {
   const keyPath = _keyPath.slice().reverse();
@@ -62,6 +27,7 @@ function labelRenderer(_keyPath: Array<string | number>) {
 function TaskView({
   taskName,
   workflowHash,
+  runId,
   task,
   artifacts,
   dag,
@@ -69,6 +35,7 @@ function TaskView({
   onSelectTask,
 }: {
   workflowHash: string;
+  runId: string | null;
   taskName: string;
   task: VoxelyticsTaskConfig;
   artifacts: Record<string, VoxelyticsArtifactConfig>;
@@ -81,17 +48,32 @@ function TaskView({
     (data.length || 0) <= 10;
 
   const ingoingEdges = dag.edges.filter((edge) => edge.target === taskName);
-  const [, invertTheme] = useTheme();
+  const [theme, invertTheme] = useTheme();
 
   return (
     <div>
-      {taskInfo.state === VoxelyticsRunState.RUNNING && (
+      {[
+        VoxelyticsRunState.RUNNING,
+        VoxelyticsRunState.CANCELLED,
+        VoxelyticsRunState.FAILED,
+      ].includes(taskInfo.state) && (
         <div style={{ display: "flex", flexDirection: "row" }}>
-          Approx. Chunk Progress:
+          Chunk Progress:
           <Tooltip
             overlay={
               <>
-                Finished chunks: {taskInfo.chunksFinished}, Total chunks: {taskInfo.chunksTotal}
+                {formatNumber(
+                  taskInfo.chunkCounts.total -
+                    taskInfo.chunkCounts.complete -
+                    taskInfo.chunkCounts.failed -
+                    taskInfo.chunkCounts.cancelled -
+                    taskInfo.chunkCounts.skipped,
+                )}{" "}
+                remaining • {formatNumber(taskInfo.chunkCounts.complete)} complete •{" "}
+                {formatNumber(taskInfo.chunkCounts.cancelled)} cancelled •{" "}
+                {formatNumber(taskInfo.chunkCounts.failed)} failed •{" "}
+                {formatNumber(taskInfo.chunkCounts.skipped)} skipped •{" "}
+                {formatNumber(taskInfo.chunkCounts.total)} total
               </>
             }
           >
@@ -105,17 +87,32 @@ function TaskView({
               }}
             >
               <Progress
-                percent={(taskInfo.chunksFinished / taskInfo.chunksTotal) * 100}
+                percent={
+                  ((taskInfo.chunkCounts.complete +
+                    taskInfo.chunkCounts.cancelled +
+                    taskInfo.chunkCounts.failed) /
+                    (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)) *
+                  100
+                }
+                status={runStateToStatus(taskInfo.state)}
+                success={{
+                  percent: Math.round(
+                    (taskInfo.chunkCounts.complete /
+                      (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)) *
+                      100,
+                  ),
+                }}
                 size="small"
                 showInfo={false}
                 style={{ flex: 1 }}
               />
               <span style={{ fontSize: "0.9em", marginLeft: "1em" }}>
-                {taskInfo.chunksFinished} / {taskInfo.chunksTotal}
+                {formatNumber(taskInfo.chunkCounts.complete)} /{" "}
+                {formatNumber(taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)}
               </span>
             </span>
           </Tooltip>
-          Current Execution Id:&nbsp;
+          Current Execution ID:&nbsp;
           <span style={{ fontFamily: "monospace" }}>
             {taskInfo.currentExecutionId != null ? taskInfo.currentExecutionId : "-"}
           </span>
@@ -150,10 +147,10 @@ function TaskView({
         {Object.keys(artifacts).length > 0 ? (
           <TabPane tab="Output Artifacts" key="2">
             <ArtifactsViewer
-              artifacts={artifacts}
-              runId={taskInfo.runId}
               workflowHash={workflowHash}
+              runId={runId}
               taskName={taskName}
+              artifacts={artifacts}
             />
           </TabPane>
         ) : null}
@@ -170,11 +167,16 @@ function TaskView({
           VoxelyticsRunState.CANCELLED,
         ].includes(taskInfo.state) && (
           <TabPane tab="Logs" key="4">
-            <LogTab
-              runId={taskInfo.runId}
-              taskName={taskInfo.taskName}
-              isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
-            />
+            {runId != null ? (
+              <LogTab
+                workflowHash={workflowHash}
+                runId={runId}
+                taskName={taskInfo.taskName}
+                isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
+              />
+            ) : (
+              <p>Please select a specific run.</p>
+            )}
           </TabPane>
         )}
         {[
@@ -187,7 +189,7 @@ function TaskView({
           <TabPane tab="Statistics" key="5">
             <StatisticsTab
               workflowHash={workflowHash}
-              runId={taskInfo.runId}
+              runId={runId}
               taskName={taskInfo.taskName}
               isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
             />

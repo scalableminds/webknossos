@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(97);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(98);
 COMMIT TRANSACTION;
 
 
@@ -513,6 +513,9 @@ CREATE TABLE webknossos.voxelytics_runs(
     workflow_hash VARCHAR(512) NOT NULL,
     workflow_yamlContent TEXT,
     workflow_config JSONB,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_organization, name),
     CONSTRAINT workflowConfigIsJsonObject CHECK(jsonb_typeof(workflow_config) = 'object')
@@ -524,6 +527,9 @@ CREATE TABLE webknossos.voxelytics_tasks(
     name varCHAR(2048) NOT NULL,
     task varCHAR(512) NOT NULL,
     config JSONB NOT NULL,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_run, name),
     CONSTRAINT configIsJsonObject CHECK(jsonb_typeof(config) = 'object')
@@ -534,6 +540,9 @@ CREATE TABLE webknossos.voxelytics_chunks(
     _task CHAR(24) NOT NULL,
     executionId VARCHAR(2048) NOT NULL,
     chunkName VARCHAR(2048) NOT NULL,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_task, executionId, chunkName)
 );
@@ -545,31 +554,10 @@ CREATE TABLE webknossos.voxelytics_workflows(
     PRIMARY KEY (_organization, hash)
 );
 
-CREATE TABLE webknossos.voxelytics_runStateChangeEvents(
-    _run CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_run, timestamp)
-);
-
 CREATE TABLE webknossos.voxelytics_runHeartbeatEvents(
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (_run)
-);
-
-CREATE TABLE webknossos.voxelytics_taskStateChangeEvents(
-    _task CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_task, timestamp)
-);
-
-CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents(
-    _chunk CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_chunk, timestamp)
 );
 
 CREATE TABLE webknossos.voxelytics_chunkProfilingEvents(
@@ -741,14 +729,8 @@ ALTER TABLE webknossos.voxelytics_chunks
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_workflows
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_runStateChangeEvents
-  ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runHeartbeatEvents
   ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_taskStateChangeEvents
-  ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_chunkStateChangeEvents
-  ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_chunkProfilingEvents
   ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifactFileChecksumEvents

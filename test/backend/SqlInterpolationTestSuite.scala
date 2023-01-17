@@ -153,6 +153,14 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       assert(sql == SqlToken("SELECT * FROM test WHERE state = ?", List(EnumerationValue(enumVal))))
       assert(sql.debugInfo == "SELECT * FROM test WHERE state = 'PENDING'")
     }
+    "construct an SQLToken with Enumeration Array" in {
+      val enumVals = List(JobState.PENDING, JobState.STARTED)
+      val sql = q"""SELECT * FROM test WHERE state = ${EnumerationArrayValue(enumVals, "webknossos.JOB_STATE")}"""
+      assert(
+        sql == SqlToken("SELECT * FROM test WHERE state = ?::webknossos.JOB_STATE[]",
+                        List(EnumerationArrayValue(enumVals, "webknossos.JOB_STATE"))))
+      assert(sql.debugInfo == "SELECT * FROM test WHERE state = {PENDING,STARTED}::webknossos.JOB_STATE[]")
+    }
     "construct an SQLToken with String Array" in {
       val stringList = List("First String", "Second String")
       val sql = q"""SELECT * FROM test WHERE tags = $stringList"""

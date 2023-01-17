@@ -28,7 +28,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the validation of some neuroglancer URLs during import. [#6722](https://github.com/scalableminds/webknossos/pull/6722)
 - Fixed a bug where deleting a dataset would fail if its representation on disk was already missing. [#6720](https://github.com/scalableminds/webknossos/pull/6720)
 - Fixed a bug where a user with multiple organizations could not log in anymore after one of their organization accounts got deactivated. [#6719](https://github.com/scalableminds/webknossos/pull/6719)
-- Fixed rare crash in new Datasets tab in dashboard. [#6750](https://github.com/scalableminds/webknossos/pull/6750)
 
 ### Removed
 

@@ -152,9 +152,10 @@ FROM (
 WHERE
 	u._id = c._id;
 
--- DROP TABLE webknossos.voxelytics_chunkStateChangeEvents;
--- DROP TABLE webknossos.voxelytics_taskStateChangeEvents;
--- DROP TABLE webknossos.voxelytics_runStateChangeEvents;
+-- Don't delete right now, because it cannot be rolled back easily
+DROP TABLE webknossos.voxelytics_chunkStateChangeEvents;
+DROP TABLE webknossos.voxelytics_taskStateChangeEvents;
+DROP TABLE webknossos.voxelytics_runStateChangeEvents;
 
 UPDATE webknossos.releaseInformation
 SET schemaVersion = 98;

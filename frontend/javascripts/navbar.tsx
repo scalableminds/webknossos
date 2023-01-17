@@ -172,7 +172,7 @@ function UserInitials({
             height: 12,
             lineHeight: "12px",
             fontSize: 12,
-            color: "#75df4a",
+            color: "#59F8E8",
           }}
           title="You are member of multiple organizations. Click the avatar to switch between them."
         />

@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, _}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataCubeCache
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -20,6 +20,8 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import scala.concurrent.ExecutionContext
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
+
+  override def fileSystemServiceOpt: Option[FileSystemService] = None
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
@@ -97,7 +99,9 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override val bucketProvider: BucketProvider = volumeBucketProvider
+  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider = volumeBucketProvider
+
+  def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
 
   override val resolutions: List[Vec3Int] =
     if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))

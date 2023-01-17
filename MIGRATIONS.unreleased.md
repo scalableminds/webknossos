@@ -13,3 +13,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - [094-pricing-plans.sql](conf/evolutions/reversions/094-pricing-plans.sql)
 - [095-constraint-naming.sql](conf/evolutions/reversions/095-constraint-naming.sql)
 - [096-storage.sql](conf/evolutions/096-storage.sql)
+- [097-credentials.sql](conf/evolutions/097-credentials.sql)

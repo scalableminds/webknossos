@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, Z
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
@@ -174,7 +175,7 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
-  def bucketProvider: BucketProvider
+  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 

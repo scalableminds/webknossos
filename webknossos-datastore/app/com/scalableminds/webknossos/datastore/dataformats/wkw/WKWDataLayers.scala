@@ -1,8 +1,10 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, _}
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import play.api.libs.json.{Json, OFormat}
 
 case class WKWResolution(resolution: Vec3Int, cubeLength: Int)
@@ -15,7 +17,8 @@ trait WKWLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.wkw
 
-  lazy val bucketProvider = new WKWBucketProvider(this)
+  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider =
+    new WKWBucketProvider(this)
 
   def wkwResolutions: List[WKWResolution]
 

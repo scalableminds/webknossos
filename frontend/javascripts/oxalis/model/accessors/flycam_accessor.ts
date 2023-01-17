@@ -71,6 +71,7 @@ function calculateTotalBucketCountForZoomLevel(
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
     determineBucketsForOblique(
+      viewMode,
       resolutions,
       position,
       enqueueFunction,
@@ -91,6 +92,7 @@ function calculateTotalBucketCountForZoomLevel(
     );
   } else {
     determineBucketsForOblique(
+      viewMode,
       resolutions,
       position,
       enqueueFunction,

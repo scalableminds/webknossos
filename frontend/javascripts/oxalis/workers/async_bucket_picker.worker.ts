@@ -67,7 +67,15 @@ function pick(
   };
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, rects);
+    determineBucketsForOblique(
+      viewMode,
+      resolutions,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+    );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
       resolutions,
@@ -78,7 +86,15 @@ function pick(
       logZoomStep,
     );
   } else {
-    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep, rects);
+    determineBucketsForOblique(
+      viewMode,
+      resolutions,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+    );
     // determineBucketsForOrthogonal(
     //   resolutions,
     //   enqueueFunction,

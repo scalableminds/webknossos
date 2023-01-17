@@ -229,6 +229,7 @@ export async function initialize(
     Store.dispatch(setLayerTransforms(layerName, transforms));
 
   // setTransforms("color", makeTranslation(122, 105));
+  setTransforms("color", makeTranslation(-1000, 0));
 
   const setScale = (layerName: string, scale: number) => {
     const pos = [3496, 3379];

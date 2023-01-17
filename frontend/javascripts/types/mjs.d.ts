@@ -62,6 +62,7 @@ declare module "mjs" {
       lengthSquared: function (x: Vector3): number {},
       scale: function (x: Vector3, f: number, res?: Vector2): Vector3 {},
       normalize: function (x: Vector3): Vector3 {},
+      mul4x4: function (m: Matrix4x4, vec: Vector3, res?: Vector3): Vector3 {},
     },
   });
 }

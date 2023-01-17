@@ -8,7 +8,14 @@ import {
   globalPositionToBucketPosition,
 } from "oxalis/model/helpers/position_converter";
 import ThreeDMap from "libs/ThreeDMap";
-import type { OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
+import {
+  OrthoViewMap,
+  OrthoViewValuesWithoutTDView,
+  OrthoViewWithoutTD,
+  Vector3,
+  Vector4,
+  ViewMode,
+} from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import { Area } from "oxalis/model/accessors/flycam_accessor";
@@ -35,7 +42,24 @@ export const getFallbackBuckets = (
       )
     : [];
 };
+
+const ALPHA = Math.PI / 2;
+// prettier-ignore
+const YZ_ROTATION = [
+  1, 0, 0, 0,
+  0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
+  0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
+  0, 0, 0, 1,
+] as Matrix4x4;
+// prettier-ignore
+const XZ_ROTATION = [
+    Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
+    0, 1, 0, 0,
+    -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
+    0, 0, 0, 1,
+] as Matrix4x4;
 export default function determineBucketsForOblique(
+  viewMode: ViewMode,
   resolutions: Array<Vector3>,
   position: Vector3,
   enqueueFunction: EnqueueFunction,
@@ -47,54 +71,70 @@ export default function determineBucketsForOblique(
   // debugger;
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
-  const queryMatrix = matrix;
   const fallbackZoomStep = logZoomStep + 1;
   const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
-  const planeId = "PLANE_XY";
-  const extent = [rects[planeId].width, rects[planeId].height];
-  const enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)];
+  const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
+  // const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_YZ"];
+  let traversedBuckets: Vector3[] = [];
+  // for (const planeId of OrthoViewValuesWithoutTDView) {
+  for (const planeId of planeIds) {
+    const extent = [rects[planeId].width, rects[planeId].height];
+    const enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)];
 
-  // Buckets adjacent to the current viewport are also loaded so that these
-  // buckets are already on the GPU when the user moves a little.
-  // const enlargementFactor = 1.1;
-  // const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
-  // const enlargedHalfExtent = enlargedExtent / 2;
-  // Cast a vertical "scan line" and check how many buckets are intersected.
-  // That amount N is used as a measure to cast N + 1 (steps) vertical scanlines.
-  const stepRatePoints = M4x4.transformVectorsAffine(queryMatrix, [
-    [-enlargedHalfExtent[0], -enlargedHalfExtent[1], 0],
-    [-enlargedHalfExtent[0], +enlargedHalfExtent[1], 0],
-  ]);
-  const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], resolutions, logZoomStep);
-  const steps = stepRateBuckets.length + 1;
-  const stepSize = [extent[0] / steps, extent[1] / steps];
-  // This array holds the start and end points
-  // of horizontal lines which cover the entire rendered plane.
-  // These "scan lines" are traversed to find out which buckets need to be
-  // sent to the GPU.
-  const scanLinesPoints = M4x4.transformVectorsAffine(
-    queryMatrix,
-    _.flatten(
-      _.range(steps + 1).map((idx) => [
-        // Cast lines at z=-10
-        // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
-        // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
-        // Cast lines at z=0
-        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
-        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
-        // Cast lines at z=10
-        // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
-        // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
-      ]),
-    ),
-  );
+    let queryMatrix = [...matrix] as Matrix4x4;
+    if (planeId === "PLANE_YZ") {
+      M4x4.mul(matrix, YZ_ROTATION, queryMatrix);
+    } else if (planeId === "PLANE_XZ") {
+      M4x4.mul(matrix, XZ_ROTATION, queryMatrix);
+    }
 
-  let traversedBuckets = _.flatten(
-    chunk2(scanLinesPoints).map(([a, b]: [Vector3, Vector3]) =>
-      traverse(a, b, resolutions, logZoomStep),
-    ),
-  );
+    // Buckets adjacent to the current viewport are also loaded so that these
+    // buckets are already on the GPU when the user moves a little.
+    // const enlargementFactor = 1.1;
+    // const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
+    // const enlargedHalfExtent = enlargedExtent / 2;
+    // Cast a vertical "scan line" and check how many buckets are intersected.
+    // That amount N is used as a measure to cast N + 1 (steps) vertical scanlines.
+    const stepRatePoints = M4x4.transformVectorsAffine(queryMatrix, [
+      [-enlargedHalfExtent[0], -enlargedHalfExtent[1], 0],
+      [-enlargedHalfExtent[0], +enlargedHalfExtent[1], 0],
+    ]);
+    const stepRateBuckets = traverse(
+      stepRatePoints[0],
+      stepRatePoints[1],
+      resolutions,
+      logZoomStep,
+    );
+    const steps = stepRateBuckets.length + 1;
+    const stepSize = [extent[0] / steps, extent[1] / steps];
+    // This array holds the start and end points
+    // of horizontal lines which cover the entire rendered plane.
+    // These "scan lines" are traversed to find out which buckets need to be
+    // sent to the GPU.
+    const scanLinesPoints = M4x4.transformVectorsAffine(
+      queryMatrix,
+      _.flatten(
+        _.range(steps + 1).map((idx) => [
+          // Cast lines at z=-10
+          // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
+          // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
+          // Cast lines at z=0
+          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+          // Cast lines at z=10
+          // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
+          // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
+        ]),
+      ),
+    );
+
+    for (const [a, b] of chunk2(scanLinesPoints)) {
+      for (const bucket of traverse(a, b, resolutions, logZoomStep)) {
+        traversedBuckets.push(bucket);
+      }
+    }
+  }
 
   traversedBuckets = makeBucketsUnique(traversedBuckets);
   let traversedBucketsVec4 = traversedBuckets.map((addr): Vector4 => [...addr, logZoomStep]);

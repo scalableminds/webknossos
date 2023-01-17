@@ -4,7 +4,7 @@ import memoizeOne from "memoize-one";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { getAreasFromState, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, Matrix4x4 } from "libs/mjs";
+import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
@@ -313,8 +313,12 @@ export default class LayerRenderingManager {
       position[0] - maximumRenderedBucketsHalfInVoxel[0] * resolution[0],
       position[1] - maximumRenderedBucketsHalfInVoxel[1] * resolution[1],
       position[2] - maximumRenderedBucketsHalfInVoxel[2] * resolution[2],
-    ];
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
+    ] as Vector3;
+
+    if (layer.transformMatrix) {
+      V3.mul4x4(layer.transformMatrix, anchorPointInVoxel, anchorPointInVoxel);
+    }
+
     const anchorPoint = this.cube.positionToZoomedAddress(anchorPointInVoxel, logZoomStep);
 
     if (_.isEqual(anchorPoint, this.cachedAnchorPoint)) {

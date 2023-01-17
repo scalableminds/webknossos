@@ -124,13 +124,6 @@ export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) 
   };
 }
 
-export function enforceValue<T>(val: T | null, msg?: string): NonNullable<T> {
-  if (val == null) {
-    throw new Error(msg || "Unexpected null value");
-  }
-  return val;
-}
-
 export function maybe<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => Maybe<B> {
   return (nullableA: A | null | undefined) => Maybe.fromNullable(nullableA).map(fn);
 }

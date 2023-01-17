@@ -530,7 +530,7 @@ function renderPlaceholder(
       }
       height={350}
     >
-      Have a look at a public dataset to experience webKnossos in action.
+      Have a look at a public dataset to experience WEBKNOSSOS in action.
     </OptionCard>
   );
 
@@ -545,7 +545,7 @@ function renderPlaceholder(
       }
       height={350}
     >
-      webKnossos supports a variety of (remote){" "}
+      WEBKNOSSOS supports a variety of (remote){" "}
       <a
         href="https://docs.webknossos.org/webknossos/data_formats.html"
         target="_blank"

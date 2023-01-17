@@ -168,7 +168,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                    userEmail,
                                                    organization.displayName,
-                                                   "Extend webKnossos plan by a year"))
+                                                   "Extend WEBKNOSSOS plan by a year"))
     } yield Ok
   }
 
@@ -190,7 +190,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
           defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                      userEmail,
                                                      organization.displayName,
-                                                     s"Upgrade webKnossos Plan to $requestedPlan"))
+                                                     s"Upgrade WEBKNOSSOS Plan to $requestedPlan"))
       } yield Ok
   }
 

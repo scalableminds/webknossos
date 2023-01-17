@@ -1,5 +1,5 @@
 # Migration Guide (Unreleased)
-All migrations (for unreleased versions) of webKnossos are documented in this file.
+All migrations (for unreleased versions) of WEBKNOSSOS are documented in this file.
 See `MIGRATIONS.released.md` for the migrations which are part of official releases.
 
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.

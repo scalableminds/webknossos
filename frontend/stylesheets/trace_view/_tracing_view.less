@@ -304,9 +304,8 @@ img.keyboard-mouse-icon:first-child {
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
-  @primary-bg: #2174c1;
-  @primary-border: #1890ff;
-  @hover-border: #40a9ff;
+  @primary-border: @primary-color;
+  @hover-border: @blue-zircon;
 
   background-color: @layout-header-background;
   color: rgba(255, 255, 255, 0.67);
@@ -386,7 +385,7 @@ img.keyboard-mouse-icon:first-child {
   }
 
   .ant-btn-primary {
-    background-color: @primary-bg !important;
+    background-color: @primary-color !important;
   }
 
   // Radio button
@@ -432,7 +431,7 @@ img.keyboard-mouse-icon:first-child {
 
   // Settings icon
   .highlight-togglable-button.ant-btn {
-    background-color: @primary-bg !important;
+    background-color: @primary-color !important;
     &:not(:hover) {
       border-color: @primary-border !important;
     }

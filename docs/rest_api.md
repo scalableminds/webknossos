@@ -1,10 +1,10 @@
-# webKnossos REST API
+# WEBKNOSSOS REST API
 
-The following HTTP requests may be used to interact with the backend of webKnossos. Please keep the server load in mind and avoid sending excessive amounts of requests or huge individual ones.
+The following HTTP requests may be used to interact with the backend of WEBKNOSSOS. Please keep the server load in mind and avoid sending excessive amounts of requests or huge individual ones.
 
 ## Authentication
 
-All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly above “logout”.
+All API routes expect the HTTP header `X-Auth-Token` to be set to your personal WEBKNOSSOS token. You can find this token in the WEBKNOSSOS menu, directly above “logout”.
 
 ## Versioning
 
@@ -32,7 +32,7 @@ New versions will be documented here, detailing the changes. Note, however, that
 ### `GET /buildinfo`
 
 #### Returns
-JSON object containing information about the version of webKnossos
+JSON object containing information about the version of WEBKNOSSOS
 
 
 ---

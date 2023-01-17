@@ -203,11 +203,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
         />
         <PlanExpirationCard organization={this.state.organization} />
         <PlanUpgradeCard organization={this.state.organization} />
-        <Card
-          title="Settings"
-          style={{ marginBottom: 20 }}
-          headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
-        >
+        <Card title="Settings" style={{ marginBottom: 20 }}>
           <Form
             onFinish={this.onFinish}
             layout="vertical"
@@ -284,11 +280,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             </Button>
           </Form>
         </Card>
-        <Card
-          title="Danger Zone"
-          style={{ marginBottom: 20 }}
-          headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
-        >
+        <Card title="Danger Zone" style={{ marginBottom: 20 }}>
           <Row>
             <Col span={18}>
               Delete this organization including all annotations, uploaded datasets, and associated

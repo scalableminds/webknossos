@@ -25,7 +25,7 @@ export default class ErrorBoundary extends React.Component<
 
       return (
         <div style={{ margin: 32 }}>
-          <h1>webKnossos encountered an error</h1>
+          <h1>WEBKNOSSOS encountered an error</h1>
 
           <p>
             Please try reloading the page. The error has been reported to our system and will be

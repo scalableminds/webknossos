@@ -2,18 +2,18 @@ package models.user
 
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-
-import javax.inject.Inject
 import com.scalableminds.webknossos.schema.Tables._
 import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
+import utils.sql.{SQLDAO, SqlClient}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class MultiUser(
@@ -27,6 +27,12 @@ case class MultiUser(
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
+
+object PasswordHasherType extends ExtendedEnumeration {
+  type PasswordHasher = Value
+
+  val SCrypt, Empty = Value
+}
 
 class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
@@ -55,11 +61,12 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def insertOne(u: MultiUser): Fox[Unit] =
     for {
+      passwordInfoHasher <- PasswordHasherType.fromString(u.passwordInfo.hasher).toFox
       _ <- run(q"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher,
                                                      passwordInfo_password,
                                                      isSuperUser, novelUserExperienceInfos, selectedTheme,
                                                      created, isDeleted)
-                   values(${u._id}, ${u.email}, ${SqlToken.raw(escapeLiteral(u.passwordInfo.hasher))},
+                   values(${u._id}, ${u.email}, $passwordInfoHasher,
                           ${u.passwordInfo.password},
                           ${u.isSuperUser}, ${u.novelUserExperienceInfos}, ${u.selectedTheme},
                           ${u.created}, ${u.isDeleted})""".asUpdate)
@@ -68,8 +75,9 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   def updatePasswordInfo(multiUserId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
+      passwordInfoHasher <- PasswordHasherType.fromString(passwordInfo.hasher).toFox
       _ <- run(q"""update webknossos.multiusers set
-                          passwordInfo_hasher = ${SqlToken.raw(escapeLiteral(passwordInfo.hasher))},
+                          passwordInfo_hasher = $passwordInfoHasher,
                           passwordInfo_password = ${passwordInfo.password}
                    where _id = $multiUserId""".asUpdate)
     } yield ()

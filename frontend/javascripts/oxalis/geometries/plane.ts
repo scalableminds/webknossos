@@ -18,6 +18,7 @@ class Plane {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: THREE.Mesh;
   planeID: OrthoView;
+  materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
   baseScaleVector: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
@@ -44,13 +45,12 @@ class Plane {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(
+    this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       true,
       OrthoViewValues.indexOf(this.planeID),
-    )
-      .setup()
-      .getMaterial();
+    );
+    const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     // create crosshair
     const crosshairGeometries = [];
@@ -124,19 +124,8 @@ class Plane {
     });
   };
 
-  updateAnchorPoints(
-    anchorPoint: Vector4 | null | undefined,
-    fallbackAnchorPoint?: Vector4 | null | undefined,
-  ): void {
-    if (anchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
-      this.plane.material.setAnchorPoint(anchorPoint);
-    }
-
-    if (fallbackAnchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setFallbackAnchorPoint' does not exist o... Remove this comment to see the full error message
-      this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
-    }
+  updateAnchorPoints(anchorPoints: Vector4[]): void {
+    this.materialFactory.setAnchorPoints(anchorPoints);
   }
 
   setScale(xFactor: number, yFactor: number): void {

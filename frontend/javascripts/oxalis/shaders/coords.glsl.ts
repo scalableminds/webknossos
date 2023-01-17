@@ -27,10 +27,11 @@ export const getResolutionFactors: ShaderModule = {
 export const getRelativeCoords: ShaderModule = {
   requirements: [getResolution],
   code: `
-    vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
+    vec3 getRelativeCoords(vec3 worldCoordUVW, float layerIndex, float usedZoomStep) {
       vec3 resolution = getResolution(usedZoomStep);
       vec3 resolutionUVW = transDim(resolution);
 
+      vec3 anchorPoint = anchorPoints[int(layerIndex)];
       vec3 anchorPointUVW = transDim(anchorPoint);
       vec3 anchorPointAsGlobalPositionUVW =
         anchorPointUVW * resolutionUVW * bucketWidth;

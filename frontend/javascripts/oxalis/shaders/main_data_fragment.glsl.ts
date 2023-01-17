@@ -56,6 +56,8 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% }) %>
 
 uniform float activeMagIndices[<%= layerNamesWithSegmentation.length %>];
+uniform vec3 anchorPoints[<%= layerNamesWithSegmentation.length %>];
+
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
   uniform highp usampler2D custom_color_texture;
@@ -88,7 +90,6 @@ uniform bool renderBucketIndices;
 uniform vec3 bboxMin;
 uniform vec3 bboxMax;
 uniform vec3 globalPosition;
-uniform vec3 anchorPoint;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
 uniform vec3 uvw;

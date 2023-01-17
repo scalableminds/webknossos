@@ -503,21 +503,23 @@ class SceneController {
     // which covers all three rendered planes. Relative to this anchor point,
     // all buckets necessary for rendering are addressed. The anchorPoint is
     // defined with bucket indices for the coordinate system of the current zoomStep.
-    let anchorPoint;
+    const anchorPoints = [];
 
     const magIndices = getActiveMagIndicesForLayers(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(
-        globalPosition,
-        magIndices[dataLayer.name],
+      anchorPoints.push(
+        dataLayer.layerRenderingManager.updateDataTextures(
+          globalPosition,
+          magIndices[dataLayer.name],
+        ),
       );
     }
 
     if (optArbitraryPlane) {
-      optArbitraryPlane.updateAnchorPoints(anchorPoint);
+      optArbitraryPlane.updateAnchorPoints(anchorPoints);
     } else {
       for (const currentPlane of _.values<Plane>(this.planes)) {
-        currentPlane.updateAnchorPoints(anchorPoint);
+        currentPlane.updateAnchorPoints(anchorPoints);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 

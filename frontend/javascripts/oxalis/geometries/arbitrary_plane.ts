@@ -45,11 +45,8 @@ class ArbitraryPlane {
     this.materialFactory.stopListening();
   }
 
-  updateAnchorPoints(anchorPoint: Vector4 | null | undefined): void {
-    if (anchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
-      this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
-    }
+  updateAnchorPoints(anchorPoints: Vector4[]): void {
+    this.materialFactory.setAnchorPoints(anchorPoints);
   }
 
   setPosition = (x: number, y: number, z: number) => {

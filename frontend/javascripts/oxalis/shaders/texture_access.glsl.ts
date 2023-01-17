@@ -104,7 +104,7 @@ export const getColorForCoords: ShaderModule = {
       // Will hold [highValue, lowValue];
       vec4 returnValue[2];
 
-      vec3 coords = floor(getRelativeCoords(worldPositionUVW, activeMagIndices[int(layerIndex)]));
+      vec3 coords = floor(getRelativeCoords(worldPositionUVW, layerIndex, activeMagIndices[int(layerIndex)]));
       vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
@@ -174,6 +174,7 @@ export const getColorForCoords: ShaderModule = {
          */
 
         vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
+        vec3 anchorPoint = anchorPoints[int(layerIndex)];
         vec3 worldBucketPosition = relativeBucketPosition + anchorPoint;
         vec3 subVolumeIndex = mod(worldBucketPosition, magnificationFactors);
         offsetInBucket = floor(

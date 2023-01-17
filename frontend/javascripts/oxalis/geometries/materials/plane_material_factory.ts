@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -135,8 +135,8 @@ class PlaneMaterialFactory {
       globalPosition: {
         value: new THREE.Vector3(0, 0, 0),
       },
-      anchorPoint: {
-        value: new THREE.Vector3(0, 0, 0),
+      anchorPoints: {
+        value: [0, 0, 0],
       },
       zoomValue: {
         value: 1,
@@ -241,7 +241,7 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_transform`] = {
         value:
           layer.transformMatrix ||
-          new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 122, 105, 0, 1]),
+          new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
       };
       // } else {
       //   this.uniforms[`${layerName}_transform`] = {
@@ -349,6 +349,10 @@ class PlaneMaterialFactory {
     };
   }
 
+  setAnchorPoints = (anchorPoints: Vector4[]) => {
+    this.uniforms.anchorPoints.value = _.flatten(anchorPoints);
+  };
+
   makeMaterial(options?: ShaderMaterialOptions): void {
     this.material = new THREE.ShaderMaterial(
       _.extend(options, {
@@ -367,11 +371,6 @@ class PlaneMaterialFactory {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
     this.material.setGlobalPosition = (x, y, z) => {
       this.uniforms.globalPosition.value.set(x, y, z);
-    };
-
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
-    this.material.setAnchorPoint = ([x, y, z]) => {
-      this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message

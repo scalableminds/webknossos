@@ -161,7 +161,7 @@ class UserService @Inject()(conf: WkConf,
         created = Instant.now
       )
       _ <- userDAO.insertOne(user)
-      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
+      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)(GlobalAccessContext)))
       _ = logger.info(
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user

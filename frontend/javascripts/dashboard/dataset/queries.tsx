@@ -537,13 +537,13 @@ function getUnobtrusivelyUpdatedDatasets(
 
 type FolderHierarchy = {
   tree: FolderItem[];
-  itemById: Record<string, FolderItem>;
+  itemById: Map<string, FolderItem>;
   flatItems: FlatFolderTreeItem[];
 };
 
 export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHierarchy {
   const roots: FolderItem[] = [];
-  const itemById: Record<string, FolderItem> = {};
+  const itemById: Map<string, FolderItem> = new Map();
   for (const folderTreeItem of folderTree) {
     const treeItem = {
       key: folderTreeItem.id,
@@ -555,18 +555,25 @@ export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHier
     if (folderTreeItem.parent == null) {
       roots.push(treeItem);
     }
-    itemById[folderTreeItem.id] = treeItem;
+    itemById.set(folderTreeItem.id, treeItem);
   }
+
+  // Satisfy TypeScript
+  const get = (id: string): FolderItem =>
+    Utils.enforceValue(
+      itemById.get(id),
+      "Unexpected error during initialization of folder structure",
+    );
 
   for (const folderTreeItem of folderTree) {
     if (folderTreeItem.parent != null) {
-      itemById[folderTreeItem.parent].children.push(itemById[folderTreeItem.id]);
+      get(folderTreeItem.parent).children.push(get(folderTreeItem.id));
     }
   }
 
   for (const folderTreeItem of folderTree) {
     if (folderTreeItem.parent != null) {
-      itemById[folderTreeItem.parent].children.sort((a, b) => a.title.localeCompare(b.title));
+      get(folderTreeItem.parent).children.sort((a, b) => a.title.localeCompare(b.title));
     }
   }
 

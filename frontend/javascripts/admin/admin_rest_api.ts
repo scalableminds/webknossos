@@ -59,10 +59,10 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
-  VoxelyticsWorkflowInfo,
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
   ShortLink,
+  VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -2381,7 +2381,7 @@ export function getShortLink(key: string): Promise<ShortLink> {
 }
 
 // ### Voxelytics
-export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowInfo>> {
+export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
   return Request.receiveJSON("/api/voxelytics/workflows");
 }
 
@@ -2410,26 +2410,29 @@ export function getVoxelyticsLogs(
 
 export function getVoxelyticsChunkStatistics(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
 ): Promise<Array<VoxelyticsChunkStatistics>> {
-  return Request.receiveJSON(
-    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${new URLSearchParams({
-      runId,
-      taskName,
-    })}`,
-  );
+  const params = new URLSearchParams({
+    taskName,
+  });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${params}`);
 }
 export function getVoxelyticsArtifactChecksums(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
   artifactName?: string,
 ): Promise<Array<Record<string, string | number>>> {
   const params = new URLSearchParams({
-    runId,
     taskName,
   });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
   if (artifactName != null) {
     params.append("artifactName", artifactName);
   }

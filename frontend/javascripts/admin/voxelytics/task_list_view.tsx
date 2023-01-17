@@ -11,6 +11,7 @@ import {
   message,
   Tag,
   Tooltip,
+  Select,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -25,9 +26,9 @@ import {
 import MiniSearch from "minisearch";
 import ColorHash from "color-hash";
 
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import moment from "moment";
-import { useUpdateEvery } from "libs/react_hooks";
+import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
 import {
   VoxelyticsRunState,
   VoxelyticsTaskConfig,
@@ -81,7 +82,7 @@ function getFilteredTasks(
  */
 function addUrlParam(location: ReturnType<typeof useLocation>, key: string, val: string) {
   const search = new URLSearchParams(location.search);
-  search.append(key, val);
+  search.set(key, val);
   return `${location.pathname}?${search.toString()}`;
 }
 
@@ -109,10 +110,15 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
         </Tag>
       );
     case VoxelyticsRunState.RUNNING: {
-      const currentDuration = Date.now() - taskInfo.beginTime;
-      if (taskInfo.chunksFinished > 0) {
+      const currentDuration = Date.now() - taskInfo.beginTime.getTime();
+      if (taskInfo.chunkCounts.complete > 0) {
         const estimatedRemainingDuration =
-          (currentDuration / taskInfo.chunksFinished) * taskInfo.chunksTotal - currentDuration;
+          (currentDuration /
+            (taskInfo.chunkCounts.complete +
+              taskInfo.chunkCounts.failed +
+              taskInfo.chunkCounts.cancelled)) *
+            (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped) -
+          currentDuration;
         const estimatedEndTime = new Date(Date.now() + estimatedRemainingDuration);
         return (
           <Tooltip
@@ -250,6 +256,8 @@ export default function TaskListView({
   onReload: () => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { runId } = useSearchParams();
+  const history = useHistory();
 
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
@@ -358,14 +366,18 @@ export default function TaskListView({
 
   async function downloadLog() {
     try {
-      const logText = (await getVoxelyticsLogs(report.run.id, null, "DEBUG"))
+      if (runId == null) {
+        message.error("Please select a specific run for log download.");
+        return;
+      }
+      const logText = (await getVoxelyticsLogs(runId, null, "DEBUG"))
         .map((line: any) =>
           formatLog(line, { timestamps: true, pid: true, level: true, logger: true }),
         )
         .join("\n");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([logText], { type: "plain/text" }));
-      a.download = `${report.run.id}.log`;
+      a.download = `${report.workflow.hash}_${runId}.log`;
       a.click();
     } catch (error) {
       message.error("Could not fetch log for download.");
@@ -385,13 +397,15 @@ export default function TaskListView({
       <Menu.Item key="3" onClick={downloadWorkflowYAML}>
         Download Workflow YAML
       </Menu.Item>
-      <Menu.Item key="4" onClick={downloadLog}>
+      <Menu.Item key="4" onClick={downloadLog} disabled={runId == null}>
         Download Log
       </Menu.Item>
     </Menu>
   );
 
   const renderTaskGroupOrTask = (taskGroup: VoxelyticsTaskConfigWithHierarchy) => {
+    const taskInfo = aggregateTaskInfos(taskGroup, report.tasks, runId);
+
     if (taskGroup.isMetaTask) {
       // If tasks are filtered away by the search query, it can happen that a meta task
       // has "no children", anymore. In that case, don't render the entire meta task.
@@ -401,7 +415,6 @@ export default function TaskListView({
         return null;
       }
 
-      const taskInfo = aggregateTaskInfos(taskGroup, report.run.tasks);
       return (
         <Panel
           header={
@@ -453,10 +466,6 @@ export default function TaskListView({
       return null;
     }
 
-    const taskInfo = report.run.tasks.find(
-      (t) => t.taskName === task.taskName,
-    ) as VoxelyticsTaskInfo;
-
     return (
       <Panel
         header={
@@ -486,6 +495,7 @@ export default function TaskListView({
         <TaskView
           taskName={task.taskName}
           workflowHash={report.workflow.hash}
+          runId={runId}
           task={task}
           artifacts={report.artifacts[task.taskName] || []}
           dag={report.dag}
@@ -496,7 +506,7 @@ export default function TaskListView({
     );
   };
 
-  const totalRuntime = report.run.tasks.reduce((sum, t) => {
+  const totalRuntime = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
       return sum.add(moment.duration(moment().diff(moment(t.beginTime))));
     } else if (t.beginTime != null && t.endTime != null) {
@@ -508,8 +518,11 @@ export default function TaskListView({
 
   const {
     workflow: { name: readableWorkflowName },
-    run: { beginTime: runBeginTimeString },
   } = report;
+  const runBeginTimeString = report.runs.reduce(
+    (r, a) => Math.min(r, a.beginTime.getTime()),
+    Infinity,
+  );
 
   return (
     <Row
@@ -563,6 +576,23 @@ export default function TaskListView({
           <Button onClick={() => onReload()}>
             <SyncOutlined spin={isLoading} /> Refresh
           </Button>
+          <Select
+            value={runId ?? ""}
+            onChange={(value) =>
+              history.replace(
+                value === ""
+                  ? removeUrlParam(history.location, "runId")
+                  : addUrlParam(history.location, "runId", value),
+              )
+            }
+          >
+            <Select.Option value="">Consolidated</Select.Option>
+            {report.runs.map((run) => (
+              <Select.Option value={run.id} key={run.id}>
+                {run.name}
+              </Select.Option>
+            ))}
+          </Select>
           <Dropdown.Button overlay={overflowMenu} onClick={() => setExpandedTasks([])}>
             Collapse All
           </Dropdown.Button>
@@ -580,29 +610,30 @@ export default function TaskListView({
 
 function aggregateTimes(taskInfos: Array<VoxelyticsTaskInfo>): [Date, Date] {
   return [
-    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime ?? Infinity), Infinity)),
-    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime ?? -Infinity), -Infinity)),
+    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime?.getTime() ?? Infinity), Infinity)),
+    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime?.getTime() ?? -Infinity), -Infinity)),
   ];
 }
 
 function aggregateTaskInfos(
   task: VoxelyticsTaskConfigWithHierarchy,
   allTaskInfos: Array<VoxelyticsTaskInfo>,
+  runId: string | null,
 ): VoxelyticsTaskInfo {
   if (task.isMetaTask) {
-    const taskInfos = task.subtasks.map((subTask) => aggregateTaskInfos(subTask, allTaskInfos));
+    const taskInfos = task.subtasks.map((subTask) =>
+      aggregateTaskInfos(subTask, allTaskInfos, runId),
+    );
 
     if (taskInfos.length === 0) {
       return {
-        runId: "",
-        runName: "",
         taskName: task.key,
         state: VoxelyticsRunState.SKIPPED,
+        currentExecutionId: null,
+        chunkCounts: { total: 0, failed: 0, skipped: 0, complete: 0, cancelled: 0 },
         beginTime: null,
         endTime: null,
-        currentExecutionId: null,
-        chunksTotal: 0,
-        chunksFinished: 0,
+        runs: [],
       };
     }
 
@@ -650,14 +681,28 @@ function aggregateTaskInfos(
     }
 
     return {
-      runId: taskInfos[0].runId,
-      runName: taskInfos[0].runName,
       taskName: task.key,
       state,
       beginTime,
       endTime,
+      currentExecutionId: null,
+      chunkCounts: {
+        total: taskInfos.reduce((r, a) => r + a.chunkCounts.total, 0),
+        failed: taskInfos.reduce((r, a) => r + a.chunkCounts.failed, 0),
+        skipped: taskInfos.reduce((r, a) => r + a.chunkCounts.skipped, 0),
+        complete: taskInfos.reduce((r, a) => r + a.chunkCounts.complete, 0),
+        cancelled: taskInfos.reduce((r, a) => r + a.chunkCounts.cancelled, 0),
+      },
+      runs: [],
     } as VoxelyticsTaskInfo;
   }
 
-  return allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
+  const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
+  if (runId != null) {
+    return {
+      ...taskInfo.runs.find((tr) => tr.runId === runId),
+      taskName: taskInfo.taskName,
+    } as VoxelyticsTaskInfo;
+  }
+  return taskInfo;
 }

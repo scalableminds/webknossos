@@ -100,8 +100,11 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       assert(sql == SqlToken("SELECT * FROM test WHERE age = ? AND name = ?", List(IntValue(3), StringValue("Amy"))))
     }
     "construct an SQLToken with identifiers" in {
-      val sql = q"""SELECT * FROM ${SqlToken.identifier("test")}"""
-      assert(sql == SqlToken("SELECT * FROM \"test\""))
+      val sql0 = q"""SELECT * FROM ${SqlToken.identifier("test")}"""
+      assert(sql0 == SqlToken("SELECT * FROM \"test\""))
+
+      val sql1 = q"""SELECT * FROM ${SqlToken.identifier("webknossos.test")}"""
+      assert(sql1 == SqlToken("SELECT * FROM \"webknossos\".\"test\""))
     }
     "construct an SQLToken with raw SQL" in {
       val sql = q"""SELECT * FROM test WHERE ${SqlToken.raw("TRUE")}"""
@@ -126,8 +129,8 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       assert(sql == SqlToken("SELECT * FROM test WHERE age IN (?, ?)", List(IntValue(3), IntValue(5))))
     }
     "construct an SQLToken with tuple lists" in {
-      val list = List(List("Bob".toSqlValue, 5.toSqlValue), List("Amy".toSqlValue, 3.toSqlValue))
-      val sql = q"""INSERT INTO test(name, age) VALUES ${SqlToken.tupleList(list)}"""
+      val list = List(SqlToken.tupleFromValues("Bob", 5), SqlToken.tupleFromValues("Amy", 3))
+      val sql = q"""INSERT INTO test(name, age) VALUES ${SqlToken.joinByComma(list)}"""
       assert(
         sql == SqlToken("INSERT INTO test(name, age) VALUES (?, ?), (?, ?)",
                         List(StringValue("Bob"), IntValue(5), StringValue("Amy"), IntValue(3))))
@@ -174,7 +177,7 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       val fields = List(q"name", q"age")
       val values = List("Bob".toSqlValue, 5.toSqlValue)
       val sql =
-        q"""INSERT INTO test(${SqlToken.joinBySeparator(fields, ", ")}) VALUES ${SqlToken.tupleList(List(values))}"""
+        q"""INSERT INTO test(${SqlToken.joinBySeparator(fields, ", ")}) VALUES ${SqlToken.tupleFromList(values)}"""
 
       assert(sql == SqlToken("""INSERT INTO test(name, age) VALUES (?, ?)""", List(StringValue("Bob"), IntValue(5))))
     }

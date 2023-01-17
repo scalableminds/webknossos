@@ -5,13 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.n5.{
-  N5Header,
-  N5Metadata,
-  N5MultiscalesDataset,
-  N5MultiscalesItem,
-  N5Transform
-}
+import com.scalableminds.webknossos.datastore.datareaders.n5._
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 import net.liftweb.util.Helpers.tryo
 
@@ -24,8 +18,8 @@ class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
 
   override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
     for {
-      zattrsPath <- Fox.successful(remotePath.resolve(N5Metadata.FILENAME_ATTRIBUTES_JSON))
-      n5Metadata <- parseJsonFromPath[N5Metadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
+      metadataPath <- Fox.successful(remotePath.resolve(N5Metadata.FILENAME_ATTRIBUTES_JSON))
+      n5Metadata <- parseJsonFromPath[N5Metadata](metadataPath) ?~> s"Failed to read N5 header at $metadataPath"
       layers <- Fox.serialCombined(n5Metadata.multiscales)(layerFromN5MultiscalesItem(_, remotePath, credentialId))
     } yield layers
 

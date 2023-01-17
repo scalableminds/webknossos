@@ -2,20 +2,10 @@ import React from "react";
 import { JSONTree } from "react-json-tree";
 import { Button, Card, message } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-
 import { VoxelyticsArtifactConfig } from "types/api_flow_types";
 import { getVoxelyticsArtifactChecksums } from "admin/admin_rest_api";
 import { formatBytes } from "libs/format_utils";
-import { useTheme } from "./task_view";
-
-function isObjectEmpty(obj: Record<string, any>) {
-  return Object.keys(obj).length === 0 && obj.constructor === Object;
-}
-
-async function copyToClipboad(text: string) {
-  await navigator.clipboard.writeText(text);
-  message.success("Copied to clipboard");
-}
+import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
 
 function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
   return (
@@ -91,15 +81,15 @@ function renderAttributes(
 }
 
 function ArtifactsView({
-  artifacts,
-  runId,
   workflowHash,
+  runId,
   taskName,
+  artifacts,
 }: {
-  artifacts: Record<string, VoxelyticsArtifactConfig>;
-  runId: string;
   workflowHash: string;
+  runId: string | null;
   taskName: string;
+  artifacts: Record<string, VoxelyticsArtifactConfig>;
 }) {
   const theme = useTheme();
 
@@ -119,7 +109,11 @@ function ArtifactsView({
       const keys = Object.keys(checksums[0]);
       const csv = [
         keys.join(","),
-        ...checksums.map((row) => keys.map((key) => row[key]).join(",")),
+        ...checksums.map((row) =>
+          keys
+            .map((key) => (key === "timestamp" ? new Date(row[key]).toISOString() : row[key]))
+            .join(","),
+        ),
       ].join("\n");
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
       a.download = `${workflowHash}_${taskName}_${artifactName}_checksums.csv`;

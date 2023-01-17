@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.schema.Tables.{Shortlinks, ShortlinksRow}
 import play.api.libs.json.{Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -18,7 +18,7 @@ object ShortLink {
   implicit val jsonFormat: OFormat[ShortLink] = Json.format[ShortLink]
 }
 
-class ShortLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[ShortLink, ShortlinksRow, Shortlinks](sqlClient) {
   protected val collection = Shortlinks
 
@@ -37,19 +37,19 @@ class ShortLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def insertOne(sl: ShortLink): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.shortLinks(_id, key, longlink)
-                         values(${sl._id}, ${sl.key}, ${sl.longLink})""")
+      _ <- run(q"""insert into webknossos.shortLinks(_id, key, longlink)
+                         values(${sl._id}, ${sl.key}, ${sl.longLink})""".asUpdate)
     } yield ()
 
   def findOne(id: String): Fox[ShortLink] =
     for {
-      r <- run(sql"select #$columns from webknossos.shortLinks where id = $id".as[ShortlinksRow])
+      r <- run(q"select $columns from webknossos.shortLinks where id = $id".as[ShortlinksRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   def findOneByKey(key: String): Fox[ShortLink] =
     for {
-      r <- run(sql"select #$columns from webknossos.shortLinks where key = $key".as[ShortlinksRow])
+      r <- run(q"select $columns from webknossos.shortLinks where key = $key".as[ShortlinksRow])
       parsed <- parseFirst(r, key)
     } yield parsed
 

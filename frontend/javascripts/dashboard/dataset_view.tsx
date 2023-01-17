@@ -30,7 +30,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIMaybeUnimportedDataset, APIUser, FolderItem } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
-import { DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
+import { type DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";
@@ -43,7 +43,11 @@ import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
-import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "./dataset/queries";
+import {
+  MINIMUM_SEARCH_QUERY_LENGTH,
+  SEARCH_RESULTS_LIMIT,
+  useFolderQuery,
+} from "./dataset/queries";
 
 const { Group: InputGroup } = Input;
 
@@ -100,6 +104,9 @@ function DatasetView(props: Props) {
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
+  const { data: folder } = useFolderQuery(
+    "activeFolderId" in context ? context.activeFolderId : null,
+  );
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
@@ -268,11 +275,34 @@ function DatasetView(props: Props) {
               {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
             </Dropdown.Button>
           </Tooltip>
-          <Link to="/datasets/upload" style={margin}>
+
+          <Link
+            to={
+              "activeFolderId" in context &&
+              context.activeFolderId != null &&
+              (folder == null || folder.isEditable)
+                ? `/datasets/upload?to=${context.activeFolderId}`
+                : "/datasets/upload"
+            }
+            style={margin}
+          >
             <Button type="primary" icon={<PlusOutlined />}>
               Add Dataset
             </Button>
           </Link>
+          {"activeFolderId" in context && context.activeFolderId != null && (
+            <Button
+              disabled={folder != null && !folder.isEditable}
+              style={margin}
+              icon={<PlusOutlined />}
+              onClick={() =>
+                context.activeFolderId != null &&
+                context.showCreateFolderPrompt(context.activeFolderId)
+              }
+            >
+              Add Folder
+            </Button>
+          )}
           {search}
         </React.Fragment>
       ) : (

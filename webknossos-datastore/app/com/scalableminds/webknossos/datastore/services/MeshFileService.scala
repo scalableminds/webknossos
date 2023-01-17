@@ -22,8 +22,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
-trait GenericJsonFormat[T] {}
-
 case class ListMeshChunksRequest(
     meshFile: String,
     segmentId: Long
@@ -147,7 +145,20 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo)
+case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo) {
+  def merge(that: WebknossosSegmentInfo): WebknossosSegmentInfo =
+    // assume that transform, meshFormat, chunkShape, gridOrigin, scale and vertexOffset are the same
+    WebknossosSegmentInfo(
+      transform,
+      meshFormat,
+      chunks = MeshSegmentInfo(
+        chunks.chunkShape,
+        chunks.gridOrigin,
+        lods = (chunks.lods, that.chunks.lods).zipped.map((lod1, lod2) =>
+          MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
+      )
+    )
+}
 
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
@@ -239,7 +250,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def listMeshChunksForSegmentV3(organizationName: String,
                                  dataSetName: String,
                                  dataLayerName: String,
-                                 listMeshChunksRequest: ListMeshChunksRequest): Fox[WebknossosSegmentInfo] = {
+                                 listMeshChunksRequest: ListMeshChunksRequest): Box[WebknossosSegmentInfo] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
@@ -260,14 +271,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .uint8()
         .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
       val segmentInfo = NeuroglancerSegmentInfo.fromBytes(manifest)
-      val processedSegmentInfo = getChunksFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
-      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, chunks = processedSegmentInfo)
+      val enrichedSegmentInfo = enrichSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
+      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, chunks = enrichedSegmentInfo)
     }
   }
 
-  private def getChunksFromSegmentInfo(segmentInfo: NeuroglancerSegmentInfo,
-                                       lodScaleMultiplier: Double,
-                                       neuroglancerOffsetStart: Long): MeshSegmentInfo = {
+  private def enrichSegmentInfo(segmentInfo: NeuroglancerSegmentInfo,
+                                lodScaleMultiplier: Double,
+                                neuroglancerOffsetStart: Long): MeshSegmentInfo = {
     val totalMeshSize = segmentInfo.chunkByteOffsets.map(_.sum).sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
     val chunkByteOffsets = segmentInfo.chunkByteOffsets.map(_.scanLeft(0)(_ + _)) // This builds a cumulative sum
@@ -311,11 +322,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val bucketStart = bucketOffsets(0)
     val bucketEnd = bucketOffsets(1)
 
+    if (bucketEnd - bucketStart == 0) throw new Exception(s"No entry for segment $segmentId")
+
     val buckets = cachedMeshFile.reader
       .uint64()
       .readMatrixBlockWithOffset("buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
 
     val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+    if (bucketLocalOffset < 0) throw new Exception(s"SegmentId $segmentId not in bucket list")
     val neuroglancerStart = buckets(bucketLocalOffset)(1)
     val neuroglancerEnd = buckets(bucketLocalOffset)(2)
 

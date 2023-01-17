@@ -19,6 +19,7 @@ import {
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
+  hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
@@ -38,7 +39,7 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import type {
   ActiveMappingInfo,
@@ -386,7 +387,13 @@ class SegmentsView extends React.Component<Props, State> {
     );
 
     if (this.props.visibleSegmentationLayer != null) {
+      const isEditableMapping = hasEditableMapping(
+        Store.getState(),
+        this.props.visibleSegmentationLayer.name,
+      );
+
       const maybeMappingName =
+        !isEditableMapping &&
         mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
         mappingInfo.mappingType === "HDF5" &&
         mappingInfo.mappingName != null
@@ -556,6 +563,7 @@ class SegmentsView extends React.Component<Props, State> {
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
+            dropdownMatchSelectWidth={false}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map((meshFile: APIMeshFile) => (

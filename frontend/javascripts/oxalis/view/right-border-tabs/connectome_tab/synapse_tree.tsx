@@ -4,7 +4,7 @@ import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { stringToAntdColorPreset } from "libs/format_utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import type { APIConnectomeFile } from "types/api_flow_types";
 import Store from "oxalis/store";

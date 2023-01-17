@@ -99,7 +99,6 @@ type State = {
   savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined;
   inferredDataSource: APIDataSource | null | undefined;
   differenceBetweenDataSources: Record<string, any>;
-  hasNoAllowedTeams: boolean;
   dataSourceSettingsStatus: DataSourceSettingsStatus;
 };
 export type FormData = {
@@ -179,7 +178,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     savedDataSourceOnServer: null,
     inferredDataSource: null,
     differenceBetweenDataSources: {},
-    hasNoAllowedTeams: false,
     dataSourceSettingsStatus: {
       appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
       isJSONFormatValid: IsJSONFormatValidEnum.Yes,
@@ -357,7 +355,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       this.setState({
         datasetDefaultConfiguration,
         dataset,
-        hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
       handleGenericError(error as Error);
@@ -772,9 +769,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   }
 
   onValuesChange = (changedValues: FormData, allValues: FormData) => {
-    const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
     this.setState({
-      hasNoAllowedTeams,
       hasUnsavedChanges: true,
     });
   };
@@ -814,17 +809,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         />
       </Tooltip>
     );
-    const { hasNoAllowedTeams } = this.state;
-    const hasNoAllowedTeamsWarning = hasNoAllowedTeams ? (
-      <Tooltip title="Please double-check some fields here.">
-        <ExclamationCircleOutlined
-          style={{
-            marginLeft: 4,
-            color: "var(--ant-warning)",
-          }}
-        />
-      </Tooltip>
-    ) : null;
+
     return (
       <Form
         ref={this.formRef}
@@ -893,12 +878,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                 </TabPane>
 
                 <TabPane
-                  tab={
-                    <span>
-                      Sharing & Permissions{" "}
-                      {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
-                    </span>
-                  }
+                  tab={<span>Sharing & Permissions {formErrors.general ? errorIcon : null}</span>}
                   key="sharing"
                   forceRender
                 >
@@ -907,7 +887,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                       form={form}
                       datasetId={this.props.datasetId}
                       dataset={this.state.dataset}
-                      hasNoAllowedTeams={hasNoAllowedTeams}
                     />
                   </Hideable>
                 </TabPane>

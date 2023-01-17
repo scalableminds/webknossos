@@ -1,10 +1,10 @@
 import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
-import type {
-  DatasetConfiguration,
-  UserConfiguration,
-  DatasetLayerConfiguration,
+import {
+  type DatasetConfiguration,
+  type UserConfiguration,
+  type DatasetLayerConfiguration,
 } from "oxalis/store";
 
 export type RecommendedConfiguration = Partial<
@@ -304,7 +304,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.required.url": "Please provide a URL to a dataset.",
-  "dataset.import.required.initialTeam": "Please select at least one team you manage.",
+  "dataset.import.required.folder": "Please define a target folder for this dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>

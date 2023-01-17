@@ -24,9 +24,9 @@ import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icon
 import _ from "lodash";
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type {
-  TaskCreationResponse,
-  TaskCreationResponseContainer,
+import {
+  type TaskCreationResponse,
+  type TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
 import { normFile, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";

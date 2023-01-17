@@ -8,7 +8,7 @@ import type { OxalisState, Tracing, HybridTracing } from "oxalis/store";
 import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { startExportTiffJob } from "admin/admin_rest_api";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import * as Utils from "libs/utils";
 import features from "features";
 import _ from "lodash";

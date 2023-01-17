@@ -1,9 +1,27 @@
-import { Form, Input, Button, Col, Radio, Row, Collapse, FormInstance, Modal, Divider } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  Col,
+  Radio,
+  Row,
+  Collapse,
+  FormInstance,
+  Modal,
+  Divider,
+  List,
+} from "antd";
 import { connect } from "react-redux";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
+import {
+  exploreRemoteDataset,
+  getDataset,
+  isDatasetNameValid,
+  storeRemoteDataset,
+  updateDataset,
+} from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer } from "admin/dataset/dataset_components";
@@ -18,7 +36,8 @@ import DatasetSettingsDataTab, {
   // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
-import { Hideable } from "dashboard/dataset/helper_components";
+import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
+import FolderSelection from "dashboard/folders/folder_selection";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -84,8 +103,15 @@ function DatasetAddZarrView(props: Props) {
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
+  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const targetFolderId = params.get("to");
+    setTargetFolderId(targetFolderId);
+  }, []);
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -119,19 +145,23 @@ function DatasetAddZarrView(props: Props) {
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
-        const response = await storeRemoteDataset(
+        await storeRemoteDataset(
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
           datasourceConfigStr,
         );
-        if (response.status !== 200) {
-          const errorJSONString = JSON.stringify(await response.json());
-          throw new Error(`${response.status} ${response.statusText} ${errorJSONString}`);
-        }
       } catch (e) {
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
+      }
+      if (targetFolderId) {
+        const datasetId = {
+          owningOrganization: activeUser.organization,
+          name: configJSON.id.name,
+        };
+        const dataset = await getDataset(datasetId);
+        await updateDataset(datasetId, dataset, targetFolderId, true);
       }
       onAdded(activeUser.organization, configJSON.id.name);
     }
@@ -166,6 +196,33 @@ function DatasetAddZarrView(props: Props) {
             />
           )}
           <Hideable hidden={hideDatasetUI}>
+            <List
+              header={
+                <div
+                  style={{
+                    fontWeight: "bold",
+                  }}
+                >
+                  General
+                </div>
+              }
+            >
+              <List.Item>
+                <FormItemWithInfo
+                  name="targetFolder"
+                  label="Target Folder"
+                  info="The folder into which the dataset will be uploaded. The dataset can be moved later after upload, too. When not selecting a folder, the dataset will be placed into the root folder."
+                >
+                  <FolderSelection
+                    width="50%"
+                    folderId={targetFolderId}
+                    onChange={setTargetFolderId}
+                    disableNotEditableFolders
+                  />
+                </FormItemWithInfo>{" "}
+              </List.Item>
+            </List>
+
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab

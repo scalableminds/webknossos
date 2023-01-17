@@ -10,10 +10,9 @@ import {
   setActiveCellAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
+import { Model, Store, api } from "oxalis/singletons";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import api from "oxalis/api/internal_api";
+
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));

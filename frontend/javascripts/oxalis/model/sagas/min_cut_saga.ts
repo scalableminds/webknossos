@@ -18,7 +18,7 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import createProgressCallback from "libs/progress_callback";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import window from "libs/window";
 import { APISegmentationLayer } from "types/api_flow_types";
 // By default, a new bounding box is created around

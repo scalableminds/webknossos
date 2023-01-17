@@ -17,7 +17,7 @@ import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -97,7 +97,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
 }
 
-class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   protected val collection = Teams
 
@@ -116,24 +116,24 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       ))
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_id in (select _team from webknossos.user_team_roles where _user = '$requestingUserId')
-       or _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
+    q"""(_id in (select _team from webknossos.user_team_roles where _user = $requestingUserId)
+       or _organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))"""
 
   override protected def deleteAccessQ(requestingUserId: ObjectId) =
-    s"""(not isorganizationteam
-          and _organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin))"""
+    q"""(not isorganizationteam
+          and _organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Team] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[TeamsRow])
+      r <- run(q"select $columns from $existingCollectionName where _id = $id and $accessQuery".as[TeamsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   def countByNameAndOrganization(teamName: String, organizationId: ObjectId): Fox[Int] =
     for {
       countList <- run(
-        sql"select count(_id) from #$existingCollectionName where name = $teamName and _organization = $organizationId"
+        q"select count(_id) from $existingCollectionName where name = $teamName and _organization = $organizationId"
           .as[Int])
       count <- countList.headOption
     } yield count
@@ -141,7 +141,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TeamsRow])
+      r <- run(q"select $columns from $existingCollectionName where $accessQuery".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -149,10 +149,10 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       requestingUserId <- userIdFromCtx
       accessQuery <- readAccessQuery
-      r <- run(sql"""select #$columns from #$existingCollectionName
-                     where (_id in (select _team from webknossos.user_team_roles where _user = $requestingUserId and isTeamManager)
+      r <- run(q"""select $columns from $existingCollectionName
+                   where (_id in (select _team from webknossos.user_team_roles where _user = $requestingUserId and isTeamManager)
                            or _organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))
-                     and #$accessQuery""".as[TeamsRow])
+                   and $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -160,52 +160,51 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select _id from #$existingCollectionName where _organization = $organizationId and #$accessQuery"
-          .as[String])
+        q"select _id from $existingCollectionName where _organization = $organizationId and $accessQuery".as[String])
       parsed <- Fox.serialCombined(r.toList)(col => ObjectId.fromString(col))
     } yield parsed
 
   def findAllByIds(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      idsLiteral = writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))
-      idPredicate = if (teamIds.isEmpty) "false" else s"_id IN $idsLiteral"
-      r <- run(sql"SELECT #$columns FROM #$existingCollectionName WHERE #$idPredicate AND #$accessQuery".as[TeamsRow])
+      idPredicate = if (teamIds.isEmpty) q"${false}" else q"_id IN ${SqlToken.tupleFromList(teamIds)}"
+      r <- run(q"""SELECT $columns FROM $existingCollectionName
+                   WHERE $idPredicate AND $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def findSharedTeamsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""SELECT #$columns from #$existingCollectionName
+      r <- run(q"""SELECT $columns from $existingCollectionName
               WHERE _id IN (SELECT _team FROM webknossos.annotation_sharedTeams WHERE _annotation = $annotationId)
-              AND #$accessQuery""".as[TeamsRow])
+              AND $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(t: Team): Fox[Unit] =
     for {
-      _ <- run(sqlu"""INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
+      _ <- run(q"""INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
                   VALUES(${t._id}, ${t._organization}, ${t.name}, ${t.created}, ${t.isOrganizationTeam}, ${t.isDeleted})
-            """)
+            """.asUpdate)
     } yield ()
 
   // Allowed Teams for Datasets and Folders
 
   def findAllowedTeamIdsForFolder(folderId: ObjectId): Fox[List[ObjectId]] =
     for {
-      rows <- run(sql"SELECT _team FROM webknossos.folder_allowedTeams WHERE _folder = $folderId".as[ObjectId])
+      rows <- run(q"SELECT _team FROM webknossos.folder_allowedTeams WHERE _folder = $folderId".as[ObjectId])
     } yield rows.toList
 
   def findAllowedTeamIdsForDataset(datasetId: ObjectId): Fox[List[ObjectId]] =
     for {
-      rows <- run(sql"SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset = $datasetId".as[ObjectId])
+      rows <- run(q"SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset = $datasetId".as[ObjectId])
     } yield rows.toList
 
   // Allowed teams are additive down through the folder paths
   def findAllowedTeamIdsCumulativeForFolder(folderId: ObjectId): Fox[List[ObjectId]] =
     for {
-      rows <- run(sql"""
+      rows <- run(q"""
           SELECT DISTINCT at._team
           FROM webknossos.folder_allowedteams at
           JOIN webknossos.folder_paths fp ON at._folder = fp._ancestor
@@ -213,9 +212,9 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield rows.toList
 
   def updateAllowedTeamsForDataset(datasetId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
-    val clearQuery = sqlu"DELETE FROM webknossos.dataSet_allowedTeams WHERE _dataSet = $datasetId"
-    val insertQueries = allowedTeams.map(teamId => sqlu"""INSERT INTO webknossos.dataSet_allowedTeams(_dataSet, _team)
-             VALUES($datasetId, $teamId)""")
+    val clearQuery = q"DELETE FROM webknossos.dataSet_allowedTeams WHERE _dataSet = $datasetId".asUpdate
+    val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataSet_allowedTeams(_dataSet, _team)
+             VALUES($datasetId, $teamId)""".asUpdate)
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
@@ -226,9 +225,9 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   }
 
   def updateAllowedTeamsForFolder(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
-    val clearQuery = sqlu"DELETE FROM webknossos.folder_allowedTeams WHERE _folder = $folderId"
-    val insertQueries = allowedTeams.map(teamId => sqlu"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
-             VALUES($folderId, $teamId)""")
+    val clearQuery = q"DELETE FROM webknossos.folder_allowedTeams WHERE _folder = $folderId".asUpdate
+    val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
+             VALUES($folderId, $teamId)""".asUpdate)
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
@@ -240,8 +239,8 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def removeTeamFromAllDatasetsAndFolders(teamId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(sqlu"DELETE FROM webknossos.dataSet_allowedTeams WHERE _team = $teamId")
-      _ <- run(sqlu"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId")
+      _ <- run(q"DELETE FROM webknossos.dataSet_allowedTeams WHERE _team = $teamId".asUpdate)
+      _ <- run(q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate)
     } yield ()
 
 }

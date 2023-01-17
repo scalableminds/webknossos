@@ -4,7 +4,7 @@ import messages from "messages";
 import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 
 const WEBGL_CONTEXT_LOST_KEY = "WEBGL_CONTEXT_LOST_KEY";
 

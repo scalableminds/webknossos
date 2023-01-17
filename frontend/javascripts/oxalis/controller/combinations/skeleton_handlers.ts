@@ -42,7 +42,7 @@ import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import type { Edge, Tree, Node } from "oxalis/store";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
@@ -331,8 +331,8 @@ export function maybeGetNodeIdFromPosition(
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because WebGL has its origin bottom-left :/
   const index = (x + (height - y) * width) * 4;
-  // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
-  const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
+  // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-256 number
+  const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 256 + b, 0);
   skeleton.stopPicking();
   // prevent flickering sometimes caused by picking
   planeView.renderFunction(true);

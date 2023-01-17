@@ -1,9 +1,4 @@
-import {
-  FileOutlined,
-  FolderOpenOutlined,
-  SearchOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
+import { FileOutlined, FolderOpenOutlined, SearchOutlined, EditOutlined } from "@ant-design/icons";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { pluralize } from "libs/utils";
@@ -184,7 +179,7 @@ function FolderDetails({
                 color: "var(--ant-text-secondary)",
               }}
             >
-              <SettingOutlined onClick={() => setFolderIdForEditModal(folder.id)} />
+              <EditOutlined onClick={() => setFolderIdForEditModal(folder.id)} />
             </span>
             <FolderOpenOutlined style={{ marginRight: 8 }} />
             {folder.name}

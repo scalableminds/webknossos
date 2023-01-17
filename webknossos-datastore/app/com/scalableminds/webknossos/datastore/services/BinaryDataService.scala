@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.nio.file.Path
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -9,14 +10,15 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Failure, Full}
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class BinaryDataService(val dataBaseDir: Path,
                         maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
-                        fileSystemServiceOpt: Option[FileSystemService])
+                        fileSystemServiceOpt: Option[FileSystemService],
+                        val applicationHealthService: Option[ApplicationHealthService])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
@@ -82,10 +84,15 @@ class BinaryDataService(val dataBaseDir: Path,
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       val bucketProvider = bucketProviderCache.getOrLoadAndPut(request.dataLayer)(dataLayer =>
         dataLayer.bucketProvider(fileSystemServiceOpt))
-      bucketProvider.load(readInstruction, shardHandleCache)
-    } else {
-      Fox.empty
-    }
+      bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
+        case Failure(msg, Full(e: InternalError), _) =>
+          applicationHealthService.foreach(a => a.pushError(e))
+          logger.warn(
+            s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
+          Fox.failure(e.getMessage)
+        case other => other.toFox
+      }
+    } else Fox.empty
 
   /**
     * Given a list of loaded buckets, cutout the data of the cuboid

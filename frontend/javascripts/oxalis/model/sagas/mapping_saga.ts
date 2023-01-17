@@ -20,7 +20,7 @@ import { getLayerByName, getMappingInfo } from "oxalis/model/accessors/dataset_a
 import type { ActiveMappingInfo, Mapping } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import { MappingStatusEnum } from "oxalis/constants";
 import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";

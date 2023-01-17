@@ -63,7 +63,6 @@ import type {
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
   ShortLink,
-  APIOrganizationStorageInfo,
   APIPricingPlanStatus,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -1461,6 +1460,7 @@ type ReserveUploadInformation = {
   name: string;
   totalFileCount: number;
   initialTeams: Array<string>;
+  folderId: string | null;
 };
 
 export function reserveDatasetUpload(
@@ -1540,13 +1540,15 @@ export async function storeRemoteDataset(
   datasetName: string,
   organizationName: string,
   datasource: string,
-): Promise<Response> {
+): Promise<void> {
   return doWithToken((token) =>
-    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: datasource,
-    }),
+    Request.sendJSONReceiveJSON(
+      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`,
+      {
+        method: "PUT",
+        data: datasource,
+      },
+    ),
   );
 }
 
@@ -1757,12 +1759,12 @@ export function makeMappingEditable(
   );
 }
 
-export function getEditableMapping(
+export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
   );
 }
 
@@ -1935,7 +1937,7 @@ export async function getOrganization(organizationName: string): Promise<APIOrga
   return {
     ...organization,
     paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
-    includedStorage: organization.includedStorage ?? Number.POSITIVE_INFINITY,
+    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
     includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
   };
 }
@@ -1988,14 +1990,6 @@ export async function isWorkflowAccessibleBySwitching(
   workflowHash: string,
 ): Promise<APIOrganization | null> {
   return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
-}
-
-export async function getOrganizationStorageSpace(
-  _organizationName: string,
-): Promise<APIOrganizationStorageInfo> {
-  // TODO switch to a real API. See PR #6614
-  const usedStorageMB = 0;
-  return Promise.resolve({ usedStorageSpace: usedStorageMB });
 }
 
 export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {

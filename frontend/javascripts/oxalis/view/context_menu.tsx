@@ -77,7 +77,7 @@ import { roundTo, hexToRgb, rgbToHex } from "libs/utils";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Store from "oxalis/store";
@@ -372,7 +372,22 @@ function NodeContextMenuOptions({
 
   const { userBoundingBoxes } = skeletonTracing;
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
-  const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
+  const clickedTree = findTreeByNodeId(trees, clickedNodeId);
+
+  if (clickedTree == null) {
+    return (
+      <Menu
+        onClick={hideContextMenu}
+        style={{
+          borderRadius: 6,
+        }}
+        mode="vertical"
+      >
+        <Menu.Item disabled>Error: Could not find clicked node</Menu.Item>
+      </Menu>
+    );
+  }
+
   const areInSameTree = activeTreeId === clickedTree.treeId;
   const isBranchpoint = clickedTree.branchPoints.find((bp) => bp.nodeId === clickedNodeId) != null;
   const isTheSameNode = activeNodeId === clickedNodeId;

@@ -4,6 +4,7 @@ import models.analytics.AnalyticsSessionService
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
 import models.job.{JobService, WorkerLivenessService}
+import models.storage.UsedStorageService
 import models.task.TaskService
 import models.user.time.TimeSpanService
 import models.user._
@@ -11,12 +12,12 @@ import models.voxelytics.ElasticsearchClient
 import oxalis.files.TempFileService
 import oxalis.mail.MailchimpTicker
 import oxalis.telemetry.SlackNotificationService
-import utils.sql.SQLClient
+import utils.sql.SqlClient
 
 class WebKnossosModule extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[Startup]).asEagerSingleton()
-    bind(classOf[SQLClient]).asEagerSingleton()
+    bind(classOf[SqlClient]).asEagerSingleton()
     bind(classOf[InitialDataService]).asEagerSingleton()
     bind(classOf[UserService]).asEagerSingleton()
     bind(classOf[TaskService]).asEagerSingleton()
@@ -34,5 +35,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[AnalyticsSessionService]).asEagerSingleton()
     bind(classOf[WorkerLivenessService]).asEagerSingleton()
     bind(classOf[ElasticsearchClient]).asEagerSingleton()
+    bind(classOf[UsedStorageService]).asEagerSingleton()
   }
 }

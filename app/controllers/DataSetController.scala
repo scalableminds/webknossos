@@ -99,6 +99,7 @@ class DataSetController @Inject()(userService: UserService,
               .clientFor(dataSet)(GlobalAccessContext)
               .flatMap(
                 _.requestDataLayerThumbnail(organizationName,
+                                            dataSet,
                                             dataLayerName,
                                             width,
                                             height,
@@ -320,7 +321,7 @@ class DataSetController @Inject()(userService: UserService,
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
         _ <- dataSetService
           .clientFor(dataSet)(GlobalAccessContext)
-          .flatMap(_.findPositionWithData(organizationName, datalayer.name).flatMap(posWithData =>
+          .flatMap(_.findPositionWithData(organizationName, dataSet, datalayer.name).flatMap(posWithData =>
             bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
       } yield {
         Ok("Ok")

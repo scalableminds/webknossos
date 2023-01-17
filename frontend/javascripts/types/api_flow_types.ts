@@ -516,10 +516,8 @@ export type APIOrganization = {
   readonly newUserMailingList: string;
   readonly paidUntil: number;
   readonly includedUsers: number;
-  readonly includedStorage: number; // megabytes
-};
-export type APIOrganizationStorageInfo = {
-  readonly usedStorageSpace: number;
+  readonly includedStorageBytes: number;
+  readonly usedStorageBytes: number;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -919,6 +917,9 @@ export type FolderItem = {
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
+  // Can be set so that the antd tree component can disable
+  // individual folder items.
+  disabled?: boolean;
 };
 
 export type Folder = {

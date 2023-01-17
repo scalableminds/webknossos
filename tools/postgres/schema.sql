@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(95);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(97);
 COMMIT TRANSACTION;
 
 
@@ -169,7 +169,8 @@ CREATE TABLE webknossos.dataStores(
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
-  onlyAllowedOrganization CHAR(24)
+  onlyAllowedOrganization CHAR(24),
+  reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.tracingStores(
@@ -291,8 +292,20 @@ CREATE TABLE webknossos.organizations(
   includedStorage BIGINT DEFAULT NULL,
   lastTermsOfServiceAcceptanceTime TIMESTAMPTZ,
   lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0,
+  lastStorageScanTime TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE webknossos.organization_usedStorage(
+  _organization CHAR(24) NOT NULL,
+  _dataStore VARCHAR(256) NOT NULL,
+  _dataSet CHAR(24) NOT NULL,
+  layerName VARCHAR(256) NOT NULL,
+  magOrDirectoryName VARCHAR(256) NOT NULL,
+  usedStorageBytes BIGINT NOT NULL,
+  lastUpdated TIMESTAMPTZ,
+  PRIMARY KEY(_organization, _dataStore, _dataSet, layerName, magOrDirectoryName)
 );
 
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt', 'Empty');
@@ -720,7 +733,8 @@ ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runs
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
-  ADD FOREIGN KEY (_organization, workflow_hash) REFERENCES webknossos.voxelytics_workflows(_organization, hash) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+  -- explicit naming for this constraint, as different postgres versions give different names to tuple key constraints
+  ADD CONSTRAINT voxelytics_runs__organization_workflow_hash_fkey FOREIGN KEY (_organization, workflow_hash) REFERENCES webknossos.voxelytics_workflows(_organization, hash) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_tasks
   ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_chunks

@@ -3,14 +3,13 @@ package models.binary.credential
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{AnyCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
-import slick.jdbc.PostgresProfile.api._
-import utils.sql.{SecuredSQLDAO, SQLClient}
+import utils.sql.{SecuredSQLDAO, SqlClient}
 import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SecuredSQLDAO(sqlClient) {
+class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SecuredSQLDAO(sqlClient) {
   protected val collection = Credentials
 
   protected def columnsList: List[String] = collection.baseTableRow.create_*.map(_.name).toList
@@ -45,19 +44,19 @@ class CredentialDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                     values(${_id}, '#${CredentialType.HTTP_Basic_Auth}', ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""")
+      _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
+                     values(${_id}, ${CredentialType.HTTP_Basic_Auth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                     values(${_id}, '#${CredentialType.S3_Access_Key}', ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.user}, ${credential.organization})""")
+      _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
+                     values(${_id}, ${CredentialType.S3_Access_Key}, ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def findOne(id: ObjectId): Fox[AnyCredential] =
     for {
-      r <- run(sql"select #$columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
+      r <- run(q"select #$columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed

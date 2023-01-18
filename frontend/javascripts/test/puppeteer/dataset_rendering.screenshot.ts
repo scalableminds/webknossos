@@ -147,11 +147,11 @@ async function withRetry(
     // eslint-disable-next-line no-await-in-loop
     const condition = await testFn();
 
-    if (condition || i === retryCount - 1) {
-      // Either the test passed or we executed the last attempt
-      resolveFn(condition);
-      return;
-    }
+    // if (condition || i === retryCount - 1) {
+    // Either the test passed or we executed the last attempt
+    resolveFn(condition);
+    return;
+    // }
 
     console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
   }

@@ -507,7 +507,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   def getRunIdByNameAndWorkflowHash(runName: String, workflowHash: String, currentUser: User): Fox[ObjectId] = {
     val readAccessQ =
       if (currentUser.isAdmin) q"${true}"
-      else q"._user = ${currentUser._id}"
+      else q"_user = ${currentUser._id}"
     for {
       objectIdList <- run(q"""
         SELECT _id

@@ -91,6 +91,13 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseFirst(r, name)
     } yield parsed
 
+  def findIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"select _id from $existingCollectionName where name = $name and $accessQuery".as[ObjectId])
+      parsed <- r.headOption
+    } yield parsed
+
   def insertOne(o: Organization): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.organizations

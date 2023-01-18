@@ -166,9 +166,12 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findAllWithSearch(isActive: Option[Boolean],
+  def findAllWithSearch(isActiveOpt: Option[Boolean],
                         isUnreported: Option[Boolean],
+                        organizationIdOpt: Option[ObjectId],
                         folderIdOpt: Option[ObjectId],
+                        uploaderIdOpt: Option[ObjectId],
+                        isEditable: Option[Boolean],
                         searchQuery: Option[String],
                         includeSubfolders: Boolean = false)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
@@ -179,15 +182,25 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         case Some(folderId) => q"_folder = $folderId"
         case None           => q"${true}"
       }
+      uploaderPredicate = uploaderIdOpt.map(uploaderId => q"_uploader = $uploaderId").getOrElse(q"${true}")
+      isActivePredicate = isActiveOpt.map(isActive => q"isUsable = $isActive").getOrElse(q"${true}")
+      organizationPredicate = organizationIdOpt
+        .map(organizationId => q"_organization = $organizationId")
+        .getOrElse(q"${true}")
       searchPredicate = buildSearchPredicate(searchQuery)
-      isActivePredicate = buildIsActivePredicate(isActive)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
+      isEditablePredicate = buildIsEditablePredicate(isEditable)
+
       r <- run(q"""SELECT $columns
               FROM $existingCollectionName
-              WHERE $folderPredicate
+              WHERE
+                  ($folderPredicate)
+              AND ($uploaderPredicate)
               AND ($searchPredicate)
               AND ($isActivePredicate)
               AND ($isUnreportedPredicate)
+              AND ($organizationPredicate)
+              AND ($isEditablePredicate)
               AND $accessQuery
               """.as[DatasetsRow])
       parsed <- parseAll(r)
@@ -201,16 +214,17 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
     }
 
-  private def buildIsActivePredicate(isActiveOpt: Option[Boolean]): SqlToken =
-    isActiveOpt match {
-      case Some(isActive) => q"isUsable = $isActive"
-      case None           => q"${true}"
-    }
-
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
       case Some(true)  => q"status = $unreportedStatus"
       case Some(false) => q"status != $unreportedStatus"
+      case None        => q"${true}"
+    }
+
+  private def buildIsEditablePredicate(isEditableOpt: Option[Boolean]): SqlToken =
+    isEditableOpt match {
+      case Some(true)  => q"${true}"
+      case Some(false) => q"${true}"
       case None        => q"${true}"
     }
 

@@ -117,14 +117,14 @@ export default function determineBucketsForOblique(
       _.flatten(
         _.range(steps + 1).map((idx) => [
           // Cast lines at z=-10
-          // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
-          // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
+          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
+          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
           // Cast lines at z=0
           [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
           [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
           // Cast lines at z=10
-          // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
-          // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
+          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
+          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
         ]),
       ),
     );

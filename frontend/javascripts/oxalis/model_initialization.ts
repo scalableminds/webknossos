@@ -228,9 +228,6 @@ export async function initialize(
   const setTransforms = (layerName: string, transforms: Matrix4x4) =>
     Store.dispatch(setLayerTransforms(layerName, transforms));
 
-  // setTransforms("color", makeTranslation(122, 105));
-  setTransforms("color", makeTranslation(-1000, 0));
-
   const setScale = (layerName: string, scale: number) => {
     const pos = [3496, 3379];
     setTransforms(
@@ -281,6 +278,9 @@ export async function initialize(
     makeTranslation,
     setTransforms,
   };
+  // setTransforms("color", makeTranslation(122, 105));
+  setTransforms("color", makeTranslation(-1000, 0));
+  setScale("color2", 2.0);
 
   return initializationInformation;
 }

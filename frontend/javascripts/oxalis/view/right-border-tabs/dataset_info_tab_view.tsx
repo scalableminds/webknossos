@@ -168,6 +168,24 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   );
 }
 
+export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
+  return (
+    <Tooltip title="Dataset voxel size" placement="left">
+      <tr>
+        <td
+          style={{
+            paddingRight: 4,
+            verticalAlign: "top",
+          }}
+        >
+          <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
+        </td>
+        <td>{formatScale(dataset.dataSource.scale)}</td>
+      </tr>
+    </Tooltip>
+  );
+}
+
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     showJobsDetailsModal: null,
@@ -608,23 +626,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <tbody>
-              <Tooltip title="Dataset voxel size" placement="left">
-                <tr>
-                  <td
-                    style={{
-                      paddingRight: 4,
-                      verticalAlign: "top",
-                    }}
-                  >
-                    <img
-                      className="info-tab-icon"
-                      src="/assets/images/icon-voxelsize.svg"
-                      alt="Voxel size"
-                    />
-                  </td>
-                  <td>{formatScale(this.props.dataset.dataSource.scale)}</td>
-                </tr>
-              </Tooltip>
+              <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
               {resolutionInfo}
 

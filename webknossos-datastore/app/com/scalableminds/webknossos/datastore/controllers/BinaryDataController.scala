@@ -1,8 +1,5 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import java.io.ByteArrayOutputStream
-import java.nio.{ByteBuffer, ByteOrder}
-
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
@@ -16,13 +13,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceMappingRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{
-  DataRequest,
-  ImageThumbnail,
-  VoxelPosition,
-  WebKnossosDataRequest,
-  _
-}
+import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import io.swagger.annotations._
@@ -31,8 +22,9 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc._
 
+import java.io.ByteArrayOutputStream
+import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 @Api(tags = Array("datastore"))
 class BinaryDataController @Inject()(

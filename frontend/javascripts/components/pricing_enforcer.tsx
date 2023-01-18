@@ -9,7 +9,7 @@ export default function PricingEnforcedMenuItem({
   children,
   requiredPricingPlan,
   showLockIcon = true,
-  ...args
+  ...menuItemProps
 }: {
   children: JSX.Element;
   requiredPricingPlan: PricingPlanEnum;
@@ -33,22 +33,18 @@ export default function PricingEnforcedMenuItem({
     info.domEvent.stopPropagation();
   };
 
-  // onClick = { handleMouseClick };
-  // onAuxClick = { handleMouseClick };
-  // onDoubleClick = { handleMouseClick };
-  // onClickCapture = { handleMouseClick };
-
   return (
-    <Tooltip title={toolTipMessage} placement="bottom">
-        <Menu.Item
-          icon={showLockIcon ? <LockOutlined /> : null}
-          onClick={handleMenuClick}
-          onAuxClick={handleMouseClick}
-          onDoubleClick={handleMouseClick}
-          onClickCapture={handleMouseClick}
-        >
-          {children}
-        </Menu.Item>
+    <Tooltip title={toolTipMessage} placement="right">
+      <Menu.Item
+        icon={showLockIcon ? <LockOutlined /> : null}
+        onClick={handleMenuClick}
+        onAuxClick={handleMouseClick}
+        onDoubleClick={handleMouseClick}
+        onClickCapture={handleMouseClick}
+        {...menuItemProps}
+      >
+        {children}
+      </Menu.Item>
     </Tooltip>
   );
 }

@@ -218,12 +218,12 @@ function AdministrationSubMenu({
       <PricingEnforcedMenuItem key="/projects" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/projects">Projects</Link>
       </PricingEnforcedMenuItem>
-      <Menu.Item key="/tasks">
+      <PricingEnforcedMenuItem key="/tasks" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/tasks">Tasks</Link>
-      </Menu.Item>
-      <Menu.Item key="/taskTypes">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem key="/taskTypes" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/taskTypes">Task Types</Link>
-      </Menu.Item>
+      </PricingEnforcedMenuItem>
       {features().jobsEnabled && (
         <Menu.Item key="/jobs">
           <Link to="/jobs">Processing Jobs</Link>
@@ -256,18 +256,24 @@ function StatisticsSubMenu({ collapse, ...menuProps }: { collapse: boolean } & S
       }
       {...menuProps}
     >
-      <Menu.Item key="/statistics">
+      <PricingEnforcedMenuItem key="/statistics" requiredPricingPlan={PricingPlanEnum.Power}>
         <Link to="/statistics">Overview</Link>
-      </Menu.Item>
-      <Menu.Item key="/reports/timetracking">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem
+        key="/reports/timetracking"
+        requiredPricingPlan={PricingPlanEnum.Power}
+      >
         <Link to="/reports/timetracking">Time Tracking</Link>
-      </Menu.Item>
-      <Menu.Item key="/reports/projectProgress">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem
+        key="/reports/projectProgress"
+        requiredPricingPlan={PricingPlanEnum.Power}
+      >
         <Link to="/reports/projectProgress">Project Progress</Link>
-      </Menu.Item>
-      <Menu.Item key="/reports/openTasks">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem key="/reports/openTasks" requiredPricingPlan={PricingPlanEnum.Power}>
         <Link to="/reports/openTasks">Open Tasks</Link>
-      </Menu.Item>
+      </PricingEnforcedMenuItem>
     </SubMenu>
   );
 }

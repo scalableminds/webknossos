@@ -69,6 +69,8 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
 
   protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
+  val unreportedStatus: String = "No longer available on datastore."
+
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
       for {
@@ -164,8 +166,11 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findAllWithSearch(folderIdOpt: Option[ObjectId], searchQuery: Option[String], includeSubfolders: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+  def findAllWithSearch(isActive: Option[Boolean],
+                        isUnreported: Option[Boolean],
+                        folderIdOpt: Option[ObjectId],
+                        searchQuery: Option[String],
+                        includeSubfolders: Boolean = false)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -175,10 +180,14 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         case None           => q"${true}"
       }
       searchPredicate = buildSearchPredicate(searchQuery)
+      isActivePredicate = buildIsActivePredicate(isActive)
+      isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
       r <- run(q"""SELECT $columns
               FROM $existingCollectionName
               WHERE $folderPredicate
               AND ($searchPredicate)
+              AND ($isActivePredicate)
+              AND ($isUnreportedPredicate)
               AND $accessQuery
               """.as[DatasetsRow])
       parsed <- parseAll(r)
@@ -190,6 +199,19 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       case Some(searchQuery) =>
         val queryTokens = searchQuery.toLowerCase.trim.split(" +")
         SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+    }
+
+  private def buildIsActivePredicate(isActiveOpt: Option[Boolean]): SqlToken =
+    isActiveOpt match {
+      case Some(isActive) => q"isUsable = $isActive"
+      case None           => q"${true}"
+    }
+
+  private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
+    isUnreportedOpt match {
+      case Some(true)  => q"status = $unreportedStatus"
+      case Some(false) => q"status != $unreportedStatus"
+      case None        => q"${true}"
     }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =

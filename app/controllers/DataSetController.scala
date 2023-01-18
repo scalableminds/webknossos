@@ -187,11 +187,11 @@ class DataSetController @Inject()(userService: UserService,
       @ApiParam(value = "Optional filtering: List only datasets with names matching this search query")
       searchQuery: Option[String],
       @ApiParam(value = "Optional limit, return only the first n matching datasets.")
-      limit: Option[Int]
+      limit: Option[Int],
+      @ApiParam(value = "Change output format to return only a compact list with name, id, status, tags")
+      compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
-      Filter(isActive, (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
-      Filter(isUnreported, (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
       Filter(isEditable,
              (value: Boolean, el: DataSet) =>
                for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield
@@ -216,17 +216,21 @@ class DataSetController @Inject()(userService: UserService,
     ) { filter =>
       for {
         folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-        dataSets <- dataSetDAO
-          .findAllWithSearch(folderIdValidated, searchQuery, recursive.getOrElse(false)) ?~> "dataSet.list.failed"
+        dataSets <- dataSetDAO.findAllWithSearch(isActive,
+                                                 isUnreported,
+                                                 folderIdValidated,
+                                                 searchQuery,
+                                                 recursive.getOrElse(false)) ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
         limited = limit.map(l => filtered.take(l)).getOrElse(filtered)
-        js <- listGrouped(limited, request.identity) ?~> "dataSet.list.failed"
+        js <- if (compact.getOrElse(false)) listCompact(limited)
+        else listGrouped(limited, request.identity) ?~> "dataSet.list.failed"
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-      } yield {
-        addRemoteOriginHeaders(Ok(Json.toJson(js)))
-      }
+      } yield addRemoteOriginHeaders(Ok(Json.toJson(js)))
     }
   }
+
+  private def listCompact(datasets: List[DataSet]): Fox[List[JsObject]] = ???
 
   private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(
       implicit ctx: DBAccessContext,

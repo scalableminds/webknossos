@@ -4,6 +4,7 @@ import { Tooltip, Menu, MenuItemProps, Alert } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
+import { Link } from "react-router-dom";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { OxalisState } from "oxalis/store";
 
@@ -24,9 +25,6 @@ export default function PricingEnforcedMenuItem({
 
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
-  // TODO show upragde button for owner
-  const toolTipMessage = `This feature is not available in your organisation's plan. Ask your organisation owner to upgrade.`;
-
   const handleMouseClick = (event: React.MouseEvent<HTMLLIElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -36,6 +34,8 @@ export default function PricingEnforcedMenuItem({
     info.domEvent.preventDefault();
     info.domEvent.stopPropagation();
   };
+
+  const toolTipMessage = `This feature is not available in your organisation's plan. Ask your organisation owner to upgrade.`;
 
   return (
     <Tooltip title={toolTipMessage} placement="right">
@@ -53,7 +53,9 @@ export default function PricingEnforcedMenuItem({
   );
 }
 
-function PageUnavailableForYourPlan() {
+export function PageUnavailableForYourPlanView() {
+  const organizationName = useSelector((state: OxalisState) => state.activeOrganization?.name);
+
   return (
     <div className="container">
       <Alert
@@ -61,8 +63,17 @@ function PageUnavailableForYourPlan() {
           maxWidth: "500px",
           margin: "0 auto",
         }}
-        message="Error 404"
-        description="Page not found."
+        message="Feature not available"
+        description={
+          <>
+            <p>
+              The requested feature is not available in your WEBKNOSSOS organization. Consider
+              upgrading to a higher WEBKNOSSOS plan to unlock it or ask your organization's owner to
+              upgrade.
+            </p>
+            <Link to={`/organizations/${organizationName}`}>Go to Organization Settings</Link>
+          </>
+        }
         type="error"
         showIcon
       />

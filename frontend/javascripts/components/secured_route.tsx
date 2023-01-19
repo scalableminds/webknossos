@@ -4,10 +4,11 @@ import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
 import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
+import { APIOrganization } from "types/api_flow_types";
+import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import type { ComponentType } from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
-import { APIOrganization } from "types/api_flow_types";
 
 type StateProps = {
   activeOrganization: APIOrganization | null;
@@ -74,7 +75,7 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
               this.props.requiredPricingPlan,
             )
           ) {
-            return <LoginView />;
+            return <PageUnavailableForYourPlanView />;
           }
 
           if (Component != null) {

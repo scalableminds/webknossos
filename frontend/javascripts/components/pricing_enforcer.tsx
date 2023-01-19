@@ -36,7 +36,6 @@ export default function PricingEnforcedMenuItem({
   return (
     <Tooltip title={toolTipMessage} placement="right">
       <Menu.Item
-        icon={showLockIcon ? <LockOutlined /> : null}
         onClick={handleMenuClick}
         onAuxClick={handleMouseClick}
         onDoubleClick={handleMouseClick}
@@ -44,6 +43,7 @@ export default function PricingEnforcedMenuItem({
         {...menuItemProps}
       >
         {children}
+        {showLockIcon ? <LockOutlined style={{ marginLeft: 5 }} /> : null}
       </Menu.Item>
     </Tooltip>
   );

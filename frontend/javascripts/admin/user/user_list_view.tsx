@@ -16,11 +16,16 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import * as React from "react";
+import React from "react";
 import _ from "lodash";
 import moment from "moment";
 import { location } from "libs/window";
-import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_types";
+import type {
+  APIUser,
+  APITeamMembership,
+  ExperienceMap,
+  APIOrganization,
+} from "types/api_flow_types";
 import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -44,6 +49,7 @@ const typeHint: APIUser[] = [];
 
 type StateProps = {
   activeUser: APIUser;
+  activeOrganization: APIOrganization;
 };
 type Props = RouteComponentProps & StateProps;
 
@@ -80,7 +86,7 @@ class UserListView extends React.PureComponent<Props, State> {
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
-    maxUserCountPerOrganization: Number.POSITIVE_INFINITY,
+    maxUserCountPerOrganization: this.props.activeOrganization.includedUsers,
   };
 
   componentDidMount() {
@@ -103,15 +109,11 @@ class UserListView extends React.PureComponent<Props, State> {
     this.setState({
       isLoading: true,
     });
-    const [users, organization] = await Promise.all([
-      getEditableUsers(),
-      getOrganization(this.props.activeUser.organization),
-    ]);
+    const users = await getEditableUsers();
 
     this.setState({
       isLoading: false,
       users,
-      maxUserCountPerOrganization: organization.includedUsers,
     });
   }
 
@@ -681,6 +683,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
+  activeOrganization: state.activeOrganization,
 });
 
 const connector = connect(mapStateToProps);

@@ -14,7 +14,7 @@ import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import JobListView from "admin/job/job_list_view";
 import Onboarding from "admin/onboarding";
-import OrganizationEditView from "admin/organization/organization_edit_view";
+import OrganizationEditView, { PricingPlanEnum } from "admin/organization/organization_edit_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
@@ -57,7 +57,12 @@ import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
-import { APICompoundTypeEnum, APIUser, TracingTypeEnum } from "types/api_flow_types";
+import {
+  APICompoundTypeEnum,
+  APIPricingPlanStatus,
+  APIUser,
+  TracingTypeEnum,
+} from "types/api_flow_types";
 
 import ErrorBoundary from "components/error_boundary";
 
@@ -80,6 +85,7 @@ const AsyncWorkflowListView = loadable(() => import("admin/voxelytics/workflow_l
 type StateProps = {
   activeUser: APIUser | null | undefined;
   hasOrganizations: boolean;
+  pricingPlan: PricingPlanEnum;
 };
 type Props = StateProps;
 const browserHistory = createBrowserHistory();
@@ -300,12 +306,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
+                requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
                 exact
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
+                requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/openTasks"
                 component={OpenTasksReportView}
                 exact
@@ -313,17 +321,20 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskListView}
                 exact
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/create"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskCreateView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
@@ -331,6 +342,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -342,6 +354,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <ProjectListView initialSearchValue={location.hash.slice(1)} />}
@@ -350,11 +363,13 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={() => <ProjectCreateView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -366,6 +381,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <ProjectCreateView projectId={match.params.projectId} />
                 )}
@@ -442,11 +458,13 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/create"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskTypeCreateView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/edit"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
@@ -454,6 +472,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/tasks"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -465,6 +484,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/projects"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
                 )}
@@ -495,10 +515,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/organizations/:organizationName"
-                render={({ match }) => (
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'organizationName' does not exist on type... Remove this comment to see the full error message
-                  <OrganizationEditView organizationName={match.params.organizationName || ""} />
-                )}
+                render={() => <OrganizationEditView />}
               />
               <RouteWithErrorBoundary
                 path="/help/keyboardshortcuts"
@@ -509,6 +526,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
+                requiredPricingPlan={PricingPlanEnum.Power}
                 render={() => <TimeLineView />}
               />
               <SecuredRouteWithErrorBoundary
@@ -698,6 +716,7 @@ class ReactRouter extends React.Component<Props> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
+  pricingPlan: state.activeOrganization.pricingPlan,
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 

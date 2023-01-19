@@ -1,17 +1,27 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Route, withRouter } from "react-router-dom";
-import type { ComponentType } from "react";
 import React from "react";
+import { Route, withRouter } from "react-router-dom";
+import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
+import { PricingPlanEnum } from "admin/organization/organization_edit_view";
+import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
+import type { ComponentType } from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
+import { APIOrganization } from "types/api_flow_types";
 
-export type SecuredRouteProps = RouteComponentProps & {
-  component?: ComponentType<any>;
-  path: string;
-  render?: (arg0: RouteComponentProps) => React.ReactNode;
-  isAuthenticated: boolean;
-  serverAuthenticationCallback?: (...args: Array<any>) => any;
-  exact?: boolean;
+type StateProps = {
+  activeOrganization: APIOrganization;
 };
+export type SecuredRouteProps = RouteComponentProps &
+  StateProps & {
+    component?: ComponentType<any>;
+    path: string;
+    render?: (arg0: RouteComponentProps) => React.ReactNode;
+    isAuthenticated: boolean;
+    requiredPricingPlan?: PricingPlanEnum;
+    serverAuthenticationCallback?: (...args: Array<any>) => any;
+    exact?: boolean;
+  };
 type State = {
   isAdditionallyAuthenticated: boolean;
 };
@@ -63,11 +73,26 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
             }
           }
 
+          if (
+            this.props.requiredPricingPlan &&
+            isPricingPlanGreaterEqualThan(
+              this.props.activeOrganization.pricingPlan,
+              this.props.requiredPricingPlan,
+            )
+          ) {
+            return <LoginView />;
+          }
+
           return <LoginView redirect={this.props.location.pathname} />;
         }}
       />
     );
   }
 }
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeOrganization: state.activeOrganization,
+});
 
-export default withRouter<SecuredRouteProps, any>(SecuredRoute);
+const connector = connect(mapStateToProps);
+
+export default connector(withRouter<SecuredRouteProps, any>(SecuredRoute));

@@ -256,9 +256,9 @@ function StatisticsSubMenu({ collapse, ...menuProps }: { collapse: boolean } & S
       }
       {...menuProps}
     >
-      <PricingEnforcedMenuItem key="/statistics" requiredPricingPlan={PricingPlanEnum.Power}>
+      <Menu.Item key="/statistics">
         <Link to="/statistics">Overview</Link>
-      </PricingEnforcedMenuItem>
+      </Menu.Item>
       <PricingEnforcedMenuItem
         key="/reports/timetracking"
         requiredPricingPlan={PricingPlanEnum.Power}
@@ -267,11 +267,11 @@ function StatisticsSubMenu({ collapse, ...menuProps }: { collapse: boolean } & S
       </PricingEnforcedMenuItem>
       <PricingEnforcedMenuItem
         key="/reports/projectProgress"
-        requiredPricingPlan={PricingPlanEnum.Power}
+        requiredPricingPlan={PricingPlanEnum.Team}
       >
         <Link to="/reports/projectProgress">Project Progress</Link>
       </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem key="/reports/openTasks" requiredPricingPlan={PricingPlanEnum.Power}>
+      <PricingEnforcedMenuItem key="/reports/openTasks" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/reports/openTasks">Open Tasks</Link>
       </PricingEnforcedMenuItem>
     </SubMenu>

@@ -24,6 +24,7 @@ import type {
   TracingType,
   APIMeshFile,
   ServerEditableMapping,
+  APIOrganization,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -66,6 +67,7 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
+import OrganizationReducer from "./model/reducers/organization_reducer";
 
 export type MutableCommentType = {
   content: string;
@@ -518,6 +520,7 @@ export type OxalisState = {
   readonly flycam: Flycam;
   readonly viewModeData: ViewModeData;
   readonly activeUser: APIUser | null | undefined;
+  readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
   readonly localSegmentationData: Record<
     string,
@@ -550,6 +553,7 @@ const combinedReducers = reduceReducers(
   UserReducer,
   UiReducer,
   ConnectomeReducer,
+  OrganizationReducer,
 );
 
 const store = createStore<OxalisState>(

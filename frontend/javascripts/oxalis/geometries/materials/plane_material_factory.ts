@@ -37,6 +37,7 @@ import {
   getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
+  Identity4x4,
 } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Model } from "oxalis/singletons";
@@ -239,9 +240,7 @@ class PlaneMaterialFactory {
       const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
 
       this.uniforms[`${layerName}_transform`] = {
-        value:
-          layer.transformMatrix ||
-          new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+        value: layer.transformMatrix || Identity4x4,
       };
       // } else {
       //   this.uniforms[`${layerName}_transform`] = {
@@ -478,10 +477,7 @@ class PlaneMaterialFactory {
           for (const layer of layers) {
             console.log("updating uniform");
             const name = sanitizeName(layer.name);
-            this.uniforms[`${name}_transform`].value.set(
-              layer.transformMatrix ||
-                new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
-            );
+            this.uniforms[`${name}_transform`].value.set(layer.transformMatrix || Identity4x4);
           }
         },
         true,

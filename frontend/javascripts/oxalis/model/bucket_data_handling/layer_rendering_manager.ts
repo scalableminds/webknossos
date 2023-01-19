@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { Area } from "oxalis/model/accessors/flycam_accessor";
+import { Area, Identity4x4 } from "oxalis/model/accessors/flycam_accessor";
 import { getAreasFromState, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
@@ -199,8 +199,7 @@ export default class LayerRenderingManager {
     );
     const areas = getAreasFromState(state);
 
-    const layerMatrix =
-      layer.transformMatrix || new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    const layerMatrix = layer.transformMatrix || Identity4x4;
 
     const matrix = M4x4.scale1(
       state.flycam.zoomStep,

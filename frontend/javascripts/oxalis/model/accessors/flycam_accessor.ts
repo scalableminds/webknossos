@@ -66,7 +66,6 @@ function calculateTotalBucketCountForZoomLevel(
   const subBucketLocality: Vector3 = [1, 1, 1];
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
-  const dummyMatrix: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
   const matrix = M4x4.scale1(zoomFactor, unzoomedMatrix);
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {

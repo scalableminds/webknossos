@@ -716,7 +716,9 @@ class ReactRouter extends React.Component<Props> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
-  pricingPlan: state.activeOrganization.pricingPlan,
+  pricingPlan: state.activeOrganization
+    ? state.activeOrganization.pricingPlan
+    : PricingPlanEnum.Basic,
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 

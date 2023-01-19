@@ -75,8 +75,12 @@ async function loadHasOrganizations() {
 async function loadOrganization() {
   try {
     const { activeUser } = Store.getState();
-    const organization = await getOrganization(activeUser?.organization);
-    Store.dispatch(setActiveOrganizationAction(organization));
+    if (activeUser) {
+      // organisation can only be loaded for user with a logged in wk account
+      // anonymous wk session for publicly shared datasets have no orga
+      const organization = await getOrganization(activeUser?.organization);
+      Store.dispatch(setActiveOrganizationAction(organization));
+    }
   } catch (e) {
     // pass
   }

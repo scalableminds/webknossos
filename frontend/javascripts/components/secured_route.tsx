@@ -10,7 +10,7 @@ import type { OxalisState } from "oxalis/store";
 import { APIOrganization } from "types/api_flow_types";
 
 type StateProps = {
-  activeOrganization: APIOrganization;
+  activeOrganization: APIOrganization | null;
 };
 export type SecuredRouteProps = RouteComponentProps &
   StateProps & {
@@ -63,19 +63,13 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
       <Route
         {...rest}
         render={(props) => {
-          if (isCompletelyAuthenticated) {
-            if (Component != null) {
-              return <Component />;
-            } else if (render != null) {
-              return render(props);
-            } else {
-              throw Error("Specified neither component nor render function.");
-            }
-          }
+          if (!isCompletelyAuthenticated)
+            return <LoginView redirect={this.props.location.pathname} />;
 
           if (
             this.props.requiredPricingPlan &&
-            isPricingPlanGreaterEqualThan(
+            this.props.activeOrganization &&
+            !isPricingPlanGreaterEqualThan(
               this.props.activeOrganization.pricingPlan,
               this.props.requiredPricingPlan,
             )
@@ -83,7 +77,13 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
             return <LoginView />;
           }
 
-          return <LoginView redirect={this.props.location.pathname} />;
+          if (Component != null) {
+            return <Component />;
+          } else if (render != null) {
+            return render(props);
+          } else {
+            throw Error("Specified neither component nor render function.");
+          }
         }}
       />
     );
@@ -94,5 +94,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-
 export default connector(withRouter<SecuredRouteProps, any>(SecuredRoute));

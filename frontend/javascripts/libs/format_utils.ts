@@ -7,14 +7,14 @@ import _ from "lodash";
 import type { BoundingBoxObject } from "oxalis/store";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 const COLOR_MAP: Array<string> = [
-  "#6962C5",
-  "#403C78",
-  "#B2B1C4",
-  "#6D6C78",
-  "#C4C4C4",
-  "#FF5000",
-  "#899AC4",
-  "#60e0ac",
+  "#575AFF",
+  "#8086FF",
+  "#2A0FC6",
+  "#37C6DC",
+  "#F61A76",
+  "#FF7BA6",
+  "#FF9364",
+  "#750790",
 ];
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
 const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);

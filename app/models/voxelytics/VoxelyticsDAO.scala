@@ -112,7 +112,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     q"""SELECT
           DISTINCT ON (t.name)
           t.name,
-          t._id _id
+          t._id
         FROM (${tasksWithStateQ(staleTimeout)}) ts
         JOIN webknossos.voxelytics_tasks t ON t._id = ts._id
         WHERE

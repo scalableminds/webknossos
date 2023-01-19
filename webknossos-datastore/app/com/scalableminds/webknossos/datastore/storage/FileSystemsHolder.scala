@@ -18,9 +18,9 @@ class FileSystemsProvidersCache(val maxEntries: Int) extends LRUConcurrentCache[
 
 object FileSystemsHolder extends LazyLogging {
 
-  private val schemeS3 = "s3"
-  private val schemeHttps = "https"
-  private val schemeHttp = "http"
+  val schemeS3: String = "s3"
+  val schemeHttps: String = "https"
+  val schemeHttp: String = "http"
 
   private val fileSystemsCache = new FileSystemsCache(maxEntries = 100)
   private val fileSystemsProvidersCache = new FileSystemsProvidersCache(maxEntries = 100)

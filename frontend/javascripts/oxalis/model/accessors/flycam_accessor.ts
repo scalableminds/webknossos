@@ -105,8 +105,8 @@ function calculateTotalBucketCountForZoomLevel(
     );
   }
 
-  const addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
-  const volumeDimension = V3.sub(maxPerDim, minPerDim);
+  // const addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
+  // const volumeDimension = V3.sub(maxPerDim, minPerDim);
 
   // todo: when growing a layer (e.g., scale=0.1) and then zooming in, good mags
   // couldn't be selected because of this.

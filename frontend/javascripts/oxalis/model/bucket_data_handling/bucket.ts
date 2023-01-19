@@ -695,22 +695,22 @@ export class DataBucket {
 
     const colors = [
       new THREE.Color(0, 0, 0),
-      new THREE.Color(255, 255, 255),
       new THREE.Color(255, 0, 0),
       new THREE.Color(0, 255, 0),
       new THREE.Color(0, 0, 255),
       new THREE.Color(255, 0, 255),
+      new THREE.Color(255, 255, 0),
     ];
 
-    if (this.zoomedAddress[3] === zoomStep) {
-      // @ts-ignore
-      this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
-        this.zoomedAddress[3],
-        this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
-        colors[this.zoomedAddress[3]] || this.visualizationColor,
-      );
-    }
+    // if (this.zoomedAddress[3] === zoomStep) {
+    // @ts-ignore
+    this.visualizedMesh = window.addBucketMesh(
+      bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
+      this.zoomedAddress[3],
+      this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
+      colors[this.zoomedAddress[3]] || this.visualizationColor,
+    );
+    // }
   }
 
   unvisualize() {

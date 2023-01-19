@@ -466,7 +466,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           )}
         </div>
         {/* todo: remove or make nice */}
-        Active Resolution:{" "}
+
         {resolutionInfo
           .getResolutionByIndex(this.props.activeMagIndicesForLayers[layerName])
           ?.join("-")}

@@ -223,52 +223,77 @@ export async function initialize(
     setInitialTool();
   }
 
-  const makeTranslation = (x: number, y: number): Matrix4x4 =>
-    new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1]);
+  const makeTranslation = (x: number, y: number, z: number): Matrix4x4 =>
+    new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+  const makeScale = (scale: Vector3, anchor: Vector3) =>
+    M4x4.mul(
+      M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),
+      makeTranslation(-anchor[0], -anchor[1], -anchor[2]),
+    );
+  const makeRotation = (theta: number, pos: Vector3) =>
+    M4x4.mul(
+      M4x4.mul(
+        makeTranslation(pos[0], pos[1], pos[1]),
+        new Float32Array([
+          Math.cos(theta),
+          Math.sin(theta),
+          0,
+          0,
+          -Math.sin(theta),
+          Math.cos(theta),
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+        ]),
+      ),
+      makeTranslation(-pos[0], -pos[1], -pos[2]),
+    );
+
   const setTransforms = (layerName: string, transforms: Matrix4x4) =>
     Store.dispatch(setLayerTransforms(layerName, transforms));
 
-  const setScale = (layerName: string, scale: number) => {
-    const pos = [3496, 3379];
-    setTransforms(
-      layerName,
-      M4x4.mul(
-        M4x4.scale([scale, scale, 1], makeTranslation(pos[0], pos[1])),
-        makeTranslation(-pos[0], -pos[1]),
-      ),
-    );
+  const setScale = (layerName: string, scale: Vector3, anchor: Vector3) => {
+    setTransforms(layerName, makeScale(scale, anchor));
   };
 
-  const setRotation = (layerName: string, _theta: number) => {
+  const setRotation = (layerName: string, _theta: number, pos: Vector3 | null = null) => {
     const theta = (_theta / 360) * 2 * Math.PI;
-    const pos = [3496, 3379];
-    setTransforms(
-      layerName,
-      M4x4.mul(
-        M4x4.mul(
-          makeTranslation(pos[0], pos[1]),
-          new Float32Array([
-            Math.cos(theta),
-            Math.sin(theta),
-            0,
-            0,
-            -Math.sin(theta),
-            Math.cos(theta),
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            1,
-          ]),
-        ),
-        makeTranslation(-pos[0], -pos[1]),
-      ),
-    );
+    if (pos == null) {
+      pos = [3496, 3379, 0];
+    }
+    setTransforms(layerName, makeRotation(theta, pos));
+  };
+
+  type Spec =
+    | { type: "scale"; args: [Vector3, Vector3] }
+    | { type: "rotate"; args: [number, Vector3] }
+    | { type: "translate"; args: Vector3 };
+  const makeChain = (specs: Array<Spec>) => {
+    let matrix = makeTranslation(0, 0, 0);
+
+    for (const spec of specs) {
+      let argMatrix;
+
+      if (spec.type === "scale") {
+        argMatrix = makeScale(...spec.args);
+      } else if (spec.type === "rotate") {
+        argMatrix = makeRotation(...spec.args);
+      } else if (spec.type === "translate") {
+        argMatrix = makeTranslation(...spec.args);
+      } else {
+        throw new Error("unknown spec type");
+      }
+
+      matrix = M4x4.mul(matrix, argMatrix);
+    }
+    return matrix;
   };
 
   // @ts-expect-error
@@ -277,10 +302,30 @@ export async function initialize(
     setRotation,
     makeTranslation,
     setTransforms,
+    makeChain,
   };
   // setTransforms("color", makeTranslation(122, 105));
-  setTransforms("color", makeTranslation(-1000, 0));
-  setScale("color2", 2.0);
+  // setTransforms("color", makeTranslation(-1000, 0, 0));
+  // setScale("color2", 2.0, [3496, 3379, 0] as Vector3);
+
+  // setScale("C556_versaCT", 8, [219, -6, 784]);
+
+  let transformer = window.transformer;
+
+  transformer.setTransforms(
+    "C556_versaCT",
+    transformer.makeChain([
+      { type: "rotate", args: [-1, [579, 332, 784]] },
+      {
+        type: "scale",
+        args: [
+          [11, 11, 5],
+          [219, -6, 784],
+        ],
+      },
+      { type: "translate", args: [-212, 0, 0] },
+    ]),
+  );
 
   return initializationInformation;
 }

@@ -19,7 +19,8 @@ import {
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import { Area } from "oxalis/model/accessors/flycam_accessor";
-import { PlaneRects } from "oxalis/store";
+import { LoadingStrategy, PlaneRects } from "oxalis/store";
+import { getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).
@@ -59,6 +60,7 @@ const XZ_ROTATION = [
     0, 0, 0, 1,
 ] as Matrix4x4;
 export default function determineBucketsForOblique(
+  loadingStrategy: LoadingStrategy,
   viewMode: ViewMode,
   resolutions: Array<Vector3>,
   position: Vector3,
@@ -162,7 +164,12 @@ export default function determineBucketsForOblique(
         bucketAddress as unknown as Vector3,
         centerAddress as unknown as Vector3,
       ).reduce((a, b) => a + Math.abs(b), 0);
-      enqueueFunction(bucketAddress, priority);
+      const zoomStepDiff = bucketAddress[3] - logZoomStep;
+      const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(
+        loadingStrategy,
+        zoomStepDiff,
+      );
+      enqueueFunction(bucketAddress, priority + additionalPriorityWeight);
     }
   }
 }

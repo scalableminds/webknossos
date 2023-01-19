@@ -433,7 +433,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { isRetrying, isFinishing, uploadProgress, isUploading } = this.state;
     return (
       <Modal
-        visible={isUploading}
+        open={isUploading}
         keyboard={false}
         maskClosable={false}
         className="no-footer-modal"

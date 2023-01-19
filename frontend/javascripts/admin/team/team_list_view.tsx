@@ -193,7 +193,7 @@ class TeamListView extends React.PureComponent<Props, State> {
           <CreateTeamModal
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ teams: never[]; isVisible: boolean; onOk: ... Remove this comment to see the full error message
             teams={this.state.teams}
-            isVisible={this.state.isTeamCreationModalVisible}
+            isOpen={this.state.isTeamCreationModalVisible}
             onOk={this.createTeam}
             onCancel={() =>
               this.setState({

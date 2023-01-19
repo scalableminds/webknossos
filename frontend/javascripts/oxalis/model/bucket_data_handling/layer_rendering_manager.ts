@@ -308,16 +308,18 @@ export default class LayerRenderingManager {
     const maximumRenderedBucketsHalfInVoxel = addressSpaceDimensions.map(
       (bucketPerDim) => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
     );
+
+    let maybeTransformedPosition = position;
+    if (layer.transformMatrix) {
+      maybeTransformedPosition = V3.mul4x4(layer.transformMatrix, maybeTransformedPosition);
+    }
+
     // Hit texture top-left coordinate
     const anchorPointInVoxel = [
-      position[0] - maximumRenderedBucketsHalfInVoxel[0] * resolution[0],
-      position[1] - maximumRenderedBucketsHalfInVoxel[1] * resolution[1],
-      position[2] - maximumRenderedBucketsHalfInVoxel[2] * resolution[2],
+      maybeTransformedPosition[0] - maximumRenderedBucketsHalfInVoxel[0] * resolution[0],
+      maybeTransformedPosition[1] - maximumRenderedBucketsHalfInVoxel[1] * resolution[1],
+      maybeTransformedPosition[2] - maximumRenderedBucketsHalfInVoxel[2] * resolution[2],
     ] as Vector3;
-
-    if (layer.transformMatrix) {
-      V3.mul4x4(layer.transformMatrix, anchorPointInVoxel, anchorPointInVoxel);
-    }
 
     const anchorPoint = this.cube.positionToZoomedAddress(anchorPointInVoxel, logZoomStep);
 

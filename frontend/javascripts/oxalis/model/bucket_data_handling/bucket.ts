@@ -34,7 +34,7 @@ export type BucketDataArray =
   | BigUint64Array;
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: true,
+  visualizeBucketsOnGPU: false,
   // For visualizing buckets which are prefetched
   visualizePrefetchedBuckets: false,
   // For enforcing fallback rendering. enforcedZoomDiff == 2, means
@@ -693,12 +693,22 @@ export class DataBucket {
 
     const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
 
+    const colors = [
+      new THREE.Color(0, 0, 0),
+      new THREE.Color(255, 255, 255),
+      new THREE.Color(255, 0, 0),
+      new THREE.Color(0, 255, 0),
+      new THREE.Color(0, 0, 255),
+      new THREE.Color(255, 0, 255),
+    ];
+
     if (this.zoomedAddress[3] === zoomStep) {
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
         this.zoomedAddress[3],
-        this.visualizationColor,
+        this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
+        colors[this.zoomedAddress[3]] || this.visualizationColor,
       );
     }
   }

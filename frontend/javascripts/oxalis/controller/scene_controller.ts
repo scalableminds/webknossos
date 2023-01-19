@@ -123,9 +123,18 @@ class SceneController {
     // These methods are attached to window, since we would run into circular import errors
     // otherwise.
     // @ts-ignore
-    window.addBucketMesh = (position: Vector3, zoomStep: number, optColor?: string) => {
+    window.addBucketMesh = (
+      position: Vector3,
+      zoomStep: number,
+      resolution: Vector3,
+      optColor?: string,
+    ) => {
       const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
-      const bucketSize = [bucketExtent, bucketExtent, bucketExtent];
+      const bucketSize = [
+        constants.BUCKET_WIDTH * resolution[0],
+        constants.BUCKET_WIDTH * resolution[1],
+        constants.BUCKET_WIDTH * resolution[2],
+      ];
       const boxGeometry = new THREE.BoxGeometry(...bucketSize);
       const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
       const material = new THREE.LineBasicMaterial({

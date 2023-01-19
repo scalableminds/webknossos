@@ -12,6 +12,7 @@ import {
   OrthoViewMap,
   OrthoViewValuesWithoutTDView,
   OrthoViewWithoutTD,
+  Vector2,
   Vector3,
   Vector4,
   ViewMode,
@@ -94,26 +95,36 @@ function addNecessaryBucketsToPriorityQueueOblique(
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
 
-  const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
+  const planeIds: Array<OrthoViewWithoutTD> =
+    viewMode == "orthogonal" ? ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] : ["PLANE_XY"];
   // const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_YZ"];
   let traversedBuckets: Vector3[] = [];
   // for (const planeId of OrthoViewValuesWithoutTDView) {
   for (const planeId of planeIds) {
-    const extent = [rects[planeId].width, rects[planeId].height];
-    const enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)];
-
+    let extent: Vector2;
+    let enlargedHalfExtent: Vector2;
     let queryMatrix = [...matrix] as Matrix4x4;
-    if (planeId === "PLANE_YZ") {
-      M4x4.mul(matrix, YZ_ROTATION, queryMatrix);
-    } else if (planeId === "PLANE_XZ") {
-      M4x4.mul(matrix, XZ_ROTATION, queryMatrix);
+
+    if (viewMode == "orthogonal") {
+      extent = [rects[planeId].width, rects[planeId].height];
+      enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)] as Vector2;
+      if (planeId === "PLANE_YZ") {
+        M4x4.mul(matrix, YZ_ROTATION, queryMatrix);
+      } else if (planeId === "PLANE_XZ") {
+        M4x4.mul(matrix, XZ_ROTATION, queryMatrix);
+      }
+    } else {
+      // Buckets adjacent to the current viewport are also loaded so that these
+      // buckets are already on the GPU when the user moves a little.
+      extent = [constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH];
+      const enlargementFactor = 1.1;
+      const enlargedExtent = [
+        constants.VIEWPORT_WIDTH * enlargementFactor,
+        constants.VIEWPORT_WIDTH * enlargementFactor,
+      ];
+      enlargedHalfExtent = [enlargedExtent[0] / 2, enlargedExtent[1] / 2] as Vector2;
     }
 
-    // Buckets adjacent to the current viewport are also loaded so that these
-    // buckets are already on the GPU when the user moves a little.
-    // const enlargementFactor = 1.1;
-    // const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
-    // const enlargedHalfExtent = enlargedExtent / 2;
     // Cast a vertical "scan line" and check how many buckets are intersected.
     // That amount N is used as a measure to cast N + 1 (steps) vertical scanlines.
     const stepRatePoints = M4x4.transformVectorsAffine(queryMatrix, [

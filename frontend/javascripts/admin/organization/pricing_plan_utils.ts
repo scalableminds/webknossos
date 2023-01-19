@@ -51,7 +51,14 @@ export function isPricingPlanGreaterEqualThan(planA: PricingPlanEnum, planB: Pri
 
     case PricingPlanEnum.Team:
     case PricingPlanEnum.TeamTrial:
-      return planB === PricingPlanEnum.Basic;
+      switch (planB) {
+        case PricingPlanEnum.Power:
+        case PricingPlanEnum.PowerTrial:
+        case PricingPlanEnum.Custom:
+          return false;
+        default:
+          return true;
+      }
 
     case PricingPlanEnum.Basic:
     default:

@@ -1,9 +1,11 @@
+import React from "react";
+import { useSelector } from "react-redux";
+import { Tooltip, Menu, MenuItemProps, Alert } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
-import { Tooltip, Menu, MenuItemProps } from "antd";
-import { MenuClickEventHandler } from "rc-menu/lib/interface";
-import * as React from "react";
+import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import type { OxalisState } from "oxalis/store";
 
 export default function PricingEnforcedMenuItem({
   children,
@@ -15,10 +17,12 @@ export default function PricingEnforcedMenuItem({
   requiredPricingPlan: PricingPlanEnum;
   showLockIcon?: boolean;
 } & MenuItemProps): JSX.Element {
-  const isFeatureAllowed = false;
-  // const isFeatureAllowed = isPricingPlanGreaterThan(organization.pricingPlan, requiredPricingPlan);
+  const currentPricingPlan = useSelector((state: OxalisState) =>
+    state.activeOrganization ? state.activeOrganization.pricingPlan : PricingPlanEnum.Basic,
+  );
+  const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
 
-  if (isFeatureAllowed) return children;
+  if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
   // TODO show upragde button for owner
   const toolTipMessage = `This feature is not available in your organisation's plan. Ask your organisation owner to upgrade.`;
@@ -46,5 +50,22 @@ export default function PricingEnforcedMenuItem({
         {showLockIcon ? <LockOutlined style={{ marginLeft: 5 }} /> : null}
       </Menu.Item>
     </Tooltip>
+  );
+}
+
+function PageUnavailableForYourPlan() {
+  return (
+    <div className="container">
+      <Alert
+        style={{
+          maxWidth: "500px",
+          margin: "0 auto",
+        }}
+        message="Error 404"
+        description="Page not found."
+        type="error"
+        showIcon
+      />
+    </div>
   );
 }

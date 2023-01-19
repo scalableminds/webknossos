@@ -25,6 +25,7 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 import { getActiveUserCount } from "./pricing_plan_utils";
 import type { OxalisState } from "oxalis/store";
 
@@ -301,7 +302,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  organization: state.activeOrganization,
+  organization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);

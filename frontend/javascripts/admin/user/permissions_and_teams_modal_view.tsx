@@ -23,7 +23,7 @@ enum PERMISSIONS {
 type TeamRoleModalProp = {
   onChange: (...args: Array<any>) => any;
   onCancel: (...args: Array<any>) => any;
-  visible: boolean;
+  isOpen: boolean;
   selectedUserIds: Key[];
   users: Array<APIUser>;
   activeUser: APIUser;
@@ -340,7 +340,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
       <Modal
         maskClosable={false}
         closable={false}
-        visible={this.props.visible}
+        open={this.props.isOpen}
         onCancel={this.props.onCancel}
         footer={
           <div>

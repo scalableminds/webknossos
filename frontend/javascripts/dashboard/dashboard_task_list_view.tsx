@@ -65,7 +65,7 @@ type Props = OwnProps & StateProps;
 type State = {
   showFinishedTasks: boolean;
   isLoading: boolean;
-  isTransferModalVisible: boolean;
+  isTransferModalOpen: boolean;
   currentAnnotationId: string | null | undefined;
   finishedModeState: TaskModeState;
   unfinishedModeState: TaskModeState;
@@ -110,7 +110,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
-    isTransferModalVisible: false,
+    isTransferModalOpen: false,
     currentAnnotationId: null,
     finishedModeState: {
       tasks: [],
@@ -223,7 +223,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   openTransferModal(annotationId: string) {
     this.setState({
-      isTransferModalVisible: true,
+      isTransferModalOpen: true,
       currentAnnotationId: annotationId,
     });
   }
@@ -374,7 +374,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   handleTransferredTask() {
     this.setState({
-      isTransferModalVisible: false,
+      isTransferModalOpen: false,
     });
 
     const removeTransferredTask = (
@@ -554,11 +554,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           ) : null}
         </div>
         <TransferTaskModal
-          visible={this.state.isTransferModalVisible}
+          isOpen={this.state.isTransferModalOpen}
           annotationId={this.state.currentAnnotationId}
           onCancel={() =>
             this.setState({
-              isTransferModalVisible: false,
+              isTransferModalOpen: false,
             })
           }
           onChange={() => this.handleTransferredTask()}

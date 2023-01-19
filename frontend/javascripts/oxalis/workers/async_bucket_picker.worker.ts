@@ -68,8 +68,8 @@ function pick(
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
     determineBucketsForOblique(
-      loadingStrategy,
       viewMode,
+      loadingStrategy,
       resolutions,
       position,
       enqueueFunction,
@@ -88,8 +88,8 @@ function pick(
     );
   } else {
     determineBucketsForOblique(
-      loadingStrategy,
       viewMode,
+      loadingStrategy,
       resolutions,
       position,
       enqueueFunction,

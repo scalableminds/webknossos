@@ -237,8 +237,7 @@ export class CuckooTable {
 
   private canDisplacedEntryBeIgnored(displacedKey: number, newKey: number): boolean {
     return (
-      // Either, the slot is empty...
-      // -1 is not allowed as a key
+      // Either, the slot is empty... (the value of EMPTY_KEY is not allowed as a key)
       displacedKey === EMPTY_KEY ||
       // or the slot already refers to the key
       displacedKey === newKey

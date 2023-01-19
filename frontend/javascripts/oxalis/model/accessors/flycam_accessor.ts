@@ -108,13 +108,16 @@ function calculateTotalBucketCountForZoomLevel(
   const addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
   const volumeDimension = V3.sub(maxPerDim, minPerDim);
 
-  if (
-    volumeDimension[0] > addressSpaceDimensions[0] ||
-    volumeDimension[1] > addressSpaceDimensions[1] ||
-    volumeDimension[2] > addressSpaceDimensions[2]
-  ) {
-    return Infinity;
-  }
+  // todo: when growing a layer (e.g., scale=0.1) and then zooming in, good mags
+  // couldn't be selected because of this.
+  // converting to cuckoo hashing would make the addressSpaceDimensions concept obsolete.
+  // if (
+  //   volumeDimension[0] > addressSpaceDimensions[0] ||
+  //   volumeDimension[1] > addressSpaceDimensions[1] ||
+  //   volumeDimension[2] > addressSpaceDimensions[2]
+  // ) {
+  //   return Infinity;
+  // }
 
   return counter;
 }

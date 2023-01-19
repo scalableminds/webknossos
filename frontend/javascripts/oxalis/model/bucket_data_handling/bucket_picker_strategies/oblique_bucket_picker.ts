@@ -45,8 +45,8 @@ const XZ_ROTATION = [
 ] as Matrix4x4;
 
 export default function determineBucketsForOblique(
-  loadingStrategy: LoadingStrategy,
   viewMode: ViewMode,
+  loadingStrategy: LoadingStrategy,
   resolutions: Array<Vector3>,
   position: Vector3,
   enqueueFunction: EnqueueFunction,

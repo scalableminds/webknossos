@@ -82,7 +82,6 @@ class PrecomputedArray(relativePath: DatasetPath,
         .min(header.precomputedScale.size(i))
       s"$beginOffset-$endOffset"
     })
-    //logger.info(s"${header.precomputedScale.key}: Getting chunk ${chunkIndex(0)},${chunkIndex(1)},${chunkIndex(2)}, resulting in ${coordinates.mkString(header.dimension_separator.toString)}")
     coordinates.mkString(header.dimension_separator.toString)
   }
 

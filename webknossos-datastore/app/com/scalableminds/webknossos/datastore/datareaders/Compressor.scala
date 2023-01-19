@@ -9,7 +9,7 @@ import org.apache.commons.compress.compressors.gzip.{
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
-import java.awt.image.BufferedImage
+import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io._
 import java.nio.ByteBuffer
 import java.util
@@ -274,8 +274,11 @@ class JpegCompressor() extends Compressor {
   @throws[IOException]
   override def uncompress(is: InputStream, os: OutputStream): Unit = {
     val iis: ImageInputStream = createImageInputStream(is)
-    val ios = createImageOutputStream(os)
     val bi: BufferedImage = ImageIO.read(iis: ImageInputStream)
-    ImageIO.write(bi, "bmp", ios)
+    val raster = bi.getRaster
+    val dbb: DataBufferByte = raster.getDataBuffer.asInstanceOf[DataBufferByte]
+    val width = raster.getWidth
+    val data = dbb.getData.grouped(width).toList.transpose
+    os.write(data.flatten.toArray)
   }
 }

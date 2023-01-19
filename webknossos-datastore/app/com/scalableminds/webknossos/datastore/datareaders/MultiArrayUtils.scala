@@ -130,7 +130,8 @@ object MultiArrayUtils {
      */
     val permutation = axisOrder.permutation(source.getRank)
     val flippedIfNeeded = if (flip) permutation.reverse else permutation
-    source.permute(flippedIfNeeded)
+    val permutationHack = Array(0, 2, 1)
+    source.permute(permutationHack)
   }
 
 }

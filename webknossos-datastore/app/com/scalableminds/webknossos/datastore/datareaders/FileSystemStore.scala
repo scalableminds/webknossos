@@ -1,10 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsPath
 import net.liftweb.util.Helpers.tryo
 
-import java.net.URI
-import java.nio.file.{FileSystem, Files, Path, Paths}
+import java.nio.file.{FileSystem, Files, Path}
 
 class FileSystemStore(val internalRoot: Path) {
   def readBytes(key: String): Option[Array[Byte]] = {

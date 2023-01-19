@@ -9,12 +9,12 @@ import type { OxalisState } from "oxalis/store";
 import { CopyableCodeSnippet, MoreInfoHint } from "./download_modal_view";
 const { Paragraph, Text } = Typography;
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onClose: () => void;
 };
 
 function _PythonClientModalView(props: Props): JSX.Element {
-  const { isVisible, onClose } = props;
+  const { isOpen, onClose } = props;
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
@@ -78,7 +78,7 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contex
   return (
     <Modal
       title="Python Client"
-      visible={isVisible}
+      open={isOpen}
       width={800}
       footer={null}
       onCancel={onClose}

@@ -24,14 +24,14 @@ export function MarkdownWrapper({ source, singleLine }: { source: string; single
 }
 export function MarkdownModal({
   source,
-  visible,
+  isOpen,
   onOk,
   onChange,
   label,
 }: {
   source: string;
   label: string;
-  visible?: boolean;
+  isOpen?: boolean;
   onOk: () => void;
   onChange: (arg0: React.SyntheticEvent) => void;
 }) {
@@ -39,7 +39,7 @@ export function MarkdownModal({
     <Modal
       key="comment-markdown-modal"
       title={<span>{`Edit ${label}`}</span>}
-      visible={visible}
+      open={isOpen}
       onCancel={onOk}
       closable={false}
       width={700}

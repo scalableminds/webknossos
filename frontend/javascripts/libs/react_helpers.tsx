@@ -69,17 +69,17 @@ export function usePolledState(callback: (arg0: OxalisState) => void, interval: 
   }, interval);
 }
 
-export function makeComponentLazy<T extends { isVisible: boolean }>(
+export function makeComponentLazy<T extends { isOpen: boolean }>(
   ComponentFn: React.ComponentType<T>,
 ): React.ComponentType<T> {
   return function LazyModalWrapper(props: T) {
     const [hasBeenInitialized, setHasBeenInitialized] = useState(false);
-    const isVisible = props.isVisible;
+    const isOpen = props.isOpen;
     useEffect(() => {
-      setHasBeenInitialized(hasBeenInitialized || isVisible);
-    }, [isVisible]);
+      setHasBeenInitialized(hasBeenInitialized || isOpen);
+    }, [isOpen]);
 
-    if (isVisible || hasBeenInitialized) {
+    if (isOpen || hasBeenInitialized) {
       return <ComponentFn {...props} />;
     }
     return null;

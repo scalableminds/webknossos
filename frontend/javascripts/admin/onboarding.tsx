@@ -220,7 +220,7 @@ type InviteUsersModalState = {
 
 export class InviteUsersModal extends React.Component<
   {
-    visible?: boolean;
+    isOpen?: boolean;
     handleVisibleChange?: (...args: Array<any>) => any;
     destroy?: (...args: Array<any>) => any;
     organizationName: string;
@@ -311,7 +311,7 @@ export class InviteUsersModal extends React.Component<
 
     return (
       <Modal
-        open={this.props.visible == null ? true : this.props.visible}
+        open={this.props.isOpen == null ? true : this.props.isOpen}
         title={
           <>
             <UserAddOutlined /> Invite Users
@@ -497,7 +497,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     >
       {this.state.isDatasetUploadModalVisible && (
         <Modal
-          visible
+          open
           width="85%"
           footer={null}
           maskClosable={false}
@@ -609,7 +609,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           </LinkButton>{" "}
           <InviteUsersModal
             organizationName={this.state.organizationName}
-            visible={this.state.isInviteModalVisible}
+            isOpen={this.state.isInviteModalVisible}
             handleVisibleChange={(isInviteModalVisible) =>
               this.setState({
                 isInviteModalVisible,

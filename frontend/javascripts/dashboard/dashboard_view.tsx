@@ -30,6 +30,7 @@ import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/or
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import { DatasetFolderView } from "./dataset_folder_view";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 type OwnProps = {
   userId: string | null | undefined;
@@ -330,7 +331,7 @@ function DatasetViewWithLegacyContext({ user }: { user: APIUser }) {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
-  activeOrganization: state.activeOrganization,
+  activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

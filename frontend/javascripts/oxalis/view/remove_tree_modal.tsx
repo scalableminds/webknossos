@@ -10,12 +10,12 @@ type Props = {
 };
 type State = {
   shouldNotWarnAgain: boolean;
-  visible: boolean;
+  isOpen: boolean;
 };
 export default class TreeRemovalModal extends React.Component<Props, State> {
   state = {
     shouldNotWarnAgain: false,
-    visible: true,
+    isOpen: true,
   };
 
   handleCheckboxChange = (event: CheckboxChangeEvent) => {
@@ -26,7 +26,7 @@ export default class TreeRemovalModal extends React.Component<Props, State> {
 
   hide = () => {
     this.setState({
-      visible: false,
+      isOpen: false,
     });
     if (this.props.destroy) this.props.destroy();
   };
@@ -45,7 +45,7 @@ export default class TreeRemovalModal extends React.Component<Props, State> {
         title={messages["tracing.delete_tree"]}
         onOk={this.handleOk}
         onCancel={this.hide}
-        visible={this.state.visible}
+        open={this.state.isOpen}
       >
         <Checkbox onChange={this.handleCheckboxChange} checked={this.state.shouldNotWarnAgain}>
           Do not warn me again. (Remember, accidentally deleted trees can always be restored using

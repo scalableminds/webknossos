@@ -398,7 +398,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <InviteUsersModal
             currentUserCount={getActiveUserCount(this.state.users)}
             maxUserCountPerOrganization={this.state.maxUserCountPerOrganization}
-            open={this.state.isInviteModalOpen}
+            isOpen={this.state.isInviteModalOpen}
             organizationName={this.props.activeUser.organization}
             handleVisibleChange={(visible) => {
               this.setState({
@@ -648,7 +648,7 @@ class UserListView extends React.PureComponent<Props, State> {
         </Spin>
         {this.state.isExperienceModalOpen ? (
           <ExperienceModalView
-            open={this.state.isExperienceModalOpen}
+            isOpen={this.state.isExperienceModalOpen}
             selectedUsers={
               this.state.singleSelectedUser
                 ? [this.state.singleSelectedUser]

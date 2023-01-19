@@ -204,20 +204,33 @@ class DataSetController @Inject()(userService: UserService,
           Fox.successful(request.identity.map(_._organization))
         else
           Fox.runOptional(organizationName)(orgaName => organizationDAO.findIdByName(orgaName)(GlobalAccessContext))
-        dataSets <- dataSetDAO.findAllWithSearch(isActive,
-                                                 isUnreported,
-                                                 organizationIdOpt,
-                                                 folderIdValidated,
-                                                 uploaderIdValidated,
-                                                 isEditable,
-                                                 searchQuery,
-                                                 recursive.getOrElse(false)) ?~> "dataSet.list.failed"
-        filtered <- filter.applyOn(dataSets)
-        limited = limit.map(l => filtered.take(l)).getOrElse(filtered)
-        js <- if (compact.getOrElse(false)) listCompact(limited)
-        else listGrouped(limited, request.identity) ?~> "dataSet.list.failed"
+        js <- if (compact.getOrElse(false)) {
+          for {
+            datasetInfos <- dataSetDAO.findCompactWithSearch(isActive,
+                                                             isUnreported,
+                                                             organizationIdOpt,
+                                                             folderIdValidated,
+                                                             uploaderIdValidated,
+                                                             isEditable,
+                                                             searchQuery,
+                                                             recursive.getOrElse(false))
+          } yield Json.toJson(datasetInfos)
+        } else
+          for {
+            dataSets <- dataSetDAO.findAllWithSearch(isActive,
+                                                     isUnreported,
+                                                     organizationIdOpt,
+                                                     folderIdValidated,
+                                                     uploaderIdValidated,
+                                                     isEditable,
+                                                     searchQuery,
+                                                     recursive.getOrElse(false)) ?~> "dataSet.list.failed"
+            filtered <- filter.applyOn(dataSets)
+            limited = limit.map(l => filtered.take(l)).getOrElse(filtered)
+            js <- listGrouped(limited, request.identity) ?~> "dataSet.list.failed"
+          } yield Json.toJson(js)
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-      } yield addRemoteOriginHeaders(Ok(Json.toJson(js)))
+      } yield addRemoteOriginHeaders(Ok(js))
     }
   }
 

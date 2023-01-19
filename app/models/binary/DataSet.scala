@@ -59,6 +59,24 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 }
 
+case class DatasetCompactInfo(
+    id: ObjectId,
+    organizationName: String,
+    folderId: ObjectId,
+    isActive: Boolean,
+    displayName: String,
+    created: Instant,
+    isEditable: Boolean,
+    lastUsedByUser: Instant,
+    status: String,
+    tags: List[String],
+    isUnreported: Boolean
+)
+
+object DatasetCompactInfo {
+  implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
+}
+
 class DataSetDAO @Inject()(sqlClient: SqlClient,
                            dataSetDataLayerDAO: DataSetDataLayerDAO,
                            organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
@@ -173,7 +191,73 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                         uploaderIdOpt: Option[ObjectId],
                         isEditable: Option[Boolean],
                         searchQuery: Option[String],
-                        includeSubfolders: Boolean = false)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+                        includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      selectionPredicates <- buildSelectionPredicates(isActiveOpt,
+                                                      isUnreported,
+                                                      organizationIdOpt,
+                                                      folderIdOpt,
+                                                      uploaderIdOpt,
+                                                      isEditable,
+                                                      searchQuery,
+                                                      includeSubfolders)
+
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates".as[DatasetsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def findCompactWithSearch(isActiveOpt: Option[Boolean],
+                            isUnreported: Option[Boolean],
+                            organizationIdOpt: Option[ObjectId],
+                            folderIdOpt: Option[ObjectId],
+                            uploaderIdOpt: Option[ObjectId],
+                            isEditable: Option[Boolean],
+                            searchQuery: Option[String],
+                            includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+    for {
+      selectionPredicates <- buildSelectionPredicates(isActiveOpt,
+                                                      isUnreported,
+                                                      organizationIdOpt,
+                                                      folderIdOpt,
+                                                      uploaderIdOpt,
+                                                      isEditable,
+                                                      searchQuery,
+                                                      includeSubfolders)
+      query = q"""
+            SELECT d._id, o.name, d._folder, d.isUsable, d.displayName, d.created, true, NOW(), d.status, d.tags
+            FROM
+            (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates) d
+            JOIN webknossos.organizations o ON o._id = d._organization
+            -- JOIN dataSet_lastUsedTimes lastUsedTimes ON lastUsedTimes._dataSet = d._id -- TODO how to include (optional) requesting user
+            -- TODO isEditable
+            """
+      _ = logger.info(query.debugInfo)
+      rows <- run(query.as[(ObjectId, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
+    } yield
+      rows.toList.map(
+        row =>
+          DatasetCompactInfo(
+            id = row._1,
+            organizationName = row._2,
+            folderId = row._3,
+            isActive = row._4,
+            displayName = row._5,
+            created = row._6,
+            isEditable = row._7,
+            lastUsedByUser = row._8,
+            status = row._9,
+            tags = parseArrayLiteral(row._10),
+            isUnreported = row._9 == unreportedStatus,
+        ))
+
+  private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
+                                       isUnreported: Option[Boolean],
+                                       organizationIdOpt: Option[ObjectId],
+                                       folderIdOpt: Option[ObjectId],
+                                       uploaderIdOpt: Option[ObjectId],
+                                       isEditable: Option[Boolean],
+                                       searchQuery: Option[String],
+                                       includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -190,21 +274,16 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       searchPredicate = buildSearchPredicate(searchQuery)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
       isEditablePredicate = buildIsEditablePredicate(isEditable)
-
-      r <- run(q"""SELECT $columns
-              FROM $existingCollectionName
-              WHERE
-                  ($folderPredicate)
-              AND ($uploaderPredicate)
-              AND ($searchPredicate)
-              AND ($isActivePredicate)
-              AND ($isUnreportedPredicate)
-              AND ($organizationPredicate)
-              AND ($isEditablePredicate)
-              AND $accessQuery
-              """.as[DatasetsRow])
-      parsed <- parseAll(r)
-    } yield parsed
+    } yield q"""
+            ($folderPredicate)
+        AND ($uploaderPredicate)
+        AND ($searchPredicate)
+        AND ($isActivePredicate)
+        AND ($isUnreportedPredicate)
+        AND ($organizationPredicate)
+        AND ($isEditablePredicate)
+        AND $accessQuery
+       """
 
   private def buildSearchPredicate(searchQueryOpt: Option[String]): SqlToken =
     searchQueryOpt match {
@@ -224,7 +303,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
   private def buildIsEditablePredicate(isEditableOpt: Option[Boolean]): SqlToken =
     isEditableOpt match {
       case Some(true)  => q"${true}"
-      case Some(false) => q"${true}"
+      case Some(false) => q"${true}" // TODO
       case None        => q"${true}"
     }
 

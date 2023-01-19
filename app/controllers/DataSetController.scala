@@ -234,8 +234,6 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  private def listCompact(datasets: List[DataSet]): Fox[List[JsObject]] = ???
-
   private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[JsObject]] =

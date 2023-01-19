@@ -20,29 +20,13 @@ import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import { Area } from "oxalis/model/accessors/flycam_accessor";
 import { LoadingStrategy, PlaneRects } from "oxalis/store";
-import { getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
+import { getMaxZoomStepDiff, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).
 const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 ** 16 * y + z;
 
 const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition);
-
-export const getFallbackBuckets = (
-  buckets: Vector4[],
-  resolutions: Vector3[],
-  fallbackZoomStep: number,
-  isFallbackAvailable: boolean,
-): Vector4[] => {
-  return isFallbackAvailable
-    ? _.uniqBy(
-        buckets.map((bucketAddress: Vector4) =>
-          zoomedAddressToAnotherZoomStep(bucketAddress, resolutions, fallbackZoomStep),
-        ),
-        hashPosition,
-      )
-    : [];
-};
 
 const ALPHA = Math.PI / 2;
 // prettier-ignore
@@ -59,6 +43,7 @@ const XZ_ROTATION = [
     -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
     0, 0, 0, 1,
 ] as Matrix4x4;
+
 export default function determineBucketsForOblique(
   loadingStrategy: LoadingStrategy,
   viewMode: ViewMode,
@@ -70,11 +55,44 @@ export default function determineBucketsForOblique(
   rects: PlaneRects,
   abortLimit?: number,
 ): void {
+  let zoomStepDiff = 0;
+
+  while (
+    logZoomStep + zoomStepDiff < resolutions.length &&
+    zoomStepDiff <= getMaxZoomStepDiff(loadingStrategy)
+  ) {
+    addNecessaryBucketsToPriorityQueueOblique(
+      loadingStrategy,
+      viewMode,
+      resolutions,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      zoomStepDiff,
+      rects,
+      abortLimit,
+    );
+    zoomStepDiff++;
+  }
+}
+
+function addNecessaryBucketsToPriorityQueueOblique(
+  loadingStrategy: LoadingStrategy,
+  viewMode: ViewMode,
+  resolutions: Array<Vector3>,
+  position: Vector3,
+  enqueueFunction: EnqueueFunction,
+  matrix: Matrix4x4,
+  nonFallbackLogZoomStep: number,
+  zoomStepDiff: number,
+  rects: PlaneRects,
+  abortLimit?: number,
+): void {
+  const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
   // debugger;
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
-  const fallbackZoomStep = logZoomStep + 1;
-  const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
   const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
   // const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_YZ"];
@@ -139,14 +157,8 @@ export default function determineBucketsForOblique(
   }
 
   traversedBuckets = makeBucketsUnique(traversedBuckets);
-  let traversedBucketsVec4 = traversedBuckets.map((addr): Vector4 => [...addr, logZoomStep]);
-  const fallbackBuckets = getFallbackBuckets(
-    traversedBucketsVec4,
-    resolutions,
-    fallbackZoomStep,
-    isFallbackAvailable,
-  );
-  traversedBucketsVec4 = traversedBucketsVec4.concat(fallbackBuckets);
+  const traversedBucketsVec4 = traversedBuckets.map((addr): Vector4 => [...addr, logZoomStep]);
+
   const centerAddress = globalPositionToBucketPosition(position, resolutions, logZoomStep);
 
   for (const bucketAddress of traversedBucketsVec4) {
@@ -164,7 +176,6 @@ export default function determineBucketsForOblique(
         bucketAddress as unknown as Vector3,
         centerAddress as unknown as Vector3,
       ).reduce((a, b) => a + Math.abs(b), 0);
-      const zoomStepDiff = bucketAddress[3] - logZoomStep;
       const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(
         loadingStrategy,
         zoomStepDiff,

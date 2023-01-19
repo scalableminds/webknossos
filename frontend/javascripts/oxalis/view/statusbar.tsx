@@ -440,14 +440,14 @@ function Infos() {
           />
         </span>
       ) : null}
-      <span className="info-element">
+      {/*<span className="info-element">
         <img
           src="/assets/images/icon-statusbar-downsampling.svg"
           className="resolution-status-bar-icon"
           alt="Resolution"
         />{" "}
         {activeResolution.join("-")}{" "}
-      </span>
+      </span>*/}
     </React.Fragment>
   );
 }

@@ -15,6 +15,8 @@ import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";
+import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
+import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 
 const { DirectoryTree } = Tree;
 
@@ -143,7 +145,9 @@ export function FolderTreeSidebar({
 
   const createMenu = () => (
     <Menu>
-      <Menu.Item disabled>Please right-click an existing folder.</Menu.Item>
+      <Menu.Item key="disabled" disabled>
+        Please right-click an existing folder.
+      </Menu.Item>
     </Menu>
   );
 
@@ -219,19 +223,26 @@ function generateTitle(
 
   const createMenu = () => (
     <Menu>
-      <Menu.Item
+      <PricingEnforcedMenuItem
         key="create"
         data-group-id={id}
         onClick={() => context.showCreateFolderPrompt(id)}
         disabled={!folder.isEditable}
+        requiredPricingPlan={PricingPlanEnum.Team}
       >
         <PlusOutlined />
         New Folder
-      </Menu.Item>
-      <Menu.Item key="edit" data-group-id={id} onClick={editFolder} disabled={!folder.isEditable}>
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem
+        key="edit"
+        data-group-id={id}
+        onClick={editFolder}
+        disabled={!folder.isEditable}
+        requiredPricingPlan={PricingPlanEnum.Team}
+      >
         <EditOutlined />
         Edit Folder
-      </Menu.Item>
+      </PricingEnforcedMenuItem>
 
       <Menu.Item
         key="delete"

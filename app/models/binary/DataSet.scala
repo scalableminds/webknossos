@@ -213,6 +213,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                             uploaderIdOpt: Option[ObjectId],
                             isEditable: Option[Boolean],
                             searchQuery: Option[String],
+                            requestingUserIdOpt: Option[ObjectId],
                             includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isActiveOpt,
@@ -224,11 +225,14 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                                                       searchQuery,
                                                       includeSubfolders)
       query = q"""
-            SELECT d._id, o.name, d._folder, d.isUsable, d.displayName, d.created, true, NOW(), d.status, d.tags
+            SELECT
+            d._id, o.name, d._folder, d.isUsable, d.displayName, d.created, true, COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}), d.status, d.tags
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates) d
             JOIN webknossos.organizations o ON o._id = d._organization
-            -- JOIN dataSet_lastUsedTimes lastUsedTimes ON lastUsedTimes._dataSet = d._id -- TODO how to include (optional) requesting user
+            LEFT JOIN (
+              SELECT * FROM webknossos.dataSet_lastUsedTimes WHERE _user = $requestingUserIdOpt
+            ) lastUsedTimes ON lastUsedTimes._dataSet = d._id
             -- TODO isEditable
             """
       _ = logger.info(query.debugInfo)

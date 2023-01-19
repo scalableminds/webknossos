@@ -646,13 +646,14 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 }
 
+const dummyResolution = [1, 1, 1] as Vector3;
 const mapStateToProps = (state: OxalisState): StateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
   // todo:
-  activeResolution: [1, 1, 1], // getCurrentResolution(state),
+  activeResolution: dummyResolution, // getCurrentResolution(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

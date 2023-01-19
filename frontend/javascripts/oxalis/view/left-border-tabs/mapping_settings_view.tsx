@@ -51,7 +51,6 @@ type StateProps = {
     arg2: MappingType,
     optionalProperties?: OptionalMappingProperties,
   ) => void;
-  activeViewport: OrthoView;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
@@ -287,7 +286,6 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     mappingName: activeMappingInfo.mappingName,
     mappingType: activeMappingInfo.mappingType,
     mappingColors: activeMappingInfo.mappingColors,
-    activeViewport: state.viewModeData.plane.activeViewport,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,

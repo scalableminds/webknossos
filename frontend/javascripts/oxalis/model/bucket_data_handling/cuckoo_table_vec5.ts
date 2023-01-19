@@ -1,0 +1,379 @@
+import * as THREE from "three";
+import UpdatableTexture from "libs/UpdatableTexture";
+import { Vector2, Vector3 } from "oxalis/constants";
+import { getRenderer } from "oxalis/controller/renderer";
+import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+
+type Vector5 = [number, number, number, number, number];
+type Key = Vector5; // [layerIdx, x, y, z, requestedMagIdx]
+type Value = Vector2; // [address, actualMagIdx]
+type Entry = [Vector5, Vector2];
+
+const ELEMENTS_PER_ENTRY = 6;
+const TEXTURE_CHANNEL_COUNT = 4;
+const DEFAULT_LOAD_FACTOR = 0.25;
+const EMPTY_KEY_VALUE = 2 ** 32 - 1;
+const EMPTY_KEY = [
+  EMPTY_KEY_VALUE,
+  EMPTY_KEY_VALUE,
+  EMPTY_KEY_VALUE,
+  EMPTY_KEY_VALUE,
+  EMPTY_KEY_VALUE,
+] as Key;
+
+export type SeedSubscriberFn = (seeds: number[]) => void;
+
+let cachedNullTexture: UpdatableTexture | undefined;
+
+export class CuckooTable {
+  entryCapacity: number;
+  table!: Uint32Array;
+  seeds!: number[];
+  seedSubscribers: Array<SeedSubscriberFn> = [];
+  _texture: UpdatableTexture;
+  textureWidth: number;
+
+  constructor(textureWidth: number) {
+    this.textureWidth = textureWidth;
+    this._texture = createUpdatableTexture(
+      textureWidth,
+      TEXTURE_CHANNEL_COUNT,
+      THREE.UnsignedIntType,
+      getRenderer(),
+      THREE.RGBAIntegerFormat,
+    );
+
+    // The internal format has to be set manually, since ThreeJS does not
+    // derive this value by itself.
+    // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
+    // for a reference of the internal formats.
+    this._texture.internalFormat = "RGBA32UI";
+
+    this.entryCapacity = Math.floor(
+      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY,
+    );
+
+    this.initializeTableArray();
+    // Initialize the texture once to avoid undefined behavior
+    this.flushTableToTexture();
+  }
+
+  static fromCapacity(requestedCapacity: number): CuckooTable {
+    const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
+    const textureWidth = Math.ceil(
+      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
+    );
+    return new CuckooTable(textureWidth);
+  }
+
+  static getNullTexture(): UpdatableTexture {
+    if (cachedNullTexture) {
+      return cachedNullTexture;
+    }
+    cachedNullTexture = createUpdatableTexture(
+      0,
+      TEXTURE_CHANNEL_COUNT,
+      THREE.UnsignedIntType,
+      getRenderer(),
+      THREE.RGBAIntegerFormat,
+    );
+    cachedNullTexture.internalFormat = "RGBA32UI";
+
+    return cachedNullTexture;
+  }
+
+  private initializeTableArray() {
+    this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(EMPTY_KEY_VALUE);
+
+    // The chance of colliding seeds is super low which is why
+    // we ignore this case (a rehash would happen automatically, anyway).
+    // Note that it makes sense to use all 32 bits for the seeds. Otherwise,
+    // hash collisions are more likely to happen.
+    this.seeds = [
+      Math.floor(2 ** 32 * Math.random()),
+      Math.floor(2 ** 32 * Math.random()),
+      Math.floor(2 ** 32 * Math.random()),
+    ];
+    this.notifySeedListeners();
+  }
+
+  getTexture(): UpdatableTexture {
+    return this._texture;
+  }
+
+  subscribeToSeeds(fn: SeedSubscriberFn): () => void {
+    this.seedSubscribers.push(fn);
+    this.notifySeedListeners();
+
+    return () => {
+      this.seedSubscribers = this.seedSubscribers.filter((el) => el !== fn);
+    };
+  }
+
+  notifySeedListeners() {
+    this.seedSubscribers.forEach((fn) => fn(this.seeds));
+  }
+
+  getUniformValues() {
+    // todo
+    return {
+      CUCKOO_ENTRY_CAPACITY: this.entryCapacity,
+      CUCKOO_ELEMENTS_PER_ENTRY: ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_TEXEL: TEXTURE_CHANNEL_COUNT,
+      CUCKOO_TWIDTH: this.textureWidth,
+    };
+  }
+
+  flushTableToTexture() {
+    this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
+  }
+
+  set(pendingKey: Key, pendingValue: Value, rehashAttempt: number = 0) {
+    if (pendingKey[0] === EMPTY_KEY_VALUE) {
+      throw new Error(`The key must not contain ${EMPTY_KEY_VALUE} at the first position.`);
+    }
+    let displacedEntry;
+    let currentAddress;
+    let iterationCounter = 0;
+
+    const ITERATION_THRESHOLD = 40;
+    const REHASH_THRESHOLD = 100;
+
+    if (rehashAttempt >= REHASH_THRESHOLD) {
+      throw new Error(
+        `Cannot rehash, since this is already the ${rehashAttempt}th attempt. Is the capacity exceeded?`,
+      );
+    }
+
+    const existingValueWithAddress = this.getWithAddress(pendingKey);
+    if (existingValueWithAddress) {
+      // The key already exists. We only have to overwrite
+      // the corresponding value.
+      const [, address] = existingValueWithAddress;
+      this.writeEntryAtAddress(pendingKey, pendingValue, address, rehashAttempt > 0);
+      return;
+    }
+
+    let seedIndex = Math.floor(Math.random() * this.seeds.length);
+    while (iterationCounter++ < ITERATION_THRESHOLD) {
+      const seed = this.seeds[seedIndex];
+      currentAddress = this._hashKeyToAddress(seed, pendingKey);
+
+      // Swap pendingKey, pendingValue with what's contained in H1
+      displacedEntry = this.writeEntryAtAddress(
+        pendingKey,
+        pendingValue,
+        currentAddress,
+        rehashAttempt > 0,
+      );
+
+      if (this.canDisplacedEntryBeIgnored(displacedEntry[0], pendingKey)) {
+        return;
+      }
+
+      [pendingKey, pendingValue] = displacedEntry;
+
+      // Pick another random seed for the next swap
+      seedIndex =
+        (seedIndex + Math.floor(Math.random() * (this.seeds.length - 1)) + 1) % this.seeds.length;
+    }
+    this.rehash(rehashAttempt + 1);
+    this.set(pendingKey, pendingValue, rehashAttempt + 1);
+
+    // Since a rehash was performed, the incremental texture updates were
+    // skipped. Update the entire texture:
+    this.flushTableToTexture();
+  }
+
+  unset(key: Key) {
+    for (const seed of this.seeds) {
+      const hashedAddress = this._hashKeyToAddress(seed, key);
+
+      const value = this.getValueAtAddress(key, hashedAddress);
+      if (value != null) {
+        this.writeEntryAtAddress(
+          EMPTY_KEY,
+          [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE],
+          hashedAddress,
+          false,
+        );
+        return;
+      }
+    }
+  }
+
+  private rehash(rehashAttempt: number): void {
+    const oldTable = this.table;
+
+    this.initializeTableArray();
+
+    for (
+      let offset = 0;
+      offset < this.entryCapacity * ELEMENTS_PER_ENTRY;
+      offset += ELEMENTS_PER_ENTRY
+    ) {
+      if (oldTable[offset] === EMPTY_KEY[0]) {
+        continue;
+      }
+      const key: Key = [
+        oldTable[offset],
+        oldTable[offset + 1],
+        oldTable[offset + 2],
+        oldTable[offset + 3],
+        oldTable[offset + 4],
+      ];
+      const value: Value = [oldTable[offset + 5], oldTable[offset + 6]];
+      this.set(key, value, rehashAttempt);
+    }
+  }
+
+  get(key: Key): Vector3 | null {
+    const result = this.getWithAddress(key);
+    return result ? result[0] : null;
+  }
+
+  getWithAddress(key: Key): [Vector3, number] | null {
+    for (const seed of this.seeds) {
+      const hashedAddress = this._hashKeyToAddress(seed, key);
+
+      const value = this.getValueAtAddress(key, hashedAddress);
+      if (value != null) {
+        return [value, hashedAddress];
+      }
+    }
+    return null;
+  }
+
+  getEntryAtAddress(hashedAddress: number): Entry {
+    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    return [
+      [
+        this.table[offset],
+        this.table[offset + 1],
+        this.table[offset + 2],
+        this.table[offset + 3],
+        this.table[offset + 4],
+      ],
+      [this.table[offset + 5], this.table[offset + 6]],
+    ];
+  }
+
+  _areKeysEqual(key1: Key, key2: Key): boolean {
+    for (let i = 0; i < 5; i++) {
+      if (key1[i] !== key2[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private canDisplacedEntryBeIgnored(displacedKey: Key, newKey: Key): boolean {
+    return (
+      // Either, the slot is empty... (the value of EMPTY_KEY is not allowed as a key)
+      this._areKeysEqual(displacedKey, EMPTY_KEY) ||
+      // or the slot already refers to the key
+      displacedKey === newKey
+    );
+  }
+
+  doesAddressContainKey(key: Key, hashedAddress: number): boolean {
+    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    return (
+      this.table[offset] === key[0] &&
+      this.table[offset + 1] === key[1] &&
+      this.table[offset + 2] === key[2] &&
+      this.table[offset + 3] === key[3] &&
+      this.table[offset + 4] === key[4]
+    );
+  }
+
+  getValueAtAddress(key: Key, hashedAddress: number): Vector3 | null {
+    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    if (this.doesAddressContainKey(key, hashedAddress)) {
+      return [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]];
+    } else {
+      return null;
+    }
+  }
+
+  private writeEntryAtAddress(
+    key: Key,
+    value: Value,
+    hashedAddress: number,
+    isRehashing: boolean,
+  ): Entry {
+    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
+
+    const displacedEntry: Entry = [
+      [
+        this.table[offset],
+        this.table[offset + 1],
+        this.table[offset + 2],
+        this.table[offset + 3],
+        this.table[offset + 4],
+      ],
+      [this.table[offset + 5], this.table[offset + 6]],
+    ];
+
+    this.table[offset] = key[0];
+    this.table[offset + 1] = key[1];
+    this.table[offset + 2] = key[2];
+    this.table[offset + 3] = key[3];
+    this.table[offset + 4] = key[4];
+    this.table[offset + 5] = value[0];
+    this.table[offset + 6] = value[1];
+
+    if (!isRehashing) {
+      // Only partially update if we are not rehashing. Otherwise, it makes more
+      // sense to flush the entire texture content after the rehashing is done.
+      this._texture.update(
+        this.table.subarray(offset, offset + ELEMENTS_PER_ENTRY),
+        texelOffset % this.textureWidth,
+        Math.floor(texelOffset / this.textureWidth),
+        1,
+        1,
+      );
+    }
+
+    return displacedEntry;
+  }
+
+  _hashCombine(state: number, value: number) {
+    // Based on Murmur3_32, since it is supported on the GPU.
+    // See https://github.com/tildeleb/cuckoo for a project
+    // written in golang which also supports Murmur hashes.
+    const k1 = 0xcc9e2d51;
+    const k2 = 0x1b873593;
+
+    // eslint-disable-next-line no-param-reassign
+    value >>>= 0;
+    // eslint-disable-next-line no-param-reassign
+    state >>>= 0;
+
+    // eslint-disable-next-line no-param-reassign
+    value = Math.imul(value, k1) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    value = ((value << 15) | (value >>> 17)) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    value = Math.imul(value, k2) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    state = (state ^ value) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    state = ((state << 13) | (state >>> 19)) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    state = (state * 5 + 0xe6546b64) >>> 0;
+    return state;
+  }
+
+  _hashKeyToAddress(seed: number, key: Key): number {
+    let state = seed;
+    state = this._hashCombine(state, key[0]);
+    state = this._hashCombine(state, key[1]);
+    state = this._hashCombine(state, key[2]);
+    state = this._hashCombine(state, key[3]);
+    state = this._hashCombine(state, key[4]);
+
+    return state % this.entryCapacity;
+  }
+}

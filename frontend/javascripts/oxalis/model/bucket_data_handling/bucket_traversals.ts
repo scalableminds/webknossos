@@ -152,7 +152,11 @@ export default function traverse(
     }
   }
 
-  throw new Error("Didn't reach target voxel?");
+  // In case this error is thrown, check that there weren't any NaN values
+  // passed. Since this should never happen, we don't check the values explicitly
+  // here (due to performance). During development this might happen by accident,
+  // though.
+  throw new Error("Didn't reach target voxel for an unknown reason.");
 }
 
 function initializeTMax(

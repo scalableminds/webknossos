@@ -65,6 +65,13 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_LAYER_TRANSFORMS": {
       const { layerName, transformMatrix } = action;
+      if (transformMatrix.some((el) => Number.isNaN(el))) {
+        console.error(
+          "Did not update layer transforms, because it contained NaN values.",
+          transformMatrix,
+        );
+        return state;
+      }
       const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
         if (layer.name === layerName) {
           return { ...layer, transformMatrix };

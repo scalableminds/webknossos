@@ -90,19 +90,21 @@ export const OrthoViewValuesWithoutTDView: Array<OrthoViewWithoutTD> = [
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,
 ];
+
+const PINK = 0xeb4b98;
+const BLUE = 0x5660ff;
+const TURQUOISE = 0x59f8e8;
+
 export const OrthoViewColors: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY]: 0xc81414,
-  // red
-  [OrthoViews.PLANE_YZ]: 0x1414c8,
-  // blue
-  [OrthoViews.PLANE_XZ]: 0x14c814,
-  // green
+  [OrthoViews.PLANE_XY]: PINK,
+  [OrthoViews.PLANE_YZ]: BLUE,
+  [OrthoViews.PLANE_XZ]: TURQUOISE,
   [OrthoViews.TDView]: 0xffffff,
 };
 export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
-  [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
-  [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
-  [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
+  [OrthoViews.PLANE_XY]: [BLUE, TURQUOISE],
+  [OrthoViews.PLANE_YZ]: [PINK, TURQUOISE],
+  [OrthoViews.PLANE_XZ]: [BLUE, PINK],
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 export type BorderTabType = {

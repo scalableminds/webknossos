@@ -88,7 +88,7 @@ export function PageUnavailableForYourPlanView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
 
-  const LinkToOrganizationSettings =
+  const linkToOrganizationSettings =
     activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
       <Link to={`/organizations/${activeOrganization.name}`}>Go to Organization Settings</Link>
     ) : null;

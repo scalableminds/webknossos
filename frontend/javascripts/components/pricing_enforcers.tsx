@@ -3,16 +3,24 @@ import { useSelector } from "react-redux";
 import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/organization_edit_view";
-import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
+import {
+  isPricingPlanGreaterEqualThan,
+  isUserAllowedToRequestUpgrades,
+} from "admin/organization/pricing_plan_utils";
 import { Link } from "react-router-dom";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { OxalisState } from "oxalis/store";
 
-const toolTipMessage = `This feature is not available in your organisation's plan. Ask your organisation owner to upgrade.`;
+const toolTipMessage = `This feature is not available in your organization's plan. Ask your organization owner to upgrade.`;
 
 const handleMouseClick = (event: React.MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
+};
+
+const handleMenuClick: MenuClickEventHandler = (info) => {
+  info.domEvent.preventDefault();
+  info.domEvent.stopPropagation();
 };
 
 export function PricingEnforcedMenuItem({
@@ -31,11 +39,6 @@ export function PricingEnforcedMenuItem({
   const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
-
-  const handleMenuClick: MenuClickEventHandler = (info) => {
-    info.domEvent.preventDefault();
-    info.domEvent.stopPropagation();
-  };
 
   return (
     <Tooltip title={toolTipMessage} placement="right">
@@ -82,7 +85,13 @@ export function PricingEnforcedButton({
 }
 
 export function PageUnavailableForYourPlanView() {
-  const organizationName = useSelector((state: OxalisState) => state.activeOrganization?.name);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+
+  const LinkToOrganizationSettings =
+    activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
+      <Link to={`/organizations/${activeOrganization.name}`}>Go to Organization Settings</Link>
+    ) : null;
 
   return (
     <div className="container">
@@ -99,7 +108,7 @@ export function PageUnavailableForYourPlanView() {
               upgrading to a higher WEBKNOSSOS plan to unlock it or ask your organization's owner to
               upgrade.
             </p>
-            <Link to={`/organizations/${organizationName}`}>Go to Organization Settings</Link>
+            {LinkToOrganizationSettings}
           </>
         }
         type="error"

@@ -282,7 +282,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       ) : null;
     this.state.pricingPlanStatus?.isAlmostExceeded;
 
-    // ToDo enable components below once pricing goes live
     const pricingPlanWarnings =
       this.props.activeOrganization &&
       this.state.pricingPlanStatus?.isAlmostExceeded &&

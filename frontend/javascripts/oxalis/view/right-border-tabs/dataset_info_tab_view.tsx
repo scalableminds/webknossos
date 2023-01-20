@@ -251,7 +251,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
-  getOrganisationLogo(isDatasetViewMode: boolean) {
+  getOrganizationLogo(isDatasetViewMode: boolean) {
     if (!this.props.dataset.logoUrl) {
       return null;
     }
@@ -642,7 +642,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
-        {this.getOrganisationLogo(isDatasetViewMode)}
+        {this.getOrganizationLogo(isDatasetViewMode)}
       </div>
     );
   }

@@ -16,7 +16,6 @@ import {
   getPricingPlanStatus,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { coalesce } from "libs/utils";
 import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
 import {
   PlanAboutToExceedAlert,
@@ -39,15 +38,11 @@ export enum PricingPlanEnum {
   Custom = "Custom",
 }
 
-type StateProps = {
+type Props = {
   organization: APIOrganization;
 };
-type Props = StateProps;
 
 type State = {
-  displayName: string;
-  newUserMailingList: string;
-  pricingPlan: PricingPlanEnum | null | undefined;
   isFetchingData: boolean;
   isDeleting: boolean;
   activeUsersCount: number;
@@ -56,9 +51,6 @@ type State = {
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
   state: State = {
-    displayName: this.props.organization.displayName,
-    newUserMailingList: this.props.organization.newUserMailingList,
-    pricingPlan: this.props.organization.pricingPlan,
     isFetchingData: false,
     isDeleting: false,
     activeUsersCount: 1,
@@ -71,43 +63,13 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     this.fetchData();
   }
 
-  componentDidUpdate(_prevProps: Props, prevState: State) {
-    if (this.formRef.current != null) {
-      // initialValues only works on the first render. Afterwards, values need to be updated
-      // using setFieldsValue
-      if (
-        prevState.displayName.length === 0 &&
-        this.state.displayName.length > 0 &&
-        this.formRef.current.getFieldValue("displayName") !== this.state.displayName
-      ) {
-        this.formRef.current.setFieldsValue({
-          displayName: this.state.displayName,
-        });
-      }
-
-      if (
-        prevState.newUserMailingList.length === 0 &&
-        this.state.newUserMailingList.length > 0 &&
-        this.formRef.current.getFieldValue("newUserMailingList") !== this.state.newUserMailingList
-      ) {
-        this.formRef.current.setFieldsValue({
-          newUserMailingList: this.state.newUserMailingList,
-        });
-      }
-    }
-  }
-
   async fetchData() {
     this.setState({
       isFetchingData: true,
     });
     const [users, pricingPlanStatus] = await Promise.all([getUsers(), getPricingPlanStatus()]);
 
-    const { displayName, newUserMailingList, pricingPlan } = this.props.organization;
     this.setState({
-      displayName,
-      pricingPlan: coalesce(PricingPlanEnum, pricingPlan),
-      newUserMailingList,
       isFetchingData: false,
       pricingPlanStatus,
       activeUsersCount: getActiveUserCount(users),
@@ -129,7 +91,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       title: (
         <p>
           Deleting an organization cannot be undone. Are you certain you want to delete the
-          organization {this.state.displayName}? <br />
+          organization {this.props.organization.displayName}? <br />
           Attention: You will be logged out.
         </p>
       ),
@@ -154,12 +116,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    if (
-      this.state.isFetchingData ||
-      !this.props.organization ||
-      !this.state.pricingPlan ||
-      !this.state.pricingPlanStatus
-    )
+    if (this.state.isFetchingData || !this.props.organization || !this.state.pricingPlanStatus)
       return (
         <div
           className="container"
@@ -186,7 +143,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       >
         <Row style={{ color: "#aaa", fontSize: "12" }}>Your Organization</Row>
         <Row style={{ marginBottom: 20 }}>
-          <h2>{this.state.displayName}</h2>
+          <h2>{this.props.organization.displayName}</h2>
         </Row>
         {this.state.pricingPlanStatus.isExceeded ? (
           <PlanExceededAlert organization={this.props.organization} />
@@ -207,8 +164,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             layout="vertical"
             ref={this.formRef}
             initialValues={{
-              displayName: this.state.displayName,
-              newUserMailingList: this.state.newUserMailingList,
+              displayName: this.props.organization.displayName,
+              newUserMailingList: this.props.organization.newUserMailingList,
             }}
           >
             <FormItem label="Organization ID">
@@ -301,7 +258,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: OxalisState): Props => ({
   organization: enforceActiveOrganization(state.activeOrganization),
 });
 

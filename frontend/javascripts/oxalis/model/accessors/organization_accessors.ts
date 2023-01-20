@@ -7,6 +7,6 @@ export function enforceActiveOrganization(
   if (activeOrganization) {
     return activeOrganization;
   } else {
-    throw new Error(messages["auth.error_no_orga"]);
+    throw new Error(messages["auth.error_no_organization"]);
   }
 }

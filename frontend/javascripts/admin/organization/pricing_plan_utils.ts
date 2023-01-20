@@ -42,18 +42,18 @@ export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
   return user.isAdmin || user.isOrganizationOwner;
 }
 
-const PLAN_TO_RANK: Map<PricingPlanEnum, number> = new Map([
-  [PricingPlanEnum.Basic, 0],
-  [PricingPlanEnum.Team, 1],
-  [PricingPlanEnum.TeamTrial, 1],
-  [PricingPlanEnum.Power, 2],
-  [PricingPlanEnum.PowerTrial, 2],
-  [PricingPlanEnum.Custom, 2],
-]);
+const PLAN_TO_RANK = {
+  [PricingPlanEnum.Basic]: 0,
+  [PricingPlanEnum.Team]: 1,
+  [PricingPlanEnum.TeamTrial]: 1,
+  [PricingPlanEnum.Power]: 2,
+  [PricingPlanEnum.PowerTrial]: 2,
+  [PricingPlanEnum.Custom]: 2,
+};
 
 export function isPricingPlanGreaterEqualThan(
   planA: PricingPlanEnum,
   planB: PricingPlanEnum,
 ): boolean {
-  return PLAN_TO_RANK.get(planA) >= PLAN_TO_RANK.get(planB);
+  return PLAN_TO_RANK[planA] >= PLAN_TO_RANK[planB];
 }

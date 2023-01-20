@@ -36,6 +36,14 @@ export default function getMainFragmentShader(params: Params) {
   return _.template(`
 precision highp float;
 const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
+uniform highp usampler2D lookup_texture;
+uniform highp uint lookup_seed0;
+uniform highp uint lookup_seed1;
+uniform highp uint lookup_seed2;
+uniform highp uint LOOKUP_CUCKOO_ENTRY_CAPACITY;
+uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
+uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
+uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(colorLayerNames, function(name) { %>
   uniform vec3 <%= name %>_color;
@@ -47,7 +55,6 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
   uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
-  uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_alpha;
@@ -172,7 +179,7 @@ void main() {
       // Get grayscale value for <%= name %>
       color_value =
         getMaybeFilteredColorOrFallback(
-          <%= name %>_lookup_texture,
+          lookup_texture,
           <%= formatNumberAsGLSLFloat(layerIndex) %>,
           <%= name %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,

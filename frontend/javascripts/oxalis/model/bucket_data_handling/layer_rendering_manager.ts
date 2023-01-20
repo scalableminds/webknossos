@@ -35,6 +35,7 @@ import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
+import { CuckooTableVec5 } from "./cuckoo_table_vec5";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 
@@ -45,6 +46,8 @@ const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
 );
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
+
+const getLookUpCuckooTable = memoizeOne(() => new CuckooTableVec5(512));
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -159,7 +162,8 @@ export default class LayerRenderingManager {
       bytes,
       elementClass,
     );
-    this.textureBucketManager.setupDataTextures(bytes);
+
+    this.textureBucketManager.setupDataTextures(bytes, getLookUpCuckooTable());
     shaderEditor.addBucketManagers(this.textureBucketManager);
 
     if (this.cube.isSegmentation) {
@@ -174,6 +178,10 @@ export default class LayerRenderingManager {
     }
 
     return this.textureBucketManager.getTextures();
+  }
+
+  getLookUpCuckooTable() {
+    return getLookUpCuckooTable();
   }
 
   // Returns the new anchorPoints if they are new
@@ -255,7 +263,7 @@ export default class LayerRenderingManager {
         );
       }
 
-      this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
+      // this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
       pickingPromise.then(
         (buffer) => {
           this.cube.markBucketsAsUnneeded();

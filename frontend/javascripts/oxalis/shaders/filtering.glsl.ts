@@ -4,7 +4,7 @@ export const getBilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
     vec4 getBilinearColorFor(
-      sampler2D lookUpTexture,
+      highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
@@ -35,7 +35,7 @@ export const getTrilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
     vec4 getTrilinearColorFor(
-      sampler2D lookUpTexture,
+      highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
@@ -79,7 +79,7 @@ const getMaybeFilteredColor: ShaderModule = {
   requirements: [getColorForCoords, getBilinearColorFor, getTrilinearColorFor],
   code: `
     vec4 getMaybeFilteredColor(
-      sampler2D lookUpTexture,
+      highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
@@ -104,7 +104,7 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
   requirements: [getMaybeFilteredColor],
   code: `
     vec4 getMaybeFilteredColorOrFallback(
-      sampler2D lookUpTexture,
+      highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
@@ -123,7 +123,7 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
     }
 
     vec4[2] getSegmentIdOrFallback(
-      sampler2D lookUpTexture,
+      highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,

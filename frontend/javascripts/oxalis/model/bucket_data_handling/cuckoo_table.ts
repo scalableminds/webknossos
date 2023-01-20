@@ -27,6 +27,7 @@ export class CuckooTable {
     this.textureWidth = textureWidth;
     this._texture = createUpdatableTexture(
       textureWidth,
+      textureWidth,
       TEXTURE_CHANNEL_COUNT,
       THREE.UnsignedIntType,
       getRenderer(),
@@ -61,6 +62,7 @@ export class CuckooTable {
       return cachedNullTexture;
     }
     cachedNullTexture = createUpdatableTexture(
+      0,
       0,
       TEXTURE_CHANNEL_COUNT,
       THREE.UnsignedIntType,

@@ -1,4 +1,5 @@
 import { getResolutionFactors, getRelativeCoords } from "oxalis/shaders/coords.glsl";
+import { convertCellIdToRGB } from "./segmentation.glsl";
 import type { ShaderModule } from "./shader_module_system";
 export const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
@@ -36,6 +37,15 @@ export const getRgbaAtIndex: ShaderModule = {
             (floor(finalPosY) + 0.5) / textureWidth
           )
         ).rgba;
+    }
+
+    uvec4 getUnsignedRgbaAtIndex(highp usampler2D dtexture, float textureWidth, float idx) {
+      float finalPosX = mod(idx, textureWidth);
+      float finalPosY = div(idx, textureWidth);
+
+      return texelFetch(
+        dtexture, ivec2(finalPosX, finalPosY), 0
+      ).rgba;
     }
   `,
 };
@@ -90,8 +100,64 @@ export const getColorForCoords: ShaderModule = {
     getResolutionFactors,
   ],
   code: `
+
+    // todo: DRY this with hashCombine (currently only due to import problems here).
+    highp uint hashCombine2(highp uint state, highp uint value) {
+      // The used constants are written in decimal, because
+      // the parser tests don't support unsigned int hex notation
+      // (yet).
+      // See this issue: https://github.com/ShaderFrog/glsl-parser/issues/1
+      // 3432918353u == 0xcc9e2d51u
+      //  461845907u == 0x1b873593u
+      // 3864292196u == 0xe6546b64u
+
+      value *= 3432918353u;
+      value = (value << 15u) | (value >> 17u);
+      value *= 461845907u;
+      state ^= value;
+      state = (state << 13u) | (state >> 19u);
+      state = (state * 5u) + 3864292196u;
+      return state;
+    }
+    vec2 attemptLookUpLookUp(uint layerIdx, uvec4 bucketAddress, uint seed) {
+      highp uint h0 = (
+        hashCombine2(
+          hashCombine2(
+            hashCombine2(
+              hashCombine2(
+                hashCombine2(seed, layerIdx),
+                bucketAddress.x
+              ),
+              bucketAddress.y
+            ),
+            bucketAddress.z
+          ),
+          bucketAddress.a
+        )
+      ) % LOOKUP_CUCKOO_ENTRY_CAPACITY;
+      h0 = uint(h0 * LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY / LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL);
+      highp uint x = h0 % LOOKUP_CUCKOO_TWIDTH;
+      highp uint y = h0 / LOOKUP_CUCKOO_TWIDTH;
+
+      uvec4 entryA = texelFetch(lookup_texture, ivec2(x, y), 0);
+      uvec4 expectedA = uvec4(layerIdx, bucketAddress.xyz);
+
+      if (entryA != expectedA) {
+        return vec2(-1.);
+      }
+
+      uvec4 entryB = texelFetch(lookup_texture, ivec2(x + uint(1), y), 0);
+
+      if (entryB.x != bucketAddress.a) {
+        return vec2(-1.);
+      }
+
+      return vec2(entryB.yz);
+    }
+
+
     vec4[2] getColorForCoords64(
-      sampler2D lookUpTexture,
+      highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
@@ -104,35 +170,53 @@ export const getColorForCoords: ShaderModule = {
       // Will hold [highValue, lowValue];
       vec4 returnValue[2];
 
-      vec3 coords = floor(getRelativeCoords(worldPositionUVW, layerIndex, activeMagIndices[int(layerIndex)]));
+      vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, activeMagIndices[int(layerIndex)]));
       vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
       // Check needs to be reworked. Maybe use cuckoo hashing?
-      if (relativeBucketPosition.x > addressSpaceDimensions.x ||
-         relativeBucketPosition.y > addressSpaceDimensions.y ||
-         relativeBucketPosition.z > addressSpaceDimensions.z ||
-         relativeBucketPosition.x < 0.0 ||
-         relativeBucketPosition.y < 0.0 ||
-         relativeBucketPosition.z < 0.0) {
-       // In theory, the current magnification should always be selected
-       // so that we won't have to address data outside of the addresSpaceDimensions.
-       // Nevertheless, we explicitly guard against this situation here to avoid
-       // rendering wrong data.
-       returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
-       return returnValue;
-      }
+      // if (relativeBucketPosition.x > addressSpaceDimensions.x ||
+      //    relativeBucketPosition.y > addressSpaceDimensions.y ||
+      //    relativeBucketPosition.z > addressSpaceDimensions.z ||
+      //    relativeBucketPosition.x < 0.0 ||
+      //    relativeBucketPosition.y < 0.0 ||
+      //    relativeBucketPosition.z < 0.0) {
+      //  // In theory, the current magnification should always be selected
+      //  // so that we won't have to address data outside of the addresSpaceDimensions.
+      //  // Nevertheless, we explicitly guard against this situation here to avoid
+      //  // rendering wrong data.
+      //  returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
+      //  return returnValue;
+      // }
 
       float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
 
-      vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
-        lookUpTexture,
-        l_texture_width,
-        bucketIdx
-      ).rg;
+      // uvec2 bucketAddressWithZoomStep = getUnsignedRgbaAtIndex(
+      //   lookUpTexture,
+      //   l_texture_width,
+      //   bucketIdx
+      // ).rg;
 
-      float bucketAddress = bucketAddressWithZoomStep.x;
-      float renderedZoomStep = bucketAddressWithZoomStep.y;
+      uint activeMagIdx = uint(activeMagIndices[int(layerIndex)]);
+
+
+      vec2 bucketAddressWithZoomStep = attemptLookUpLookUp(uint(layerIndex), uvec4(uvec3(relativeBucketPosition), activeMagIdx), lookup_seed0);
+      if (bucketAddressWithZoomStep.r == -1.) {
+        bucketAddressWithZoomStep = attemptLookUpLookUp(uint(layerIndex), uvec4(uvec3(relativeBucketPosition), activeMagIdx), lookup_seed1);
+      }
+      if (bucketAddressWithZoomStep.r == -1.) {
+        bucketAddressWithZoomStep = attemptLookUpLookUp(uint(layerIndex), uvec4(uvec3(relativeBucketPosition), activeMagIdx), lookup_seed2);
+      }
+      if (bucketAddressWithZoomStep.r != -1.) {
+      }
+      float bucketAddress = float(bucketAddressWithZoomStep.x);
+      float renderedZoomStep = float(bucketAddressWithZoomStep.y);
+
+
+      // if (bucketAddress == -1.) {
+      //   returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
+      // }
+      // return returnValue;
 
       if (bucketAddress == -2.0) {
         // The bucket is out of bounds. Render black
@@ -279,7 +363,7 @@ export const getColorForCoords: ShaderModule = {
     }
 
     vec4 getColorForCoords(
-      sampler2D lookUpTexture,
+      highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,

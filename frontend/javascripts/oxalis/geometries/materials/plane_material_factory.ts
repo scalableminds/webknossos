@@ -96,10 +96,8 @@ class PlaneMaterialFactory {
   isOrthogonal: boolean;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'material' has no initializer and is not ... Remove this comment to see the full error message
   material: THREE.ShaderMaterial;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
-  uniforms: Uniforms;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'attributes' has no initializer and is no... Remove this comment to see the full error message
-  attributes: Record<string, any>;
+  uniforms: Uniforms = {};
+  attributes: Record<string, any> = {};
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
@@ -196,6 +194,18 @@ class PlaneMaterialFactory {
       addressSpaceDimensions: {
         value: new THREE.Vector3(...addressSpaceDimensions),
       },
+
+      lookup_seed0: { value: 0 },
+      lookup_seed1: { value: 0 },
+      lookup_seed2: { value: 0 },
+
+      LOOKUP_CUCKOO_ENTRY_CAPACITY: { value: 0 },
+      LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY: { value: 0 },
+      LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL: { value: 0 },
+      LOOKUP_CUCKOO_TWIDTH: { value: 0 },
+      // todo: needed?
+      // custom_color_texture: { value: CuckooTable.getNullTexture() },
+
       // The hovered segment id is always stored as a 64-bit (8 byte)
       // value which is why it is spread over two uniforms,
       // named as `-High` and `-Low`.
@@ -270,10 +280,14 @@ class PlaneMaterialFactory {
   }
 
   attachTextures(): void {
+    let sharedLookUpTexture;
+    let sharedLookUpCuckooTable;
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
+      sharedLookUpTexture = lookUpTexture;
+      sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getLookUpCuckooTable();
       const layerName = sanitizeName(name);
       this.uniforms[`${layerName}_textures`] = {
         value: dataTextures,
@@ -281,10 +295,34 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
-      this.uniforms[`${layerName}_lookup_texture`] = {
-        value: lookUpTexture,
-      };
     }
+
+    if (!sharedLookUpCuckooTable) {
+      throw new Error("Empty layer list at unexpected point.");
+    }
+
+    this.uniforms.lookup_texture = {
+      value: sharedLookUpTexture,
+    };
+
+    this.unsubscribeSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
+      console.log("seeds for shared look up table", seeds);
+      seeds.forEach((seed, idx) => {
+        this.uniforms[`lookup_seed${idx}`] = {
+          value: seed,
+        };
+      });
+    });
+    const {
+      CUCKOO_ENTRY_CAPACITY,
+      CUCKOO_ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_TEXEL,
+      CUCKOO_TWIDTH,
+    } = sharedLookUpCuckooTable.getUniformValues();
+    this.uniforms.LOOKUP_CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+    this.uniforms.LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+    this.uniforms.LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+    this.uniforms.LOOKUP_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
 
     this.attachSegmentationMappingTextures();
     this.attachSegmentationColorTexture();

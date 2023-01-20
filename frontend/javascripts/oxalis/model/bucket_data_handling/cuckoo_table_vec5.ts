@@ -9,7 +9,8 @@ type Key = Vector5; // [layerIdx, x, y, z, requestedMagIdx]
 type Value = Vector2; // [address, actualMagIdx]
 type Entry = [Vector5, Vector2];
 
-const ELEMENTS_PER_ENTRY = 6;
+// Actually, it's only 7 but for alignment purposes we chose 8.
+const ELEMENTS_PER_ENTRY = 8;
 const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
 const EMPTY_KEY_VALUE = 2 ** 32 - 1;
@@ -25,7 +26,7 @@ export type SeedSubscriberFn = (seeds: number[]) => void;
 
 let cachedNullTexture: UpdatableTexture | undefined;
 
-export class CuckooTable {
+export class CuckooTableVec5 {
   entryCapacity: number;
   table!: Uint32Array;
   seeds!: number[];
@@ -36,6 +37,7 @@ export class CuckooTable {
   constructor(textureWidth: number) {
     this.textureWidth = textureWidth;
     this._texture = createUpdatableTexture(
+      textureWidth,
       textureWidth,
       TEXTURE_CHANNEL_COUNT,
       THREE.UnsignedIntType,
@@ -58,12 +60,12 @@ export class CuckooTable {
     this.flushTableToTexture();
   }
 
-  static fromCapacity(requestedCapacity: number): CuckooTable {
+  static fromCapacity(requestedCapacity: number): CuckooTableVec5 {
     const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
     const textureWidth = Math.ceil(
       Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
     );
-    return new CuckooTable(textureWidth);
+    return new CuckooTableVec5(textureWidth);
   }
 
   static getNullTexture(): UpdatableTexture {
@@ -71,6 +73,7 @@ export class CuckooTable {
       return cachedNullTexture;
     }
     cachedNullTexture = createUpdatableTexture(
+      0,
       0,
       TEXTURE_CHANNEL_COUNT,
       THREE.UnsignedIntType,
@@ -324,6 +327,9 @@ export class CuckooTable {
     this.table[offset + 5] = value[0];
     this.table[offset + 6] = value[1];
 
+    // const x = texelOffset % this.textureWidth;
+    // const y = Math.floor(texelOffset / this.textureWidth);
+
     if (!isRehashing) {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
@@ -331,7 +337,7 @@ export class CuckooTable {
         this.table.subarray(offset, offset + ELEMENTS_PER_ENTRY),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),
-        1,
+        ELEMENTS_PER_ENTRY / TEXTURE_CHANNEL_COUNT,
         1,
       );
     }

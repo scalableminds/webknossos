@@ -52,8 +52,6 @@ export const convertCellIdToRGB: ShaderModule = {
 
       return vec3(customEntry.gba) / 255.;
     }
-
-
     vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
@@ -273,7 +271,7 @@ export const getSegmentationId: ShaderModule = {
     vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
       vec4[2] volume_color =
         getSegmentIdOrFallback(
-          <%= segmentationName %>_lookup_texture,
+          lookup_texture,
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,

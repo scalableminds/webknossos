@@ -146,6 +146,7 @@ export default function DatasetCollectionContextProvider({
 
   async function fetchDatasets(_options: Options = {}): Promise<void> {
     datasetsInFolderQuery.refetch();
+    datasetSearchQuery.refetch();
   }
 
   async function reloadDataset(
@@ -224,6 +225,7 @@ export default function DatasetCollectionContextProvider({
         setIsChecking(false);
 
         datasetsInFolderQuery.refetch();
+        datasetSearchQuery.refetch();
       },
       selectedDatasets,
       setSelectedDatasets,

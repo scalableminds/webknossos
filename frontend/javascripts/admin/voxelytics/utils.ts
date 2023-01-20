@@ -1,7 +1,8 @@
+import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import { message } from "antd";
 import { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
-import { VoxelyticsRunState } from "types/api_flow_types";
+import { VoxelyticsLogLine, VoxelyticsRunState } from "types/api_flow_types";
 
 export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
 
@@ -62,4 +63,30 @@ export function isObjectEmpty(obj: Record<string, any>) {
 export async function copyToClipboad(text: string) {
   await navigator.clipboard.writeText(text);
   message.success("Copied to clipboard");
+}
+
+export async function loadAllLogs(
+  runId: string,
+  taskName: string | null,
+  minLevel: string,
+  startTime: Date,
+  endTime: Date,
+  batchSize: number = 5000,
+): Promise<Array<VoxelyticsLogLine>> {
+  let buffer: Array<VoxelyticsLogLine> = [];
+  let currentEndTime = endTime;
+  while (true) {
+    const batch = await getVoxelyticsLogs(
+      runId,
+      taskName,
+      minLevel,
+      startTime,
+      currentEndTime,
+      batchSize,
+    );
+    if (batch.length === 0) break;
+    buffer = batch.concat(buffer);
+    currentEndTime = new Date(batch[batch.length - 1].timestamp - 1);
+  }
+  return buffer;
 }

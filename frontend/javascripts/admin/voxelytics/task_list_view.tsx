@@ -47,6 +47,7 @@ import {
 import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
+import { loadAllLogs } from "./utils";
 
 const { Panel } = Collapse;
 const { Search } = Input;
@@ -370,10 +371,8 @@ export default function TaskListView({
         message.error("Please select a specific run for log download.");
         return;
       }
-      const logText = (await getVoxelyticsLogs(runId, null, "DEBUG"))
-        .map((line: any) =>
-          formatLog(line, { timestamps: true, pid: true, level: true, logger: true }),
-        )
+      const logText = (await loadAllLogs(runId, null, "DEBUG", new Date(0), new Date()))
+        .map((line) => formatLog(line, { timestamps: true, pid: true, level: true, logger: true }))
         .join("\n");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([logText], { type: "plain/text" }));

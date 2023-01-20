@@ -64,6 +64,7 @@ import type {
   ShortLink,
   VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
+  VoxelyticsLogLine,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -2400,8 +2401,17 @@ export function getVoxelyticsLogs(
   runId: string,
   taskName: string | null,
   minLevel: string,
-): Promise<Array<{}>> {
-  const params = new URLSearchParams({ runId, minLevel });
+  startTime: Date,
+  endTime: Date,
+  limit: number,
+): Promise<Array<VoxelyticsLogLine>> {
+  const params = new URLSearchParams({
+    runId,
+    minLevel,
+    startTimestamp: startTime.getTime().toString(),
+    endTimestamp: endTime.getTime().toString(),
+    limit: limit.toString(),
+  });
   if (taskName != null) {
     params.append("taskName", taskName);
   }

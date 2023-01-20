@@ -1,6 +1,6 @@
 import React, { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { debounce } from "lodash";
-import { Button, Select, Switch } from "antd";
+import { Button, message, Select, Switch } from "antd";
 import chalk from "chalk";
 import Ansi from "ansi-to-react";
 import classnames from "classnames";
@@ -9,36 +9,37 @@ import { AutoSizer, List } from "react-virtualized";
 import { usePolling } from "libs/react_hooks";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import { Result, VX_POLLING_INTERVAL } from "./utils";
+import { loadAllLogs, Result, VX_POLLING_INTERVAL } from "./utils";
+import { VoxelyticsLogLine } from "types/api_flow_types";
+import { LOG_LEVELS } from "oxalis/constants";
 
-type LogResult = Result<Array<any>>;
-
-const LOG_LEVELS = ["NOTSET", "DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"];
+type LogResult = Result<Array<VoxelyticsLogLine>>;
 
 // These constants need to be in sync with the variables in main.less
 const LOG_FONT = "12px 'RobotoMono', Monaco, 'Courier New', monospace";
 const LOG_LINE_HEIGHT = 19;
 const LOG_LINE_NUMBER_WIDTH = 60;
+const LOG_LINE_LIMIT = 1000;
 
 export function formatLog(
-  logEntry: any,
+  logEntry: VoxelyticsLogLine,
   options: { timestamps: boolean; pid: boolean; level: boolean; logger: boolean },
 ): string {
   chalk.level = 3;
   const parts = [];
   if (options.timestamps) {
-    parts.push(chalk.green(logEntry._source["@timestamp"]));
+    parts.push(chalk.green(new Date(logEntry.timestamp).toISOString()));
   }
   if (options.pid) {
-    parts.push(chalk.gray(`PID=${String(logEntry._source.pid).padStart(5, "0")}`));
+    parts.push(chalk.gray(`PID=${String(logEntry.pid).padStart(5, "0")}`));
   }
   if (options.level) {
-    parts.push(chalk.bold.gray(logEntry._source.level.padEnd(8, " ")));
+    parts.push(chalk.bold.gray(logEntry.level.padEnd(8, " ")));
   }
   if (options.logger) {
-    parts.push(chalk.magenta(logEntry._source.vx.logger_name));
+    parts.push(chalk.magenta(logEntry.logger_name));
   }
-  parts.push(logEntry._source.message);
+  parts.push(logEntry.message);
 
   return parts.join(" ");
 }
@@ -143,13 +144,17 @@ export default function LogTab({
   runId,
   taskName,
   isRunning,
+  beginTime,
+  endTime,
 }: {
   workflowHash: string;
   runId: string;
   taskName: string;
   isRunning: boolean;
+  beginTime: Date | null;
+  endTime: Date | null;
 }) {
-  const [showTimestamps, setShowTimestamps] = useState(false);
+  const [showTimestamps, setShowTimestamps] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [level, setLevel] = useState("DEBUG");
@@ -159,7 +164,14 @@ export default function LogTab({
   async function loadLog() {
     setIsLoading(true);
     try {
-      const log = await getVoxelyticsLogs(runId, taskName, level);
+      const log = await getVoxelyticsLogs(
+        runId,
+        taskName,
+        level,
+        beginTime ?? new Date(0),
+        endTime ?? new Date(),
+        LOG_LINE_LIMIT,
+      );
       setLogResult({ type: "SUCCESS", value: log });
     } catch {
       setLogResult({ type: "ERROR" });
@@ -192,6 +204,24 @@ export default function LogTab({
     }
   }, [logResult, showTimestamps]);
 
+  async function downloadFullLog() {
+    try {
+      const logText = (
+        await loadAllLogs(runId, taskName, level, beginTime ?? new Date(0), endTime ?? new Date())
+      )
+        .map((line: any) =>
+          formatLog(line, { timestamps: true, pid: true, level: true, logger: true }),
+        )
+        .join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([logText], { type: "plain/text" }));
+      a.download = `${workflowHash}_${runId}_${taskName}.log`;
+      a.click();
+    } catch (error) {
+      message.error("Could not fetch log for download.");
+    }
+  }
+
   return (
     <div className={classnames("log-tab", { "log-tab-fullscreen": isFullscreen })}>
       <div className="log-tab-header">
@@ -216,13 +246,12 @@ export default function LogTab({
           />{" "}
           Fullscreen
         </span>
-
         <Button onClick={() => loadLog()}>
           <SyncOutlined spin={isLoading} /> Refresh
         </Button>
-
+        <Button onClick={downloadFullLog}>Download</Button>
         <Select onChange={(value) => setLevel(value)} value={level} style={{ marginLeft: -1 }}>
-          {LOG_LEVELS.map((_level) => (
+          {Object.values(LOG_LEVELS).map((_level) => (
             <Select.Option value={_level} key={_level}>
               {_level}
             </Select.Option>

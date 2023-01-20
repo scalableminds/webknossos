@@ -214,6 +214,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.elasticsearch.startupTimeout")
     }
 
+    object Loki {
+      val uri: String = get[String]("voxelytics.loki.uri")
+      val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.loki.startupTimeout")
+    }
+
     val children = List(Elasticsearch)
   }
 

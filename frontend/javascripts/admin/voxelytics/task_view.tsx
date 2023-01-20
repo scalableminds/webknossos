@@ -56,6 +56,7 @@ function TaskView({
         VoxelyticsRunState.RUNNING,
         VoxelyticsRunState.CANCELLED,
         VoxelyticsRunState.FAILED,
+        VoxelyticsRunState.STALE,
       ].includes(taskInfo.state) && (
         <div style={{ display: "flex", flexDirection: "row" }}>
           Chunk Progress:
@@ -173,6 +174,8 @@ function TaskView({
                 runId={runId}
                 taskName={taskInfo.taskName}
                 isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
+                beginTime={taskInfo.beginTime}
+                endTime={taskInfo.endTime}
               />
             ) : (
               <p>Please select a specific run.</p>
@@ -212,7 +215,13 @@ function renderInputs(
   // (in that case, renderInputs is called recursively).
   return Object.entries(inputs).map(([key, linkLabelOrDict]) => {
     const sourceTaskName = getTaskProducerOfInput(ingoingEdges, prevKeys.concat([key]));
-    if (typeof linkLabelOrDict === "string") {
+    if (linkLabelOrDict == null) {
+      return (
+        <li key={key}>
+          <b>{key}:</b> -
+        </li>
+      );
+    } else if (typeof linkLabelOrDict === "string") {
       const linkLabel = linkLabelOrDict;
       return (
         <li key={key}>

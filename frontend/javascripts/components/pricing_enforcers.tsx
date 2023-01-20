@@ -108,7 +108,7 @@ export function PageUnavailableForYourPlanView() {
               upgrading to a higher WEBKNOSSOS plan to unlock it or ask your organization's owner to
               upgrade.
             </p>
-            {LinkToOrganizationSettings}
+            {linkToOrganizationSettings}
           </>
         }
         type="error"

@@ -11,7 +11,7 @@ import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
 import net.liftweb.common.Full
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.duration._
@@ -56,6 +56,9 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         .flatMap(result =>
           if (Status.isSuccessful(result.status)) {
             Fox.successful(true)
+          } else if (result.status >= 500 && result.status < 600) {
+            logger.debug(s"Loki status: ${result.status}")
+            Fox.successful(false)
           } else {
             Fox.failure(s"Unexpected error code from Loki ${result.status}.")
         })
@@ -78,7 +81,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   }
 
   def queryLogs(runName: String,
-                organizationName: String,
+                organizationId: ObjectId,
                 taskName: Option[String],
                 minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                 startTime: Instant,
@@ -92,7 +95,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
       Some(s"""level=~"(${levels.mkString("|")})"""")
     ).flatten.mkString(" | ")
     val logQL =
-      s"""{vx_run_name="$runName",wk_org="$organizationName",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
+      s"""{vx_run_name="$runName",wk_org="${organizationId.id}",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
 
     val queryString =
       List("query" -> logQL,
@@ -120,23 +123,18 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                     "timestamp" -> Instant(value._1.substring(0, value._1.length - 6).toLong)))))
   }
 
-  def bulkInsert(logEntries: List[JsValue]): Fox[Unit] =
+  def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId): Fox[Unit] =
     if (logEntries.nonEmpty) {
       val streams = logEntries
         .groupBy(
-          entry =>
-            LokiLabel(
-              (entry \ "vx" \ "workflow_hash").as[String],
-              (entry \ "vx" \ "run_name").as[String],
-              (entry \ "vx" \ "wk_url").as[String],
-              (entry \ "vx" \ "wk_org").as[String]
-          ))
+          entry => ((entry \ "vx" \ "workflow_hash").as[String], (entry \ "vx" \ "run_name").as[String])
+        )
         .map(kv =>
           Json.obj(
-            "stream" -> Json.obj("vx_workflow_hash" -> kv._1.workflow_hash,
-                                 "vx_run_name" -> kv._1.run_name,
-                                 "wk_url" -> kv._1.wk_url,
-                                 "wk_org" -> kv._1.wk_org),
+            "stream" -> Json.obj("vx_workflow_hash" -> kv._1._1,
+                                 "vx_run_name" -> kv._1._2,
+                                 "wk_url" -> wkConf.Http.uri,
+                                 "wk_org" -> organizationId.id),
             "values" -> JsArray(kv._2.map(entry => {
               val timestamp = java.time.Instant.parse((entry \ "@timestamp").as[String]).toEpochMilli
               Json.arr(

@@ -42,26 +42,18 @@ export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
   return user.isAdmin || user.isOrganizationOwner;
 }
 
-export function isPricingPlanGreaterEqualThan(planA: PricingPlanEnum, planB: PricingPlanEnum) {
-  switch (planA) {
-    case PricingPlanEnum.Power:
-    case PricingPlanEnum.PowerTrial:
-    case PricingPlanEnum.Custom:
-      return true;
+const PLAN_TO_RANK: Map<PricingPlanEnum, number> = new Map([
+  [PricingPlanEnum.Basic, 0],
+  [PricingPlanEnum.Team, 1],
+  [PricingPlanEnum.TeamTrial, 1],
+  [PricingPlanEnum.Power, 2],
+  [PricingPlanEnum.PowerTrial, 2],
+  [PricingPlanEnum.Custom, 2],
+]);
 
-    case PricingPlanEnum.Team:
-    case PricingPlanEnum.TeamTrial:
-      switch (planB) {
-        case PricingPlanEnum.Power:
-        case PricingPlanEnum.PowerTrial:
-        case PricingPlanEnum.Custom:
-          return false;
-        default:
-          return true;
-      }
-
-    case PricingPlanEnum.Basic:
-    default:
-      return false;
-  }
+export function isPricingPlanGreaterEqualThan(
+  planA: PricingPlanEnum,
+  planB: PricingPlanEnum,
+): boolean {
+  return PLAN_TO_RANK.get(planA) >= PLAN_TO_RANK.get(planB);
 }

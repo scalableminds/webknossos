@@ -258,6 +258,20 @@ export default function LogTab({
           ))}
         </Select>
       </div>
+      {logText.length >= LOG_LINE_LIMIT && (
+        <p className="log-tab-warning">
+          Only the {LOG_LINE_LIMIT} latest log lines are shown.{" "}
+          <a
+            onClick={(event) => {
+              event.preventDefault();
+              downloadFullLog();
+            }}
+          >
+            Click download
+          </a>{" "}
+          for the full log.
+        </p>
+      )}
       <div className="log-tab-content">
         <AutoSizer>
           {({ height, width }) => <LogContent logText={logText} height={height} width={width} />}

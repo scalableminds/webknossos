@@ -24,11 +24,11 @@ type Props = {
   destroy: () => void;
 };
 type State = {
-  visible: boolean;
+  isOpen: boolean;
 };
 export default class RecommendedConfigurationModal extends React.Component<Props, State> {
   state: State = {
-    visible: true,
+    isOpen: true,
   };
 
   handleOk = () => {
@@ -38,7 +38,7 @@ export default class RecommendedConfigurationModal extends React.Component<Props
 
   hide = () => {
     this.setState({
-      visible: false,
+      isOpen: false,
     });
     this.props.destroy();
   };
@@ -56,7 +56,7 @@ export default class RecommendedConfigurationModal extends React.Component<Props
     return (
       <Modal
         maskClosable={false}
-        visible={this.state.visible}
+        open={this.state.isOpen}
         title="Recommended Configuration"
         okText="Accept"
         cancelText="Decline"

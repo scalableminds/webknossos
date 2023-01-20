@@ -27,7 +27,7 @@ type ProjectInfo = {
   label: string;
 };
 type OwnProps = {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => void;
 };
 type StateProps = {
@@ -232,7 +232,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     return (
       <Modal
         title="Merge"
-        visible={this.props.isVisible}
+        open={this.props.isOpen}
         onCancel={this.props.onOk}
         className="merge-modal"
         width={800}

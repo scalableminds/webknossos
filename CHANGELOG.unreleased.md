@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Changed branding of WEBKNOSSOS including a new logo, new primary colors, and UPPERCASE name. [#6739](https://github.com/scalableminds/webknossos/pull/6739)
 - Improves performance for ingesting Voxelytics reporting data. [#6732](https://github.com/scalableminds/webknossos/pull/6732)
 - Implements statistics from combined worflow runs in the Voxelytics reporting. [#6732](https://github.com/scalableminds/webknossos/pull/6732)
+- The dataset list route `GET api/datasets` no longer respects the isEditable filter. [#6759](https://github.com/scalableminds/webknossos/pull/6759)
 
 ### Fixed
 - Fixed node selection and context menu for node ids greater than 130813. [#6724](https://github.com/scalableminds/webknossos/pull/6724) and [#6731](https://github.com/scalableminds/webknossos/pull/6731)
@@ -32,7 +33,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed incorrect loading of precomputed meshes from mesh files that were computed for a specific mapping. [#6771](https://github.com/scalableminds/webknossos/pull/6771)
 - Fixed a bug where remote datasets without authentication could not be explored. [#6764](https://github.com/scalableminds/webknossos/pull/6764)
 - Fixed deprecation warnings for antd <Modal> props. [#6765](https://github.com/scalableminds/webknossos/pull/6765)
+- Fixed a bug where the dataset folders view would not list public datasets if the requesting user could not also access the dataset for other reasons, like being admin. [#6759](https://github.com/scalableminds/webknossos/pull/6759)
 
 ### Removed
 
 ### Breaking Changes
+- The dataset list route `GET api/datasets` no longer respects the isEditable filter. [#6759](https://github.com/scalableminds/webknossos/pull/6759)

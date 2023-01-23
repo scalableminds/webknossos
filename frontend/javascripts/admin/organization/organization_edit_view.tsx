@@ -1,4 +1,5 @@
-import { RouteComponentProps, withRouter } from "react-router-dom";
+import React from "react";
+import { connect } from "react-redux";
 import { Form, Button, Card, Input, Row, FormInstance, Col, Skeleton } from "antd";
 import {
   MailOutlined,
@@ -7,17 +8,14 @@ import {
   SaveOutlined,
   IdcardOutlined,
 } from "@ant-design/icons";
-import React from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import {
-  getOrganization,
   deleteOrganization,
   updateOrganization,
   getUsers,
   getPricingPlanStatus,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { coalesce } from "libs/utils";
 import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
 import {
   PlanAboutToExceedAlert,
@@ -26,7 +24,9 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 import { getActiveUserCount } from "./pricing_plan_utils";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 export enum PricingPlanEnum {
@@ -37,80 +37,40 @@ export enum PricingPlanEnum {
   PowerTrial = "Power_Trial",
   Custom = "Custom",
 }
+
 type Props = {
-  organizationName: string;
+  organization: APIOrganization;
 };
+
 type State = {
-  displayName: string;
-  newUserMailingList: string;
-  pricingPlan: PricingPlanEnum | null | undefined;
   isFetchingData: boolean;
   isDeleting: boolean;
-  organization: APIOrganization | null;
   activeUsersCount: number;
   pricingPlanStatus: APIPricingPlanStatus | null;
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
   state: State = {
-    displayName: "",
-    newUserMailingList: "",
-    pricingPlan: null,
     isFetchingData: false,
     isDeleting: false,
-    organization: null,
     activeUsersCount: 1,
     pricingPlanStatus: null,
   };
+
   formRef = React.createRef<FormInstance>();
 
   componentDidMount() {
     this.fetchData();
   }
 
-  componentDidUpdate(_prevProps: Props, prevState: State) {
-    if (this.formRef.current != null) {
-      // initialValues only works on the first render. Afterwards, values need to be updated
-      // using setFieldsValue
-      if (
-        prevState.displayName.length === 0 &&
-        this.state.displayName.length > 0 &&
-        this.formRef.current.getFieldValue("displayName") !== this.state.displayName
-      ) {
-        this.formRef.current.setFieldsValue({
-          displayName: this.state.displayName,
-        });
-      }
-
-      if (
-        prevState.newUserMailingList.length === 0 &&
-        this.state.newUserMailingList.length > 0 &&
-        this.formRef.current.getFieldValue("newUserMailingList") !== this.state.newUserMailingList
-      ) {
-        this.formRef.current.setFieldsValue({
-          newUserMailingList: this.state.newUserMailingList,
-        });
-      }
-    }
-  }
-
   async fetchData() {
     this.setState({
       isFetchingData: true,
     });
-    const [organization, users, pricingPlanStatus] = await Promise.all([
-      getOrganization(this.props.organizationName),
-      getUsers(),
-      getPricingPlanStatus(),
-    ]);
+    const [users, pricingPlanStatus] = await Promise.all([getUsers(), getPricingPlanStatus()]);
 
-    const { displayName, newUserMailingList, pricingPlan } = organization;
     this.setState({
-      displayName,
-      pricingPlan: coalesce(PricingPlanEnum, pricingPlan),
-      newUserMailingList,
       isFetchingData: false,
-      organization,
       pricingPlanStatus,
       activeUsersCount: getActiveUserCount(users),
     });
@@ -119,7 +79,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   onFinish = async (formValues) => {
     await updateOrganization(
-      this.props.organizationName,
+      this.props.organization.name,
       formValues.displayName,
       formValues.newUserMailingList,
     );
@@ -131,7 +91,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       title: (
         <p>
           Deleting an organization cannot be undone. Are you certain you want to delete the
-          organization {this.state.displayName}? <br />
+          organization {this.props.organization.displayName}? <br />
           Attention: You will be logged out.
         </p>
       ),
@@ -142,7 +102,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       this.setState({
         isDeleting: true,
       });
-      await deleteOrganization(this.props.organizationName);
+      await deleteOrganization(this.props.organization.name);
       this.setState({
         isDeleting: false,
       });
@@ -151,17 +111,12 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   };
 
   handleCopyNameButtonClicked = async (): Promise<void> => {
-    await navigator.clipboard.writeText(this.props.organizationName);
+    await navigator.clipboard.writeText(this.props.organization.name);
     Toast.success("Copied organization name to the clipboard.");
   };
 
   render() {
-    if (
-      this.state.isFetchingData ||
-      !this.state.organization ||
-      !this.state.pricingPlan ||
-      !this.state.pricingPlanStatus
-    )
+    if (this.state.isFetchingData || !this.props.organization || !this.state.pricingPlanStatus)
       return (
         <div
           className="container"
@@ -188,36 +143,36 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       >
         <Row style={{ color: "#aaa", fontSize: "12" }}>Your Organization</Row>
         <Row style={{ marginBottom: 20 }}>
-          <h2>{this.state.displayName}</h2>
+          <h2>{this.props.organization.displayName}</h2>
         </Row>
         {this.state.pricingPlanStatus.isExceeded ? (
-          <PlanExceededAlert organization={this.state.organization} />
+          <PlanExceededAlert organization={this.props.organization} />
         ) : null}
         {this.state.pricingPlanStatus.isAlmostExceeded &&
         !this.state.pricingPlanStatus.isExceeded ? (
-          <PlanAboutToExceedAlert organization={this.state.organization} />
+          <PlanAboutToExceedAlert organization={this.props.organization} />
         ) : null}
         <PlanDashboardCard
-          organization={this.state.organization}
+          organization={this.props.organization}
           activeUsersCount={this.state.activeUsersCount}
         />
-        <PlanExpirationCard organization={this.state.organization} />
-        <PlanUpgradeCard organization={this.state.organization} />
+        <PlanExpirationCard organization={this.props.organization} />
+        <PlanUpgradeCard organization={this.props.organization} />
         <Card title="Settings" style={{ marginBottom: 20 }}>
           <Form
             onFinish={this.onFinish}
             layout="vertical"
             ref={this.formRef}
             initialValues={{
-              displayName: this.state.displayName,
-              newUserMailingList: this.state.newUserMailingList,
+              displayName: this.props.organization.displayName,
+              newUserMailingList: this.props.organization.newUserMailingList,
             }}
           >
             <FormItem label="Organization ID">
               <Input.Group compact>
                 <Input
                   prefix={<IdcardOutlined />}
-                  value={this.props.organizationName}
+                  value={this.props.organization.name}
                   style={{
                     width: "calc(100% - 31px)",
                   }}
@@ -303,4 +258,9 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(OrganizationEditView);
+const mapStateToProps = (state: OxalisState): Props => ({
+  organization: enforceActiveOrganization(state.activeOrganization),
+});
+
+const connector = connect(mapStateToProps);
+export default connector(OrganizationEditView);

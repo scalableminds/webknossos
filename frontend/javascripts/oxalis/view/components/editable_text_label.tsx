@@ -149,7 +149,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           ) : (
             <MarkdownModal
               source={this.state.value}
-              visible={this.state.isEditing}
+              isOpen={this.state.isEditing}
               onChange={this.handleInputChange}
               onOk={this.handleOnChange}
               label={this.props.label}

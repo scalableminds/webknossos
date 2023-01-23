@@ -800,7 +800,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             !isVisibleInDom ? null : (
               <React.Fragment>
                 <Modal
-                  visible={this.state.isDownloading || this.state.isUploading}
+                  open={this.state.isDownloading || this.state.isUploading}
                   title={title}
                   closable={false}
                   footer={null}

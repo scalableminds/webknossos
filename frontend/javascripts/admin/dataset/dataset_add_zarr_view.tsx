@@ -176,7 +176,7 @@ function DatasetAddZarrView(props: Props) {
           <Modal
             title="Add Layer"
             width={800}
-            visible={showAddLayerModal}
+            open={showAddLayerModal}
             footer={null}
             onCancel={() => setShowAddLayerModal(false)}
           >

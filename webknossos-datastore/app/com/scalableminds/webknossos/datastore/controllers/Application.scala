@@ -34,7 +34,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
     try {
       val fs = CloudStorageFileSystem.forBucket("neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
       try {
-        val path = fs.getPath("lolcat.csv")
+        val path = fs.getPath("info")
         val lines = Files.readAllLines(path, StandardCharsets.UTF_8)
       } finally if (fs != null) fs.close()
     }

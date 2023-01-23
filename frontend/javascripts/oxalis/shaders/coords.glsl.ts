@@ -29,6 +29,7 @@ export const getRelativeCoords: ShaderModule = {
   code: `
     vec3 getAbsoluteCoords(vec3 worldCoordUVW, float layerIndex, float usedZoomStep) {
       vec3 resolution = getResolution(usedZoomStep);
+      // todo: neutralize transDim calls
       vec3 resolutionUVW = transDim(resolution);
 
       vec3 relativeCoords = worldCoordUVW / resolutionUVW;

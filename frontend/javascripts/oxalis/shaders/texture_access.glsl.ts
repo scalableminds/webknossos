@@ -155,6 +155,16 @@ export const getColorForCoords: ShaderModule = {
       return vec2(entryB.yz);
     }
 
+    vec2 lookUpBucket(uint layerIndex, uvec4 bucketAddress) {
+      vec2 bucketAddressWithZoomStep = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed0);
+      if (bucketAddressWithZoomStep.r == -1.) {
+        bucketAddressWithZoomStep = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed1);
+      }
+      if (bucketAddressWithZoomStep.r == -1.) {
+        bucketAddressWithZoomStep = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed2);
+      }
+      return bucketAddressWithZoomStep;
+    }
 
     vec4[2] getColorForCoords64(
       highp usampler2D lookUpTexture,
@@ -169,73 +179,34 @@ export const getColorForCoords: ShaderModule = {
 
       // Will hold [highValue, lowValue];
       vec4 returnValue[2];
-
-      vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, activeMagIndices[int(layerIndex)]));
-      vec3 relativeBucketPosition = div(coords, bucketWidth);
-      vec3 offsetInBucket = mod(coords, bucketWidth);
-
-      // Check needs to be reworked. Maybe use cuckoo hashing?
-      // if (relativeBucketPosition.x > addressSpaceDimensions.x ||
-      //    relativeBucketPosition.y > addressSpaceDimensions.y ||
-      //    relativeBucketPosition.z > addressSpaceDimensions.z ||
-      //    relativeBucketPosition.x < 0.0 ||
-      //    relativeBucketPosition.y < 0.0 ||
-      //    relativeBucketPosition.z < 0.0) {
-      //  // In theory, the current magnification should always be selected
-      //  // so that we won't have to address data outside of the addresSpaceDimensions.
-      //  // Nevertheless, we explicitly guard against this situation here to avoid
-      //  // rendering wrong data.
-      //  returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
-      //  return returnValue;
-      // }
-
-      float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
-
-      // uvec2 bucketAddressWithZoomStep = getUnsignedRgbaAtIndex(
-      //   lookUpTexture,
-      //   l_texture_width,
-      //   bucketIdx
-      // ).rg;
-
       uint activeMagIdx = uint(activeMagIndices[int(layerIndex)]);
 
+      vec2 bucketAddressWithZoomStep;
 
-      vec2 bucketAddressWithZoomStep = attemptLookUpLookUp(uint(layerIndex), uvec4(uvec3(relativeBucketPosition), activeMagIdx), lookup_seed0);
-      if (bucketAddressWithZoomStep.r == -1.) {
-        bucketAddressWithZoomStep = attemptLookUpLookUp(uint(layerIndex), uvec4(uvec3(relativeBucketPosition), activeMagIdx), lookup_seed1);
+      vec3 coords;
+      vec3 offsetInBucket;
+
+      for (uint i = uint(0); i < uint(4); i++) {
+        coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, float(activeMagIdx + i)));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        offsetInBucket = mod(coords, bucketWidth);
+        bucketAddressWithZoomStep = lookUpBucket(
+          uint(layerIndex),
+          uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
+        );
+        if (bucketAddressWithZoomStep.r != -1.) {
+          break;
+        }
       }
-      if (bucketAddressWithZoomStep.r == -1.) {
-        bucketAddressWithZoomStep = attemptLookUpLookUp(uint(layerIndex), uvec4(uvec3(relativeBucketPosition), activeMagIdx), lookup_seed2);
-      }
-      if (bucketAddressWithZoomStep.r != -1.) {
-      }
+
       float bucketAddress = float(bucketAddressWithZoomStep.x);
       float renderedZoomStep = float(bucketAddressWithZoomStep.y);
-
-
-      // if (bucketAddress == -1.) {
-      //   returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
-      // }
-      // return returnValue;
-
-      if (bucketAddress == -2.0) {
-        // The bucket is out of bounds. Render black
-        // In flight mode, it can happen that buckets were not passed to the GPU
-        // since the approximate implementation of the bucket picker missed the bucket.
-        // We simply handle this case as if the bucket was not yet loaded which means
-        // that fallback data is loaded.
-        // The downside is that data which does not exist, will be rendered gray instead of black.
-        // Issue to track progress: #3446
-        float alpha = isFlightMode() ? -1.0 : 0.0;
-        returnValue[1] = vec4(0.0, 0.0, 0.0, alpha);
-        return returnValue;
-      }
 
       if (bucketAddress < 0. ||
           isNan(bucketAddress)) {
         // Not-yet-existing data is encoded with a = -1.0
         // todo: restore gray-when-loading behavior
-        // returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
+        returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
         return returnValue;
       }
 
@@ -258,8 +229,10 @@ export const getColorForCoords: ShaderModule = {
          */
 
         vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
-        vec3 anchorPoint = anchorPoints[int(layerIndex)].xyz;
-        vec3 worldBucketPosition = relativeBucketPosition + anchorPoint;
+        coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, zoomStep));
+        offsetInBucket = mod(coords, bucketWidth);
+        vec3 worldBucketPosition = div(coords, bucketWidth);
+
         vec3 subVolumeIndex = mod(worldBucketPosition, magnificationFactors);
         offsetInBucket = floor(
           (offsetInBucket + vec3(bucketWidth) * subVolumeIndex)

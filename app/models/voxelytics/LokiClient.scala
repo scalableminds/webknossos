@@ -112,9 +112,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         .mkString("&")
     for {
       _ <- serverStartupFuture
-      _ = { println(s"ready, $queryString") }
       res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
-      _ = { println(s"$res") }
       logEntries <- tryo(
         JsArray(
           (res \ "data" \ "result")

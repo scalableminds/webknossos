@@ -338,27 +338,27 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     } yield {
       Json.obj(
         "name" -> dataSet.name,
-        "dataSource" -> dataSource, // not
-        "dataStore" -> dataStoreJs, // not
+        "dataSource" -> dataSource,
+        "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization.name,
-        "allowedTeams" -> teamsJs, // not
-        "allowedTeamsCumulative" -> teamsCumulativeJs, // not
+        "allowedTeams" -> teamsJs,
+        "allowedTeamsCumulative" -> teamsCumulativeJs,
         "isActive" -> dataSet.isUsable,
-        "isPublic" -> dataSet.isPublic, // not
-        "description" -> dataSet.description, // not
+        "isPublic" -> dataSet.isPublic,
+        "description" -> dataSet.description,
         "displayName" -> dataSet.displayName,
         "created" -> dataSet.created,
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,
-        "logoUrl" -> logoUrl, // not
-        "sortingKey" -> dataSet.sortingKey, // not
-        "details" -> dataSet.details, // not
+        "logoUrl" -> logoUrl,
+        "sortingKey" -> dataSet.sortingKey,
+        "details" -> dataSet.details,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
-        "jobsEnabled" -> jobsEnabled, // not
+        "jobsEnabled" -> jobsEnabled,
         "tags" -> dataSet.tags,
         "folderId" -> dataSet._folder,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
-        "publication" -> None // not
-      ) // add status in root
+        "publication" -> None
+      )
     }
 }

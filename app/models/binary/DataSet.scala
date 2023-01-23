@@ -233,11 +233,29 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
               d.isUsable,
               d.displayName,
               d.created,
-              COALESCE((
-                      (u.isAdmin AND u._organization = d._organization) OR
-                      u.isDatasetManager OR
-                      d._uploader = u._id
-                    ), ${false}) AS isEditable,
+              COALESCE(
+                (
+                  (u.isAdmin AND u._organization = d._organization) OR
+                  u.isDatasetManager OR
+                  d._uploader = u._id OR
+                  d._id IN (              -- team manager of team that has access to the dataset
+                    SELECT _dataSet
+                    FROM webknossos.dataSet_allowedTeams dt
+                    JOIN webknossos.user_team_roles utr ON dt._team = utr._team
+                    WHERE utr._user = u._id AND utr.isTeamManager
+                  ) OR
+                  d. _folder IN (        -- team manager of team that has (cumulative) access to dataset folder
+                    SELECT fp._descendant
+                    FROM webknossos.folder_paths fp
+                    WHERE fp._ancestor IN (
+                      SELECT at._folder
+                      FROM webknossos.folder_allowedTeams at
+                      JOIN webknossos.user_team_roles utr ON at._team = utr._team
+                      WHERE utr._user = u._id
+                    )
+                  )
+                ), ${false}
+              ) AS isEditable,
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
               d.status,
               d.tags

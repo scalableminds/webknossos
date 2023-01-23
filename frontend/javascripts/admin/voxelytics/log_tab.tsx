@@ -157,7 +157,7 @@ export default function LogTab({
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [level, setLevel] = useState("DEBUG");
+  const [level, setLevel] = useState(LOG_LEVELS.INFO);
 
   const [logResult, setLogResult] = useState<LogResult>({ type: "LOADING" });
 

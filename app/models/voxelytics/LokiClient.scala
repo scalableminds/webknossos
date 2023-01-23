@@ -8,6 +8,7 @@ import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.Full
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
@@ -106,63 +107,80 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                              "backward"
                            } else {
                              "forward"
-                           })).map(kv => s"${kv._1}=${java.net.URLEncoder.encode(kv._2, "UTF-8")}").mkString("&")
+                           }))
+        .map(keyValueTuple => s"${keyValueTuple._1}=${java.net.URLEncoder.encode(keyValueTuple._2, "UTF-8")}")
+        .mkString("&")
     for {
       _ <- serverStartupFuture
+      _ = { println(s"ready, $queryString") }
       res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
-    } yield
-      JsArray(
-        (res \ "data" \ "result")
-          .as[List[JsValue]]
-          .flatMap(
-            stream =>
-              (stream \ "values")
-                .as[List[(String, String)]]
-                .map(value =>
-                  Json.parse(value._2).as[JsObject] ++ (stream \ "stream").as[JsObject] ++ Json.obj(
-                    "timestamp" -> Instant(value._1.substring(0, value._1.length - 6).toLong)))))
+      _ = { println(s"$res") }
+      logEntries <- tryo(
+        JsArray(
+          (res \ "data" \ "result")
+            .as[List[JsValue]]
+            .flatMap(
+              stream =>
+                (stream \ "values")
+                  .as[List[(String, String)]]
+                  .map(value =>
+                    Json.parse(value._2).as[JsObject] ++ (stream \ "stream").as[JsObject] ++ Json.obj(
+                      "timestamp" -> Instant(value._1.substring(0, value._1.length - 6).toLong)))))).toFox
+    } yield logEntries
   }
 
-  def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId): Fox[Unit] =
+  def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
     if (logEntries.nonEmpty) {
-      val streams = logEntries
-        .groupBy(
-          entry => ((entry \ "vx" \ "workflow_hash").as[String], (entry \ "vx" \ "run_name").as[String])
-        )
-        .map(kv =>
-          Json.obj(
-            "stream" -> Json.obj("vx_workflow_hash" -> kv._1._1,
-                                 "vx_run_name" -> kv._1._2,
-                                 "wk_url" -> wkConf.Http.uri,
-                                 "wk_org" -> organizationId.id),
-            "values" -> JsArray(kv._2.map(entry => {
-              val timestamp = java.time.Instant.parse((entry \ "@timestamp").as[String]).toEpochMilli
-              Json.arr(
-                s"${timestamp}000000", // make nanoseconds
-                Json.stringify(Json.obj(
-                  "level" -> (entry \ "level").as[String],
-                  "pid" -> (entry \ "pid").as[Long],
-                  "logger_name" -> (entry \ "vx" \ "logger_name").as[String],
-                  "vx_workflow_hash" -> (entry \ "vx" \ "workflow_hash").as[String],
-                  "vx_run_name" -> (entry \ "vx" \ "run_name").as[String],
-                  "vx_task_name" -> (entry \ "vx" \ "task_name").as[String],
-                  "message" -> (entry \ "message").as[String],
-                  "host" -> (entry \ "host").as[String],
-                  "program" -> (entry \ "program").as[String],
-                  "func_name" -> (entry \ "vx" \ "func_name").as[String],
-                  "line" -> (entry \ "vx" \ "line").as[Long],
-                  "path" -> (entry \ "vx" \ "path").as[String],
-                  "process_name" -> (entry \ "vx" \ "process_name").as[String],
-                  "thread_name" -> (entry \ "vx" \ "thread_name").as[String],
-                  "vx_version" -> (entry \ "vx" \ "version").as[String],
-                  "user" -> (entry \ "vx" \ "user").as[String],
-                  "pgid" -> (entry \ "vx" \ "process_group_id").as[Long]
-                ))
-              )
-            }))
-        ))
       for {
         _ <- serverStartupFuture
+        logEntryGroups <- tryo(
+          logEntries
+            .groupBy(
+              entry => ((entry \ "vx" \ "workflow_hash").as[String], (entry \ "vx" \ "run_name").as[String])
+            )
+            .toList).toFox
+        streams <- Fox.serialCombined(logEntryGroups)(
+          keyValueTuple =>
+            for {
+              values <- Fox.serialCombined(keyValueTuple._2)(entry => {
+                for {
+                  timestamp <- Instant.fromString((entry \ "@timestamp").as[String])
+                  values <- tryo(
+                    Json.stringify(
+                      Json.obj(
+                        "level" -> (entry \ "level").as[String],
+                        "pid" -> (entry \ "pid").as[Long],
+                        "logger_name" -> (entry \ "vx" \ "logger_name").as[String],
+                        "vx_workflow_hash" -> (entry \ "vx" \ "workflow_hash").as[String],
+                        "vx_run_name" -> (entry \ "vx" \ "run_name").as[String],
+                        "vx_task_name" -> (entry \ "vx" \ "task_name").as[String],
+                        "message" -> (entry \ "message").as[String],
+                        "host" -> (entry \ "host").as[String],
+                        "program" -> (entry \ "program").as[String],
+                        "func_name" -> (entry \ "vx" \ "func_name").as[String],
+                        "line" -> (entry \ "vx" \ "line").as[Long],
+                        "path" -> (entry \ "vx" \ "path").as[String],
+                        "process_name" -> (entry \ "vx" \ "process_name").as[String],
+                        "thread_name" -> (entry \ "vx" \ "thread_name").as[String],
+                        "vx_version" -> (entry \ "vx" \ "version").as[String],
+                        "user" -> (entry \ "vx" \ "user").as[String],
+                        "pgid" -> (entry \ "vx" \ "process_group_id").as[Long]
+                      ))
+                  ).toFox
+                } yield
+                  Json.arr(
+                    timestamp.toNanosecondsString,
+                    values
+                  )
+              })
+            } yield
+              Json.obj(
+                "stream" -> Json.obj("vx_workflow_hash" -> keyValueTuple._1._1,
+                                     "vx_run_name" -> keyValueTuple._1._2,
+                                     "wk_url" -> wkConf.Http.uri,
+                                     "wk_org" -> organizationId.id),
+                "values" -> JsArray(values)
+            ))
         res <- rpc(s"${conf.uri}/loki/api/v1/push").silent
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
           .post[JsValue](Json.obj("streams" -> streams))

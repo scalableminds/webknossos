@@ -1,5 +1,6 @@
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import { message } from "antd";
+import { LOG_LEVELS } from "oxalis/constants";
 import { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { VoxelyticsLogLine, VoxelyticsRunState } from "types/api_flow_types";
@@ -68,7 +69,7 @@ export async function copyToClipboad(text: string) {
 export async function loadAllLogs(
   runId: string,
   taskName: string | null,
-  minLevel: string,
+  minLevel: LOG_LEVELS,
   startTime: Date,
   endTime: Date,
   batchSize: number = 5000,

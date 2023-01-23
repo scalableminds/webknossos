@@ -37,7 +37,6 @@ import {
   VoxelyticsTaskInfo,
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import {
   formatDateMedium,
   formatDistance,
@@ -48,6 +47,7 @@ import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
 import { loadAllLogs } from "./utils";
+import { LOG_LEVELS } from "oxalis/constants";
 
 const { Panel } = Collapse;
 const { Search } = Input;
@@ -371,7 +371,7 @@ export default function TaskListView({
         message.error("Please select a specific run for log download.");
         return;
       }
-      const logText = (await loadAllLogs(runId, null, "DEBUG", new Date(0), new Date()))
+      const logText = (await loadAllLogs(runId, null, LOG_LEVELS.DEBUG, new Date(0), new Date()))
         .map((line) => formatLog(line, { timestamps: true, pid: true, level: true, logger: true }))
         .join("\n");
       const a = document.createElement("a");

@@ -67,7 +67,7 @@ import type {
   VoxelyticsLogLine,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
@@ -2400,7 +2400,7 @@ export function getVoxelyticsWorkflow(
 export function getVoxelyticsLogs(
   runId: string,
   taskName: string | null,
-  minLevel: string,
+  minLevel: LOG_LEVELS,
   startTime: Date,
   endTime: Date,
   limit: number,

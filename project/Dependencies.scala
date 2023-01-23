@@ -55,6 +55,7 @@ object Dependencies {
   private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.7"
   private val commonsCompress = "org.apache.commons" % "commons-compress" % "1.21"
   private val jwt = "com.github.jwt-scala" %% "jwt-play-json" % "9.1.1"
+  private val googleCloudStorage = "com.google.cloud" % "google-cloud-nio" % "0.123.28"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -104,7 +105,8 @@ object Dependencies {
     tika,
     jblosc,
     scalajHttp,
-    commonsCompress
+    commonsCompress,
+    googleCloudStorage
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

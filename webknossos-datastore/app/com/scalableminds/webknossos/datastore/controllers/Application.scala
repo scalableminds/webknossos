@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
@@ -25,6 +26,19 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
         _ = logger.info(s"Answering ok for Datastore health check, took ${afterChecks - before} ms")
       } yield Ok("Ok")
     }
+  }
+
+  def testGoogleStorage: Action[AnyContent] = Action.async { implicit request =>
+    import java.nio.charset.StandardCharsets
+    import java.nio.file.Files
+    try {
+      val fs = CloudStorageFileSystem.forBucket("neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
+      try {
+        val path = fs.getPath("lolcat.csv")
+        val lines = Files.readAllLines(path, StandardCharsets.UTF_8)
+      } finally if (fs != null) fs.close()
+    }
+    Fox.successful(Ok("Hi!"))
   }
 
 }

@@ -144,11 +144,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
       requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
       remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
-      credentialId <- credentialService.createCredential(new URI(normalizeUri(layerUri)),
-                                                         user,
-                                                         password,
-                                                         requestingUser._id.toString,
-                                                         requestingUser._organization.toString)
+      credentialId <- credentialService.createCredential(
+        new URI(normalizeUri(layerUri)),
+        user,
+        password,
+        requestingUser._id.toString,
+        requestingUser._organization.toString) ?~> "Failed to set up remote file system credentaial"
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(

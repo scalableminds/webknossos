@@ -7,10 +7,10 @@ const FormItem = Form.Item;
 type Props = {
   onOk: (...args: Array<any>) => any;
   onCancel: (...args: Array<any>) => any;
-  isVisible: boolean;
+  isOpen: boolean;
 };
 
-function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isVisible }: Props) {
+function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isOpen }: Props) {
   const [form] = Form.useForm();
 
   const onOk = async () => {
@@ -32,7 +32,7 @@ function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isVisible }: Props)
   };
 
   return (
-    <Modal visible={isVisible} title="Add a New Team" okText="Ok" onCancel={onCancel} onOk={onOk}>
+    <Modal open={isOpen} title="Add a New Team" okText="Ok" onCancel={onCancel} onOk={onOk}>
       <Shortcut keys="enter" onTrigger={onOk} supportInputElements />
 
       <Form layout="vertical" form={form}>

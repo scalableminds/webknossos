@@ -9,13 +9,13 @@ type Props = {
 };
 type State = {
   mayClose: boolean;
-  visible: boolean;
+  isOpen: boolean;
 };
 export default class NewTaskDescriptionModal extends React.Component<Props, State> {
   timeoutId: ReturnType<typeof setTimeout> | undefined;
   state: State = {
     mayClose: false,
-    visible: true,
+    isOpen: true,
   };
 
   componentDidMount() {
@@ -45,7 +45,7 @@ export default class NewTaskDescriptionModal extends React.Component<Props, Stat
     }
 
     this.setState({
-      visible: false,
+      isOpen: false,
     });
     this.props.destroy();
   };
@@ -54,7 +54,7 @@ export default class NewTaskDescriptionModal extends React.Component<Props, Stat
     return (
       <Modal
         maskClosable={false}
-        visible={this.state.visible}
+        open={this.state.isOpen}
         title={this.props.title}
         onOk={this.handleOk}
         onCancel={this.handleOk}

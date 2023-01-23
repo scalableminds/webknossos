@@ -1,7 +1,11 @@
 package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{HttpBasicAuthCredential, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  FileSystemsHolder,
+  HttpBasicAuthCredential,
+  S3AccessKeyCredential
+}
 import utils.ObjectId
 
 import java.net.URI
@@ -17,7 +21,7 @@ class CredentialService @Inject()(credentialDao: CredentialDAO) {
                        organization: String)(implicit ec: ExecutionContext): Fox[Option[ObjectId]] = {
     val scheme = uri.getScheme
     scheme match {
-      case "https" =>
+      case FileSystemsHolder.schemeHttps =>
         username match {
           case Some(u) =>
             val _id = ObjectId.generate
@@ -25,11 +29,10 @@ class CredentialService @Inject()(credentialDao: CredentialDAO) {
               _ <- credentialDao.insertOne(
                 _id,
                 HttpBasicAuthCredential(uri.toString, u, password.getOrElse(""), user, organization))
-              _ <- credentialDao.findOne(_id)
             } yield Some(_id)
-          case None => Fox.empty
+          case None => Fox.successful(None)
         }
-      case "s3" =>
+      case FileSystemsHolder.schemeS3 =>
         username match {
           case Some(keyId) =>
             password match {
@@ -39,11 +42,10 @@ class CredentialService @Inject()(credentialDao: CredentialDAO) {
                   _ <- credentialDao.insertOne(
                     _id,
                     S3AccessKeyCredential(uri.toString, keyId, secretKey, user, organization))
-                  _ <- credentialDao.findOne(_id)
                 } yield Some(_id)
-              case None => Fox.empty
+              case None => Fox.successful(None)
             }
-          case None => Fox.empty
+          case None => Fox.successful(None)
         }
     }
   }

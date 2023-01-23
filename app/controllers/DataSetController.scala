@@ -183,7 +183,7 @@ class DataSetController @Inject()(userService: UserService,
       searchQuery: Option[String],
       @ApiParam(value = "Optional limit, return only the first n matching datasets.")
       limit: Option[Int],
-      @ApiParam(value = "Change output format to return only a compact list with name, id, status, tags")
+      @ApiParam(value = "Change output format to return only a compact list with essential information on the datasets")
       compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {

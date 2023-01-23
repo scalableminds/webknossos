@@ -2,7 +2,7 @@ import React from "react";
 import { Route, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
-import { PricingPlanEnum } from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
 import { APIOrganization } from "types/api_flow_types";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";

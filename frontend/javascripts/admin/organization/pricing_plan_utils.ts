@@ -1,5 +1,13 @@
 import { APIOrganization, APIUser } from "types/api_flow_types";
-import { PricingPlanEnum } from "./organization_edit_view";
+
+export enum PricingPlanEnum {
+  Basic = "Basic",
+  Team = "Team",
+  Power = "Power",
+  TeamTrial = "Team_Trial",
+  PowerTrial = "Power_Trial",
+  Custom = "Custom",
+}
 
 export const teamPlanFeatures = [
   "Collaborative Annotation",

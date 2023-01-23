@@ -14,7 +14,8 @@ import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import JobListView from "admin/job/job_list_view";
 import Onboarding from "admin/onboarding";
-import OrganizationEditView, { PricingPlanEnum } from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import OrganizationEditView from "admin/organization/organization_edit_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
@@ -57,12 +58,7 @@ import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
-import {
-  APICompoundTypeEnum,
-  APIPricingPlanStatus,
-  APIUser,
-  TracingTypeEnum,
-} from "types/api_flow_types";
+import { APICompoundTypeEnum, APIUser, TracingTypeEnum } from "types/api_flow_types";
 
 import ErrorBoundary from "components/error_boundary";
 

@@ -16,7 +16,7 @@ import {
   sendUpgradePricingPlanUserEmail,
 } from "admin/admin_rest_api";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
-import { PricingPlanEnum } from "./organization_edit_view";
+import { PricingPlanEnum } from "./pricing_plan_utils";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";

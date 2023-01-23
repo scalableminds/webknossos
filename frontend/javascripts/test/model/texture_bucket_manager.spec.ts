@@ -30,9 +30,8 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
 const setActiveBucketsAndWait = (
   tbm: typeof TextureBucketManager,
   activeBuckets: typeof DataBucket[],
-  anchorPoint: Vector4,
 ) => {
-  tbm.setActiveBuckets(activeBuckets, anchorPoint);
+  tbm.setActiveBuckets(activeBuckets);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case
   activeBuckets.forEach(() => tbm.processWriterQueue());
 
@@ -60,7 +59,7 @@ test("TextureBucketManager: basic functionality", (t) => {
     buildBucket([1, 1, 2, 0], 101),
     buildBucket([1, 2, 1, 0], 102),
   ];
-  setActiveBucketsAndWait(tbm, activeBuckets, [1, 1, 1, 0]);
+  setActiveBucketsAndWait(tbm, activeBuckets);
   expectBucket(t, tbm, activeBuckets[0], 100);
   expectBucket(t, tbm, activeBuckets[1], 101);
   expectBucket(t, tbm, activeBuckets[2], 102);
@@ -77,8 +76,8 @@ test("TextureBucketManager: changing active buckets", (t) => {
     buildBucket([1, 0, 1, 0], 201),
     buildBucket([1, 1, 0, 0], 202),
   ];
-  setActiveBucketsAndWait(tbm, activeBuckets.slice(0, 3), [0, 0, 0, 0]);
-  setActiveBucketsAndWait(tbm, activeBuckets.slice(3, 6), [1, 0, 0, 0]);
+  setActiveBucketsAndWait(tbm, activeBuckets.slice(0, 3));
+  setActiveBucketsAndWait(tbm, activeBuckets.slice(3, 6));
   expectBucket(t, tbm, activeBuckets[3], 200);
   expectBucket(t, tbm, activeBuckets[4], 201);
   expectBucket(t, tbm, activeBuckets[5], 202);

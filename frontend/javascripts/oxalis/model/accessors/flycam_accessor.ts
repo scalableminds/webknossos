@@ -4,7 +4,6 @@ import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getDataLayers,
@@ -62,7 +61,6 @@ function calculateTotalBucketCountForZoomLevel(
 
   // Define dummy values
   const position: Vector3 = [0, 0, 0];
-  const anchorPoint: Vector4 = [0, 0, 0, 0];
   const subBucketLocality: Vector3 = [1, 1, 1];
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
@@ -103,20 +101,6 @@ function calculateTotalBucketCountForZoomLevel(
       abortLimit,
     );
   }
-
-  // const addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
-  // const volumeDimension = V3.sub(maxPerDim, minPerDim);
-
-  // todo: when growing a layer (e.g., scale=0.1) and then zooming in, good mags
-  // couldn't be selected because of this.
-  // converting to cuckoo hashing would make the addressSpaceDimensions concept obsolete.
-  // if (
-  //   volumeDimension[0] > addressSpaceDimensions[0] ||
-  //   volumeDimension[1] > addressSpaceDimensions[1] ||
-  //   volumeDimension[2] > addressSpaceDimensions[2]
-  // ) {
-  //   return Infinity;
-  // }
 
   return counter;
 }

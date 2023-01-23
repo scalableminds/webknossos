@@ -6,8 +6,6 @@ import { getAreasFromState, getZoomedMatrix } from "oxalis/model/accessors/flyca
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { map3 } from "libs/utils";
 import {
   getResolutions,
@@ -125,7 +123,6 @@ export default class LayerRenderingManager {
   cube: DataCube;
   pullQueue: PullQueue;
   dataTextureCount: number;
-  cachedAnchorPoint: Vector4 = [0, 0, 0, 0];
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
@@ -198,11 +195,9 @@ export default class LayerRenderingManager {
     return getLookUpCuckooTable();
   }
 
-  // Returns the new anchorPoints if they are new
-  updateDataTextures(position: Vector3, logZoomStep: number): Vector4 {
+  updateDataTextures(position: Vector3, logZoomStep: number): void {
     const state = Store.getState();
     const { dataset, datasetConfiguration } = state;
-    const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
     const layer = getLayerByName(dataset, this.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
     const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
@@ -210,8 +205,8 @@ export default class LayerRenderingManager {
 
     if (logZoomStep > maximumResolutionIndex) {
       // Don't render anything if the zoomStep is too high
-      this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint, isAnchorPointNew);
-      return this.cachedAnchorPoint;
+      this.textureBucketManager.setActiveBuckets([]);
+      return;
     }
 
     const resolutions = getResolutions(dataset);
@@ -234,7 +229,6 @@ export default class LayerRenderingManager {
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
 
     if (
-      isAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
       !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
@@ -268,7 +262,6 @@ export default class LayerRenderingManager {
             matrix,
             logZoomStep,
             datasetConfiguration.loadingStrategy,
-            this.cachedAnchorPoint,
             areas,
             rects,
             subBucketLocality,
@@ -277,7 +270,6 @@ export default class LayerRenderingManager {
         );
       }
 
-      // this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
       pickingPromise.then(
         (buffer) => {
           this.cube.markBucketsAsUnneeded();
@@ -287,11 +279,7 @@ export default class LayerRenderingManager {
             this.textureBucketManager.maximumCapacity,
           );
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-          this.textureBucketManager.setActiveBuckets(
-            buckets,
-            this.cachedAnchorPoint,
-            isAnchorPointNew,
-          );
+          this.textureBucketManager.setActiveBuckets(buckets);
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())
@@ -310,46 +298,6 @@ export default class LayerRenderingManager {
         },
       );
     }
-
-    return this.cachedAnchorPoint;
-  }
-
-  maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
-    const state = Store.getState();
-    const layer = getLayerByName(state.dataset, this.name);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const datasetResolutionInfo = getDatasetResolutionInfo(state.dataset);
-    const resolution = resolutionInfo.getResolutionByIndexWithFallback(
-      logZoomStep,
-      datasetResolutionInfo,
-    );
-    const addressSpaceDimensions = getAddressSpaceDimensions(
-      state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
-    );
-    const maximumRenderedBucketsHalfInVoxel = addressSpaceDimensions.map(
-      (bucketPerDim) => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
-    );
-
-    let maybeTransformedPosition = position;
-    if (layer.transformMatrix) {
-      maybeTransformedPosition = V3.mul4x4(layer.transformMatrix, maybeTransformedPosition);
-    }
-
-    // Hit texture top-left coordinate
-    const anchorPointInVoxel = [
-      maybeTransformedPosition[0] - maximumRenderedBucketsHalfInVoxel[0] * resolution[0],
-      maybeTransformedPosition[1] - maximumRenderedBucketsHalfInVoxel[1] * resolution[1],
-      maybeTransformedPosition[2] - maximumRenderedBucketsHalfInVoxel[2] * resolution[2],
-    ] as Vector3;
-
-    const anchorPoint = this.cube.positionToZoomedAddress(anchorPointInVoxel, logZoomStep);
-
-    if (_.isEqual(anchorPoint, this.cachedAnchorPoint)) {
-      return false;
-    }
-
-    this.cachedAnchorPoint = anchorPoint;
-    return true;
   }
 
   destroy() {

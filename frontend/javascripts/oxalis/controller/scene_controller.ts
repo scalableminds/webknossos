@@ -508,29 +508,18 @@ class SceneController {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
-    // The anchor point refers to the top-left-front bucket of the bounding box
-    // which covers all three rendered planes. Relative to this anchor point,
-    // all buckets necessary for rendering are addressed. The anchorPoint is
-    // defined with bucket indices for the coordinate system of the current zoomStep.
-    const anchorPoints = [];
-
     // todo: this method is called very frequently. optimize?
 
     const magIndices = getActiveMagIndicesForLayers(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      anchorPoints.push(
-        dataLayer.layerRenderingManager.updateDataTextures(
-          globalPosition,
-          magIndices[dataLayer.name],
-        ),
+      dataLayer.layerRenderingManager.updateDataTextures(
+        globalPosition,
+        magIndices[dataLayer.name],
       );
     }
 
-    if (optArbitraryPlane) {
-      // optArbitraryPlane.updateAnchorPoints(anchorPoints);
-    } else {
+    if (!optArbitraryPlane) {
       for (const currentPlane of _.values<Plane>(this.planes)) {
-        // currentPlane.updateAnchorPoints(anchorPoints);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 

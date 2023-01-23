@@ -124,10 +124,6 @@ class Plane {
     });
   };
 
-  // updateAnchorPoints(anchorPoints: Vector4[]): void {
-  //   this.materialFactory.setAnchorPoints(anchorPoints);
-  // }
-
   setScale(xFactor: number, yFactor: number): void {
     if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {
       this.lastScaleFactors[0] = xFactor;

@@ -37,21 +37,6 @@ export const getRelativeCoords: ShaderModule = {
       vec3 coords = transDim(relativeCoords);
       return coords;
     }
-
-    vec3 getRelativeCoords(vec3 worldCoordUVW, float layerIndex, float usedZoomStep) {
-      vec3 resolution = getResolution(usedZoomStep);
-      // todo: 2x transDim can be removed probably
-      vec3 resolutionUVW = transDim(resolution);
-
-      vec3 anchorPoint = anchorPoints[int(layerIndex)].xyz;
-      vec3 anchorPointUVW = transDim(anchorPoint);
-      vec3 anchorPointAsGlobalPositionUVW =
-        anchorPointUVW * resolutionUVW * bucketWidth;
-      vec3 relativeCoords = (worldCoordUVW - anchorPointAsGlobalPositionUVW) / resolutionUVW;
-
-      vec3 coords = transDim(relativeCoords);
-      return coords;
-    }
   `,
 };
 export const getWorldCoordUVW: ShaderModule = {

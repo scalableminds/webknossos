@@ -16,7 +16,6 @@ import {
   getActiveSegmentPosition,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  getAddressSpaceDimensions,
   getLookupBufferSize,
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
@@ -124,18 +123,12 @@ class PlaneMaterialFactory {
   }
 
   setupUniforms(): void {
-    const addressSpaceDimensions = getAddressSpaceDimensions(
-      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
-    );
     this.uniforms = {
       sphericalCapRadius: {
         value: 140,
       },
       globalPosition: {
         value: new THREE.Vector3(0, 0, 0),
-      },
-      anchorPoints: {
-        value: [0, 0, 0],
       },
       zoomValue: {
         value: 1,
@@ -190,9 +183,6 @@ class PlaneMaterialFactory {
       },
       renderBucketIndices: {
         value: false,
-      },
-      addressSpaceDimensions: {
-        value: new THREE.Vector3(...addressSpaceDimensions),
       },
 
       lookup_seed0: { value: 0 },
@@ -385,11 +375,6 @@ class PlaneMaterialFactory {
       value: customColorTexture,
     };
   }
-
-  setAnchorPoints = (anchorPoints: Vector4[]) => {
-    // todo: perf?
-    this.uniforms.anchorPoints.value = _.flatten(anchorPoints);
-  };
 
   makeMaterial(options?: ShaderMaterialOptions): void {
     this.material = new THREE.ShaderMaterial(

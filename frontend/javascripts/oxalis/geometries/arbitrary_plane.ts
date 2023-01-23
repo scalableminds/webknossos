@@ -45,10 +45,6 @@ class ArbitraryPlane {
     this.materialFactory.stopListening();
   }
 
-  // updateAnchorPoints(anchorPoints: Vector4[]): void {
-  //   this.materialFactory.setAnchorPoints(anchorPoints);
-  // }
-
   setPosition = (x: number, y: number, z: number) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
     this.meshes.mainPlane.material.setGlobalPosition(x, y, z);

@@ -3,7 +3,6 @@ import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_re
 import type { LoadingStrategy } from "oxalis/store";
 import type { OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getMaxZoomStepDiff,
   getPriorityWeightForZoomStepDiff,
@@ -27,12 +26,14 @@ export default function determineBucketsForOrthogonal(
   enqueueFunction: EnqueueFunction,
   loadingStrategy: LoadingStrategy,
   logZoomStep: number,
-  anchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   abortLimit: number | null | undefined,
   gpuFactor: number,
 ) {
+  // Todo: Remove this bucket picker altogether?
+  // Or restore anchor point mechanism for this picker as an optimization?
+  const anchorPoint = [0, 0, 0, 0] as Vector4;
   let zoomStepDiff = 0;
 
   while (
@@ -101,8 +102,8 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       resolutions,
       logZoomStep,
     );
-    const addressSpaceDimensions = getAddressSpaceDimensions(gpuFactor);
-    const renderedBucketsPerDimension = addressSpaceDimensions[w];
+    // todo: this used to be dynamic.
+    const renderedBucketsPerDimension = 40;
     let topLeftBucket = nonFallbackAnchorPoint.slice() as any as Vector4;
     topLeftBucket[w] += getAnchorPositionToCenterDistance(renderedBucketsPerDimension);
     topLeftBucket = zoomedAddressToAnotherZoomStep(topLeftBucket, resolutions, logZoomStep);

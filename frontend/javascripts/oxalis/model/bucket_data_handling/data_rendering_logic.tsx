@@ -326,17 +326,3 @@ export function getLookupBufferSize(gpuMultiplier: number): number {
       return 512;
   }
 }
-// A look up buffer with the size [key]**2 is able to represent
-// a volume with the dimensions of [value].
-// The values were chosen so that value[0]*value[1]*value[2] / key**2
-// approaches ~ 1 (i.e., the utilization ratio of the buffer is close to
-// 100%).
-const addressSpaceDimensionsTable: Record<string, Vector3> = {
-  "256": [36, 36, 50],
-  "512": [61, 61, 70],
-  "1024": [96, 96, 112],
-};
-export function getAddressSpaceDimensions(gpuMultiplier: number): Vector3 {
-  const lookupBufferSize = getLookupBufferSize(gpuMultiplier);
-  return addressSpaceDimensionsTable[lookupBufferSize] || addressSpaceDimensionsTable["256"];
-}

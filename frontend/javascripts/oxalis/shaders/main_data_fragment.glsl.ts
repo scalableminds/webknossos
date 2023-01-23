@@ -63,7 +63,6 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 <% }) %>
 
 uniform float activeMagIndices[<%= layerNamesWithSegmentation.length %>];
-uniform vec4 anchorPoints[<%= layerNamesWithSegmentation.length %>];
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
@@ -151,8 +150,8 @@ void main() {
 
   if (renderBucketIndices) {
     // todo: reactivate (only used for debugging, though)
-    // vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
-    // vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
+    // vec3 absoluteCoords = getAbsoluteCoords(worldCoordUVW, zoomStep);
+    // vec3 bucketPosition = div(floor(absoluteCoords), bucketWidth);
     // gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
     return;
   }

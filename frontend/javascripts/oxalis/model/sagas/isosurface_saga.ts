@@ -662,7 +662,7 @@ function* loadPrecomputedMeshForSegmentId(
         // if it should perform extra (reverse) look ups to compute a mesh
         // with a specific mapping from a mesh file that was computed
         // without a mapping.
-        meshFile.mappingName != null ? null : mappingName,
+        meshFile.mappingName == null ? mappingName : null,
         editableMapping != null && tracing ? tracing.tracingId : null,
       );
       scale = [

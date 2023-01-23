@@ -61,6 +61,7 @@ case class DataSet(
 
 case class DatasetCompactInfo(
     id: ObjectId,
+    name: String,
     organizationName: String,
     folderId: ObjectId,
     isActive: Boolean,
@@ -189,69 +190,85 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                         organizationIdOpt: Option[ObjectId],
                         folderIdOpt: Option[ObjectId],
                         uploaderIdOpt: Option[ObjectId],
-                        isEditable: Option[Boolean],
                         searchQuery: Option[String],
-                        includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+                        includeSubfolders: Boolean,
+                        limitOpt: Option[Int])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isActiveOpt,
                                                       isUnreported,
                                                       organizationIdOpt,
                                                       folderIdOpt,
                                                       uploaderIdOpt,
-                                                      isEditable,
                                                       searchQuery,
                                                       includeSubfolders)
-
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates".as[DatasetsRow])
+      limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
 
-  def findCompactWithSearch(isActiveOpt: Option[Boolean],
-                            isUnreported: Option[Boolean],
-                            organizationIdOpt: Option[ObjectId],
-                            folderIdOpt: Option[ObjectId],
-                            uploaderIdOpt: Option[ObjectId],
-                            isEditable: Option[Boolean],
-                            searchQuery: Option[String],
-                            requestingUserIdOpt: Option[ObjectId],
-                            includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+  def findAllCompactWithSearch(isActiveOpt: Option[Boolean],
+                               isUnreported: Option[Boolean],
+                               organizationIdOpt: Option[ObjectId],
+                               folderIdOpt: Option[ObjectId],
+                               uploaderIdOpt: Option[ObjectId],
+                               searchQuery: Option[String],
+                               requestingUserIdOpt: Option[ObjectId],
+                               includeSubfolders: Boolean,
+                               limitOpt: Option[Int])(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isActiveOpt,
                                                       isUnreported,
                                                       organizationIdOpt,
                                                       folderIdOpt,
                                                       uploaderIdOpt,
-                                                      isEditable,
                                                       searchQuery,
                                                       includeSubfolders)
+      limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       query = q"""
             SELECT
-            d._id, o.name, d._folder, d.isUsable, d.displayName, d.created, true, COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}), d.status, d.tags
+              d._id,
+              d.name,
+              o.name,
+              d._folder,
+              d.isUsable,
+              d.displayName,
+              d.created,
+              COALESCE((
+                      (u.isAdmin AND u._organization = d._organization) OR
+                      u.isDatasetManager OR
+                      d._uploader = u._id
+                    ), ${false}) AS isEditable,
+              COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
+              d.status,
+              d.tags
             FROM
-            (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates) d
-            JOIN webknossos.organizations o ON o._id = d._organization
-            LEFT JOIN (
-              SELECT * FROM webknossos.dataSet_lastUsedTimes WHERE _user = $requestingUserIdOpt
-            ) lastUsedTimes ON lastUsedTimes._dataSet = d._id
-            -- TODO isEditable
+            (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
+            JOIN webknossos.organizations o
+              ON o._id = d._organization
+            LEFT JOIN webknossos.users_ u
+              ON u._id = $requestingUserIdOpt
+            LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
+              ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
             """
       _ = logger.info(query.debugInfo)
-      rows <- run(query.as[(ObjectId, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
+      rows <- run(
+        query.as[(ObjectId, String, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
     } yield
       rows.toList.map(
         row =>
           DatasetCompactInfo(
             id = row._1,
-            organizationName = row._2,
-            folderId = row._3,
-            isActive = row._4,
-            displayName = row._5,
-            created = row._6,
-            isEditable = row._7,
-            lastUsedByUser = row._8,
-            status = row._9,
-            tags = parseArrayLiteral(row._10),
-            isUnreported = row._9 == unreportedStatus,
+            name = row._2,
+            organizationName = row._3,
+            folderId = row._4,
+            isActive = row._5,
+            displayName = row._6,
+            created = row._7,
+            isEditable = row._8,
+            lastUsedByUser = row._9,
+            status = row._10,
+            tags = parseArrayLiteral(row._11),
+            isUnreported = row._10 == unreportedStatus,
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
@@ -259,7 +276,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                                        organizationIdOpt: Option[ObjectId],
                                        folderIdOpt: Option[ObjectId],
                                        uploaderIdOpt: Option[ObjectId],
-                                       isEditable: Option[Boolean],
                                        searchQuery: Option[String],
                                        includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[SqlToken] =
     for {
@@ -277,7 +293,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         .getOrElse(q"${true}")
       searchPredicate = buildSearchPredicate(searchQuery)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
-      isEditablePredicate = buildIsEditablePredicate(isEditable)
     } yield q"""
             ($folderPredicate)
         AND ($uploaderPredicate)
@@ -285,7 +300,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         AND ($isActivePredicate)
         AND ($isUnreportedPredicate)
         AND ($organizationPredicate)
-        AND ($isEditablePredicate)
         AND $accessQuery
        """
 
@@ -301,13 +315,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     isUnreportedOpt match {
       case Some(true)  => q"status = $unreportedStatus"
       case Some(false) => q"status != $unreportedStatus"
-      case None        => q"${true}"
-    }
-
-  private def buildIsEditablePredicate(isEditableOpt: Option[Boolean]): SqlToken =
-    isEditableOpt match {
-      case Some(true)  => q"${true}"
-      case Some(false) => q"${true}" // TODO
       case None        => q"${true}"
     }
 

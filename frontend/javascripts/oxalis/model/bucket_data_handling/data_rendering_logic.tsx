@@ -11,7 +11,7 @@ type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
 };
-const lookupTextureCountPerLayer = 1;
+const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
   // @ts-ignore
   const canvas = document.createElement("canvas");
@@ -258,8 +258,8 @@ function getRenderSupportedLayerCount<
   // and two for mappings.
   const textureCountForSegmentation = hasSegmentation ? 3 : 0;
   const maximumLayerCountToRender = Math.floor(
-    (specs.maxTextureCount - textureCountForSegmentation) /
-      (lookupTextureCountPerLayer + maximumTextureCountForLayer),
+    (specs.maxTextureCount - textureCountForSegmentation - lookupTextureCount) /
+      maximumTextureCountForLayer,
   );
   return {
     maximumLayerCountToRender,

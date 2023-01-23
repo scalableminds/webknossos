@@ -182,12 +182,10 @@ export const getColorForCoords: ShaderModule = {
       uint activeMagIdx = uint(activeMagIndices[int(layerIndex)]);
 
       vec2 bucketAddressWithZoomStep;
-
-      vec3 coords;
       vec3 offsetInBucket;
 
-      for (uint i = uint(0); i < uint(4); i++) {
-        coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, float(activeMagIdx + i)));
+      for (uint i = 0u; i < 4u; i++) {
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, float(activeMagIdx + i)));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddressWithZoomStep = lookUpBucket(
@@ -229,7 +227,7 @@ export const getColorForCoords: ShaderModule = {
          */
 
         vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
-        coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, zoomStep));
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, zoomStep));
         offsetInBucket = mod(coords, bucketWidth);
         vec3 worldBucketPosition = div(coords, bucketWidth);
 

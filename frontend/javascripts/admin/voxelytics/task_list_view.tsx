@@ -397,7 +397,13 @@ export default function TaskListView({
         Download Workflow YAML
       </Menu.Item>
       <Menu.Item key="4" onClick={downloadLog} disabled={runId == null}>
-        Download Log
+        {runId == null ? (
+          <Tooltip title="Please select a specific run for log download.">
+            <div>Download Log</div>
+          </Tooltip>
+        ) : (
+          "Download Log"
+        )}
       </Menu.Item>
     </Menu>
   );

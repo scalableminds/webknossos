@@ -275,7 +275,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       rows <- run(q"""select count(_id) from $existingCollectionName
-                   typ = ${AnnotationType.Explorational} and $stateQuery and $accessQuery""".as[Long])
+                   where typ = ${AnnotationType.Explorational} and ($stateQuery) and ($accessQuery)""".as[Long])
       count <- rows.headOption.toFox
     } yield count
   }

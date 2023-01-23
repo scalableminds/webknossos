@@ -6,6 +6,9 @@ import { useSelector } from "react-redux";
 import { VoxelyticsLogLine, VoxelyticsRunState } from "types/api_flow_types";
 
 export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
+const LOG_ENTRY_BATCH_SIZE = 5000;
+const LOG_TIME_BATCH_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7 days
+const LOG_TIME_PADDING = 60 * 1000; // 1 minute
 
 export type Result<T> =
   | {
@@ -66,28 +69,46 @@ export async function copyToClipboad(text: string) {
   message.success("Copied to clipboard");
 }
 
+export function addBeforePadding(date: Date): Date {
+  return new Date(date.getTime() - LOG_TIME_PADDING);
+}
+
+export function addAfterPadding(date: Date): Date {
+  return new Date(date.getTime() + LOG_TIME_PADDING);
+}
+
 export async function loadAllLogs(
   runId: string,
   taskName: string | null,
   minLevel: LOG_LEVELS,
   startTime: Date,
   endTime: Date,
-  batchSize: number = 5000,
 ): Promise<Array<VoxelyticsLogLine>> {
   let buffer: Array<VoxelyticsLogLine> = [];
   let currentEndTime = endTime;
+  let currentStartTime = new Date(
+    Math.max(startTime.getTime(), endTime.getTime() - LOG_TIME_BATCH_INTERVAL),
+  );
+
   while (true) {
     const batch = await getVoxelyticsLogs(
       runId,
       taskName,
       minLevel,
-      startTime,
+      currentStartTime,
       currentEndTime,
-      batchSize,
+      LOG_ENTRY_BATCH_SIZE,
     );
-    if (batch.length === 0) break;
-    buffer = batch.concat(buffer);
-    currentEndTime = new Date(batch[batch.length - 1].timestamp - 1);
+    if (batch.length === 0) {
+      if (currentStartTime.getTime() === startTime.getTime()) break;
+      currentEndTime = currentStartTime;
+    } else {
+      buffer = batch.concat(buffer);
+      currentEndTime = new Date(buffer[0].timestamp);
+    }
+    currentStartTime = new Date(
+      Math.max(startTime.getTime(), currentEndTime.getTime() - LOG_TIME_BATCH_INTERVAL),
+    );
   }
   return buffer;
 }

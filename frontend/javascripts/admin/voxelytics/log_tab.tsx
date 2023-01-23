@@ -9,7 +9,13 @@ import { AutoSizer, List } from "react-virtualized";
 import { usePolling } from "libs/react_hooks";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import { loadAllLogs, Result, VX_POLLING_INTERVAL } from "./utils";
+import {
+  addAfterPadding,
+  addBeforePadding,
+  loadAllLogs,
+  Result,
+  VX_POLLING_INTERVAL,
+} from "./utils";
 import { VoxelyticsLogLine } from "types/api_flow_types";
 import { LOG_LEVELS } from "oxalis/constants";
 
@@ -164,14 +170,17 @@ export default function LogTab({
   async function loadLog() {
     setIsLoading(true);
     try {
-      const log = await getVoxelyticsLogs(
-        runId,
-        taskName,
-        level,
-        beginTime ?? new Date(0),
-        endTime ?? new Date(),
-        LOG_LINE_LIMIT,
-      );
+      const log =
+        beginTime == null
+          ? []
+          : await getVoxelyticsLogs(
+              runId,
+              taskName,
+              level,
+              addBeforePadding(beginTime),
+              addAfterPadding(endTime ?? new Date()),
+              LOG_LINE_LIMIT,
+            );
       setLogResult({ type: "SUCCESS", value: log });
     } catch {
       setLogResult({ type: "ERROR" });
@@ -206,8 +215,18 @@ export default function LogTab({
 
   async function downloadFullLog() {
     try {
+      if (beginTime == null) {
+        message.error("Run hasn't started yet.");
+        return;
+      }
       const logText = (
-        await loadAllLogs(runId, taskName, level, beginTime ?? new Date(0), endTime ?? new Date())
+        await loadAllLogs(
+          runId,
+          taskName,
+          level,
+          addBeforePadding(beginTime),
+          addAfterPadding(endTime ?? new Date()),
+        )
       )
         .map((line: any) =>
           formatLog(line, { timestamps: true, pid: true, level: true, logger: true }),

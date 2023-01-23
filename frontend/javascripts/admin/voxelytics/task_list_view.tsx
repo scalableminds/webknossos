@@ -46,7 +46,7 @@ import {
 import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
-import { loadAllLogs } from "./utils";
+import { addAfterPadding, addBeforePadding, loadAllLogs } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
 
 const { Panel } = Collapse;
@@ -266,6 +266,8 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
+  const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
+
   useEffect(() => {
     setExpandedTasks([highlightedTask]);
     handleFocusTask(highlightedTask);
@@ -367,18 +369,36 @@ export default function TaskListView({
 
   async function downloadLog() {
     try {
-      if (runId == null) {
+      if (singleRunId == null) {
         message.error("Please select a specific run for log download.");
         return;
       }
-      const logText = (await loadAllLogs(runId, null, LOG_LEVELS.DEBUG, new Date(0), new Date()))
+      const singleRun = report.runs.find((r) => r.id === singleRunId);
+      const beginTime = singleRun?.beginTime;
+      const endTime = singleRun?.endTime ?? new Date();
+
+      if (beginTime == null) {
+        message.error("Run hasn't started yet.");
+        return;
+      }
+
+      const logText = (
+        await loadAllLogs(
+          singleRunId,
+          null,
+          LOG_LEVELS.DEBUG,
+          addBeforePadding(beginTime),
+          addAfterPadding(endTime),
+        )
+      )
         .map((line) => formatLog(line, { timestamps: true, pid: true, level: true, logger: true }))
         .join("\n");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([logText], { type: "plain/text" }));
-      a.download = `${report.workflow.hash}_${runId}.log`;
+      a.download = `${report.workflow.hash}_${singleRunId}.log`;
       a.click();
     } catch (error) {
+      console.error(error);
       message.error("Could not fetch log for download.");
     }
   }
@@ -396,8 +416,8 @@ export default function TaskListView({
       <Menu.Item key="3" onClick={downloadWorkflowYAML}>
         Download Workflow YAML
       </Menu.Item>
-      <Menu.Item key="4" onClick={downloadLog} disabled={runId == null}>
-        {runId == null ? (
+      <Menu.Item key="4" onClick={downloadLog} disabled={singleRunId == null}>
+        {singleRunId == null ? (
           <Tooltip title="Please select a specific run for log download.">
             <div>Download Log</div>
           </Tooltip>
@@ -500,7 +520,7 @@ export default function TaskListView({
         <TaskView
           taskName={task.taskName}
           workflowHash={report.workflow.hash}
-          runId={runId}
+          runId={singleRunId}
           task={task}
           artifacts={report.artifacts[task.taskName] || []}
           dag={report.dag}

@@ -64,6 +64,9 @@ object Instant extends FoxImplicits {
       .map(date => Instant(date.getTime))
       .toFox
 
+  def fromNanosecondsString(nanosecondsString: String): Instant =
+    Instant(nanosecondsString.substring(0, nanosecondsString.length - 6).toLong)
+
   private def fromStringSync(instantLiteral: String): Option[Instant] =
     tryo(java.time.Instant.parse(instantLiteral).toEpochMilli).toOption.map(timestamp => Instant(timestamp))
 

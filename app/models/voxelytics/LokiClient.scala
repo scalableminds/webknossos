@@ -109,13 +109,13 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         JsArray(
           (res \ "data" \ "result")
             .as[List[JsValue]]
-            .flatMap(
-              stream =>
-                (stream \ "values")
-                  .as[List[(String, String)]]
-                  .map(value =>
-                    Json.parse(value._2).as[JsObject] ++ (stream \ "stream").as[JsObject] ++ Json.obj(
-                      "timestamp" -> Instant(value._1.substring(0, value._1.length - 6).toLong)))))).toFox
+            .flatMap(stream =>
+              (stream \ "values")
+                .as[List[(String, String)]]
+                .map(value =>
+                  Json.parse(value._2).as[JsObject] ++ (stream \ "stream").as[JsObject] ++ Json.obj(
+                    "timestamp" -> Instant.fromNanosecondsString(value._1))))
+            .sortBy(entry => (entry \ "timestamp").as[Long]))).toFox
     } yield logEntries
   }
 

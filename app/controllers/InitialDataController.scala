@@ -71,7 +71,7 @@ Samplecountry
       ObjectId.generate,
       "sample_organization",
       additionalInformation,
-      "/assets/images/icon-only.svg",
+      "/assets/images/logo.svg",
       "Sample Organization",
       PricingPlan.Custom,
       None,

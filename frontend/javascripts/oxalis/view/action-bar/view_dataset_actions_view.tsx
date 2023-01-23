@@ -33,13 +33,13 @@ export default function ViewDatasetActionsView(props: Props) {
   );
   const shareDatasetModal = (
     <ShareViewDatasetModalView
-      isVisible={isShareModalOpen}
+      isOpen={isShareModalOpen}
       onOk={() => Store.dispatch(setShareModalVisibilityAction(false))}
     />
   );
   const pythonClientModal = (
     <PythonClientModalView
-      isVisible={isPythonClientModalOpen}
+      isOpen={isPythonClientModalOpen}
       onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
     />
   );

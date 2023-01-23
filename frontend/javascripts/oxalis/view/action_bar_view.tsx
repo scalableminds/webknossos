@@ -55,12 +55,12 @@ type OwnProps = {
 };
 type Props = OwnProps & StateProps;
 type State = {
-  isNewLayoutModalVisible: boolean;
+  isNewLayoutModalOpen: boolean;
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state: State = {
-    isNewLayoutModalVisible: false,
+    isNewLayoutModalOpen: false,
   };
 
   handleResetLayout = () => {
@@ -77,7 +77,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   addNewLayout = (layoutName: string) => {
     this.setState({
-      isNewLayoutModalVisible: false,
+      isNewLayoutModalOpen: false,
     });
     const configForLayout = getLayoutConfig(
       this.props.layoutProps.layoutKey,
@@ -155,7 +155,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         key="layout-menu"
         addNewLayout={() => {
           this.setState({
-            isNewLayoutModalVisible: true,
+            isNewLayoutModalOpen: true,
           });
         }}
         onResetLayout={this.handleResetLayout}
@@ -179,10 +179,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
-          open={this.state.isNewLayoutModalVisible}
+          isOpen={this.state.isNewLayoutModalOpen}
           onCancel={() =>
             this.setState({
-              isNewLayoutModalVisible: false,
+              isNewLayoutModalOpen: false,
             })
           }
         />

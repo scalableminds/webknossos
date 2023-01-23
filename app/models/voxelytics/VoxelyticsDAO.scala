@@ -111,8 +111,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   private def latestCompleteTaskQ(runIds: List[ObjectId], taskName: Option[String], staleTimeout: FiniteDuration) =
     q"""SELECT
           DISTINCT ON (t.name)
-          t.name name,
-          t._id _id
+          t.name,
+          t._id
         FROM (${tasksWithStateQ(staleTimeout)}) ts
         JOIN webknossos.voxelytics_tasks t ON t._id = ts._id
         WHERE
@@ -688,15 +688,15 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       r <- run(q"""
         WITH latest_complete_tasks AS (${latestCompleteTaskQ(runIds, Some(taskName), staleTimeout)})
         SELECT
-          t.name AS taskName,
-          a.name AS artifactName,
-          af.path AS path,
-          af.resolvedPath AS resolvedPath,
-          af.timestamp AS timestamp,
-          af.checksumMethod AS checksumMethod,
-          af.checksum AS checksum,
-          af.fileSize AS fileSize,
-          af.lastModified AS lastModified
+          t.name,
+          a.name,
+          af.path,
+          af.resolvedPath,
+          af.timestamp,
+          af.checksumMethod,
+          af.checksum,
+          af.fileSize,
+          af.lastModified
         FROM
           (
           SELECT DISTINCT ON(_artifact, path) *
@@ -744,14 +744,14 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         )
         INSERT INTO webknossos.voxelytics_artifactFileChecksumEvents (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp)
         SELECT
-          a._id _artifact,
-          iv.path path,
-          iv.resolvedPath resolvedPath,
-          iv.checksumMethod checksumMethod,
-          iv.checksum checksum,
-          iv.fileSize fileSize,
-          iv.lastModified lastModified,
-          iv.timestamp timestamp
+          a._id,
+          iv.path,
+          iv.resolvedPath,
+          iv.checksumMethod,
+          iv.checksum,
+          iv.fileSize,
+          iv.lastModified,
+          iv.timestamp
         FROM insert_values iv
         JOIN webknossos.voxelytics_tasks t ON t._run = iv._run AND t.name = iv.taskName
         JOIN webknossos.voxelytics_artifacts a ON a._task = t._id AND a.name = iv.artifactName
@@ -786,13 +786,13 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         )
         INSERT INTO webknossos.voxelytics_chunkProfilingEvents (_chunk, hostname, pid, memory, cpuUser, cpuSystem, timestamp)
         SELECT
-          c._id _chunk,
-          iv.hostname hostname,
-          iv.pid pid,
-          iv.memory memory,
-          iv.cpuUser cpuUser,
-          iv.cpuSystem cpuSystem,
-          iv.timestamp timestamp
+          c._id,
+          iv.hostname,
+          iv.pid,
+          iv.memory,
+          iv.cpuUser,
+          iv.cpuSystem,
+          iv.timestamp
         FROM insert_values iv
         JOIN webknossos.voxelytics_tasks t ON t._run = iv._run AND t.name = iv.taskName
         JOIN webknossos.voxelytics_chunks c ON c._task = t._id AND c.executionId = iv.executionId AND c.chunkName = iv.chunkName
@@ -845,10 +845,10 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         )
         INSERT INTO webknossos.voxelytics_chunks AS u (_id, _task, executionId, chunkName, beginTime, endTime, state)
         SELECT
-          iv._chunk _id,
-          t._id _task,
-          iv.executionId executionId,
-          iv.chunkName chunkName,
+          iv._chunk,
+          t._id,
+          iv.executionId,
+          iv.chunkName,
           iv.beginTime::TIMESTAMPTZ,
           iv.endTime::TIMESTAMPTZ,
           iv.state::webknossos.voxelytics_run_state
@@ -1054,14 +1054,14 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         )
         INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
         SELECT
-          iv._id _id,
-          t._id _task,
-          iv.artifactName name,
-          iv.path path,
-          iv.fileSize fileSize,
-          iv.inodeCount inodeCount,
-          iv.version version,
-          iv.metadata metadata
+          iv._id,
+          t._id,
+          iv.artifactName,
+          iv.path,
+          iv.fileSize,
+          iv.inodeCount,
+          iv.version,
+          iv.metadata
         FROM insert_values iv
         JOIN webknossos.voxelytics_tasks t ON t._run = iv._run AND t.name = iv.taskName
         ON CONFLICT (_task, name)

@@ -18,13 +18,6 @@ import javax.inject.Inject
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-protected case class LokiLabel(
-    workflow_hash: String,
-    run_name: String,
-    wk_url: String,
-    wk_org: String
-)
-
 class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
     with MimeTypes {
@@ -103,11 +96,10 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
            "start" -> startTime.toString,
            "end" -> endTime.toString,
            "limit" -> limit.toString,
-           "direction" -> (if (backward) {
+           "direction" -> (if (backward)
                              "backward"
-                           } else {
-                             "forward"
-                           }))
+                           else
+                             "forward"))
         .map(keyValueTuple => s"${keyValueTuple._1}=${java.net.URLEncoder.encode(keyValueTuple._2, "UTF-8")}")
         .mkString("&")
     for {
@@ -143,9 +135,10 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
               values <- Fox.serialCombined(keyValueTuple._2)(entry => {
                 for {
                   timestampString <- tryo((entry \ "@timestamp").as[String]).toFox
-                  timestamp <- if (timestampString.endsWith("Z")) { Instant.fromString(timestampString) } else {
+                  timestamp <- if (timestampString.endsWith("Z"))
+                    Instant.fromString(timestampString)
+                  else
                     Instant.fromLocalTimeString(timestampString)
-                  }
                   values <- tryo(
                     Json.stringify(
                       Json.obj(
@@ -182,7 +175,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                                      "wk_org" -> organizationId.id),
                 "values" -> JsArray(values)
             ))
-        res <- rpc(s"${conf.uri}/loki/api/v1/push").silent
+        _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
           .post[JsValue](Json.obj("streams" -> streams))
       } yield ()

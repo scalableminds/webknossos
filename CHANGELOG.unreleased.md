@@ -35,3 +35,4 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Removed
 
 ### Breaking Changes
+- Changes the storage backend for Voxelytics logging from Elasticsearch to Loki. [#6770](https://github.com/scalableminds/webknossos/pull/6770)

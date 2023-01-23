@@ -142,7 +142,10 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
             for {
               values <- Fox.serialCombined(keyValueTuple._2)(entry => {
                 for {
-                  timestamp <- Instant.fromString((entry \ "@timestamp").as[String])
+                  timestampString <- tryo((entry \ "@timestamp").as[String]).toFox
+                  timestamp <- if (timestampString.endsWith("Z")) { Instant.fromString(timestampString) } else {
+                    Instant.fromLocalTimeString(timestampString)
+                  }
                   values <- tryo(
                     Json.stringify(
                       Json.obj(

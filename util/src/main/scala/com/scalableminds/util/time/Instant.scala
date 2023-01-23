@@ -59,6 +59,11 @@ object Instant extends FoxImplicits {
 
   def fromCalendar(calendarTime: java.util.Calendar): Instant = Instant(calendarTime.getTimeInMillis)
 
+  def fromLocalTimeString(localTimeLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
+    tryo(new java.text.SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").parse(localTimeLiteral).toInstant())
+      .map(instant => Instant(instant.toEpochMilli))
+      .toFox
+
   private def fromStringSync(instantLiteral: String): Option[Instant] =
     tryo(java.time.Instant.parse(instantLiteral).toEpochMilli).toOption.map(timestamp => Instant(timestamp))
 
@@ -74,7 +79,7 @@ object Instant extends FoxImplicits {
             val parsedOpt = fromStringSync(instantString)
             parsedOpt match {
               case Some(parsed) => JsSuccess(parsed)
-              case None => JsError(f"instant.invalid: $instantString")
+              case None         => JsError(f"instant.invalid: $instantString")
             }
           }
         }

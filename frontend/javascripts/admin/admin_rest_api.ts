@@ -2405,6 +2405,8 @@ export function getVoxelyticsLogs(
   endTime: Date,
   limit: number,
 ): Promise<Array<VoxelyticsLogLine>> {
+  // Data is fetched with the limit from the end backward, i.e. the latest data is fetched first.
+  // The data is still ordered chronologically, i.e. ascending timestamps.
   const params = new URLSearchParams({
     runId,
     minLevel,

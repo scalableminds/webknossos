@@ -527,10 +527,10 @@ class SceneController {
     }
 
     if (optArbitraryPlane) {
-      optArbitraryPlane.updateAnchorPoints(anchorPoints);
+      // optArbitraryPlane.updateAnchorPoints(anchorPoints);
     } else {
       for (const currentPlane of _.values<Plane>(this.planes)) {
-        currentPlane.updateAnchorPoints(anchorPoints);
+        // currentPlane.updateAnchorPoints(anchorPoints);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 

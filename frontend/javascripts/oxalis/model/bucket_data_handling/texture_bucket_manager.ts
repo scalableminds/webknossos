@@ -72,7 +72,7 @@ function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementCl
 
 export default class TextureBucketManager {
   dataTextures: Array<UpdatableTexture>;
-  layerIndex: number;
+  layerIndex: number = -1;
   lookUpCuckooTable!: CuckooTableVec5;
   // Holds the index for each active bucket, to which it should (or already
   // has been was) written in the data texture.
@@ -114,13 +114,9 @@ export default class TextureBucketManager {
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(_.range(this.maximumCapacity));
     this.dataTextures = [];
-
-    // todo todop!!
-    this.layerIndex = 0;
   }
 
   async startRAFLoops() {
-    // todo: fix?
     // await waitForCondition(
     //   () => this.lookUpCuckooTable._texture.isInitialized() && this.dataTextures[0].isInitialized(),
     // );
@@ -297,7 +293,7 @@ export default class TextureBucketManager {
     return [this.lookUpCuckooTable._texture].concat(this.dataTextures);
   }
 
-  setupDataTextures(bytes: number, lookUpCuckooTable: CuckooTableVec5): void {
+  setupDataTextures(bytes: number, lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
       const channelCount = getChannelCount(bytes, this.packingDegree, this.elementClass);
       const textureType = this.elementClass === "float" ? THREE.FloatType : THREE.UnsignedByteType;
@@ -312,6 +308,7 @@ export default class TextureBucketManager {
     }
 
     this.lookUpCuckooTable = lookUpCuckooTable;
+    this.layerIndex = layerIndex;
     this.startRAFLoops();
   }
 
@@ -322,8 +319,7 @@ export default class TextureBucketManager {
     this.freeIndexSet.delete(index);
     this.activeBucketToIndexMap.set(bucket, index);
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_index' implicitly has an 'any' type.
-    const enqueueBucket = (_index) => {
+    const enqueueBucket = (_index: number) => {
       if (!bucket.hasData()) {
         return;
       }

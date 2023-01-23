@@ -17,6 +17,7 @@ import {
   getLayerByName,
   getResolutionInfo,
   getDatasetResolutionInfo,
+  getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -36,6 +37,7 @@ import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import { Model } from "oxalis/singletons";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 
@@ -163,7 +165,19 @@ export default class LayerRenderingManager {
       elementClass,
     );
 
-    this.textureBucketManager.setupDataTextures(bytes, getLookUpCuckooTable());
+    const allColorLayers = getColorLayers(Store.getState().dataset);
+    let layerIndex = allColorLayers.findIndex((layer) => layer.name === this.name);
+
+    if (layerIndex < 0) {
+      const segmentationLayers = Model.getSegmentationLayers();
+      const segLayerIndex = segmentationLayers.findIndex((layer) => layer.name === this.name);
+      if (segLayerIndex < 0) {
+        throw new Error("Could not determine segmentation layer index");
+      }
+      layerIndex = allColorLayers.length + segLayerIndex;
+    }
+
+    this.textureBucketManager.setupDataTextures(bytes, getLookUpCuckooTable(), layerIndex);
     shaderEditor.addBucketManagers(this.textureBucketManager);
 
     if (this.cube.isSegmentation) {

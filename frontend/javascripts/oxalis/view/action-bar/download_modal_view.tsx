@@ -27,7 +27,7 @@ const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onClose: () => void;
   annotationType: APIAnnotationType;
   annotationId: string;
@@ -124,7 +124,7 @@ function Footer({
 }
 
 function _DownloadModalView(props: Props): JSX.Element {
-  const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
+  const { isOpen, onClose, annotationType, annotationId, hasVolumeFallback } = props;
 
   const [activeTabKey, setActiveTabKey] = useState("download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
@@ -298,7 +298,7 @@ with wk.webknossos_context(
   return (
     <Modal
       title="Download this annotation"
-      visible={isVisible}
+      open={isOpen}
       width={600}
       footer={[
         <Footer

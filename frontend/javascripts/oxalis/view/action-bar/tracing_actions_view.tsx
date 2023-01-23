@@ -573,7 +573,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       modals.push(
         <DownloadModalView
           key="download-modal"
-          isVisible={this.props.isDownloadModalOpen}
+          isOpen={this.props.isDownloadModalOpen}
           onClose={this.handleDownloadClose}
           annotationType={annotationType}
           annotationId={annotationId}
@@ -601,7 +601,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <ShareModalView
         key="share-modal"
-        isVisible={this.props.isShareModalOpen}
+        isOpen={this.props.isShareModalOpen}
         onOk={this.handleShareClose}
         annotationType={annotationType}
         annotationId={annotationId}
@@ -610,7 +610,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <PrivateLinksModal
         key="private-links-modal"
-        isVisible={this.state.isZarrPrivateLinksModalOpen}
+        isOpen={this.state.isZarrPrivateLinksModalOpen}
         onOk={() => this.setState({ isZarrPrivateLinksModalOpen: false })}
         annotationId={annotationId}
       />,
@@ -633,7 +633,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <UserScriptsModalView
         key="user-scripts-modal"
-        isVisible={this.state.isUserScriptsModalOpen}
+        isOpen={this.state.isUserScriptsModalOpen}
         onOK={this.handleUserScriptsClose}
       />,
     );
@@ -648,7 +648,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       modals.push(
         <MergeModalView
           key="merge-modal"
-          isVisible={this.state.isMergeModalOpen}
+          isOpen={this.state.isMergeModalOpen}
           onOk={this.handleMergeClose}
         />,
       );

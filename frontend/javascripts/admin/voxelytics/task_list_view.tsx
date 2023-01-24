@@ -46,8 +46,9 @@ import {
 import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
-import { addAfterPadding, addBeforePadding, loadAllLogs } from "./utils";
+import { addAfterPadding, addBeforePadding } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
+import { getVoxelyticsLogs } from "admin/admin_rest_api";
 
 const { Panel } = Collapse;
 const { Search } = Input;
@@ -383,7 +384,7 @@ export default function TaskListView({
       }
 
       const logText = (
-        await loadAllLogs(
+        await getVoxelyticsLogs(
           singleRunId,
           null,
           LOG_LEVELS.DEBUG,

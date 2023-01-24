@@ -2403,7 +2403,7 @@ export function getVoxelyticsLogs(
   minLevel: LOG_LEVELS,
   startTime: Date,
   endTime: Date,
-  limit: number,
+  limit: number | null = null,
 ): Promise<Array<VoxelyticsLogLine>> {
   // Data is fetched with the limit from the end backward, i.e. the latest data is fetched first.
   // The data is still ordered chronologically, i.e. ascending timestamps.
@@ -2412,10 +2412,12 @@ export function getVoxelyticsLogs(
     minLevel,
     startTimestamp: startTime.getTime().toString(),
     endTimestamp: endTime.getTime().toString(),
-    limit: limit.toString(),
   });
   if (taskName != null) {
     params.append("taskName", taskName);
+  }
+  if (limit != null) {
+    params.append("limit", limit.toString());
   }
   return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }

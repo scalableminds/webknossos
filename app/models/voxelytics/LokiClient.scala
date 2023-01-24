@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
@@ -17,6 +17,7 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.math.Ordering.Implicits.infixOrderingOps
 
 class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
@@ -26,6 +27,8 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
 
   private val POLLING_INTERVAL = 1 second
+  private val LOG_TIME_BATCH_INTERVAL = 7 days
+  private val LOG_ENTRY_BATCH_SIZE = 5000L
 
   private lazy val serverStartupFuture: Fox[Unit] = {
     for {
@@ -74,14 +77,66 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
     } yield ()
   }
 
+  def queryLogsBatched(runName: String,
+                       organizationId: ObjectId,
+                       taskName: Option[String],
+                       minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
+                       startTime: Instant,
+                       endTime: Instant,
+                       limit: Option[Long]): Fox[List[JsValue]] = {
+    val currentEndTime = endTime
+    val currentStartTime = startTime.max(endTime - LOG_TIME_BATCH_INTERVAL)
+
+    for {
+      headBatch <- queryLogs(runName,
+                             organizationId,
+                             taskName,
+                             minLevel,
+                             currentStartTime,
+                             currentEndTime,
+                             limit.getOrElse(LOG_ENTRY_BATCH_SIZE).min(LOG_ENTRY_BATCH_SIZE))
+      newLimit = limit.map(l => l - headBatch.length)
+      buffer <- if (headBatch.isEmpty) {
+        if (currentStartTime == startTime) {
+          Fox.successful(List())
+        } else {
+          for {
+            tailBatch <- queryLogsBatched(
+              runName,
+              organizationId,
+              taskName,
+              minLevel,
+              startTime,
+              currentStartTime,
+              newLimit
+            )
+          } yield tailBatch ++ headBatch
+        }
+      } else {
+        for {
+          batchHead <- headBatch.headOption.toFox
+          batchHeadTime <- tryo(Instant((batchHead \ "timestamp").as[Long])).toFox
+          tailBatch <- queryLogsBatched(
+            runName,
+            organizationId,
+            taskName,
+            minLevel,
+            startTime,
+            batchHeadTime,
+            newLimit
+          )
+        } yield tailBatch ++ headBatch
+      }
+    } yield buffer
+  }
+
   def queryLogs(runName: String,
                 organizationId: ObjectId,
                 taskName: Option[String],
                 minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                 startTime: Instant,
                 endTime: Instant,
-                limit: Long,
-                backward: Boolean = true): Fox[JsValue] = {
+                limit: Long): Fox[List[JsValue]] = {
     val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
 
     val logQLFilter = List(
@@ -96,26 +151,23 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
            "start" -> startTime.toString,
            "end" -> endTime.toString,
            "limit" -> limit.toString,
-           "direction" -> (if (backward)
-                             "backward"
-                           else
-                             "forward"))
+           "direction" -> "backward")
         .map(keyValueTuple => s"${keyValueTuple._1}=${java.net.URLEncoder.encode(keyValueTuple._2, "UTF-8")}")
         .mkString("&")
     for {
       _ <- serverStartupFuture
-      res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
+      res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").getWithJsonResponse[JsValue]
       logEntries <- tryo(
-        JsArray(
-          (res \ "data" \ "result")
-            .as[List[JsValue]]
-            .flatMap(stream =>
+        (res \ "data" \ "result")
+          .as[List[JsValue]]
+          .flatMap(
+            stream =>
               (stream \ "values")
                 .as[List[(String, String)]]
                 .map(value =>
                   Json.parse(value._2).as[JsObject] ++ (stream \ "stream").as[JsObject] ++ Json.obj(
                     "timestamp" -> Instant.fromNanosecondsString(value._1))))
-            .sortBy(entry => (entry \ "timestamp").as[Long]))).toFox
+          .sortBy(entry => (entry \ "timestamp").as[Long])).toFox
     } yield logEntries
   }
 

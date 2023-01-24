@@ -76,39 +76,3 @@ export function addBeforePadding(date: Date): Date {
 export function addAfterPadding(date: Date): Date {
   return new Date(date.getTime() + LOG_TIME_PADDING);
 }
-
-export async function loadAllLogs(
-  runId: string,
-  taskName: string | null,
-  minLevel: LOG_LEVELS,
-  startTime: Date,
-  endTime: Date,
-): Promise<Array<VoxelyticsLogLine>> {
-  let buffer: Array<VoxelyticsLogLine> = [];
-  let currentEndTime = endTime;
-  let currentStartTime = new Date(
-    Math.max(startTime.getTime(), endTime.getTime() - LOG_TIME_BATCH_INTERVAL),
-  );
-
-  while (true) {
-    const batch = await getVoxelyticsLogs(
-      runId,
-      taskName,
-      minLevel,
-      currentStartTime,
-      currentEndTime,
-      LOG_ENTRY_BATCH_SIZE,
-    );
-    if (batch.length === 0) {
-      if (currentStartTime.getTime() === startTime.getTime()) break;
-      currentEndTime = currentStartTime;
-    } else {
-      buffer = batch.concat(buffer);
-      currentEndTime = new Date(buffer[0].timestamp);
-    }
-    currentStartTime = new Date(
-      Math.max(startTime.getTime(), currentEndTime.getTime() - LOG_TIME_BATCH_INTERVAL),
-    );
-  }
-  return buffer;
-}

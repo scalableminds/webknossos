@@ -266,16 +266,16 @@ class VoxelyticsController @Inject()(
           runName <- voxelyticsDAO.getRunNameById(runIdValidated, request.identity._organization)
           _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
           organization <- organizationDAO.findOne(request.identity._organization)
-          logEntries <- lokiClient.queryLogs(
+          logEntries <- lokiClient.queryLogsBatched(
             runName,
             organization._id,
             taskName,
             minLevel.flatMap(VoxelyticsLogLevel.fromString).getOrElse(VoxelyticsLogLevel.INFO),
             Instant(startTimestamp),
             Instant(endTimestamp),
-            limit.getOrElse(1000L)
+            limit
           )
-        } yield JsonOk(logEntries)
+        } yield JsonOk(JsArray(logEntries))
       }
     }
 }

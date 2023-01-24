@@ -296,7 +296,6 @@ class PlaneMaterialFactory {
     };
 
     this.unsubscribeSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
-      console.log("seeds for shared look up table", seeds);
       seeds.forEach((seed, idx) => {
         this.uniforms[`lookup_seed${idx}`] = {
           value: seed,
@@ -498,7 +497,6 @@ class PlaneMaterialFactory {
         (storeState) => storeState.dataset.dataSource.dataLayers,
         (layers) => {
           for (const layer of layers) {
-            console.log("updating uniform");
             const name = sanitizeName(layer.name);
             this.uniforms[`${name}_transform`].value.set(layer.transformMatrix || Identity4x4);
           }

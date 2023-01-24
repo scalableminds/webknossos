@@ -1,6 +1,6 @@
 import { getResolutionFactors, getRelativeCoords } from "oxalis/shaders/coords.glsl";
-import { convertCellIdToRGB } from "./segmentation.glsl";
 import type { ShaderModule } from "./shader_module_system";
+
 export const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
   code: `
@@ -119,18 +119,18 @@ export const getColorForCoords: ShaderModule = {
       state = (state * 5u) + 3864292196u;
       return state;
     }
-    vec2 attemptLookUpLookUp(uint layerIdx, uvec4 bucketAddress, uint seed) {
+    float attemptLookUpLookUp(uint layerIdx, uvec4 bucketAddress, uint seed) {
       highp uint h0 = (
         hashCombine2(
           hashCombine2(
             hashCombine2(
               hashCombine2(
-                hashCombine2(seed, layerIdx),
-                bucketAddress.x
+                hashCombine2(seed, bucketAddress.x),
+                bucketAddress.y
               ),
-              bucketAddress.y
+              bucketAddress.z
             ),
-            bucketAddress.z
+            layerIdx
           ),
           bucketAddress.a
         )
@@ -139,31 +139,31 @@ export const getColorForCoords: ShaderModule = {
       highp uint x = h0 % LOOKUP_CUCKOO_TWIDTH;
       highp uint y = h0 / LOOKUP_CUCKOO_TWIDTH;
 
-      uvec4 entryA = texelFetch(lookup_texture, ivec2(x, y), 0);
-      uvec4 expectedA = uvec4(layerIdx, bucketAddress.xyz);
+      uvec4 compressedEntry = texelFetch(lookup_texture, ivec2(x, y), 0);
 
-      if (entryA != expectedA) {
-        return vec2(-1.);
+      uint compressedBytes = compressedEntry.a;
+      uint foundLayerIdx = compressedBytes >> (32u - 5u);
+      uint foundMagIdx = (compressedBytes >> 12u) & (uint(pow(2., 15.)) - 1u);
+
+      if (compressedEntry.xyz != bucketAddress.xyz
+        || layerIdx != foundLayerIdx
+        || foundMagIdx != bucketAddress.a) {
+        return -1.;
       }
+      uint address = compressedBytes & (uint(pow(2., 12.)) - 1u);
 
-      uvec4 entryB = texelFetch(lookup_texture, ivec2(x + uint(1), y), 0);
-
-      if (entryB.x != bucketAddress.a) {
-        return vec2(-1.);
-      }
-
-      return vec2(entryB.yz);
+      return float(address);
     }
 
-    vec2 lookUpBucket(uint layerIndex, uvec4 bucketAddress) {
-      vec2 bucketAddressWithZoomStep = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed0);
-      if (bucketAddressWithZoomStep.r == -1.) {
-        bucketAddressWithZoomStep = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed1);
+    float lookUpBucket(uint layerIndex, uvec4 bucketAddress) {
+      float bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed0);
+      if (bucketAddressInTexture == -1.) {
+        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed1);
       }
-      if (bucketAddressWithZoomStep.r == -1.) {
-        bucketAddressWithZoomStep = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed2);
+      if (bucketAddressInTexture == -1.) {
+        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed2);
       }
-      return bucketAddressWithZoomStep;
+      return bucketAddressInTexture;
     }
 
     vec4[2] getColorForCoords64(
@@ -181,24 +181,30 @@ export const getColorForCoords: ShaderModule = {
       vec4 returnValue[2];
       uint activeMagIdx = uint(activeMagIndices[int(layerIndex)]);
 
-      vec2 bucketAddressWithZoomStep;
+      float bucketAddress;
       vec3 offsetInBucket;
+      float renderedZoomStep;
 
       for (uint i = 0u; i < 4u; i++) {
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, float(activeMagIdx + i)));
+        renderedZoomStep = float(activeMagIdx + i);
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, renderedZoomStep));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
-        bucketAddressWithZoomStep = lookUpBucket(
+        bucketAddress = lookUpBucket(
           uint(layerIndex),
           uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
         );
-        if (bucketAddressWithZoomStep.r != -1.) {
+
+        // // 1, 2, 3, 4, 5 => 6
+        // bucketAddress = lookUpBucket(
+        //   uint(4),
+        //   uvec4(uvec3(1u, 2u, 3u), 5u)
+        // );
+
+        if (bucketAddress != -1.) {
           break;
         }
       }
-
-      float bucketAddress = float(bucketAddressWithZoomStep.x);
-      float renderedZoomStep = float(bucketAddressWithZoomStep.y);
 
       if (bucketAddress < 0. ||
           isNan(bucketAddress)) {

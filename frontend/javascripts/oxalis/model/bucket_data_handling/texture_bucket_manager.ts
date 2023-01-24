@@ -195,7 +195,13 @@ export default class TextureBucketManager {
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;
     const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
 
-    while (performance.now() - startingTime < maxTimePerFrame && this.writerQueue.length > 0) {
+    // if (!window.hasSetDebug) {
+    //   this.lookUpCuckooTable.set([1, 2, 3, 4, 5], 6);
+    //   window.hasSetDebug = true;
+    // }
+    // return;
+
+    while (this.writerQueue.length > 0 && performance.now() - startingTime < maxTimePerFrame) {
       // @ts-expect-error pop cannot return null due to the while condition
       const { bucket, _index } = this.writerQueue.pop();
 
@@ -239,13 +245,13 @@ export default class TextureBucketManager {
 
       this.lookUpCuckooTable.set(
         [
-          this.layerIndex,
           bucket.zoomedAddress[0],
           bucket.zoomedAddress[1],
           bucket.zoomedAddress[2],
+          this.layerIndex,
           bucket.zoomedAddress[3],
         ],
-        [_index, bucket.zoomedAddress[3]],
+        _index,
       );
 
       // bucket.setVisualizationColor("#00ff00");

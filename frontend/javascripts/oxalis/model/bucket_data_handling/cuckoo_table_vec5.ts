@@ -1,16 +1,17 @@
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
-import { Vector2, Vector3 } from "oxalis/constants";
+import { Vector2, Vector3, Vector4 } from "oxalis/constants";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 
 type Vector5 = [number, number, number, number, number];
-type Key = Vector5; // [layerIdx, x, y, z, requestedMagIdx]
-type Value = Vector2; // [address, actualMagIdx]
-type Entry = [Vector5, Vector2];
+type Key = Vector5; // [x, y, z, layerIdx, requestedMagIdx]
+type Value = number; // [address, actualMagIdx]
+type Entry = [Key, Value];
+type CompressedEntry = Vector4; // [x, y, z, layerIdxMagIdxAndAddress]
 
-// Actually, it's only 7 but for alignment purposes we chose 8.
-const ELEMENTS_PER_ENTRY = 8;
+// Actually, it's only 6 but we squeeze these into 4.
+const ELEMENTS_PER_ENTRY = 4;
 const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
 const EMPTY_KEY_VALUE = 2 ** 32 - 1;
@@ -118,7 +119,6 @@ export class CuckooTableVec5 {
   }
 
   getUniformValues() {
-    // todo
     return {
       CUCKOO_ENTRY_CAPACITY: this.entryCapacity,
       CUCKOO_ELEMENTS_PER_ENTRY: ELEMENTS_PER_ENTRY,
@@ -194,12 +194,7 @@ export class CuckooTableVec5 {
 
       const value = this.getValueAtAddress(key, hashedAddress);
       if (value != null) {
-        this.writeEntryAtAddress(
-          EMPTY_KEY,
-          [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE],
-          hashedAddress,
-          false,
-        );
+        this.writeEntryAtAddress(EMPTY_KEY, EMPTY_KEY_VALUE, hashedAddress, false);
         return;
       }
     }
@@ -215,27 +210,21 @@ export class CuckooTableVec5 {
       offset < this.entryCapacity * ELEMENTS_PER_ENTRY;
       offset += ELEMENTS_PER_ENTRY
     ) {
-      if (oldTable[offset] === EMPTY_KEY[0]) {
+      if (oldTable[offset] === EMPTY_KEY_VALUE) {
         continue;
       }
-      const key: Key = [
-        oldTable[offset],
-        oldTable[offset + 1],
-        oldTable[offset + 2],
-        oldTable[offset + 3],
-        oldTable[offset + 4],
-      ];
-      const value: Value = [oldTable[offset + 5], oldTable[offset + 6]];
+      const [key, value] = this.getEntryAtAddress(offset / ELEMENTS_PER_ENTRY, oldTable);
+
       this.set(key, value, rehashAttempt);
     }
   }
 
-  get(key: Key): Vector3 | null {
+  get(key: Key): Value | null {
     const result = this.getWithAddress(key);
     return result ? result[0] : null;
   }
 
-  getWithAddress(key: Key): [Vector3, number] | null {
+  getWithAddress(key: Key): [Value, number] | null {
     for (const seed of this.seeds) {
       const hashedAddress = this._hashKeyToAddress(seed, key);
 
@@ -247,22 +236,13 @@ export class CuckooTableVec5 {
     return null;
   }
 
-  getEntryAtAddress(hashedAddress: number): Entry {
+  getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    return [
-      [
-        this.table[offset],
-        this.table[offset + 1],
-        this.table[offset + 2],
-        this.table[offset + 3],
-        this.table[offset + 4],
-      ],
-      [this.table[offset + 5], this.table[offset + 6]],
-    ];
+    return this.readDecompressedEntry(offset, optTable);
   }
 
   _areKeysEqual(key1: Key, key2: Key): boolean {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < key1.length; i++) {
       if (key1[i] !== key2[i]) {
         return false;
       }
@@ -273,30 +253,58 @@ export class CuckooTableVec5 {
   private canDisplacedEntryBeIgnored(displacedKey: Key, newKey: Key): boolean {
     return (
       // Either, the slot is empty... (the value of EMPTY_KEY is not allowed as a key)
-      this._areKeysEqual(displacedKey, EMPTY_KEY) ||
+      displacedKey[0] === EMPTY_KEY_VALUE ||
       // or the slot already refers to the key
-      displacedKey === newKey
+      this._areKeysEqual(displacedKey, newKey)
     );
   }
 
   doesAddressContainKey(key: Key, hashedAddress: number): boolean {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    return (
-      this.table[offset] === key[0] &&
-      this.table[offset + 1] === key[1] &&
-      this.table[offset + 2] === key[2] &&
-      this.table[offset + 3] === key[3] &&
-      this.table[offset + 4] === key[4]
-    );
+
+    const decompressedEntry = this.readDecompressedEntry(offset);
+    const keyInTable = decompressedEntry[0];
+
+    return this._areKeysEqual(keyInTable, key);
   }
 
-  getValueAtAddress(key: Key, hashedAddress: number): Vector3 | null {
+  getValueAtAddress(key: Key, hashedAddress: number): Value | null {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    // todo: doesAddressContainKey also uses readDecompressedEntry (perf)
     if (this.doesAddressContainKey(key, hashedAddress)) {
-      return [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]];
+      const decompressedEntry = this.readDecompressedEntry(offset);
+      return decompressedEntry[1];
     } else {
       return null;
     }
+  }
+
+  readDecompressedEntry(offset: number, optTable?: Uint32Array) {
+    const table = optTable || this.table;
+    return this.decompressEntry(
+      table.slice(offset, offset + ELEMENTS_PER_ENTRY) as unknown as Vector4,
+    );
+  }
+
+  compressEntry(key: Key, value: Value): CompressedEntry {
+    const compressedBytes =
+      ((key[3] & (2 ** 5 - 1)) << (32 - 5)) +
+      ((key[4] & (2 ** 15 - 1)) << 12) +
+      (value & (2 ** 12 - 1));
+
+    return [key[0], key[1], key[2], compressedBytes];
+  }
+
+  decompressEntry(compressedEntry: CompressedEntry): Entry {
+    const compressedBytes = compressedEntry[3];
+    const layerIndex = compressedBytes >>> (32 - 5);
+    const magIndex = (compressedBytes >>> 12) & (2 ** 15 - 1);
+    const address = compressedBytes & (2 ** 12 - 1);
+
+    return [
+      [compressedEntry[0], compressedEntry[1], compressedEntry[2], layerIndex, magIndex],
+      address,
+    ];
   }
 
   private writeEntryAtAddress(
@@ -306,31 +314,16 @@ export class CuckooTableVec5 {
     isRehashing: boolean,
   ): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
 
-    const displacedEntry: Entry = [
-      [
-        this.table[offset],
-        this.table[offset + 1],
-        this.table[offset + 2],
-        this.table[offset + 3],
-        this.table[offset + 4],
-      ],
-      [this.table[offset + 5], this.table[offset + 6]],
-    ];
+    const displacedEntry: Entry = this.readDecompressedEntry(offset);
+    const compressedEntry = this.compressEntry(key, value);
 
-    this.table[offset] = key[0];
-    this.table[offset + 1] = key[1];
-    this.table[offset + 2] = key[2];
-    this.table[offset + 3] = key[3];
-    this.table[offset + 4] = key[4];
-    this.table[offset + 5] = value[0];
-    this.table[offset + 6] = value[1];
-
-    // const x = texelOffset % this.textureWidth;
-    // const y = Math.floor(texelOffset / this.textureWidth);
+    for (let i = 0; i < compressedEntry.length; i++) {
+      this.table[offset + i] = compressedEntry[i];
+    }
 
     if (!isRehashing) {
+      const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
       this._texture.update(
@@ -374,11 +367,11 @@ export class CuckooTableVec5 {
 
   _hashKeyToAddress(seed: number, key: Key): number {
     let state = seed;
-    state = this._hashCombine(state, key[0]);
-    state = this._hashCombine(state, key[1]);
-    state = this._hashCombine(state, key[2]);
-    state = this._hashCombine(state, key[3]);
-    state = this._hashCombine(state, key[4]);
+    state = this._hashCombine(state, key[0]); // x
+    state = this._hashCombine(state, key[1]); // y
+    state = this._hashCombine(state, key[2]); // z
+    state = this._hashCombine(state, key[3]); // layerIdx
+    state = this._hashCombine(state, key[4]); // magIdx
 
     return state % this.entryCapacity;
   }

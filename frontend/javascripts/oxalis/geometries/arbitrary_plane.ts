@@ -62,8 +62,7 @@ class ArbitraryPlane {
     if (this.isDirty) {
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mesh' implicitly has an 'any' type.
-      const updateMesh = (mesh) => {
+      const updateMesh = (mesh: THREE.Mesh | null | undefined) => {
         if (!mesh) {
           return;
         }
@@ -101,8 +100,7 @@ class ArbitraryPlane {
   }
 
   createMeshes(): ArbitraryMeshes {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_plane' implicitly has an 'any' type.
-    const adaptPlane = (_plane) => {
+    const adaptPlane = (_plane: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>) => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;
       _plane.material.side = THREE.DoubleSide;

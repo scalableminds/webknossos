@@ -5,9 +5,13 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import Maybe from "data.maybe";
-import type { MeshMetaData } from "types/api_flow_types";
+import type { APIDataLayer, MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
-import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getBoundaries,
+  getDataLayers,
+  getLayerBoundingBox,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getActiveMagIndicesForLayers } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -49,8 +53,9 @@ class SceneController {
   datasetBoundingBox: Cube;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxGroup' has no initializer... Remove this comment to see the full error message
   userBoundingBoxGroup: THREE.Group;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxes' has no initializer an... Remove this comment to see the full error message
-  userBoundingBoxes: Array<Cube>;
+  layerBoundingBoxGroup!: THREE.Group;
+  userBoundingBoxes!: Array<Cube>;
+  layerBoundingBoxes!: Array<Cube>;
   annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
@@ -369,7 +374,9 @@ class SceneController {
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
+    this.layerBoundingBoxGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
+    this.rootNode.add(this.layerBoundingBoxGroup);
     this.annotationToolsGeometryGroup = new THREE.Group();
     this.rootNode.add(this.annotationToolsGeometryGroup);
     this.userBoundingBoxes = [];
@@ -585,6 +592,54 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
+  setLayerBoundingBoxes(layers: APIDataLayer[]): void {
+    const newLayerBoundingBoxGroup = new THREE.Group();
+    const dataset = Store.getState().dataset;
+    this.layerBoundingBoxes = layers.map((layer) => {
+      const boundingBox = getLayerBoundingBox(dataset, layer.name);
+      const { min, max } = boundingBox;
+      // todo: use layer color? (avoid white on white or black on black, though)
+      const bbColor: Vector3 = [0.5 * 255, 0.5 * 255, 0.5 * 255];
+      const bbCube = new Cube({
+        min,
+        max,
+        color: Utils.rgbToInt(bbColor),
+        showCrossSections: true,
+        isHighlighted: false,
+      });
+      bbCube.setVisibility(true);
+      bbCube.getMeshes().forEach((mesh) => {
+        if (layer.transformMatrix) {
+          const matrix = new THREE.Matrix4();
+          matrix.set(
+            layer.transformMatrix[0],
+            layer.transformMatrix[4],
+            layer.transformMatrix[8],
+            layer.transformMatrix[12],
+            layer.transformMatrix[1],
+            layer.transformMatrix[5],
+            layer.transformMatrix[9],
+            layer.transformMatrix[13],
+            layer.transformMatrix[2],
+            layer.transformMatrix[6],
+            layer.transformMatrix[10],
+            layer.transformMatrix[14],
+            layer.transformMatrix[3],
+            layer.transformMatrix[7],
+            layer.transformMatrix[11],
+            layer.transformMatrix[15],
+          );
+          mesh.applyMatrix4(matrix);
+        }
+        newLayerBoundingBoxGroup.add(mesh);
+      });
+      return bbCube;
+    });
+    this.rootNode.remove(this.layerBoundingBoxGroup);
+    this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
+    this.rootNode.add(this.layerBoundingBoxGroup);
+  }
+
   highlightUserBoundingBox(bboxId: number | null | undefined): void {
     if (this.highlightedBBoxId === bboxId) {
       return;
@@ -657,6 +712,10 @@ class SceneController {
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).userBoundingBoxes,
       (bboxes) => this.setUserBoundingBoxes(bboxes),
+    );
+    listenToStoreProperty(
+      (storeState) => getDataLayers(storeState.dataset),
+      (layers) => this.setLayerBoundingBoxes(layers),
     );
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).boundingBox,

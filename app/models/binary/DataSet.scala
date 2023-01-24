@@ -244,7 +244,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                     JOIN webknossos.user_team_roles utr ON dt._team = utr._team
                     WHERE utr._user = u._id AND utr.isTeamManager
                   ) OR
-                  d. _folder IN (        -- team manager of team that has (cumulative) access to dataset folder
+                  d._folder IN (        -- team manager of team that has (cumulative) access to dataset folder
                     SELECT fp._descendant
                     FROM webknossos.folder_paths fp
                     WHERE fp._ancestor IN (

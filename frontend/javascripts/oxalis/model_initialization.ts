@@ -233,7 +233,7 @@ export async function initialize(
   const makeRotation = (theta: number, pos: Vector3) =>
     M4x4.mul(
       M4x4.mul(
-        makeTranslation(pos[0], pos[1], pos[1]),
+        makeTranslation(pos[0], pos[1], pos[2]),
         new Float32Array([
           Math.cos(theta),
           Math.sin(theta),

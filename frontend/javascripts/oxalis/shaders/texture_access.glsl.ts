@@ -179,6 +179,12 @@ export const getColorForCoords: ShaderModule = {
 
       // Will hold [highValue, lowValue];
       vec4 returnValue[2];
+
+      if (worldPositionUVW.x < 0. || worldPositionUVW.y < 0. || worldPositionUVW.z < 0.) {
+        returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
+        return returnValue;
+      }
+
       uint activeMagIdx = uint(activeMagIndices[int(layerIndex)]);
 
       float bucketAddress;

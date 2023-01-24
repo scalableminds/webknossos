@@ -27,7 +27,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
 
   private val POLLING_INTERVAL = 1 second
-  private val LOG_TIME_BATCH_INTERVAL = 7 days
+  private val LOG_TIME_BATCH_INTERVAL = 1 days
   private val LOG_ENTRY_BATCH_SIZE = 5000L
 
   private lazy val serverStartupFuture: Fox[Unit] = {
@@ -156,7 +156,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         .mkString("&")
     for {
       _ <- serverStartupFuture
-      res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").getWithJsonResponse[JsValue]
+      res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
       logEntries <- tryo(
         (res \ "data" \ "result")
           .as[List[JsValue]]

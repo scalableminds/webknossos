@@ -48,6 +48,8 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
+import { PricingEnforcedButton } from "components/pricing_enforcers";
+import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 
 const { Group: InputGroup } = Input;
 
@@ -291,7 +293,7 @@ function DatasetView(props: Props) {
             </Button>
           </Link>
           {"activeFolderId" in context && context.activeFolderId != null && (
-            <Button
+            <PricingEnforcedButton
               disabled={folder != null && !folder.isEditable}
               style={margin}
               icon={<PlusOutlined />}
@@ -299,9 +301,10 @@ function DatasetView(props: Props) {
                 context.activeFolderId != null &&
                 context.showCreateFolderPrompt(context.activeFolderId)
               }
+              requiredPricingPlan={PricingPlanEnum.Team}
             >
               Add Folder
-            </Button>
+            </PricingEnforcedButton>
           )}
           {search}
         </React.Fragment>

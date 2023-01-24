@@ -690,20 +690,20 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         return;
                       }
 
-                      const teamOfOrganisation = fetchedTeams.find(
+                      const teamOfOrganization = fetchedTeams.find(
                         (team) => team.name === team.organization,
                       );
 
-                      if (teamOfOrganisation == null) {
+                      if (teamOfOrganization == null) {
                         return;
                       }
 
                       if (this.formRef.current == null) return;
                       this.formRef.current.setFieldsValue({
-                        initialTeams: [teamOfOrganisation],
+                        initialTeams: [teamOfOrganization],
                       });
                       this.setState({
-                        selectedTeams: [teamOfOrganisation],
+                        selectedTeams: [teamOfOrganization],
                       });
                     }}
                   />

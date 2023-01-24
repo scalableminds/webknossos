@@ -59,6 +59,25 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 }
 
+case class DatasetCompactInfo(
+    id: ObjectId,
+    name: String,
+    organizationName: String,
+    folderId: ObjectId,
+    isActive: Boolean,
+    displayName: String,
+    created: Instant,
+    isEditable: Boolean,
+    lastUsedByUser: Instant,
+    status: String,
+    tags: List[String],
+    isUnreported: Boolean
+)
+
+object DatasetCompactInfo {
+  implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
+}
+
 class DataSetDAO @Inject()(sqlClient: SqlClient,
                            dataSetDataLayerDAO: DataSetDataLayerDAO,
                            organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
@@ -68,6 +87,8 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
   protected def idColumn(x: Datasets): Rep[String] = x._Id
 
   protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
+
+  val unreportedStatus: String = "No longer available on datastore."
 
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
@@ -164,8 +185,117 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findAllWithSearch(folderIdOpt: Option[ObjectId], searchQuery: Option[String], includeSubfolders: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+  def findAllWithSearch(isActiveOpt: Option[Boolean],
+                        isUnreported: Option[Boolean],
+                        organizationIdOpt: Option[ObjectId],
+                        folderIdOpt: Option[ObjectId],
+                        uploaderIdOpt: Option[ObjectId],
+                        searchQuery: Option[String],
+                        includeSubfolders: Boolean,
+                        limitOpt: Option[Int])(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      selectionPredicates <- buildSelectionPredicates(isActiveOpt,
+                                                      isUnreported,
+                                                      organizationIdOpt,
+                                                      folderIdOpt,
+                                                      uploaderIdOpt,
+                                                      searchQuery,
+                                                      includeSubfolders)
+      limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def findAllCompactWithSearch(isActiveOpt: Option[Boolean],
+                               isUnreported: Option[Boolean],
+                               organizationIdOpt: Option[ObjectId],
+                               folderIdOpt: Option[ObjectId],
+                               uploaderIdOpt: Option[ObjectId],
+                               searchQuery: Option[String],
+                               requestingUserIdOpt: Option[ObjectId],
+                               includeSubfolders: Boolean,
+                               limitOpt: Option[Int])(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+    for {
+      selectionPredicates <- buildSelectionPredicates(isActiveOpt,
+                                                      isUnreported,
+                                                      organizationIdOpt,
+                                                      folderIdOpt,
+                                                      uploaderIdOpt,
+                                                      searchQuery,
+                                                      includeSubfolders)
+      limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
+      query = q"""
+            SELECT
+              d._id,
+              d.name,
+              o.name,
+              d._folder,
+              d.isUsable,
+              d.displayName,
+              d.created,
+              COALESCE(
+                (
+                  (u.isAdmin AND u._organization = d._organization) OR
+                  u.isDatasetManager OR
+                  d._uploader = u._id OR
+                  d._id IN (              -- team manager of team that has access to the dataset
+                    SELECT _dataSet
+                    FROM webknossos.dataSet_allowedTeams dt
+                    JOIN webknossos.user_team_roles utr ON dt._team = utr._team
+                    WHERE utr._user = u._id AND utr.isTeamManager
+                  ) OR
+                  d._folder IN (        -- team manager of team that has (cumulative) access to dataset folder
+                    SELECT fp._descendant
+                    FROM webknossos.folder_paths fp
+                    WHERE fp._ancestor IN (
+                      SELECT at._folder
+                      FROM webknossos.folder_allowedTeams at
+                      JOIN webknossos.user_team_roles utr ON at._team = utr._team
+                      WHERE utr._user = u._id
+                    )
+                  )
+                ), ${false}
+              ) AS isEditable,
+              COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
+              d.status,
+              d.tags
+            FROM
+            (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
+            JOIN webknossos.organizations o
+              ON o._id = d._organization
+            LEFT JOIN webknossos.users_ u
+              ON u._id = $requestingUserIdOpt
+            LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
+              ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
+            """
+      _ = logger.info(query.debugInfo)
+      rows <- run(
+        query.as[(ObjectId, String, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
+    } yield
+      rows.toList.map(
+        row =>
+          DatasetCompactInfo(
+            id = row._1,
+            name = row._2,
+            organizationName = row._3,
+            folderId = row._4,
+            isActive = row._5,
+            displayName = row._6,
+            created = row._7,
+            isEditable = row._8,
+            lastUsedByUser = row._9,
+            status = row._10,
+            tags = parseArrayLiteral(row._11),
+            isUnreported = row._10 == unreportedStatus,
+        ))
+
+  private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
+                                       isUnreported: Option[Boolean],
+                                       organizationIdOpt: Option[ObjectId],
+                                       folderIdOpt: Option[ObjectId],
+                                       uploaderIdOpt: Option[ObjectId],
+                                       searchQuery: Option[String],
+                                       includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -174,15 +304,22 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
         case Some(folderId) => q"_folder = $folderId"
         case None           => q"${true}"
       }
+      uploaderPredicate = uploaderIdOpt.map(uploaderId => q"_uploader = $uploaderId").getOrElse(q"${true}")
+      isActivePredicate = isActiveOpt.map(isActive => q"isUsable = $isActive").getOrElse(q"${true}")
+      organizationPredicate = organizationIdOpt
+        .map(organizationId => q"_organization = $organizationId")
+        .getOrElse(q"${true}")
       searchPredicate = buildSearchPredicate(searchQuery)
-      r <- run(q"""SELECT $columns
-              FROM $existingCollectionName
-              WHERE $folderPredicate
-              AND ($searchPredicate)
-              AND $accessQuery
-              """.as[DatasetsRow])
-      parsed <- parseAll(r)
-    } yield parsed
+      isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
+    } yield q"""
+            ($folderPredicate)
+        AND ($uploaderPredicate)
+        AND ($searchPredicate)
+        AND ($isActivePredicate)
+        AND ($isUnreportedPredicate)
+        AND ($organizationPredicate)
+        AND $accessQuery
+       """
 
   private def buildSearchPredicate(searchQueryOpt: Option[String]): SqlToken =
     searchQueryOpt match {
@@ -190,6 +327,13 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       case Some(searchQuery) =>
         val queryTokens = searchQuery.toLowerCase.trim.split(" +")
         SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+    }
+
+  private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
+    isUnreportedOpt match {
+      case Some(true)  => q"status = $unreportedStatus"
+      case Some(false) => q"status != $unreportedStatus"
+      case None        => q"${true}"
     }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =

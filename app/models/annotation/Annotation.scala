@@ -270,15 +270,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
-  def countAllListableExplorationals(isFinished: Option[Boolean])(
-      implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
+  def countAllListableExplorationals(isFinished: Option[Boolean])(implicit ctx: DBAccessContext): Fox[Long] = {
     val stateQuery = getStateQuery(isFinished)
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(q"""select count(_id) from $existingCollectionName
-                   typ = ${AnnotationType.Explorational} and $stateQuery and $accessQuery""".as[AnnotationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
+      rows <- run(q"""select count(_id) from $existingCollectionName
+                   where typ = ${AnnotationType.Explorational} and ($stateQuery) and ($accessQuery)""".as[Long])
+      count <- rows.headOption.toFox
+    } yield count
   }
 
   def findActiveTaskIdsForUser(userId: ObjectId): Fox[List[ObjectId]] = {

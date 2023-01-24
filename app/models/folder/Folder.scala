@@ -124,9 +124,10 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          WHERE fp._descendant IN (
            SELECT d._folder
            FROM webknossos.dataSets_ d
-           JOIN webknossos.dataSet_allowedTeams dt ON dt._dataSet = d._id
-           JOIN webknossos.user_team_roles utr ON dt._team = utr._team
+           LEFT JOIN webknossos.dataSet_allowedTeams dt ON dt._dataSet = d._id
+           LEFT JOIN webknossos.user_team_roles utr ON dt._team = utr._team
            WHERE utr._user = $requestingUserId
+           OR d.isPublic
          )
        )
        """

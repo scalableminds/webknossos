@@ -16,11 +16,16 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import * as React from "react";
+import React from "react";
 import _ from "lodash";
 import moment from "moment";
 import { location } from "libs/window";
-import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_types";
+import type {
+  APIUser,
+  APITeamMembership,
+  ExperienceMap,
+  APIOrganization,
+} from "types/api_flow_types";
 import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -37,6 +42,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -44,6 +50,7 @@ const typeHint: APIUser[] = [];
 
 type StateProps = {
   activeUser: APIUser;
+  activeOrganization: APIOrganization;
 };
 type Props = RouteComponentProps & StateProps;
 
@@ -58,7 +65,6 @@ type State = {
   activationFilter: Array<"true" | "false">;
   searchQuery: string;
   domainToEdit: string | null | undefined;
-  maxUserCountPerOrganization: number;
 };
 const persistence = new Persistence<Pick<State, "searchQuery" | "activationFilter">>(
   {
@@ -80,7 +86,6 @@ class UserListView extends React.PureComponent<Props, State> {
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
-    maxUserCountPerOrganization: Number.POSITIVE_INFINITY,
   };
 
   componentDidMount() {
@@ -103,15 +108,11 @@ class UserListView extends React.PureComponent<Props, State> {
     this.setState({
       isLoading: true,
     });
-    const [users, organization] = await Promise.all([
-      getEditableUsers(),
-      getOrganization(this.props.activeUser.organization),
-    ]);
+    const users = await getEditableUsers();
 
     this.setState({
       isLoading: false,
       users,
-      maxUserCountPerOrganization: organization.includedUsers,
     });
   }
 
@@ -279,7 +280,7 @@ class UserListView extends React.PureComponent<Props, State> {
         message="You reached the maximum number of users"
         description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
           this.state.users,
-        )} active users of ${this.state.maxUserCountPerOrganization} allowed by your plan.`}
+        )} active users of ${this.props.activeOrganization.includedUsers} allowed by your plan.`}
         type="error"
         showIcon
         style={{
@@ -342,7 +343,7 @@ class UserListView extends React.PureComponent<Props, State> {
     };
     const noOtherUsers = this.state.users.length < 2;
     const isUserInvitesDisabled =
-      getActiveUserCount(this.state.users) >= this.state.maxUserCountPerOrganization;
+      getActiveUserCount(this.state.users) >= this.props.activeOrganization.includedUsers;
 
     return (
       <div className="container test-UserListView">
@@ -394,7 +395,7 @@ class UserListView extends React.PureComponent<Props, State> {
           </Button>
           <InviteUsersModal
             currentUserCount={getActiveUserCount(this.state.users)}
-            maxUserCountPerOrganization={this.state.maxUserCountPerOrganization}
+            maxUserCountPerOrganization={this.props.activeOrganization.includedUsers}
             isOpen={this.state.isInviteModalOpen}
             organizationName={this.props.activeUser.organization}
             handleVisibleChange={(visible) => {
@@ -681,6 +682,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
+  activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);

@@ -100,7 +100,7 @@ class AuthenticationController @Inject()(
                   inviteBox.toOption,
                   organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 _ <- organizationService
-                  .assertUsersCanBeAdded(organization)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
+                  .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
                 _ <- createUser(organization,
                                 email,
@@ -343,7 +343,7 @@ class AuthenticationController @Inject()(
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser)(
         organizationService
-          .assertUsersCanBeAdded(organization)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
+          .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
       _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)

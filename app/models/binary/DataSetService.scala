@@ -47,7 +47,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val unreportedStatus = "No longer available on datastore."
+  private val unreportedStatus = dataSetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
   private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
 

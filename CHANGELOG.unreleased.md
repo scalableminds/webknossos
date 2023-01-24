@@ -34,6 +34,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed incorrect loading of precomputed meshes from mesh files that were computed for a specific mapping. [#6771](https://github.com/scalableminds/webknossos/pull/6771)
 - Fixed a bug where remote datasets without authentication could not be explored. [#6764](https://github.com/scalableminds/webknossos/pull/6764)
 - Fixed deprecation warnings for antd <Modal> props. [#6765](https://github.com/scalableminds/webknossos/pull/6765)
+- Fixed a bug where direct task assignment to a single user would fail. [#6777](https://github.com/scalableminds/webknossos/pull/6777)
 
 ### Removed
 

@@ -81,7 +81,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
     state.activeOrganization ? state.activeOrganization.pricingPlan : PricingPlanEnum.Basic,
   );
   const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
-  if (isFeatureAllowed) return <>children</>;
+  if (isFeatureAllowed) return <>{children}</>;
 
   return (
     <Tooltip title={messages["organization.plan.feature_not_available"]}>

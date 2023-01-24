@@ -494,15 +494,17 @@ i.without-icon-margin,
       text-align: center;
     }
 
-    .log-tab-content {
+    .log-content {
+      position: relative;
+      background-color: @component-background;
       width: 100%;
       height: 500px;
-      position: relative;
-    }
-    .log-content {
-      background-color: @component-background;
+      overflow-y: auto;
     }
     .log-line {
+      position: relative;
+      padding-left: 60px;
+
       @log-font-family: "RobotoMono", Monaco, "Courier New", monospace;
       @log-font-size: 12px;
       @log-line-height: 19px;
@@ -521,14 +523,12 @@ i.without-icon-margin,
         user-select: none;
       }
       code {
-        position: absolute;
-        top: 0;
-        left: @log-line-number-width;
+        display: block;
         width: calc(100% - @log-line-number-width);
         font-family: @log-font-family;
         font-size: @log-font-size;
         line-height: @log-line-height;
-        white-space: pre-wrap;
+        overflow-wrap: break-word;
         color: @text-color;
       }
       &:hover {

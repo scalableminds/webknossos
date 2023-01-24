@@ -138,10 +138,10 @@ export default class TextureBucketManager {
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
     this.lookUpCuckooTable.unset([
-      this.layerIndex,
       bucket.zoomedAddress[0],
       bucket.zoomedAddress[1],
       bucket.zoomedAddress[2],
+      this.layerIndex,
       bucket.zoomedAddress[3],
     ]);
   }
@@ -162,8 +162,6 @@ export default class TextureBucketManager {
       this.freeBucket(freeBucket);
     }
 
-    let needsNewBucket = false;
-
     for (const nextBucket of buckets) {
       if (!this.activeBucketToIndexMap.has(nextBucket)) {
         if (this.freeIndexSet.size === 0) {
@@ -172,7 +170,6 @@ export default class TextureBucketManager {
 
         const freeBucketIdx = getSomeValue(this.freeIndexSet);
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
-        needsNewBucket = true;
       }
     }
   }

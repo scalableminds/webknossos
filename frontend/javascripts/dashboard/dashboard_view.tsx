@@ -11,7 +11,6 @@ import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_f
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
-  getOrganization,
   getPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
@@ -31,6 +30,7 @@ import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/or
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import { DatasetFolderView } from "./dataset_folder_view";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 type OwnProps = {
   userId: string | null | undefined;
@@ -39,6 +39,7 @@ type OwnProps = {
 };
 type StateProps = {
   activeUser: APIUser;
+  activeOrganization: APIOrganization;
 };
 type DispatchProps = {
   updateActiveUser: (arg0: APIUser) => void;
@@ -124,14 +125,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     const user =
       this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
 
-    const [organization, pricingPlanStatus] = await Promise.all([
-      getOrganization(user.organization),
-      getPricingPlanStatus(),
-    ]);
+    const pricingPlanStatus = await getPricingPlanStatus();
 
     this.setState({
       user,
-      organization,
       pricingPlanStatus,
     });
   }
@@ -285,16 +282,15 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       ) : null;
     this.state.pricingPlanStatus?.isAlmostExceeded;
 
-    // ToDo enable components below once pricing goes live
     const pricingPlanWarnings =
-      this.state.organization &&
+      this.props.activeOrganization &&
       this.state.pricingPlanStatus?.isAlmostExceeded &&
       !this.state.pricingPlanStatus.isExceeded ? (
-        <PlanAboutToExceedAlert organization={this.state.organization} />
+        <PlanAboutToExceedAlert organization={this.props.activeOrganization} />
       ) : null;
     const pricingPlanErrors =
-      this.state.organization && this.state.pricingPlanStatus?.isExceeded ? (
-        <PlanExceededAlert organization={this.state.organization} />
+      this.props.activeOrganization && this.state.pricingPlanStatus?.isExceeded ? (
+        <PlanExceededAlert organization={this.props.activeOrganization} />
       ) : null;
 
     return (
@@ -334,6 +330,7 @@ function DatasetViewWithLegacyContext({ user }: { user: APIUser }) {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
+  activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

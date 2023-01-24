@@ -327,6 +327,7 @@ export class InviteUsersModal extends React.Component<
           if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
           if (this.props.destroy != null) this.props.destroy();
         }}
+        closable
       >
         {this.getContent(isInvitesDisabled)}
       </Modal>

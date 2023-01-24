@@ -604,7 +604,7 @@ class SceneController {
         min,
         max,
         color: Utils.rgbToInt(bbColor),
-        showCrossSections: true,
+        showCrossSections: false,
         isHighlighted: false,
       });
       bbCube.setVisibility(true);
@@ -629,6 +629,7 @@ class SceneController {
             layer.transformMatrix[11],
             layer.transformMatrix[15],
           );
+          matrix.invert();
           mesh.applyMatrix4(matrix);
         }
         newLayerBoundingBoxGroup.add(mesh);

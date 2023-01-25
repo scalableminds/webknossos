@@ -141,8 +141,8 @@ export default class TextureBucketManager {
       bucket.zoomedAddress[0],
       bucket.zoomedAddress[1],
       bucket.zoomedAddress[2],
-      this.layerIndex,
       bucket.zoomedAddress[3],
+      this.layerIndex,
     ]);
   }
 
@@ -245,8 +245,8 @@ export default class TextureBucketManager {
           bucket.zoomedAddress[0],
           bucket.zoomedAddress[1],
           bucket.zoomedAddress[2],
-          this.layerIndex,
           bucket.zoomedAddress[3],
+          this.layerIndex,
         ],
         _index,
       );

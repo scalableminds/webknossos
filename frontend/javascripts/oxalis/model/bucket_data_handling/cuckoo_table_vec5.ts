@@ -5,10 +5,17 @@ import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 
 type Vector5 = [number, number, number, number, number];
-type Key = Vector5; // [x, y, z, layerIdx, requestedMagIdx]
-type Value = number; // [address, actualMagIdx]
+type Key = Vector5; // [x, y, z, requestedMagIdx, layerIdx]
+type Value = number; // bucket address in texture
 type Entry = [Key, Value];
-type CompressedEntry = Vector4; // [x, y, z, layerIdxMagIdxAndAddress]
+// CompressedEntry = [
+//    x, // 32 bit
+//    y, // 32 bit
+//    z, // 32 bit
+//    // 32 bit = 5 (magIdx) + 6 (layerIdx) + 21 bit (bucket address)
+//    requesteMagIdxAndLayerIdxAndBucketAddress
+// ]
+type CompressedEntry = Vector4;
 
 // Actually, it's only 6 but we squeeze these into 4.
 const ELEMENTS_PER_ENTRY = 4;
@@ -289,20 +296,20 @@ export class CuckooTableVec5 {
   compressEntry(key: Key, value: Value): CompressedEntry {
     const compressedBytes =
       ((key[3] & (2 ** 5 - 1)) << (32 - 5)) +
-      ((key[4] & (2 ** 15 - 1)) << 12) +
-      (value & (2 ** 12 - 1));
+      ((key[4] & (2 ** 6 - 1)) << (32 - 5 - 6)) +
+      (value & (2 ** 21 - 1));
 
     return [key[0], key[1], key[2], compressedBytes];
   }
 
   decompressEntry(compressedEntry: CompressedEntry): Entry {
     const compressedBytes = compressedEntry[3];
-    const layerIndex = compressedBytes >>> (32 - 5);
-    const magIndex = (compressedBytes >>> 12) & (2 ** 15 - 1);
-    const address = compressedBytes & (2 ** 12 - 1);
+    const magIndex = compressedBytes >>> (32 - 5);
+    const layerIndex = (compressedBytes >>> (32 - 5 - 6)) & (2 ** 6 - 1);
+    const address = compressedBytes & (2 ** 21 - 1);
 
     return [
-      [compressedEntry[0], compressedEntry[1], compressedEntry[2], layerIndex, magIndex],
+      [compressedEntry[0], compressedEntry[1], compressedEntry[2], magIndex, layerIndex],
       address,
     ];
   }
@@ -370,8 +377,8 @@ export class CuckooTableVec5 {
     state = this._hashCombine(state, key[0]); // x
     state = this._hashCombine(state, key[1]); // y
     state = this._hashCombine(state, key[2]); // z
-    state = this._hashCombine(state, key[3]); // layerIdx
-    state = this._hashCombine(state, key[4]); // magIdx
+    state = this._hashCombine(state, key[3]); // magIdx
+    state = this._hashCombine(state, key[4]); // layerIdx
 
     return state % this.entryCapacity;
   }

@@ -19,9 +19,9 @@ function generateRandomEntry(): Entry {
       Math.floor(Math.random() * 1000),
       Math.floor(Math.random() * 1000),
       Math.floor(Math.random() * 2 ** 5),
-      Math.floor(Math.random() * 2 ** 15),
+      Math.floor(Math.random() * 2 ** 6),
     ],
-    Math.floor(Math.random() * 2 ** 12),
+    Math.floor(Math.random() * 2 ** 21),
   ];
 }
 
@@ -49,6 +49,15 @@ function isValueEqual(t: ExecutionContext<any>, val1: Value, val2: Value) {
 
   t.true(val1 === val2);
 }
+
+test.serial("CuckooTableVec5: Compression/Decompression roundtrip", (t) => {
+  const ct = CuckooTableVec5.fromCapacity(0);
+  const expectedEntry = [[363, 213, 995, 28, 58], 1547497];
+
+  const actualEntry = ct.decompressEntry(ct.compressEntry(...expectedEntry));
+
+  t.deepEqual(expectedEntry, actualEntry);
+});
 
 test.serial("CuckooTableVec5: Basic", (t) => {
   debugger;

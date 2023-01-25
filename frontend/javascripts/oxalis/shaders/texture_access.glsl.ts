@@ -106,8 +106,8 @@ export const getColorForCoords: ShaderModule = {
       highp uint h0 = hashCombine(seed, bucketAddress.x);
       h0 = hashCombine(h0, bucketAddress.y);
       h0 = hashCombine(h0, bucketAddress.z);
-      h0 = hashCombine(h0, layerIdx);
       h0 = hashCombine(h0, bucketAddress.a);
+      h0 = hashCombine(h0, layerIdx);
       h0 = h0 % LOOKUP_CUCKOO_ENTRY_CAPACITY;
       h0 = uint(h0 * LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY / LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL);
 
@@ -117,15 +117,15 @@ export const getColorForCoords: ShaderModule = {
       uvec4 compressedEntry = texelFetch(lookup_texture, ivec2(x, y), 0);
 
       uint compressedBytes = compressedEntry.a;
-      uint foundLayerIdx = compressedBytes >> (32u - 5u);
-      uint foundMagIdx = (compressedBytes >> 12u) & (uint(pow(2., 15.)) - 1u);
+      uint foundMagIdx = compressedBytes >> (32u - 5u);
+      uint foundLayerIdx = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
 
       if (compressedEntry.xyz != bucketAddress.xyz
         || layerIdx != foundLayerIdx
         || foundMagIdx != bucketAddress.a) {
         return -1.;
       }
-      uint address = compressedBytes & (uint(pow(2., 12.)) - 1u);
+      uint address = compressedBytes & (uint(pow(2., 21.)) - 1u);
 
       return float(address);
     }

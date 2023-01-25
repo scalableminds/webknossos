@@ -93,7 +93,7 @@ class BinaryDataService(val dataBaseDir: Path,
         case Full(data) =>
           if (data.length == 0) {
             val msg =
-              s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}"
+              s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
             logger.warn(msg)
             Fox.failure(msg)
 

@@ -201,12 +201,6 @@ export const getColorForCoords: ShaderModule = {
           uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
         );
 
-        // // 1, 2, 3, 4, 5 => 6
-        // bucketAddress = lookUpBucket(
-        //   uint(4),
-        //   uvec4(uvec3(1u, 2u, 3u), 5u)
-        // );
-
         if (bucketAddress != -1.) {
           break;
         }

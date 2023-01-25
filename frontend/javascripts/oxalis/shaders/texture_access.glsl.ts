@@ -181,7 +181,8 @@ export const getColorForCoords: ShaderModule = {
       vec4 returnValue[2];
 
       if (worldPositionUVW.x < 0. || worldPositionUVW.y < 0. || worldPositionUVW.z < 0.) {
-        returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
+        // should alpha be -1.0?
+        returnValue[1] = vec4(0.0, 0.0, 0.0, 0.0);
         return returnValue;
       }
 
@@ -209,8 +210,11 @@ export const getColorForCoords: ShaderModule = {
       if (bucketAddress < 0. ||
           isNan(bucketAddress)) {
         // Not-yet-existing data is encoded with a = -1.0
-        // todo: restore gray-when-loading behavior
-        returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
+        // todo: restore gray-when-loading behavior and also
+        // ensure that out-of-bbox data is rendered black
+        // (formerly encoded as -2 in the look up buffer).
+        // returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
+        returnValue[1] = vec4(0.0, 0.0, 0.0, 0.0);
         return returnValue;
       }
 

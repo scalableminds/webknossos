@@ -336,3 +336,13 @@ export type TypedArray =
 export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
 
 export const PRIMARY_COLOR = [86, 96, 255];
+
+export enum LOG_LEVELS {
+  NOTSET = "NOTSET",
+  DEBUG = "DEBUG",
+  INFO = "INFO",
+  NOTICE = "NOTICE",
+  WARNING = "WARNING",
+  ERROR = "ERROR",
+  CRITICAL = "CRITICAL",
+}

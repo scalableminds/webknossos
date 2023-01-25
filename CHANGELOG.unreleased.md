@@ -39,8 +39,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed deprecation warnings for antd <Modal> props. [#6765](https://github.com/scalableminds/webknossos/pull/6765)
 - Fixed a bug where direct task assignment to a single user would fail. [#6777](https://github.com/scalableminds/webknossos/pull/6777)
 - Fixed a bug where the dataset folders view would not list public datasets if the requesting user could not also access the dataset for other reasons, like being admin. [#6759](https://github.com/scalableminds/webknossos/pull/6759)
+- Fixed a bug where zarr-streamed datasets would produce (very rare) rendering errors. [#6782](https://github.com/scalableminds/webknossos/pull/6782)
 
 ### Removed
 
 ### Breaking Changes
+- Changes the storage backend for Voxelytics logging from Elasticsearch to Loki. [#6770](https://github.com/scalableminds/webknossos/pull/6770)
 - The dataset list route `GET api/datasets` no longer respects the isEditable filter. [#6759](https://github.com/scalableminds/webknossos/pull/6759)

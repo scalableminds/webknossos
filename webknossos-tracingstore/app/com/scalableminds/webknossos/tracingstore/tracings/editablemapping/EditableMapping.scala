@@ -8,7 +8,7 @@ case class EditableMapping(
     agglomerateToGraph: Map[Long, AgglomerateGraph],
     createdTimestamp: Long,
 ) {
-  override def toString: String = f"EditableMapping(agglomerates:${agglomerateToGraph.keySet})"
+  override def toString: String = f"EditableMapping(${agglomerateToGraph.size} agglomerates)"
 
   def toProto: EditableMappingProto =
     EditableMappingProto(

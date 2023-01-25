@@ -2,6 +2,7 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO
 import models.voxelytics._
@@ -18,7 +19,7 @@ class VoxelyticsController @Inject()(
     organizationDAO: OrganizationDAO,
     voxelyticsDAO: VoxelyticsDAO,
     voxelyticsService: VoxelyticsService,
-    elasticsearchClient: ElasticsearchClient,
+    lokiClient: LokiClient,
     wkConf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -246,15 +247,17 @@ class VoxelyticsController @Inject()(
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         organization <- organizationDAO.findOne(request.identity._organization)
-        logEntries = request.body.map(
-          entry =>
-            entry ++ Json.obj("vx" -> ((entry \ "vx").as[JsObject] ++ Json.obj("wk_org" -> organization.name,
-                                                                               "wk_user" -> request.identity._id.id))))
-        _ <- elasticsearchClient.bulkInsert(logEntries)
+        logEntries = request.body
+        _ <- lokiClient.bulkInsert(logEntries, organization._id)
       } yield Ok
     }
 
-  def getLogs(runId: String, taskName: Option[String], minLevel: Option[String]): Action[AnyContent] =
+  def getLogs(runId: String,
+              taskName: Option[String],
+              minLevel: Option[String],
+              startTimestamp: Long,
+              endTimestamp: Long,
+              limit: Option[Long]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
         for {
@@ -263,13 +266,16 @@ class VoxelyticsController @Inject()(
           runName <- voxelyticsDAO.getRunNameById(runIdValidated, request.identity._organization)
           _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
           organization <- organizationDAO.findOne(request.identity._organization)
-          organizationName = organization.name
-          logEntries <- elasticsearchClient.queryLogs(
+          logEntries <- lokiClient.queryLogsBatched(
             runName,
-            organizationName,
+            organization._id,
             taskName,
-            minLevel.flatMap(VoxelyticsLogLevel.fromString).getOrElse(VoxelyticsLogLevel.INFO))
-        } yield JsonOk(logEntries)
+            minLevel.flatMap(VoxelyticsLogLevel.fromString).getOrElse(VoxelyticsLogLevel.INFO),
+            Instant(startTimestamp),
+            Instant(endTimestamp),
+            limit
+          )
+        } yield JsonOk(JsArray(logEntries))
       }
     }
 }

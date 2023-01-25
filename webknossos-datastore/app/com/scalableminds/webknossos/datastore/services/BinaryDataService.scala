@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -12,6 +11,7 @@ import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class BinaryDataService(val dataBaseDir: Path,
@@ -90,12 +90,20 @@ class BinaryDataService(val dataBaseDir: Path,
           logger.warn(
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
+        case Full(data) =>
+          if (data.length == 0) {
+            val msg =
+              s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
+            logger.warn(msg)
+            Fox.failure(msg)
+
+          } else Fox.successful(data)
         case other => other.toFox
       }
     } else Fox.empty
 
   /**
-    * Given a list of loaded buckets, cutout the data of the cuboid
+    * Given a list of loaded buckets, cut out the data of the cuboid
     */
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement

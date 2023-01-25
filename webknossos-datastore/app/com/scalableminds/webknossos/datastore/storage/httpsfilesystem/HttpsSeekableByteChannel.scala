@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.storage.httpsfilesystem
 
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
@@ -14,9 +13,7 @@ import scalaj.http.{Http, HttpResponse}
 
 import scala.concurrent.duration.DurationInt
 
-class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenOption])
-    extends SeekableByteChannel
-    with LazyLogging {
+class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenOption]) extends SeekableByteChannel {
   private var _position: Long = 0L
 
   private val connectionTimeout = 5 seconds
@@ -44,10 +41,6 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
         if (!response.isSuccess) {
           val bodyString = new String(bytes, StandardCharsets.UTF_8)
           throw new Exception(s"Https read failed for uri $uri: ${response.statusLine} – ${bodyString.take(1000)}")
-        }
-
-        if (bytes.length == 0) {
-          logger.warn(s"Https read succeded with ${response.statusLine} but body length is 0. Uri: $uri")
         }
 
         val lengthToCopy = bytes.length - position

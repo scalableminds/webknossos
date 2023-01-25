@@ -24,7 +24,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
@@ -84,8 +83,7 @@ class EditableMappingService @Inject()(
     extends KeyValueStoreImplicits
     with FallbackDataHelper
     with FoxImplicits
-    with ProtoGeometryImplicits
-    with LazyLogging {
+    with ProtoGeometryImplicits {
 
   private def generateId: String = UUID.randomUUID.toString
 
@@ -189,8 +187,6 @@ class EditableMappingService @Inject()(
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
         .get(editableMappingId, Some(desiredVersion))(bytes =>
           fromProtoBytes[EditableMappingProto](bytes).map(EditableMapping.fromProto))
-      _ = logger.info(
-        f"Loading mapping version $desiredVersion, closest materialized is version ${closestMaterializedVersion.version} (${closestMaterializedVersion.value})")
       materialized <- applyPendingUpdates(
         editableMappingId,
         desiredVersion,
@@ -199,7 +195,6 @@ class EditableMappingService @Inject()(
         closestMaterializedVersion.version,
         userToken
       )
-      _ = logger.info(s"Materialized mapping: $materialized")
       _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
         tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized.toProto)
       }
@@ -245,7 +240,6 @@ class EditableMappingService @Inject()(
 
     for {
       pendingUpdates <- findPendingUpdates(editableMappingId, existingVersion, desiredVersion)
-      _ = logger.info(s"Applying ${pendingUpdates.length} mapping updates: $pendingUpdates...")
       appliedEditableMapping <- updateIter(Some(existingEditableMapping), pendingUpdates)
     } yield appliedEditableMapping
   }
@@ -267,14 +261,11 @@ class EditableMappingService @Inject()(
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
       agglomerateGraph <- agglomerateGraphForId(mapping, update.agglomerateId, remoteFallbackLayer, userToken)
-      _ = logger.info(s"Applying one split action on agglomerate ${update.agglomerateId}...")
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
       largestExistingAgglomerateId <- largestAgglomerateId(mapping, remoteFallbackLayer, userToken)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
-      _ = logger.info(
-        s"Graphs after split: Agglomerate ${update.agglomerateId}: AgglomerateGraph(${graph1.segments.length} segments, ${graph1.edges.length} edges), Aggloemrate $agglomerateId2: AgglomerateGraph(${graph2.segments.length} segments, ${graph2.edges.length} edges)")
       splitSegmentToAgglomerate = graph2.segments.map(_ -> agglomerateId2).toMap
     } yield
       EditableMapping(

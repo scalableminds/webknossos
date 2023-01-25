@@ -466,13 +466,21 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
-    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = Store.getState().userConfiguration;
+    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
+      Store.getState().userConfiguration;
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
+    this.layerBoundingBoxes.forEach((bbCube) => {
+      const visible = id !== OrthoViews.TDView || tdViewDisplayLayerBorders;
+      bbCube.setVisibility(visible);
+      if (visible) {
+        bbCube.updateForCam(id);
+      }
+    });
 
     this.taskBoundingBox?.updateForCam(id);
 

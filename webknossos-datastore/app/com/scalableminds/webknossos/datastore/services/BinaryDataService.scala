@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,8 +9,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Empty, Full}
+import net.liftweb.common.{Failure, Full}
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class BinaryDataService(val dataBaseDir: Path,

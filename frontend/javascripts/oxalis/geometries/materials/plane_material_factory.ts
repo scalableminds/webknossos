@@ -185,9 +185,7 @@ class PlaneMaterialFactory {
         value: false,
       },
 
-      lookup_seed0: { value: 0 },
-      lookup_seed1: { value: 0 },
-      lookup_seed2: { value: 0 },
+      lookup_seeds: { value: [0, 0, 0] },
 
       LOOKUP_CUCKOO_ENTRY_CAPACITY: { value: 0 },
       LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY: { value: 0 },
@@ -296,11 +294,9 @@ class PlaneMaterialFactory {
     };
 
     this.unsubscribeSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
-      seeds.forEach((seed, idx) => {
-        this.uniforms[`lookup_seed${idx}`] = {
-          value: seed,
-        };
-      });
+      this.uniforms.lookup_seeds = {
+        value: seeds,
+      };
     });
     const {
       CUCKOO_ENTRY_CAPACITY,
@@ -336,9 +332,7 @@ class PlaneMaterialFactory {
   attachSegmentationColorTexture(): void {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (segmentationLayer == null) {
-      this.uniforms.seed0 = { value: 0 };
-      this.uniforms.seed1 = { value: 0 };
-      this.uniforms.seed2 = { value: 0 };
+      this.uniforms.custom_color_seeds = { value: [0, 0, 0] };
 
       this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: 0 };
       this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
@@ -354,11 +348,7 @@ class PlaneMaterialFactory {
       this.unsubscribeSeedsFn();
     }
     this.unsubscribeSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
-      seeds.forEach((seed, idx) => {
-        this.uniforms[`seed${idx}`] = {
-          value: seed,
-        };
-      });
+      this.uniforms.custom_color_seeds = { value: seeds };
     });
     const {
       CUCKOO_ENTRY_CAPACITY,

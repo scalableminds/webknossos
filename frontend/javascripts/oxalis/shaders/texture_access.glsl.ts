@@ -156,12 +156,12 @@ export const getColorForCoords: ShaderModule = {
     }
 
     float lookUpBucket(uint layerIndex, uvec4 bucketAddress) {
-      float bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed0);
+      float bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seeds[0]);
       if (bucketAddressInTexture == -1.) {
-        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed1);
+        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seeds[1]);
       }
       if (bucketAddressInTexture == -1.) {
-        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seed2);
+        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seeds[2]);
       }
       return bucketAddressInTexture;
     }

@@ -37,9 +37,7 @@ export default function getMainFragmentShader(params: Params) {
 precision highp float;
 const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 uniform highp usampler2D lookup_texture;
-uniform highp uint lookup_seed0;
-uniform highp uint lookup_seed1;
-uniform highp uint lookup_seed2;
+uniform highp uint lookup_seeds[3];
 uniform highp uint LOOKUP_CUCKOO_ENTRY_CAPACITY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
@@ -67,9 +65,7 @@ uniform float activeMagIndices[<%= layerNamesWithSegmentation.length %>];
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
   uniform highp usampler2D custom_color_texture;
-  uniform highp uint seed0;
-  uniform highp uint seed1;
-  uniform highp uint seed2;
+  uniform highp uint custom_color_seeds[3];
   uniform highp uint CUCKOO_ENTRY_CAPACITY;
   uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
   uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;

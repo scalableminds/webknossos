@@ -85,12 +85,12 @@ export const convertCellIdToRGB: ShaderModule = {
       // float colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
       uint integerValue = vec4ToUint(idLow);
-      vec3 customColor = attemptCustomColorLookUp(integerValue, seed0);
+      vec3 customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[0]);
       if (customColor.r == -1.) {
-        customColor = attemptCustomColorLookUp(integerValue, seed1);
+        customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[1]);
       }
       if (customColor.r == -1.) {
-        customColor = attemptCustomColorLookUp(integerValue, seed2);
+        customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[2]);
       }
       if (customColor.r != -1.) {
         vec3 customHSV = rgb2hsv(customColor);

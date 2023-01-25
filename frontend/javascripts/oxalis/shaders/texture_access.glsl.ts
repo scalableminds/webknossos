@@ -1,4 +1,5 @@
 import { getResolutionFactors, getRelativeCoords } from "oxalis/shaders/coords.glsl";
+import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
 
 export const linearizeVec3ToIndex: ShaderModule = {
@@ -98,44 +99,18 @@ export const getColorForCoords: ShaderModule = {
     getRgbaAtXYIndex,
     getRelativeCoords,
     getResolutionFactors,
+    hashCombine,
   ],
   code: `
-
-    // todo: DRY this with hashCombine (currently only due to import problems here).
-    highp uint hashCombine2(highp uint state, highp uint value) {
-      // The used constants are written in decimal, because
-      // the parser tests don't support unsigned int hex notation
-      // (yet).
-      // See this issue: https://github.com/ShaderFrog/glsl-parser/issues/1
-      // 3432918353u == 0xcc9e2d51u
-      //  461845907u == 0x1b873593u
-      // 3864292196u == 0xe6546b64u
-
-      value *= 3432918353u;
-      value = (value << 15u) | (value >> 17u);
-      value *= 461845907u;
-      state ^= value;
-      state = (state << 13u) | (state >> 19u);
-      state = (state * 5u) + 3864292196u;
-      return state;
-    }
     float attemptLookUpLookUp(uint layerIdx, uvec4 bucketAddress, uint seed) {
-      highp uint h0 = (
-        hashCombine2(
-          hashCombine2(
-            hashCombine2(
-              hashCombine2(
-                hashCombine2(seed, bucketAddress.x),
-                bucketAddress.y
-              ),
-              bucketAddress.z
-            ),
-            layerIdx
-          ),
-          bucketAddress.a
-        )
-      ) % LOOKUP_CUCKOO_ENTRY_CAPACITY;
+      highp uint h0 = hashCombine(seed, bucketAddress.x);
+      h0 = hashCombine(h0, bucketAddress.y);
+      h0 = hashCombine(h0, bucketAddress.z);
+      h0 = hashCombine(h0, layerIdx);
+      h0 = hashCombine(h0, bucketAddress.a);
+      h0 = h0 % LOOKUP_CUCKOO_ENTRY_CAPACITY;
       h0 = uint(h0 * LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY / LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL);
+
       highp uint x = h0 % LOOKUP_CUCKOO_TWIDTH;
       highp uint y = h0 / LOOKUP_CUCKOO_TWIDTH;
 

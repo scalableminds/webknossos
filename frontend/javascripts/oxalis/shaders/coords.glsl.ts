@@ -27,6 +27,7 @@ export const getResolutionFactors: ShaderModule = {
 export const getRelativeCoords: ShaderModule = {
   requirements: [getResolution],
   code: `
+  // todo: unused layerindex
     vec3 getAbsoluteCoords(vec3 worldCoordUVW, float layerIndex, float usedZoomStep) {
       vec3 resolution = getResolution(usedZoomStep);
       // todo: neutralize transDim calls

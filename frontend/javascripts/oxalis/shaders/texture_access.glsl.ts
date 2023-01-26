@@ -79,11 +79,11 @@ export const getRgbaAtXYIndex: ShaderModule = {
       }
     <% }); %>
 
-    vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float x, float y) {
-      if (layerIndex == 0.0) {
+    vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
+      if (localLayerIndex == 0.0) {
         return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
       } <% _.each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
-        else if (layerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
+        else if (localLayerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
           return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
         }
       <% }); %>
@@ -102,12 +102,12 @@ export const getColorForCoords: ShaderModule = {
     hashCombine,
   ],
   code: `
-    float attemptLookUpLookUp(uint layerIdx, uvec4 bucketAddress, uint seed) {
+    float attemptLookUpLookUp(uint globalLayerIndex, uvec4 bucketAddress, uint seed) {
       highp uint h0 = hashCombine(seed, bucketAddress.x);
       h0 = hashCombine(h0, bucketAddress.y);
       h0 = hashCombine(h0, bucketAddress.z);
       h0 = hashCombine(h0, bucketAddress.a);
-      h0 = hashCombine(h0, layerIdx);
+      h0 = hashCombine(h0, globalLayerIndex);
       h0 = h0 % LOOKUP_CUCKOO_ENTRY_CAPACITY;
       h0 = uint(h0 * LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY / LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL);
 
@@ -118,10 +118,10 @@ export const getColorForCoords: ShaderModule = {
 
       uint compressedBytes = compressedEntry.a;
       uint foundMagIdx = compressedBytes >> (32u - 5u);
-      uint foundLayerIdx = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
+      uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
 
       if (compressedEntry.xyz != bucketAddress.xyz
-        || layerIdx != foundLayerIdx
+        || globalLayerIndex != foundLayerIndex
         || foundMagIdx != bucketAddress.a) {
         return -1.;
       }
@@ -130,13 +130,13 @@ export const getColorForCoords: ShaderModule = {
       return float(address);
     }
 
-    float lookUpBucket(uint layerIndex, uvec4 bucketAddress) {
-      float bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seeds[0]);
+    float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress) {
+      float bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[0]);
       if (bucketAddressInTexture == -1.) {
-        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seeds[1]);
+        bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[1]);
       }
       if (bucketAddressInTexture == -1.) {
-        bucketAddressInTexture = attemptLookUpLookUp(layerIndex, bucketAddress, lookup_seeds[2]);
+        bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[2]);
       }
       return bucketAddressInTexture;
     }
@@ -193,7 +193,8 @@ export const getColorForCoords: ShaderModule = {
         return returnValue;
       }
 
-      float zoomStep = activeMagIndices[int(layerIndex)];
+      // todo: unify
+      float zoomStep = float(activeMagIdx);
       if (renderedZoomStep != zoomStep) {
         /* We already know which fallback bucket we have to look into. However,
          * for 8 mag-1 buckets, there is usually one fallback bucket in mag-2.

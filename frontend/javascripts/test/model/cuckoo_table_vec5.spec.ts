@@ -60,7 +60,6 @@ test.serial("CuckooTableVec5: Compression/Decompression roundtrip", (t) => {
 });
 
 test.serial("CuckooTableVec5: Basic", (t) => {
-  debugger;
   const entries = generateRandomEntrySet();
   const ct = CuckooTableVec5.fromCapacity(entries.length);
 

@@ -3,23 +3,11 @@ import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_re
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { chunk2 } from "oxalis/model/helpers/chunk";
-import {
-  zoomedAddressToAnotherZoomStep,
-  globalPositionToBucketPosition,
-} from "oxalis/model/helpers/position_converter";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import ThreeDMap from "libs/ThreeDMap";
-import {
-  OrthoViewMap,
-  OrthoViewValuesWithoutTDView,
-  OrthoViewWithoutTD,
-  Vector2,
-  Vector3,
-  Vector4,
-  ViewMode,
-} from "oxalis/constants";
+import { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
-import { Area } from "oxalis/model/accessors/flycam_accessor";
 import { LoadingStrategy, PlaneRects } from "oxalis/store";
 import { getMaxZoomStepDiff, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
 
@@ -96,7 +84,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
   let currentCount = 0;
 
   const planeIds: Array<OrthoViewWithoutTD> =
-    viewMode == "orthogonal" ? ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] : ["PLANE_XY"];
+    viewMode === "orthogonal" ? ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] : ["PLANE_XY"];
   // const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_YZ"];
   let traversedBuckets: Vector3[] = [];
   // for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -105,7 +93,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
     let enlargedHalfExtent: Vector2;
     let queryMatrix = [...matrix] as Matrix4x4;
 
-    if (viewMode == "orthogonal") {
+    if (viewMode === "orthogonal") {
       extent = [rects[planeId].width, rects[planeId].height];
       enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)] as Vector2;
       if (planeId === "PLANE_YZ") {

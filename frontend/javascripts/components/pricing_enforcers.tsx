@@ -86,16 +86,30 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   return (
     <Tooltip title={messages["organization.plan.feature_not_available"]}>
       <div style={{ position: "relative", cursor: "not-allowed" }}>
-        <div style={{ filter: "blur(1px)", pointerEvents: "none" }}>{children}</div>
-        <LockOutlined
+        <div
           style={{
-            marginLeft: 5,
-            position: "absolute",
-            left: "calc(50% - 10px)",
-            top: "calc(50% - 10px)",
-            fontSize: 20,
+            filter: "blur(1px)",
+            pointerEvents: "none",
           }}
-        />
+        >
+          {children}
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "calc(50% - 150px)",
+            top: "calc(50% - 50px)",
+            width: 300,
+            maxHeight: 150,
+            textAlign: "center",
+          }}
+        >
+          <Alert
+            showIcon
+            message={messages["organization.plan.feature_not_available"]}
+            icon={<LockOutlined />}
+          />
+        </div>
       </div>
     </Tooltip>
   );

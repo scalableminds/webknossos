@@ -21,7 +21,7 @@ class ChainReducerClass<S, A> {
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'A | ((arg0: S) => A)' is not assignable to t... Remove this comment to see the full error message
     return actionGetters.reduce(
       // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-      (acc, currentActionGetter) => this.apply(reducer, currentActionGetter),
+      (_acc, currentActionGetter) => this.apply(reducer, currentActionGetter),
       this,
     );
   }

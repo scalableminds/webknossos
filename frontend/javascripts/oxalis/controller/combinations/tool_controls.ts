@@ -212,7 +212,7 @@ export class SkeletonTool {
 
     let draggingNodeId: number | null | undefined = null;
     return {
-      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
         if (useLegacyBindings) {
@@ -235,7 +235,7 @@ export class SkeletonTool {
       },
       leftDownMove: (
         delta: Point2,
-        pos: Point2,
+        _pos: Point2,
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
@@ -290,7 +290,7 @@ export class SkeletonTool {
           showNodeContextMenuAt,
         );
       },
-      middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
           handleAgglomerateSkeletonAtClick(pos);
         }
@@ -350,7 +350,7 @@ export class DrawTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): any {
     return {
-      leftDownMove: (delta: Point2, pos: Point2) => {
+      leftDownMove: (_delta: Point2, pos: Point2) => {
         VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -369,7 +369,7 @@ export class DrawTool {
       leftMouseUp: () => {
         VolumeHandlers.handleEndForDrawOrErase();
       },
-      rightDownMove: (delta: Point2, pos: Point2) => {
+      rightDownMove: (_delta: Point2, pos: Point2) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
         if (!useLegacyBindings) {
@@ -404,7 +404,7 @@ export class DrawTool {
 
         VolumeHandlers.handleEndForDrawOrErase();
       },
-      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      leftClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         const shouldPickCell = event.shiftKey && !event.ctrlKey;
         const shouldErase = event.shiftKey && event.ctrlKey;
 
@@ -467,7 +467,7 @@ export class EraseTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): any {
     return {
-      leftDownMove: (delta: Point2, pos: Point2) => {
+      leftDownMove: (_delta: Point2, pos: Point2) => {
         VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
@@ -643,7 +643,7 @@ export class BoundingBoxTool {
 
 export class QuickSelectTool {
   static getPlaneMouseControls(
-    planeId: OrthoView,
+    _planeId: OrthoView,
     planeView: PlaneView,
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): any {

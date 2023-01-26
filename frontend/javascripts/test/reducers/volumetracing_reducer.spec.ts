@@ -176,7 +176,7 @@ test("VolumeTracing should update its lastLabelActions", (t) => {
   });
 });
 
-const prepareContourListTest = (t, state) => {
+const prepareContourListTest = (_t, state) => {
   const contourList = [
     [4, 6, 9],
     [1, 2, 3],

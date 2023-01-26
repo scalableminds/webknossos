@@ -84,7 +84,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             <Column
               title=""
               key="content"
-              render={(text, item) =>
+              render={(_text, item) =>
                 // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 Object.keys(item.assignmentsByProjects)
                   // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.

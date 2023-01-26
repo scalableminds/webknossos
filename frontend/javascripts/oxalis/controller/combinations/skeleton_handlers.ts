@@ -102,7 +102,7 @@ export function handleSelectNode(
 
   return false;
 }
-export function handleCreateNode(planeView: PlaneView, position: Point2, ctrlPressed: boolean) {
+export function handleCreateNode(_planeView: PlaneView, position: Point2, ctrlPressed: boolean) {
   const state = Store.getState();
 
   if (isMagRestrictionViolated(state)) {

@@ -162,7 +162,7 @@ test("Utils Api: registerKeyHandler should register a key handler and return a h
 test("Utils Api: registerOverwrite should overwrite an existing function", (t) => {
   const { api } = t.context;
   let bool = false;
-  api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
+  api.utils.registerOverwrite("SET_ACTIVE_NODE", (_store, call, action) => {
     bool = true;
     call(action);
   });

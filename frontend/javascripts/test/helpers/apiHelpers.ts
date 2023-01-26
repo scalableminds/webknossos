@@ -33,7 +33,7 @@ const Request = {
   always: () => Promise.resolve(),
 };
 export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
-  return async function getBucketData(url, payload) {
+  return async function getBucketData(_url, payload) {
     const bucketCount = payload.data.length;
     await sleep(delay);
     return {
@@ -131,7 +131,7 @@ const modelData = {
 
 const { default: Store, startSagas } = require("oxalis/store");
 const rootSaga = require("oxalis/model/sagas/root_saga").default;
-const { setStore, setModel, setApi } = require("oxalis/singletons");
+const { setStore, setModel } = require("oxalis/singletons");
 const { setupApi } = require("oxalis/api/internal_api");
 
 setModel(Model);

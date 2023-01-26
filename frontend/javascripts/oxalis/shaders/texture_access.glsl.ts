@@ -1,4 +1,4 @@
-import { getResolutionFactors, getRelativeCoords } from "oxalis/shaders/coords.glsl";
+import { getResolutionFactors, getAbsoluteCoords } from "oxalis/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
 
@@ -97,7 +97,7 @@ export const getColorForCoords: ShaderModule = {
     linearizeVec3ToIndexWithMod,
     getRgbaAtIndex,
     getRgbaAtXYIndex,
-    getRelativeCoords,
+    getAbsoluteCoords,
     getResolutionFactors,
     hashCombine,
   ],
@@ -166,11 +166,11 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketAddress;
       vec3 offsetInBucket;
-      float renderedZoomStep;
+      uint renderedMagIdx;
 
       for (uint i = 0u; i < 4u; i++) {
-        renderedZoomStep = float(activeMagIdx + i);
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, localLayerIndex, renderedZoomStep));
+        renderedMagIdx = activeMagIdx + i;
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
@@ -194,9 +194,7 @@ export const getColorForCoords: ShaderModule = {
         return returnValue;
       }
 
-      // todo: unify
-      float zoomStep = float(activeMagIdx);
-      if (renderedZoomStep != zoomStep) {
+      if (renderedMagIdx != activeMagIdx) {
         /* We already know which fallback bucket we have to look into. However,
          * for 8 mag-1 buckets, there is usually one fallback bucket in mag-2.
          * Therefore, depending on the actual mag-1 bucket, we have to look into
@@ -213,8 +211,8 @@ export const getColorForCoords: ShaderModule = {
          * with the resolution factor. A typical resolution factor is 2.
          */
 
-        vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, localLayerIndex, zoomStep));
+        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx);
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx));
         offsetInBucket = mod(coords, bucketWidth);
         vec3 worldBucketPosition = div(coords, bucketWidth);
 

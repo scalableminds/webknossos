@@ -9,7 +9,7 @@ import {
   getSegmentationId,
 } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
-import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
+import { getAbsoluteCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import compileShader from "./shader_module_system";
 type Params = {
@@ -127,7 +127,7 @@ ${compileShader(
   isNan,
   isFlightMode,
   transDim,
-  getRelativeCoords,
+  getAbsoluteCoords,
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,

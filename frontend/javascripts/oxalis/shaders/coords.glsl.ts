@@ -2,11 +2,11 @@ import { isFlightMode, getW } from "oxalis/shaders/utils.glsl";
 import type { ShaderModule } from "./shader_module_system";
 export const getResolution: ShaderModule = {
   code: `
-    vec3 getResolution(float zoomStep) {
-      if (zoomStep == 0.0) {
+    vec3 getResolution(uint zoomStep) {
+      if (zoomStep == 0u) {
         return <%= formatVector3AsVec3(resolutions[0]) %>;
       } <% _.range(1, resolutions.length).forEach(resolutionIdx => { %>
-      else if (zoomStep == <%= formatNumberAsGLSLFloat(resolutionIdx) %>) {
+      else if (zoomStep == <%= resolutionIdx %>u) {
         return <%= formatVector3AsVec3(resolutions[resolutionIdx]) %>;
       }
       <% }) %>
@@ -19,23 +19,17 @@ export const getResolution: ShaderModule = {
 export const getResolutionFactors: ShaderModule = {
   requirements: [getResolution],
   code: `
-    vec3 getResolutionFactors(float zoomStepA, float zoomStepB) {
+    vec3 getResolutionFactors(uint zoomStepA, uint zoomStepB) {
       return getResolution(zoomStepA) / getResolution(zoomStepB);
     }
   `,
 };
-export const getRelativeCoords: ShaderModule = {
+export const getAbsoluteCoords: ShaderModule = {
   requirements: [getResolution],
   code: `
-  // todo: unused layerindex
-    vec3 getAbsoluteCoords(vec3 worldCoordUVW, float layerIndex, float usedZoomStep) {
+    vec3 getAbsoluteCoords(vec3 worldCoordUVW, uint usedZoomStep) {
       vec3 resolution = getResolution(usedZoomStep);
-      // todo: neutralize transDim calls
-      vec3 resolutionUVW = transDim(resolution);
-
-      vec3 relativeCoords = worldCoordUVW / resolutionUVW;
-
-      vec3 coords = transDim(relativeCoords);
+      vec3 coords = transDim(worldCoordUVW) / resolution;
       return coords;
     }
   `,

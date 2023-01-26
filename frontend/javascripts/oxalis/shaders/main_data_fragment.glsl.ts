@@ -13,6 +13,7 @@ import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./c
 import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import compileShader from "./shader_module_system";
 type Params = {
+  globalLayerCount: number;
   colorLayerNames: string[];
   segmentationLayerNames: string[];
   packingDegreeLookup: Record<string, number>;
@@ -54,13 +55,13 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 <% _.each(layerNamesWithSegmentation, function(name) { %>
   uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
   uniform float <%= name %>_data_texture_width;
-  uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
   uniform float <%= name %>_unrenderable;
 <% }) %>
 
-uniform float activeMagIndices[<%= layerNamesWithSegmentation.length %>];
+uniform float activeMagIndices[<%= globalLayerCount %>];
+uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table

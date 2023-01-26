@@ -143,7 +143,7 @@ export const getColorForCoords: ShaderModule = {
 
     vec4[2] getColorForCoords64(
       highp usampler2D lookUpTexture,
-      float layerIndex,
+      float localLayerIndex,
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW
@@ -161,7 +161,8 @@ export const getColorForCoords: ShaderModule = {
         return returnValue;
       }
 
-      uint activeMagIdx = uint(activeMagIndices[int(layerIndex)]);
+      uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[uint(localLayerIndex)];
+      uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
 
       float bucketAddress;
       vec3 offsetInBucket;
@@ -169,11 +170,11 @@ export const getColorForCoords: ShaderModule = {
 
       for (uint i = 0u; i < 4u; i++) {
         renderedZoomStep = float(activeMagIdx + i);
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, renderedZoomStep));
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, localLayerIndex, renderedZoomStep));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
-          uint(layerIndex),
+          globalLayerIndex,
           uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
         );
 
@@ -213,7 +214,7 @@ export const getColorForCoords: ShaderModule = {
          */
 
         vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, layerIndex, zoomStep));
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, localLayerIndex, zoomStep));
         offsetInBucket = mod(coords, bucketWidth);
         vec3 worldBucketPosition = div(coords, bucketWidth);
 
@@ -245,7 +246,7 @@ export const getColorForCoords: ShaderModule = {
 
       // The lower 32-bit of the value.
       vec4 bucketColor = getRgbaAtXYIndex(
-        layerIndex,
+        localLayerIndex,
         textureIndex,
         x,
         y
@@ -253,7 +254,7 @@ export const getColorForCoords: ShaderModule = {
 
       if (packingDegree == 0.5) {
         vec4 bucketColorHigh = getRgbaAtXYIndex(
-          layerIndex,
+          localLayerIndex,
           textureIndex,
           // x + 1.0 will never exceed the texture width because
           // - the texture width is even
@@ -321,7 +322,7 @@ export const getColorForCoords: ShaderModule = {
 
     vec4 getColorForCoords(
       highp usampler2D lookUpTexture,
-      float layerIndex,
+      float localLayerIndex,
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW
@@ -329,7 +330,7 @@ export const getColorForCoords: ShaderModule = {
       // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
       // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
       // No clear negative impact could be measured which is why this delegation should be ok.
-      vec4[2] retVal = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+      vec4[2] retVal = getColorForCoords64(lookUpTexture, localLayerIndex, d_texture_width, packingDegree, worldPositionUVW);
       return retVal[1];
     }
   `,

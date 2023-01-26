@@ -23,6 +23,7 @@ test.afterEach(async (t: ExecutionContext<any>) => {
 
 test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -48,6 +49,7 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
 
 test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -67,6 +69,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
 
 test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -87,6 +90,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
 
 test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -105,6 +109,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
 
 test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -124,6 +129,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
 
 test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 1.0,

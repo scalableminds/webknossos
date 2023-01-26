@@ -48,6 +48,7 @@ import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
+import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -348,11 +349,18 @@ class PlaneMaterialFactory {
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
+    const [fragmentShader, additionalUniforms] = this.getFragmentShaderWithUniforms();
+    // The uniforms instance must not be changed (e.g., with
+    // {...this.uniforms, ...additionalUniforms}), as this would result in
+    // errors à la: Two textures of different types use the same sampler location.
+    for (const [name, value] of Object.entries(additionalUniforms)) {
+      this.uniforms[name] = value;
+    }
     this.material = new THREE.ShaderMaterial(
       _.extend(options, {
         uniforms: this.uniforms,
         vertexShader: this.getVertexShader(),
-        fragmentShader: this.getFragmentShader(),
+        fragmentShader,
       }),
     );
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
@@ -694,7 +702,10 @@ class PlaneMaterialFactory {
   }
 
   recomputeFragmentShader = _.throttle(() => {
-    const newShaderCode = this.getFragmentShader();
+    const [newShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
+    for (const [name, value] of Object.entries(additionalUniforms)) {
+      this.uniforms[name] = value;
+    }
 
     // Comparing to this.material.fragmentShader does not work. The code seems
     // to be modified by a third party.
@@ -709,7 +720,7 @@ class PlaneMaterialFactory {
     window.needsRerender = true;
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>] {
+  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {
     // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
     // all layers, we can simply return all layers here.
@@ -718,17 +729,18 @@ class PlaneMaterialFactory {
     // layers were least-recently activated (but are now disabled).
     // The first array contains the color layer names and the second the segmentation layer names.
     if (maximumLayerCountToRender <= 0) {
-      return [[], []];
+      return [[], [], 0];
     }
 
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
     );
+    const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
 
-    if (maximumLayerCountToRender >= colorLayerNames.length + segmentationLayerNames.length) {
+    if (maximumLayerCountToRender >= globalLayerCount) {
       // We can simply render all available layers.
-      return [colorLayerNames, segmentationLayerNames];
+      return [colorLayerNames, segmentationLayerNames, globalLayerCount];
     }
 
     const state = Store.getState();
@@ -761,7 +773,7 @@ class PlaneMaterialFactory {
       ({ isSegmentationLayer }) => !isSegmentationLayer,
     ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
 
-    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames];
+    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames, globalLayerCount];
   }
 
   onDisableLayer = (layerName: string, isSegmentationLayer: boolean) => {
@@ -780,17 +792,25 @@ class PlaneMaterialFactory {
     );
   };
 
-  getFragmentShader(): string {
+  getFragmentShaderWithUniforms(): [string, Uniforms] {
     const { initializedGpuFactor, maximumLayerCountToRender } =
       Store.getState().temporaryConfiguration.gpuSetup;
     // Don't compile code for segmentation in arbitrary mode
-    const [colorLayerNames, segmentationLayerNames] =
+    const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
+
+    const availableLayerNames = colorLayerNames.concat(segmentationLayerNames);
+
+    const availableLayerIndexToGlobalLayerIndex = availableLayerNames.map((layerName) =>
+      getGlobalLayerIndexForLayerName(layerName, sanitizeName),
+    );
+
     const packingDegreeLookup = getPackingDegreeLookup();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
     const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
-    return getMainFragmentShader({
+    const code = getMainFragmentShader({
+      globalLayerCount,
       colorLayerNames,
       segmentationLayerNames,
       packingDegreeLookup,
@@ -801,6 +821,10 @@ class PlaneMaterialFactory {
       isOrthogonal: this.isOrthogonal,
       lookupTextureWidth,
     });
+    return [
+      code,
+      { availableLayerIndexToGlobalLayerIndex: { value: availableLayerIndexToGlobalLayerIndex } },
+    ];
   }
 
   getVertexShader(): string {

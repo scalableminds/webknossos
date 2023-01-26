@@ -262,8 +262,7 @@ function getRenderSupportedLayerCount<
       maximumTextureCountForLayer,
   );
   return {
-    // todo: revert
-    maximumLayerCountToRender: 1,
+    maximumLayerCountToRender,
     maximumTextureCountForLayer,
   };
 }

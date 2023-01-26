@@ -1,10 +1,9 @@
 import { Vector3 } from "oxalis/constants";
 import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-const ELEMENTS_PER_ENTRY = 4;
-const TEXTURE_CHANNEL_COUNT = 4;
 const EMPTY_KEY = 2 ** 32 - 1;
 const EMPTY_VALUE = [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY] as Value;
+
 type Key = number;
 type Value = Vector3;
 type Entry = [Key, Value];
@@ -24,7 +23,7 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
 
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
     const table = optTable || this.table;
-    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
     return [table[offset], [table[offset + 1], table[offset + 2], table[offset + 3]]];
   }
 
@@ -42,7 +41,7 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
   }
 
   writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
-    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
     this.table[offset] = key;
     this.table[offset + 1] = value[0];
     this.table[offset + 2] = value[1];

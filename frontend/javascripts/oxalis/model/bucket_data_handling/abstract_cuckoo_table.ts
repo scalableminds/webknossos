@@ -3,7 +3,6 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 
-const ELEMENTS_PER_ENTRY = 4;
 const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
 const EMPTY_KEY = 2 ** 32 - 1;
@@ -14,6 +13,7 @@ export type SeedSubscriberFn = (seeds: number[]) => void;
 let cachedNullTexture: UpdatableTexture | undefined;
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
+  static ELEMENTS_PER_ENTRY = 4;
   entryCapacity: number;
   table!: Uint32Array;
   seeds!: number[];
@@ -39,7 +39,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture.internalFormat = "RGBA32UI";
 
     this.entryCapacity = Math.floor(
-      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY,
+      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / AbstractCuckooTable.ELEMENTS_PER_ENTRY,
     );
 
     this.initializeTableArray();
@@ -50,7 +50,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   static computeTextureWidthFromCapacity(requestedCapacity: number): number {
     const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
     const textureWidth = Math.ceil(
-      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
+      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / AbstractCuckooTable.ELEMENTS_PER_ENTRY),
     );
     return textureWidth;
   }
@@ -73,7 +73,9 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   private initializeTableArray() {
-    this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(EMPTY_KEY_VALUE);
+    this.table = new Uint32Array(AbstractCuckooTable.ELEMENTS_PER_ENTRY * this.entryCapacity).fill(
+      EMPTY_KEY_VALUE,
+    );
 
     // The chance of colliding seeds is super low which is why
     // we ignore this case (a rehash would happen automatically, anyway).
@@ -107,7 +109,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   getUniformValues() {
     return {
       CUCKOO_ENTRY_CAPACITY: this.entryCapacity,
-      CUCKOO_ELEMENTS_PER_ENTRY: ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_ENTRY: AbstractCuckooTable.ELEMENTS_PER_ENTRY,
       CUCKOO_ELEMENTS_PER_TEXEL: TEXTURE_CHANNEL_COUNT,
       CUCKOO_TWIDTH: this.textureWidth,
     };
@@ -200,13 +202,16 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
     for (
       let offset = 0;
-      offset < this.entryCapacity * ELEMENTS_PER_ENTRY;
-      offset += ELEMENTS_PER_ENTRY
+      offset < this.entryCapacity * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+      offset += AbstractCuckooTable.ELEMENTS_PER_ENTRY
     ) {
       if (oldTable[offset] === EMPTY_KEY) {
         continue;
       }
-      const [key, value] = this.getEntryAtAddress(offset / ELEMENTS_PER_ENTRY, oldTable);
+      const [key, value] = this.getEntryAtAddress(
+        offset / AbstractCuckooTable.ELEMENTS_PER_ENTRY,
+        oldTable,
+      );
       this.set(key, value, rehashAttempt);
     }
   }
@@ -234,16 +239,11 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
   abstract _areKeysEqual(key1: K, key2: K): boolean;
 
-  doesAddressContainKey(key: K, hashedAddress: number): boolean {
-    const [foundKey] = this.getEntryAtAddress(hashedAddress);
-    return this._areKeysEqual(foundKey, key);
-  }
-
   getValueAtAddress(key: K, hashedAddress: number): V | null {
-    // todo: doesAddressContainKey also uses getEntryAtAddress (perf)
-    if (this.doesAddressContainKey(key, hashedAddress)) {
-      const entry = this.getEntryAtAddress(hashedAddress);
-      return entry[1];
+    const [foundKey, foundValue] = this.getEntryAtAddress(hashedAddress);
+    const doesAddressContainKey = this._areKeysEqual(foundKey, key);
+    if (doesAddressContainKey) {
+      return foundValue;
     } else {
       return null;
     }
@@ -258,13 +258,13 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     if (!isRehashing) {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
-      const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+      const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
       const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
       this._texture.update(
-        this.table.subarray(offset, offset + ELEMENTS_PER_ENTRY),
+        this.table.subarray(offset, offset + AbstractCuckooTable.ELEMENTS_PER_ENTRY),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),
-        ELEMENTS_PER_ENTRY / TEXTURE_CHANNEL_COUNT,
+        AbstractCuckooTable.ELEMENTS_PER_ENTRY / TEXTURE_CHANNEL_COUNT,
         1,
       );
     }

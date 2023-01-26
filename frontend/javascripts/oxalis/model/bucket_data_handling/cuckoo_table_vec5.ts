@@ -1,6 +1,11 @@
 import { Vector4, Vector5 } from "oxalis/constants";
 import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
+// Note that AbstractCuckooTable uses a 4-channel texture which
+// lends itself ideally to an entry type of Vector4.
+// However, this class uses a 6-tuple for an entry.
+// This works by squeezing two parts of the keys together
+// with the value into one channel.
 type Key = Vector5; // [x, y, z, requestedMagIdx, layerIdx]
 type Value = number; // bucket address in texture
 type Entry = [Key, Value];
@@ -13,9 +18,6 @@ type Entry = [Key, Value];
 // ]
 type CompressedEntry = Vector4;
 
-// Actually, it's only 6 but we squeeze these into 4.
-const ELEMENTS_PER_ENTRY = 4;
-const TEXTURE_CHANNEL_COUNT = 4;
 const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 const EMPTY_KEY = [
   EMPTY_KEY_VALUE,
@@ -32,6 +34,8 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
 
   checkValidKey(key: Key) {
     if (key[0] === EMPTY_KEY_VALUE) {
+      // We don't compare the whole key as it's faster and easier to simply forbid key[0]
+      // to be different from EMPTY_KEY_VALUE.
       throw new Error(`The key must not contain ${EMPTY_KEY_VALUE} at the first position.`);
     }
   }
@@ -44,7 +48,7 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
   }
 
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
-    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
     return this.readDecompressedEntry(offset, optTable);
   }
 
@@ -69,7 +73,7 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
   readDecompressedEntry(offset: number, optTable?: Uint32Array) {
     const table = optTable || this.table;
     return this.decompressEntry(
-      table.slice(offset, offset + ELEMENTS_PER_ENTRY) as unknown as Vector4,
+      table.slice(offset, offset + AbstractCuckooTable.ELEMENTS_PER_ENTRY) as unknown as Vector4,
     );
   }
 
@@ -96,7 +100,7 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
 
   writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
     const compressedEntry = this.compressEntry(key, value);
-    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
     for (let i = 0; i < compressedEntry.length; i++) {
       this.table[offset + i] = compressedEntry[i];
     }

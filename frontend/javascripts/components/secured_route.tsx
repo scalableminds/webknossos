@@ -9,7 +9,6 @@ import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import type { ComponentType } from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 type StateProps = {
   activeOrganization: APIOrganization | null;

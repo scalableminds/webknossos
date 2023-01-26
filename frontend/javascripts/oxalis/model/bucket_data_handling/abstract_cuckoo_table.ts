@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
-import { Vector3 } from "oxalis/constants";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 
@@ -9,8 +8,6 @@ const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
 const EMPTY_KEY = 2 ** 32 - 1;
 const EMPTY_KEY_VALUE = 2 ** 32 - 1;
-
-type Entry = [number, Vector3];
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 
@@ -48,6 +45,14 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this.initializeTableArray();
     // Initialize the texture once to avoid undefined behavior
     this.flushTableToTexture();
+  }
+
+  static computeTextureWidthFromCapacity(requestedCapacity: number): number {
+    const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
+    const textureWidth = Math.ceil(
+      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
+    );
+    return textureWidth;
   }
 
   static getNullTexture(): UpdatableTexture {

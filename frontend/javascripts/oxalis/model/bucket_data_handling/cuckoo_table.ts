@@ -1,32 +1,25 @@
-import * as THREE from "three";
-import UpdatableTexture from "libs/UpdatableTexture";
 import { Vector3 } from "oxalis/constants";
-import { getRenderer } from "oxalis/controller/renderer";
-import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
 const ELEMENTS_PER_ENTRY = 4;
 const TEXTURE_CHANNEL_COUNT = 4;
-const DEFAULT_LOAD_FACTOR = 0.25;
 const EMPTY_KEY = 2 ** 32 - 1;
+const EMPTY_VALUE = [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY] as Value;
 type Key = number;
 type Value = Vector3;
 type Entry = [Key, Value];
 
 export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
   static fromCapacity(requestedCapacity: number): CuckooTable {
-    const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
-    const textureWidth = Math.ceil(
-      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
-    );
-    return new CuckooTable(textureWidth);
+    return new CuckooTable(this.computeTextureWidthFromCapacity(requestedCapacity));
   }
 
   getEmptyKey(): Key {
     return EMPTY_KEY;
   }
+
   getEmptyValue(): Value {
-    return [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY];
+    return EMPTY_VALUE;
   }
 
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {

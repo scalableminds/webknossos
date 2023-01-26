@@ -1,11 +1,6 @@
-import * as THREE from "three";
-import UpdatableTexture from "libs/UpdatableTexture";
-import { Vector2, Vector3, Vector4 } from "oxalis/constants";
-import { getRenderer } from "oxalis/controller/renderer";
-import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import { Vector4, Vector5 } from "oxalis/constants";
 import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-type Vector5 = [number, number, number, number, number];
 type Key = Vector5; // [x, y, z, requestedMagIdx, layerIdx]
 type Value = number; // bucket address in texture
 type Entry = [Key, Value];
@@ -14,14 +9,13 @@ type Entry = [Key, Value];
 //    y, // 32 bit
 //    z, // 32 bit
 //    // 32 bit = 5 (magIdx) + 6 (layerIdx) + 21 bit (bucket address)
-//    requesteMagIdxAndLayerIdxAndBucketAddress
+//    requestedMagIdxAndLayerIdxAndBucketAddress
 // ]
 type CompressedEntry = Vector4;
 
 // Actually, it's only 6 but we squeeze these into 4.
 const ELEMENTS_PER_ENTRY = 4;
 const TEXTURE_CHANNEL_COUNT = 4;
-const DEFAULT_LOAD_FACTOR = 0.25;
 const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 const EMPTY_KEY = [
   EMPTY_KEY_VALUE,
@@ -33,11 +27,7 @@ const EMPTY_KEY = [
 
 export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
   static fromCapacity(requestedCapacity: number): CuckooTableVec5 {
-    const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
-    const textureWidth = Math.ceil(
-      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
-    );
-    return new CuckooTableVec5(textureWidth);
+    return new CuckooTableVec5(this.computeTextureWidthFromCapacity(requestedCapacity));
   }
 
   checkValidKey(key: Key) {

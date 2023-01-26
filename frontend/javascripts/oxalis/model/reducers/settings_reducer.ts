@@ -16,6 +16,7 @@ import {
   hasEditableMapping,
   isMappingActivationAllowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { setRotationReducer } from "./flycam_reducer";
 
 //
 // Update helpers
@@ -176,9 +177,14 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const { allowedModes } = state.tracing.restrictions;
 
       if (allowedModes.includes(action.viewMode)) {
-        return updateTemporaryConfig(state, {
+        const newState = updateTemporaryConfig(state, {
           viewMode: action.viewMode,
         });
+        if (action.viewMode !== "orthogonal") {
+          return newState;
+        }
+        // Restore rotation
+        return setRotationReducer(newState, [0, 0, 0]);
       } else {
         return state;
       }

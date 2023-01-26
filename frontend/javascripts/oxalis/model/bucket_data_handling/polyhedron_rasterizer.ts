@@ -387,8 +387,7 @@ class PolyhedronRasterizer {
     // edges of that polygon is then drawn into the buffer.
     // After that, we know all line segments that belong to
     // the polyhedron.
-    // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
-    const { deltaX, deltaY, deltaZ, shiftZ, buffer, pointsBuffer } = this;
+    const { deltaY, deltaZ, shiftZ, buffer, pointsBuffer } = this;
 
     // build and rasterize convex hull of all xy-planes
     for (let z = 0; z < deltaZ; z++) {

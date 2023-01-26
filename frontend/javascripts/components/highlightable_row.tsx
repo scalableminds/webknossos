@@ -17,7 +17,8 @@ export default class HighlightableRow extends React.PureComponent<Props, State> 
   };
 
   render() {
-    const { style, ...restProps } = this.props;
+    // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+    const { shouldHighlight, style, ...restProps } = this.props;
     return (
       <tr
         {...restProps}

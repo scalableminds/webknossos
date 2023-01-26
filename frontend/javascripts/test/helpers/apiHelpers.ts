@@ -33,7 +33,7 @@ const Request = {
   always: () => Promise.resolve(),
 };
 export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
-  return async function getBucketData(payload) {
+  return async function getBucketData(_url, payload) {
     const bucketCount = payload.data.length;
     await sleep(delay);
     return {

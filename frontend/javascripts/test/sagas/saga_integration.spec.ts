@@ -67,7 +67,9 @@ test.serial(
     );
     // Reset the info field which is just for debugging purposes
     const actualSaveQueue = state.save.queue.skeleton.map((entry) => {
-      return { ...entry, info: "[]" };
+      // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+      const { info, ...rest } = entry;
+      return { ...rest, info: "[]" };
     });
     // Once the updateTree update action is in the save queue, we're good.
     // This means the setTreeName action was dispatched, the diffing ran, and the change will be persisted.

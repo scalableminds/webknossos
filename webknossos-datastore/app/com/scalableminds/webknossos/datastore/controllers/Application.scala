@@ -7,9 +7,10 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
+import net.liftweb.util.Helpers.tryo
 import play.api.mvc.{Action, AnyContent}
 
-import java.io.ByteArrayInputStream
+import java.io.FileInputStream
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -35,18 +36,27 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
     import java.nio.charset.StandardCharsets
     import java.nio.file.Files
 
-    val storageOptions: StorageOptions = StorageOptions
-      .newBuilder()
-      .setCredentials(
-        ServiceAccountCredentials.fromStream(new ByteArrayInputStream("{\"type\": \"service_account\"}".getBytes())))
-      .build();
+    val useCredentials = false
+    val bucket = "zarr-example-datasets"
+    val pathStr = "6001251.zarr/0/.zarray"
+    // val bucket = "neuroglancer-fafb-data"
+    // val pathStr = "fafb_v14/fafb_v14_orig/info"
+
+    val storageOptions =
+      if (useCredentials)
+        StorageOptions
+          .newBuilder()
+          .setCredentials(ServiceAccountCredentials.fromStream(new FileInputStream("google-service-credentials.json")))
+          .build()
+      else StorageOptions.newBuilder().build()
 
     val fs =
-      CloudStorageFileSystem.forBucket("neuroglancer-fafb-data", CloudStorageConfiguration.DEFAULT, storageOptions)
-    val path = fs.getPath("/fafb_v14/fafb_v14_orig/info")
-    val bytes = ZipIO.gunzip(Files.readAllBytes(path))
+      CloudStorageFileSystem.forBucket(bucket, CloudStorageConfiguration.DEFAULT, storageOptions)
+    val path = fs.getPath(pathStr)
+    val bytesRaw = Files.readAllBytes(path)
+    val bytes = tryo(ZipIO.gunzip(bytesRaw)).toOption.getOrElse(bytesRaw)
     val text = new String(bytes, StandardCharsets.UTF_8)
-    Fox.successful(Ok(s"Hi! ${bytes.length}. $text"))
+    Fox.successful(Ok(s"Received ${bytes.length} bytes: $text"))
   }
 
 }

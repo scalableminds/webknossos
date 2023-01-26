@@ -102,6 +102,8 @@ export const getColorForCoords: ShaderModule = {
     hashCombine,
   ],
   code: `
+    float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
+
     float attemptLookUpLookUp(uint globalLayerIndex, uvec4 bucketAddress, uint seed) {
       highp uint h0 = hashCombine(seed, bucketAddress.x);
       h0 = hashCombine(h0, bucketAddress.y);
@@ -178,18 +180,22 @@ export const getColorForCoords: ShaderModule = {
           uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
         );
 
-        if (bucketAddress != -1.) {
+        if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
           break;
         }
       }
 
-      if (bucketAddress < 0. ||
-          isNan(bucketAddress)) {
+      if (bucketAddress == NOT_YET_COMMITTED_VALUE) {
+        // No bucket was found that was already committed.
         // Not-yet-existing data is encoded with a = -1.0
-        // todo: restore gray-when-loading behavior and also
-        // ensure that out-of-bbox data is rendered black
-        // (formerly encoded as -2 in the look up buffer).
-        // returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
+        // and will be rendered gray.
+        returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
+        return returnValue;
+      }
+
+      if (bucketAddress < 0. || isNan(bucketAddress)) {
+        // The requested data could not be found in the look up
+        // table. Render black.
         returnValue[1] = vec4(0.0, 0.0, 0.0, 0.0);
         return returnValue;
       }

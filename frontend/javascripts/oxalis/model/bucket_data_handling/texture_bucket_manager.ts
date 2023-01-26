@@ -23,19 +23,21 @@ import { CuckooTableVec5 } from "./cuckoo_table_vec5";
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
 // setActiveBuckets can be called with an array of buckets, which will be
-// written into the dataTexture and lookUpTexture of this class instance.
+// written into the dataTexture and lookUpTexture of this class instance
+// (note that the lookUpTexture is shared across all layers).
 // Buckets which are already in this texture won't be written again.
 // Buckets which are not needed anymore will be replaced by other buckets.
 // A bucket is considered "active" if it is supposed to be in the data texture.
 // A bucket is considered "committed" if it is indeed in the data texture.
 // Active buckets will be pushed into a writerQueue which is processed by
 // writing buckets to the data texture (i.e., "committing the buckets").
-// At the moment, we store two floats per bucket.
-// The first value f denotes the following:
-//   If f >= 0, f denotes the index in the data texture where the bucket is stored.
-//   If f == -1, the bucket is not yet committed
-//   If f == -2, the bucket is not supposed to be rendered. Out of bounds.
-// The second value v denotes the magnification value of the addressed bucket.
+//
+// Within the lookUpTexture, we store one unsigned integer i per bucket.
+// If i == 2**21 - 1, the bucket is not yet committed.
+// Otherwise, i denotes the index in the data texture where the bucket is stored.
+
+const NOT_YET_COMMITTED_VALUE = 2 ** 21 - 1;
+
 export const channelCountForLookupBuffer = 2;
 
 function getSomeValue<T>(set: Set<T>): T {
@@ -186,17 +188,11 @@ export default class TextureBucketManager {
     // back (via pop). This ensures that the newest bucket "wins" if there are
     // multiple buckets for the same index.
     this.writerQueue = _.uniqBy(this.writerQueue, (el) => el._index);
-    const maxTimePerFrame = 16;
+    const maxTimePerFrame = 1;
     const startingTime = performance.now();
     const packedBucketSize = this.getPackedBucketSize();
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;
     const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
-
-    // if (!window.hasSetDebug) {
-    //   this.lookUpCuckooTable.set([1, 2, 3, 4, 5], 6);
-    //   window.hasSetDebug = true;
-    // }
-    // return;
 
     while (this.writerQueue.length > 0 && performance.now() - startingTime < maxTimePerFrame) {
       // @ts-expect-error pop cannot return null due to the while condition
@@ -291,6 +287,17 @@ export default class TextureBucketManager {
   reserveIndexForBucket(bucket: DataBucket, index: number): void {
     this.freeIndexSet.delete(index);
     this.activeBucketToIndexMap.set(bucket, index);
+
+    this.lookUpCuckooTable.set(
+      [
+        bucket.zoomedAddress[0],
+        bucket.zoomedAddress[1],
+        bucket.zoomedAddress[2],
+        bucket.zoomedAddress[3],
+        this.layerIndex,
+      ],
+      NOT_YET_COMMITTED_VALUE,
+    );
 
     const enqueueBucket = (_index: number) => {
       if (!bucket.hasData()) {

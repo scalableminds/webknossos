@@ -235,21 +235,37 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   getValueAtAddress(key: K, hashedAddress: number): V | null {
-    // todo: doesAddressContainKey also uses readDecompressedEntry (perf)
+    // todo: doesAddressContainKey also uses getEntryAtAddress (perf)
     if (this.doesAddressContainKey(key, hashedAddress)) {
-      const decompressedEntry = this.getEntryAtAddress(hashedAddress);
-      return decompressedEntry[1];
+      const entry = this.getEntryAtAddress(hashedAddress);
+      return entry[1];
     } else {
       return null;
     }
   }
 
-  abstract writeEntryAtAddress(
-    key: K,
-    value: V,
-    hashedAddress: number,
-    isRehashing: boolean,
-  ): Entry;
+  abstract writeEntryToTable(key: K, value: V, hashedAddress: number): void;
+
+  writeEntryAtAddress(key: K, value: V, hashedAddress: number, isRehashing: boolean): Entry {
+    const displacedEntry: Entry = this.getEntryAtAddress(hashedAddress);
+    this.writeEntryToTable(key, value, hashedAddress);
+
+    if (!isRehashing) {
+      // Only partially update if we are not rehashing. Otherwise, it makes more
+      // sense to flush the entire texture content after the rehashing is done.
+      const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+      const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
+      this._texture.update(
+        this.table.subarray(offset, offset + ELEMENTS_PER_ENTRY),
+        texelOffset % this.textureWidth,
+        Math.floor(texelOffset / this.textureWidth),
+        ELEMENTS_PER_ENTRY / TEXTURE_CHANNEL_COUNT,
+        1,
+      );
+    }
+
+    return displacedEntry;
+  }
 
   _hashCombine(state: number, value: number) {
     // Based on Murmur3_32, since it is supported on the GPU.

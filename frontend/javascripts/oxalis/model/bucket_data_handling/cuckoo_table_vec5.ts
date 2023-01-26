@@ -104,30 +104,12 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
     ];
   }
 
-  writeEntryAtAddress(key: Key, value: Value, hashedAddress: number, isRehashing: boolean): Entry {
-    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-
-    const displacedEntry: Entry = this.readDecompressedEntry(offset);
+  writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
     const compressedEntry = this.compressEntry(key, value);
-
+    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     for (let i = 0; i < compressedEntry.length; i++) {
       this.table[offset + i] = compressedEntry[i];
     }
-
-    if (!isRehashing) {
-      const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
-      // Only partially update if we are not rehashing. Otherwise, it makes more
-      // sense to flush the entire texture content after the rehashing is done.
-      this._texture.update(
-        this.table.subarray(offset, offset + ELEMENTS_PER_ENTRY),
-        texelOffset % this.textureWidth,
-        Math.floor(texelOffset / this.textureWidth),
-        ELEMENTS_PER_ENTRY / TEXTURE_CHANNEL_COUNT,
-        1,
-      );
-    }
-
-    return displacedEntry;
   }
 
   _hashKeyToAddress(seed: number, key: Key): number {

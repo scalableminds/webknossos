@@ -48,38 +48,12 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
     return key1 === key2;
   }
 
-  writeEntryAtAddress(
-    key: number,
-    value: Vector3,
-    hashedAddress: number,
-    isRehashing: boolean,
-  ): Entry {
+  writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
-
-    const displacedEntry: Entry = [
-      this.table[offset],
-      [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
-    ];
-
     this.table[offset] = key;
     this.table[offset + 1] = value[0];
     this.table[offset + 2] = value[1];
     this.table[offset + 3] = value[2];
-
-    if (!isRehashing) {
-      // Only partially update if we are not rehashing. Otherwise, it makes more
-      // sense to flush the entire texture content after the rehashing is done.
-      this._texture.update(
-        this.table.subarray(offset, offset + ELEMENTS_PER_ENTRY),
-        texelOffset % this.textureWidth,
-        Math.floor(texelOffset / this.textureWidth),
-        1,
-        1,
-      );
-    }
-
-    return displacedEntry;
   }
 
   _hashKeyToAddress(seed: number, key: number): number {

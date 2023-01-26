@@ -1,13 +1,16 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import com.google.auth.oauth2.ServiceAccountCredentials
+import com.google.cloud.storage.StorageOptions
+import com.google.cloud.storage.contrib.nio.{CloudStorageConfiguration, CloudStorageFileSystem}
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
-
-import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 
+import java.io.ByteArrayInputStream
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
@@ -31,14 +34,19 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
   def testGoogleStorage: Action[AnyContent] = Action.async { implicit request =>
     import java.nio.charset.StandardCharsets
     import java.nio.file.Files
-    try {
-      val fs = CloudStorageFileSystem.forBucket("neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-      try {
-        val path = fs.getPath("info")
-        val lines = Files.readAllLines(path, StandardCharsets.UTF_8)
-      } finally if (fs != null) fs.close()
-    }
-    Fox.successful(Ok("Hi!"))
+
+    val storageOptions: StorageOptions = StorageOptions
+      .newBuilder()
+      .setCredentials(
+        ServiceAccountCredentials.fromStream(new ByteArrayInputStream("{\"type\": \"service_account\"}".getBytes())))
+      .build();
+
+    val fs =
+      CloudStorageFileSystem.forBucket("neuroglancer-fafb-data", CloudStorageConfiguration.DEFAULT, storageOptions)
+    val path = fs.getPath("/fafb_v14/fafb_v14_orig/info")
+    val bytes = ZipIO.gunzip(Files.readAllBytes(path))
+    val text = new String(bytes, StandardCharsets.UTF_8)
+    Fox.successful(Ok(s"Hi! ${bytes.length}. $text"))
   }
 
 }

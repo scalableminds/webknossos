@@ -139,17 +139,15 @@ ${compileShader(
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
-  // todo: needs to happen per layer maybe?
-  // if (isOutsideOfBoundingBox(worldCoordUVW)) {
-  //   gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-  //   return;
-  // }
 
   if (renderBucketIndices) {
-    // todo: reactivate (only used for debugging, though)
-    // vec3 absoluteCoords = getAbsoluteCoords(worldCoordUVW, zoomStep);
-    // vec3 bucketPosition = div(floor(absoluteCoords), bucketWidth);
-    // gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
+    // Only used for debugging purposes. Will render bucket positions for the
+    // first renderable layer.
+    uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[0u];
+    uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
+    vec3 absoluteCoords = getAbsoluteCoords(worldCoordUVW, activeMagIdx);
+    vec3 bucketPosition = div(floor(absoluteCoords), bucketWidth);
+    gl_FragColor = vec4(bucketPosition, activeMagIdx) / 255.;
     return;
   }
   vec3 data_color = vec3(0.0);

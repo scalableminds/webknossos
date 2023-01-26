@@ -188,7 +188,7 @@ export default class TextureBucketManager {
     // back (via pop). This ensures that the newest bucket "wins" if there are
     // multiple buckets for the same index.
     this.writerQueue = _.uniqBy(this.writerQueue, (el) => el._index);
-    const maxTimePerFrame = 1;
+    const maxTimePerFrame = 16;
     const startingTime = performance.now();
     const packedBucketSize = this.getPackedBucketSize();
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;

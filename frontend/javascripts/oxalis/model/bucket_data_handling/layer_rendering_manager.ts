@@ -109,6 +109,27 @@ function consumeBucketsFromArrayBuffer(
   return bucketsWithPriorities;
 }
 
+export function getGlobalLayerIndexForLayerName(
+  layerName: string,
+  optSanitizer?: (arg: string) => string,
+): number {
+  const sanitizer = optSanitizer || _.identity;
+  const allColorLayers = getColorLayers(Store.getState().dataset);
+  let layerIndex = allColorLayers.findIndex((layer) => sanitizer(layer.name) === layerName);
+
+  if (layerIndex < 0) {
+    const segmentationLayers = Model.getSegmentationLayers();
+    const segLayerIndex = segmentationLayers.findIndex(
+      (layer) => sanitizer(layer.name) === layerName,
+    );
+    if (segLayerIndex < 0) {
+      throw new Error("Could not determine segmentation layer index");
+    }
+    layerIndex = allColorLayers.length + segLayerIndex;
+  }
+  return layerIndex;
+}
+
 export default class LayerRenderingManager {
   lastSphericalCapRadius: number | undefined;
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
@@ -162,17 +183,7 @@ export default class LayerRenderingManager {
       elementClass,
     );
 
-    const allColorLayers = getColorLayers(Store.getState().dataset);
-    let layerIndex = allColorLayers.findIndex((layer) => layer.name === this.name);
-
-    if (layerIndex < 0) {
-      const segmentationLayers = Model.getSegmentationLayers();
-      const segLayerIndex = segmentationLayers.findIndex((layer) => layer.name === this.name);
-      if (segLayerIndex < 0) {
-        throw new Error("Could not determine segmentation layer index");
-      }
-      layerIndex = allColorLayers.length + segLayerIndex;
-    }
+    const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 
     this.textureBucketManager.setupDataTextures(bytes, getLookUpCuckooTable(), layerIndex);
     shaderEditor.addBucketManagers(this.textureBucketManager);

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -185,15 +185,6 @@ class PlaneMaterialFactory {
         value: false,
       },
 
-      lookup_seeds: { value: [0, 0, 0] },
-
-      LOOKUP_CUCKOO_ENTRY_CAPACITY: { value: 0 },
-      LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY: { value: 0 },
-      LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL: { value: 0 },
-      LOOKUP_CUCKOO_TWIDTH: { value: 0 },
-      // todo: needed?
-      // custom_color_texture: { value: CuckooTable.getNullTexture() },
-
       // The hovered segment id is always stored as a 64-bit (8 byte)
       // value which is why it is spread over two uniforms,
       // named as `-High` and `-Low`.
@@ -219,10 +210,6 @@ class PlaneMaterialFactory {
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
 
-      // todo: unused?
-      this.uniforms[`${layerName}_maxZoomStep`] = {
-        value: dataLayer.cube.resolutionInfo.getHighestResolutionIndex(),
-      };
       this.uniforms[`${layerName}_alpha`] = {
         value: 1,
       };
@@ -240,11 +227,6 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_transform`] = {
         value: layer.transformMatrix || Identity4x4,
       };
-      // } else {
-      //   this.uniforms[`${layerName}_transform`] = {
-      //     value: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
-      //   };
-      // }
     }
 
     for (const name of getSanitizedColorLayerNames()) {

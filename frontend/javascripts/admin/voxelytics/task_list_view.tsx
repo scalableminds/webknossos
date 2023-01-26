@@ -333,8 +333,7 @@ export default function TaskListView({
 
   function copyAllArtifactPaths() {
     const artifactPaths = Object.values(report.artifacts)
-      .map((artifactObject) => Object.values(artifactObject).map((artifact) => artifact.path))
-      .flat();
+      .flatMap((artifactObject) => Object.values(artifactObject).map((artifact) => artifact.path));
 
     navigator.clipboard.writeText(artifactPaths.join("\n")).then(
       () => notification.success({ message: "All artifacts path were copied to the clipboard" }),

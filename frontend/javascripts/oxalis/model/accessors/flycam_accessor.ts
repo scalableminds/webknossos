@@ -29,7 +29,6 @@ import type {
 import constants, { OrthoViews } from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";

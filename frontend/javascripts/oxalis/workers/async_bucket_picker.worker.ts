@@ -6,7 +6,6 @@ import type { OrthoViewMap, Vector3, Vector4, ViewMode } from "oxalis/constants"
 import constants from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { expose } from "./comlink_wrapper";
 
 type PriorityItem = {
@@ -96,16 +95,6 @@ function pick(
       logZoomStep,
       rects,
     );
-    // determineBucketsForOrthogonal(
-    //   resolutions,
-    //   enqueueFunction,
-    //   loadingStrategy,
-    //   logZoomStep,
-    //   areas,
-    //   subBucketLocality,
-    //   null,
-    //   gpuFactor,
-    // );
   }
 
   return dequeueToArrayBuffer(bucketQueue);

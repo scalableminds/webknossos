@@ -256,11 +256,11 @@
   "madge": {
     "detectiveOptions": {
       "ts": {
-            "skipTypeImports": true
-          },
-          "tsx": {
-            "skipTypeImports": true
-          }
+        "skipTypeImports": true
+      },
+      "tsx": {
+        "skipTypeImports": true
+      }
     }
   }
 }

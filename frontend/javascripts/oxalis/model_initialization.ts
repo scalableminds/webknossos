@@ -99,7 +99,7 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
-import { M4x4, Matrix4x4 } from "libs/mjs";
+import { M4x4, Matrix4x4, Vector16 } from "libs/mjs";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -257,7 +257,7 @@ export async function initialize(
     );
 
   const setTransforms = (layerName: string, transforms: Matrix4x4) =>
-    Store.dispatch(setLayerTransforms(layerName, transforms));
+    Store.dispatch(setLayerTransforms(layerName, Array.from(transforms) as Vector16));
 
   const setScale = (layerName: string, scale: Vector3, anchor: Vector3) => {
     setTransforms(layerName, makeScale(scale, anchor));

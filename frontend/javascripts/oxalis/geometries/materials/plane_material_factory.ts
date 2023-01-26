@@ -478,7 +478,7 @@ class PlaneMaterialFactory {
         (layers) => {
           for (const layer of layers) {
             const name = sanitizeName(layer.name);
-            this.uniforms[`${name}_transform`].value.set(layer.transformMatrix || Identity4x4);
+            this.uniforms[`${name}_transform`].value = layer.transformMatrix || Identity4x4;
           }
         },
         true,

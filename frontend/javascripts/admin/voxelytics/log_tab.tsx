@@ -41,7 +41,7 @@ export function formatLog(
 function LogContent({ logText }: { logText: Array<string> }) {
   return (
     <div className="log-content">
-      {logText.map((line, index) => (
+      {logText.map((_line, index) => (
         // rome-ignore lint/suspicious/noArrayIndexKey: log lines are indexed uniquely
         <div className={`log-line log-line-${index % 2 ? "odd" : "even"}`} key={index}>
           <div className="log-line-number">{index + 1}</div>
@@ -143,7 +143,7 @@ export default function LogTab({
       a.href = URL.createObjectURL(new Blob([logText], { type: "plain/text" }));
       a.download = `${workflowHash}_${runId}_${taskName}.log`;
       a.click();
-    } catch (error) {
+    } catch (_error) {
       message.error("Could not fetch log for download.");
     }
   }

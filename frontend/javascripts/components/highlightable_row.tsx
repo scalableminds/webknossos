@@ -17,7 +17,7 @@ export default class HighlightableRow extends React.PureComponent<Props, State> 
   };
 
   render() {
-    const { shouldHighlight, style, ...restProps } = this.props;
+    const { style, ...restProps } = this.props;
     return (
       <tr
         {...restProps}

@@ -57,12 +57,7 @@ import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
-import {
-  APICompoundTypeEnum,
-  APIPricingPlanStatus,
-  APIUser,
-  TracingTypeEnum,
-} from "types/api_flow_types";
+import { APICompoundTypeEnum, APIUser, TracingTypeEnum } from "types/api_flow_types";
 
 import ErrorBoundary from "components/error_boundary";
 
@@ -199,7 +194,7 @@ class ReactRouter extends React.Component<Props> {
     try {
       const annotationInformation = await getAnnotationInformation(match.params.id || "");
       return annotationInformation.visibility === "Public";
-    } catch (ex) {
+    } catch (_ex) {
       // Annotation could not be found
     }
 
@@ -254,7 +249,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/datasets/:folderIdWithName"
-                render={({ match }: ContextRouter) => {
+                render={() => {
                   const initialTabKey = "datasets";
                   return (
                     <DashboardView

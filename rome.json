@@ -30,6 +30,7 @@
         "noDelete": "off"
       },
       "correctness": {
+        "noUnusedVariables": "error",
         "noRenderReturnValue": "off"
       },
       "suspicious": {

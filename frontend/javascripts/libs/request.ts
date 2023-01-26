@@ -316,7 +316,7 @@ class Request {
 
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({ ...json, url: requestedUrl });
-            } catch (jsonError) {
+            } catch (_jsonError) {
               if (showErrorToast) Toast.error(text);
 
               /* eslint-disable-next-line prefer-promise-reject-errors */

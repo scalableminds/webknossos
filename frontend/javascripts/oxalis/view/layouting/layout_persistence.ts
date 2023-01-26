@@ -61,7 +61,7 @@ function readStoredLayoutConfigs() {
     }
 
     return defaultLayoutConfig;
-  } catch (ex) {
+  } catch (_ex) {
     // This should only happen if someone tinkers with localStorage manually
     console.warn("Layout config could not be deserialized.");
   }

@@ -60,7 +60,7 @@ test("UrlManager should parse csv url hash without optional values", (t) => {
     rotation: [40.45, 13.65, 0.8],
     activeNode: 2,
   };
-  const { rotation, ...stateWithoutRotation } = state;
+  const { ...stateWithoutRotation } = state;
   location.hash = `#${[
     ...state.position,
     ViewModeValues.indexOf(state.mode),
@@ -68,7 +68,7 @@ test("UrlManager should parse csv url hash without optional values", (t) => {
     state.activeNode,
   ].join(",")}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation);
-  const { activeNode, ...stateWithoutActiveNode } = state;
+  const { ...stateWithoutActiveNode } = state;
   location.hash = `#${[
     ...state.position,
     ViewModeValues.indexOf(state.mode),
@@ -133,10 +133,10 @@ test("UrlManager should parse incomplete json url hash", (t) => {
     rotation: [40.45, 13.65, 0.8],
     activeNode: 2,
   };
-  const { rotation, ...stateWithoutRotation } = state;
+  const { ...stateWithoutRotation } = state;
   location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutRotation))}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation);
-  const { activeNode, ...stateWithoutActiveNode } = state;
+  const { ...stateWithoutActiveNode } = state;
   location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutActiveNode))}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutActiveNode);
 });

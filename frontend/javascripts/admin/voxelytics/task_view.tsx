@@ -43,7 +43,7 @@ function TaskView({
   taskInfo: VoxelyticsTaskInfo;
   onSelectTask: (id: string) => void;
 }) {
-  const shouldExpandNode = (keyPath: Array<string | number>, data: any) =>
+  const shouldExpandNode = (_keyPath: Array<string | number>, data: any) =>
     // Expand all with at most 10 keys
     (data.length || 0) <= 10;
 

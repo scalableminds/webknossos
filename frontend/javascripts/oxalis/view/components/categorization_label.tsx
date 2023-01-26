@@ -46,7 +46,7 @@ export function CategorizationSearch({
       try {
         const loadedSearchTags = JSON.parse(searchTagString);
         setTags(loadedSearchTags);
-      } catch (error) {
+      } catch (_error) {
         // pass
       }
     }

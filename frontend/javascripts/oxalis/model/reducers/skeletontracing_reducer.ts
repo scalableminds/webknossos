@@ -704,21 +704,20 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const { timestamp, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .chain(([tree, node]) =>
-              createBranchPoint(skeletonTracing, tree, node, timestamp, restrictions).map(
-                (branchPoint) =>
-                  update(state, {
-                    tracing: {
-                      skeleton: {
-                        trees: {
-                          [tree.treeId]: {
-                            branchPoints: {
-                              $push: [branchPoint],
-                            },
+              createBranchPoint(tree, node, timestamp, restrictions).map((branchPoint) =>
+                update(state, {
+                  tracing: {
+                    skeleton: {
+                      trees: {
+                        [tree.treeId]: {
+                          branchPoints: {
+                            $push: [branchPoint],
                           },
                         },
                       },
                     },
-                  }),
+                  },
+                }),
               ),
             )
             .getOrElse(state);

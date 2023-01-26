@@ -118,7 +118,7 @@ function ArtifactsView({
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
       a.download = `${workflowHash}_${taskName}_${artifactName}_checksums.csv`;
       a.click();
-    } catch (error) {
+    } catch (_error) {
       message.error("Could not download artifact checksums.");
     }
   }

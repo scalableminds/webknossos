@@ -176,7 +176,7 @@ test("VolumeTracing should update its lastLabelActions", (t) => {
   });
 });
 
-const prepareContourListTest = (t, state) => {
+const prepareContourListTest = (state) => {
   const contourList = [
     [4, 6, 9],
     [1, 2, 3],
@@ -193,7 +193,7 @@ const prepareContourListTest = (t, state) => {
 };
 
 test("VolumeTracing should add values to the contourList", (t) => {
-  const { newState, contourList } = prepareContourListTest(t, initialState);
+  const { newState, contourList } = prepareContourListTest(initialState);
   t.not(newState, initialState);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
     t.deepEqual(tracing.contourList, contourList);
@@ -208,7 +208,7 @@ test("VolumeTracing should add values to the contourList even if getRequestLogZo
     },
   });
   t.true(getRequestLogZoomStep(alteredState) > 1);
-  const { newState, contourList } = prepareContourListTest(t, alteredState);
+  const { newState, contourList } = prepareContourListTest(alteredState);
   t.not(newState, initialState);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
     t.deepEqual(tracing.contourList, contourList);

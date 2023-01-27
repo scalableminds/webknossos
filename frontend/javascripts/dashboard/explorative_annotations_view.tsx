@@ -608,7 +608,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           width={280}
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, (annotation) => annotation.name)}
-          render={(name: string, tracing: APIAnnotationCompact) =>
+          render={(_name: string, tracing: APIAnnotationCompact) =>
             this.renderNameWithDescription(tracing)
           }
         />

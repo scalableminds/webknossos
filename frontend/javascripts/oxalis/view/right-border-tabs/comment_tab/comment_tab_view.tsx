@@ -88,7 +88,7 @@ type CommentTabState = {
   isSortedAscending: boolean;
   sortBy: SortByEnumType;
   collapsedTreeIds: Record<number, boolean>;
-  isMarkdownModalVisible: boolean;
+  isMarkdownModalOpen: boolean;
 };
 const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "updateTree",
@@ -142,7 +142,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     isSortedAscending: true,
     sortBy: SortByEnum.NAME,
     collapsedTreeIds: {},
-    isMarkdownModalVisible: false,
+    isMarkdownModalOpen: false,
   };
 
   componentDidMount() {
@@ -311,7 +311,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
   setMarkdownModalVisibility = (visible: boolean) => {
     this.setState({
-      isMarkdownModalVisible: visible,
+      isMarkdownModalOpen: visible,
     });
   };
 
@@ -328,7 +328,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
         <MarkdownModal
           key={comment.nodeId}
           source={comment.content}
-          visible={this.state.isMarkdownModalVisible}
+          isOpen={this.state.isMarkdownModalOpen}
           onChange={this.handleChangeInput}
           onOk={onOk}
           label="Comment"
@@ -420,7 +420,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       >
         <DomVisibilityObserver targetId={commentTabId}>
           {(isVisibleInDom) => {
-            if (!isVisibleInDom && !this.state.isMarkdownModalVisible) {
+            if (!isVisibleInDom && !this.state.isMarkdownModalOpen) {
               return null;
             }
 

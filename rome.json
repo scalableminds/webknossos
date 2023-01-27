@@ -26,11 +26,17 @@
         "useValidAnchor": "off",
         "useKeyWithClickEvents": "off"
       },
+      "performance": {
+        "noDelete": "off"
+      },
       "correctness": {
-        "noDelete": "off",
-        "noShadowRestrictedNames": "off",
-        "noRenderReturnValue": "off",
-        "noAsyncPromiseExecutor": "off"
+        "noUnusedVariables": "error",
+        "noRenderReturnValue": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noAsyncPromiseExecutor": "off",
+        "noShadowRestrictedNames": "off"
       }
     }
   },

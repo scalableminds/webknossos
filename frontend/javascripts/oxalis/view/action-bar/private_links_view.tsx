@@ -91,7 +91,7 @@ function useUpdatePrivateLink(annotationId: string) {
       return { previousLink };
     },
     // If the mutation fails, use the context returned from onMutate to roll back
-    onError: (err, _updatedLinkItem, context) => {
+    onError: (_err, _updatedLinkItem, context) => {
       Toast.error("Could not update link.");
       if (context) {
         queryClient.setQueryData(mutationKey, context.previousLink);
@@ -404,11 +404,11 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
 }
 
 export function _PrivateLinksModal({
-  isVisible,
+  isOpen,
   onOk,
   annotationId,
 }: {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => void;
   annotationId: string;
 }) {
@@ -420,7 +420,7 @@ export function _PrivateLinksModal({
   return (
     <Modal
       title="Manage Zarr Links"
-      visible={isVisible}
+      open={isOpen}
       width={800}
       onCancel={onOk}
       onOk={onOk}

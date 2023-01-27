@@ -42,7 +42,7 @@ trait RequestLogging extends AbstractRequestLogging {
       _ = logRequestFormatted(request, result, notifier)
     } yield result
 
-  def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 10 seconds)(
+  def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 30 seconds)(
       block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
     def logTimeFormatted(executionTime: Long, request: Request[_], result: Result): Unit = {
       val debugString = s"Request ${request.method} ${request.uri} took ${BigDecimal(executionTime / 1e9)

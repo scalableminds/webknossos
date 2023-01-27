@@ -48,7 +48,7 @@ import { AsyncButton } from "components/async_clickables";
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => void;
   annotationType: APIAnnotationType;
   annotationId: string;
@@ -168,7 +168,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 }
 
 function _ShareModalView(props: Props) {
-  const { isVisible, onOk, annotationType, annotationId } = props;
+  const { isOpen, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -333,7 +333,7 @@ function _ShareModalView(props: Props) {
   return (
     <Modal
       title="Share this annotation"
-      visible={isVisible}
+      open={isOpen}
       width={800}
       onOk={onOk}
       onCancel={onOk}
@@ -349,7 +349,7 @@ function _ShareModalView(props: Props) {
           Sharing Link
         </Col>
         <Col span={18}>
-          <CopyableSharingLink isVisible={isVisible} longUrl={longUrl} />
+          <CopyableSharingLink isVisible={isOpen} longUrl={longUrl} />
           <Hint
             style={{
               margin: "4px 9px 12px 4px",

@@ -9,8 +9,7 @@ import {
   TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
@@ -65,7 +64,7 @@ type Props = OwnProps & StateProps;
 type State = {
   showFinishedTasks: boolean;
   isLoading: boolean;
-  isTransferModalVisible: boolean;
+  isTransferModalOpen: boolean;
   currentAnnotationId: string | null | undefined;
   finishedModeState: TaskModeState;
   unfinishedModeState: TaskModeState;
@@ -110,7 +109,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
-    isTransferModalVisible: false,
+    isTransferModalOpen: false,
     currentAnnotationId: null,
     finishedModeState: {
       tasks: [],
@@ -223,7 +222,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   openTransferModal(annotationId: string) {
     this.setState({
-      isTransferModalVisible: true,
+      isTransferModalOpen: true,
       currentAnnotationId: annotationId,
     });
   }
@@ -363,7 +362,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           ]),
         },
       }));
-    } catch (ex) {
+    } catch (_ex) {
       // catch exception so that promise does not fail and the modal will close
     } finally {
       this.setState({
@@ -374,7 +373,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   handleTransferredTask() {
     this.setState({
-      isTransferModalVisible: false,
+      isTransferModalOpen: false,
     });
 
     const removeTransferredTask = (
@@ -554,11 +553,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           ) : null}
         </div>
         <TransferTaskModal
-          visible={this.state.isTransferModalVisible}
+          isOpen={this.state.isTransferModalOpen}
           annotationId={this.state.currentAnnotationId}
           onCancel={() =>
             this.setState({
-              isTransferModalVisible: false,
+              isTransferModalOpen: false,
             })
           }
           onChange={() => this.handleTransferredTask()}

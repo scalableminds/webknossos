@@ -3,8 +3,6 @@ import { FormInstance } from "antd/lib/form";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 import messages from "messages";

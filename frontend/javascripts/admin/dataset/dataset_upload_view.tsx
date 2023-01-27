@@ -1,17 +1,4 @@
-import {
-  Popover,
-  Avatar,
-  Form,
-  Button,
-  Col,
-  Row,
-  Tooltip,
-  Modal,
-  Progress,
-  Alert,
-  List,
-  Spin,
-} from "antd";
+import { Popover, Avatar, Form, Button, Col, Row, Modal, Progress, Alert, List, Spin } from "antd";
 import { Location as HistoryLocation, Action as HistoryAction } from "history";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -34,8 +21,6 @@ import {
   startConvertToWkwJob,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
-  updateDataset,
-  getDataset,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -690,20 +675,20 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         return;
                       }
 
-                      const teamOfOrganisation = fetchedTeams.find(
+                      const teamOfOrganization = fetchedTeams.find(
                         (team) => team.name === team.organization,
                       );
 
-                      if (teamOfOrganisation == null) {
+                      if (teamOfOrganization == null) {
                         return;
                       }
 
                       if (this.formRef.current == null) return;
                       this.formRef.current.setFieldsValue({
-                        initialTeams: [teamOfOrganisation],
+                        initialTeams: [teamOfOrganization],
                       });
                       this.setState({
-                        selectedTeams: [teamOfOrganisation],
+                        selectedTeams: [teamOfOrganization],
                       });
                     }}
                   />

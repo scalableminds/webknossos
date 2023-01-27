@@ -48,7 +48,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
           updatedAt: Date.now(),
         });
         Toast.close(errorToastKey);
-      } catch (err) {
+      } catch (_err) {
         Toast.error(messages["project.report.failed_to_refresh"], {
           sticky: true,
           key: errorToastKey,
@@ -201,7 +201,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 dataIndex="finishedInstances"
                 // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
                 sorter={Utils.compareBy(typeHint, (project) => project.finishedInstances)}
-                render={(text, item) => ({
+                render={(_text, item) => ({
                   props: {
                     colSpan: 3,
                   },

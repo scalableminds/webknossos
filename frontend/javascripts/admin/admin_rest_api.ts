@@ -59,14 +59,15 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
-  VoxelyticsWorkflowInfo,
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
   ShortLink,
+  VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
+  VoxelyticsLogLine,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
@@ -2381,7 +2382,7 @@ export function getShortLink(key: string): Promise<ShortLink> {
 }
 
 // ### Voxelytics
-export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowInfo>> {
+export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
   return Request.receiveJSON("/api/voxelytics/workflows");
 }
 
@@ -2399,37 +2400,53 @@ export function getVoxelyticsWorkflow(
 export function getVoxelyticsLogs(
   runId: string,
   taskName: string | null,
-  minLevel: string,
-): Promise<Array<{}>> {
-  const params = new URLSearchParams({ runId, minLevel });
+  minLevel: LOG_LEVELS,
+  startTime: Date,
+  endTime: Date,
+  limit: number | null = null,
+): Promise<Array<VoxelyticsLogLine>> {
+  // Data is fetched with the limit from the end backward, i.e. the latest data is fetched first.
+  // The data is still ordered chronologically, i.e. ascending timestamps.
+  const params = new URLSearchParams({
+    runId,
+    minLevel,
+    startTimestamp: startTime.getTime().toString(),
+    endTimestamp: endTime.getTime().toString(),
+  });
   if (taskName != null) {
     params.append("taskName", taskName);
+  }
+  if (limit != null) {
+    params.append("limit", limit.toString());
   }
   return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }
 
 export function getVoxelyticsChunkStatistics(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
 ): Promise<Array<VoxelyticsChunkStatistics>> {
-  return Request.receiveJSON(
-    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${new URLSearchParams({
-      runId,
-      taskName,
-    })}`,
-  );
+  const params = new URLSearchParams({
+    taskName,
+  });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${params}`);
 }
 export function getVoxelyticsArtifactChecksums(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
   artifactName?: string,
 ): Promise<Array<Record<string, string | number>>> {
   const params = new URLSearchParams({
-    runId,
     taskName,
   });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
   if (artifactName != null) {
     params.append("artifactName", artifactName);
   }

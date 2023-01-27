@@ -215,6 +215,7 @@ const defaultState: OxalisState = {
     },
   },
   activeUser: null,
+  activeOrganization: null,
   uiInformation: {
     activeTool: "MOVE",
     showDropzoneModal: false,

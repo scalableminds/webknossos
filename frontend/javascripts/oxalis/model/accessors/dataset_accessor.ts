@@ -584,10 +584,7 @@ export function getDatasetExtentAsString(
   const extent = getDatasetExtentInLength(dataset);
   return formatExtentWithLength(extent, formatNumberToLength);
 }
-export function determineAllowedModes(
-  dataset: APIDataset,
-  settings?: Settings,
-): {
+export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
   allowedModes: Array<APIAllowedMode>;
 } {

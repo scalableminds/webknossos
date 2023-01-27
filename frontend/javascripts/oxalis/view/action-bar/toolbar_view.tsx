@@ -49,7 +49,7 @@ import {
   InterpolationMode,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
-import Store, { OxalisState, VolumeTracing } from "oxalis/store";
+import Store, { OxalisState } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";

@@ -1,5 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Card, Alert } from "antd";
@@ -46,7 +45,7 @@ type State = {
   users: APIUser[];
   searchQuery: string;
   selectedUserIdForAssignment: string | null;
-  isAnonymousTaskLinkModalVisible: boolean;
+  isAnonymousTaskLinkModalOpen: boolean;
 };
 const typeHint: Array<APITask> = [];
 const persistence = new Persistence<Pick<State, "searchQuery">>(
@@ -63,7 +62,7 @@ class TaskListView extends React.PureComponent<Props, State> {
     users: [],
     searchQuery: "",
     selectedUserIdForAssignment: null,
-    isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
+    isAnonymousTaskLinkModalOpen: Utils.hasUrlParam("showAnonymousLinks"),
   };
 
   componentDidMount() {
@@ -200,7 +199,7 @@ class TaskListView extends React.PureComponent<Props, State> {
   getAnonymousTaskLinkModal() {
     const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
 
-    if (!this.state.isAnonymousTaskLinkModalVisible) {
+    if (!this.state.isAnonymousTaskLinkModalOpen) {
       return null;
     }
 
@@ -211,18 +210,18 @@ class TaskListView extends React.PureComponent<Props, State> {
     return (
       <Modal
         title={`Anonymous Task Links for Task ${anonymousTaskId}`}
-        visible={this.state.isAnonymousTaskLinkModalVisible}
+        open={this.state.isAnonymousTaskLinkModalOpen}
         onOk={() => {
           navigator.clipboard
             .writeText(tasksString)
             .then(() => Toast.success("Links copied to clipboard"));
           this.setState({
-            isAnonymousTaskLinkModalVisible: false,
+            isAnonymousTaskLinkModalOpen: false,
           });
         }}
         onCancel={() =>
           this.setState({
-            isAnonymousTaskLinkModalVisible: false,
+            isAnonymousTaskLinkModalOpen: false,
           })
         }
       >

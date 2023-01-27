@@ -16,6 +16,8 @@ New versions will be documented here, detailing the changes. Note, however, that
 
 ### Current api version is `v5`
 
+* Changed in all versions: `GET /datasets` no longer respects the isEditable parameter.
+
 * New in v5:
   - The annotation json no longer contains `skeletonTracingId` and `volumeTracingId`, but instead a list of `annotationLayers`, each containing `tracingId: String, typ: AnnotationLayerType, name: Option[String]`.
   - `createExplorational` now expects a list of layer parameters (`typ: AnnotationLayerType, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions], name: Option[String]`)
@@ -185,9 +187,6 @@ List all teams that you can manage
 List all datasets for which you have read access
 
 #### Expects
- - Optional GET parameter `isEditable=[BOOLEAN]`
-   - If true: list only datasets you can edit
-   - If false: list only datasets you cannot edit
  - Optional GET parameter `isActive=[BOOLEAN]`
    - If true: list only datasets that are active (=imported)
    - If false: list only datasets that are inactive (=non-imported)
@@ -196,10 +195,12 @@ List all datasets for which you have read access
 #### Returns
  - JSON list of objects containing dataset information
 
-#### Note
+#### Notes
 
-The list of resolutions for each data layer is always empty in this list, for performance reasons.
-To get the actual resolutions, please use `GET /datasets/:organizationName/:dataSetName` (see below).
+ - The list of resolutions for each data layer is always empty in this list, for performance reasons. To get the actual resolutions, please use `GET /datasets/:organizationName/:dataSetName` (see below).
+ - This route used to accept an optional filter parameter isEditable. This is no longer supported. This change affects all api versions.
+
+
 
 ---
 ### `GET /datasets/:organizationName/:dataSetName`

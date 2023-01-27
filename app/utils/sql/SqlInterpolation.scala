@@ -80,18 +80,16 @@ object SqlToken {
   def tupleFromValues(values: SqlValue*): SqlToken =
     SqlToken(sql = s"(${values.map(_.placeholder).mkString(", ")})", values = values.toList)
 
-  def tupleList(sqlValueLists: List[List[SqlValue]]): SqlToken =
-    SqlToken(sql = sqlValueLists.map(list => s"(${list.map(_.placeholder).mkString(", ")})").mkString(", "),
-             values = sqlValueLists.flatten)
-
   def raw(s: String): SqlToken = SqlToken(s)
 
   def joinBySeparator(tokens: Iterable[SqlToken], separator: String): SqlToken =
     SqlToken(sql = tokens.map(_.sql).mkString(separator), values = tokens.flatMap(_.values).toList)
 
+  def joinByComma(tokens: Iterable[SqlToken]): SqlToken = joinBySeparator(tokens, ", ")
+
   def empty: SqlToken = raw("")
 
-  def identifier(id: String): SqlToken = raw('"' + id + '"')
+  def identifier(id: String): SqlToken = raw(id.split('.').map(i => '"' + i + '"').mkString("."))
 }
 
 trait SqlValue {

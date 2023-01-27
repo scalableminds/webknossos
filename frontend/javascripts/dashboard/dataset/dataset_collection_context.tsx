@@ -146,6 +146,7 @@ export default function DatasetCollectionContextProvider({
 
   async function fetchDatasets(_options: Options = {}): Promise<void> {
     datasetsInFolderQuery.refetch();
+    datasetSearchQuery.refetch();
   }
 
   async function reloadDataset(
@@ -166,9 +167,17 @@ export default function DatasetCollectionContextProvider({
     const { itemById } = folderHierarchyQuery.data;
 
     let currentFolder = itemById[dataset.folderId];
+    if (currentFolder == null) {
+      console.warn("Breadcrumbs could not be computed.");
+      return [];
+    }
     const breadcrumbs = [currentFolder.title];
     while (currentFolder?.parent != null) {
       currentFolder = itemById[currentFolder.parent];
+      if (currentFolder == null) {
+        console.warn("Breadcrumbs could not be computed.");
+        return [];
+      }
       breadcrumbs.unshift(currentFolder.title);
     }
 
@@ -216,6 +225,7 @@ export default function DatasetCollectionContextProvider({
         setIsChecking(false);
 
         datasetsInFolderQuery.refetch();
+        datasetSearchQuery.refetch();
       },
       selectedDatasets,
       setSelectedDatasets,

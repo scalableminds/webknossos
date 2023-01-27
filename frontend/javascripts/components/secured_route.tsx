@@ -1,17 +1,28 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Route, withRouter } from "react-router-dom";
-import type { ComponentType } from "react";
 import React from "react";
+import { Route, withRouter } from "react-router-dom";
+import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
+import { PricingPlanEnum } from "admin/organization/organization_edit_view";
+import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
+import { APIOrganization } from "types/api_flow_types";
+import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
+import type { ComponentType } from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
 
-export type SecuredRouteProps = RouteComponentProps & {
-  component?: ComponentType<any>;
-  path: string;
-  render?: (arg0: RouteComponentProps) => React.ReactNode;
-  isAuthenticated: boolean;
-  serverAuthenticationCallback?: (...args: Array<any>) => any;
-  exact?: boolean;
+type StateProps = {
+  activeOrganization: APIOrganization | null;
 };
+export type SecuredRouteProps = RouteComponentProps &
+  StateProps & {
+    component?: ComponentType<any>;
+    path: string;
+    render?: (arg0: RouteComponentProps) => React.ReactNode;
+    isAuthenticated: boolean;
+    requiredPricingPlan?: PricingPlanEnum;
+    serverAuthenticationCallback?: (...args: Array<any>) => any;
+    exact?: boolean;
+  };
 type State = {
   isAdditionallyAuthenticated: boolean;
 };
@@ -53,21 +64,38 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
       <Route
         {...rest}
         render={(props) => {
-          if (isCompletelyAuthenticated) {
-            if (Component != null) {
-              return <Component />;
-            } else if (render != null) {
-              return render(props);
-            } else {
-              throw Error("Specified neither component nor render function.");
-            }
+          if (!isCompletelyAuthenticated) {
+            return <LoginView redirect={this.props.location.pathname} />;
           }
 
-          return <LoginView redirect={this.props.location.pathname} />;
+          if (
+            this.props.requiredPricingPlan &&
+            !(
+              this.props.activeOrganization &&
+              isPricingPlanGreaterEqualThan(
+                this.props.activeOrganization.pricingPlan,
+                this.props.requiredPricingPlan,
+              )
+            )
+          ) {
+            return <PageUnavailableForYourPlanView />;
+          }
+
+          if (Component != null) {
+            return <Component />;
+          } else if (render != null) {
+            return render(props);
+          } else {
+            throw Error("Specified neither component nor render function.");
+          }
         }}
       />
     );
   }
 }
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeOrganization: state.activeOrganization,
+});
 
-export default withRouter<SecuredRouteProps, any>(SecuredRoute);
+const connector = connect(mapStateToProps);
+export default connector(withRouter<SecuredRouteProps, any>(SecuredRoute));

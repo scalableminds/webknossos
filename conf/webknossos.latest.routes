@@ -69,7 +69,7 @@ GET           /teams/:id/progressOverview                                       
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational              controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                     controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int])
+GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
 POST          /datasets/exploreRemote                                                   controllers.DataSetController.exploreRemoteDataset
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
@@ -275,10 +275,10 @@ POST          /credentials/s3AccessKey                                          
 
 # Voxelytics
 POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow
-GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows(workflowHash: Option[String])
+GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows
 GET           /voxelytics/workflows/:workflowHash                                       controllers.VoxelyticsController.getWorkflow(workflowHash: String, runId: Option[String])
 POST          /voxelytics/workflows/:workflowHash/events                                controllers.VoxelyticsController.storeWorkflowEvents(workflowHash: String, runName: String)
-GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: String, taskName: String)
-GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: String, taskName: String, artifactName: Option[String])
+GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: Option[String], taskName: String)
+GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: Option[String], taskName: String, artifactName: Option[String])
 POST          /voxelytics/logs                                                          controllers.VoxelyticsController.appendLogs
-GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String])
+GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String], startTimestamp:Long, endTimestamp: Long, limit: Option[Long])

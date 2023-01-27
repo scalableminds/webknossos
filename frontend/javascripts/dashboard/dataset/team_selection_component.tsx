@@ -53,7 +53,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
       if (this.props.afterFetchedTeams != null) {
         this.props.afterFetchedTeams(possibleTeams);
       }
-    } catch (exception) {
+    } catch (_exception) {
       console.error("Could not load teams.");
     }
   }

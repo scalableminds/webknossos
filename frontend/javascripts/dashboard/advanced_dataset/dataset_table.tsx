@@ -1,12 +1,7 @@
 import { FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Dropdown, Table, Tag, Tooltip } from "antd";
-import type {
-  FilterValue,
-  SorterResult,
-  TableCurrentDataSource,
-  TablePaginationConfig,
-} from "antd/lib/table/interface";
+import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
 import { diceCoefficient as dice } from "dice-coefficient";
@@ -537,7 +532,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             width={280}
             sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(name: string, dataset: APIMaybeUnimportedDataset) => (
+            render={(_name: string, dataset: APIMaybeUnimportedDataset) => (
               <>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
@@ -548,11 +543,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 </Link>
                 <br />
 
-                {"getBreadcrumbs" in this.props.context ? (
+                {"getBreadcrumbs" in this.props.context &&
+                this.props.context.globalSearchQuery != null ? (
                   <BreadcrumbsTag parts={this.props.context.getBreadcrumbs(dataset)} />
-                ) : (
-                  <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
-                )}
+                ) : null}
               </>
             )}
           />
@@ -561,7 +555,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             dataIndex="tags"
             key="tags"
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
+            render={(_tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
               dataset.isActive ? (
                 <DatasetTags
                   dataset={dataset}
@@ -613,7 +607,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 }
                 return dataset.allowedTeams.some((team) => team.name === value);
               }}
-              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => (
+              render={(_teams: APITeam[], dataset: APIMaybeUnimportedDataset) => (
                 <TeamTags dataset={dataset} />
               )}
             />

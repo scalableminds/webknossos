@@ -7,14 +7,14 @@ import _ from "lodash";
 import type { BoundingBoxObject } from "oxalis/store";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 const COLOR_MAP: Array<string> = [
-  "#6962C5",
-  "#403C78",
-  "#B2B1C4",
-  "#6D6C78",
-  "#C4C4C4",
-  "#FF5000",
-  "#899AC4",
-  "#60e0ac",
+  "#575AFF",
+  "#8086FF",
+  "#2A0FC6",
+  "#37C6DC",
+  "#F61A76",
+  "#FF7BA6",
+  "#FF9364",
+  "#750790",
 ];
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
 const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
@@ -187,7 +187,7 @@ export function formatDistanceStrict(start: Date | number, end: Date | number): 
 export function formatDurationStrict(duration: Duration): string {
   const parts: Array<string> = [];
   if (Math.floor(duration.asDays()) > 0) {
-    parts.push(`${Math.floor(duration.asDays())}d`);
+    parts.push(`${formatNumber(Math.floor(duration.asDays()))}d`);
   }
   if (duration.hours() > 0) {
     parts.push(`${duration.hours()}h`);
@@ -197,6 +197,9 @@ export function formatDurationStrict(duration: Duration): string {
   }
   if (duration.seconds() > 0) {
     parts.push(`${duration.seconds()}s`);
+  }
+  if (duration.asSeconds() < 1) {
+    parts.push("0s");
   }
   return parts.join(" ");
 }
@@ -233,4 +236,8 @@ export function formatBytes(nbytes: number) {
     return `${(nbytes / 2 ** 10).toPrecision(4)} KiB`;
   }
   return `${nbytes} B`;
+}
+
+export function formatNumber(num: number): string {
+  return new Intl.NumberFormat("en-US").format(num);
 }

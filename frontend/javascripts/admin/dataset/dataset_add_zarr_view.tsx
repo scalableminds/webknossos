@@ -176,7 +176,7 @@ function DatasetAddZarrView(props: Props) {
           <Modal
             title="Add Layer"
             width={800}
-            visible={showAddLayerModal}
+            open={showAddLayerModal}
             footer={null}
             onCancel={() => setShowAddLayerModal(false)}
           >
@@ -349,7 +349,7 @@ function AddZarrLayer({
     let existingDatasource;
     try {
       existingDatasource = JSON.parse(datasourceConfigStr);
-    } catch (e) {
+    } catch (_e) {
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
       );

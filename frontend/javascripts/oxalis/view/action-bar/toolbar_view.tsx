@@ -57,11 +57,6 @@ import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 import { QuickSelectControls } from "./quick_select_settings";
-import {
-  isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
-} from "admin/organization/pricing_plan_utils";
-import messages from "messages";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -595,7 +590,6 @@ export default function ToolbarView() {
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const maybeResolutionWithZoomStep = useSelector(
     getRenderableResolutionForActiveSegmentationTracing,
   );
@@ -662,11 +656,6 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.TRACE ||
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
-
-  const isProofReadingToolDisabled = !isFeatureAllowedByPricingPlan(
-    activeOrganization,
-    PricingPlanEnum.Power,
-  );
 
   return (
     <>
@@ -871,15 +860,8 @@ export default function ToolbarView() {
         {hasSkeleton && hasVolume && isAgglomerateMappingEnabled.value ? (
           <RadioButtonWithTooltip
             title="Proofreading Tool - Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
-            disabledTitle={
-              isProofReadingToolDisabled
-                ? messages["organization.plan.feature_not_available"]
-                : disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
-            }
-            disabled={
-              isProofReadingToolDisabled ||
-              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
-            }
+            disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
             style={narrowButtonStyle}
             value={AnnotationToolEnum.PROOFREAD}
           >

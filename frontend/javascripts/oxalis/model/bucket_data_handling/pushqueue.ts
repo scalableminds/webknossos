@@ -104,7 +104,7 @@ class PushQueue {
     try {
       // wait here
       await this.compressionTaskQueue.join();
-    } catch (error) {
+    } catch (_error) {
       alert("We've encountered a permanent issue while saving. Please try to reload the page.");
     }
   };

@@ -30,7 +30,7 @@ import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import LinkButton from "components/link_button";
-import { getEditableUsers, getOrganization, updateUser } from "admin/admin_rest_api";
+import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { stringToColor } from "libs/format_utils";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import ExperienceModalView from "admin/user/experience_modal_view";
@@ -442,7 +442,7 @@ class UserListView extends React.PureComponent<Props, State> {
             style={{
               marginTop: 30,
             }}
-            onChange={(pagination, filters) =>
+            onChange={(_pagination, filters) =>
               this.setState({
                 // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error message
                 activationFilter: filters.isActive != null ? filters.isActive : [],

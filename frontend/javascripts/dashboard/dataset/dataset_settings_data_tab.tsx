@@ -470,7 +470,7 @@ function SimpleLayerForm({
               },
               {
                 warningOnly: true,
-                validator: (rule, value) =>
+                validator: (_rule, value) =>
                   value == null || value === ""
                     ? Promise.reject(
                         new Error(
@@ -519,7 +519,7 @@ function SimpleLayerForm({
                   }
                   rules={[
                     {
-                      validator: (rule, value) =>
+                      validator: (_rule, value) =>
                         value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
                           ? Promise.resolve()
                           : Promise.reject(
@@ -530,7 +530,7 @@ function SimpleLayerForm({
                     },
                     {
                       warningOnly: true,
-                      validator: (rule, value) =>
+                      validator: (_rule, value) =>
                         value == null || value === ""
                           ? Promise.reject(
                               new Error(

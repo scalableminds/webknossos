@@ -3,11 +3,11 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIDataLayer, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
+import type { APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
-import Store, { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import {
   ResolutionInfo,
   getResolutionInfo,
@@ -64,7 +64,6 @@ import {
   getActiveSegmentationTracing,
   getEditableMappingForVolumeTracingId,
   getTracingForSegmentationLayer,
-  hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";

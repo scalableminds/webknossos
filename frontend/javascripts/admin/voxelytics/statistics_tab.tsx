@@ -37,7 +37,6 @@ export default function StatisticsTab({
   workflowHash,
   runId,
   taskName,
-  isRunning,
 }: {
   workflowHash: string;
   runId: string | null;

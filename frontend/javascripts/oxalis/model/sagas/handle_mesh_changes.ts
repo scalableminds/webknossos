@@ -89,7 +89,7 @@ function* handleRemoteUpdateMesh(action: UpdateRemoteMeshMetaDataAction): Saga<v
     }),
   );
 
-  /* eslint no-unused-vars: ["error", { "ignoreRestSiblings": true }] */
+  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { isVisible, isLoaded, isLoading, ...remoteMetadata } = meshMetaData;
   yield* call(updateMeshMetaData, remoteMetadata);
   yield* put(

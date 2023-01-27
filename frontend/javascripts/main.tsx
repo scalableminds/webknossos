@@ -57,7 +57,7 @@ async function loadActiveUser() {
       queryClient: reactQueryClient,
       persister: localStoragePersister,
     });
-  } catch (e) {
+  } catch (_e) {
     // pass
   }
 }
@@ -67,7 +67,7 @@ async function loadHasOrganizations() {
   try {
     const hasOrganizations = await checkAnyOrganizationExists();
     Store.dispatch(setHasOrganizationsAction(hasOrganizations));
-  } catch (e) {
+  } catch (_e) {
     // pass
   }
 }

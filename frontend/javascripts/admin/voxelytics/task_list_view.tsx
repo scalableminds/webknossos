@@ -332,9 +332,9 @@ export default function TaskListView({
   }
 
   function copyAllArtifactPaths() {
-    const artifactPaths = Object.values(report.artifacts)
-      .map((artifactObject) => Object.values(artifactObject).map((artifact) => artifact.path))
-      .flat();
+    const artifactPaths = Object.values(report.artifacts).flatMap((artifactObject) =>
+      Object.values(artifactObject).map((artifact) => artifact.path),
+    );
 
     navigator.clipboard.writeText(artifactPaths.join("\n")).then(
       () => notification.success({ message: "All artifacts path were copied to the clipboard" }),
@@ -363,7 +363,7 @@ export default function TaskListView({
       );
       a.download = `${report.workflow.name}.yaml`;
       a.click();
-    } catch (error) {
+    } catch (_error) {
       message.error("Could not find YAML file for download.");
     }
   }

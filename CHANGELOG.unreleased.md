@@ -24,8 +24,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Implements statistics from combined worflow runs in the Voxelytics reporting. [#6732](https://github.com/scalableminds/webknossos/pull/6732)
 - Limit paid task/project management features to respective organization plans. [6767](https://github.com/scalableminds/webknossos/pull/6767)
 - The dataset list route `GET api/datasets` no longer respects the isEditable filter. [#6759](https://github.com/scalableminds/webknossos/pull/6759)
+- Upgrade linter to Rome v11.0.0. [#6785](https://github.com/scalableminds/webknossos/pull/6785)
 - Limit paid team sharing features to respective organization plans. [6767](https://github.com/scalableminds/webknossos/pull/6776)
-
 
 ### Fixed
 - Fixed node selection and context menu for node ids greater than 130813. [#6724](https://github.com/scalableminds/webknossos/pull/6724) and [#6731](https://github.com/scalableminds/webknossos/pull/6731)
@@ -40,6 +40,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where direct task assignment to a single user would fail. [#6777](https://github.com/scalableminds/webknossos/pull/6777)
 - Fixed a bug where the dataset folders view would not list public datasets if the requesting user could not also access the dataset for other reasons, like being admin. [#6759](https://github.com/scalableminds/webknossos/pull/6759)
 - Fixed a bug where zarr-streamed datasets would produce (very rare) rendering errors. [#6782](https://github.com/scalableminds/webknossos/pull/6782)
+- Fixed a bug where publicly shared annotations were not viewable by users without an account. [#6784](https://github.com/scalableminds/webknossos/pull/6784)
 
 ### Removed
 

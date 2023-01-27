@@ -195,7 +195,7 @@ class ReactRouter extends React.Component<Props> {
     try {
       const annotationInformation = await getAnnotationInformation(match.params.id || "");
       return annotationInformation.visibility === "Public";
-    } catch (ex) {
+    } catch (_ex) {
       // Annotation could not be found
     }
 
@@ -250,7 +250,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/datasets/:folderIdWithName"
-                render={({ match }: ContextRouter) => {
+                render={() => {
                   const initialTabKey = "datasets";
                   return (
                     <DashboardView

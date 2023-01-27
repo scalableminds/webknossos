@@ -9,8 +9,7 @@ import {
   TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
@@ -363,7 +362,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           ]),
         },
       }));
-    } catch (ex) {
+    } catch (_ex) {
       // catch exception so that promise does not fail and the modal will close
     } finally {
       this.setState({

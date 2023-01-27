@@ -1,13 +1,9 @@
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import { message } from "antd";
-import { LOG_LEVELS } from "oxalis/constants";
 import { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
-import { VoxelyticsLogLine, VoxelyticsRunState } from "types/api_flow_types";
+import { VoxelyticsRunState } from "types/api_flow_types";
 
 export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
-const LOG_ENTRY_BATCH_SIZE = 5000;
-const LOG_TIME_BATCH_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7 days
 const LOG_TIME_PADDING = 60 * 1000; // 1 minute
 
 export type Result<T> =

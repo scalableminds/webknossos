@@ -407,7 +407,6 @@ function splitTreeByNodes(
 }
 
 export function createBranchPoint(
-  skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
   timestamp: number,
@@ -684,7 +683,7 @@ export function shuffleTreeColor(
   return setTreeColorIndex(skeletonTracing, tree, randomId);
 }
 export function setTreeColorIndex(
-  skeletonTracing: SkeletonTracing,
+  _skeletonTracing: SkeletonTracing,
   tree: Tree,
   colorIndex: number,
 ): Maybe<[Tree, number]> {
@@ -696,7 +695,7 @@ export function setTreeColorIndex(
   return Maybe.Just([newTree, tree.treeId]);
 }
 export function createComment(
-  skeletonTracing: SkeletonTracing,
+  _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
   commentText: string,
@@ -712,7 +711,7 @@ export function createComment(
   return Maybe.Just(newComments);
 }
 export function deleteComment(
-  skeletonTracing: SkeletonTracing,
+  _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
 ): Maybe<Array<CommentType>> {

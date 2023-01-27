@@ -77,7 +77,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
       }
 
       this.props.onComplete();
-    } catch (e) {
+    } catch (_e) {
       Toast.error(messages["project.unsuccessful_active_tasks_transfer"]);
     }
   };

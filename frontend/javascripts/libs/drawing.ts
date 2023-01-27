@@ -154,7 +154,7 @@ class Drawing {
         bufX1[y] = x;
       });
     } else {
-      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+      this.drawLine2d(x1, y1, x2, y2, (_x: number, y: number) => {
         bufX0[y] = minX;
         bufX1[y] = maxX;
       });

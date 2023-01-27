@@ -2,11 +2,11 @@ import React from "react";
 import { useSelector } from "react-redux";
 import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button } from "antd";
 import { LockOutlined } from "@ant-design/icons";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
-  isPricingPlanGreaterEqualThan,
-  isUserAllowedToRequestUpgrades,
+  isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import { Link } from "react-router-dom";
 import messages from "messages";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
@@ -27,10 +27,8 @@ type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
 export const PricingEnforcedMenuItem: React.FunctionComponent<
   RequiredPricingProps & MenuItemProps
 > = ({ children, requiredPricingPlan, ...menuItemProps }) => {
-  const currentPricingPlan = useSelector((state: OxalisState) =>
-    state.activeOrganization ? state.activeOrganization.pricingPlan : PricingPlanEnum.Basic,
-  );
-  const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
@@ -56,10 +54,8 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
   requiredPricingPlan,
   ...buttonProps
 }) => {
-  const currentPricingPlan = useSelector((state: OxalisState) =>
-    state.activeOrganization ? state.activeOrganization.pricingPlan : PricingPlanEnum.Basic,
-  );
-  const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Button {...buttonProps}>{children}</Button>;
 
@@ -77,10 +73,9 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   children,
   requiredPricingPlan,
 }) => {
-  const currentPricingPlan = useSelector((state: OxalisState) =>
-    state.activeOrganization ? state.activeOrganization.pricingPlan : PricingPlanEnum.Basic,
-  );
-  const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+
   if (isFeatureAllowed) return <>{children}</>;
 
   return (

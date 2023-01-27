@@ -1,7 +1,7 @@
 package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{AnyCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{FileSystemCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
@@ -54,14 +54,14 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                      values(${_id}, ${CredentialType.S3_Access_Key}, ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
-  def findOne(id: ObjectId): Fox[AnyCredential] =
+  def findOne(id: ObjectId): Fox[FileSystemCredential] =
     for {
       r <- run(q"select $columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed
 
-  private def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential] =
+  private def parseAnyCredential(r: CredentialsRow): Fox[FileSystemCredential] =
     r.`type` match {
       case "HTTP_Basic_Auth" => parseAsHttpBasicAuthCredential(r)
       case "S3_Access_Key"   => parseAsS3AccessKeyCredential(r)

@@ -2,34 +2,37 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebKnossosClient
 
 import java.net.URI
+import java.nio.file.{FileSystem, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
+case class RemoteSourceDescriptor(uri: URI, credential: Option[FileSystemCredential]) {
+  def username: Option[String] = credential.flatMap(_.usernameOpt)
+  def password: Option[String] = credential.flatMap(_.passwordOpt)
+}
+
 class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient) {
 
-  private def remoteSourceDescriptorFromCredential(uri: URI, credential: AnyCredential): RemoteSourceDescriptor =
-    credential match {
-      case HttpBasicAuthCredential(name, username, password, _, _) =>
-        RemoteSourceDescriptor(uri, Some(username), Some(password))
-      case S3AccessKeyCredential(name, keyId, key, _, _) => RemoteSourceDescriptor(uri, Some(keyId), Some(key))
-    }
+  def remotePathFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[Path] =
+    for {
+      credentialBox <- credentialFor(magLocator: MagLocator).futureBox
+      remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)
+      remotePath = FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
+        fileSystem.getPath(remoteSource.uri.toString)
+      }
+    } yield remotePath
 
-  def remoteSourceFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
+  private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[FileSystemCredential] =
     magLocator.credentialId match {
       case Some(credentialId) =>
-        for {
-          credential <- dSRemoteWebKnossosClient.findCredential(credentialId)
-          descriptor = remoteSourceDescriptorFromCredential(magLocator.uri, credential)
-        } yield descriptor
+        dSRemoteWebKnossosClient.findCredential(credentialId)
       case None =>
         magLocator.credentials match {
-          case Some(credentials) =>
-            Fox.successful(RemoteSourceDescriptor(magLocator.uri, Some(credentials.user), credentials.password))
-          case None => Fox.successful(RemoteSourceDescriptor(magLocator.uri, None, None))
+          case Some(credential) => Fox.successful(credential)
+          case None             => Fox.empty
         }
     }
 

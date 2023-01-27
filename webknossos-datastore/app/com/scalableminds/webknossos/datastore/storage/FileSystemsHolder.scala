@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.storage
 
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+
 import java.lang.Thread.currentThread
 import java.net.URI
 import java.nio.file.spi.FileSystemProvider
@@ -7,7 +9,6 @@ import java.nio.file.{FileSystem, FileSystemAlreadyExistsException, FileSystems}
 import java.util.ServiceLoader
 import com.google.common.collect.ImmutableMap
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.scalableminds.webknossos.datastore.s3fs.AmazonS3Factory
 import com.typesafe.scalalogging.LazyLogging
 
@@ -21,12 +22,13 @@ object FileSystemsHolder extends LazyLogging {
   val schemeS3: String = "s3"
   val schemeHttps: String = "https"
   val schemeHttp: String = "http"
+  val schemeGS: String = CloudStorageFileSystem.URI_SCHEME
 
   private val fileSystemsCache = new FileSystemsCache(maxEntries = 100)
   private val fileSystemsProvidersCache = new FileSystemsProvidersCache(maxEntries = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
-    List(schemeS3, schemeHttps, schemeHttp).contains(uriScheme)
+    List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 
   def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
     fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(loadFromProvider)
@@ -62,7 +64,7 @@ object FileSystemsHolder extends LazyLogging {
   }
 
   private def insertUserName(uri: URI, remoteSource: RemoteSourceDescriptor): URI =
-    remoteSource.user.map { user =>
+    remoteSource.username.map { user =>
       new URI(uri.getScheme, user, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
     }.getOrElse(uri)
 
@@ -71,17 +73,17 @@ object FileSystemsHolder extends LazyLogging {
 
   private def makeCredentialsEnv(remoteSource: RemoteSourceDescriptor, scheme: String): ImmutableMap[String, Any] =
     (for {
-      user <- remoteSource.user
+      username <- remoteSource.username
       password <- remoteSource.password
     } yield {
       if (scheme == schemeS3) {
         ImmutableMap
           .builder[String, Any]
-          .put(AmazonS3Factory.ACCESS_KEY, user)
+          .put(AmazonS3Factory.ACCESS_KEY, username)
           .put(AmazonS3Factory.SECRET_KEY, password)
           .build
       } else if (scheme == schemeHttps || scheme == schemeHttp) {
-        ImmutableMap.builder[String, Any].put("user", user).put("password", password).build
+        ImmutableMap.builder[String, Any].put("user", username).put("password", password).build
       } else emptyEnv
     }).getOrElse(emptyEnv)
 

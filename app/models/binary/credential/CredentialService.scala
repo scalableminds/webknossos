@@ -14,11 +14,8 @@ import scala.concurrent.ExecutionContext
 
 class CredentialService @Inject()(credentialDao: CredentialDAO) {
 
-  def createCredential(uri: URI,
-                       username: Option[String],
-                       password: Option[String],
-                       user: String,
-                       organization: String)(implicit ec: ExecutionContext): Fox[Option[ObjectId]] = {
+  def storeCredential(uri: URI, username: Option[String], password: Option[String], user: String, organization: String)(
+      implicit ec: ExecutionContext): Fox[Option[ObjectId]] = {
     val scheme = uri.getScheme
     scheme match {
       case FileSystemsHolder.schemeHttps =>

@@ -7,7 +7,11 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
+import com.scalableminds.webknossos.datastore.storage.{
+  FileSystemsHolder,
+  LegacyFileSystemCredential,
+  RemoteSourceDescriptor
+}
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.credential.CredentialService
 import models.user.User
@@ -143,15 +147,17 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
       reportMutable: ListBuffer[String],
       requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
-      remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
-      credentialId <- credentialService.createCredential(
+      remoteSource <- tryo(RemoteSourceDescriptor(
+        new URI(normalizeUri(layerUri)),
+        user.map(u => LegacyFileSystemCredential(u, password)))).toFox ?~> s"Received invalid URI: $layerUri"
+      credentialId <- credentialService.storeCredential(
         new URI(normalizeUri(layerUri)),
         user,
         password,
         requestingUser._id.toString,
         requestingUser._organization.toString) ?~> "Failed to set up remote file system credentaial"
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
-      remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
+      remotePath <- tryo(fileSystem.getPath(remoteSource.uri.toString)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
         credentialId.map(_.toString),

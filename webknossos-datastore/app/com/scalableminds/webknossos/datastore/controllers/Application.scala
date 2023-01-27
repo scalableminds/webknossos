@@ -36,7 +36,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
     import java.nio.charset.StandardCharsets
     import java.nio.file.Files
 
-    val useCredentials = false
+    val useCredentials = true
     val bucket = "zarr-example-datasets"
     val pathStr = "6001251.zarr/0/.zarray"
     // val bucket = "neuroglancer-fafb-data"
@@ -52,7 +52,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
 
     val fs =
       CloudStorageFileSystem.forBucket(bucket, CloudStorageConfiguration.DEFAULT, storageOptions)
-    val path = fs.getPath(pathStr)
+    val path = fs.getPath("6001251.zarr").resolve("0/.zarray")
     val bytesRaw = Files.readAllBytes(path)
     val bytes = tryo(ZipIO.gunzip(bytesRaw)).toOption.getOrElse(bytesRaw)
     val text = new String(bytes, StandardCharsets.UTF_8)

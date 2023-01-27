@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.storage.AnyCredential
+import com.scalableminds.webknossos.datastore.storage.FileSystemCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
@@ -150,10 +150,10 @@ class DSRemoteWebKnossosClient @Inject()(
           .getWithJsonResponse[AnnotationSource]
     )
 
-  def findCredential(credentialId: String): Fox[AnyCredential] =
+  def findCredential(credentialId: String): Fox[FileSystemCredential] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/findCredential")
       .addQueryString("credentialId" -> credentialId)
       .addQueryString("key" -> dataStoreKey)
       .silent
-      .getWithJsonResponse[AnyCredential]
+      .getWithJsonResponse[FileSystemCredential]
 }

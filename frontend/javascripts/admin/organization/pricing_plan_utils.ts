@@ -70,7 +70,7 @@ export function isFeatureAllowedByPricingPlan(
   organization: APIOrganization | null,
   requiredPricingPlan: PricingPlanEnum,
 ) {
-  // This function should not be needed for "Basic" plans since its the default plan for all users anyway.
+  // This function should not be called to check for "Basic" plans since its the default plan for all users anyway.
 
   if (!organization) return false;
 

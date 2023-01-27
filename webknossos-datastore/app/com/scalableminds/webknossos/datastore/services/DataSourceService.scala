@@ -36,6 +36,8 @@ class DataSourceService @Inject()(
   override protected lazy val enabled: Boolean = config.Datastore.WatchFileSystem.enabled
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
 
+  override val tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
+
   val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")

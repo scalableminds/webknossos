@@ -3,16 +3,7 @@ import type { ShaderModule } from "./shader_module_system";
 export const getResolution: ShaderModule = {
   code: `
     vec3 getResolution(uint zoomStep) {
-      if (zoomStep == 0u) {
-        return <%= formatVector3AsVec3(resolutions[0]) %>;
-      } <% _.range(1, resolutions.length).forEach(resolutionIdx => { %>
-      else if (zoomStep == <%= resolutionIdx %>u) {
-        return <%= formatVector3AsVec3(resolutions[resolutionIdx]) %>;
-      }
-      <% }) %>
-      else {
-        return vec3(0.0, 0.0, 0.0);
-      }
+      return resolutions[zoomStep];
     }
   `,
 };

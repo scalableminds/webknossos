@@ -44,7 +44,7 @@ import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
-import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
@@ -416,6 +416,17 @@ class PlaneMaterialFactory {
         true,
       ),
     );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getResolutions(storeState.dataset),
+        (resolutions) => {
+          this.uniforms.resolutions = { value: _.flatten(resolutions) };
+        },
+        true,
+      ),
+    );
+
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getZoomValue(storeState.flycam),

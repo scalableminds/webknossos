@@ -62,6 +62,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
+uniform vec3 resolutions[<%= globalLayerCount %>];
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
@@ -107,6 +108,7 @@ uniform vec4 hoveredSegmentIdHigh;
 
 flat in uint outputMagIdx;
 flat in uint outputSeed;
+flat in float outputAddress;
 in vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;

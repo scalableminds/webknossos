@@ -314,8 +314,6 @@ export async function initialize(
 
   // setScale("C556_versaCT", 8, [219, -6, 784]);
 
-  let transformer = window.transformer;
-
   transformer.setTransforms(
     "C556_versaCT",
     transformer.makeChain([

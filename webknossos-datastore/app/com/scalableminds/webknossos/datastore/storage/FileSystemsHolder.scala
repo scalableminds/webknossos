@@ -1,17 +1,19 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
-
-import java.lang.Thread.currentThread
-import java.net.URI
-import java.nio.file.spi.FileSystemProvider
-import java.nio.file.{FileSystem, FileSystemAlreadyExistsException, FileSystems}
-import java.util.ServiceLoader
+import com.google.auth.oauth2.ServiceAccountCredentials
+import com.google.cloud.storage.StorageOptions
+import com.google.cloud.storage.contrib.nio.{CloudStorageConfiguration, CloudStorageFileSystem}
 import com.google.common.collect.ImmutableMap
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.s3fs.AmazonS3Factory
 import com.typesafe.scalalogging.LazyLogging
 
+import java.io.ByteArrayInputStream
+import java.lang.Thread.currentThread
+import java.net.URI
+import java.nio.file.spi.FileSystemProvider
+import java.nio.file.{FileSystem, FileSystemAlreadyExistsException, FileSystems}
+import java.util.ServiceLoader
 import scala.collection.JavaConverters._
 
 class FileSystemsCache(val maxEntries: Int) extends LRUConcurrentCache[RemoteSourceDescriptor, FileSystem]
@@ -33,7 +35,7 @@ object FileSystemsHolder extends LazyLogging {
   def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
     fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(loadFromProvider)
 
-  private def loadFromProvider(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
+  private def loadFromProvider(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
     /*
      * The FileSystemProviders can have their own cache for file systems.
      * Those will error on create if the file system already exists.
@@ -41,27 +43,32 @@ object FileSystemsHolder extends LazyLogging {
      * This is not supported for newFileSystem but is for getFileSystem.
      * Conversely, getFileSystem cannot be called with the credentials env.
      * Hence this has to be called in two different ways here.
+     * Note: Google Cloud Storage is not loaded via either of those but instead provides its own forBucket
      */
-    val uriWithPath = remoteSource.uri
-    val uri = baseUri(uriWithPath)
-    val uriWithUser = insertUserName(uri, remoteSource)
 
-    val scheme = uri.getScheme
-    val credentialsEnv = makeCredentialsEnv(remoteSource, scheme)
+    if (remoteSource.uri.getScheme == schemeGS) {
+      getGoogleCloudStorageFileSystem(remoteSource)
+    } else {
+      val uriWithPath = remoteSource.uri
+      val uri = baseUri(uriWithPath)
+      val uriWithUser = insertUserName(uri, remoteSource)
 
-    try {
-      Some(FileSystems.newFileSystem(uri, credentialsEnv, currentThread().getContextClassLoader))
-    } catch {
-      case _: FileSystemAlreadyExistsException =>
-        try {
-          findProviderWithCache(uri.getScheme).map(_.getFileSystem(uriWithUser))
-        } catch {
-          case e2: Exception =>
-            logger.error(s"getFileSytem errored for ${uriWithUser.toString}:", e2)
-            None
-        }
+      val scheme = uri.getScheme
+      val credentialsEnv = buildCredentialsEnv(remoteSource, scheme)
+
+      try {
+        Some(FileSystems.newFileSystem(uri, credentialsEnv, currentThread().getContextClassLoader))
+      } catch {
+        case _: FileSystemAlreadyExistsException =>
+          try {
+            findProviderWithCache(uri.getScheme).map(_.getFileSystem(uriWithUser))
+          } catch {
+            case e2: Exception =>
+              logger.error(s"getFileSytem errored for ${uriWithUser.toString}:", e2)
+              None
+          }
+      }
     }
-  }
 
   private def insertUserName(uri: URI, remoteSource: RemoteSourceDescriptor): URI =
     remoteSource.username.map { user =>
@@ -71,7 +78,7 @@ object FileSystemsHolder extends LazyLogging {
   private def baseUri(uri: URI): URI =
     new URI(uri.getScheme, uri.getUserInfo, uri.getHost, uri.getPort, null, null, null)
 
-  private def makeCredentialsEnv(remoteSource: RemoteSourceDescriptor, scheme: String): ImmutableMap[String, Any] =
+  private def buildCredentialsEnv(remoteSource: RemoteSourceDescriptor, scheme: String): ImmutableMap[String, Any] =
     (for {
       username <- remoteSource.username
       password <- remoteSource.password
@@ -97,5 +104,32 @@ object FileSystemsHolder extends LazyLogging {
       ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator().asScala
     providersIterator.find(p => p.getScheme.equalsIgnoreCase(scheme))
   }
+
+  private def getGoogleCloudStorageFileSystem(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
+    val uri = remoteSource.uri
+    if (remoteSource.uri.getScheme != schemeGS) None
+    else {
+      val bucketName = uri.getPath.split("/").headOption.getOrElse(uri.getPath)
+      val storageOptions = buildCredentialStorageOptions(remoteSource)
+      try {
+        Some(CloudStorageFileSystem.forBucket(bucketName, CloudStorageConfiguration.DEFAULT, storageOptions))
+      } catch {
+        case e: Exception =>
+          logger.error(s"getGoogleCloudStorageFileSystem errored for ${remoteSource.uri.toString}:", e)
+          None
+      }
+    }
+  }
+
+  private def buildCredentialStorageOptions(remoteSource: RemoteSourceDescriptor) =
+    remoteSource.credential match {
+      case Some(credential: GoogleServiceAccountCredential) =>
+        StorageOptions
+          .newBuilder()
+          .setCredentials(
+            ServiceAccountCredentials.fromStream(new ByteArrayInputStream(credential.jsonBody.toString.getBytes)))
+          .build()
+      case _ => StorageOptions.newBuilder().build()
+    }
 
 }

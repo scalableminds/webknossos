@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{JsValue, Json, OFormat}
 
 sealed trait FileSystemCredential {
   def usernameOpt: Option[String] // TODO remove, rewrite FileSystemsHolder to use different types of credentials
@@ -30,6 +30,15 @@ case class S3AccessKeyCredential(name: String, keyId: String, key: String, user:
 
 object S3AccessKeyCredential {
   implicit val jsonFormat: OFormat[S3AccessKeyCredential] = Json.format[S3AccessKeyCredential]
+}
+
+case class GoogleServiceAccountCredential(jsonBody: JsValue) extends FileSystemCredential {
+  override def usernameOpt: Option[String] = None
+  override def passwordOpt: Option[String] = None
+}
+
+object GoogleServiceAccountCredential {
+  implicit val jsonFormat: OFormat[GoogleServiceAccountCredential] = Json.format[GoogleServiceAccountCredential]
 }
 
 case class LegacyFileSystemCredential(user: String, password: Option[String]) extends FileSystemCredential {

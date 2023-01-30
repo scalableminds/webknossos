@@ -109,7 +109,7 @@ object FileSystemsHolder extends LazyLogging {
     val uri = remoteSource.uri
     if (remoteSource.uri.getScheme != schemeGS) None
     else {
-      val bucketName = uri.getPath.split("/").headOption.getOrElse(uri.getPath)
+      val bucketName = uri.getHost
       val storageOptions = buildCredentialStorageOptions(remoteSource)
       try {
         Some(CloudStorageFileSystem.forBucket(bucketName, CloudStorageConfiguration.DEFAULT, storageOptions))

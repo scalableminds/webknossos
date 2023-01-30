@@ -154,7 +154,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "Failed to store file system credential"
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
-      remotePath <- tryo(fileSystem.getPath(remoteSource.uri.toString)) ?~> "Failed to get remote path"
+      remotePath <- tryo(fileSystem.getPath(remoteSource.uri.getPath)) ?~> "Failed to get remote path" // TODO re-check with s3 and https
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
         credentialId.map(_.toString),

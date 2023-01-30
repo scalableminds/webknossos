@@ -133,6 +133,9 @@ export const getColorForCoords: ShaderModule = {
     }
 
     float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress) {
+      return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed);
+
+
       float bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[0]);
       if (bucketAddressInTexture == -1.) {
         bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[1]);
@@ -170,20 +173,34 @@ export const getColorForCoords: ShaderModule = {
       vec3 offsetInBucket;
       uint renderedMagIdx;
 
-      for (uint i = 0u; i < 4u; i++) {
-        renderedMagIdx = activeMagIdx + i;
+      if (false) {
+        for (uint i = 0u; i < 4u; i++) {
+          renderedMagIdx = activeMagIdx + i;
+          vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+          vec3 absoluteBucketPosition = div(coords, bucketWidth);
+          offsetInBucket = mod(coords, bucketWidth);
+          bucketAddress = lookUpBucket(
+            globalLayerIndex,
+            uvec4(uvec3(absoluteBucketPosition), renderedMagIdx)
+          );
+
+          if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
+            break;
+          }
+        }
+      } else {
+        // new
+        renderedMagIdx = outputMagIdx;
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
           globalLayerIndex,
-          uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
+          uvec4(uvec3(absoluteBucketPosition), renderedMagIdx)
         );
-
-        if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
-          break;
-        }
+        // new end
       }
+
 
       if (bucketAddress == NOT_YET_COMMITTED_VALUE) {
         // No bucket was found that was already committed.

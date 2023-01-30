@@ -105,7 +105,9 @@ uniform vec3 addressSpaceDimensions;
 uniform vec4 hoveredSegmentIdLow;
 uniform vec4 hoveredSegmentIdHigh;
 
-varying vec4 worldCoord;
+flat in uint outputMagIdx;
+flat in uint outputSeed;
+in vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
 

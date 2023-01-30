@@ -831,10 +831,159 @@ class PlaneMaterialFactory {
     return `
 precision highp float;
 
-varying vec4 worldCoord;
+out vec4 worldCoord;
+flat out uint outputMagIdx;
+flat out uint outputSeed;
 varying vec4 modelCoord;
 varying vec2 vUv;
 varying mat4 savedModelMatrix;
+
+// todo: 3 should be <%= globalLayerCount %>
+uniform float activeMagIndices[4];
+uniform uint availableLayerIndexToGlobalLayerIndex[4];
+
+uniform highp usampler2D lookup_texture;
+uniform highp uint lookup_seeds[3];
+uniform highp uint LOOKUP_CUCKOO_ENTRY_CAPACITY;
+uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
+uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
+uniform highp uint LOOKUP_CUCKOO_TWIDTH;
+
+uniform vec3 globalPosition;
+
+// todo
+const vec3 datasetScale = vec3(11.5, 11.5, 28.7);
+
+highp uint hashCombine(highp uint state, highp uint value) {
+  // The used constants are written in decimal, because
+  // the parser tests don't support unsigned int hex notation
+  // (yet).
+  // See this issue: https://github.com/ShaderFrog/glsl-parser/issues/1
+  // 3432918353u == 0xcc9e2d51u
+  //  461845907u == 0x1b873593u
+  // 3864292196u == 0xe6546b64u
+
+  value *= 3432918353u;
+  value = (value << 15u) | (value >> 17u);
+  value *= 461845907u;
+  state ^= value;
+  state = (state << 13u) | (state >> 19u);
+  state = (state * 5u) + 3864292196u;
+  return state;
+}
+
+float attemptLookUpLookUp(uint globalLayerIndex, uvec4 bucketAddress, uint seed) {
+  outputSeed = seed;
+  highp uint h0 = hashCombine(seed, bucketAddress.x);
+  h0 = hashCombine(h0, bucketAddress.y);
+  h0 = hashCombine(h0, bucketAddress.z);
+  h0 = hashCombine(h0, bucketAddress.a);
+  h0 = hashCombine(h0, globalLayerIndex);
+  h0 = h0 % LOOKUP_CUCKOO_ENTRY_CAPACITY;
+  h0 = uint(h0 * LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY / LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL);
+
+  highp uint x = h0 % LOOKUP_CUCKOO_TWIDTH;
+  highp uint y = h0 / LOOKUP_CUCKOO_TWIDTH;
+
+  uvec4 compressedEntry = texelFetch(lookup_texture, ivec2(x, y), 0);
+
+  uint compressedBytes = compressedEntry.a;
+  uint foundMagIdx = compressedBytes >> (32u - 5u);
+  uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
+
+  if (compressedEntry.xyz != bucketAddress.xyz
+    || globalLayerIndex != foundLayerIndex
+    || foundMagIdx != bucketAddress.a) {
+    return -1.;
+  }
+  uint address = compressedBytes & (uint(pow(2., 21.)) - 1u);
+
+  return float(address);
+}
+
+vec3 getResolution(uint zoomStep) {
+  if (zoomStep == 0u) {
+    return vec3(1.0, 1.0, 1.0);
+  }
+  else if (zoomStep == 1u) {
+    return vec3(2.0, 2.0, 1.0);
+  }
+
+  else if (zoomStep == 2u) {
+    return vec3(4.0, 4.0, 1.0);
+  }
+
+  else if (zoomStep == 3u) {
+    return vec3(8.0, 8.0, 2.0);
+  }
+
+  else if (zoomStep == 4u) {
+    return vec3(16.0, 16.0, 4.0);
+  }
+
+  else {
+    return vec3(0.0, 0.0, 0.0);
+  }
+}
+
+vec3 transDim(vec3 array) {
+  // todo
+  return array;
+}
+
+vec3 getAbsoluteCoords(vec3 worldCoordUVW, uint usedZoomStep) {
+  vec3 resolution = getResolution(usedZoomStep);
+  vec3 coords = transDim(worldCoordUVW) / resolution;
+  return coords;
+}
+
+
+float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress) {
+  float bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[0]);
+  if (bucketAddressInTexture == -1.) {
+    bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[1]);
+  }
+  if (bucketAddressInTexture == -1.) {
+    bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[2]);
+  }
+  return bucketAddressInTexture;
+}
+
+vec3 div(vec3 a, float b) {
+  return floor(a / b);
+}
+
+vec3 getWorldCoordUVW() {
+  vec3 worldCoordUVW = transDim(worldCoord.xyz);
+
+  // if (isFlightMode()) {
+  //   vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
+  //   float sphericalRadius = sphericalCapRadius;
+
+  //   vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);
+  //   modelCoords.z = 0.0;
+  //   modelCoords += centerVertex;
+  //   modelCoords.xyz = modelCoords.xyz * (sphericalRadius / length(modelCoords.xyz));
+  //   modelCoords -= centerVertex;
+
+  //   worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
+  // }
+
+  vec3 datasetScaleUVW = transDim(datasetScale);
+
+  worldCoordUVW = vec3(
+    // For u and w we need to divide by datasetScale because the threejs scene is scaled
+    worldCoordUVW.x / datasetScaleUVW.x,
+    worldCoordUVW.y / datasetScaleUVW.y,
+
+    // In orthogonal mode, the planes are offset in 3D space to allow skeletons to be rendered before
+    // each plane. Since w (e.g., z for xy plane) is
+    // the same for all texels computed in this shader, we simply use globalPosition[w] instead
+    globalPosition.z
+  );
+
+  return worldCoordUVW;
+}
 
 void main() {
   vUv = uv;
@@ -842,6 +991,39 @@ void main() {
   savedModelMatrix = modelMatrix;
   worldCoord = modelMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+
+
+
+
+
+
+  vec3 worldCoordUVW = getWorldCoordUVW();
+  float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
+  const float bucketWidth = 32.;
+  const float bucketSize = 32.*32.*32.;
+
+  float bucketAddress;
+  // todo: layerindex is variable
+  uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[uint(1)];
+  uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
+
+  uint renderedMagIdx;
+  outputMagIdx = 100u;
+  for (uint i = 0u; i < 4u; i++) {
+    renderedMagIdx = activeMagIdx + i;
+    vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
+    vec3 absoluteBucketPosition = div(coords, bucketWidth);
+    bucketAddress = lookUpBucket(
+      globalLayerIndex,
+      uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
+    );
+
+    if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
+      outputMagIdx = renderedMagIdx;
+      break;
+    }
+  }
 }`;
   }
 }

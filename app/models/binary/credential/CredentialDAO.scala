@@ -8,6 +8,8 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3AccessKeyCredential
 }
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
+import net.liftweb.util.Helpers.tryo
+import play.api.libs.json.Json
 import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
@@ -47,6 +49,18 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         r._Organization
       )
 
+  private def parseAsGCSCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
+    for {
+      secret <- r.secret.toFox
+      secretJson <- tryo(Json.parse(secret)).toFox
+    } yield
+      GoogleServiceAccountCredential(
+        r.name,
+        secretJson,
+        r._User,
+        r._Organization
+      )
+
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
@@ -76,5 +90,6 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     r.`type` match {
       case "HTTP_Basic_Auth" => parseAsHttpBasicAuthCredential(r)
       case "S3_Access_Key"   => parseAsS3AccessKeyCredential(r)
+      case "GCS"             => parseAsGCSCredential(r) // TODO type should be enum
     }
 }

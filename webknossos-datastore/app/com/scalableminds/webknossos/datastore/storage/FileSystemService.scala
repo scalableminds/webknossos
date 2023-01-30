@@ -21,7 +21,7 @@ class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCl
       credentialBox <- credentialFor(magLocator: MagLocator).futureBox
       remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)
       remotePath = FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
-        fileSystem.getPath(remoteSource.uri.toString)
+        fileSystem.getPath(remoteSource.uri.getPath)
       }
     } yield remotePath
 

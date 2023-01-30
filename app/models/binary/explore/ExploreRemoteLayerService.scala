@@ -155,11 +155,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "Failed to store file system credential"
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.uri.getPath)) ?~> "Failed to get remote path" // TODO re-check with s3 and https
-      layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
+      layersWithVoxelSizes <- exploreRemoteLayersForRemotePath( // TODO remotePath does not contain schema in uri case
         remotePath,
         credentialId.map(_.toString),
         reportMutable,
-        List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer, new N5MultiscalesExplorer))
+        List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer, new N5MultiscalesExplorer)
+      )
     } yield layersWithVoxelSizes
 
   private def normalizeUri(uri: String): String =

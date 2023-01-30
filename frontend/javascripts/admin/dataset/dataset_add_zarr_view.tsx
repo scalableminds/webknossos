@@ -311,7 +311,6 @@ function AddZarrLayer({
       (userInput.indexOf("https://") !== 0 && userInput.indexOf("s3://") === 0)
     ) {
       setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https" : "s3");
-      setShowCredentialsFields(userInput.indexOf("s3://") === 0);
     } else {
       throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
     }

@@ -127,7 +127,7 @@ object FileSystemsHolder extends LazyLogging {
         StorageOptions
           .newBuilder()
           .setCredentials(
-            ServiceAccountCredentials.fromStream(new ByteArrayInputStream(credential.jsonBody.toString.getBytes)))
+            ServiceAccountCredentials.fromStream(new ByteArrayInputStream(credential.secretJson.toString.getBytes)))
           .build()
       case _ => StorageOptions.newBuilder().build()
     }

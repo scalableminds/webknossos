@@ -7,11 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.{
-  FileSystemsHolder,
-  LegacyFileSystemCredential,
-  RemoteSourceDescriptor
-}
+import com.scalableminds.webknossos.datastore.storage.{FileSystemsHolder, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.credential.CredentialService
 import models.user.User
@@ -27,7 +23,9 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-case class ExploreRemoteDatasetParameters(remoteUri: String, user: Option[String], password: Option[String])
+case class ExploreRemoteDatasetParameters(remoteUri: String,
+                                          credentialIdentifier: Option[String],
+                                          credentialSecret: Option[String])
 
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
@@ -43,8 +41,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
       exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(
         parameters =>
           exploreRemoteLayersForUri(parameters.remoteUri,
-                                    parameters.user,
-                                    parameters.password,
+                                    parameters.credentialIdentifier,
+                                    parameters.credentialSecret,
                                     reportMutable,
                                     requestIdentity))
       layersWithVoxelSizes = exploredLayersNested.flatten
@@ -142,20 +140,19 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
 
   private def exploreRemoteLayersForUri(
       layerUri: String,
-      user: Option[String],
-      password: Option[String],
+      credentialIdentifier: Option[String],
+      credentialSecret: Option[String],
       reportMutable: ListBuffer[String],
       requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
-      remoteSource <- tryo(RemoteSourceDescriptor(
-        new URI(normalizeUri(layerUri)),
-        user.map(u => LegacyFileSystemCredential(u, password)))).toFox ?~> s"Received invalid URI: $layerUri"
-      credentialId <- credentialService.storeCredential(
-        new URI(normalizeUri(layerUri)),
-        user,
-        password,
-        requestingUser._id.toString,
-        requestingUser._organization.toString) ?~> "Failed to set up remote file system credentaial"
+      uri <- tryo(new URI(normalizeUri(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      credentialOpt = credentialService.createCredentialOpt(uri,
+                                                            credentialIdentifier,
+                                                            credentialSecret,
+                                                            requestingUser._id,
+                                                            requestingUser._organization)
+      remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
+      credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "Failed to store file system credential"
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.uri.toString)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(

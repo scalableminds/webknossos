@@ -32,7 +32,8 @@ object S3AccessKeyCredential {
   implicit val jsonFormat: OFormat[S3AccessKeyCredential] = Json.format[S3AccessKeyCredential]
 }
 
-case class GoogleServiceAccountCredential(jsonBody: JsValue) extends FileSystemCredential {
+case class GoogleServiceAccountCredential(name: String, secretJson: JsValue, user: String, organization: String)
+    extends FileSystemCredential {
   override def usernameOpt: Option[String] = None
   override def passwordOpt: Option[String] = None
 }

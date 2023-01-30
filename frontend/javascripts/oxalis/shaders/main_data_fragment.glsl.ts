@@ -260,5 +260,178 @@ void main() {
       `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
+    isFragment: true,
+  });
+}
+
+export function getMainVertexShader(params: Params) {
+  const hasSegmentation = params.segmentationLayerNames.length > 0;
+  return _.template(`
+precision highp float;
+
+
+out vec4 worldCoord;
+flat out uint outputMagIdx;
+flat out uint outputSeed;
+flat out float outputAddress;
+varying vec4 modelCoord;
+varying vec2 vUv;
+varying mat4 savedModelMatrix;
+
+
+
+
+const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
+uniform highp usampler2D lookup_texture;
+uniform highp uint lookup_seeds[3];
+uniform highp uint LOOKUP_CUCKOO_ENTRY_CAPACITY;
+uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
+uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
+uniform highp uint LOOKUP_CUCKOO_TWIDTH;
+
+<% _.each(colorLayerNames, function(name) { %>
+  uniform vec3 <%= name %>_color;
+  uniform float <%= name %>_min;
+  uniform float <%= name %>_max;
+  uniform float <%= name %>_is_inverted;
+  uniform mat4 <%= name %>_transform;
+<% }) %>
+
+<% _.each(layerNamesWithSegmentation, function(name) { %>
+  uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
+  uniform float <%= name %>_data_texture_width;
+  uniform float <%= name %>_alpha;
+  uniform float <%= name %>_gammaCorrectionValue;
+  uniform float <%= name %>_unrenderable;
+<% }) %>
+
+uniform float activeMagIndices[<%= globalLayerCount %>];
+uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
+uniform vec3 resolutions[<%= globalLayerCount %>];
+
+<% if (hasSegmentation) { %>
+  // Custom color cuckoo table
+  uniform highp usampler2D custom_color_texture;
+  uniform highp uint custom_color_seeds[3];
+  uniform highp uint CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint CUCKOO_TWIDTH;
+
+  uniform vec4 activeCellIdHigh;
+  uniform vec4 activeCellIdLow;
+  uniform bool isMouseInActiveViewport;
+  uniform bool showBrush;
+  uniform bool isProofreading;
+  uniform float segmentationPatternOpacity;
+
+  uniform bool isMappingEnabled;
+  uniform float mappingSize;
+  uniform bool hideUnmappedIds;
+  uniform sampler2D segmentation_mapping_texture;
+  uniform sampler2D segmentation_mapping_lookup_texture;
+<% } %>
+
+uniform float sphericalCapRadius;
+uniform float viewMode;
+uniform float alpha;
+uniform bool renderBucketIndices;
+uniform vec3 bboxMin;
+uniform vec3 bboxMax;
+uniform vec3 globalPosition;
+uniform vec3 activeSegmentPosition;
+uniform float zoomValue;
+uniform vec3 uvw;
+uniform bool useBilinearFiltering;
+uniform vec3 globalMousePosition;
+uniform bool isMouseInCanvas;
+uniform float brushSizeInPixel;
+uniform float planeID;
+uniform vec3 addressSpaceDimensions;
+uniform vec4 hoveredSegmentIdLow;
+uniform vec4 hoveredSegmentIdHigh;
+
+const float bucketWidth = <%= bucketWidth %>;
+const float bucketSize = <%= bucketSize %>;
+const float l_texture_width = <%= l_texture_width %>;
+
+
+// For some reason, taking the dataset scale from the uniform results in imprecise
+// rendering of the brush circle (and issues in the arbitrary modes). That's why it
+// is directly inserted into the source via templating.
+const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
+
+const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
+
+${compileShader(
+  inverse,
+  div,
+  isNan,
+  isFlightMode,
+  transDim,
+  getAbsoluteCoords,
+  getWorldCoordUVW,
+  isOutsideOfBoundingBox,
+  getMaybeFilteredColorOrFallback,
+  hasSegmentation ? convertCellIdToRGB : null,
+  hasSegmentation ? getBrushOverlay : null,
+  hasSegmentation ? getSegmentationId : null,
+  hasSegmentation ? getCrossHairOverlay : null,
+)}
+
+
+
+
+void main() {
+  vUv = uv;
+  modelCoord = vec4(position, 1.0);
+  savedModelMatrix = modelMatrix;
+  worldCoord = modelMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+
+
+
+  vec3 worldCoordUVW = getWorldCoordUVW();
+  float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
+  const float bucketWidth = 32.;
+  const float bucketSize = 32.*32.*32.;
+
+  float bucketAddress;
+  // todo: layerindex is variable
+  uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[uint(1)];
+  uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
+
+  uint renderedMagIdx;
+  outputMagIdx = 100u;
+  for (uint i = 0u; i < 4u; i++) {
+    renderedMagIdx = activeMagIdx + i;
+    vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
+    vec3 absoluteBucketPosition = div(coords, bucketWidth);
+    bucketAddress = lookUpBucket(
+      globalLayerIndex,
+      uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
+    );
+
+    if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
+      outputMagIdx = renderedMagIdx;
+      break;
+    }
+  }
+}
+  `)({
+    ...params,
+    layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
+    bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
+    bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
+    l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),
+    mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
+    formatNumberAsGLSLFloat,
+    formatVector3AsVec3: (vector3: Vector3) =>
+      `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
+    OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
+    hasSegmentation,
+    isFragment: false,
   });
 }

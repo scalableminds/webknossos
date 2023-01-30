@@ -47,7 +47,7 @@ const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 
-const getLookUpCuckooTable = memoizeOne(() => new CuckooTableVec5(512));
+const getLookUpCuckooTable = memoizeOne(() => new CuckooTableVec5(256));
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {

@@ -105,6 +105,11 @@ export const getColorForCoords: ShaderModule = {
     float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
     float attemptLookUpLookUp(uint globalLayerIndex, uvec4 bucketAddress, uint seed) {
+      <% if (!isFragment) { %>
+        outputSeed = seed;
+      <% } %>
+
+
       highp uint h0 = hashCombine(seed, bucketAddress.x);
       h0 = hashCombine(h0, bucketAddress.y);
       h0 = hashCombine(h0, bucketAddress.z);
@@ -125,15 +130,25 @@ export const getColorForCoords: ShaderModule = {
       if (compressedEntry.xyz != bucketAddress.xyz
         || globalLayerIndex != foundLayerIndex
         || foundMagIdx != bucketAddress.a) {
+        <% if (!isFragment) { %>
+          outputAddress = -1.;
+        <% } %>
         return -1.;
       }
       uint address = compressedBytes & (uint(pow(2., 21.)) - 1u);
+
+      <% if (!isFragment) { %>
+        outputAddress = float(address);
+      <% } %>
 
       return float(address);
     }
 
     float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress) {
-      return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed);
+      <% if (isFragment) { %>
+        return outputAddress;
+        return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed);
+      <% } %>
 
 
       float bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[0]);

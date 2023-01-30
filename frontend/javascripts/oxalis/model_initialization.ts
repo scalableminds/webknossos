@@ -296,14 +296,18 @@ export async function initialize(
     return matrix;
   };
 
-  // @ts-expect-error
-  window.transformer = {
+  const transformer = {
     setScale,
     setRotation,
     makeTranslation,
     setTransforms,
     makeChain,
   };
+
+  if (typeof window != null) {
+    // @ts-expect-error
+    window.transformer = transformer;
+  }
   // setTransforms("color", makeTranslation(122, 105));
   // setTransforms("color", makeTranslation(-1000, 0, 0));
   // setScale("color2", 2.0, [3496, 3379, 0] as Vector3);

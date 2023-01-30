@@ -106,7 +106,7 @@ export const getColorForCoords: ShaderModule = {
 
     float attemptLookUpLookUp(uint globalLayerIndex, uvec4 bucketAddress, uint seed) {
       <% if (!isFragment) { %>
-        outputSeed = seed;
+        outputSeed[globalLayerIndex] = seed;
       <% } %>
 
 
@@ -123,6 +123,10 @@ export const getColorForCoords: ShaderModule = {
 
       uvec4 compressedEntry = texelFetch(lookup_texture, ivec2(x, y), 0);
 
+      <% if (!isFragment) { %>
+        pre_compressedEntry[globalLayerIndex] = compressedEntry;
+      <% } %>
+
       uint compressedBytes = compressedEntry.a;
       uint foundMagIdx = compressedBytes >> (32u - 5u);
       uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
@@ -131,14 +135,14 @@ export const getColorForCoords: ShaderModule = {
         || globalLayerIndex != foundLayerIndex
         || foundMagIdx != bucketAddress.a) {
         <% if (!isFragment) { %>
-          outputAddress = -1.;
+          outputAddress[globalLayerIndex] = -1.;
         <% } %>
         return -1.;
       }
       uint address = compressedBytes & (uint(pow(2., 21.)) - 1u);
 
       <% if (!isFragment) { %>
-        outputAddress = float(address);
+        outputAddress[globalLayerIndex] = float(address);
       <% } %>
 
       return float(address);
@@ -146,8 +150,22 @@ export const getColorForCoords: ShaderModule = {
 
     float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress) {
       <% if (isFragment) { %>
-        return outputAddress;
-        return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed);
+      {
+        uvec4 compressedEntry = pre_compressedEntry[globalLayerIndex];
+
+        uint compressedBytes = compressedEntry.a;
+        uint foundMagIdx = compressedBytes >> (32u - 5u);
+        uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
+        if (compressedEntry.xyz != bucketAddress.xyz
+          || globalLayerIndex != foundLayerIndex
+          || foundMagIdx != bucketAddress.a) {
+          // cache miss
+        } else {
+          return outputAddress[globalLayerIndex];
+          return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed[globalLayerIndex]);
+
+        }
+      }
       <% } %>
 
 
@@ -205,7 +223,7 @@ export const getColorForCoords: ShaderModule = {
         }
       } else {
         // new
-        renderedMagIdx = outputMagIdx;
+        renderedMagIdx = outputMagIdx[globalLayerIndex];
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);

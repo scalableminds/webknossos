@@ -106,9 +106,10 @@ uniform vec3 addressSpaceDimensions;
 uniform vec4 hoveredSegmentIdLow;
 uniform vec4 hoveredSegmentIdHigh;
 
-flat in uint outputMagIdx;
-flat in uint outputSeed;
-flat in float outputAddress;
+flat in uvec4 pre_compressedEntry[<%= globalLayerCount %>];
+flat in uint outputMagIdx[<%= globalLayerCount %>];
+flat in uint outputSeed[<%= globalLayerCount %>];
+flat in float outputAddress[<%= globalLayerCount %>];
 in vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
@@ -271,9 +272,10 @@ precision highp float;
 
 
 out vec4 worldCoord;
-flat out uint outputMagIdx;
-flat out uint outputSeed;
-flat out float outputAddress;
+flat out uvec4 pre_compressedEntry[<%= globalLayerCount %>];
+flat out uint outputMagIdx[<%= globalLayerCount %>];
+flat out uint outputSeed[<%= globalLayerCount %>];
+flat out float outputAddress[<%= globalLayerCount %>];
 varying vec4 modelCoord;
 varying vec2 vUv;
 varying mat4 savedModelMatrix;
@@ -397,27 +399,31 @@ void main() {
   const float bucketWidth = 32.;
   const float bucketSize = 32.*32.*32.;
 
-  float bucketAddress;
-  // todo: layerindex is variable
-  uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[uint(1)];
-  uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
+  // todo: seg layer is missing!
+  <% _.each(colorLayerNames, function(name, layerIndex) { %>
+  {
+    float bucketAddress;
+    uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u];
+    uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
 
-  uint renderedMagIdx;
-  outputMagIdx = 100u;
-  for (uint i = 0u; i < 4u; i++) {
-    renderedMagIdx = activeMagIdx + i;
-    vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
-    vec3 absoluteBucketPosition = div(coords, bucketWidth);
-    bucketAddress = lookUpBucket(
-      globalLayerIndex,
-      uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
-    );
+    uint renderedMagIdx;
+    outputMagIdx[globalLayerIndex] = 100u;
+    for (uint i = 0u; i < 4u; i++) {
+      renderedMagIdx = activeMagIdx + i;
+      vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
+      vec3 absoluteBucketPosition = div(coords, bucketWidth);
+      bucketAddress = lookUpBucket(
+        globalLayerIndex,
+        uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
+      );
 
-    if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
-      outputMagIdx = renderedMagIdx;
-      break;
+      if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
+        outputMagIdx[globalLayerIndex] = renderedMagIdx;
+        break;
+      }
     }
   }
+  <% }) %>
 }
   `)({
     ...params,

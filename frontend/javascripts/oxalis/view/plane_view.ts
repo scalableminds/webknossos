@@ -133,25 +133,7 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-
-          window.renderCounter = (window.renderCounter || 0) + 1;
-
-          window.totalRenderTime = window.totalRenderTime || 0;
-          window.counterWithoutBatch = window.counterWithoutBatch || 0;
-
-          if (window.renderCounter % 100 == 0) {
-            console.time("Rendering 100 times");
-            for (let i = 0; i < 100; i++) {
-              renderer.render(scene, this.cameras[plane]);
-            }
-            console.timeEnd("Rendering 100 times");
-            console.log("comparing with", window.totalRenderTime / window.counterWithoutBatch);
-          } else {
-            const then = performance.now();
-            renderer.render(scene, this.cameras[plane]);
-            window.totalRenderTime += performance.now() - then;
-            window.counterWithoutBatch++;
-          }
+          renderer.render(scene, this.cameras[plane]);
         }
       }
 

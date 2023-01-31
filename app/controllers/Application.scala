@@ -71,7 +71,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
 
   @ApiOperation(value = "Health endpoint")
   def health: Action[AnyContent] = Action {
-    Ok
+    Ok("Ok")
   }
 
   @ApiOperation(hidden = true, value = "")

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -9,6 +10,7 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 import play.api.libs.json.Json.WithDefaultValues
 
 import java.nio.ByteOrder
+import scala.::
 
 case class PrecomputedHeader(`type`: String, data_type: String, num_channels: Int, scales: List[PrecomputedScale]) {
 
@@ -27,7 +29,7 @@ case class PrecomputedScale(key: String,
 
 case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
     extends DatasetHeader {
-  override def datasetShape: Array[Int] = (precomputedScale.resolution, precomputedScale.size).zipped.map(_ * _)
+  override def datasetShape: Array[Int] = precomputedScale.size //(precomputedScale.resolution, precomputedScale.size).zipped.map(_ * _)
 
   override def chunkSize: Array[Int] = precomputedScale.chunk_sizes.head
 
@@ -41,12 +43,31 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
 
   override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
 
+  override def shiftAxisOrderRight: Boolean = true
+
   override def resolvedDataType: ArrayDataType =
     PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(dataType.toLowerCase).get)
 
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(precomputedScale.encoding)
+
+  def grid_size: Array[Int] = (chunkSize, precomputedScale.size).zipped.map((c, s) => (s.toDouble / c).ceil.toInt)
+
+  override def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = {
+    chunkIndexToBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
+  }
+
+  lazy val voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
+
+  def chunkIndexToBoundingBox(chunkIndex: Array[Int]): Array[(Int,Int)] = {
+    chunkIndex.zipWithIndex.map(indices => {
+      val (cIndex, i) = indices
+      val beginOffset = voxelOffset(i) + cIndex * precomputedScale.chunk_sizes.head(i)
+      val endOffset = voxelOffset(i) + ((cIndex + 1) * precomputedScale.chunk_sizes.head(i))
+        .min(precomputedScale.size(i))
+      (beginOffset, endOffset)
+    })
+  }
 }
-//
 
 object PrecomputedScale extends JsonImplicits {
   implicit object PrecomputedScaleFormat extends Format[PrecomputedScale] {

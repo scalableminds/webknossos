@@ -64,12 +64,19 @@ object MultiArrayUtils {
     */
   @throws[InvalidRangeException]
   def copyRange(offset: Array[Int], source: MultiArray, target: MultiArray): Unit = {
+    // At this point offset is XYZ, source should be XYZ (but for precomputed it is XZY)
+
+    val new_offset = /*if (source.getShape.toSet.size > 1) {
+      Array(offset(0), offset(2), offset(1))
+    } else {*/
+      offset
+    //}
     val sourceShape: Array[Int] = source.getShape
     val targetShape: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
     val targetRanges = new util.ArrayList[Range]
-    for (dimension <- offset.indices) {
-      val dimOffset = offset(dimension)
+    for (dimension <- new_offset.indices) {
+      val dimOffset = new_offset(dimension)
       var sourceFirst = 0
       var targetFirst = 0
       if (dimOffset >= 0) {
@@ -120,18 +127,37 @@ object MultiArrayUtils {
     source.permute(permutation)
   }
 
-  def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean): MultiArray = {
+  def pad(source: MultiArray): MultiArray = {
+    val ma = MultiArray.factory(source.getDataType, source.getShape)
+    val sourceInnerArray = source.getStorage.asInstanceOf[Array[Byte]]
+    val actualSize = sourceInnerArray.length
+    if(source.getSize == actualSize) {
+      return source
+    }
+    val targetInnerArray = ma.getStorage.asInstanceOf[Array[Byte]]
+    for(i <- 0 until actualSize) {
+      targetInnerArray(i) = sourceInnerArray(i)
+    }
+    ma
+  }
+
+  def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean, shiftRight: Boolean): MultiArray = {
     /* create a view in which the last three axes are XYZ, rest unchanged
      * optionally flip the axes afterwards
      *
      * Note that we are at this point unsure if this function should be using the *inverse* permutation.
      * For all cases we could test, the two are identical. Beware of this when debugging future datasets,
      * e.g. with axis order ZXY
+     *
+     * 2023-01-19: For neuroglancer-precomputed datasets, the axis order used for indexing chunks is a
+     * different one that is used. Therefore, the additional parameter "shiftRight" is introduced, which is
+     * only used for neuroglancer-precomputed datasets.
      */
+
     val permutation = axisOrder.permutation(source.getRank)
     val flippedIfNeeded = if (flip) permutation.reverse else permutation
-    val permutationHack = Array(0, 2, 1)
-    source.permute(permutationHack)
+    //val shiftedIfNeeded = if (shiftRight) flippedIfNeeded.last +: flippedIfNeeded.init else flippedIfNeeded
+    source.permute(flippedIfNeeded)
   }
 
 }

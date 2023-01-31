@@ -25,7 +25,7 @@ class DatasetArray(relativePath: DatasetPath,
     ChunkReader.create(store, header)
 
   // cache currently limited to 1 GB per array
-  private lazy val chunkContentsCache: Cache[String, MultiArray] = {
+  protected lazy val chunkContentsCache: Cache[String, MultiArray] = {
     val maxSizeBytes = 1000L * 1000 * 1000
     val maxEntries = maxSizeBytes / header.bytesPerChunk
     AlfuCache(maxEntries.toInt)
@@ -78,7 +78,8 @@ class DatasetArray(relativePath: DatasetPath,
           offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
-                                                                             flip = header.order != ArrayOrder.C)
+                                                                             header.order != ArrayOrder.C,
+                                                                             header.shiftAxisOrderRight)
           _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
         } yield ()
       }
@@ -88,12 +89,13 @@ class DatasetArray(relativePath: DatasetPath,
     }
   }
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
+  protected def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
+    val chunkShape = header.chunkSizeAtIndex(chunkIndex)
 
-    chunkContentsCache.getOrLoad(storeKey, chunkReader.read)
+    chunkContentsCache.getOrLoad(storeKey, key => chunkReader.read(key, chunkShape))
   }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
@@ -118,9 +120,9 @@ class DatasetArray(relativePath: DatasetPath,
   private def isZeroOffset(offset: Array[Int]): Boolean =
     util.Arrays.equals(offset, new Array[Int](offset.length))
 
-  private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
+  protected def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunkSize)(dim))
+      globalOffset(dim) - (chunkIndex(dim) * header.chunkSize(dim))
     }.toArray
 
   override def toString: String =

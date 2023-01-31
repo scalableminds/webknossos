@@ -9,13 +9,19 @@ import java.nio.ByteOrder
 
 trait DatasetHeader {
   def datasetShape: Array[Int] // shape of the entire array
+
   def chunkSize: Array[Int] // shape of each chunk
+
   def dimension_separator: DimensionSeparator
+
   def dataType: String
+
   def fill_value: Either[String, Number]
+
   def order: ArrayOrder
 
   def resolvedDataType: ArrayDataType
+
   def compressorImpl: Compressor
 
   lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
@@ -40,4 +46,8 @@ trait DatasetHeader {
       Some(BoundingBox(Vec3Int.zeros, datasetShape(axisOrder.x), datasetShape(axisOrder.y), datasetShape(axisOrder.z)))
 
   lazy val rank: Int = datasetShape.length
+
+  def shiftAxisOrderRight: Boolean = false
+
+  def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize
 }

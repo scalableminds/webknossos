@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 
+import java.io.FileNotFoundException
 import java.nio.file.{FileSystem, Files, Path}
 
 class FileSystemStore(val internalRoot: Path) {
@@ -12,7 +14,8 @@ class FileSystemStore(val internalRoot: Path) {
 }
 
 class GoogleCloudFileSystemStore(override val internalRoot: Path, fs: FileSystem)
-    extends FileSystemStore(internalRoot) {
+    extends FileSystemStore(internalRoot)
+    with LazyLogging {
 
   private def normalizedInternalRoot = {
     def prefix = internalRoot.getParent.toString // This part uses "/"
@@ -23,6 +26,17 @@ class GoogleCloudFileSystemStore(override val internalRoot: Path, fs: FileSystem
 
   override def readBytes(key: String): Option[Array[Byte]] = {
     val path = s"$normalizedInternalRoot%2F$key?alt=media"
-    tryo(Files.readAllBytes(fs.getPath(path))).toOption
+    try {
+      Some(Files.readAllBytes(fs.getPath(path)))
+    } catch {
+      case e: FileNotFoundException => {
+        logger.info(s"Could not read data at ${path}")
+        None
+      }
+      case _ => {
+        logger.info(s"Could not read data at ${path}")
+        None
+      }
+    }
   }
 }

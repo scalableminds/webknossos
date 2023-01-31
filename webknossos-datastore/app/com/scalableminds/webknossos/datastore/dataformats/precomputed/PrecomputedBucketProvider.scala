@@ -53,7 +53,8 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer)
           case None => Empty
           case Some(magPath) =>
             tryo(onError = e => logError(e))(
-              PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))
+              PrecomputedArray
+                .open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex, readInstruction.bucket.mag))
               .map(new PrecomputedCubeHandle(_))
         }
     }

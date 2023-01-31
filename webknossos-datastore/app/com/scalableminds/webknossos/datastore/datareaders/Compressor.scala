@@ -15,7 +15,7 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.zip.{Deflater, DeflaterOutputStream, Inflater, InflaterInputStream}
 import javax.imageio.ImageIO
-import javax.imageio.ImageIO.{createImageInputStream, createImageOutputStream}
+import javax.imageio.ImageIO.{createImageInputStream}
 import javax.imageio.stream.ImageInputStream
 
 sealed trait CompressionSetting
@@ -278,7 +278,7 @@ class JpegCompressor() extends Compressor {
     val raster = bi.getRaster
     val dbb: DataBufferByte = raster.getDataBuffer.asInstanceOf[DataBufferByte]
     val width = raster.getWidth
-    val data = dbb.getData.grouped(width).toList.transpose
+    val data = dbb.getData.grouped(width).toList//.transpose
     os.write(data.flatten.toArray)
   }
 }

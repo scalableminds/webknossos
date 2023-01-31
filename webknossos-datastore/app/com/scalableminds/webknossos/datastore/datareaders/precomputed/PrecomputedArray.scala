@@ -1,24 +1,24 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  ChunkReader,
-  DatasetArray,
-  DatasetPath,
-  FileSystemStore,
-  GoogleCloudFileSystemStore,
-  GoogleCloudStoragePath
-}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder, ChunkReader, ChunkUtils, DatasetArray, DatasetPath, FileSystemStore, GoogleCloudFileSystemStore, GoogleCloudStoragePath, MultiArrayUtils}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
+import ucar.ma2.InvalidRangeException
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import scala.concurrent.{ExecutionContext, Future}
+import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
-  def open(magPath: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
+  def open(magPath: Path,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           mag: Vec3Int): PrecomputedArray = {
 
     //val rootPath = new DatasetPath("")
 
@@ -57,7 +57,8 @@ object PrecomputedArray extends LazyLogging {
                          store,
                          scaleHeader,
                          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-                         channelIndex)
+                         channelIndex,
+                         mag)
   }
 }
 
@@ -65,7 +66,8 @@ class PrecomputedArray(relativePath: DatasetPath,
                        store: FileSystemStore,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
-                       channelIndex: Option[Int])
+                       channelIndex: Option[Int],
+                       mag: Vec3Int)
     extends DatasetArray(relativePath, store, header, axisOrder, channelIndex)
     with LazyLogging {
 
@@ -73,16 +75,30 @@ class PrecomputedArray(relativePath: DatasetPath,
     PrecomputedChunkReader.create(store, header)
 
   lazy val voxelOffset = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
-
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
-    val coordinates: Array[String] = chunkIndex.zipWithIndex.map(indices => {
+
+    /*val coordinates: Array[String] = chunkIndex.zipWithIndex.map(indices => {
       val (cIndex, i) = indices
       val beginOffset = voxelOffset(i) + cIndex * header.precomputedScale.chunk_sizes.head(i)
       val endOffset = voxelOffset(i) + ((cIndex + 1) * header.precomputedScale.chunk_sizes.head(i))
         .min(header.precomputedScale.size(i))
       s"$beginOffset-$endOffset"
-    })
-    coordinates.mkString(header.dimension_separator.toString)
+    })*/
+    val bbox = header.chunkIndexToBoundingBox(chunkIndex)
+    bbox.map(dim => {
+      s"${dim._1}-${dim._2}"
+    }).mkString(header.dimension_separator.toString)
+    /*
+    logger.info(
+      s"Requesting chunkIndex ${chunkIndex(0)},${chunkIndex(1)},${chunkIndex(2)} with grid_size ${
+        header.grid_size
+          .mkString("Array(", ", ", ")")
+      },")
+    if (chunkIndex(2) > header.grid_size(2)) {
+      logger.info("Chunk index > grid size")
+    }
+    logger.info(coordinates.mkString(header.dimension_separator.toString))
+    coordinates.mkString(header.dimension_separator.toString)*/
   }
 
 }

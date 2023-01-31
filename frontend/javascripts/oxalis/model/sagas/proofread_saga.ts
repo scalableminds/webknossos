@@ -639,7 +639,7 @@ function* getPartnerAgglomerateIds(
     yield* put(setBusyBlockingInfoAction(false));
     return null;
   }
-  if (sourceAgglomerateId == 0 || targetAgglomerateId == 0) {
+  if ([sourceAgglomerateId, targetAgglomerateId, unmappedSourceId, unmappedTargetId].includes(0)) {
     Toast.warning(
       "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
     );

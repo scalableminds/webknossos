@@ -375,10 +375,7 @@ ${compileShader(
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
-  hasSegmentation ? convertCellIdToRGB : null,
-  hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentationId : null,
-  hasSegmentation ? getCrossHairOverlay : null,
 )}
 
 

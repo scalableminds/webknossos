@@ -1549,10 +1549,12 @@ class DataApi {
     topLeft: Vector3,
     bottomRight: Vector3,
     token: string,
+    resolution?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getDatasetResolutionInfo(dataset);
-    const resolution = resolutionInfo.getLowestResolution();
+    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName).resolutions);
+    resolution = resolution || resolutionInfo.getLowestResolution();
+
     const magString = resolution.join("-");
     return (
       `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
@@ -1591,6 +1593,7 @@ class DataApi {
     layerName: string,
     topLeft: Vector3,
     bottomRight: Vector3,
+    resolution?: Vector3,
   ): Promise<ArrayBuffer> {
     return doWithToken((token) => {
       const downloadUrl = this._getDownloadUrlForRawDataCuboid(
@@ -1598,6 +1601,7 @@ class DataApi {
         topLeft,
         bottomRight,
         token,
+        resolution,
       );
       return Request.receiveArraybuffer(downloadUrl);
     });

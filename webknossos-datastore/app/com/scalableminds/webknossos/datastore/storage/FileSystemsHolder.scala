@@ -3,123 +3,72 @@ package com.scalableminds.webknossos.datastore.storage
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.{CloudStorageConfiguration, CloudStorageFileSystem}
-import com.google.common.collect.ImmutableMap
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.webknossos.datastore.s3fs.AmazonS3Factory
+import com.scalableminds.webknossos.datastore.s3fs.{S3FileSystem, S3FileSystemProvider}
+import com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsFileSystem
 import com.typesafe.scalalogging.LazyLogging
 
 import java.io.ByteArrayInputStream
-import java.lang.Thread.currentThread
 import java.net.URI
-import java.nio.file.spi.FileSystemProvider
-import java.nio.file.{FileSystem, FileSystemAlreadyExistsException, FileSystems}
-import java.util.ServiceLoader
-import scala.collection.JavaConverters._
-
-class FileSystemsCache(val maxEntries: Int) extends LRUConcurrentCache[RemoteSourceDescriptor, FileSystem]
-class FileSystemsProvidersCache(val maxEntries: Int) extends LRUConcurrentCache[String, FileSystemProvider]
+import java.nio.file.FileSystem
 
 object FileSystemsHolder extends LazyLogging {
 
   val schemeS3: String = "s3"
   val schemeHttps: String = "https"
   val schemeHttp: String = "http"
-  val schemeGS: String = CloudStorageFileSystem.URI_SCHEME
+  val schemeGS: String = "gs"
 
+  class FileSystemsCache(val maxEntries: Int) extends LRUConcurrentCache[RemoteSourceDescriptor, FileSystem]
   private val fileSystemsCache = new FileSystemsCache(maxEntries = 100)
-  private val fileSystemsProvidersCache = new FileSystemsProvidersCache(maxEntries = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 
   def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
-    fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(loadFromProvider)
+    fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(create)
 
-  private def loadFromProvider(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
-    /*
-     * The FileSystemProviders can have their own cache for file systems.
-     * Those will error on create if the file system already exists.
-     * Quirk: They include the user name in the key.
-     * This is not supported for newFileSystem but is for getFileSystem.
-     * Conversely, getFileSystem cannot be called with the credentials env.
-     * Hence this has to be called in two different ways here.
-     * Note: Google Cloud Storage is not loaded via either of those but instead provides its own forBucket
-     */
-
-    if (remoteSource.uri.getScheme == schemeGS) {
-      getGoogleCloudStorageFileSystem(remoteSource)
-    } else {
-      val uriWithPath = remoteSource.uri
-      val uri = baseUri(uriWithPath)
-      val uriWithUser = insertUserName(uri, remoteSource)
-
-      val scheme = uri.getScheme
-      val credentialsEnv = buildCredentialsEnv(remoteSource, scheme)
-
-      try {
-        Some(FileSystems.newFileSystem(uri, credentialsEnv, currentThread().getContextClassLoader))
-      } catch {
-        case _: FileSystemAlreadyExistsException =>
-          try {
-            findProviderWithCache(uri.getScheme).map(_.getFileSystem(uriWithUser))
-          } catch {
-            case e2: Exception =>
-              logger.error(s"getFileSytem errored for ${uriWithUser.toString}:", e2)
-              None
-          }
-      }
-    }
-
-  private def insertUserName(uri: URI, remoteSource: RemoteSourceDescriptor): URI =
-    remoteSource.username.map { user =>
-      new URI(uri.getScheme, user, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
-    }.getOrElse(uri)
-
-  private def baseUri(uri: URI): URI =
-    new URI(uri.getScheme, uri.getUserInfo, uri.getHost, uri.getPort, null, null, null)
-
-  private def buildCredentialsEnv(remoteSource: RemoteSourceDescriptor, scheme: String): ImmutableMap[String, Any] =
-    (for {
-      username <- remoteSource.username
-      password <- remoteSource.password
-    } yield {
-      if (scheme == schemeS3) {
-        ImmutableMap
-          .builder[String, Any]
-          .put(AmazonS3Factory.ACCESS_KEY, username)
-          .put(AmazonS3Factory.SECRET_KEY, password)
-          .build
+  def create(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
+    val scheme = remoteSource.uri.getScheme
+    try {
+      val fs: FileSystem = if (scheme == schemeGS) {
+        getGoogleCloudStorageFileSystem(remoteSource)
+      } else if (scheme == schemeS3) {
+        getAmazonS3FileSystem(remoteSource)
       } else if (scheme == schemeHttps || scheme == schemeHttp) {
-        ImmutableMap.builder[String, Any].put("user", username).put("password", password).build
-      } else emptyEnv
-    }).getOrElse(emptyEnv)
-
-  private def emptyEnv: ImmutableMap[String, Any] = ImmutableMap.builder[String, Any].build()
-
-  private def findProviderWithCache(scheme: String): Option[FileSystemProvider] =
-    fileSystemsProvidersCache.getOrLoadAndPutOptional(scheme: String)(findProvider)
-
-  private def findProvider(scheme: String): Option[FileSystemProvider] = {
-    val providersIterator =
-      ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator().asScala
-    providersIterator.find(p => p.getScheme.equalsIgnoreCase(scheme))
-  }
-
-  private def getGoogleCloudStorageFileSystem(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
-    val uri = remoteSource.uri
-    if (remoteSource.uri.getScheme != schemeGS) None
-    else {
-      val bucketName = uri.getHost
-      val storageOptions = buildCredentialStorageOptions(remoteSource)
-      try {
-        Some(CloudStorageFileSystem.forBucket(bucketName, CloudStorageConfiguration.DEFAULT, storageOptions))
-      } catch {
-        case e: Exception =>
-          logger.error(s"getGoogleCloudStorageFileSystem errored for ${remoteSource.uri.toString}:", e)
-          None
+        getHttpsFileSystem(remoteSource)
+      } else {
+        throw new Exception(s"Unknown file system scheme $scheme")
       }
+      Some(fs)
+    } catch {
+      case e: Exception =>
+        logger.error(s"get file system errored for ${remoteSource.uri.toString}:", e)
+        None
     }
   }
+
+  private def getGoogleCloudStorageFileSystem(remoteSource: RemoteSourceDescriptor): FileSystem = {
+    val bucketName = remoteSource.uri.getHost
+    val storageOptions = buildCredentialStorageOptions(remoteSource)
+    CloudStorageFileSystem.forBucket(bucketName, CloudStorageConfiguration.DEFAULT, storageOptions)
+  }
+
+  private def getAmazonS3FileSystem(remoteSource: RemoteSourceDescriptor): FileSystem =
+    remoteSource.credential match {
+      case Some(credential: S3AccessKeyCredential) =>
+        S3FileSystem.forUri(remoteSource.uri, credential.keyId, credential.key)
+      case _ =>
+        S3FileSystem.forUri(remoteSource.uri)
+    }
+
+  private def getHttpsFileSystem(remoteSource: RemoteSourceDescriptor): FileSystem =
+    remoteSource.credential match {
+      case Some(credential: HttpBasicAuthCredential) =>
+        HttpsFileSystem.forUri(remoteSource.uri, Some(credential))
+      case _ =>
+        HttpsFileSystem.forUri(remoteSource.uri)
+    }
 
   private def buildCredentialStorageOptions(remoteSource: RemoteSourceDescriptor) =
     remoteSource.credential match {
@@ -132,4 +81,9 @@ object FileSystemsHolder extends LazyLogging {
       case _ => StorageOptions.newBuilder().build()
     }
 
+  def pathFromUri(uri: URI): String =
+    if (uri.getScheme == schemeS3) {
+      // There are several s3 uri styles. Normalize, then drop bucket name (and handle leading slash)
+      "/" + S3FileSystemProvider.resolveShortcutHost(uri).getPath.split("/").drop(2).mkString("/")
+    } else uri.getPath
 }

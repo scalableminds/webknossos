@@ -9,10 +9,7 @@ import java.nio.file.{FileSystem, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class RemoteSourceDescriptor(uri: URI, credential: Option[FileSystemCredential]) {
-  def username: Option[String] = credential.flatMap(_.usernameOpt)
-  def password: Option[String] = credential.flatMap(_.passwordOpt)
-}
+case class RemoteSourceDescriptor(uri: URI, credential: Option[FileSystemCredential])
 
 class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient) {
 
@@ -21,7 +18,7 @@ class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCl
       credentialBox <- credentialFor(magLocator: MagLocator).futureBox
       remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)
       remotePath = FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
-        fileSystem.getPath(remoteSource.uri.getPath)
+        fileSystem.getPath(FileSystemsHolder.pathFromUri(remoteSource.uri))
       }
     } yield remotePath
 

@@ -14,7 +14,7 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
 
   private val uri: URI = path.asInstanceOf[HttpsPath].toUri
   private val response =
-    path.getBasicAuthCredentials.map { credentials =>
+    path.getBasicAuthCredential.map { credentials =>
       Http(uri.toString)
         .timeout(connTimeoutMs = 5000, readTimeoutMs = 30000)
         .auth(credentials.user, credentials.password)

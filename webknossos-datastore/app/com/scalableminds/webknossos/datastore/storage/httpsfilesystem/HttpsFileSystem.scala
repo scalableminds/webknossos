@@ -1,14 +1,28 @@
 package com.scalableminds.webknossos.datastore.storage.httpsfilesystem
 
+import com.scalableminds.webknossos.datastore.storage.HttpBasicAuthCredential
+
 import java.net.URI
 import java.nio.file._
 import java.nio.file.attribute.UserPrincipalLookupService
 import java.nio.file.spi.FileSystemProvider
 import java.{lang, util}
 
+object HttpsFileSystem {
+  def forUri(uri: URI, credential: Option[HttpBasicAuthCredential] = None): HttpsFileSystem = {
+    val provider = new HttpsFileSystemProvider
+
+    // TODO cache
+
+    val fileSystem = new HttpsFileSystem(provider, uri, credential)
+    fileSystem
+  }
+
+}
+
 class HttpsFileSystem(provider: HttpsFileSystemProvider,
                       uri: URI,
-                      basicAuthCredentials: Option[HttpsBasicAuthCredentials] = None)
+                      basicAuthCredential: Option[HttpBasicAuthCredential] = None)
     extends FileSystem {
   override def provider(): FileSystemProvider = provider
 
@@ -35,7 +49,7 @@ class HttpsFileSystem(provider: HttpsFileSystemProvider,
 
   override def newWatchService(): WatchService = ???
 
-  def getKey: String = provider.fileSystemKey(uri, basicAuthCredentials)
+  def getKey: String = provider.fileSystemKey(uri, basicAuthCredential)
 
-  def getBasicAuthCredentials: Option[HttpsBasicAuthCredentials] = basicAuthCredentials
+  def getBasicAuthCredential: Option[HttpBasicAuthCredential] = basicAuthCredential
 }

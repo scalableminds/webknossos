@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// @noflow
-/* eslint-disable import/no-extraneous-dependencies, prefer-template, prefer-arrow-callback */
 const program = require("commander");
 const randomstring = require("randomstring");
 const execSync = require("child_process").execSync;
@@ -14,7 +12,7 @@ const POSTGRES_URL =
   typeof process.env.POSTGRES_URL !== "undefined"
     ? process.env.POSTGRES_URL
     : "jdbc:postgresql://localhost/webknossos";
-const envWithPostgresPwd = Object.assign({}, process.env, {
+const envWithPostgresPassword = Object.assign({}, process.env, {
   PGPASSWORD: "postgres",
 });
 const scriptdir = __dirname;
@@ -37,7 +35,7 @@ function dump(parameter) {
 
     console.log("Creating DB " + dbName);
     execSync("psql -U postgres -h " + dbHost + " -c 'CREATE DATABASE " + dbName + ";'", {
-      env: envWithPostgresPwd,
+      env: envWithPostgresPassword,
     });
     try {
       loadDataIntoDB(parameter, dbHost, dbName);
@@ -48,7 +46,7 @@ function dump(parameter) {
     } finally {
       console.log("CLEANUP: DROP DATABASE " + dbName);
       execSync("psql -U postgres -h " + dbHost + " -c 'DROP DATABASE " + dbName + ";'", {
-        env: envWithPostgresPwd,
+        env: envWithPostgresPassword,
       });
     }
   }
@@ -89,7 +87,7 @@ function loadDataIntoDB(parameter, dbHost, dbName) {
   // prettier-ignore
   execSync(
     "psql -U postgres -h " + dbHost + " --dbname='" + dbName + "' -v ON_ERROR_STOP=ON -q " + concatenateFileNames,
-    { env: envWithPostgresPwd }
+    { env: envWithPostgresPassword }
   );
 }
 

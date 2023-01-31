@@ -699,6 +699,7 @@ function* createGetUnmappedDataValueFn(
       fallbackLayerName,
       nodePosition,
       V3.add(nodePosition, mag),
+      mag,
     );
 
     return Number(new TypedArrayClass(buffer)[0]);

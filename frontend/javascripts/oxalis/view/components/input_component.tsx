@@ -3,11 +3,36 @@ import * as React from "react";
 import _ from "lodash";
 import TextArea, { TextAreaProps } from "antd/lib/input/TextArea";
 
-export type InputComponentProps = InputProps &
-  TextAreaProps & {
-    title?: React.ReactNode;
-    isTextArea?: boolean;
-  };
+export type InputComponentProps = InputComponentCommonProps &
+  (InputElementProps | TextAreaElementProps);
+
+export type InputComponentCommonProps = {
+  value: React.InputHTMLAttributes<HTMLInputElement>["value"];
+  title?: React.ReactNode;
+  style?: React.InputHTMLAttributes<HTMLInputElement>["style"];
+  placeholder?: React.InputHTMLAttributes<HTMLInputElement>["placeholder"];
+  disabled?: React.InputHTMLAttributes<HTMLInputElement>["disabled"];
+  size?: InputProps["size"];
+};
+
+export type InputElementProps = {
+  // The discriminated union
+  isTextArea?: false;
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onFocus?: React.FocusEventHandler<HTMLInputElement>;
+  onPressEnter?: React.KeyboardEventHandler<HTMLInputElement>;
+};
+
+type TextAreaElementProps = {
+  isTextArea: true;
+  autoSize: TextAreaProps["autoSize"];
+  rows: TextAreaProps["rows"];
+  onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
+  onBlur?: React.FocusEventHandler<HTMLTextAreaElement>;
+  onFocus?: React.FocusEventHandler<HTMLTextAreaElement>;
+  onPressEnter?: React.KeyboardEventHandler<HTMLTextAreaElement>;
+};
 
 type InputComponentState = {
   isFocused: boolean;
@@ -26,8 +51,6 @@ type InputComponentState = {
 class InputComponent extends React.PureComponent<InputComponentProps, InputComponentState> {
   static defaultProps: InputComponentProps = {
     onChange: _.noop,
-    onFocus: _.noop,
-    onBlur: _.noop,
     onPressEnter: undefined,
     placeholder: "",
     value: "",
@@ -96,19 +119,31 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
 
   render() {
     const { isTextArea, onPressEnter, title, style, ...inputProps } = this.props;
-    const InputComponentType: typeof TextArea | typeof Input = isTextArea ? TextArea : Input;
-    const input = (
-      <InputComponentType
+    // const InputComponentType: typeof TextArea | typeof Input = isTextArea ? TextArea : Input;
+    const input = isTextArea ? (
+      <TextArea
         {...inputProps}
         style={title == null ? style : undefined}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
-        onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
+        onPressEnter={onPressEnter}
+        onKeyDown={this.blurOnEscape}
+      />
+    ) : (
+      <Input
+        {...inputProps}
+        style={title == null ? style : undefined}
+        onChange={this.handleChange}
+        onFocus={this.handleFocus}
+        onBlur={this.handleBlur}
+        value={this.state.currentValue}
+        onPressEnter={onPressEnter}
         onKeyDown={this.blurOnEscape}
       />
     );
+
     // The input needs to be wrapped in a span in order for the tooltip to work. See https://github.com/react-component/tooltip/issues/18#issuecomment-140078802.
     return title != null ? (
       <Tooltip title={title} style={style}>

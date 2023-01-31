@@ -129,7 +129,6 @@ class DatasetPositionView extends PureComponent<Props> {
           </Tooltip>
           <Vector3Input
             value={position}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(position: Vector3) => void' is not assignab... Remove this comment to see the full error message
             onChange={this.handleChangePosition}
             autoSize
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ textAlign: string; }' is not assignable to... Remove this comment to see the full error message
@@ -159,7 +158,6 @@ class DatasetPositionView extends PureComponent<Props> {
             </Tooltip>
             <Vector3Input
               value={rotation}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(rotation: Vector3) => void' is not assignab... Remove this comment to see the full error message
               onChange={this.handleChangeRotation}
               style={{
                 textAlign: "center",

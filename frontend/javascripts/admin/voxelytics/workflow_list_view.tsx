@@ -6,7 +6,6 @@ import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
   VoxelyticsWorkflowListingRun,
   VoxelyticsRunState,
-  VoxelyticsTaskInfo,
   VoxelyticsWorkflowListing,
 } from "types/api_flow_types";
 import { usePolling } from "libs/react_hooks";

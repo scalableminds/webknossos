@@ -64,9 +64,10 @@ import type {
   ShortLink,
   VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
+  VoxelyticsLogLine,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
@@ -2399,11 +2400,24 @@ export function getVoxelyticsWorkflow(
 export function getVoxelyticsLogs(
   runId: string,
   taskName: string | null,
-  minLevel: string,
-): Promise<Array<{}>> {
-  const params = new URLSearchParams({ runId, minLevel });
+  minLevel: LOG_LEVELS,
+  startTime: Date,
+  endTime: Date,
+  limit: number | null = null,
+): Promise<Array<VoxelyticsLogLine>> {
+  // Data is fetched with the limit from the end backward, i.e. the latest data is fetched first.
+  // The data is still ordered chronologically, i.e. ascending timestamps.
+  const params = new URLSearchParams({
+    runId,
+    minLevel,
+    startTimestamp: startTime.getTime().toString(),
+    endTimestamp: endTime.getTime().toString(),
+  });
   if (taskName != null) {
     params.append("taskName", taskName);
+  }
+  if (limit != null) {
+    params.append("limit", limit.toString());
   }
   return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }

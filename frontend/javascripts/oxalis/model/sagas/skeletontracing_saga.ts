@@ -35,7 +35,6 @@ import {
   deleteBranchPointAction,
   setTreeNameAction,
   addTreesAndGroupsAction,
-  deleteTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   generateTreeName,

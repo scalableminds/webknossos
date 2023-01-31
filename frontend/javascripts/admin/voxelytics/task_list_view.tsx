@@ -37,7 +37,6 @@ import {
   VoxelyticsTaskInfo,
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import {
   formatDateMedium,
   formatDistance,
@@ -47,6 +46,9 @@ import {
 import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
+import { addAfterPadding, addBeforePadding } from "./utils";
+import { LOG_LEVELS } from "oxalis/constants";
+import { getVoxelyticsLogs } from "admin/admin_rest_api";
 
 const { Panel } = Collapse;
 const { Search } = Input;
@@ -265,6 +267,8 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
+  const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
+
   useEffect(() => {
     setExpandedTasks([highlightedTask]);
     handleFocusTask(highlightedTask);
@@ -328,9 +332,9 @@ export default function TaskListView({
   }
 
   function copyAllArtifactPaths() {
-    const artifactPaths = Object.values(report.artifacts)
-      .map((artifactObject) => Object.values(artifactObject).map((artifact) => artifact.path))
-      .flat();
+    const artifactPaths = Object.values(report.artifacts).flatMap((artifactObject) =>
+      Object.values(artifactObject).map((artifact) => artifact.path),
+    );
 
     navigator.clipboard.writeText(artifactPaths.join("\n")).then(
       () => notification.success({ message: "All artifacts path were copied to the clipboard" }),
@@ -359,27 +363,43 @@ export default function TaskListView({
       );
       a.download = `${report.workflow.name}.yaml`;
       a.click();
-    } catch (error) {
+    } catch (_error) {
       message.error("Could not find YAML file for download.");
     }
   }
 
   async function downloadLog() {
     try {
-      if (runId == null) {
+      if (singleRunId == null) {
         message.error("Please select a specific run for log download.");
         return;
       }
-      const logText = (await getVoxelyticsLogs(runId, null, "DEBUG"))
-        .map((line: any) =>
-          formatLog(line, { timestamps: true, pid: true, level: true, logger: true }),
+      const singleRun = report.runs.find((r) => r.id === singleRunId);
+      const beginTime = singleRun?.beginTime;
+      const endTime = singleRun?.endTime ?? new Date();
+
+      if (beginTime == null) {
+        message.error("Run hasn't started yet.");
+        return;
+      }
+
+      const logText = (
+        await getVoxelyticsLogs(
+          singleRunId,
+          null,
+          LOG_LEVELS.DEBUG,
+          addBeforePadding(beginTime),
+          addAfterPadding(endTime),
         )
+      )
+        .map((line) => formatLog(line, { timestamps: true, pid: true, level: true, logger: true }))
         .join("\n");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([logText], { type: "plain/text" }));
-      a.download = `${report.workflow.hash}_${runId}.log`;
+      a.download = `${report.workflow.hash}_${singleRunId}.log`;
       a.click();
     } catch (error) {
+      console.error(error);
       message.error("Could not fetch log for download.");
     }
   }
@@ -397,8 +417,14 @@ export default function TaskListView({
       <Menu.Item key="3" onClick={downloadWorkflowYAML}>
         Download Workflow YAML
       </Menu.Item>
-      <Menu.Item key="4" onClick={downloadLog} disabled={runId == null}>
-        Download Log
+      <Menu.Item key="4" onClick={downloadLog} disabled={singleRunId == null}>
+        {singleRunId == null ? (
+          <Tooltip title="Please select a specific run for log download.">
+            <div>Download Log</div>
+          </Tooltip>
+        ) : (
+          "Download Log"
+        )}
       </Menu.Item>
     </Menu>
   );
@@ -495,7 +521,7 @@ export default function TaskListView({
         <TaskView
           taskName={task.taskName}
           workflowHash={report.workflow.hash}
-          runId={runId}
+          runId={singleRunId}
           task={task}
           artifacts={report.artifacts[task.taskName] || []}
           dag={report.dag}

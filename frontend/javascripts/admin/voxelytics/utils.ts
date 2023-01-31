@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { VoxelyticsRunState } from "types/api_flow_types";
 
 export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
+const LOG_TIME_PADDING = 60 * 1000; // 1 minute
 
 export type Result<T> =
   | {
@@ -62,4 +63,12 @@ export function isObjectEmpty(obj: Record<string, any>) {
 export async function copyToClipboad(text: string) {
   await navigator.clipboard.writeText(text);
   message.success("Copied to clipboard");
+}
+
+export function addBeforePadding(date: Date): Date {
+  return new Date(date.getTime() - LOG_TIME_PADDING);
+}
+
+export function addAfterPadding(date: Date): Date {
+  return new Date(date.getTime() + LOG_TIME_PADDING);
 }

@@ -43,7 +43,7 @@ test.serial(
     try {
       await runSaga({}, processTaskWithPool, tasks, 1).toPromise();
       t.fail("processTaskWithPool should fail");
-    } catch (exception) {
+    } catch (_exception) {
       t.deepEqual(protocol, [1]);
     }
   },

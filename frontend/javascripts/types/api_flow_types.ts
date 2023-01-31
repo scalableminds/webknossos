@@ -7,7 +7,7 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
+import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
@@ -937,6 +937,29 @@ export type VoxelyticsChunkStatistics = {
   cpuUser: Statistics | null;
   cpuSystem: Statistics | null;
   duration: Statistics | null;
+};
+
+export type VoxelyticsLogLine = {
+  func_name: string;
+  host: string;
+  level: LOG_LEVELS;
+  line: number;
+  logger_name: string;
+  message: string;
+  path: string;
+  pgid: number;
+  pid: number;
+  process_name: string;
+  program: string;
+  thread_name: string;
+  timestamp: number;
+  user: string;
+  vx_run_name: string;
+  vx_task_name: string;
+  vx_version: string;
+  vx_workflow_hash: string;
+  wk_org: string;
+  wk_url: string;
 };
 
 // Backend type

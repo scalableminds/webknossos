@@ -6,6 +6,7 @@ import { location } from "libs/window";
 import Constants, { ViewModeValues } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import update from "immutability-helper";
+
 test("UrlManager should replace tracing in url", (t) => {
   // Without annotationType (Explorational and Task don't appear in the URL)
   t.is(
@@ -35,6 +36,7 @@ test("UrlManager should replace tracing in url", (t) => {
     "abc/def/annotations/CompoundProject/newAnnotationId/readOnly",
   );
 });
+
 test("UrlManager should parse full csv url hash", (t) => {
   const state = {
     position: [555, 278, 482],
@@ -52,6 +54,7 @@ test("UrlManager should parse full csv url hash", (t) => {
   ].join(",")}`;
   t.deepEqual(UrlManager.parseUrlHash(), state);
 });
+
 test("UrlManager should parse csv url hash without optional values", (t) => {
   const state = {
     position: [555, 278, 482],
@@ -60,6 +63,7 @@ test("UrlManager should parse csv url hash without optional values", (t) => {
     rotation: [40.45, 13.65, 0.8],
     activeNode: 2,
   };
+  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { rotation, ...stateWithoutRotation } = state;
   location.hash = `#${[
     ...state.position,
@@ -68,6 +72,7 @@ test("UrlManager should parse csv url hash without optional values", (t) => {
     state.activeNode,
   ].join(",")}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation);
+  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { activeNode, ...stateWithoutActiveNode } = state;
   location.hash = `#${[
     ...state.position,
@@ -82,6 +87,7 @@ test("UrlManager should parse csv url hash without optional values", (t) => {
   )}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutOptionalValues);
 });
+
 test("UrlManager should build csv url hash and parse it again", (t) => {
   const mode = Constants.MODE_ARBITRARY;
   const urlState = {
@@ -101,6 +107,7 @@ test("UrlManager should build csv url hash and parse it again", (t) => {
   location.hash = `#${hash}`;
   t.deepEqual(UrlManager.parseUrlHash(), urlState);
 });
+
 test("UrlManager should parse url hash with comment links", (t) => {
   const state = {
     position: [555, 278, 482],
@@ -114,6 +121,7 @@ test("UrlManager should parse url hash with comment links", (t) => {
     });
   }
 });
+
 test("UrlManager should parse json url hash", (t) => {
   const state = {
     position: [555, 278, 482],
@@ -125,6 +133,7 @@ test("UrlManager should parse json url hash", (t) => {
   location.hash = `#${encodeUrlHash(JSON.stringify(state))}`;
   t.deepEqual(UrlManager.parseUrlHash(), state);
 });
+
 test("UrlManager should parse incomplete json url hash", (t) => {
   const state = {
     position: [555, 278, 482],
@@ -133,13 +142,16 @@ test("UrlManager should parse incomplete json url hash", (t) => {
     rotation: [40.45, 13.65, 0.8],
     activeNode: 2,
   };
+  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { rotation, ...stateWithoutRotation } = state;
   location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutRotation))}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation);
+  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { activeNode, ...stateWithoutActiveNode } = state;
   location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutActiveNode))}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutActiveNode);
 });
+
 test("UrlManager should build json url hash and parse it again", (t) => {
   const mode = Constants.MODE_ARBITRARY;
   const urlState = {
@@ -159,6 +171,7 @@ test("UrlManager should build json url hash and parse it again", (t) => {
   location.hash = `#${hash}`;
   t.deepEqual(UrlManager.parseUrlHash(), urlState);
 });
+
 test("UrlManager should build default url in csv format", (t) => {
   UrlManager.initialize();
   const url = UrlManager.buildUrl();

@@ -1,4 +1,3 @@
-import type { Dispatch } from "redux";
 import { createStore, applyMiddleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { Saga } from "redux-saga";

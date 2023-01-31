@@ -610,7 +610,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         const dataSource = JSON.parse(form.getFieldValue("dataSourceJson"));
         const didNotEditDatasource = !this.didDatasourceChange(dataSource);
         return didNotEditDatasource;
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     }
@@ -768,7 +768,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     );
   }
 
-  onValuesChange = (changedValues: FormData, allValues: FormData) => {
+  onValuesChange = (_changedValues: FormData, _allValues: FormData) => {
     this.setState({
       hasUnsavedChanges: true,
     });

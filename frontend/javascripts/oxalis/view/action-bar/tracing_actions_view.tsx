@@ -123,7 +123,6 @@ export function LayoutMenu(props: LayoutMenuProps) {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
-    setCurrentLayout,
     ...others
   } = props;
   const layoutMissingHelpTitle = (

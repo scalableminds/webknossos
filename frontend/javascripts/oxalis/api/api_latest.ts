@@ -66,7 +66,6 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
-  getDatasetResolutionInfo,
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
@@ -1552,7 +1551,7 @@ class DataApi {
     resolution?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName).resolutions);
+    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
     resolution = resolution || resolutionInfo.getLowestResolution();
 
     const magString = resolution.join("-");

@@ -10,6 +10,7 @@ const evolutionsPath = path.resolve(path.join(__dirname, "..", "..", "conf", "ev
 const PG_CONFIG = (() => {
   let rawUrl = process.env.POSTGRES_URL || "postgres://postgres:postgres@127.0.0.1:5432/webknossos";
   if (rawUrl.startsWith("jdbc:")) {
+    console.log(rawUrl);
     rawUrl = rawUrl.substring(5);
     const url = new URL(rawUrl);
     url.username = url.searchParams.get("user");

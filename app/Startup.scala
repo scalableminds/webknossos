@@ -69,9 +69,9 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private lazy val postgresUrl = {
-    val uri = new URIBuilder(conf.Slick.DB.url)
+    val uri = new URIBuilder(conf.Slick.DB.url.substring(5))
     uri.setUserInfo(conf.Slick.DB.user, conf.Slick.DB.password)
-    uri.toString()
+    uri.build().toString
   }
 
   if (conf.Slick.checkSchemaOnStartup) {
@@ -104,7 +104,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresDatabase(): Unit = {
-    logger.info(s"Setting up database ${conf.Slick.DB.url}")
+    logger.info(s"Setting up database $postgresUrl")
     val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
 
     // this script is copied to the stage directory in AssetCompilation

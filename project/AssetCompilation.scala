@@ -119,8 +119,8 @@ object AssetCompilation {
           "Ensuring Postgres DB is running for Slick code generation..."
         )
         startProcess(
-          (baseDirectoryValue / "tools" / "postgres" / "ensure_db.sh").toString,
-          List(),
+          (baseDirectoryValue / "tools" / "postgres" / "dbtool.js").toString,
+          List("ensure-db"),
           baseDirectoryValue
         ) ! streamsValue.log
 

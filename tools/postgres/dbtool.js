@@ -15,6 +15,7 @@ const PG_CONFIG = (() => {
   const url = new URL(rawUrl);
   const urlWithoutDatabase = new URL(url);
   urlWithoutDatabase.pathname = "";
+  console.log(url, urlWithoutDatabase);
   return {
     url: url.toString(),
     urlWithoutDatabase: urlWithoutDatabase.toString(),

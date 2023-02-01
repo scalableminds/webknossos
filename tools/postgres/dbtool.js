@@ -330,7 +330,7 @@ function assertUniqueEvolutionNumbers() {
   console.log("✨✨ All evolution numbers are unique");
 }
 
-program.name("database-tool").description("Tool for managing the WEBKNOSSOS database");
+program.name("dbtool").description("Tool for managing the WEBKNOSSOS database");
 
 program
   .command("drop-db")

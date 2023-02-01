@@ -58,7 +58,7 @@ object Dependencies {
     "com.typesafe.slick" %% "slick" % "3.3.3",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
     "com.typesafe.slick" %% "slick-codegen" % "3.3.3",
-    "org.postgresql" % "postgresql" % "42.3.6"
+    "org.postgresql" % "postgresql" % "42.5.2"
   )
 
   val utilDependencies: Seq[ModuleID] = Seq(
@@ -118,8 +118,6 @@ object Dependencies {
     silhouetteTestkit,
     silhouetteCrypto,
     specs2 % Test,
-    trireme,
-    triremeNode,
     xmlWriter,
     woodstoxXml,
     jwt

@@ -8,9 +8,17 @@ const schemaPath = path.join(__dirname, "schema.sql");
 const evolutionsPath = path.resolve(path.join(__dirname, "..", "..", "conf", "evolutions"));
 
 const PG_CONFIG = (() => {
-  const url = new URL(
-    process.env.POSTGRES_URL || "postgres://postgres:postgres@127.0.0.1:5432/webknossos",
-  );
+  let rawUrl = process.env.POSTGRES_URL || "postgres://postgres:postgres@127.0.0.1:5432/webknossos";
+  if (rawUrl.startsWith("jdbc:")) {
+    rawUrl = rawUrl.substring(5);
+    const url = new URL(rawUrl);
+    url.username = url.searchParams.get("user");
+    url.password = url.searchParams.get("password");
+    url.searchParams.delete("user");
+    url.searchParams.delete("password");
+    rawUrl = url.toString();
+  }
+  const url = new URL(rawUrl);
   const urlWithoutDatabase = new URL(url);
   urlWithoutDatabase.pathname = "";
   return {
@@ -110,7 +118,7 @@ function prepareTestDb() {
 }
 
 function refreshSchema() {
-  console.log(safePsqlSpawn([PG_CONFIG.url, "-f", schemaPath]));
+  console.log(safePsqlSpawn([PG_CONFIG.url, "-v", "ON_ERROR_STOP=ON", "-f", schemaPath]));
 }
 
 function dumpSchema(databaseUrl, schemaDir, silent = false) {

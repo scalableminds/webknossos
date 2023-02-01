@@ -85,7 +85,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
     val capturingProcessLogger =
       ProcessLogger((o: String) => errorMessageBuilder.append(o), (e: String) => logger.error(e))
 
-    val result = "./tools/postgres/dbtool.js check-db-schema" ! capturingProcessLogger
+    val result = Process("./tools/postgres/dbtool.js check-db-schema", None, "POSTGRES_URL" -> conf.Slick.DB.url) ! capturingProcessLogger
     if (result == 0) {
       logger.info("Database schema is up to date.")
     } else {
@@ -96,11 +96,11 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresDatabase(): Unit = {
-    logger.info("Running ensure-db with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
+    logger.info(s"Setting up database ${conf.Slick.DB.url}")
     val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
 
     // this script is copied to the stage directory in AssetCompilation
-    val result = "./tools/postgres/dbtool.js ensure-db" ! processLogger
+    val result = Process("./tools/postgres/dbtool.js ensure-db", None, "POSTGRES_URL" -> conf.Slick.DB.url) ! processLogger
     if (result != 0)
       throw new Exception("Could not ensure Postgres database. Is postgres installed?")
 

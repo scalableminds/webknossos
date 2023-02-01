@@ -24,8 +24,8 @@ const PG_CONFIG = (() => {
   return {
     url: url.toString(),
     urlWithoutDatabase: urlWithoutDatabase.toString(),
-    username: url.username !== "" ? url.username : "postgres",
-    password: url.password !== "" ? url.password : "postgres",
+    username: url.username !== "" && url.username != null ? url.username : "postgres",
+    password: url.password !== "" && url.password != null ? url.password : "postgres",
     hostname: url.hostname,
     port: url.port !== "" ? url.port : 5432,
     database: url.pathname.length > 1 ? url.pathname.substring(1) : "webknossos",

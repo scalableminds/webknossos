@@ -4,6 +4,7 @@ import controllers.InitialDataService
 import models.annotation.AnnotationDAO
 import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
+import org.apache.http.client.utils.URIBuilder
 import oxalis.cleanup.CleanUpService
 import oxalis.files.TempFileService
 import oxalis.mail.{Mailer, MailerConfig}
@@ -67,6 +68,12 @@ class Startup @Inject()(actorSystem: ActorSystem,
     }
   }
 
+  private lazy val postgresUrl = {
+    val uri = new URIBuilder(conf.Slick.DB.url)
+    uri.setUserInfo(conf.Slick.DB.user, conf.Slick.DB.password)
+    uri.toString()
+  }
+
   if (conf.Slick.checkSchemaOnStartup) {
     ensurePostgresDatabase()
   }
@@ -81,11 +88,12 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   private def ensurePostgresSchema(): Unit = {
     logger.info("Checking database schema")
+
     val errorMessageBuilder = mutable.ListBuffer[String]()
     val capturingProcessLogger =
       ProcessLogger((o: String) => errorMessageBuilder.append(o), (e: String) => logger.error(e))
 
-    val result = Process("./tools/postgres/dbtool.js check-db-schema", None, "POSTGRES_URL" -> conf.Slick.DB.url) ! capturingProcessLogger
+    val result = Process("./tools/postgres/dbtool.js check-db-schema", None, "POSTGRES_URL" -> postgresUrl) ! capturingProcessLogger
     if (result == 0) {
       logger.info("Database schema is up to date.")
     } else {
@@ -100,7 +108,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
     val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
 
     // this script is copied to the stage directory in AssetCompilation
-    val result = Process("./tools/postgres/dbtool.js ensure-db", None, "POSTGRES_URL" -> conf.Slick.DB.url) ! processLogger
+    val result = Process("./tools/postgres/dbtool.js ensure-db", None, "POSTGRES_URL" -> postgresUrl) ! processLogger
     if (result != 0)
       throw new Exception("Could not ensure Postgres database. Is postgres installed?")
 

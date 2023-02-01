@@ -1,5 +1,7 @@
 FROM eclipse-temurin:11
-RUN curl -fsSL https://deb.nodesource.com/setup_19.x | bash - \
+ARG VERSION_NODE="16.x"
+
+RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
   && apt-get -y install libblosc1 postgresql-client git nodejs \
   && rm -rf /var/lib/apt/lists/*
 

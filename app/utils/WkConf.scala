@@ -206,6 +206,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object DB {
       val url: String = get[String]("slick.db.url")
+      val user: String = get[String]("slick.db.user")
+      val password: String = get[String]("slick.db.password")
     }
 
     val children = List(DB)

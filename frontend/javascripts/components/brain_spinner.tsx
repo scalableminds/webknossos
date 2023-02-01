@@ -38,17 +38,7 @@ export default function BrainSpinner({ message, isLoading = true }: Props) {
               }}
             />
           ) : null}
-          {message != null ? (
-            <div
-              style={{
-                marginLeft: "auto",
-                marginRight: "auto",
-                marginTop: 30,
-              }}
-            >
-              {message}
-            </div>
-          ) : null}
+          {message}
         </div>
       </div>
     </div>
@@ -67,9 +57,6 @@ export function BrainSpinnerWithError({
   const switchToOwningOrganizationButton = (
     <AsyncButton
       type="primary"
-      style={{
-        marginRight: 26,
-      }}
       onClick={async () => {
         if (organizationToSwitchTo != null) {
           await switchToOrganization(organizationToSwitchTo.name);
@@ -87,25 +74,22 @@ export function BrainSpinnerWithError({
   return (
     <BrainSpinner
       message={
-        <div
-          style={{
-            textAlign: "center",
-          }}
-        >
-          {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
-          <br />
-          <div
-            style={{
-              marginTop: 16,
-              display: "inline-block",
-            }}
-          >
-            {organizationToSwitchTo != null ? switchToOwningOrganizationButton : null}
-            <Link to="/">
+        <>
+          <div style={{ textAlign: "center" }}>
+            {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
+          </div>
+          {organizationToSwitchTo != null ? <div>{switchToOwningOrganizationButton}</div> : null}
+          <div>
+            <Link
+              to="/"
+              style={{
+                marginTop: 16,
+              }}
+            >
               <Button type="primary">Return to dashboard</Button>
             </Link>
           </div>
-        </div>
+        </>
       }
       isLoading={false}
     />

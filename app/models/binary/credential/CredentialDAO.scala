@@ -49,7 +49,7 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         r._Organization
       )
 
-  private def parseAsGCSCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
+  private def parseAsGoogleServiceAccountCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
     for {
       secret <- r.secret.toFox
       secretJson <- tryo(Json.parse(secret)).toFox
@@ -70,7 +70,7 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                       values(${_id}, ${CredentialType.S3_Access_Key}, ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.user}, ${credential.organization})""".asUpdate)
+                       values(${_id}, ${CredentialType.S3_Access_Key}, ${credential.name}, ${credential.accessKeyId}, ${credential.secretAccessKey}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: GoogleServiceAccountCredential): Fox[Unit] =
@@ -90,6 +90,6 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     r.`type` match {
       case "HTTP_Basic_Auth" => parseAsHttpBasicAuthCredential(r)
       case "S3_Access_Key"   => parseAsS3AccessKeyCredential(r)
-      case "GCS"             => parseAsGCSCredential(r) // TODO type should be enum
+      case "GCS"             => parseAsGoogleServiceAccountCredential(r)
     }
 }

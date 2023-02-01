@@ -40,6 +40,7 @@ object FileSystemsHolder extends LazyLogging {
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")
       }
+      logger.info(s"Successfully created file system for ${remoteSource.uri.toString}")
       Some(fs)
     } catch {
       case e: Exception =>
@@ -57,7 +58,11 @@ object FileSystemsHolder extends LazyLogging {
   private def getAmazonS3FileSystem(remoteSource: RemoteSourceDescriptor): FileSystem =
     remoteSource.credential match {
       case Some(credential: S3AccessKeyCredential) =>
-        S3FileSystem.forUri(remoteSource.uri, credential.keyId, credential.key)
+        S3FileSystem.forUri(remoteSource.uri, credential.accessKeyId, credential.secretAccessKey)
+      case Some(credential: LegacyFileSystemCredential) =>
+        S3FileSystem.forUri(remoteSource.uri,
+                            credential.toS3AccessKey.accessKeyId,
+                            credential.toS3AccessKey.secretAccessKey)
       case _ =>
         S3FileSystem.forUri(remoteSource.uri)
     }
@@ -66,6 +71,8 @@ object FileSystemsHolder extends LazyLogging {
     remoteSource.credential match {
       case Some(credential: HttpBasicAuthCredential) =>
         HttpsFileSystem.forUri(remoteSource.uri, Some(credential))
+      case Some(credential: LegacyFileSystemCredential) =>
+        HttpsFileSystem.forUri(remoteSource.uri, Some(credential.toBasicAuth))
       case _ =>
         HttpsFileSystem.forUri(remoteSource.uri)
     }

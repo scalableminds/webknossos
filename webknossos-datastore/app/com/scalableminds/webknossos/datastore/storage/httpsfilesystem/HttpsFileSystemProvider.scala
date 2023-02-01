@@ -7,16 +7,11 @@ import java.nio.file.spi.FileSystemProvider
 import java.nio.file._
 import java.util
 import java.util.concurrent.ConcurrentHashMap
-import com.google.common.collect.ImmutableMap
 import com.scalableminds.webknossos.datastore.storage.HttpBasicAuthCredential
 import com.typesafe.scalalogging.LazyLogging
 
-class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
-  protected val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]
-
-  override def getScheme: String = "https" // Note that it will also handle http if called with one
-
-  override def newFileSystem(uri: URI, env: util.Map[String, _]): FileSystem = ???
+object HttpsFileSystemProvider {
+  val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]
 
   def fileSystemKey(uri: URI, basicAuthCredentials: Option[HttpBasicAuthCredential]): String = {
     val uriWithUser = basicAuthCredentials.map { c =>
@@ -24,16 +19,17 @@ class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
     }.getOrElse(uri)
     uriWithUser.toString
   }
+}
 
-  override def getFileSystem(uri: URI): FileSystem = {
-    val key = fileSystemKey(uri, None)
-    if (fileSystems.containsKey(key)) {
-      fileSystems.get(key)
-    } else this.newFileSystem(uri, ImmutableMap.builder[String, Any].build())
-  }
+class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
 
-  override def getPath(uri: URI): Path =
-    getFileSystem(uri).getPath(uri.getPath)
+  override def getScheme: String = "https" // Note that it will also handle http if called with one
+
+  override def newFileSystem(uri: URI, env: util.Map[String, _]): FileSystem = ???
+
+  override def getFileSystem(uri: URI): FileSystem = ???
+
+  override def getPath(uri: URI): Path = ???
 
   override def newByteChannel(path: Path,
                               openOptions: util.Set[_ <: OpenOption],

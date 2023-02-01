@@ -15,7 +15,11 @@ object HttpBasicAuthCredential {
   implicit val jsonFormat: OFormat[HttpBasicAuthCredential] = Json.format[HttpBasicAuthCredential]
 }
 
-case class S3AccessKeyCredential(name: String, keyId: String, key: String, user: String, organization: String)
+case class S3AccessKeyCredential(name: String,
+                                 accessKeyId: String,
+                                 secretAccessKey: String,
+                                 user: String,
+                                 organization: String)
     extends FileSystemCredential
 
 object S3AccessKeyCredential {
@@ -29,7 +33,17 @@ object GoogleServiceAccountCredential {
   implicit val jsonFormat: OFormat[GoogleServiceAccountCredential] = Json.format[GoogleServiceAccountCredential]
 }
 
-case class LegacyFileSystemCredential(user: String, password: Option[String]) extends FileSystemCredential
+case class LegacyFileSystemCredential(user: String, password: Option[String]) extends FileSystemCredential {
+  def toBasicAuth: HttpBasicAuthCredential =
+    HttpBasicAuthCredential(name = "", username = user, password = password.getOrElse(""), user = "", organization = "")
+
+  def toS3AccessKey: S3AccessKeyCredential =
+    S3AccessKeyCredential(name = "",
+                          accessKeyId = user,
+                          secretAccessKey = password.getOrElse(""),
+                          user = "",
+                          organization = "")
+}
 
 object LegacyFileSystemCredential {
   implicit val jsonFormat: OFormat[LegacyFileSystemCredential] = Json.format[LegacyFileSystemCredential]

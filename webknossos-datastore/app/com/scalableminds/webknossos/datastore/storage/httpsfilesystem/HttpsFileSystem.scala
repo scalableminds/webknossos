@@ -10,12 +10,15 @@ import java.{lang, util}
 
 object HttpsFileSystem {
   def forUri(uri: URI, credential: Option[HttpBasicAuthCredential] = None): HttpsFileSystem = {
-    val provider = new HttpsFileSystemProvider
 
-    // TODO cache
-
-    val fileSystem = new HttpsFileSystem(provider, uri, credential)
-    fileSystem
+    val key = HttpsFileSystemProvider.fileSystemKey(uri, None)
+    if (HttpsFileSystemProvider.fileSystems.containsKey(key)) {
+      HttpsFileSystemProvider.fileSystems.get(key)
+    } else {
+      val fileSystem = new HttpsFileSystem(new HttpsFileSystemProvider, uri, credential)
+      HttpsFileSystemProvider.fileSystems.put(key, fileSystem)
+      fileSystem
+    }
   }
 
 }
@@ -49,7 +52,7 @@ class HttpsFileSystem(provider: HttpsFileSystemProvider,
 
   override def newWatchService(): WatchService = ???
 
-  def getKey: String = provider.fileSystemKey(uri, basicAuthCredential)
+  def getKey: String = HttpsFileSystemProvider.fileSystemKey(uri, basicAuthCredential)
 
   def getBasicAuthCredential: Option[HttpBasicAuthCredential] = basicAuthCredential
 }

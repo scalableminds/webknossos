@@ -112,7 +112,6 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
   render() {
     const iconStyle = {
       cursor: "pointer",
-      marginTop: 5
     };
     const margin = this.props.margin != null ? this.props.margin : "0 10px";
     const inputComponentProps: InputProps = {
@@ -125,14 +124,12 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       },
       size: "small",
       autoFocus: true,
-      // @ts-ignore
-      rows: this.props.rows,
     };
     const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-error)" } : {};
 
     if (this.state.isEditing) {
       return (
-        <span style={{ display: "inline-flex" }}>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>
           {this.props.rows === 1 ? (
             <React.Fragment>
               <Input {...inputComponentProps} onBlur={() => this.handleOnChange} />
@@ -163,6 +160,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           style={{
             margin,
             display: "inline-flex",
+            alignItems: "center",
           }}
           className={this.props.onClick != null ? "clickable-text" : undefined}
           onClick={this.props.onClick}

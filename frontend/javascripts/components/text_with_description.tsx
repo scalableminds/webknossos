@@ -10,7 +10,7 @@ type EditableProps = EditableTextLabelProp & {
   description: string;
 };
 type NonEditableProps = {
-  markdown?: boolean 
+  markdown?: boolean;
   isEditable: false;
   description: string;
   value: string;

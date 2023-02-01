@@ -41,6 +41,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where zarr-streamed datasets would produce (very rare) rendering errors. [#6782](https://github.com/scalableminds/webknossos/pull/6782)
 - Fixed a bug where publicly shared annotations were not viewable by users without an account. [#6784](https://github.com/scalableminds/webknossos/pull/6784)
 - Fixed that the proofreading tool allowed to split/merge with segment 0 which led to an inconsistent state. [#6793](https://github.com/scalableminds/webknossos/pull/6793)
+- Fixed some layouting issues with line breaks in segment list/dataset info tab [#6799](https://github.com/scalableminds/webknossos/pull/6799)
 
 ### Removed
 

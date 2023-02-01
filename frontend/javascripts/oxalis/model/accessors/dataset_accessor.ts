@@ -368,11 +368,19 @@ function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): Resol
 export const getResolutionInfoOfVisibleSegmentationLayer = memoizeOne(
   _getResolutionInfoOfVisibleSegmentationLayer,
 );
-export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
+export function getLayerByName(
+  dataset: APIDataset,
+  layerName: string,
+  alsoMatchFallbackLayer: boolean = false,
+): DataLayerType {
   const dataLayers = getDataLayers(dataset);
   const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
-  const layer = dataLayers.find((l) => l.name === layerName);
+  const layer = dataLayers.find(
+    (l) =>
+      l.name === layerName ||
+      (alsoMatchFallbackLayer && "fallbackLayer" in l && l.fallbackLayer === layerName),
+  );
 
   if (!layer) {
     throw new Error(`Layer "${layerName}" not found`);

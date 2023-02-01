@@ -87,9 +87,13 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     } yield parsed
 
   private def parseAnyCredential(r: CredentialsRow): Fox[FileSystemCredential] =
-    r.`type` match {
-      case "HTTP_Basic_Auth" => parseAsHttpBasicAuthCredential(r)
-      case "S3_Access_Key"   => parseAsS3AccessKeyCredential(r)
-      case "GCS"             => parseAsGoogleServiceAccountCredential(r)
-    }
+    for {
+      typeParsed <- CredentialType.fromString(r.`type`).toFox
+      parsed <- typeParsed match {
+        case CredentialType.HTTP_Basic_Auth => parseAsHttpBasicAuthCredential(r)
+        case CredentialType.S3_Access_Key   => parseAsS3AccessKeyCredential(r)
+        case CredentialType.GCS             => parseAsGoogleServiceAccountCredential(r)
+        case _                              => Fox.failure(s"Unknown credential type: ${r.`type`}")
+      }
+    } yield parsed
 }

@@ -150,10 +150,17 @@ class DSRemoteWebKnossosClient @Inject()(
           .getWithJsonResponse[AnnotationSource]
     )
 
-  def findCredential(credentialId: String): Fox[FileSystemCredential] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/findCredential")
-      .addQueryString("credentialId" -> credentialId)
-      .addQueryString("key" -> dataStoreKey)
-      .silent
-      .getWithJsonResponse[FileSystemCredential]
+  private lazy val credentialCache: AlfuFoxCache[String, FileSystemCredential] =
+    AlfuFoxCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
+
+  def getCredential(credentialId: String): Fox[FileSystemCredential] =
+    credentialCache.getOrLoad(
+      credentialId,
+      _ =>
+        rpc(s"$webKnossosUri/api/datastores/$dataStoreName/findCredential")
+          .addQueryString("credentialId" -> credentialId)
+          .addQueryString("key" -> dataStoreKey)
+          .silent
+          .getWithJsonResponse[FileSystemCredential]
+    )
 }

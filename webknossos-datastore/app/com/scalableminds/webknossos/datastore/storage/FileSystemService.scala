@@ -3,9 +3,10 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebKnossosClient
+import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
-import java.nio.file.{FileSystem, Path}
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -17,15 +18,14 @@ class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCl
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).futureBox
       remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)
-      remotePath = FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
-        fileSystem.getPath(FileSystemsHolder.pathFromUri(remoteSource.uri))
-      }
+      fileSystem <- FileSystemsHolder.getOrCreate(remoteSource) ?~> "Failed to set up remote file system"
+      remotePath <- tryo(fileSystem.getPath(FileSystemsHolder.pathFromUri(remoteSource.uri)))
     } yield remotePath
 
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[FileSystemCredential] =
     magLocator.credentialId match {
       case Some(credentialId) =>
-        dSRemoteWebKnossosClient.findCredential(credentialId)
+        dSRemoteWebKnossosClient.getCredential(credentialId)
       case None =>
         magLocator.credentials match {
           case Some(credential) => Fox.successful(credential)

@@ -3,14 +3,17 @@ package com.scalableminds.webknossos.datastore.storage
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.{CloudStorageConfiguration, CloudStorageFileSystem}
-import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.s3fs.{S3FileSystem, S3FileSystemProvider}
 import com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsFileSystem
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Full
 
 import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.file.FileSystem
+import scala.concurrent.ExecutionContext
 
 object FileSystemsHolder extends LazyLogging {
 
@@ -19,16 +22,16 @@ object FileSystemsHolder extends LazyLogging {
   val schemeHttp: String = "http"
   val schemeGS: String = "gs"
 
-  class FileSystemsCache(val maxEntries: Int) extends LRUConcurrentCache[RemoteSourceDescriptor, FileSystem]
-  private val fileSystemsCache = new FileSystemsCache(maxEntries = 100)
+  private val fileSystemsCache: AlfuFoxCache[RemoteSourceDescriptor, FileSystem] =
+    AlfuFoxCache(maxEntries = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 
-  def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
-    fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(create)
+  def getOrCreate(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[FileSystem] =
+    fileSystemsCache.getOrLoad(remoteSource, create)
 
-  def create(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
+  def create(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[FileSystem] = {
     val scheme = remoteSource.uri.getScheme
     try {
       val fs: FileSystem = if (scheme == schemeGS) {
@@ -41,11 +44,12 @@ object FileSystemsHolder extends LazyLogging {
         throw new Exception(s"Unknown file system scheme $scheme")
       }
       logger.info(s"Successfully created file system for ${remoteSource.uri.toString}")
-      Some(fs)
+      Fox.successful(fs)
     } catch {
       case e: Exception =>
-        logger.error(s"get file system errored for ${remoteSource.uri.toString}:", e)
-        None
+        val msg = s"get file system errored for ${remoteSource.uri.toString}:"
+        logger.error(msg, e)
+        Fox.failure(msg, Full(e))
     }
   }
 

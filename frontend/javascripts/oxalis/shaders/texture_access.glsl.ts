@@ -124,7 +124,7 @@ export const getColorForCoords: ShaderModule = {
       uvec4 compressedEntry = texelFetch(lookup_texture, ivec2(x, y), 0);
 
       <% if (!isFragment) { %>
-        pre_compressedEntry[globalLayerIndex] = compressedEntry;
+        outputCompressedEntry[globalLayerIndex] = compressedEntry;
       <% } %>
 
       uint compressedBytes = compressedEntry.a;
@@ -149,9 +149,13 @@ export const getColorForCoords: ShaderModule = {
     }
 
     float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress) {
+      // The fragment shader can read the entry that was
+      // calculated by the vertex shader. However, this won't always
+      // be precise because the triangles of the plane won't necessarily
+      // align with the bucket borders.
       <% if (isFragment) { %>
       {
-        uvec4 compressedEntry = pre_compressedEntry[globalLayerIndex];
+        uvec4 compressedEntry = outputCompressedEntry[globalLayerIndex];
 
         uint compressedBytes = compressedEntry.a;
         uint foundMagIdx = compressedBytes >> (32u - 5u);
@@ -162,8 +166,7 @@ export const getColorForCoords: ShaderModule = {
           // cache miss
         } else {
           return outputAddress[globalLayerIndex];
-          return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed[globalLayerIndex]);
-
+          // return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed[globalLayerIndex]);
         }
       }
       <% } %>

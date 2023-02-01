@@ -106,7 +106,7 @@ uniform vec3 addressSpaceDimensions;
 uniform vec4 hoveredSegmentIdLow;
 uniform vec4 hoveredSegmentIdHigh;
 
-flat in uvec4 pre_compressedEntry[<%= globalLayerCount %>];
+flat in uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
 flat in float outputAddress[<%= globalLayerCount %>];
@@ -272,7 +272,7 @@ precision highp float;
 
 
 out vec4 worldCoord;
-flat out uvec4 pre_compressedEntry[<%= globalLayerCount %>];
+flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];

@@ -140,6 +140,7 @@ class Plane {
     this.TDViewBorders.scale.copy(scaleVec);
     this.crosshair[0].scale.copy(scaleVec);
     this.crosshair[1].scale.copy(scaleVec);
+    this.updateTesselation();
   }
 
   setRotation = (rotVec: THREE.Euler): void => {
@@ -170,7 +171,43 @@ class Plane {
         originalPosition[2],
       );
     }
+    this.updateTesselation();
   };
+
+  updateTesselation() {
+    const positions = this.plane.geometry.attributes.position.array;
+
+    let x, y, z, index;
+    x = y = z = index = 0;
+
+    const width = constants.VIEWPORT_WIDTH,
+      height = constants.VIEWPORT_WIDTH;
+    const widthSegments = 100;
+    const heightSegments = 100;
+    const width_half = width / 2;
+    const height_half = height / 2;
+    const gridX = Math.floor(widthSegments);
+    const gridY = Math.floor(heightSegments);
+    const gridX1 = gridX + 1;
+    const gridY1 = gridY + 1;
+    const segment_width = width / gridX;
+    const segment_height = height / gridY;
+
+    for (let iy = 0; iy < gridY1; iy++) {
+      const y = iy * segment_height - height_half;
+
+      for (let ix = 0; ix < gridX1; ix++) {
+        const x = ix * segment_width - width_half;
+
+        // @ts-ignore
+        positions[index++] = x;
+        // @ts-ignore
+        positions[index++] = -y;
+        // @ts-ignore
+        positions[index++] = 0;
+      }
+    }
+  }
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {
     this.plane.visible = isDataVisible != null ? isDataVisible : isVisible;

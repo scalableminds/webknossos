@@ -145,6 +145,9 @@ object ZipIO extends LazyLogging {
     }
   }
 
+  def tryGunzip(possiblyCompressed: Array[Byte]): Array[Byte] =
+    tryo(gunzip(possiblyCompressed)).toOption.getOrElse(possiblyCompressed)
+
   def gunzip(compressed: Array[Byte]): Array[Byte] = {
     val is = new GZIPInputStream(new ByteArrayInputStream(compressed))
     val os = new ByteArrayOutputStream()

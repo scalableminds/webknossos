@@ -1,6 +1,7 @@
 package models.binary.explore
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
@@ -24,7 +25,8 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   protected def parseJsonFromPath[T: Reads](path: Path): Fox[T] =
     for {
-      fileAsString <- tryo(new String(Files.readAllBytes(path), StandardCharsets.UTF_8)).toFox ?~> "Failed to read remote file"
+      fileBytes <- tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "Failed to read remote file"
+      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "Failed to read remote file"
       parsed <- JsonHelper.parseAndValidateJson[T](fileAsString) ?~> "Failed to parse or validate json against data schema"
     } yield parsed
 

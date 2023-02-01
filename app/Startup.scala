@@ -1,10 +1,6 @@
-import java.io.{ByteArrayOutputStream, File}
-
 import akka.actor.{ActorSystem, Props}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
-import io.apigee.trireme.core.{NodeEnvironment, Sandbox}
-import javax.inject._
 import models.annotation.AnnotationDAO
 import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
@@ -17,6 +13,8 @@ import play.api.inject.ApplicationLifecycle
 import utils.WkConf
 import utils.sql.SqlClient
 
+import javax.inject._
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -81,38 +79,32 @@ class Startup @Inject()(actorSystem: ActorSystem,
     case _ => ()
   }
 
-  private def ensurePostgresDatabase(): Unit = {
-    logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
+  private def ensurePostgresSchema(): Unit = {
+    logger.info("Checking database schema")
+    val errorMessageBuilder = mutable.ListBuffer[String]()
+    val capturingProcessLogger =
+      ProcessLogger((o: String) => errorMessageBuilder.append(o), (e: String) => logger.error(e))
 
-    val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
-
-    // this script is copied to the stage directory in AssetCompilation
-    val result = "./tools/postgres/ensure_db.sh" ! processLogger
-
-    if (result != 0)
-      throw new Exception("Could not ensure Postgres database. Is postgres installed?")
-
-    // diffing the actual DB schema against schema.sql:
-    logger.info("Running diff_schema.js tools/postgres/schema.sql DB")
-    val nodeEnv = new NodeEnvironment()
-    nodeEnv.setDefaultNodeVersion("0.12")
-    val nodeOutput = new ByteArrayOutputStream()
-    nodeEnv.setSandbox(new Sandbox().setStdout(nodeOutput).setStderr(nodeOutput))
-    val script = nodeEnv.createScript(
-      "diff_schema.js",
-      new File("tools/postgres/diff_schema.js"),
-      Array("tools/postgres/schema.sql", "DB")
-    )
-    val status = script.execute().get()
-    if (status.getExitCode == 0) {
-      logger.info("Schema is up to date.")
+    val result = "./tools/postgres/dbtool.js check-db-schema" ! capturingProcessLogger
+    if (result == 0) {
+      logger.info("Database schema is up to date.")
     } else {
-      val nodeOut = new String(nodeOutput.toByteArray, "UTF-8")
-      val errorMessage = s"Database schema does not fit to schema.sql! \n $nodeOut"
+      val errorMessage = errorMessageBuilder.toList.mkString("\n")
       logger.error(errorMessage)
       slackNotificationService.warn("SQL schema mismatch", errorMessage)
     }
+  }
 
+  private def ensurePostgresDatabase(): Unit = {
+    logger.info("Running ensure-db with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
+    val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
+
+    // this script is copied to the stage directory in AssetCompilation
+    val result = "./tools/postgres/dbtool.js ensure-db" ! processLogger
+    if (result != 0)
+      throw new Exception("Could not ensure Postgres database. Is postgres installed?")
+
+    ensurePostgresSchema()
   }
 
   private def startActors(actorSystem: ActorSystem) = {

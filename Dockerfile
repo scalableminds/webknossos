@@ -1,6 +1,6 @@
 FROM eclipse-temurin:11
-RUN apt-get update \
-  && apt-get -y install libblosc1 postgresql-client git \
+RUN curl -fsSL https://deb.nodesource.com/setup_19.x | bash - \
+  && apt-get -y install libblosc1 postgresql-client git nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos

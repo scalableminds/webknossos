@@ -5,7 +5,6 @@ import sbt.Keys._
 import sbt._
 import sys.process.Process
 
-
 object AssetCompilation {
   object SettingsKeys {
     val yarnPath = SettingKey[String]("npm-path", "where npm is installed")
@@ -16,12 +15,11 @@ object AssetCompilation {
 
   private def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
 
-  private def startProcess(app: String, params: List[String], base: File) = {
+  private def startProcess(app: String, params: List[String], base: File) =
     if (isWindowsSystem)
       Process("cmd" :: "/c" :: app :: params, base)
     else
       Process(app :: params, base)
-  }
 
   private def yarnInstall: Def.Initialize[Task[Seq[File]]] = Def task {
     try {
@@ -72,8 +70,7 @@ object AssetCompilation {
         copyRecursively(baseDirectory.value / "tools" / "postgres", destination)
       } catch {
         case e: Exception =>
-          streams.value.log
-            .error("Could not copy SQL schema to stage dir: " + e.getMessage)
+          streams.value.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
       }
 
       // copy test/db
@@ -84,14 +81,11 @@ object AssetCompilation {
         copyRecursively(baseDirectory.value / "test" / "db", destination)
       } catch {
         case e: Exception =>
-          streams.value.log
-            .error("Could not test database entries to stage dir: " + e.getMessage)
+          streams.value.log.error("Could not test database entries to stage dir: " + e.getMessage)
       }
 
       // copy node_modules for diff_schema.js
       {
-        val nodeModules =
-          Seq("commander", "randomstring", "glob", "rimraf", "replace-in-file")
         val nodeSrc = baseDirectory.value / "node_modules"
         val nodeDest = target.value / "universal" / "stage" / "node_modules"
         val tmpPath = baseDirectory.value / "tmp"
@@ -99,9 +93,7 @@ object AssetCompilation {
 
         tmpPath.mkdirs
         startProcess(yarnPath.value, List("init", "-y"), tmpPath) ! streamsValue
-        nodeModules.foreach(nodeModule => {
-          startProcess(yarnPath.value, List("add", (nodeSrc / nodeModule).getAbsolutePath), tmpPath) ! streamsValue
-        })
+        startProcess(yarnPath.value, List("add", (nodeSrc / "commander").getAbsolutePath), tmpPath) ! streamsValue
         deleteRecursively(nodeDest)
         copyRecursively(tmpPath / "node_modules", nodeDest)
         deleteRecursively(tmpPath)

@@ -13,16 +13,20 @@ const PG_CONFIG = (() => {
     rawUrl = rawUrl.substring(5);
   }
   const url = new URL(rawUrl);
+  url.username = url.username !== "" && url.username != null ? url.username : "postgres";
+  url.password = url.password !== "" && url.password != null ? url.password : "postgres";
+  url.port = url.port !== "" && url.port != null ? url.port : 5432;
+
   const urlWithoutDatabase = new URL(url);
   urlWithoutDatabase.pathname = "";
-  console.log(url, urlWithoutDatabase);
+
   return {
     url: url.toString(),
     urlWithoutDatabase: urlWithoutDatabase.toString(),
-    username: url.username !== "" && url.username != null ? url.username : "postgres",
-    password: url.password !== "" && url.password != null ? url.password : "postgres",
+    username: url.username,
+    password: url.password,
     hostname: url.hostname,
-    port: url.port !== "" ? url.port : 5432,
+    port: url.port,
     database: url.pathname.length > 1 ? url.pathname.substring(1) : "webknossos",
   };
 })();

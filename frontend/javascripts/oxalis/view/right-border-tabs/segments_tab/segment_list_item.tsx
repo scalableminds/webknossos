@@ -40,6 +40,7 @@ function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vect
       style={{
         paddingLeft: "10px",
         backgroundColor: hslaCss,
+        marginTop: 5,
       }}
     />
   );
@@ -470,6 +471,7 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
+          <div style={{display: "inline-flex"}}>
           <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
           <EditableTextLabel
             value={segment.name || `Segment ${segment.id}`}
@@ -516,6 +518,7 @@ function _SegmentListItem({
               />
             </Tooltip>
           ) : null}
+          </div>
         </Tooltip>
       </Dropdown>
 

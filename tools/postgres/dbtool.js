@@ -13,8 +13,18 @@ const PG_CONFIG = (() => {
     rawUrl = rawUrl.substring(5);
   }
   const url = new URL(rawUrl);
-  url.username = url.username !== "" && url.username != null ? url.username : "postgres";
-  url.password = url.password !== "" && url.password != null ? url.password : "postgres";
+  url.username =
+    url.username !== "" && url.username != null
+      ? url.username
+      : process.env.PGUSER != null
+      ? process.env.PGUSER
+      : "postgres";
+  url.password =
+    url.password !== "" && url.password != null
+      ? url.password
+      : process.env.PGPASSWORD != null
+      ? process.env.PGPASSWORD
+      : "postgres";
   url.port = url.port !== "" && url.port != null ? url.port : 5432;
 
   const urlWithoutDatabase = new URL(url);

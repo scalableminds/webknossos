@@ -323,7 +323,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,
-        title: messages["organization.plan.feature_not_available"],
+        title: messages["organization.plan.feature_not_available"](PricingPlanEnum.Team),
       };
     }
 

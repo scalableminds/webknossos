@@ -72,14 +72,14 @@ export function isFeatureAllowedByPricingPlan(
 ) {
   // This function should not be called to check for "Basic" plans since its the default plan for all users anyway.
 
-  if (!organization) return false;
-
   if (requiredPricingPlan === PricingPlanEnum.Basic) {
     console.debug(
       "Restricting a feature to Basic Plan does not make sense. Consider removing the restriction",
     );
     return true;
   }
+
+  if (!organization) return false;
 
   return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
 }

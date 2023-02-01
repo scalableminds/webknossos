@@ -33,7 +33,10 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
   return (
-    <Tooltip title={messages["organization.plan.feature_not_available"]} placement="right">
+    <Tooltip
+      title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
+      placement="right"
+    >
       <Menu.Item
         onClick={handleMenuClick}
         onAuxClick={handleMouseClick}
@@ -60,7 +63,10 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
   if (isFeatureAllowed) return <Button {...buttonProps}>{children}</Button>;
 
   return (
-    <Tooltip title={messages["organization.plan.feature_not_available"]} placement="right">
+    <Tooltip
+      title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
+      placement="right"
+    >
       <Button {...buttonProps} disabled>
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
@@ -79,7 +85,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   if (isFeatureAllowed) return <>{children}</>;
 
   return (
-    <Tooltip title={messages["organization.plan.feature_not_available"]}>
+    <Tooltip title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}>
       <div style={{ position: "relative", cursor: "not-allowed" }}>
         <div
           style={{
@@ -101,7 +107,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
         >
           <Alert
             showIcon
-            message={messages["organization.plan.feature_not_available"]}
+            message={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
             icon={<LockOutlined />}
           />
         </div>

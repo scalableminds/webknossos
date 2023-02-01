@@ -166,7 +166,7 @@ function _getDisabledInfoFromArgs(
         ? !hasSkeleton
           ? disabledSkeletonExplanation
           : disabledAgglomerateMappingsExplanation
-        : messages["organization.plan.feature_not_available"],
+        : messages["organization.plan.feature_not_available"](PricingPlanEnum.Power),
     },
   };
 }

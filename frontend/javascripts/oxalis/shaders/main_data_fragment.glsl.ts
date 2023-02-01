@@ -396,6 +396,8 @@ void main() {
   const float bucketWidth = 32.;
   const float bucketSize = 32.*32.*32.;
 
+  const uint FALLBACK_COUNT = 3u;
+
   // todo: seg layer is missing!
   <% _.each(colorLayerNames, function(name, layerIndex) { %>
   {
@@ -405,7 +407,7 @@ void main() {
 
     uint renderedMagIdx;
     outputMagIdx[globalLayerIndex] = 100u;
-    for (uint i = 0u; i < 4u; i++) {
+    for (uint i = 0u; i < FALLBACK_COUNT; i++) {
       renderedMagIdx = activeMagIdx + i;
       vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);

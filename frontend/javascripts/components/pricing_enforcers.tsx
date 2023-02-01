@@ -2,16 +2,15 @@ import React from "react";
 import { useSelector } from "react-redux";
 import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button } from "antd";
 import { LockOutlined } from "@ant-design/icons";
-import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 import {
-  isPricingPlanGreaterEqualThan,
-  isUserAllowedToRequestUpgrades,
+  isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import { Link } from "react-router-dom";
+import messages from "messages";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { OxalisState } from "oxalis/store";
-
-const toolTipMessage = `This feature is not available in your organization's plan. Ask your organization owner to upgrade.`;
 
 const handleMouseClick = (event: React.MouseEvent) => {
   event.preventDefault();
@@ -23,25 +22,18 @@ const handleMenuClick: MenuClickEventHandler = (info) => {
   info.domEvent.stopPropagation();
 };
 
-export function PricingEnforcedMenuItem({
-  children,
-  requiredPricingPlan,
-  showLockIcon = true,
-  ...menuItemProps
-}: {
-  children: React.ReactNode;
-  requiredPricingPlan: PricingPlanEnum;
-  showLockIcon?: boolean;
-} & MenuItemProps): JSX.Element {
-  const currentPricingPlan = useSelector((state: OxalisState) =>
-    state.activeOrganization ? state.activeOrganization.pricingPlan : PricingPlanEnum.Basic,
-  );
-  const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
+type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
+
+export const PricingEnforcedMenuItem: React.FunctionComponent<
+  RequiredPricingProps & MenuItemProps
+> = ({ children, requiredPricingPlan, ...menuItemProps }) => {
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
   return (
-    <Tooltip title={toolTipMessage} placement="right">
+    <Tooltip title={messages["organization.plan.feature_not_available"]} placement="right">
       <Menu.Item
         onClick={handleMenuClick}
         onAuxClick={handleMouseClick}
@@ -51,38 +43,72 @@ export function PricingEnforcedMenuItem({
         {...menuItemProps}
       >
         {children}
-        {showLockIcon ? <LockOutlined style={{ marginLeft: 5 }} /> : null}
+        <LockOutlined style={{ marginLeft: 5 }} />
       </Menu.Item>
     </Tooltip>
   );
-}
+};
 
-export function PricingEnforcedButton({
+export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps & ButtonProps> = ({
   children,
   requiredPricingPlan,
-  showLockIcon = true,
   ...buttonProps
-}: {
-  children: React.ReactNode;
-  requiredPricingPlan: PricingPlanEnum;
-  showLockIcon?: boolean;
-} & ButtonProps): JSX.Element {
-  const currentPricingPlan = useSelector((state: OxalisState) =>
-    state.activeOrganization ? state.activeOrganization.pricingPlan : PricingPlanEnum.Basic,
-  );
-  const isFeatureAllowed = isPricingPlanGreaterEqualThan(currentPricingPlan, requiredPricingPlan);
+}) => {
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Button {...buttonProps}>{children}</Button>;
 
   return (
-    <Tooltip title={toolTipMessage} placement="right">
+    <Tooltip title={messages["organization.plan.feature_not_available"]} placement="right">
       <Button {...buttonProps} disabled>
         {children}
-        {showLockIcon ? <LockOutlined style={{ marginLeft: 5 }} /> : null}
+        <LockOutlined style={{ marginLeft: 5 }} />
       </Button>
     </Tooltip>
   );
-}
+};
+
+export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> = ({
+  children,
+  requiredPricingPlan,
+}) => {
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+
+  if (isFeatureAllowed) return <>{children}</>;
+
+  return (
+    <Tooltip title={messages["organization.plan.feature_not_available"]}>
+      <div style={{ position: "relative", cursor: "not-allowed" }}>
+        <div
+          style={{
+            filter: "blur(1px)",
+            pointerEvents: "none",
+          }}
+        >
+          {children}
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "calc(50% - 150px)",
+            top: "calc(50% - 50px)",
+            width: 300,
+            maxHeight: 150,
+            textAlign: "center",
+          }}
+        >
+          <Alert
+            showIcon
+            message={messages["organization.plan.feature_not_available"]}
+            icon={<LockOutlined />}
+          />
+        </div>
+      </div>
+    </Tooltip>
+  );
+};
 
 export function PageUnavailableForYourPlanView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);

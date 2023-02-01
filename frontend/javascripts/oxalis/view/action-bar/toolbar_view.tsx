@@ -593,6 +593,7 @@ export default function ToolbarView() {
   const maybeResolutionWithZoomStep = useSelector(
     getRenderableResolutionForActiveSegmentationTracing,
   );
+
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const hasResolutionWithHigherDimension = (labeledResolution || []).some((val) => val > 1);
@@ -606,12 +607,14 @@ export default function ToolbarView() {
       />
     </Tooltip>
   ) : null;
+
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   // Ensure that no volume-tool is selected when being in merger mode.
   // Even though, the volume toolbar is disabled, the user can still cycle through
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
+
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
       setLastForcefulDisabledTool(activeTool);
@@ -629,6 +632,7 @@ export default function ToolbarView() {
       setLastForcefulDisabledTool(null);
     }
   }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
+
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");
@@ -652,6 +656,7 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.TRACE ||
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
+
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>

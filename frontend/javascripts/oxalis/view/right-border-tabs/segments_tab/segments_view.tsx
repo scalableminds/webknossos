@@ -1,7 +1,7 @@
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
 import type { Dispatch } from "redux";
 import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -52,6 +52,11 @@ import type {
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import features from "features";
+import {
+  isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
+} from "admin/organization/pricing_plan_utils";
+import messages from "messages";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -313,6 +318,14 @@ class SegmentsView extends React.Component<Props, State> {
   getPrecomputeMeshesTooltipInfo = () => {
     let title = "";
     let disabled = true;
+
+    const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+    if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
+      return {
+        disabled: true,
+        title: messages["organization.plan.feature_not_available"],
+      };
+    }
 
     if (!features().jobsEnabled) {
       title = "Computation jobs are not enabled for this WEBKNOSSOS instance.";

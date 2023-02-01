@@ -1,5 +1,13 @@
 import { APIOrganization, APIUser } from "types/api_flow_types";
-import { PricingPlanEnum } from "./organization_edit_view";
+
+export enum PricingPlanEnum {
+  Basic = "Basic",
+  Team = "Team",
+  Power = "Power",
+  TeamTrial = "Team_Trial",
+  PowerTrial = "Power_Trial",
+  Custom = "Custom",
+}
 
 export const teamPlanFeatures = [
   "Collaborative Annotation",
@@ -56,4 +64,22 @@ export function isPricingPlanGreaterEqualThan(
   planB: PricingPlanEnum,
 ): boolean {
   return PLAN_TO_RANK[planA] >= PLAN_TO_RANK[planB];
+}
+
+export function isFeatureAllowedByPricingPlan(
+  organization: APIOrganization | null,
+  requiredPricingPlan: PricingPlanEnum,
+) {
+  // This function should not be called to check for "Basic" plans since its the default plan for all users anyway.
+
+  if (!organization) return false;
+
+  if (requiredPricingPlan === PricingPlanEnum.Basic) {
+    console.debug(
+      "Restricting a feature to Basic Plan does not make sense. Consider removing the restriction",
+    );
+    return true;
+  }
+
+  return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
 }

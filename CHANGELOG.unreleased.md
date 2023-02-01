@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Limit paid task/project management features to respective organization plans. [6767](https://github.com/scalableminds/webknossos/pull/6767)
 - The dataset list route `GET api/datasets` no longer respects the isEditable filter. [#6759](https://github.com/scalableminds/webknossos/pull/6759)
 - Upgrade linter to Rome v11.0.0. [#6785](https://github.com/scalableminds/webknossos/pull/6785)
+- Limit paid team sharing features to respective organization plans. [6767](https://github.com/scalableminds/webknossos/pull/6776)
 
 ### Fixed
 - Fixed node selection and context menu for node ids greater than 130813. [#6724](https://github.com/scalableminds/webknossos/pull/6724) and [#6731](https://github.com/scalableminds/webknossos/pull/6731)

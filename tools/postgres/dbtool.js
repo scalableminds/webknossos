@@ -93,6 +93,7 @@ function ensureDb() {
 
 function prepareTestDb() {
   ensureDb();
+  refreshSchema();
 
   const csvFolder = path.join(__dirname, "..", "..", "test", "db");
   for (const filename of fs.readdirSync(csvFolder)) {

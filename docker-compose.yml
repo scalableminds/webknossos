@@ -37,7 +37,7 @@ services:
     environment:
       POSTGRES_URL: jdbc:postgresql://postgres/webknossos
       POSTGRES_USER: webknossos_user
-      PGPASSWORD: secret_password
+      POSTGRES_PASSWORD: secret_password
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   webknossos-datastore:

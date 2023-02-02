@@ -278,7 +278,7 @@ class JpegCompressor() extends Compressor {
     val raster = bi.getRaster
     val dbb: DataBufferByte = raster.getDataBuffer.asInstanceOf[DataBufferByte]
     val width = raster.getWidth
-    val data = dbb.getData.grouped(width).toList//.transpose
+    val data = dbb.getData.grouped(width).toList //.transpose
     os.write(data.flatten.toArray)
   }
 }

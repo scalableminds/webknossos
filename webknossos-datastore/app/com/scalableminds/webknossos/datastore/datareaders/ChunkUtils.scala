@@ -40,7 +40,7 @@ object ChunkUtils extends LazyLogging {
     }
     chunkIndices.toList
   }
-/*
+  /*
   def calculatePrecomputedChunks(arrayShape: Array[Int],
                                  arrayChunkSize: Array[Int],
                                  selectedShape: Array[Int],

@@ -69,7 +69,7 @@ object MultiArrayUtils {
     val new_offset = /*if (source.getShape.toSet.size > 1) {
       Array(offset(0), offset(2), offset(1))
     } else {*/
-      offset
+    offset
     //}
     val sourceShape: Array[Int] = source.getShape
     val targetShape: Array[Int] = target.getShape
@@ -131,11 +131,11 @@ object MultiArrayUtils {
     val ma = MultiArray.factory(source.getDataType, source.getShape)
     val sourceInnerArray = source.getStorage.asInstanceOf[Array[Byte]]
     val actualSize = sourceInnerArray.length
-    if(source.getSize == actualSize) {
+    if (source.getSize == actualSize) {
       return source
     }
     val targetInnerArray = ma.getStorage.asInstanceOf[Array[Byte]]
-    for(i <- 0 until actualSize) {
+    for (i <- 0 until actualSize) {
       targetInnerArray(i) = sourceInnerArray(i)
     }
     ma

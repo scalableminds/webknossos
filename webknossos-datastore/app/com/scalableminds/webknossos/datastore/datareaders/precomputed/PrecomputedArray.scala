@@ -2,7 +2,18 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder, ChunkReader, ChunkUtils, DatasetArray, DatasetPath, FileSystemStore, GoogleCloudFileSystemStore, GoogleCloudStoragePath, MultiArrayUtils}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  ArrayOrder,
+  AxisOrder,
+  ChunkReader,
+  ChunkUtils,
+  DatasetArray,
+  DatasetPath,
+  FileSystemStore,
+  GoogleCloudFileSystemStore,
+  GoogleCloudStoragePath,
+  MultiArrayUtils
+}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.InvalidRangeException
@@ -85,9 +96,11 @@ class PrecomputedArray(relativePath: DatasetPath,
       s"$beginOffset-$endOffset"
     })*/
     val bbox = header.chunkIndexToBoundingBox(chunkIndex)
-    bbox.map(dim => {
-      s"${dim._1}-${dim._2}"
-    }).mkString(header.dimension_separator.toString)
+    bbox
+      .map(dim => {
+        s"${dim._1}-${dim._2}"
+      })
+      .mkString(header.dimension_separator.toString)
     /*
     logger.info(
       s"Requesting chunkIndex ${chunkIndex(0)},${chunkIndex(1)},${chunkIndex(2)} with grid_size ${

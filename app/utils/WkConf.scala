@@ -210,7 +210,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val password: String = get[String]("slick.db.password")
     }
 
-    val children = List(DB)
+    val children = List(Db)
   }
 
   object Voxelytics {

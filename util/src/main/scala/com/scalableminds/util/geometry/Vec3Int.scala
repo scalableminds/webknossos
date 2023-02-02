@@ -14,15 +14,6 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def *(that: Int): Vec3Int =
     Vec3Int(x * that, y * that, z * that)
 
-  def /(that: Vec3Int): Vec3Int =
-    Vec3Int(x / that.x, y / that.y, z / that.z)
-
-  def +(that: Vec3Int): Vec3Int =
-    Vec3Int(x + that.x, y + that.y, z + that.z)
-
-  def -(that: Vec3Int): Vec3Int =
-    Vec3Int(x - that.x, y - that.y, z - that.z)
-
   def scale(s: Float): Vec3Int =
     Vec3Int((x * s).toInt, (y * s).toInt, (z * s).toInt)
 

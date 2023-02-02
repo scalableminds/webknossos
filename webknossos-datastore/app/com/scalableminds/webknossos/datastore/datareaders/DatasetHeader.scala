@@ -47,7 +47,5 @@ trait DatasetHeader {
 
   lazy val rank: Int = datasetShape.length
 
-  def shiftAxisOrderRight: Boolean = false
-
   def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize
 }

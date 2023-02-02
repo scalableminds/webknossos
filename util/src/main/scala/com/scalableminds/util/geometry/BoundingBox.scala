@@ -100,9 +100,6 @@ object BoundingBox {
     else
       None
 
-  def fromOffsetAndShape(offset: Vec3Int, shape: Vec3Int): BoundingBox =
-    BoundingBox(offset, shape.x, shape.y, shape.z)
-
   def union(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>

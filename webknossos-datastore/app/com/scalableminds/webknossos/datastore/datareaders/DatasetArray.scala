@@ -25,7 +25,7 @@ class DatasetArray(relativePath: DatasetPath,
     ChunkReader.create(store, header)
 
   // cache currently limited to 1 GB per array
-  protected lazy val chunkContentsCache: Cache[String, MultiArray] = {
+  private lazy val chunkContentsCache: Cache[String, MultiArray] = {
     val maxSizeBytes = 1000L * 1000 * 1000
     val maxEntries = maxSizeBytes / header.bytesPerChunk
     AlfuCache(maxEntries.toInt)
@@ -78,8 +78,7 @@ class DatasetArray(relativePath: DatasetPath,
           offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
-                                                                             header.order != ArrayOrder.C,
-                                                                             header.shiftAxisOrderRight)
+                                                                             header.order != ArrayOrder.C)
           _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
         } yield ()
       }
@@ -89,7 +88,7 @@ class DatasetArray(relativePath: DatasetPath,
     }
   }
 
-  protected def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
@@ -122,7 +121,7 @@ class DatasetArray(relativePath: DatasetPath,
 
   protected def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * header.chunkSize(dim))
+      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunkSize)(dim))
     }.toArray
 
   override def toString: String =

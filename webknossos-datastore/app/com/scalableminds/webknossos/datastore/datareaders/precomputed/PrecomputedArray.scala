@@ -31,15 +31,8 @@ object PrecomputedArray extends LazyLogging {
            channelIndex: Option[Int],
            mag: Vec3Int): PrecomputedArray = {
 
-    //val rootPath = new DatasetPath("")
-
-    // magPath = https://www.googleapis.com/storage/v1/b/neuroglancer-fafb-data/o/fafb_v14%2Ffafb_v14_orig%2F64_64_80
-    //val basePath = magPath.toString.split("/").init.reduce((a, b) => s"$a/$b")
-    // basePath = https://www.googleapis.com/storage/v1/b/neuroglancer-fafb-data/o/fafb_v14%2Ffafb_v14_orig
-
     val store = new GoogleCloudFileSystemStore(magPath.getParent, magPath.getFileSystem)
     val headerPath = s"${PrecomputedHeader.METADATA_PATH}"
-    // headerPath = info?alt=media
     val headerBytes = store.readBytes(headerPath)
     if (headerBytes.isEmpty)
       throw new IOException(
@@ -53,7 +46,6 @@ object PrecomputedArray extends LazyLogging {
           throw new Exception("Validating json as precomputed metadata failed: " + JsError.toJson(errors).toString())
       }
 
-    // Key of the scale is encoded in magpath
     val key = magPath.getFileName
 
     val scaleHeader: PrecomputedScaleHeader = PrecomputedScaleHeader(
@@ -85,33 +77,15 @@ class PrecomputedArray(relativePath: DatasetPath,
   override protected val chunkReader: ChunkReader =
     PrecomputedChunkReader.create(store, header)
 
-  lazy val voxelOffset = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
+  lazy val voxelOffset: Array[Int] = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
 
-    /*val coordinates: Array[String] = chunkIndex.zipWithIndex.map(indices => {
-      val (cIndex, i) = indices
-      val beginOffset = voxelOffset(i) + cIndex * header.precomputedScale.chunk_sizes.head(i)
-      val endOffset = voxelOffset(i) + ((cIndex + 1) * header.precomputedScale.chunk_sizes.head(i))
-        .min(header.precomputedScale.size(i))
-      s"$beginOffset-$endOffset"
-    })*/
     val bbox = header.chunkIndexToBoundingBox(chunkIndex)
     bbox
       .map(dim => {
         s"${dim._1}-${dim._2}"
       })
       .mkString(header.dimension_separator.toString)
-    /*
-    logger.info(
-      s"Requesting chunkIndex ${chunkIndex(0)},${chunkIndex(1)},${chunkIndex(2)} with grid_size ${
-        header.grid_size
-          .mkString("Array(", ", ", ")")
-      },")
-    if (chunkIndex(2) > header.grid_size(2)) {
-      logger.info("Chunk index > grid size")
-    }
-    logger.info(coordinates.mkString(header.dimension_separator.toString))
-    coordinates.mkString(header.dimension_separator.toString)*/
   }
 
 }

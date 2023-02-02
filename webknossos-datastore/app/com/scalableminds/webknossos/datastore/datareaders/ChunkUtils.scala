@@ -40,29 +40,4 @@ object ChunkUtils extends LazyLogging {
     }
     chunkIndices.toList
   }
-  /*
-  def calculatePrecomputedChunks(arrayShape: Array[Int],
-                                 arrayChunkSize: Array[Int],
-                                 selectedShape: Array[Int],
-                                 selectedOffset: Array[Int],
-                                 mag: Vec3Int): Iterable[BoundingBox] = {
-
-    val offset = (selectedOffset, mag.toList).zipped.map((o, m) => o / m)
-    val requested = BoundingBox.fromOffsetAndShape(Vec3Int.fromList(offset.toList).getOrElse(Vec3Int(0, 0, 0)),
-                                                   Vec3Int.fromList(selectedShape.toList).getOrElse(Vec3Int(0, 0, 0)))
-    val boundingBox = BoundingBox(Vec3Int(0, 0, 0), arrayShape(0), arrayShape(1), arrayShape(2))
-    val inside = requested.intersection(boundingBox)
-
-    val chunkSize = Vec3Int.fromList(arrayChunkSize.toList).getOrElse(Vec3Int(0, 0, 0))
-
-    inside match {
-      case Some(inside) => {
-        val aligned = (inside - boundingBox.topLeft).div(chunkSize) * chunkSize + boundingBox.topLeft
-        aligned
-          .range(chunkSize)
-          .flatMap(chunkOffset => BoundingBox.fromOffsetAndShape(chunkOffset, chunkSize).intersection(boundingBox))
-      }
-      case _ => List()
-    }
-  }*/
 }

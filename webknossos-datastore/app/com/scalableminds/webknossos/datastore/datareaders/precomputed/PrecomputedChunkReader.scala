@@ -13,6 +13,4 @@ object PrecomputedChunkReader {
 }
 
 class PrecomputedChunkReader(header: DatasetHeader, store: FileSystemStore, typedChunkReader: TypedChunkReader)
-    extends ChunkReader(header, store, typedChunkReader) {
-  // TODO
-}
+    extends ChunkReader(header, store, typedChunkReader) {}

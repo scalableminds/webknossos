@@ -30,7 +30,7 @@ case class PrecomputedScale(key: String,
 case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
     extends DatasetHeader {
   override def datasetShape: Array[Int] =
-    precomputedScale.size //(precomputedScale.resolution, precomputedScale.size).zipped.map(_ * _)
+    precomputedScale.size
 
   override def chunkSize: Array[Int] = precomputedScale.chunk_sizes.head
 
@@ -43,8 +43,6 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override def order: ArrayOrder = ArrayOrder.F
 
   override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
-
-  override def shiftAxisOrderRight: Boolean = true
 
   override def resolvedDataType: ArrayDataType =
     PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(dataType.toLowerCase).get)
@@ -79,7 +77,7 @@ object PrecomputedScale extends JsonImplicits {
 }
 
 object PrecomputedHeader extends JsonImplicits {
-  val METADATA_PATH = "info" // TODO: Why doesn't "/" work?
+  val METADATA_PATH = "info"
 
   implicit object PrecomputedHeaderFormat extends Format[PrecomputedHeader] {
     override def reads(json: JsValue): JsResult[PrecomputedHeader] =

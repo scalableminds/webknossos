@@ -29,7 +29,7 @@ class GoogleCloudFileSystemStore(override val internalRoot: Path, fs: FileSystem
     try {
       Some(Files.readAllBytes(fs.getPath(path)))
     } catch {
-      case e: FileNotFoundException => {
+      case _: FileNotFoundException => {
         logger.info(s"Could not read data at ${path}")
         None
       }

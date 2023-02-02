@@ -21,12 +21,14 @@ const PG_CONFIG = (() => {
     : process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres";
   url.port = url.port ? url.port : 5432;
 
-  const urlWithoutDatabase = new URL(url);
-  urlWithoutDatabase.pathname = "";
+  const urlWithDefaultDatabase = new URL(url);
+  urlWithDefaultDatabase.pathname = "/postgres";
+
+  console.log(url);
 
   return {
     url: url.toString(),
-    urlWithoutDatabase: urlWithoutDatabase.toString(),
+    urlWithDefaultDatabase: urlWithDefaultDatabase.toString(),
     username: url.username,
     password: url.password,
     hostname: url.hostname,
@@ -66,13 +68,13 @@ function callPsql(sql) {
 
 function dropDb() {
   console.log(
-    safePsqlSpawn([PG_CONFIG.urlWithoutDatabase, "-c", `DROP DATABASE ${PG_CONFIG.database}`]),
+    safePsqlSpawn([PG_CONFIG.urlWithDefaultDatabase, "-c", `DROP DATABASE ${PG_CONFIG.database}`]),
   );
 }
 
 function ensureDb() {
   const doesDbExist = safePsqlSpawn([
-    PG_CONFIG.urlWithoutDatabase,
+    PG_CONFIG.urlWithDefaultDatabase,
     "-tAc",
     `SELECT 1 FROM pg_database WHERE datname='${PG_CONFIG.database}'`,
   ]).trim();
@@ -81,7 +83,7 @@ function ensureDb() {
   } else {
     console.log(
       safePsqlSpawn([
-        PG_CONFIG.urlWithoutDatabase,
+        PG_CONFIG.urlWithDefaultDatabase,
         "-tAc",
         `CREATE DATABASE ${PG_CONFIG.database};`,
       ]),
@@ -183,9 +185,9 @@ function dumpExpectedSchema(sqlFilePaths) {
 
   try {
     // Create tmp database
-    safePsqlSpawn([PG_CONFIG.urlWithoutDatabase, "-c", `CREATE DATABASE ${tmpDbName}`]);
+    safePsqlSpawn([PG_CONFIG.urlWithDefaultDatabase, "-c", `CREATE DATABASE ${tmpDbName}`]);
 
-    const urlWithDatabase = new URL(PG_CONFIG.urlWithoutDatabase);
+    const urlWithDatabase = new URL(PG_CONFIG.urlWithDefaultDatabase);
     urlWithDatabase.pathname = "/" + tmpDbName;
     // Load schema into tmp database
     safePsqlSpawn([
@@ -200,7 +202,7 @@ function dumpExpectedSchema(sqlFilePaths) {
     dumpCurrentSchema(urlWithDatabase.toString(), tmpSchemaDir, true);
     return tmpSchemaDir;
   } finally {
-    safePsqlSpawn([PG_CONFIG.urlWithoutDatabase, "-c", `DROP DATABASE ${tmpDbName}`]);
+    safePsqlSpawn([PG_CONFIG.urlWithDefaultDatabase, "-c", `DROP DATABASE ${tmpDbName}`]);
   }
 }
 

@@ -70,7 +70,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   private lazy val postgresUrl = {
     val slickUrl =
-      if (conf.Slick.DB.url.startsWith("jdbc:").)
+      if (conf.Slick.DB.url.startsWith("jdbc:"))
         conf.Slick.DB.url.substring(5)
       else conf.Slick.DB.url
     val uri = new URIBuilder(slickUrl)

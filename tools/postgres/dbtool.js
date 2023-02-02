@@ -33,7 +33,10 @@ const PG_CONFIG = (() => {
     password: url.password,
     hostname: url.hostname,
     port: url.port,
-    database: url.pathname.length > 1 ? url.pathname.substring(1) : "webknossos",
+    database:
+      url.pathname.length > 1
+        ? url.pathname.substring(1) // remove leading '/'`
+        : "webknossos",
   };
 })();
 
@@ -87,10 +90,10 @@ function ensureDb() {
     );
   }
 
-  const doesSchemaExist = callPsql(
+  const existingSchemaName = callPsql(
     "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'webknossos';",
   ).trim();
-  if (doesSchemaExist === "webknossos") {
+  if (existingSchemaName === "webknossos") {
     console.log("Schema already exists");
   } else {
     refreshSchema();
@@ -127,7 +130,7 @@ function refreshSchema() {
   console.log(safePsqlSpawn([PG_CONFIG.url, "-v", "ON_ERROR_STOP=ON", "-f", schemaPath]));
 }
 
-function dumpSchema(databaseUrl, schemaDir, silent = false) {
+function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {
   if (!fs.existsSync(schemaDir) || !fs.statSync(schemaDir).isDirectory) {
     console.error("Schema directory $schemadir does not exist, aborting!");
     process.exit(1);
@@ -176,7 +179,7 @@ function cleanSchemaDump(dumpDir) {
   }
 }
 
-function dumpSchemaViaSqlFiles(filePaths) {
+function dumpExpectedSchema(sqlFilePaths) {
   const tmpDbName = `webknossos_tmp_${Date.now()}`;
   const tmpSchemaDir = fs.mkdtempSync("temp-webknossos-schema-");
 
@@ -192,11 +195,11 @@ function dumpSchemaViaSqlFiles(filePaths) {
       "-v",
       "ON_ERROR_STOP=ON",
       "-q",
-      ...filePaths.flatMap((filePath) => ["-f", filePath]),
+      ...sqlFilePaths.flatMap((filePath) => ["-f", filePath]),
     ]);
 
     // Dump schema into diffable files
-    dumpSchema(urlWithDatabase.toString(), tmpSchemaDir, true);
+    dumpCurrentSchema(urlWithDatabase.toString(), tmpSchemaDir, true);
     return tmpSchemaDir;
   } finally {
     safePsqlSpawn([PG_CONFIG.urlWithoutDatabase, "-c", `DROP DATABASE ${tmpDbName}`]);
@@ -207,8 +210,8 @@ function checkDbSchema() {
   const dbDumpDir = fs.mkdtempSync("temp-webknossos-schema-");
   let schemaDumpDir = null;
   try {
-    dumpSchema(PG_CONFIG.url, dbDumpDir, true);
-    schemaDumpDir = dumpSchemaViaSqlFiles([schemaPath]);
+    dumpCurrentSchema(PG_CONFIG.url, dbDumpDir, true);
+    schemaDumpDir = dumpExpectedSchema([schemaPath]);
 
     cleanSchemaDump(dbDumpDir);
     cleanSchemaDump(schemaDumpDir);
@@ -233,14 +236,14 @@ function checkEvolutionsSchema() {
   let evolutionsDumpDir = null;
   let schemaDumpDir = null;
   try {
-    evolutionsDumpDir = dumpSchemaViaSqlFiles(
+    evolutionsDumpDir = dumpExpectedSchema(
       fs
         .readdirSync(evolutionsPath)
         .filter((filename) => filename.endsWith(".sql"))
         .map((filename) => path.join(evolutionsPath, filename))
         .sort(),
     );
-    schemaDumpDir = dumpSchemaViaSqlFiles([schemaPath]);
+    schemaDumpDir = dumpExpectedSchema([schemaPath]);
 
     cleanSchemaDump(evolutionsDumpDir);
     cleanSchemaDump(schemaDumpDir);
@@ -281,21 +284,22 @@ function applyEvolutions() {
       return [num, filename];
     })
     .filter(([num]) => num > schemaVersion)
-    .sort((a, b) => a[0] - b[0]);
+    .sort((a, b) => a[0] - b[0])
+    .map(([, evolutionFilename]) => evolutionFilename);
 
   // apply evolutions
   if (evolutions.length > 0) {
-    for (const [_, evolutionFilename] of evolutions) {
-      console.log(`Applying evolution: ${evolutionFilename}`);
-      safePsqlSpawn([
-        PG_CONFIG.url,
-        "-v",
-        "ON_ERROR_STOP=ON",
-        "-q",
+    console.log(`Applying evolutions: ${evolutions}`);
+    safePsqlSpawn([
+      PG_CONFIG.url,
+      "-v",
+      "ON_ERROR_STOP=ON",
+      "-q",
+      ...evolutions.flatMap((evolutionFilename) => [
         "-f",
         path.join(evolutionsPath, evolutionFilename),
-      ]);
-    }
+      ]),
+    ]);
     console.log("✨✨ Successfully applied the evolutions");
   } else {
     console.log("There are no evolutions that can be applied.");
@@ -402,7 +406,7 @@ program
   .command("dump-schema <schemaDir>")
   .description("Dumps current schema into a folder")
   .action((schemaDir) => {
-    dumpSchema(PG_CONFIG.url, schemaDir);
+    dumpCurrentSchema(PG_CONFIG.url, schemaDir);
     console.log("✨✨ Done");
   });
 

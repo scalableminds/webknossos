@@ -13,15 +13,13 @@ const PG_CONFIG = (() => {
     rawUrl = rawUrl.substring(5);
   }
   const url = new URL(rawUrl);
-  url.username =
-    url.username !== "" && url.username != null
-      ? url.username
-      : process.env.POSTGRES_USER ?? process.env.PGUSER ?? "postgres";
-  url.password =
-    url.password !== "" && url.password != null
-      ? url.password
-      : process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres";
-  url.port = url.port !== "" && url.port != null ? url.port : 5432;
+  url.username = url.username
+    ? url.username
+    : process.env.POSTGRES_USER ?? process.env.PGUSER ?? "postgres";
+  url.password = url.password
+    ? url.password
+    : process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres";
+  url.port = url.port ? url.port : 5432;
 
   const urlWithoutDatabase = new URL(url);
   urlWithoutDatabase.pathname = "";
@@ -232,16 +230,26 @@ function checkDbSchema() {
   console.log("✨✨ Database schema is up-to-date");
 }
 
+function findEvolutionFiles() {
+  return fs
+    .readdirSync(evolutionsPath)
+    .filter((filename) => filename.endsWith(".sql"))
+    .map((filename) => {
+      const num = parseInt(filename.split("-")[0], 10);
+      return [num, filename];
+    })
+    .filter(([num]) => num > schemaVersion)
+    .sort((a, b) => a[0] - b[0]);
+}
+
 function checkEvolutionsSchema() {
   let evolutionsDumpDir = null;
   let schemaDumpDir = null;
   try {
     evolutionsDumpDir = dumpExpectedSchema(
-      fs
-        .readdirSync(evolutionsPath)
-        .filter((filename) => filename.endsWith(".sql"))
-        .map((filename) => path.join(evolutionsPath, filename))
-        .sort(),
+      findEvolutionFiles().map(([, evolutionFilename]) =>
+        path.join(evolutionsPath, evolutionFilename),
+      ),
     );
     schemaDumpDir = dumpExpectedSchema([schemaPath]);
 
@@ -276,15 +284,8 @@ function applyEvolutions() {
   console.log(`Schema version: ${schemaVersion}`);
 
   // get list of evolutions to apply
-  const evolutions = fs
-    .readdirSync(evolutionsPath)
-    .filter((filename) => filename.endsWith(".sql"))
-    .map((filename) => {
-      const num = parseInt(filename.split("-")[0], 10);
-      return [num, filename];
-    })
+  const evolutions = findEvolutionFiles()
     .filter(([num]) => num > schemaVersion)
-    .sort((a, b) => a[0] - b[0])
     .map(([, evolutionFilename]) => evolutionFilename);
 
   // apply evolutions
@@ -310,6 +311,9 @@ function assertUniqueEvolutionNumbers() {
   const groupedEvolutions = new Map();
   for (const filename of fs.readdirSync(evolutionsPath)) {
     const num = parseInt(filename.split("-")[0], 10);
+    if (isNaN(num)) {
+      onsole.log("Found invalid evolution filename:", filename);
+    }
     if (groupedEvolutions.has(num)) {
       groupedEvolutions.get(num).push(filename);
     } else {
@@ -341,7 +345,7 @@ program
   });
 
 program
-  .command("refresh-db")
+  .command("drop-and-refresh-db")
   .description("Drop the current database and initializes a new one")
   .action(() => {
     try {

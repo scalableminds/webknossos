@@ -70,16 +70,17 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   private lazy val postgresUrl = {
     val slickUrl =
-      if (conf.Slick.DB.url.startsWith("jdbc:"))
-        conf.Slick.DB.url.substring(5)
-      else conf.Slick.DB.url
+      if (conf.Slick.Db.url.startsWith("jdbc:"))
+        conf.Slick.Db.url.substring(5)
+      else conf.Slick.Db.url
     val uri = new URIBuilder(slickUrl)
-    uri.setUserInfo(conf.Slick.DB.user, conf.Slick.DB.password)
+    uri.setUserInfo(conf.Slick.Db.user, conf.Slick.Db.password)
     uri.build().toString
   }
 
   if (conf.Slick.checkSchemaOnStartup) {
     ensurePostgresDatabase()
+    ensurePostgresSchema()
   }
 
   initialDataService.insert.futureBox.map {
@@ -115,8 +116,6 @@ class Startup @Inject()(actorSystem: ActorSystem,
     val result = Process("./tools/postgres/dbtool.js ensure-db", None, "POSTGRES_URL" -> postgresUrl) ! processLogger
     if (result != 0)
       throw new Exception("Could not ensure Postgres database. Is postgres installed?")
-
-    ensurePostgresSchema()
   }
 
   private def startActors(actorSystem: ActorSystem) = {

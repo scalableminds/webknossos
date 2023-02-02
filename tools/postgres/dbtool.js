@@ -16,15 +16,11 @@ const PG_CONFIG = (() => {
   url.username =
     url.username !== "" && url.username != null
       ? url.username
-      : process.env.PGUSER != null
-      ? process.env.PGUSER
-      : "postgres";
+      : process.env.POSTGRES_USER ?? process.env.PGUSER ?? "postgres";
   url.password =
     url.password !== "" && url.password != null
       ? url.password
-      : process.env.PGPASSWORD != null
-      ? process.env.PGPASSWORD
-      : "postgres";
+      : process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres";
   url.port = url.port !== "" && url.port != null ? url.port : 5432;
 
   const urlWithoutDatabase = new URL(url);
@@ -137,8 +133,8 @@ function dumpSchema(databaseUrl, schemaDir, silent = false) {
     process.exit(1);
   }
 
-  for (const fn of fs.readdirSync(schemaDir)) {
-    fs.rmSync(path.join(schemaDir, fn), { recursive: true, force: true });
+  for (const filename of fs.readdirSync(schemaDir)) {
+    fs.rmSync(path.join(schemaDir, filename), { recursive: true, force: true });
   }
 
   if (!silent) console.log(`Dumping database to ${schemaDir}.`);

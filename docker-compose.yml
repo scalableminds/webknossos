@@ -36,7 +36,7 @@ services:
       - ./binaryData:/webknossos/binaryData
     environment:
       POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-      PGUSER: webknossos
+      POSTGRES_USER: webknossos_user
       PGPASSWORD: secret_password
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
@@ -97,8 +97,8 @@ services:
       - COVERALLS_REPO_TOKEN
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
-      - PGUSER=webknossos
-      - PGPASSWORD=secret_password
+      - POSTGRES_USER=webknossos
+      - POSTGRES_PASSWORD=secret_password
       - HOME=/root
       - CIRCLE_TAG=${CIRCLE_TAG}
       - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
@@ -138,8 +138,8 @@ services:
         condition: service_healthy
     environment:
       POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-      PGUSER: webknossos
-      PGPASSWORD: secret_password
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
     command:
       - bash
       - -c
@@ -182,8 +182,8 @@ services:
         condition: service_healthy
     environment:
       POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
-      PGUSER: webknossos
-      PGPASSWORD: secret_password
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
     command:
       - bash
       - -c
@@ -246,7 +246,7 @@ services:
 
   psql:
     extends: postgres
-    command: psql -h postgres -U webknossos webknossos
+    command: psql -h postgres -U webknossos_user webknossos
     links:
       - "postgres-persisted:postgres"
     depends_on:
@@ -259,7 +259,7 @@ services:
 
   drop-db:
     extends: postgres
-    command: psql -h postgres -U webknossos postgres -c "DROP DATABASE webknossos"
+    command: psql -h postgres -U webknossos_user postgres -c "DROP DATABASE webknossos"
     links:
       - "postgres-persisted:postgres"
     depends_on:

@@ -220,7 +220,7 @@ services:
     image: postgres:10-alpine
     environment:
       POSTGRES_DB: webknossos
-      POSTGRES_USER: webknossos
+      POSTGRES_USER: webknossos_user
       POSTGRES_PASSWORD: secret_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]

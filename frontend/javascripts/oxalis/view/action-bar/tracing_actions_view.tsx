@@ -123,6 +123,8 @@ export function LayoutMenu(props: LayoutMenuProps) {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
+    // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+    setCurrentLayout,
     ...others
   } = props;
   const layoutMissingHelpTitle = (

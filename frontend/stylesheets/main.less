@@ -260,10 +260,14 @@ i.without-icon-margin,
 }
 
 .brain-loading-content {
-  flex: 1;
-  flex: none;
   max-width: 50%;
   width: 375px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+.brain-loading-content > * {
+  margin: 1em 0;
 }
 
 .brain-loading-bar {

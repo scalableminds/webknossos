@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
@@ -31,33 +32,35 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray)
 
 }
 
-class PrecomputedBucketProvider(layer: PrecomputedLayer)
+class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOpt: Option[FileSystemService])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[PrecomputedCubeHandle] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[PrecomputedCubeHandle] = {
     val precomputedMagOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
     precomputedMagOpt match {
-      case None => Empty
+      case None => Fox.empty
       case Some(precomputedMag) =>
-        val magPathOpt: Option[Path] = {
-          precomputedMag.remoteSource match {
-            case Some(remoteSource) => remotePathFrom(remoteSource)
-            case None               => localPathFrom(readInstruction, precomputedMag.pathWithFallback)
-          }
+        fileSystemServiceOpt match {
+          case Some(fileSystemService: FileSystemService) =>
+            for {
+              magPath: Path <- if (precomputedMag.isRemote) {
+                for {
+                  remoteSource <- fileSystemService.remoteSourceFor(precomputedMag)
+                  remotePath <- remotePathFrom(remoteSource)
+                } yield remotePath
+              } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
+              cubeHandle <- tryo(onError = e => logError(e))(
+                PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))
+                .map(new PrecomputedCubeHandle(_))
+            } yield cubeHandle
         }
-        magPathOpt match {
-          case None => Empty
-          case Some(magPath) =>
-            tryo(onError = e => logError(e))(
-              PrecomputedArray
-                .open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex, readInstruction.bucket.mag))
-              .map(new PrecomputedCubeHandle(_))
-        }
-    }
 
+    }
   }
+
 }

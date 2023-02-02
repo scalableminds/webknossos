@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -10,7 +9,6 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 import play.api.libs.json.Json.WithDefaultValues
 
 import java.nio.ByteOrder
-import scala.::
 
 case class PrecomputedHeader(`type`: String, data_type: String, num_channels: Int, scales: List[PrecomputedScale]) {
 

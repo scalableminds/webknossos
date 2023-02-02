@@ -1,35 +1,24 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{
-  ArrayOrder,
   AxisOrder,
   ChunkReader,
-  ChunkUtils,
   DatasetArray,
   DatasetPath,
   FileSystemStore,
   GoogleCloudFileSystemStore,
   GoogleCloudStoragePath,
-  MultiArrayUtils
 }
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
-import ucar.ma2.InvalidRangeException
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import scala.concurrent.{ExecutionContext, Future}
-import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
-  def open(magPath: Path,
-           axisOrderOpt: Option[AxisOrder],
-           channelIndex: Option[Int],
-           mag: Vec3Int): PrecomputedArray = {
+  def open(magPath: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
 
     val store = new GoogleCloudFileSystemStore(magPath.getParent, magPath.getFileSystem)
     val headerPath = s"${PrecomputedHeader.METADATA_PATH}"
@@ -60,8 +49,7 @@ object PrecomputedArray extends LazyLogging {
                          store,
                          scaleHeader,
                          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-                         channelIndex,
-                         mag)
+                         channelIndex)
   }
 }
 
@@ -69,8 +57,7 @@ class PrecomputedArray(relativePath: DatasetPath,
                        store: FileSystemStore,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
-                       channelIndex: Option[Int],
-                       mag: Vec3Int)
+                       channelIndex: Option[Int])
     extends DatasetArray(relativePath, store, header, axisOrder, channelIndex)
     with LazyLogging {
 

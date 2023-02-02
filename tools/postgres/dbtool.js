@@ -238,7 +238,6 @@ function findEvolutionFiles() {
       const num = parseInt(filename.split("-")[0], 10);
       return [num, filename];
     })
-    .filter(([num]) => num > schemaVersion)
     .sort((a, b) => a[0] - b[0]);
 }
 

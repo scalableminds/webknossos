@@ -24,8 +24,6 @@ const PG_CONFIG = (() => {
   const urlWithDefaultDatabase = new URL(url);
   urlWithDefaultDatabase.pathname = "/postgres";
 
-  console.log(url);
-
   return {
     url: url.toString(),
     urlWithDefaultDatabase: urlWithDefaultDatabase.toString(),

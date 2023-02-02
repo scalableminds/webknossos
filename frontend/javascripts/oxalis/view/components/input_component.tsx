@@ -119,7 +119,6 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
 
   render() {
     const { isTextArea, onPressEnter, title, style, ...inputProps } = this.props;
-    // const InputComponentType: typeof TextArea | typeof Input = isTextArea ? TextArea : Input;
     const input = isTextArea ? (
       <TextArea
         {...inputProps}
@@ -128,7 +127,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
-        onPressEnter={onPressEnter}
+        onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
         onKeyDown={this.blurOnEscape}
       />
     ) : (
@@ -139,7 +138,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
-        onPressEnter={onPressEnter}
+        onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
         onKeyDown={this.blurOnEscape}
       />
     );

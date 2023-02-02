@@ -2,8 +2,10 @@ import React from "react";
 import { Route, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
-import { PricingPlanEnum } from "admin/organization/organization_edit_view";
-import { isPricingPlanGreaterEqualThan } from "admin/organization/pricing_plan_utils";
+import {
+  isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
+} from "admin/organization/pricing_plan_utils";
 import { APIOrganization } from "types/api_flow_types";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import type { ComponentType } from "react";
@@ -70,12 +72,9 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
 
           if (
             this.props.requiredPricingPlan &&
-            !(
-              this.props.activeOrganization &&
-              isPricingPlanGreaterEqualThan(
-                this.props.activeOrganization.pricingPlan,
-                this.props.requiredPricingPlan,
-              )
+            !isFeatureAllowedByPricingPlan(
+              this.props.activeOrganization,
+              this.props.requiredPricingPlan,
             )
           ) {
             return <PageUnavailableForYourPlanView />;

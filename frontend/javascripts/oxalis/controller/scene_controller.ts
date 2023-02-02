@@ -8,11 +8,7 @@ import Maybe from "data.maybe";
 import type { MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getPosition,
-  getPlaneScalingFactor,
-  getRequestLogZoomStep,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -23,7 +19,7 @@ import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import Cube from "oxalis/geometries/cube";
 import Dimensions from "oxalis/model/dimensions";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import type { UserBoundingBox, OxalisState, SkeletonTracing } from "oxalis/store";
@@ -40,6 +36,7 @@ import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 import { mergeVertices } from "libs/BufferGeometryUtils";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
 
 const CUBE_COLOR = 0x999999;
 

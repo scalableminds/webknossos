@@ -3,17 +3,20 @@ package controllers
 import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
-import models.team.{PricingPlan}
+import models.team.PricingPlan
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsNull, JsValue, Json, __}
 import play.api.mvc.{Action, AnyContent}
 import utils.WkConf
+
 import scala.concurrent.duration._
 import oxalis.mail.{DefaultMails, Send}
 
@@ -119,7 +122,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
       requiredVersion = conf.WebKnossos.TermsOfService.version
       _ <- bool2Fox(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
-      _ <- organizationDAO.acceptTermsOfService(request.identity._organization, version, System.currentTimeMillis())
+      _ <- organizationDAO.acceptTermsOfService(request.identity._organization, version, Instant.now)
     } yield Ok
   }
 
@@ -165,7 +168,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
         defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                    userEmail,
                                                    organization.displayName,
-                                                   "Extend webKnossos plan by a year"))
+                                                   "Extend WEBKNOSSOS plan by a year"))
     } yield Ok
   }
 
@@ -187,7 +190,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
           defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                      userEmail,
                                                      organization.displayName,
-                                                     s"Upgrade webKnossos Plan to $requestedPlan"))
+                                                     s"Upgrade WEBKNOSSOS Plan to $requestedPlan"))
       } yield Ok
   }
 

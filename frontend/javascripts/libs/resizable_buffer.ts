@@ -1,5 +1,5 @@
 const GROW_MULTIPLIER = 1.3;
-type Class<T> = new (...args: any[]) => T;
+type Class<T> = new (..._args: any[]) => T;
 
 class ResizableBuffer<T extends Float32Array> {
   elementLength: number;

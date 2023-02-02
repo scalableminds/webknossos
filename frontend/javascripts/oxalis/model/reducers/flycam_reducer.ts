@@ -6,10 +6,12 @@ import { M4x4 } from "libs/mjs";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getValidZoomRangeForUser,
+  ZOOM_STEP_INTERVAL,
+} from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
-export const ZOOM_STEP_INTERVAL = 1.1;
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [

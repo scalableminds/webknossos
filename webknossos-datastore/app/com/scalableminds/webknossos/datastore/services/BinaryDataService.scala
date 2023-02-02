@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -9,20 +7,28 @@ import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
+import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Failure, Full}
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateServiceOpt: Option[AgglomerateService])
+class BinaryDataService(val dataBaseDir: Path,
+                        maxCacheSize: Int,
+                        val agglomerateServiceOpt: Option[AgglomerateService],
+                        fileSystemServiceOpt: Option[FileSystemService],
+                        val applicationHealthService: Option[ApplicationHealthService])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
 
-  /* Note that this must stay in sync with the back-end constant
+  /* Note that this must stay in sync with the front-end constant
     compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
-  lazy val cache = new DataCubeCache(maxCacheSize)
+
+  private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
+  private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
@@ -43,9 +49,9 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
   }
 
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
-    def convertIfNecessary[T](isNecessary: Boolean,
-                              inputArray: Array[Byte],
-                              conversionFunc: Array[Byte] => Array[Byte]): Array[Byte] =
+    def convertIfNecessary(isNecessary: Boolean,
+                           inputArray: Array[Byte],
+                           conversionFunc: Array[Byte] => Array[Byte]): Array[Byte] =
       if (isNecessary) conversionFunc(inputArray) else inputArray
 
     val requestsCount = requests.length
@@ -76,13 +82,28 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      request.dataLayer.bucketProvider.load(readInstruction, cache)
-    } else {
-      Fox.empty
-    }
+      val bucketProvider = bucketProviderCache.getOrLoadAndPut(request.dataLayer)(dataLayer =>
+        dataLayer.bucketProvider(fileSystemServiceOpt))
+      bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
+        case Failure(msg, Full(e: InternalError), _) =>
+          applicationHealthService.foreach(a => a.pushError(e))
+          logger.warn(
+            s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
+          Fox.failure(e.getMessage)
+        case Full(data) =>
+          if (data.length == 0) {
+            val msg =
+              s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
+            logger.warn(msg)
+            Fox.failure(msg)
+
+          } else Fox.successful(data)
+        case other => other.toFox
+      }
+    } else Fox.empty
 
   /**
-    * Given a list of loaded buckets, cutout the data of the cuboid
+    * Given a list of loaded buckets, cut out the data of the cuboid
     */
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
@@ -180,7 +201,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
-    val closedDataCubeHandleCount = cache.clear(dataCubeMatchPredicate)
+    val closedDataCubeHandleCount = shardHandleCache.clear(dataCubeMatchPredicate)
     (closedAgglomerateFileHandleCount, closedDataCubeHandleCount)
   }
 

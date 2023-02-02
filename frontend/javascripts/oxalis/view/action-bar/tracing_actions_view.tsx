@@ -54,12 +54,12 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
@@ -123,6 +123,7 @@ export function LayoutMenu(props: LayoutMenuProps) {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
+    // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
     setCurrentLayout,
     ...others
   } = props;
@@ -573,7 +574,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       modals.push(
         <DownloadModalView
           key="download-modal"
-          isVisible={this.props.isDownloadModalOpen}
+          isOpen={this.props.isDownloadModalOpen}
           onClose={this.handleDownloadClose}
           annotationType={annotationType}
           annotationId={annotationId}
@@ -601,7 +602,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <ShareModalView
         key="share-modal"
-        isVisible={this.props.isShareModalOpen}
+        isOpen={this.props.isShareModalOpen}
         onOk={this.handleShareClose}
         annotationType={annotationType}
         annotationId={annotationId}
@@ -610,7 +611,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <PrivateLinksModal
         key="private-links-modal"
-        isVisible={this.state.isZarrPrivateLinksModalOpen}
+        isOpen={this.state.isZarrPrivateLinksModalOpen}
         onOk={() => this.setState({ isZarrPrivateLinksModalOpen: false })}
         annotationId={annotationId}
       />,
@@ -633,7 +634,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <UserScriptsModalView
         key="user-scripts-modal"
-        isVisible={this.state.isUserScriptsModalOpen}
+        isOpen={this.state.isUserScriptsModalOpen}
         onOK={this.handleUserScriptsClose}
       />,
     );
@@ -648,7 +649,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       modals.push(
         <MergeModalView
           key="merge-modal"
-          isVisible={this.state.isMergeModalOpen}
+          isOpen={this.state.isMergeModalOpen}
           onOk={this.handleMergeClose}
         />,
       );

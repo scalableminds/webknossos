@@ -29,7 +29,7 @@ import {
   registerLabelPointAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import ndarray from "ndarray";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";

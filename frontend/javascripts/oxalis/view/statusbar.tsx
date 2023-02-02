@@ -28,7 +28,7 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { V3 } from "libs/mjs";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";

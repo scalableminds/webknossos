@@ -50,7 +50,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };

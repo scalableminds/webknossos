@@ -42,7 +42,7 @@ import {
   getSharingTokenFromUrlParameters,
   getUserConfiguration,
   getDatasetViewConfiguration,
-  getEditableMapping,
+  getEditableMappingInfo,
   getAnnotationCompoundInformation,
 } from "admin/admin_rest_api";
 import {
@@ -209,7 +209,7 @@ export async function initialize(
     initializeTracing(annotation, serverTracings, editableMappings);
   } else {
     // In view only tracings we need to set the view mode too.
-    const { allowedModes } = determineAllowedModes(dataset);
+    const { allowedModes } = determineAllowedModes();
     const mode = UrlManager.initialState.mode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
@@ -243,7 +243,7 @@ async function fetchEditableMappings(
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.mappingIsEditable)
-    .map((tracing) => getEditableMapping(tracingStoreUrl, tracing.id));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
   return Promise.all(promises);
 }
 
@@ -285,7 +285,7 @@ function initializeTracing(
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
-  const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
+  const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
   _.extend(annotation.settings, {
     allowedModes,

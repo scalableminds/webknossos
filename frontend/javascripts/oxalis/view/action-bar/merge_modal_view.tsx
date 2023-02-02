@@ -19,7 +19,7 @@ import type { OxalisState, MutableTreeMap, TreeGroup } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { makeComponentLazy } from "libs/react_helpers";
 type ProjectInfo = {
@@ -27,7 +27,7 @@ type ProjectInfo = {
   label: string;
 };
 type OwnProps = {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => void;
 };
 type StateProps = {
@@ -232,7 +232,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     return (
       <Modal
         title="Merge"
-        visible={this.props.isVisible}
+        open={this.props.isOpen}
         onCancel={this.props.onOk}
         className="merge-modal"
         width={800}

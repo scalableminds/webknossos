@@ -24,7 +24,7 @@ import Constants, {
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
-import Model from "oxalis/model";
+
 import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -84,6 +84,7 @@ import {
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import { Model } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
 import React from "react";

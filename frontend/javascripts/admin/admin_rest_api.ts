@@ -59,15 +59,15 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
-  VoxelyticsWorkflowInfo,
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
   ShortLink,
-  APIOrganizationStorageInfo,
+  VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
+  VoxelyticsLogLine,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
@@ -848,7 +848,7 @@ export async function getTracingsForAnnotation(
 
   if (skeletonLayers.length > 1) {
     throw new Error(
-      "Having more than one skeleton layer is currently not supported by webKnossos.",
+      "Having more than one skeleton layer is currently not supported by WEBKNOSSOS.",
     );
   }
 
@@ -1461,6 +1461,7 @@ type ReserveUploadInformation = {
   name: string;
   totalFileCount: number;
   initialTeams: Array<string>;
+  folderId: string | null;
 };
 
 export function reserveDatasetUpload(
@@ -1540,13 +1541,15 @@ export async function storeRemoteDataset(
   datasetName: string,
   organizationName: string,
   datasource: string,
-): Promise<Response> {
+): Promise<void> {
   return doWithToken((token) =>
-    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: datasource,
-    }),
+    Request.sendJSONReceiveJSON(
+      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`,
+      {
+        method: "PUT",
+        data: datasource,
+      },
+    ),
   );
 }
 
@@ -1757,12 +1760,12 @@ export function makeMappingEditable(
   );
 }
 
-export function getEditableMapping(
+export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
   );
 }
 
@@ -1890,7 +1893,7 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 
 // ### Organizations
 export async function getDefaultOrganization(): Promise<APIOrganization | null> {
-  // Only returns an organization if the webKnossos instance only has one organization
+  // Only returns an organization if the WEBKNOSSOS instance only has one organization
   return Request.receiveJSON("/api/organizations/default");
 }
 
@@ -1935,7 +1938,7 @@ export async function getOrganization(organizationName: string): Promise<APIOrga
   return {
     ...organization,
     paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
-    includedStorage: organization.includedStorage ?? Number.POSITIVE_INFINITY,
+    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
     includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
   };
 }
@@ -1988,14 +1991,6 @@ export async function isWorkflowAccessibleBySwitching(
   workflowHash: string,
 ): Promise<APIOrganization | null> {
   return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
-}
-
-export async function getOrganizationStorageSpace(
-  _organizationName: string,
-): Promise<APIOrganizationStorageInfo> {
-  // TODO switch to a real API. See PR #6614
-  const usedStorageMB = 0;
-  return Promise.resolve({ usedStorageSpace: usedStorageMB });
 }
 
 export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
@@ -2387,7 +2382,7 @@ export function getShortLink(key: string): Promise<ShortLink> {
 }
 
 // ### Voxelytics
-export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowInfo>> {
+export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
   return Request.receiveJSON("/api/voxelytics/workflows");
 }
 
@@ -2405,37 +2400,53 @@ export function getVoxelyticsWorkflow(
 export function getVoxelyticsLogs(
   runId: string,
   taskName: string | null,
-  minLevel: string,
-): Promise<Array<{}>> {
-  const params = new URLSearchParams({ runId, minLevel });
+  minLevel: LOG_LEVELS,
+  startTime: Date,
+  endTime: Date,
+  limit: number | null = null,
+): Promise<Array<VoxelyticsLogLine>> {
+  // Data is fetched with the limit from the end backward, i.e. the latest data is fetched first.
+  // The data is still ordered chronologically, i.e. ascending timestamps.
+  const params = new URLSearchParams({
+    runId,
+    minLevel,
+    startTimestamp: startTime.getTime().toString(),
+    endTimestamp: endTime.getTime().toString(),
+  });
   if (taskName != null) {
     params.append("taskName", taskName);
+  }
+  if (limit != null) {
+    params.append("limit", limit.toString());
   }
   return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }
 
 export function getVoxelyticsChunkStatistics(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
 ): Promise<Array<VoxelyticsChunkStatistics>> {
-  return Request.receiveJSON(
-    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${new URLSearchParams({
-      runId,
-      taskName,
-    })}`,
-  );
+  const params = new URLSearchParams({
+    taskName,
+  });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${params}`);
 }
 export function getVoxelyticsArtifactChecksums(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
   artifactName?: string,
 ): Promise<Array<Record<string, string | number>>> {
   const params = new URLSearchParams({
-    runId,
     taskName,
   });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
   if (artifactName != null) {
     params.append("artifactName", artifactName);
   }

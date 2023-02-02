@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { disableViewportMetatag } from "libs/utils"; // For registered users, webKnossos should behave similar to
+import { disableViewportMetatag } from "libs/utils"; // For registered users, WEBKNOSSOS should behave similar to
 // the desktop's browser behavior. Therefore, we clear the
 // viewport meta tag.
 

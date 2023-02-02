@@ -14,7 +14,7 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";

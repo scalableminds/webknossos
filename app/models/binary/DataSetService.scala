@@ -47,7 +47,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val unreportedStatus = "No longer available on datastore."
+  private val unreportedStatus = dataSetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
   private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
 
@@ -61,7 +61,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
+  def createPreliminaryDataset(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
     val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), notYetUploadedStatus)
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }
@@ -256,7 +256,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WKRemoteDataStoreClient] =
     for {
       dataStore <- dataStoreFor(dataSet)
-    } yield new WKRemoteDataStoreClient(dataStore, dataSet, rpc)
+    } yield new WKRemoteDataStoreClient(dataStore, rpc)
 
   def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Instant] =
     userOpt match {

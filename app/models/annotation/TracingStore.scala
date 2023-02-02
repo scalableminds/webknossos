@@ -12,7 +12,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SqlClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -57,7 +57,7 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
     } yield new WKRemoteTracingStoreClient(tracingStore, dataSet, rpc)
 }
 
-class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
   protected val collection = Tracingstores
 
@@ -79,24 +79,19 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       rOpt <- run(Tracingstores.filter(r => notdel(r) && r.key === key).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   def findOneByName(name: String): Fox[TracingStore] =
     for {
       rOpt <- run(Tracingstores.filter(r => notdel(r) && r.name === name).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #$columns from webknossos.tracingstores_ where url = $url and #$accessQuery".as[TracingstoresRow])
+      r <- run(q"select $columns from webknossos.tracingstores_ where url = $url and $accessQuery".as[TracingstoresRow])
       parsed <- parseFirst(r, url)
     } yield parsed
 
@@ -108,18 +103,18 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def insertOne(t: TracingStore): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
-                         values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""")
+      _ <- run(q"""insert into webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
+                         values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =
     for {
-      _ <- run(sqlu"""update webknossos.tracingStores set isDeleted = true where name = $name""")
+      _ <- run(q"update webknossos.tracingStores set isDeleted = true where name = $name".asUpdate)
     } yield ()
 
   def updateOne(t: TracingStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu""" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}""")
+        q" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}".asUpdate)
     } yield ()
 }

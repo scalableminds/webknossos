@@ -1,19 +1,20 @@
 import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
+import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
+import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
+  getEnabledLayers,
   getMaxZoomStep,
   getResolutionByMax,
+  getResolutionInfo,
   getResolutions,
+  SmallerOrHigherInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
-import { userSettings } from "types/schemas/user_settings.schema";
 import Dimensions from "oxalis/model/dimensions";
 import type {
   OrthoView,
@@ -30,6 +31,10 @@ import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+
+export const ZOOM_STEP_INTERVAL = 1.1;
 
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
@@ -307,7 +312,7 @@ export function getValidTaskZoomRange(
   state: OxalisState,
   respectRestriction: boolean = false,
 ): [number, number] {
-  const defaultRange = [userSettings.zoom.minimum, Infinity];
+  const defaultRange = [baseDatasetViewConfiguration.zoom.minimum, Infinity];
   const { resolutionRestrictions } = state.tracing.restrictions;
 
   if (!respectRestriction) {
@@ -344,22 +349,7 @@ export function isMagRestrictionViolated(state: OxalisState): boolean {
 
   return false;
 }
-export function getPlaneScalingFactor(
-  state: OxalisState,
-  flycam: Flycam,
-  planeID: OrthoView,
-): [number, number] {
-  const [width, height] = getPlaneExtentInVoxelFromStore(state, flycam.zoomStep, planeID);
-  return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
-}
-export function getPlaneExtentInVoxelFromStore(
-  state: OxalisState,
-  zoomStep: number,
-  planeID: OrthoView,
-): [number, number] {
-  const { width, height } = getInputCatcherRect(state, planeID);
-  return [width * zoomStep, height * zoomStep];
-}
+
 export function getPlaneExtentInVoxel(
   rects: OrthoViewRects,
   zoomStep: number,
@@ -440,3 +430,63 @@ export function getAreasFromState(state: OxalisState): OrthoViewMap<Area> {
   const datasetScale = state.dataset.dataSource.scale;
   return getAreas(rects, position, zoomStep, datasetScale);
 }
+
+type UnrenderableLayersInfos = {
+  layer: DataLayerType;
+  smallerOrHigherInfo: SmallerOrHigherInfo;
+};
+
+/*
+  This function returns layers that cannot be rendered (since the current resolution is missing),
+  even though they should be rendered (since they are enabled). For each layer, this method
+  additionally returns whether data of this layer can be rendered by zooming in or out.
+  The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
+ */
+function _getUnrenderableLayerInfosForCurrentZoom(
+  state: OxalisState,
+): Array<UnrenderableLayersInfos> {
+  const { dataset } = state;
+  const zoomStep = getRequestLogZoomStep(state);
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
+  const unrenderableLayers = getEnabledLayers(dataset, state.datasetConfiguration)
+    .map((layer: DataLayerType) => ({
+      layer,
+      resolutionInfo: getResolutionInfo(layer.resolutions),
+    }))
+    .filter(({ resolutionInfo }) => {
+      const isPresent = resolutionInfo.hasIndex(zoomStep);
+
+      if (isPresent) {
+        // The layer exists. Thus, it is not unrenderable.
+        return false;
+      }
+
+      if (renderMissingDataBlack) {
+        // We already know that the layer is missing. Since `renderMissingDataBlack`
+        // is enabled, the fallback resolutions don't matter. The layer cannot be
+        // rendered.
+        return true;
+      }
+
+      // The current resolution is missing and fallback rendering
+      // is activated. Thus, check whether one of the fallback
+      // zoomSteps can be rendered.
+      return !_.range(1, maxZoomStepDiff + 1).some((diff) => {
+        const fallbackZoomStep = zoomStep + diff;
+        return resolutionInfo.hasIndex(fallbackZoomStep);
+      });
+    })
+    .map<UnrenderableLayersInfos>(({ layer, resolutionInfo }) => {
+      const smallerOrHigherInfo = resolutionInfo.hasSmallerAndOrHigherIndex(zoomStep);
+      return {
+        layer,
+        smallerOrHigherInfo,
+      };
+    });
+  return unrenderableLayers;
+}
+
+export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayerInfosForCurrentZoom,
+);

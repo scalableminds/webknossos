@@ -8,7 +8,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { getHistogramForLayer } from "admin/admin_rest_api";
 import DataLayer from "oxalis/model/data_layer";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import { Vector2 } from "oxalis/constants";
 
 export default function* loadHistogramDataSaga(): Saga<void> {

@@ -1,14 +1,14 @@
 # Collaboration & Sharing
-webKnossos is built for working collaboratively and sharing your work with colleagues, collaborators, and the scientific community.
-Anything in webKnossos can be shared: the raw datasets, any skeleton or volume annotations, or complex segmentations.
+WEBKNOSSOS is built for working collaboratively and sharing your work with colleagues, collaborators, and the scientific community.
+Anything in WEBKNOSSOS can be shared: the raw datasets, any skeleton or volume annotations, or complex segmentations.
 
-When speaking about collaboration and sharing, we imagine three scenarios supported by webKnossos:
+When speaking about collaboration and sharing, we imagine three scenarios supported by WEBKNOSSOS:
 
-1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g., colleagues from other institutes, reviewers, publishers, a paper publication, and the research community as a whole (read-only).
+1. Sharing data with outsiders - anyone who is not a member of your WEBKNOSSOS organization, e.g., colleagues from other institutes, reviewers, publishers, a paper publication, and the research community as a whole (read-only).
 2. Sharing data within your organization to collaborate with other members/co-workers (both read-only or modifiable)
 3. Reconstruction of large datasets through a divide-and-conquer strategy with the [projects and tasks system](./tasks.md).
 
-Since webKnossos is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
+Since WEBKNOSSOS is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate WEBKNOSSOS in your existing communication workflows, e.g.:
 
 - send collaborators an *email* containing a link to specific, interesting data locations or annotations
 - include a link in a *publication* so readers can have direct access to the data to see for themselves
@@ -18,18 +18,18 @@ Since webKnossos is a web platform, most resources can be shared as a web link/U
 
 In many ways, sharing by web link works similarly to products like Google Drive or Dropbox.
 
-webKnossos sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
+WEBKNOSSOS sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
 
 ![Video: Include links to your datasets directly in a publication](https://www.youtube.com/watch?v=hcm8Jx22DG8)
 
 ## Dataset Sharing
 
- Dataset sharing allows outside users to view your datasets and segmentation layers within webKnossos.
+ Dataset sharing allows outside users to view your datasets and segmentation layers within WEBKNOSSOS.
  Shared resources can be accessed through a direct URL or can be featured. 
  [Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
 
  The easiest way to obtain this sharing link is by clicking the `Share` button in the toolbar at the top of the screen next to the position/coordinate section (*Share icon*). 
- The sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
+ The sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current WEBKNOSSOS state so that any recipient can take off from the same situation.
 
  Sharing a dataset is useful for multiple scenarios: 
  
@@ -37,12 +37,12 @@ webKnossos sharing is tightly integrated with user permissions and access rights
  - You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
  - You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
 
- webKnossos shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
+ WEBKNOSSOS shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
 
 ### Private and Internal Sharing
 A privately shared dataset can only be accessed by outside users using the correct URL.
 A unique authentification token is part of the URL, so anyone with this URL has access permission for viewing the dataset.
-The dataset is NOT featured publicly anywhere else on your webKnossos instance.
+The dataset is NOT featured publicly anywhere else on your WEBKNOSSOS instance.
 
 Private sharing is useful for giving outside users (reviewers, editors, journalists etc.) an opportunity to look at your data without having to publish it publicly.
 
@@ -62,7 +62,7 @@ To revoke a sharing link in the future, click the `Revoke` button on the right-h
 
 ### Public Sharing
 Public sharing provides access to your dataset to the general public.
-Anyone can access the shared dataset and view it on your webKnossos instance without the need for an account.
+Anyone can access the shared dataset and view it on your WEBKNOSSOS instance without the need for an account.
 
 ![The Featured Publications tab provides a public showcase of selected published, community datasets. ](images/getting_started-datasets.jpeg)
 
@@ -79,11 +79,11 @@ To share a dataset publicly, follow these steps:
 
 ![The Metadata tab overview](images/metadata_tab.jpeg)
 
-  **We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main webKnossos UI.**
+  **We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.**
 
 
 ## Annotation Sharing
-Besides sharing just a dataset for viewing, webKnossos can also share complete annotations, e.g., a large-scale skeleton reconstruction.
+Besides sharing just a dataset for viewing, WEBKNOSSOS can also share complete annotations, e.g., a large-scale skeleton reconstruction.
 Sharing works for both skeletons and volume annotations.
 
 
@@ -112,17 +112,17 @@ Annotations can be shared via a link. People, who obtain the link, must have acc
 
 `Public` annotations do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website.
 For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
-Otherwise, the annotation and data cannot be loaded by webKnossos, and an error will occur.
+Otherwise, the annotation and data cannot be loaded by WEBKNOSSOS, and an error will occur.
 [Learn how to share datasets publicly above.](#public-sharing)
 
-`Internal` annotations require the recipient of a link to log in with his webKnossos account.
+`Internal` annotations require the recipient of a link to log in with his WEBKNOSSOS account.
 This is primarily used for sharing annotations with your co-workers, e.g. for highlighting interesting positions in your work.
 Since your position, rotation, zoom etc. are encoded in the URL it is a great way for working collaboratively.
 Just send an URL to your co-workers in an email or blog post, and they may jump right into the annotation at your location.
 
 `Private` annotations don't allow sharing. However, your direct supervisor and admins can still view the annotation.
 
-Since every annotation is tied to an individual webKnossos user, co-workers cannot modify your annotation if you share it with them.
+Since every annotation is tied to an individual WEBKNOSSOS user, co-workers cannot modify your annotation if you share it with them.
 Instead, the shared annotation will be read-only.
 If your co-workers want to make modifications to the annotation, they can click the `Copy to my Account` button in the toolbar.
 This will create a copy of the annotation, link it to the co-workers' accounts and enable modifications again.
@@ -137,10 +137,10 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 ![Get the Annotation Sharing Link](images/sharing_modal_link.jpeg)
 
 #### Sharing Link Format
-By default, webKnossos shortens the web links for ease of use. You can switch to full-length links in the link-sharing UI.
+By default, WEBKNOSSOS shortens the web links for ease of use. You can switch to full-length links in the link-sharing UI.
 
 As mentioned above, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes. 
-Anyone who opens a link will have the same webKnossos experience that was captured when copying the link. 
+Anyone who opens a link will have the same WEBKNOSSOS experience that was captured when copying the link. 
 Alternatively, the link can be crafted manually or programmatically to direct users to specific locations in a dataset. 
 
 The information is JSON-encoded in the URL fragment and has the following format (flow type definition):
@@ -220,8 +220,8 @@ Any annotation shared this way will be listed in your personal and any team memb
 
 To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Yes, allow editing" from the sharing UI.
 
-Note that while webKnossos allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once. 
-webKnossos does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies. 
+Note that while WEBKNOSSOS allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once. 
+WEBKNOSSOS does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies. 
 Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
 
 !!! info

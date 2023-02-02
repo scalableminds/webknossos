@@ -37,6 +37,8 @@ import window, { document, location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -155,7 +157,6 @@ function UserInitials({
       <Avatar
         className="hover-effect-via-opacity"
         style={{
-          backgroundColor: "rgb(82, 196, 26)",
           verticalAlign: "middle",
         }}
       >
@@ -164,17 +165,7 @@ function UserInitials({
 
       {isMultiMember ? (
         <SwapOutlined
-          style={{
-            position: "absolute",
-            top: 2,
-            right: -5,
-            marginRight: 0,
-            minWidth: 12,
-            height: 12,
-            lineHeight: "12px",
-            fontSize: 12,
-            color: "#75df4a",
-          }}
+          className="switch-organization-icon"
           title="You are member of multiple organizations. Click the avatar to switch between them."
         />
       ) : null}
@@ -224,15 +215,15 @@ function AdministrationSubMenu({
       <Menu.Item key="/teams">
         <Link to="/teams">Teams</Link>
       </Menu.Item>
-      <Menu.Item key="/projects">
+      <PricingEnforcedMenuItem key="/projects" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/projects">Projects</Link>
-      </Menu.Item>
-      <Menu.Item key="/tasks">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem key="/tasks" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/tasks">Tasks</Link>
-      </Menu.Item>
-      <Menu.Item key="/taskTypes">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem key="/taskTypes" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/taskTypes">Task Types</Link>
-      </Menu.Item>
+      </PricingEnforcedMenuItem>
       {features().jobsEnabled && (
         <Menu.Item key="/jobs">
           <Link to="/jobs">Processing Jobs</Link>
@@ -268,15 +259,21 @@ function StatisticsSubMenu({ collapse, ...menuProps }: { collapse: boolean } & S
       <Menu.Item key="/statistics">
         <Link to="/statistics">Overview</Link>
       </Menu.Item>
-      <Menu.Item key="/reports/timetracking">
+      <PricingEnforcedMenuItem
+        key="/reports/timetracking"
+        requiredPricingPlan={PricingPlanEnum.Power}
+      >
         <Link to="/reports/timetracking">Time Tracking</Link>
-      </Menu.Item>
-      <Menu.Item key="/reports/projectProgress">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem
+        key="/reports/projectProgress"
+        requiredPricingPlan={PricingPlanEnum.Team}
+      >
         <Link to="/reports/projectProgress">Project Progress</Link>
-      </Menu.Item>
-      <Menu.Item key="/reports/openTasks">
+      </PricingEnforcedMenuItem>
+      <PricingEnforcedMenuItem key="/reports/openTasks" requiredPricingPlan={PricingPlanEnum.Team}>
         <Link to="/reports/openTasks">Open Tasks</Link>
-      </Menu.Item>
+      </PricingEnforcedMenuItem>
     </SubMenu>
   );
 }
@@ -433,7 +430,7 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
         marginRight: 12,
       }}
     >
-      <Tooltip title="See what's new in webKnossos" placement="bottomLeft">
+      <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
         <Badge count={maybeUnreadReleaseCount || 0} size="small">
           <Button
             onClick={handleShowWhatsNewView}
@@ -750,10 +747,11 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
               to="/dashboard"
               style={{
                 fontWeight: 400,
+                verticalAlign: "middle",
               }}
             >
               <CollapsibleMenuTitle
-                title="webKnossos"
+                title="WEBKNOSSOS"
                 icon={<span className="logo" />}
                 collapse={collapseAllNavItems}
               />

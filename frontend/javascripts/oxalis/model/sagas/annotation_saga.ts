@@ -11,7 +11,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { takeLatest, select, take, retry, delay } from "typed-redux-saga";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { MappingStatusEnum } from "oxalis/constants";

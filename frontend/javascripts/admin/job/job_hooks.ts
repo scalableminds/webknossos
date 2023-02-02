@@ -88,7 +88,7 @@ export function useStartAndPollJob({
       }
     } else {
       // Check whether there is an active job (e.g., the user
-      // started the job earlier and reopened webKnossos in the meantime).
+      // started the job earlier and reopened WEBKNOSSOS in the meantime).
       const pendingJobs = potentialJobs.filter(
         (job) => job.state === "STARTED" || job.state === "PENDING",
       );

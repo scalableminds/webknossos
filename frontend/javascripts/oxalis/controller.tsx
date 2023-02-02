@@ -18,7 +18,7 @@ import { wkReadyAction } from "oxalis/model/actions/actions";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";

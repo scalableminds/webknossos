@@ -34,13 +34,20 @@ trait DataSetDeleter extends LazyLogging with DirectoryConstants {
     val dataSourcePath =
       if (isInConversion) dataBaseDir.resolve(organizationName).resolve(forConversionDir).resolve(dataSetName)
       else dataBaseDir.resolve(organizationName).resolve(dataSetName)
-    val trashPath: Path = dataBaseDir.resolve(organizationName).resolve(trashDir)
-    val targetPath = trashPath.resolve(dataSetName)
-    new File(trashPath.toString).mkdirs()
 
-    logger.info(
-      s"Deleting dataset by moving it from $dataSourcePath to $targetPath${if (reason.isDefined) s" because ${reason.getOrElse("")}"
-      else "..."}")
-    deleteWithRetry(dataSourcePath, targetPath)
+    if (Files.exists(dataSourcePath)) {
+      val trashPath: Path = dataBaseDir.resolve(organizationName).resolve(trashDir)
+      val targetPath = trashPath.resolve(dataSetName)
+      new File(trashPath.toString).mkdirs()
+
+      logger.info(
+        s"Deleting dataset by moving it from $dataSourcePath to $targetPath${if (reason.isDefined) s" because ${reason.getOrElse("")}"
+        else "..."}")
+      deleteWithRetry(dataSourcePath, targetPath)
+    } else {
+      Fox.successful(logger.info(
+        s"Dataset deletion requested for dataset at $dataSourcePath, but it does not exist. Skipping deletion on disk."))
+    }
+
   }
 }

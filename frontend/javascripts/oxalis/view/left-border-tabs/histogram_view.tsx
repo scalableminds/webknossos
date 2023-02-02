@@ -3,7 +3,7 @@ import { Alert, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
-import type { Vector2, Vector3 } from "oxalis/constants";
+import { PRIMARY_COLOR, Vector2, Vector3 } from "oxalis/constants";
 import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
@@ -151,7 +151,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     );
 
     for (const [i, histogram] of data.entries()) {
-      const color = data.length > 1 ? uint24Colors[i] : uint24Colors[2];
+      const color = data.length > 1 ? uint24Colors[i] : PRIMARY_COLOR;
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }

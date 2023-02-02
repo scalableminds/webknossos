@@ -1,12 +1,7 @@
 import { FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Dropdown, Table, Tag, Tooltip } from "antd";
-import type {
-  FilterValue,
-  SorterResult,
-  TableCurrentDataSource,
-  TablePaginationConfig,
-} from "antd/lib/table/interface";
+import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
 import { diceCoefficient as dice } from "dice-coefficient";
@@ -18,7 +13,7 @@ import type {
   APIDatasetId,
   APIDataset,
 } from "types/api_flow_types";
-import type { DatasetFilteringMode } from "dashboard/dataset_view";
+import { type DatasetFilteringMode } from "dashboard/dataset_view";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
 import { stringToColor, formatScale } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -36,8 +31,8 @@ import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/con
 import Shortcut from "libs/shortcut_component";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import { useSelector } from "react-redux";
-import { DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
-import { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
+import { type DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
+import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
 
 const { ThinSpace } = Unicode;
@@ -326,7 +321,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
       ) : null;
     return (
       <>
-        <p>No Datasets found.</p>
+        {"queries" in this.props.context ? <p>This folder is empty.</p> : <p>No Datasets found.</p>}
+
         {maybeWarning}
       </>
     );
@@ -536,7 +532,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             width={280}
             sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(name: string, dataset: APIMaybeUnimportedDataset) => (
+            render={(_name: string, dataset: APIMaybeUnimportedDataset) => (
               <>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
@@ -547,11 +543,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 </Link>
                 <br />
 
-                {"getBreadcrumbs" in this.props.context ? (
+                {"getBreadcrumbs" in this.props.context &&
+                this.props.context.globalSearchQuery != null ? (
                   <BreadcrumbsTag parts={this.props.context.getBreadcrumbs(dataset)} />
-                ) : (
-                  <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
-                )}
+                ) : null}
               </>
             )}
           />
@@ -560,7 +555,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             dataIndex="tags"
             key="tags"
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
+            render={(_tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
               dataset.isActive ? (
                 <DatasetTags
                   dataset={dataset}
@@ -612,7 +607,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 }
                 return dataset.allowedTeams.some((team) => team.name === value);
               }}
-              render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => (
+              render={(_teams: APITeam[], dataset: APIMaybeUnimportedDataset) => (
                 <TeamTags dataset={dataset} />
               )}
             />

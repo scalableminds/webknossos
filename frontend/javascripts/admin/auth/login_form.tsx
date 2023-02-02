@@ -53,7 +53,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
           forbidden in most browsers. Please
           {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'Location' is not assignable to type 'string'... Remove this comment to see the full error message */}
           <a href={window.location} target="_blank" rel="noopener noreferrer">
-            open webKnossos
+            open WEBKNOSSOS
           </a>{" "}
           outside of an iFrame to log in.
         </span>

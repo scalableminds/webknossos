@@ -17,7 +17,6 @@ import type {
   Node,
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 export type SkeletonTracingStats = {
   treeCount: number;
@@ -97,11 +96,11 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 
   return Maybe.Nothing();
 }
-export function findTreeByNodeId(trees: TreeMap, nodeId: number): Maybe<Tree> {
-  return Maybe.fromNullable(_.values(trees).find((tree) => tree.nodes.has(nodeId)));
+export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
+  return _.values(trees).find((tree) => tree.nodes.has(nodeId));
 }
-export function findTreeByName(trees: TreeMap, treeName: string): Maybe<Tree> {
-  return Maybe.fromNullable(_.values(trees).find((tree: Tree) => tree.name === treeName));
+export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
+  return _.values(trees).find((tree: Tree) => tree.name === treeName);
 }
 export function getTree(
   skeletonTracing: SkeletonTracing,
@@ -232,3 +231,17 @@ export const getTreeNameForAgglomerateSkeleton = (
   agglomerateId: number,
   mappingName: string,
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;
+
+// Helper
+export function* mapGroups<R>(
+  groups: Array<TreeGroup>,
+  callback: (arg0: TreeGroup) => R,
+): Generator<R, void, void> {
+  for (const group of groups) {
+    yield callback(group);
+
+    if (group.children) {
+      yield* mapGroups(group.children, callback);
+    }
+  }
+}

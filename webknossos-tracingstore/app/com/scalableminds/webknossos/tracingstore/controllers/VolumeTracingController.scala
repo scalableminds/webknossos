@@ -5,11 +5,12 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
@@ -372,6 +373,44 @@ class VolumeTracingController @Inject()(
                                                         editableMappingId = mappingName,
                                                         editableMapping = editableMapping)
           } yield Ok(infoJson)
+        }
+      }
+  }
+
+  def editableMappingProto(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            mappingName <- tracing.mappingName.toFox
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            editableMapping <- editableMappingService.get(mappingName,
+                                                          remoteFallbackLayer,
+                                                          urlOrHeaderToken(token, request))
+          } yield Ok(toProtoBytes[EditableMappingProto](editableMapping.toProto))
+        }
+      }
+  }
+
+  def editableMappingSegmentIdsForAgglomerate(token: Option[String],
+                                              tracingId: String,
+                                              agglomerateId: Long): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            mappingName <- tracing.mappingName.toFox
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            editableMapping <- editableMappingService.get(mappingName,
+                                                          remoteFallbackLayer,
+                                                          urlOrHeaderToken(token, request))
+            agglomerateIdIsPresent = editableMapping.agglomerateToGraph.contains(agglomerateId)
+            segmentIds = if (agglomerateIdIsPresent) {
+              editableMapping.agglomerateToGraph(agglomerateId).segments
+            } else List.empty
+          } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
         }
       }
   }

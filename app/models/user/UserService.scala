@@ -22,7 +22,7 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -55,8 +55,15 @@ class UserService @Inject()(conf: WkConf,
 
   def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] =
     multiUser._lastLoggedInIdentity match {
-      case Some(userId) => userDAO.findOne(userId)
-      case None         => userDAO.findFirstByMultiUser(multiUser._id)
+      case Some(userId) =>
+        for {
+          maybeLastLoggedInIdentity <- userDAO.findOne(userId).futureBox
+          identity <- maybeLastLoggedInIdentity match {
+            case Full(user) if !user.isDeactivated => Fox.successful(user)
+            case _                                 => userDAO.findFirstByMultiUser(multiUser._id)
+          }
+        } yield identity
+      case None => userDAO.findFirstByMultiUser(multiUser._id)
     }
 
   def findOneByEmailAndOrganization(email: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
@@ -135,11 +142,11 @@ class UserService @Inject()(conf: WkConf,
                        organizationId: ObjectId,
                        autoActivate: Boolean,
                        isAdmin: Boolean = false,
-                       isUnlisted: Boolean = false)(implicit ctx: DBAccessContext): Fox[User] =
+                       isUnlisted: Boolean = false): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
+      organizationTeamMembership = TeamMembership(organizationTeamId, isTeamManager = false)
       loginInfo = LoginInfo(CredentialsProvider.ID, newUserId.id)
       user = originalUser.copy(
         _id = newUserId,
@@ -154,7 +161,7 @@ class UserService @Inject()(conf: WkConf,
         created = Instant.now
       )
       _ <- userDAO.insertOne(user)
-      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
+      _ <- userDAO.insertTeamMembership(user._id, organizationTeamMembership)(GlobalAccessContext)
       _ = logger.info(
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user

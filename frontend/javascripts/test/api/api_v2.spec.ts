@@ -134,7 +134,7 @@ test("registerKeyHandler should register a key handler and return a handler to u
 test("registerOverwrite should overwrite newAddNode", (t) => {
   const api = t.context.api;
   let bool = false;
-  api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
+  api.utils.registerOverwrite("SET_ACTIVE_NODE", (_store, call, action) => {
     bool = true;
     call(action);
   });
@@ -147,7 +147,7 @@ test("registerOverwrite should overwrite newAddNode", (t) => {
 test("registerOverwrite should overwrite deleteActiveNode", (t) => {
   const api = t.context.api;
   let bool = false;
-  api.utils.registerOverwrite("DELETE_NODE", (store, call, action) => {
+  api.utils.registerOverwrite("DELETE_NODE", (_store, call, action) => {
     bool = true;
     call(action);
   });

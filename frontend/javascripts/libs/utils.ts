@@ -137,7 +137,7 @@ export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
     } else {
       return Maybe.Nothing();
     }
-  } catch (exception) {
+  } catch (_exception) {
     return Maybe.Nothing();
   }
 }
@@ -145,7 +145,7 @@ export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
 export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<T | null | undefined> {
   try {
     return await promise;
-  } catch (exception) {
+  } catch (_exception) {
     return null;
   }
 }
@@ -740,7 +740,7 @@ const areEventListenerOptionsSupported = _.once(() => {
     window.addEventListener("test", options, options);
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("test", options, options);
-  } catch (err) {
+  } catch (_err) {
     passiveSupported = false;
   }
 
@@ -1000,7 +1000,7 @@ export function convertBufferToImage(
 export function getIsInIframe() {
   try {
     return window.self !== window.top;
-  } catch (e) {
+  } catch (_e) {
     return true;
   }
 }

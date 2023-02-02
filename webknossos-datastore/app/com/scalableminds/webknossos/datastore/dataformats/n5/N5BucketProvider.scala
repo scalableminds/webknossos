@@ -4,11 +4,12 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
+import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
 import java.nio.file.Path
@@ -28,28 +29,33 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging wit
 
 }
 
-class N5BucketProvider(layer: N5Layer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
+class N5BucketProvider(layer: N5Layer, val fileSystemServiceOpt: Option[FileSystemService])
+    extends BucketProvider
+    with LazyLogging
+    with RateLimitedErrorLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[N5CubeHandle] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[N5CubeHandle] = {
     val n5MagOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
     n5MagOpt match {
-      case None => Empty
+      case None => Fox.empty
       case Some(n5Mag) =>
-        val magPathOpt: Option[Path] = {
-          n5Mag.remoteSource match {
-            case Some(remoteSource) => remotePathFrom(remoteSource)
-            case None               => localPathFrom(readInstruction, n5Mag.pathWithFallback)
-          }
-        }
-        magPathOpt match {
+        fileSystemServiceOpt match {
+          case Some(fileSystemService: FileSystemService) =>
+            for {
+              magPath: Path <- if (n5Mag.isRemote) {
+                for {
+                  remoteSource <- fileSystemService.remoteSourceFor(n5Mag)
+                  remotePath <- remotePathFrom(remoteSource)
+                } yield remotePath
+              } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
+              cubeHandle <- tryo(onError = e => logError(e))(N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex))
+                .map(new N5CubeHandle(_))
+            } yield cubeHandle
           case None => Empty
-          case Some(magPath) =>
-            tryo(onError = e => logError(e))(N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex))
-              .map(new N5CubeHandle(_))
         }
     }
-
   }
 }

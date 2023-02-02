@@ -1,6 +1,6 @@
 import type { Point2, Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getMappingInfo,

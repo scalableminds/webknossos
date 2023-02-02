@@ -1,6 +1,10 @@
 // The menu items to the right side of the tracing view.
 // Currently tabs for comments / trees etc
 
+.flexlayout__tab_border_right {
+  font-size: @font-size-base;
+}
+
 #abstract-tree-canvas {
   flex-grow: 1;
   min-height: 600px;
@@ -30,7 +34,7 @@
     display: none;
   }
   &.is-selected-cell {
-    background-color: @blue-2;
+    background-color: @blue-3;
   }
 
   &:hover {
@@ -48,7 +52,7 @@
 }
 
 .deemphasized-segment-name {
-  fontstyle: italic;
+  font-style: italic;
   color: #989898;
 }
 
@@ -57,6 +61,10 @@
   .comment-tree {
     height: 24px;
     line-height: 24px;
+    cursor: pointer;
+    &:hover {
+      background-color: @blue-1;
+    }
   }
   .comment-active {
     background-color: @blue-3;
@@ -98,7 +106,7 @@
   }
 
   .selected-tree-node {
-    background-color: rgba(@green-7, 0.8);
+    background-color: @blue-zircon;
   }
 
   .rst__rowLabel {
@@ -109,6 +117,9 @@
   }
   .rst__rowSearchMatch .rst__rowLabel {
     background-color: @blue-3;
+    &:hover {
+      background-color: @blue-1;
+    }
   }
 }
 

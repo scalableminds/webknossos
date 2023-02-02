@@ -99,7 +99,6 @@ type State = {
   savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined;
   inferredDataSource: APIDataSource | null | undefined;
   differenceBetweenDataSources: Record<string, any>;
-  hasNoAllowedTeams: boolean;
   dataSourceSettingsStatus: DataSourceSettingsStatus;
 };
 export type FormData = {
@@ -179,7 +178,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     savedDataSourceOnServer: null,
     inferredDataSource: null,
     differenceBetweenDataSources: {},
-    hasNoAllowedTeams: false,
     dataSourceSettingsStatus: {
       appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
       isJSONFormatValid: IsJSONFormatValidEnum.Yes,
@@ -357,7 +355,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       this.setState({
         datasetDefaultConfiguration,
         dataset,
-        hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
       handleGenericError(error as Error);
@@ -440,9 +437,9 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       message = (
         <div>
           The current datasource-properties.json on the server seems to be in an invalid JSON format
-          (or is missing completely). The settings below are suggested by webKnossos and should be
+          (or is missing completely). The settings below are suggested by WEBKNOSSOS and should be
           adjusted. <br />
-          Be aware that webKnossos cannot guess properties like the voxel size or the largest
+          Be aware that WEBKNOSSOS cannot guess properties like the voxel size or the largest
           segment id. You must set them yourself.
         </div>
       );
@@ -463,7 +460,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           >
             Here
           </LinkButton>{" "}
-          are suggested settings from webKnossos. But be aware that properties like the voxel size
+          are suggested settings from WEBKNOSSOS. But be aware that properties like the voxel size
           or the largest segment id cannot be detected correctly. <br />
           If you want to apply those settings, click{" "}
           <LinkButton onClick={applySuggestedSettings}>here</LinkButton>.
@@ -487,7 +484,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
-          webKnossos detected additional information not yet present in the dataset’s{" "}
+          WEBKNOSSOS detected additional information not yet present in the dataset’s{" "}
           <em>datasource-properties.json</em> file:
           <div
             style={{
@@ -613,7 +610,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         const dataSource = JSON.parse(form.getFieldValue("dataSourceJson"));
         const didNotEditDatasource = !this.didDatasourceChange(dataSource);
         return didNotEditDatasource;
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     }
@@ -771,10 +768,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     );
   }
 
-  onValuesChange = (changedValues: FormData, allValues: FormData) => {
-    const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
+  onValuesChange = (_changedValues: FormData, _allValues: FormData) => {
     this.setState({
-      hasNoAllowedTeams,
       hasUnsavedChanges: true,
     });
   };
@@ -814,17 +809,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         />
       </Tooltip>
     );
-    const { hasNoAllowedTeams } = this.state;
-    const hasNoAllowedTeamsWarning = hasNoAllowedTeams ? (
-      <Tooltip title="Please double-check some fields here.">
-        <ExclamationCircleOutlined
-          style={{
-            marginLeft: 4,
-            color: "var(--ant-warning)",
-          }}
-        />
-      </Tooltip>
-    ) : null;
+
     return (
       <Form
         ref={this.formRef}
@@ -893,12 +878,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                 </TabPane>
 
                 <TabPane
-                  tab={
-                    <span>
-                      Sharing & Permissions{" "}
-                      {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
-                    </span>
-                  }
+                  tab={<span>Sharing & Permissions {formErrors.general ? errorIcon : null}</span>}
                   key="sharing"
                   forceRender
                 >
@@ -907,7 +887,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                       form={form}
                       datasetId={this.props.datasetId}
                       dataset={this.state.dataset}
-                      hasNoAllowedTeams={hasNoAllowedTeams}
                     />
                   </Hideable>
                 </TabPane>

@@ -22,7 +22,7 @@ import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_ac
 import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
 import { Unicode, type Vector3 } from "oxalis/constants";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
@@ -626,7 +626,7 @@ export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
       description={
         <p>
           For this annotation some floodfill operations have not run to completion, because they
-          covered a too large volume. webKnossos can finish these operations via a long-running job.
+          covered a too large volume. WEBKNOSSOS can finish these operations via a long-running job.
           This job will copy the current dataset, apply the changes of the current volume annotation
           into the volume layer and use the existing bounding boxes as seeds to continue the
           remaining floodfill operations (i.e., &quot;globalize&quot; them).

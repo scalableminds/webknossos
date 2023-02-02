@@ -5,7 +5,7 @@ import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import features from "features";
 import { downloadAnnotation, getAuthToken } from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
@@ -27,7 +27,7 @@ const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onClose: () => void;
   annotationType: APIAnnotationType;
   annotationId: string;
@@ -124,7 +124,7 @@ function Footer({
 }
 
 function _DownloadModalView(props: Props): JSX.Element {
-  const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
+  const { isOpen, onClose, annotationType, annotationId, hasVolumeFallback } = props;
 
   const [activeTabKey, setActiveTabKey] = useState("download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
@@ -298,7 +298,7 @@ with wk.webknossos_context(
   return (
     <Modal
       title="Download this annotation"
-      visible={isVisible}
+      open={isOpen}
       width={600}
       footer={[
         <Footer
@@ -485,7 +485,7 @@ with wk.webknossos_context(
             >
               The following code snippets are suggestions to get you started quickly with the{" "}
               <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
-                webKnossos Python API
+                WEBKNOSSOS Python API
               </a>
               . To download and use this annotation in your Python project, simply copy and paste
               the code snippets to your script.

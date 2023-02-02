@@ -199,7 +199,7 @@ class TDController extends React.PureComponent<Props> {
       },
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'delta' implicitly has an 'any' type.
       pinch: (delta) => this.zoomTDView(delta, true),
-      mouseMove: (delta: Point2, position: Point2) => {
+      mouseMove: (_delta: Point2, position: Point2) => {
         if (this.props.planeView == null) {
           return;
         }

@@ -106,7 +106,7 @@ function guardAgainstMesaLimit(maxSamplers: number, gl: any) {
 export function validateMinimumRequirements(specs: GpuSpecs): void {
   if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
     const msg =
-      "Your GPU is not able to render datasets in webKnossos. The graphic card should support at least a texture size of 4096 and 8 textures.";
+      "Your GPU is not able to render datasets in WEBKNOSSOS. The graphic card should support at least a texture size of 4096 and 8 textures.";
     Toast.error(msg, {
       sticky: true,
     });

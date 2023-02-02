@@ -22,7 +22,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { MappingStatusEnum } from "oxalis/constants";
 

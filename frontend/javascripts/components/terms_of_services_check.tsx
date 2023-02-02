@@ -116,7 +116,7 @@ function AcceptTermsOfServiceModal({
     >
       <p>
         <b>
-          Please accept the following terms of services to continue using webKnossos.{" "}
+          Please accept the following terms of services to continue using WEBKNOSSOS.{" "}
           {deadlineExplanation}
         </b>
       </p>
@@ -135,7 +135,7 @@ function getDeadlineExplanation(acceptanceInfo: AcceptanceInfo) {
     ? null
     : `If the terms are not accepted until ${formatDateInLocalTimeZone(
         acceptanceInfo.acceptanceDeadline,
-      )}, webKnossos cannot be used until the terms are accepted.`;
+      )}, WEBKNOSSOS cannot be used until the terms are accepted.`;
 }
 
 function TermsOfServiceAcceptanceMissingModal({

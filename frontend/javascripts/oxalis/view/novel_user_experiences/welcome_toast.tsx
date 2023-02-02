@@ -10,12 +10,12 @@ function showWelcomeToast() {
     message: (
       <div>
         <span className="logo" />
-        Welcome to webKnossos!
+        Welcome to WEBKNOSSOS!
       </div>
     ),
     description: (
       <div>
-        webKnossos is a web-based platform for visualization, annotation, and sharing of large-scale
+        WEBKNOSSOS is a web-based platform for visualization, annotation, and sharing of large-scale
         3D image datasets. Try out the annotation features and upload your own data with a free
         account.
         <div

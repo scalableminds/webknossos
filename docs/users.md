@@ -1,12 +1,12 @@
 # Managing Users & Access Permissions
 
-webKnossos offers a built-in user management system to administer different user roles and permissions.
+WEBKNOSSOS offers a built-in user management system to administer different user roles and permissions.
 
 
 ## Organizations
 
-The root entity in webKnossos is an *organization*.
-You will create one when setting up webKnossos or when signing up for an account on [webKnossos.org](https://webknossos.org).
+The root entity in WEBKNOSSOS is an *organization*.
+You will create one when setting up WEBKNOSSOS or when signing up for an account on [webknossos.org](https://webknossos.org).
 An organization contains all your users, datasets, annotations, and other data.
 Organizations are isolated from each other.
 You are not allowed to see data from organizations other than your own. 
@@ -27,9 +27,9 @@ An organization can contain as many teams as you like. Users can be assigned to 
 
 ## Access Rights / Roles
 
-The webKnossos permissions system is designed to 1) control read/write access to datasets and 2) limit access to certain administration functionalities.
+The WEBKNOSSOS permissions system is designed to 1) control read/write access to datasets and 2) limit access to certain administration functionalities.
 
-There are four different roles for webKnossos users divided into global, organization-wide roles and team-based permissions:
+There are four different roles for WEBKNOSSOS users divided into global, organization-wide roles and team-based permissions:
 
 *On a per team basis:*
 
@@ -75,25 +75,25 @@ For more information regarding (public) dataset sharing and access rights (espec
 
 
 ## Sign Up & Invitations for New User Accounts
-On webKnossos.org, users can either sign up for a webKnossos account by themselves or be invited through email to join an existing organization by co-workers or collaborators. On private webKnossos instances, users can only join through an email invitation.
+On webknossos.org, users can either sign up for a WEBKNOSSOS account by themselves or be invited through email to join an existing organization by co-workers or collaborators. On private WEBKNOSSOS instances, users can only join through an email invitation.
 
 !!!info
-    As an admin or team manager, you can invite users to join your webKnossos organization by clicking the `Invite Users` button at the top of the `Users` list available from the `Admin` menu in the navbar. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
+    As an admin or team manager, you can invite users to join your WEBKNOSSOS organization by clicking the `Invite Users` button at the top of the `Users` list available from the `Admin` menu in the navbar. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
 
     ![Send an invite link to new users](./images/users_invite.jpeg)
 
 ## Switching Organizations
-A webKnossos user account can be part of more than one organization, .e.g., when your are invited to collaborate on projects of another institute, working as a different webKnossos organization.
+A WEBKNOSSOS user account can be part of more than one organization, .e.g., when your are invited to collaborate on projects of another institute, working as a different WEBKNOSSOS organization.
 
 If you are part of multiple organizations, you can switch between them from the "User avatar" menu. 
 Click on your user avatar in the top-right corner of the screen and select an entry from the "Switch Organization" menu.
-webKnossos will quickly reload and switch your account to that organization, i.e. refresh your dashboard, access permissions, annotations, etc. to match your account in the selected organization.
+WEBKNOSSOS will quickly reload and switch your account to that organization, i.e. refresh your dashboard, access permissions, annotations, etc. to match your account in the selected organization.
 
 
 ## Activating New Users
-- not applicable to webKnossos.org - 
+- not applicable to webknossos.org - 
 
-If newly registered users did not join via an email invite link, they join a webKnossos organization with the status "deactivated". An admin or a team manager needs to approve them and activate their user account before they can access anything on your webKnossos instance. 
+If newly registered users did not join via an email invite link, they join a WEBKNOSSOS organization with the status "deactivated". An admin or a team manager needs to approve them and activate their user account before they can access anything on your WEBKNOSSOS instance. 
 Users that registered within the last 14 days are shown above the `Users` list (accessible from the Admin menu) and can be activated quickly from there.
 After that time or by default for any other inactive users, the `Users` list only shows active users, so make sure to deactivate the `Show Active Users Only` filter at the top of the user list to see/activate new users.
 

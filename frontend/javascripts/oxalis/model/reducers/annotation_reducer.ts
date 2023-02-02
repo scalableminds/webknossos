@@ -178,8 +178,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const mergedUserBoundingBoxes = _.uniqWith(
         [...tracing.userBoundingBoxes, ...additionalUserBoundingBoxes],
         (bboxWithId1, bboxWithId2) => {
-          const { id: id1, ...bbox1 } = bboxWithId1;
-          const { id: id2, ...bbox2 } = bboxWithId2;
+          const { id: _id1, ...bbox1 } = bboxWithId1;
+          const { id: _id2, ...bbox2 } = bboxWithId2;
           return _.isEqual(bbox1, bbox2);
         },
       );

@@ -66,7 +66,6 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
-  getDatasetResolutionInfo,
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
@@ -123,7 +122,7 @@ import Constants, {
 } from "oxalis/constants";
 import DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import Request from "libs/request";
 import type {
   MappingType,
@@ -311,7 +310,7 @@ class TracingApi {
       const tree =
         treeId != null
           ? skeletonTracing.trees[treeId]
-          : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+          : findTreeByNodeId(skeletonTracing.trees, nodeId);
       assertExists(tree, `Couldn't find node ${nodeId}.`);
       Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
     } else {
@@ -1549,10 +1548,12 @@ class DataApi {
     topLeft: Vector3,
     bottomRight: Vector3,
     token: string,
+    resolution?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getDatasetResolutionInfo(dataset);
-    const resolution = resolutionInfo.getLowestResolution();
+    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
+    resolution = resolution || resolutionInfo.getLowestResolution();
+
     const magString = resolution.join("-");
     return (
       `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
@@ -1591,6 +1592,7 @@ class DataApi {
     layerName: string,
     topLeft: Vector3,
     bottomRight: Vector3,
+    resolution?: Vector3,
   ): Promise<ArrayBuffer> {
     return doWithToken((token) => {
       const downloadUrl = this._getDownloadUrlForRawDataCuboid(
@@ -1598,6 +1600,7 @@ class DataApi {
         topLeft,
         bottomRight,
         token,
+        resolution,
       );
       return Request.receiveArraybuffer(downloadUrl);
     });
@@ -2120,7 +2123,7 @@ class UtilsApi {
   }
 }
 
-type ApiInterface = {
+export type ApiInterface = {
   tracing: TracingApi;
   data: DataApi;
   user: UserApi;

@@ -4,7 +4,6 @@ import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import ndarray, { NdArray } from "ndarray";
-import api from "oxalis/api/internal_api";
 import {
   ContourModeEnum,
   InterpolationModeEnum,
@@ -13,7 +12,7 @@ import {
   TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
-import Model from "oxalis/model";
+import { Model, api } from "oxalis/singletons";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";

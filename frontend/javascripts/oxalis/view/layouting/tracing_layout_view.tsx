@@ -135,7 +135,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     refreshMessageContainer.style.height = "75vh";
 
     const refreshMessage = document.createElement("div");
-    refreshMessage.innerHTML = "Reloading webKnossos...";
+    refreshMessage.innerHTML = "Reloading WEBKNOSSOS...";
     refreshMessageContainer.appendChild(refreshMessage);
 
     if (document.body != null) {
@@ -242,7 +242,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       }
     };
 
-    const titleArray: Array<string> = [...getDescriptors(), "webKnossos"];
+    const titleArray: Array<string> = [...getDescriptors(), "WEBKNOSSOS"];
     return titleArray.filter((elem) => elem).join(" | ");
   };
 

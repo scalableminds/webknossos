@@ -12,13 +12,13 @@ import { OxalisState } from "oxalis/store";
 import React from "react";
 import { useSelector } from "react-redux";
 import { APIOrganization } from "types/api_flow_types";
-import { PricingPlanEnum } from "./organization_edit_view";
 import {
   hasPricingPlanExceededStorage,
   hasPricingPlanExceededUsers,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   powerPlanFeatures,
+  PricingPlanEnum,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
@@ -99,7 +99,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       <Row gutter={24}>
         <Col span={18}>
           <p>
-            Upgrading your webKnossos plan will unlock more advanced features and increase your user
+            Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user
             and storage quotas.
           </p>
           <p>
@@ -132,13 +132,12 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       }}
       bodyStyle={{
         background:
-          "linear-gradient(rgba(9, 109, 217,  0.8), rgba(9, 109, 217,  0.7)), url(/assets/images/pricing/background_neuron_meshes.jpeg) 10% center / 120% no-repeat",
+          "linear-gradient(rgba(85, 96, 255,  0.8), rgba(85, 96, 255,  0.7)), url(/assets/images/pricing/background_neuron_meshes.jpeg) 10% center / 120% no-repeat",
         color: "white",
       }}
-      headStyle={{ backgroundColor: "rgb(250, 250, 250)" }}
     >
       <p>
-        Upgrading your webKnossos plan will unlock more advanced features and increase your user and
+        Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user and
         storage quotas.
       </p>
       {cardBody}
@@ -173,32 +172,31 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
 export function PlanDashboardCard({
   organization,
   activeUsersCount,
-  usedStorageSpace,
 }: {
   organization: APIOrganization;
   activeUsersCount: number;
-  usedStorageSpace: number;
 }) {
   const usedUsersPercentage = (activeUsersCount / organization.includedUsers) * 100;
-  const usedStoragePercentage = (usedStorageSpace / organization.includedStorage) * 100;
+  const usedStoragePercentage =
+    (organization.usedStorageBytes / organization.includedStorageBytes) * 100;
 
   const hasExceededUserLimit = hasPricingPlanExceededUsers(organization, activeUsersCount);
-  const hasExceededStorageLimit = hasPricingPlanExceededStorage(organization, usedStorageSpace);
+  const hasExceededStorageLimit = hasPricingPlanExceededStorage(organization);
 
   const maxUsersCountLabel =
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
 
   let includedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(organization.includedStorage / 1000).toFixed(0)}GB`
-      : `${(organization.includedStorage / 1000 ** 2).toFixed(0)}TB`;
+      ? `${(organization.includedStorageBytes / 10 ** 9).toFixed(0)}GB`
+      : `${(organization.includedStorageBytes / 10 ** 12).toFixed(0)}TB`;
   includedStorageLabel =
-    organization.includedStorage === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
+    organization.includedStorageBytes === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
 
   const usedStorageLabel =
     organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(usedStorageSpace / 1000).toFixed(1)}`
-      : `${(usedStorageSpace / 1000 ** 2).toFixed(1)}`;
+      ? `${(organization.usedStorageBytes / 10 ** 9).toFixed(1)}`
+      : `${(organization.usedStorageBytes / 10 ** 12).toFixed(1)}`;
 
   const storageLabel = `${usedStorageLabel}/${includedStorageLabel}`;
 
@@ -299,7 +297,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
   const message = hasPlanExpired
-    ? "Your webKnossos plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
+    ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
     : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account from being blocked.";
   const actionButton = hasPlanExpired ? (
     <Button
@@ -340,7 +338,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
   if (isAboutToExpire)
     alerts.push({
       message:
-        "Your webKnossos plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features.",
+        "Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features.",
       actionButton: (
         <Button
           size="small"

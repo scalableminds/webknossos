@@ -13,7 +13,7 @@ const { TextArea } = Input;
 
 type UserScriptsModalViewProps = {
   onOK: (...args: Array<any>) => any;
-  isVisible: boolean;
+  isOpen: boolean;
 };
 type State = {
   code: string;
@@ -116,7 +116,7 @@ class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProp
   render() {
     return (
       <Modal
-        visible={this.props.isVisible}
+        open={this.props.isOpen}
         title="Add User Script"
         okText="Add"
         cancelText="Close"
@@ -141,7 +141,7 @@ class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProp
             rows={15}
             onChange={this.handleCodeChange}
             value={this.state.code}
-            placeholder="Choose an existing user script from the dropdown above or add webKnossos frontend script code here"
+            placeholder="Choose an existing user script from the dropdown above or add WEBKNOSSOS frontend script code here"
           />
         </Spin>
       </Modal>

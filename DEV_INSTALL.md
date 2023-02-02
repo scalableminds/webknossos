@@ -9,8 +9,8 @@ docker-compose pull webknossos
 ./start-docker.sh
 ```
 
-Open your local webKnossos instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
-Now, you are ready to use your local webKnossos instance.
+Open your local WEBKNOSSOS instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
+Now, you are ready to use your local WEBKNOSSOS instance.
 
 See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
 
@@ -29,7 +29,7 @@ For non-localhost deployments, check out the [installation guide in the document
 
 ### MacOS
 ```bash
-# webKnossos needs to be run from x86_64 environment (only applicable for arm64-based Macs)
+# WEBKNOSSOS needs to be run from x86_64 environment (only applicable for arm64-based Macs)
 arch -x86_64 /bin/zsh
 
 # Install Homebrew package manager
@@ -58,13 +58,13 @@ psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
-# Checkout the webKnossos git repository
+# Checkout the WEBKNOSSOS git repository
 git clone git@github.com:scalableminds/webknossos.git
 
 
 ```
 
-Note: On arm64-based Macs (e.g. M1), you need to run webKnossos in an x86_64 environment (Rosetta 2). In case you accidentally started webKnossos in an arm64 environment, it is advisable to delete several caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`. Since Postgres and Redis are isolated processes, they can be run either from arm64 or x86_64 environments.
+Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 environment (Rosetta 2). In case you accidentally started WEBKNOSSOS in an arm64 environment, it is advisable to delete several caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`. Since Postgres and Redis are isolated processes, they can be run either from arm64 or x86_64 environments.
 
 
 ### Ubuntu 20.04 LTS
@@ -121,9 +121,9 @@ First, install all frontend dependencies via
 ```bash
 yarn install
 ```
-Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing webKnossos, you can safely ignore this error.
+Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing WEBKNOSSOS, you can safely ignore this error.
 
-To start webKnossos, use
+To start WEBKNOSSOS, use
 ```bash
 yarn start
 ```

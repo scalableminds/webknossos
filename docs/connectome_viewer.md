@@ -1,8 +1,8 @@
 # Synapse and Connectome Viewer
 
-While webKnossos works great for many different imaging environments, the Synapse and Connectome Viewer is designed in particular for Neuroscientists. The Synapse and Connectome viewer offers a way of listing all incoming and outgoing synapses for a given segment/cell in a neuron segmentation for exploration and analysis. 
+While WEBKNOSSOS works great for many different imaging environments, the Synapse and Connectome Viewer is designed in particular for Neuroscientists. The Synapse and Connectome viewer offers a way of listing all incoming and outgoing synapses for a given segment/cell in a neuron segmentation for exploration and analysis. 
 
-Synapse locations, types, and partners have to be pre-computed outside of webKnossos, e.g. with [Voxelytics](https://voxelytics.com). webKnossos can load the resulting synaptic connectivity maps, often called Connectome, and offer deeper insights into your dataset.
+Synapse locations, types, and partners have to be pre-computed outside of WEBKNOSSOS, e.g. with [Voxelytics](https://voxelytics.com). WEBKNOSSOS can load the resulting synaptic connectivity maps, often called Connectome, and offer deeper insights into your dataset.
 
 ## Features
 
@@ -21,10 +21,10 @@ Use the input field at the top of the Connectome Viewer to enter one or several 
 
 Several segments/cells can be loaded at the same time to highlight their matching synaptic partners.
 
-In addition to loading the synapse locations and visualizing them as nodes, webKnossos will also load the agglomerate skeleton representation of the selected segment(s) for context.
+In addition to loading the synapse locations and visualizing them as nodes, WEBKNOSSOS will also load the agglomerate skeleton representation of the selected segment(s) for context.
 
 ## Configuration
-For webKnossos to detect and load your Connectome file, you need to place it into a `connectome` sub-directory for a respective segmentation layer, e.g.:
+For WEBKNOSSOS to detect and load your Connectome file, you need to place it into a `connectome` sub-directory for a respective segmentation layer, e.g.:
 
 ```
 my_dataset                          # Dataset root

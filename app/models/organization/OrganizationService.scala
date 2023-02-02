@@ -36,7 +36,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "lastTermsOfServiceAcceptanceVersion" -> organization.lastTermsOfServiceAcceptanceVersion
       )
     } else Json.obj()
-    Fox.successful(
+    for {
+      usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
+    } yield
       Json.obj(
         "id" -> organization._id.toString,
         "name" -> organization.name,
@@ -46,9 +48,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "pricingPlan" -> organization.pricingPlan,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
-        "includedStorage" -> organization.includedStorage.map(bytes => bytes / 1000000)
+        "includedStorageBytes" -> organization.includedStorageBytes,
+        "usedStorageBytes" -> usedStorageBytes
       ) ++ adminOnlyInfo
-    )
   }
 
   def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizationNameOpt: Option[String])(
@@ -113,7 +115,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .addQueryString("token" -> dataStoreToken, "organizationName" -> organizationName)
-        .post
+        .post()
         .futureBox
 
     for {
@@ -122,11 +124,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
   }
 
-  def assertUsersCanBeAdded(organization: Organization, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
-                                                                                  ec: ExecutionContext): Fox[Unit] =
+  def assertUsersCanBeAdded(organizationId: ObjectId, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
+                                                                                ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- organizationDAO.findOne(organization._id)
-      userCount <- userDAO.countAllForOrganization(organization._id)
+      organization <- organizationDAO.findOne(organizationId)
+      userCount <- userDAO.countAllForOrganization(organizationId)
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
         bool2Fox(userCount + usersToAddCount <= includedUsers))
     } yield ()

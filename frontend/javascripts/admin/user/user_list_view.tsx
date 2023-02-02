@@ -16,16 +16,21 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import * as React from "react";
+import React from "react";
 import _ from "lodash";
 import moment from "moment";
 import { location } from "libs/window";
-import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_types";
+import type {
+  APIUser,
+  APITeamMembership,
+  ExperienceMap,
+  APIOrganization,
+} from "types/api_flow_types";
 import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import LinkButton from "components/link_button";
-import { getEditableUsers, getOrganization, updateUser } from "admin/admin_rest_api";
+import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { stringToColor } from "libs/format_utils";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import ExperienceModalView from "admin/user/experience_modal_view";
@@ -37,6 +42,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -44,6 +50,7 @@ const typeHint: APIUser[] = [];
 
 type StateProps = {
   activeUser: APIUser;
+  activeOrganization: APIOrganization;
 };
 type Props = RouteComponentProps & StateProps;
 
@@ -51,14 +58,13 @@ type State = {
   isLoading: boolean;
   users: Array<APIUser>;
   selectedUserIds: Key[];
-  isExperienceModalVisible: boolean;
-  isTeamRoleModalVisible: boolean;
-  isInviteModalVisible: boolean;
+  isExperienceModalOpen: boolean;
+  isTeamRoleModalOpen: boolean;
+  isInviteModalOpen: boolean;
   singleSelectedUser: APIUser | null | undefined;
   activationFilter: Array<"true" | "false">;
   searchQuery: string;
   domainToEdit: string | null | undefined;
-  maxUserCountPerOrganization: number;
 };
 const persistence = new Persistence<Pick<State, "searchQuery" | "activationFilter">>(
   {
@@ -73,14 +79,13 @@ class UserListView extends React.PureComponent<Props, State> {
     isLoading: true,
     users: [],
     selectedUserIds: [],
-    isExperienceModalVisible: false,
-    isTeamRoleModalVisible: false,
-    isInviteModalVisible: false,
+    isExperienceModalOpen: false,
+    isTeamRoleModalOpen: false,
+    isInviteModalOpen: false,
     activationFilter: ["true"],
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
-    maxUserCountPerOrganization: Number.POSITIVE_INFINITY,
   };
 
   componentDidMount() {
@@ -90,7 +95,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
     if (location.hash === "#invite") {
       this.setState({
-        isInviteModalVisible: true,
+        isInviteModalOpen: true,
       });
     }
   }
@@ -103,15 +108,11 @@ class UserListView extends React.PureComponent<Props, State> {
     this.setState({
       isLoading: true,
     });
-    const [users, organization] = await Promise.all([
-      getEditableUsers(),
-      getOrganization(this.props.activeUser.organization),
-    ]);
+    const users = await getEditableUsers();
 
     this.setState({
       isLoading: false,
       users,
-      maxUserCountPerOrganization: organization.includedUsers,
     });
   }
 
@@ -131,7 +132,7 @@ class UserListView extends React.PureComponent<Props, State> {
         this.setState({
           users: newUsers,
           selectedUserIds: [selectedUser.id],
-          isTeamRoleModalVisible: isActive,
+          isTeamRoleModalOpen: isActive,
         });
       },
       () => {}, // Do nothing, change did not succeed
@@ -169,8 +170,8 @@ class UserListView extends React.PureComponent<Props, State> {
   handleUsersChange = (updatedUsers: Array<APIUser>): void => {
     this.setState({
       users: updatedUsers,
-      isExperienceModalVisible: false,
-      isTeamRoleModalVisible: false,
+      isExperienceModalOpen: false,
+      isTeamRoleModalOpen: false,
     });
   };
 
@@ -178,7 +179,7 @@ class UserListView extends React.PureComponent<Props, State> {
     const updatedUsersMap = _.keyBy(updatedUsers, (u) => u.id);
 
     this.setState((prevState) => ({
-      isExperienceModalVisible: false,
+      isExperienceModalOpen: false,
       users: prevState.users.map((user) => updatedUsersMap[user.id] || user),
       singleSelectedUser: null,
       selectedUserIds: prevState.singleSelectedUser == null ? [] : prevState.selectedUserIds,
@@ -246,7 +247,7 @@ class UserListView extends React.PureComponent<Props, State> {
   renderInviteUsersAlert() {
     const inviteUsersCallback = () =>
       this.setState({
-        isInviteModalVisible: true,
+        isInviteModalOpen: true,
       });
 
     const noUsersMessage = (
@@ -277,9 +278,9 @@ class UserListView extends React.PureComponent<Props, State> {
     return (
       <Alert
         message="You reached the maximum number of users"
-        description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your webKnossos plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
+        description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
           this.state.users,
-        )} active users of ${this.state.maxUserCountPerOrganization} allowed by your plan.`}
+        )} active users of ${this.props.activeOrganization.includedUsers} allowed by your plan.`}
         type="error"
         showIcon
         style={{
@@ -342,7 +343,7 @@ class UserListView extends React.PureComponent<Props, State> {
     };
     const noOtherUsers = this.state.users.length < 2;
     const isUserInvitesDisabled =
-      getActiveUserCount(this.state.users) >= this.state.maxUserCountPerOrganization;
+      getActiveUserCount(this.state.users) >= this.props.activeOrganization.includedUsers;
 
     return (
       <div className="container test-UserListView">
@@ -359,7 +360,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <Button
             onClick={() =>
               this.setState({
-                isTeamRoleModalVisible: true,
+                isTeamRoleModalOpen: true,
               })
             }
             icon={<TeamOutlined />}
@@ -371,7 +372,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <Button
             onClick={() => {
               this.setState({
-                isExperienceModalVisible: true,
+                isExperienceModalOpen: true,
               });
             }}
             icon={<TrophyOutlined />}
@@ -386,7 +387,7 @@ class UserListView extends React.PureComponent<Props, State> {
             style={marginRight}
             onClick={() =>
               this.setState({
-                isInviteModalVisible: true,
+                isInviteModalOpen: true,
               })
             }
           >
@@ -394,12 +395,12 @@ class UserListView extends React.PureComponent<Props, State> {
           </Button>
           <InviteUsersModal
             currentUserCount={getActiveUserCount(this.state.users)}
-            maxUserCountPerOrganization={this.state.maxUserCountPerOrganization}
-            visible={this.state.isInviteModalVisible}
+            maxUserCountPerOrganization={this.props.activeOrganization.includedUsers}
+            isOpen={this.state.isInviteModalOpen}
             organizationName={this.props.activeUser.organization}
             handleVisibleChange={(visible) => {
               this.setState({
-                isInviteModalVisible: visible,
+                isInviteModalOpen: visible,
               });
             }}
           />
@@ -441,7 +442,7 @@ class UserListView extends React.PureComponent<Props, State> {
             style={{
               marginTop: 30,
             }}
-            onChange={(pagination, filters) =>
+            onChange={(_pagination, filters) =>
               this.setState({
                 // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error message
                 activationFilter: filters.isActive != null ? filters.isActive : [],
@@ -518,7 +519,7 @@ class UserListView extends React.PureComponent<Props, State> {
                           // If no user is selected, set singleSelectedUser. Otherwise,
                           // open the modal so that all selected users are edited.
                           singleSelectedUser: prevState.selectedUserIds.length > 0 ? null : user,
-                          isExperienceModalVisible: true,
+                          isExperienceModalOpen: true,
                           domainToEdit: domain,
                         }));
                       }}
@@ -643,9 +644,9 @@ class UserListView extends React.PureComponent<Props, State> {
             />
           </Table>
         </Spin>
-        {this.state.isExperienceModalVisible ? (
+        {this.state.isExperienceModalOpen ? (
           <ExperienceModalView
-            visible={this.state.isExperienceModalVisible}
+            isOpen={this.state.isExperienceModalOpen}
             selectedUsers={
               this.state.singleSelectedUser
                 ? [this.state.singleSelectedUser]
@@ -655,7 +656,7 @@ class UserListView extends React.PureComponent<Props, State> {
             onChange={this.closeExperienceModal}
             onCancel={() =>
               this.setState({
-                isExperienceModalVisible: false,
+                isExperienceModalOpen: false,
                 singleSelectedUser: null,
                 domainToEdit: null,
               })
@@ -663,13 +664,13 @@ class UserListView extends React.PureComponent<Props, State> {
           />
         ) : null}
         <PermissionsAndTeamsModalView
-          visible={this.state.isTeamRoleModalVisible}
+          isOpen={this.state.isTeamRoleModalOpen}
           selectedUserIds={this.state.selectedUserIds}
           users={this.state.users}
           onChange={this.handleUsersChange}
           onCancel={() =>
             this.setState({
-              isTeamRoleModalVisible: false,
+              isTeamRoleModalOpen: false,
             })
           }
           activeUser={this.props.activeUser}
@@ -681,6 +682,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
+  activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);

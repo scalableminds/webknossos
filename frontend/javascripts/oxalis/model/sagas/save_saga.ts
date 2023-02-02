@@ -92,7 +92,7 @@ import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import Toast from "libs/toast";

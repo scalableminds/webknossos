@@ -12,9 +12,8 @@ import models.binary.DataStoreDAO
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SQLClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
@@ -29,7 +28,7 @@ case class Worker(_id: ObjectId,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
-class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
   protected val collection = Workers
 
@@ -52,19 +51,19 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findOneByKey(key: String): Fox[Worker] =
     for {
-      r: Seq[WorkersRow] <- run(sql"select #$columns from #$existingCollectionName where key = $key".as[WorkersRow])
+      r: Seq[WorkersRow] <- run(q"select $columns from $existingCollectionName where key = $key".as[WorkersRow])
       parsed <- parseFirst(r, "key")
     } yield parsed
 
   def findOneByDataStore(dataStoreName: String): Fox[Worker] =
     for {
       r: Seq[WorkersRow] <- run(
-        sql"select #$columns from #$existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
+        q"select $columns from $existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
       parsed <- parseFirst(r, "dataStoreName")
     } yield parsed
 
   def updateHeartBeat(_id: ObjectId): Unit = {
-    run(sqlu"update webknossos.workers set lastHeartBeat = NOW() where _id = ${_id}")
+    run(q"update webknossos.workers set lastHeartBeat = NOW() where _id = ${_id}".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical
     ()
   }

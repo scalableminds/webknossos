@@ -2,17 +2,16 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import javax.inject.Inject
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
-import slick.jdbc.PostgresProfile.api._
-import utils.sql.{SQLClient, SimpleSQLDAO}
 import utils.ObjectId
+import utils.sql.{SimpleSQLDAO, SqlClient}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
@@ -31,13 +30,13 @@ object ProjectProgressEntry {
   implicit val jsonFormat: OFormat[ProjectProgressEntry] = Json.format[ProjectProgressEntry]
 }
 
-class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
+class ReportDAO @Inject()(sqlClient: SqlClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def projectProgress(teamId: ObjectId): Fox[List[ProjectProgressEntry]] =
     for {
-      r <- run(sql"""
-          with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = ${teamId.id})
+      r <- run(q"""
+          with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = $teamId)
 
           ,experiences as (select ue.domain, ue.value
           from
@@ -50,7 +49,7 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
             webknossos.projects_ p
             JOIN webknossos.tasks_ t ON t._project = p._id
             CROSS JOIN experiences ue
-          where p._team = ${teamId.id} and
+          where p._team = $teamId and
           t.neededExperience_domain = ue.domain and
           t.neededExperience_value <= ue.value and
           not p.isblacklistedfromreport
@@ -83,7 +82,7 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
            FROM
              filteredProjects p
              join webknossos.tasks_ t on p._id = t._project
-             left join (select #${annotationDAO.columns} from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
+             left join (select ${annotationDAO.columns} from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
            group by p._id
            )
 
@@ -100,17 +99,17 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
 
   def getAssignmentsByProjectsFor(userId: ObjectId): Fox[Map[String, Int]] =
     for {
-      r <- run(sql"""
+      r <- run(q"""
         select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
         from
         webknossos.tasks_ t
         join
         (select domain, value
           from webknossos.user_experiences
-        where _user = ${userId.id})
+        where _user = $userId)
         as ue on t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
         join webknossos.projects_ p on t._project = p._id
-        left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationType.Task}') as userAnnotations ON t._id = userAnnotations._task
+        left join (select _task from webknossos.annotations_ where _user = $userId and typ = ${AnnotationType.Task}) as userAnnotations ON t._id = userAnnotations._task
         where t.openInstances > 0
         and userAnnotations._task is null
         and not p.paused

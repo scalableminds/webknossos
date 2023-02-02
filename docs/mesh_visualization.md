@@ -1,7 +1,7 @@
 # Mesh Visualization
-webKnossos offers two different methods to render and visualize volumetric segmentations as 3D meshes.
+WEBKNOSSOS offers two different methods to render and visualize volumetric segmentations as 3D meshes.
 
-1. Load a pre-computed 3D mesh. Meshes can either be (pre-)computed from within webKnossos for the whole dataset or outside of webKnossos with a `mesh file`. These meshes will be instantly available the next time you open this dataset (quicker mesh loading time).
+1. Load a pre-computed 3D mesh. Meshes can either be (pre-)computed from within WEBKNOSSOS for the whole dataset or outside of WEBKNOSSOS with a `mesh file`. These meshes will be instantly available the next time you open this dataset (quicker mesh loading time).
 2. Compute an ad-hoc mesh of any segmentation layer or volume annotation. These meshes will live computed any time you request them (slower mesh loading time).
 
 Mesh will always be rendered in the 3D viewport in the lower right. 
@@ -22,7 +22,7 @@ Any meshes listed in the `Segments` tab can be downloaded as an industry-standar
 
 Mesh visibility can also be triggered from the `Segments` tab.
 
-Shift + Click on any mesh in the 3D viewport will navigate webKnossos to that position.
+Shift + Click on any mesh in the 3D viewport will navigate WEBKNOSSOS to that position.
 CTRL + Click on any mesh will unload that mesh.
 
 ![Segments Tab](images/segments_tab2.jpeg)
@@ -33,6 +33,6 @@ Instead of having to slowly compute individual mesh every time you open a datase
 You can start the mesh generation from the `Segments` tab in the right-hand side panel. Click on the little plus button to initiate the mesh generation. We recommend computing the meshes in the medium quality (default) to strike a good balance between visual fidelity, compute time, and GPU resource usage. 
 
 !!! info
-    Pre-computated meshes are exclusive to webKnossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the webKnossos worker or [Voxelytics](https://voxelytics.com)) for the meshing job.
+    Pre-computated meshes are exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the WEBKNOSSOS worker or [Voxelytics](https://voxelytics.com)) for the meshing job.
 
 [Check the `Processing Jobs` page](./jobs.md) from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, pre-computed mesh will be available on page reload. 

@@ -5,7 +5,7 @@ import Store from "oxalis/store";
 import type { OxalisState, IsBusyInfo } from "oxalis/store";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import window from "libs/window";
 import { Tooltip } from "antd";
 import {

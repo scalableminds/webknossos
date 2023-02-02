@@ -62,6 +62,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val children = List(User)
     }
 
+    object FetchUsedStorage {
+      val rescanInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.rescanInterval")
+      val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.tickerInterval")
+      val scansPerTick: Int = get[Int]("webKnossos.fetchUsedStorage.scansPerTick")
+    }
+
     object TermsOfService {
       val enabled: Boolean = get[Boolean]("webKnossos.termsOfService.enabled")
       val url: String = get[String]("webKnossos.termsOfService.url")
@@ -70,7 +76,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     }
 
     val operatorData: String = get[String]("webKnossos.operatorData")
-    val children = List(User, Tasks, Cache, SampleOrganization)
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
   }
 
   object SingleSignOn {
@@ -202,13 +208,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   object Voxelytics {
     val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
-    object Elasticsearch {
-      val uri: String = get[String]("voxelytics.elasticsearch.uri")
-      val index: String = get[String]("voxelytics.elasticsearch.index")
-      val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.elasticsearch.startupTimeout")
+    object Loki {
+      val uri: String = get[String]("voxelytics.loki.uri")
+      val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.loki.startupTimeout")
     }
 
-    val children = List(Elasticsearch)
+    val children = List(Loki)
   }
 
   val children =

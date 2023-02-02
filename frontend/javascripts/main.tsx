@@ -2,7 +2,10 @@ import { Provider } from "react-redux";
 import React from "react";
 import ReactDOM from "react-dom";
 import { document } from "libs/window";
-import { getActiveUser, checkAnyOrganizationExists } from "admin/admin_rest_api";
+import rootSaga from "oxalis/model/sagas/root_saga";
+import UnthrottledStore, { startSagas } from "oxalis/store";
+
+import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admin/admin_rest_api";
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
 import { load as loadFeatureToggles } from "features";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
@@ -18,6 +21,15 @@ import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persist
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
 import ErrorBoundary from "components/error_boundary";
+import { setStore, setModel } from "oxalis/singletons";
+import Model from "oxalis/model";
+import { setupApi } from "oxalis/api/internal_api";
+import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+
+setModel(Model);
+setStore(UnthrottledStore);
+setupApi();
+startSagas(rootSaga);
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +57,7 @@ async function loadActiveUser() {
       queryClient: reactQueryClient,
       persister: localStoragePersister,
     });
-  } catch (e) {
+  } catch (_e) {
     // pass
   }
 }
@@ -55,8 +67,18 @@ async function loadHasOrganizations() {
   try {
     const hasOrganizations = await checkAnyOrganizationExists();
     Store.dispatch(setHasOrganizationsAction(hasOrganizations));
-  } catch (e) {
+  } catch (_e) {
     // pass
+  }
+}
+
+async function loadOrganization() {
+  const { activeUser } = Store.getState();
+  if (activeUser) {
+    // organization can only be loaded for user with a logged in wk account
+    // anonymous wk session for publicly shared datasets have no orga
+    const organization = await getOrganization(activeUser.organization);
+    Store.dispatch(setActiveOrganizationAction(organization));
   }
 }
 
@@ -66,6 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.addEventListener("click", googleAnalyticsLogClicks);
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
+  await Promise.all([loadOrganization()]);
   const containerElement = document.getElementById("main-container");
 
   if (containerElement) {

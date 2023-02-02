@@ -21,7 +21,7 @@ const emptyViewportRect = {
 };
 
 function ignoreContextMenu(event: React.MouseEvent) {
-  // hide contextmenu, while rightclicking a canvas
+  // hide contextmenu, while right-clicking a canvas
   event.preventDefault();
 }
 

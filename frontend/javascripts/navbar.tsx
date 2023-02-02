@@ -37,7 +37,7 @@ import window, { document, location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
-import { PricingPlanEnum } from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
 
 const { SubMenu } = Menu;

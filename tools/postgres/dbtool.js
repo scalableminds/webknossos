@@ -312,7 +312,7 @@ function assertUniqueEvolutionNumbers() {
   for (const filename of fs.readdirSync(evolutionsPath)) {
     const num = parseInt(filename.split("-")[0], 10);
     if (isNaN(num)) {
-      onsole.log("Found invalid evolution filename:", filename);
+      console.log("Found invalid evolution filename:", filename);
     }
     if (groupedEvolutions.has(num)) {
       groupedEvolutions.get(num).push(filename);

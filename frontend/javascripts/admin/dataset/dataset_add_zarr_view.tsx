@@ -38,6 +38,12 @@ import DatasetSettingsDataTab, {
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
+import {
+  GoogleAuthFormItem,
+  parseCredentials,
+  type FileList,
+} from "./dataset_add_neuroglancer_view";
+import { UploadChangeParam, UploadFile } from "antd/lib/upload";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -303,14 +309,22 @@ function AddZarrLayer({
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
-  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https">("https");
+  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
+  const [fileList, setFileList] = useState<FileList>([]);
+
+  const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
+    // Restrict the upload list to the latest file
+    const newFileList = info.fileList.slice(-1);
+    setFileList(newFileList);
+  };
 
   function validateUrls(userInput: string) {
-    if (
-      (userInput.indexOf("https://") === 0 && userInput.indexOf("s3://") !== 0) ||
-      (userInput.indexOf("https://") !== 0 && userInput.indexOf("s3://") === 0)
-    ) {
-      setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https" : "s3");
+    if (userInput.startsWith("https://")) {
+      setSelectedProtocol("https");
+    } else if (userInput.startsWith("s3://")) {
+      setSelectedProtocol("s3");
+    } else if (userInput.startsWith("gs://")) {
+      setSelectedProtocol("gs");
     } else {
       throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
     }
@@ -326,13 +340,28 @@ function AddZarrLayer({
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
 
-    const { dataSource: newDataSource, report } =
-      !usernameOrAccessKey || !passwordOrSecretKey
-        ? await exploreRemoteDataset([datasourceUrl])
-        : await exploreRemoteDataset([datasourceUrl], {
+    const { dataSource: newDataSource, report } = await (async () => {
+      if (showCredentialsFields) {
+        if (selectedProtocol === "gs") {
+          const credentials =
+            fileList.length > 0 ? await parseCredentials(fileList[0]?.originFileObj) : null;
+          if (credentials) {
+            return exploreRemoteDataset([datasourceUrl], {
+              username: "",
+              pass: JSON.stringify(credentials),
+            });
+          } else {
+            // Fall through to exploreRemoteDataset without parameters
+          }
+        } else if (usernameOrAccessKey && passwordOrSecretKey) {
+          return exploreRemoteDataset([datasourceUrl], {
             username: usernameOrAccessKey,
             pass: passwordOrSecretKey,
           });
+        }
+      }
+      return exploreRemoteDataset([datasourceUrl]);
+    })();
     setExploreLog(report);
     if (!newDataSource) {
       Toast.error(
@@ -412,34 +441,38 @@ function AddZarrLayer({
         </RadioGroup>
       </FormItem>
       {showCredentialsFields ? (
-        <Row gutter={8}>
-          <Col span={12}>
-            <FormItem
-              label={selectedProtocol === "https" ? "Username" : "Access Key ID"}
-              hasFeedback
-              rules={[{ required: true }]}
-              validateFirst
-            >
-              <Input
-                value={usernameOrAccessKey}
-                onChange={(e) => setUsernameOrAccessKey(e.target.value)}
-              />
-            </FormItem>
-          </Col>
-          <Col span={12}>
-            <FormItem
-              label={selectedProtocol === "https" ? "Password" : "Secret Access Key"}
-              hasFeedback
-              rules={[{ required: true }]}
-              validateFirst
-            >
-              <Password
-                value={passwordOrSecretKey}
-                onChange={(e) => setPasswordOrSecretKey(e.target.value)}
-              />
-            </FormItem>
-          </Col>
-        </Row>
+        selectedProtocol === "gs" ? (
+          <GoogleAuthFormItem fileList={fileList} handleChange={handleChange} />
+        ) : (
+          <Row gutter={8}>
+            <Col span={12}>
+              <FormItem
+                label={selectedProtocol === "https" ? "Username" : "Access Key ID"}
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Input
+                  value={usernameOrAccessKey}
+                  onChange={(e) => setUsernameOrAccessKey(e.target.value)}
+                />
+              </FormItem>
+            </Col>
+            <Col span={12}>
+              <FormItem
+                label={selectedProtocol === "https" ? "Password" : "Secret Access Key"}
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Password
+                  value={passwordOrSecretKey}
+                  onChange={(e) => setPasswordOrSecretKey(e.target.value)}
+                />
+              </FormItem>
+            </Col>
+          </Row>
+        )
       ) : null}
       {exploreLog ? (
         <Row gutter={8}>

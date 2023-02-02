@@ -1,4 +1,4 @@
-import { Form, Input, Button, Col, Row, Upload } from "antd";
+import { Form, Input, Button, Col, Row, Upload, UploadFile } from "antd";
 import { UnlockOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { useState } from "react";
@@ -17,6 +17,7 @@ import {
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
 import { readFileAsText } from "libs/read_file";
+import { RcFile, UploadChangeParam } from "antd/lib/upload";
 const FormItem = Form.Item;
 type OwnProps = {
   datastores: Array<APIDataStore>;
@@ -26,9 +27,66 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
 };
 type Props = OwnProps & StateProps;
-type FileList = Array<{
-  originFileObj: File;
-}>;
+
+export type FileList = UploadFile<any>[];
+
+export const parseCredentials = async (file: RcFile | undefined): Promise<Object | null> => {
+  if (!file) {
+    return null;
+  }
+  const jsonString = await readFileAsText(file);
+  return JSON.parse(jsonString);
+};
+
+export function GoogleAuthFormItem({
+  fileList,
+  handleChange,
+}: {
+  fileList: FileList;
+  handleChange: (arg: UploadChangeParam<UploadFile<any>>) => void;
+}) {
+  return (
+    <FormItem
+      name="authFile"
+      label={
+        <React.Fragment>
+          Google{Unicode.NonBreakingSpace}
+          <a
+            href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Service Account
+          </a>
+          {Unicode.NonBreakingSpace}Key (Optional)
+        </React.Fragment>
+      }
+      hasFeedback
+    >
+      <Upload.Dragger
+        name="files"
+        fileList={fileList}
+        onChange={handleChange}
+        beforeUpload={() => false}
+      >
+        <p className="ant-upload-drag-icon">
+          <UnlockOutlined
+            style={{
+              margin: 0,
+              fontSize: 35,
+            }}
+          />
+        </p>
+        <p className="ant-upload-text">
+          Click or Drag your Google Cloud Authentication File to this Area to Upload
+        </p>
+        <p className="ant-upload-text-hint">
+          This is only needed if the dataset is located in a non-public Google Cloud Storage bucket
+        </p>
+      </Upload.Dragger>
+    </FormItem>
+  );
+}
 
 function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) {
   const [fileList, setFileList] = useState<FileList>([]);
@@ -66,16 +124,10 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     return config;
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'info' implicitly has an 'any' type.
-  const handleChange = (info) => {
+  const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
     const newFileList = info.fileList.slice(-1);
     setFileList(newFileList);
-  };
-
-  const parseCredentials = async (file: File) => {
-    const jsonString = await readFileAsText(file);
-    return JSON.parse(jsonString);
   };
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
@@ -92,7 +144,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     }));
 
     const credentials =
-      fileList.length > 0 ? await parseCredentials(fileList[0].originFileObj) : null;
+      fileList.length > 0 ? await parseCredentials(fileList[0]?.originFileObj) : null;
     const datasetConfig = {
       neuroglancer: {
         [activeUser.organization]: {
@@ -165,47 +217,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
           >
             <Input />
           </FormItem>
-          <FormItem
-            name="authFile"
-            label={
-              <React.Fragment>
-                Google{Unicode.NonBreakingSpace}
-                <a
-                  href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Service Account
-                </a>
-                {Unicode.NonBreakingSpace}Key (Optional)
-              </React.Fragment>
-            }
-            hasFeedback
-          >
-            <Upload.Dragger
-              name="files"
-              // @ts-expect-error ts-migrate(2322) FIXME: Type 'FileList' is not assignable to type 'UploadF... Remove this comment to see the full error message
-              fileList={fileList}
-              onChange={handleChange}
-              beforeUpload={() => false}
-            >
-              <p className="ant-upload-drag-icon">
-                <UnlockOutlined
-                  style={{
-                    margin: 0,
-                    fontSize: 35,
-                  }}
-                />
-              </p>
-              <p className="ant-upload-text">
-                Click or Drag your Google Cloud Authentication File to this Area to Upload
-              </p>
-              <p className="ant-upload-text-hint">
-                This is only needed if the dataset is located in a non-public Google Cloud Storage
-                bucket
-              </p>
-            </Upload.Dragger>
-          </FormItem>
+          <GoogleAuthFormItem fileList={fileList} handleChange={handleChange} />
           <FormItem
             style={{
               marginBottom: 0,

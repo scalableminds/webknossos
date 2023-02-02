@@ -64,19 +64,19 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                     values(${_id}, ${CredentialType.HTTP_Basic_Auth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
+                     values(${_id}, ${CredentialType.HttpBasicAuth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                       values(${_id}, ${CredentialType.S3_Access_Key}, ${credential.name}, ${credential.accessKeyId}, ${credential.secretAccessKey}, ${credential.user}, ${credential.organization})""".asUpdate)
+                       values(${_id}, ${CredentialType.S3AccessKey}, ${credential.name}, ${credential.accessKeyId}, ${credential.secretAccessKey}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: GoogleServiceAccountCredential): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.credentials(_id, type, name, secret, _user, _organization)
-                       values(${_id}, ${CredentialType.Google_Service_Account}, ${credential.name}, ${credential.secretJson.toString}, ${credential.user}, ${credential.organization})""".asUpdate)
+                       values(${_id}, ${CredentialType.GoogleServiceAccount}, ${credential.name}, ${credential.secretJson.toString}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def findOne(id: ObjectId): Fox[FileSystemCredential] =
@@ -90,9 +90,9 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     for {
       typeParsed <- CredentialType.fromString(r.`type`).toFox
       parsed <- typeParsed match {
-        case CredentialType.HTTP_Basic_Auth        => parseAsHttpBasicAuthCredential(r)
-        case CredentialType.S3_Access_Key          => parseAsS3AccessKeyCredential(r)
-        case CredentialType.Google_Service_Account => parseAsGoogleServiceAccountCredential(r)
+        case CredentialType.HttpBasicAuth        => parseAsHttpBasicAuthCredential(r)
+        case CredentialType.S3AccessKey          => parseAsS3AccessKeyCredential(r)
+        case CredentialType.GoogleServiceAccount => parseAsGoogleServiceAccountCredential(r)
         case _                                     => Fox.failure(s"Unknown credential type: ${r.`type`}")
       }
     } yield parsed

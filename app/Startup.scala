@@ -91,7 +91,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresSchema(): Unit = {
-    logger.info("Checking database schema")
+    logger.info("Checking database schema…")
 
     val errorMessageBuilder = mutable.ListBuffer[String]()
     val capturingProcessLogger =
@@ -108,7 +108,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresDatabase(): Unit = {
-    logger.info(s"Setting up database")
+    logger.info(s"Ensuring Postgres database…")
     val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
 
     // this script is copied to the stage directory in AssetCompilation

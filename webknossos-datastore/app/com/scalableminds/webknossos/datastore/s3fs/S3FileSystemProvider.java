@@ -37,7 +37,7 @@ import static java.lang.String.format;
 /**
  * Spec:
  * <p>
- * URI: s3://[user@]{bucket}/{key}.
+ * URI: s3://[user@]{bucket}/{key}
  * It's assumed to use the default S3 endpoint (s3.amazonaws.com)
  * </p>
  * <p>

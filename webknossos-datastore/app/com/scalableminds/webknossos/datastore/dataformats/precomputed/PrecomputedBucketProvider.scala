@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
 import java.nio.file.Path
@@ -58,6 +58,7 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOp
                 PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))
                 .map(new PrecomputedCubeHandle(_))
             } yield cubeHandle
+          case None => Empty
         }
 
     }

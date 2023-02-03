@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedDataLayer,
-  PrecomputedLayer,
   PrecomputedSegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.dataformats.zarr._

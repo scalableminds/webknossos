@@ -78,7 +78,7 @@ class DatasetArray(relativePath: DatasetPath,
           offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
-                                                                             header.order != ArrayOrder.C)
+                                                                             flip = header.order != ArrayOrder.C)
           _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
         } yield ()
       }
@@ -119,7 +119,7 @@ class DatasetArray(relativePath: DatasetPath,
   private def isZeroOffset(offset: Array[Int]): Boolean =
     util.Arrays.equals(offset, new Array[Int](offset.length))
 
-  protected def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
+  private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
       globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunkSize)(dim))
     }.toArray

@@ -64,8 +64,6 @@ object MultiArrayUtils {
     */
   @throws[InvalidRangeException]
   def copyRange(offset: Array[Int], source: MultiArray, target: MultiArray): Unit = {
-    // At this point offset is XYZ, source should be XYZ (but for precomputed it is XZY)
-
     val sourceShape: Array[Int] = source.getShape
     val targetShape: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
@@ -130,7 +128,6 @@ object MultiArrayUtils {
      * For all cases we could test, the two are identical. Beware of this when debugging future datasets,
      * e.g. with axis order ZXY
      */
-
     val permutation = axisOrder.permutation(source.getRank)
     val flippedIfNeeded = if (flip) permutation.reverse else permutation
     source.permute(flippedIfNeeded)

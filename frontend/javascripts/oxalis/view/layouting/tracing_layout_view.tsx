@@ -75,6 +75,8 @@ type State = {
   status: ControllerStatus;
   contextMenuPosition: [number, number] | null | undefined;
   clickedNodeId: number | null | undefined;
+  contextMenuMeshId: number | null | undefined;
+  contextMenuMeshIntersectionPosition: THREE.Vector3 | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
   contextMenuGlobalPosition: Vector3 | null | undefined;
   contextMenuViewport: OrthoView | null | undefined;
@@ -109,6 +111,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       clickedBoundingBoxId: null,
       contextMenuGlobalPosition: null,
       contextMenuViewport: null,
+      contextMenuMeshId: null,
+      contextMenuMeshIntersectionPosition: null,
       model: layout,
     };
   }
@@ -173,6 +177,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     boundingBoxId: number | null | undefined,
     globalPosition: Vector3 | null | undefined,
     viewport: OrthoView,
+    isosurfaceId?: number,
+    meshIntersectionPosition?: THREE.Vector3,
   ) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
     // of the context menu. This causes the context menu to instantly close after opening.
@@ -186,6 +192,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           clickedBoundingBoxId: boundingBoxId,
           contextMenuGlobalPosition: globalPosition,
           contextMenuViewport: viewport,
+          contextMenuMeshId: isosurfaceId,
+          contextMenuMeshIntersectionPosition: meshIntersectionPosition,
         }),
       0,
     );
@@ -198,6 +206,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       clickedBoundingBoxId: null,
       contextMenuGlobalPosition: null,
       contextMenuViewport: null,
+      contextMenuMeshId: null,
+      contextMenuMeshIntersectionPosition: null,
     });
   };
 
@@ -299,6 +309,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             globalPosition={this.state.contextMenuGlobalPosition}
             contextMenuPosition={contextMenuPosition}
             maybeViewport={contextMenuViewport}
+            maybeClickedMeshId={this.state.contextMenuMeshId}
+            maybeMeshIntersectionPosition={this.state.contextMenuMeshIntersectionPosition}
           />
         )}
 

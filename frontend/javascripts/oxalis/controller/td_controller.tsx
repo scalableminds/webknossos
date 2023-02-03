@@ -220,11 +220,12 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        const hitPosition = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
+        const intersection = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
 
-        if (!hitPosition) {
+        if (!intersection) {
           return;
         }
+        const { point: hitPosition } = intersection;
 
         const unscaledPosition = V3.divide3(hitPosition.toArray() as Vector3, this.props.scale);
 
@@ -244,7 +245,11 @@ class TDController extends React.PureComponent<Props> {
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
-
+        const intersection = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
+        debugger;
+        // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
+        const meshId = intersection ? intersection.object.parent?.cellId : null;
+        const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
         handleOpenContextMenu(
           this.props.planeView,
           pos,
@@ -252,6 +257,8 @@ class TDController extends React.PureComponent<Props> {
           isTouch,
           event,
           this.props.showContextMenuAt,
+          meshId,
+          meshClickedPosition,
         );
       },
     };

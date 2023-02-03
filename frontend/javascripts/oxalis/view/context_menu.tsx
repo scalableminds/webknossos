@@ -36,6 +36,8 @@ import {
   deleteUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   maybeFetchMeshFilesAction,
+  removeIsosurfaceAction,
+  updateIsosurfaceVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
@@ -86,6 +88,7 @@ import {
   minCutAgglomerateWithPositionAction,
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 const { SubMenu } = Menu;
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -95,6 +98,8 @@ export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
 type OwnProps = {
   contextMenuPosition: [number, number] | null | undefined;
   maybeClickedNodeId: number | null | undefined;
+  maybeClickedMeshId: number | null | undefined;
+  maybeMeshIntersectionPosition: Vector3 | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
   globalPosition: Vector3 | null | undefined;
   maybeViewport: OrthoView | null | undefined;
@@ -117,6 +122,10 @@ type DispatchProps = {
   setActiveCell: (arg0: number, somePosition?: Vector3) => void;
   createBranchPoint: (arg0: number, arg1: number) => void;
   deleteBranchpointById: (arg0: number, arg1: number) => void;
+  performMinCut: (arg0: number, arg1: number | undefined) => void;
+  removeMesh: (arg0: string, arg1: number) => void;
+  hideMesh: (arg0: string, arg1: number) => void;
+  setPosition: (arg0: Vector3) => void;
 };
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
@@ -299,7 +308,7 @@ function getMaybeMinCutItem(
   clickedTree: Tree,
   volumeTracing: VolumeTracing | null | undefined,
   userBoundingBoxes: Array<UserBoundingBox>,
-  dispatch: Dispatch<any>,
+  performMinCut: (treeId: number, boundingBoxId?: number | undefined) => void,
 ) {
   const seeds = Array.from(clickedTree.nodes.values());
 
@@ -320,20 +329,14 @@ function getMaybeMinCutItem(
         key="choose-bbox-group"
         title="Choose a bounding box for the min-cut operation:"
       >
-        <Menu.Item
-          key="create-new"
-          onClick={() => dispatch(performMinCutAction(clickedTree.treeId))}
-        >
+        <Menu.Item key="create-new" onClick={() => performMinCut(clickedTree.treeId)}>
           Use default bounding box
         </Menu.Item>
 
         {userBoundingBoxes
           .filter((bbox) => isBoundingBoxUsableForMinCut(bbox.boundingBox, seeds))
           .map((bbox) => (
-            <Menu.Item
-              key={bbox.id}
-              onClick={() => dispatch(performMinCutAction(clickedTree.treeId, bbox.id))}
-            >
+            <Menu.Item key={bbox.id} onClick={() => performMinCut(clickedTree.treeId, bbox.id)}>
               {bbox.name || "Unnamed bounding box"}
             </Menu.Item>
           ))}
@@ -342,9 +345,70 @@ function getMaybeMinCutItem(
   );
 }
 
+function getMaybeMeshItems(
+  maybeClickedMeshId: number | null | undefined,
+  maybeMeshIntersectionPosition: Vector3 | null | undefined,
+  removeMesh: (segmentationLayerName: string, meshId: number) => void,
+  hideMesh: (segmentationLayerName: string, meshId: number) => void,
+  setPosition: (position: Vector3) => void,
+) {
+  if (maybeClickedMeshId == null || maybeMeshIntersectionPosition == null) {
+    return null;
+  }
+  const getActiveSegmentationLayerName = () => {
+    const storeState = Store.getState();
+    const segmentationLayer = getVisibleSegmentationLayer(storeState);
+    if (!segmentationLayer) {
+      return null;
+    }
+    return segmentationLayer?.name;
+  };
+
+  return [
+    <Menu.Item
+      key="hide-mesh"
+      onClick={() => {
+        const segmentationLayerName = getActiveSegmentationLayerName();
+        if (!segmentationLayerName) {
+          return;
+        }
+        hideMesh(segmentationLayerName, maybeClickedMeshId);
+      }}
+    >
+      Hide Mesh
+    </Menu.Item>,
+    <Menu.Item
+      key="remove-mesh"
+      onClick={() => {
+        const segmentationLayerName = getActiveSegmentationLayerName();
+        if (!segmentationLayerName) {
+          return;
+        }
+        removeMesh(segmentationLayerName, maybeClickedMeshId);
+      }}
+    >
+      Remove Mesh
+    </Menu.Item>,
+    <Menu.Item
+      key="jump-to-mesh"
+      onClick={() => {
+        const storeState = Store.getState();
+        const datasetScale = storeState.dataset.dataSource.scale;
+        const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScale);
+
+        setPosition(unscaledPosition);
+      }}
+    >
+      Jump to Position
+    </Menu.Item>,
+  ];
+}
+
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
+  maybeClickedMeshId,
+  maybeMeshIntersectionPosition,
   hideContextMenu,
   deleteEdge,
   mergeTrees,
@@ -354,6 +418,10 @@ function NodeContextMenuOptions({
   deleteBranchpointById,
   setActiveNode,
   hideTree,
+  performMinCut,
+  removeMesh,
+  hideMesh,
+  setPosition,
   useLegacyBindings,
   volumeTracing,
   infoRows,
@@ -415,7 +483,7 @@ function NodeContextMenuOptions({
       >
         Select this Node
       </Menu.Item>
-      {getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch)}
+      {getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, performMinCut)}
       {allowUpdate ? (
         <>
           <Menu.Item
@@ -489,6 +557,13 @@ function NodeContextMenuOptions({
           )}
         </>
       ) : null}
+      {getMaybeMeshItems(
+        maybeClickedMeshId,
+        maybeMeshIntersectionPosition,
+        removeMesh,
+        hideMesh,
+        setPosition,
+      )}
       {isTheSameNode ? null : (
         <Menu.Item
           key="measure-node-path-length"
@@ -673,6 +748,8 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     volumeTracing,
     activeTool,
     globalPosition,
+    maybeClickedMeshId,
+    maybeMeshIntersectionPosition,
     viewport,
     createTree,
     segmentIdAtPosition,
@@ -682,6 +759,9 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     currentConnectomeFile,
     hideContextMenu,
     setActiveCell,
+    removeMesh,
+    hideMesh,
+    setPosition,
     mappingInfo,
     infoRows,
     allowUpdate,
@@ -872,7 +952,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
         ]
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
-
   if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadPrecomputedMeshItem);
     nonSkeletonActions.push(computeMeshAdHocItem);
@@ -881,12 +960,23 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
   let allActions: Array<JSX.Element | null> = [];
 
+  const maybeMeshRelatedItems = getMaybeMeshItems(
+    maybeClickedMeshId,
+    maybeMeshIntersectionPosition,
+    removeMesh,
+    hideMesh,
+    setPosition,
+  );
+
   if (isSkeletonToolActive) {
     allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
   } else if (isBoundingBoxToolActive) {
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
   } else {
     allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
+  }
+  if (maybeMeshRelatedItems) {
+    allActions = allActions.concat(maybeMeshRelatedItems);
   }
 
   const empty = (
@@ -1227,6 +1317,18 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
         isVisible: false,
       }),
     );
+  },
+  performMinCut(treeId: number, boundingBoxId: number | undefined) {
+    dispatch(performMinCutAction(treeId, boundingBoxId));
+  },
+  removeMesh(layerName: string, isosurfaceId: number) {
+    dispatch(removeIsosurfaceAction(layerName, isosurfaceId));
+  },
+  hideMesh(layerName: string, id: number) {
+    dispatch(updateIsosurfaceVisibilityAction(layerName, id, false));
+  },
+  setPosition(position: Vector3) {
+    dispatch(setPositionAction(position));
   },
 });
 

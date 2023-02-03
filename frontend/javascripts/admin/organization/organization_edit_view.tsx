@@ -7,6 +7,7 @@ import {
   CopyOutlined,
   SaveOutlined,
   IdcardOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import {
@@ -169,12 +170,21 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                     width: "calc(100% - 31px)",
                   }}
                   readOnly
+                  disabled
                 />
                 <Button
                   onClick={this.handleCopyNameButtonClicked}
                   icon={<CopyOutlined className="without-icon-margin" />}
                 />
               </Input.Group>
+            </FormItem>
+            <FormItem label="Organization Owner">
+              <Input
+                prefix={<UserOutlined />}
+                value={`${this.props.organization.owner.firstName} ${this.props.organization.owner.lastName}`}
+                readOnly
+                disabled
+              />
             </FormItem>
             <FormItem
               label="Organization Name"

@@ -5,9 +5,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   ChunkReader,
   DatasetArray,
   DatasetPath,
-  FileSystemStore,
-  GoogleCloudFileSystemStore,
-  GoogleCloudStoragePath,
+  FileSystemStore
 }
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -20,7 +18,7 @@ object PrecomputedArray extends LazyLogging {
   @throws[IOException]
   def open(magPath: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
 
-    val store = new GoogleCloudFileSystemStore(magPath.getParent, magPath.getFileSystem)
+    val store = new FileSystemStore(magPath.getParent)
     val headerPath = s"${PrecomputedHeader.METADATA_PATH}"
     val headerBytes = store.readBytes(headerPath)
     if (headerBytes.isEmpty)
@@ -44,7 +42,7 @@ object PrecomputedArray extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
-    val datasetPath = new GoogleCloudStoragePath(key.toString)
+    val datasetPath = new DatasetPath(key.toString)
     new PrecomputedArray(datasetPath,
                          store,
                          scaleHeader,

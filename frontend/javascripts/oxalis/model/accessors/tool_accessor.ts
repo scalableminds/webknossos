@@ -11,10 +11,10 @@ import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_acce
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import { APIOrganization } from "types/api_flow_types";
 import {
+  getFeatureNotAvailabeInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import messages from "messages";
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
@@ -166,7 +166,7 @@ function _getDisabledInfoFromArgs(
         ? !hasSkeleton
           ? disabledSkeletonExplanation
           : disabledAgglomerateMappingsExplanation
-        : messages["organization.plan.feature_not_available"](PricingPlanEnum.Power),
+        : getFeatureNotAvailabeInPlanMessage(PricingPlanEnum.Power, activeOrganization),
     },
   };
 }

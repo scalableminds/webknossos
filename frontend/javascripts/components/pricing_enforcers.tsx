@@ -1,14 +1,14 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button } from "antd";
+import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button, Result } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
+  getFeatureNotAvailabeInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import { Link } from "react-router-dom";
-import messages from "messages";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { OxalisState } from "oxalis/store";
 
@@ -34,7 +34,7 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
 
   return (
     <Tooltip
-      title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
+      title={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
       placement="right"
     >
       <Menu.Item
@@ -64,7 +64,7 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
 
   return (
     <Tooltip
-      title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
+      title={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
       placement="right"
     >
       <Button {...buttonProps} disabled>
@@ -85,7 +85,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   if (isFeatureAllowed) return <>{children}</>;
 
   return (
-    <Tooltip title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}>
+    <Tooltip title={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}>
       <div style={{ position: "relative", cursor: "not-allowed" }}>
         <div
           style={{
@@ -107,7 +107,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
         >
           <Alert
             showIcon
-            message={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
+            message={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
             icon={<LockOutlined />}
           />
         </div>
@@ -116,36 +116,43 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   );
 };
 
-export function PageUnavailableForYourPlanView() {
+export function PageUnavailableForYourPlanView({
+  requiredPricingPlan,
+}: {
+  requiredPricingPlan: PricingPlanEnum;
+}) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
 
   const linkToOrganizationSettings =
     activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
-      <Link to={`/organizations/${activeOrganization.name}`}>Go to Organization Settings</Link>
-    ) : null;
+      <Link to={`/organizations/${activeOrganization.name}`}>
+        <Button>Go to Organization Settings</Button>
+      </Link>
+    ) : undefined;
 
   return (
     <div className="container">
-      <Alert
-        style={{
-          maxWidth: "500px",
-          margin: "0 auto",
-        }}
-        message="Feature not available"
-        description={
-          <>
-            <p>
-              The requested feature is not available in your WEBKNOSSOS organization. Consider
-              upgrading to a higher WEBKNOSSOS plan to unlock it or ask your organization's owner to
-              upgrade.
-            </p>
-            {linkToOrganizationSettings}
-          </>
+      <Result
+        status="warning"
+        title="Feature not available"
+        subTitle={
+          <p style={{ maxWidth: "500px", margin: "0 auto" }}>
+            {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+          </p>
         }
-        type="error"
-        showIcon
+        extra={[
+          <Link to="/">
+            <Button type="primary">Return to Dashboard</Button>
+          </Link>,
+          linkToOrganizationSettings,
+        ]}
       />
     </div>
   );
 }
+
+// style={{
+//           maxWidth: "500px",
+//           margin: "0 auto",
+//         }}

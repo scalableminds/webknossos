@@ -53,10 +53,10 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import features from "features";
 import {
+  getFeatureNotAvailabeInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import messages from "messages";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -323,7 +323,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,
-        title: messages["organization.plan.feature_not_available"](PricingPlanEnum.Team),
+        title: getFeatureNotAvailabeInPlanMessage(PricingPlanEnum.Team, activeOrganization),
       };
     }
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button, Result } from "antd";
+import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button, Result, Popover } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailabeInPlanMessage,
@@ -11,6 +11,9 @@ import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_
 import { Link } from "react-router-dom";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { OxalisState } from "oxalis/store";
+import { rgbToHex } from "libs/utils";
+import { PRIMARY_COLOR } from "oxalis/constants";
+import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 
 const handleMouseClick = (event: React.MouseEvent) => {
   event.preventDefault();
@@ -27,15 +30,34 @@ type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
 export const PricingEnforcedMenuItem: React.FunctionComponent<
   RequiredPricingProps & MenuItemProps
 > = ({ children, requiredPricingPlan, ...menuItemProps }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
+  const upgradeNowButton =
+    activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
+      <Button
+        size="small"
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(activeOrganization)}
+        style={{ marginTop: 10 }}
+      >
+        Upgrade Now
+      </Button>
+    ) : null;
+
   return (
-    <Tooltip
-      title={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+    <Popover
+      color={rgbToHex(PRIMARY_COLOR)}
+      content={
+        <div style={{ color: "white", maxWidth: 250 }}>
+          {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {upgradeNowButton}
+        </div>
+      }
       placement="right"
+      trigger="hover"
     >
       <Menu.Item
         onClick={handleMenuClick}
@@ -48,7 +70,7 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
       </Menu.Item>
-    </Tooltip>
+    </Popover>
   );
 };
 

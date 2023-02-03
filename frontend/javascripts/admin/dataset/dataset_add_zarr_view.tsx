@@ -259,7 +259,10 @@ function DatasetAddZarrView(props: Props) {
                       size="large"
                       type="default"
                       style={{ width: "100%" }}
-                      onClick={() => setDatasourceConfigStr("")}
+                      onClick={() => {
+                        setDatasourceConfigStr("");
+                        form.resetFields();
+                      }}
                     >
                       Reset
                     </Button>

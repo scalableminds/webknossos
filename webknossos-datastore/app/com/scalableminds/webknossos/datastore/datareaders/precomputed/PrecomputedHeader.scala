@@ -14,6 +14,8 @@ case class PrecomputedHeader(`type`: String, data_type: String, num_channels: In
 
   def getScale(key: String): Option[PrecomputedScale] =
     scales.find(s => s.key == key)
+
+  def describesSegmentationLayer: Boolean = `type` == "segmentation"
 }
 
 case class PrecomputedScale(key: String,

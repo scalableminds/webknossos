@@ -31,8 +31,8 @@ trait PrecomputedLayer extends DataLayer {
 
 case class PrecomputedDataLayer(
     name: String,
-    category: Category.Value,
     boundingBox: BoundingBox,
+    category: Category.Value,
     elementClass: ElementClass.Value,
     mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,

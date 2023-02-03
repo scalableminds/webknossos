@@ -2,7 +2,11 @@ package models.binary.explore
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{PrecomputedDataLayer, PrecomputedLayer}
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+  PrecomputedDataLayer,
+  PrecomputedLayer,
+  PrecomputedSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
@@ -31,7 +35,9 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
       voxelSize <- Vec3Int.fromList(smallestResolution.toList).toFox
       mags: Seq[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
         getMagFromScale(_, smallestResolution, remotePath, credentialId))
-      layer = PrecomputedDataLayer(name, Category.color, boundingBox, elementClass, mags.toList)
+      layer = if (precomputedHeader.describesSegmentationLayer) {
+        PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags.toList, None)
+      } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags.toList)
     } yield (layer, Vec3Double.fromVec3Int(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Fox[ElementClass.Value] =

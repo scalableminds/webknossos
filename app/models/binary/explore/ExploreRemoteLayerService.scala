@@ -3,6 +3,11 @@ package models.binary.explore
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+  PrecomputedDataLayer,
+  PrecomputedLayer,
+  PrecomputedSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
@@ -130,6 +135,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
           case l: N5SegmentationLayer =>
             l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
                    boundingBox = l.boundingBox * magFactors)
+          case l: PrecomputedDataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: PrecomputedSegmentationLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
           case _ => throw new Exception("Encountered unsupported layer format during explore remote")
         }
       })
@@ -156,7 +167,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
         remotePath,
         credentialId.map(_.toString),
         reportMutable,
-        List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer, new N5MultiscalesExplorer))
+        List(new ZarrArrayExplorer,
+             new NgffExplorer,
+             new N5ArrayExplorer,
+             new N5MultiscalesExplorer,
+             new PrecomputedExplorer)
+      )
     } yield layersWithVoxelSizes
 
   private def normalizeUri(uri: String): String =

@@ -34,6 +34,9 @@ type DataLayerZarrPartial = BaseRemoteLayer & {
 type DataLayerN5Partial = BaseRemoteLayer & {
   dataFormat: "n5";
 };
+type DataLayerPrecomputedPartial = BaseRemoteLayer & {
+  dataFormat: "precomputed";
+};
 export type DataLayer = {
   name: string;
   category: "color" | "segmentation";
@@ -59,7 +62,7 @@ export type DataLayer = {
       mappings: Array<string>;
     }
 ) &
-  (DataLayerWKWPartial | DataLayerZarrPartial | DataLayerN5Partial);
+  (DataLayerWKWPartial | DataLayerZarrPartial | DataLayerN5Partial | DataLayerPrecomputedPartial);
 export type DatasourceConfiguration = {
   id: {
     name: string;

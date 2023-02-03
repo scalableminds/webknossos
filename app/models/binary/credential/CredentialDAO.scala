@@ -93,7 +93,7 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         case CredentialType.HttpBasicAuth        => parseAsHttpBasicAuthCredential(r)
         case CredentialType.S3AccessKey          => parseAsS3AccessKeyCredential(r)
         case CredentialType.GoogleServiceAccount => parseAsGoogleServiceAccountCredential(r)
-        case _                                     => Fox.failure(s"Unknown credential type: ${r.`type`}")
+        case _                                   => Fox.failure(s"Unknown credential type: ${r.`type`}")
       }
     } yield parsed
 }

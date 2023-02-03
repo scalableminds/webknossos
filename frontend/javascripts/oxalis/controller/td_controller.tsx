@@ -246,7 +246,6 @@ class TDController extends React.PureComponent<Props> {
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
         const intersection = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
-        debugger;
         // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
         const meshId = intersection ? intersection.object.parent?.cellId : null;
         const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;

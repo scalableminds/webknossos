@@ -156,7 +156,6 @@ class PlaneView {
 
     // Outside of the 3D viewport, we don't do isosurface hit tests
     if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
-      console.log("No hit test because we are not in the 3D viewport");
       if (hoveredSegmentId !== 0) {
         // Reset hoveredSegmentId if we are outside of the 3D viewport,
         // since that id takes precedence over the shader-calculated cell id

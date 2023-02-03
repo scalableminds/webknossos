@@ -14,6 +14,7 @@ import type {
   MutableNode,
   MutableTreeMap,
   OxalisState,
+  SegmentMap,
   SkeletonTracing,
   Tree,
   UserBoundingBox,
@@ -38,6 +39,7 @@ import {
   maybeFetchMeshFilesAction,
   removeIsosurfaceAction,
   updateIsosurfaceVisibilityAction,
+  refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
@@ -51,7 +53,10 @@ import {
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getSegmentsForLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getSegmentIdForPosition,
@@ -89,6 +94,7 @@ import {
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getNameOfSegment } from "./right-border-tabs/segments_tab/segment_list_item";
 const { SubMenu } = Menu;
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -126,6 +132,7 @@ type DispatchProps = {
   removeMesh: (arg0: string, arg1: number) => void;
   hideMesh: (arg0: string, arg1: number) => void;
   setPosition: (arg0: Vector3) => void;
+  refreshMesh: (arg0: string, arg1: number) => void;
 };
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
@@ -140,6 +147,7 @@ type StateProps = {
   userBoundingBoxes: Array<UserBoundingBox>;
   mappingInfo: ActiveMappingInfo;
   allowUpdate: boolean;
+  segments: SegmentMap | null | undefined;
 };
 type Props = OwnProps & StateProps & DispatchProps;
 
@@ -348,46 +356,32 @@ function getMaybeMinCutItem(
 function getMaybeMeshItems(
   maybeClickedMeshId: number | null | undefined,
   maybeMeshIntersectionPosition: Vector3 | null | undefined,
+  visibleSegmentationLayer: APIDataLayer | null | undefined,
   removeMesh: (segmentationLayerName: string, meshId: number) => void,
   hideMesh: (segmentationLayerName: string, meshId: number) => void,
   setPosition: (position: Vector3) => void,
+  refreshMesh: (segmentationLayerName: string, meshId: number) => void,
 ) {
-  if (maybeClickedMeshId == null || maybeMeshIntersectionPosition == null) {
+  if (
+    maybeClickedMeshId == null ||
+    maybeMeshIntersectionPosition == null ||
+    visibleSegmentationLayer == null
+  ) {
     return null;
   }
-  const getActiveSegmentationLayerName = () => {
-    const storeState = Store.getState();
-    const segmentationLayer = getVisibleSegmentationLayer(storeState);
-    if (!segmentationLayer) {
-      return null;
-    }
-    return segmentationLayer?.name;
-  };
 
   return [
     <Menu.Item
       key="hide-mesh"
-      onClick={() => {
-        const segmentationLayerName = getActiveSegmentationLayerName();
-        if (!segmentationLayerName) {
-          return;
-        }
-        hideMesh(segmentationLayerName, maybeClickedMeshId);
-      }}
+      onClick={() => hideMesh(visibleSegmentationLayer.name, maybeClickedMeshId)}
     >
       Hide Mesh
     </Menu.Item>,
     <Menu.Item
-      key="remove-mesh"
-      onClick={() => {
-        const segmentationLayerName = getActiveSegmentationLayerName();
-        if (!segmentationLayerName) {
-          return;
-        }
-        removeMesh(segmentationLayerName, maybeClickedMeshId);
-      }}
+      key="reload-mesh"
+      onClick={() => refreshMesh(visibleSegmentationLayer.name, maybeClickedMeshId)}
     >
-      Remove Mesh
+      Reload Mesh
     </Menu.Item>,
     <Menu.Item
       key="jump-to-mesh"
@@ -401,6 +395,12 @@ function getMaybeMeshItems(
     >
       Jump to Position
     </Menu.Item>,
+    <Menu.Item
+      key="remove-mesh"
+      onClick={() => removeMesh(visibleSegmentationLayer.name, maybeClickedMeshId)}
+    >
+      Remove Mesh
+    </Menu.Item>,
   ];
 }
 
@@ -409,6 +409,7 @@ function NodeContextMenuOptions({
   clickedNodeId,
   maybeClickedMeshId,
   maybeMeshIntersectionPosition,
+  visibleSegmentationLayer,
   hideContextMenu,
   deleteEdge,
   mergeTrees,
@@ -422,6 +423,7 @@ function NodeContextMenuOptions({
   removeMesh,
   hideMesh,
   setPosition,
+  refreshMesh,
   useLegacyBindings,
   volumeTracing,
   infoRows,
@@ -560,9 +562,11 @@ function NodeContextMenuOptions({
       {getMaybeMeshItems(
         maybeClickedMeshId,
         maybeMeshIntersectionPosition,
+        visibleSegmentationLayer,
         removeMesh,
         hideMesh,
         setPosition,
+        refreshMesh,
       )}
       {isTheSameNode ? null : (
         <Menu.Item
@@ -751,17 +755,18 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     viewport,
-    createTree,
-    segmentIdAtPosition,
     visibleSegmentationLayer,
+    segmentIdAtPosition,
     dataset,
     currentMeshFile,
     currentConnectomeFile,
+    createTree,
     hideContextMenu,
     setActiveCell,
     removeMesh,
     hideMesh,
     setPosition,
+    refreshMesh,
     mappingInfo,
     infoRows,
     allowUpdate,
@@ -963,9 +968,11 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const maybeMeshRelatedItems = getMaybeMeshItems(
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
+    visibleSegmentationLayer,
     removeMesh,
     hideMesh,
     setPosition,
+    refreshMesh,
   );
 
   if (isSkeletonToolActive) {
@@ -1099,7 +1106,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const {
     skeletonTracing,
     maybeClickedNodeId,
+    maybeClickedMeshId,
     contextMenuPosition,
+    segments,
     hideContextMenu,
     datasetScale,
     globalPosition,
@@ -1180,14 +1189,25 @@ function ContextMenuInner(propsWithInputRef: Props) {
       );
     }
 
-    if (segmentIdAtPosition > 0) {
+    if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
+      const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
       infoRows.push(
         <InfoMenuItem key="copy-cell">
           <div className="cell-context-icon" />
-          Segment ID: {`${segmentIdAtPosition}`}{" "}
-          {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
+          Segment ID: {`${segmentId}`} {copyIconWithTooltip(segmentId, "Copy Segment ID")}
         </InfoMenuItem>,
       );
+    }
+    if (segments != null && maybeClickedMeshId != null) {
+      const segmentName = getNameOfSegment(segments.get(maybeClickedMeshId));
+      if (segmentName != null) {
+        infoRows.push(
+          <InfoMenuItem key="copy-cell">
+            <div className="cell-context-icon" />
+            Segment Name: {segmentName}
+          </InfoMenuItem>,
+        );
+      }
     }
 
     if (infoRows.length > 0) {
@@ -1321,14 +1341,17 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   performMinCut(treeId: number, boundingBoxId: number | undefined) {
     dispatch(performMinCutAction(treeId, boundingBoxId));
   },
-  removeMesh(layerName: string, isosurfaceId: number) {
-    dispatch(removeIsosurfaceAction(layerName, isosurfaceId));
+  removeMesh(layerName: string, meshId: number) {
+    dispatch(removeIsosurfaceAction(layerName, meshId));
   },
-  hideMesh(layerName: string, id: number) {
-    dispatch(updateIsosurfaceVisibilityAction(layerName, id, false));
+  hideMesh(layerName: string, meshId: number) {
+    dispatch(updateIsosurfaceVisibilityAction(layerName, meshId, false));
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));
+  },
+  refreshMesh(layerName: string, segmentId: number) {
+    dispatch(refreshIsosurfaceAction(layerName, segmentId));
   },
 });
 
@@ -1346,7 +1369,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
     allowUpdate: state.tracing.restrictions.allowUpdate,
-    visibleSegmentationLayer: getVisibleSegmentationLayer(state),
+    visibleSegmentationLayer,
     currentMeshFile:
       visibleSegmentationLayer != null
         ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
@@ -1358,6 +1381,10 @@ function mapStateToProps(state: OxalisState): StateProps {
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
     userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
+    segments:
+      visibleSegmentationLayer != null
+        ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
+        : null,
     mappingInfo,
   };
 }

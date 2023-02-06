@@ -404,7 +404,7 @@ function AddZarrLayer({
     <>
       Please enter a URL that points to the Zarr or N5 data you would like to import. If necessary,
       specify the credentials for the dataset. For datasets with multiple layers, e.g. raw
-      microscopy and segmentattion data, please add them separately with the ”Add Layer” button
+      microscopy and segmentation data, please add them separately with the ”Add Layer” button
       below. Once you have approved of the resulting datasource you can import it.
       <FormItem
         style={{ marginTop: 16 }}

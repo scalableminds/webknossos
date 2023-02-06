@@ -51,6 +51,7 @@ class AnnotationController @Inject()(
     dataSetDAO: DataSetDAO,
     dataSetService: DataSetService,
     annotationService: AnnotationService,
+    annotationMutexService: AnnotationMutexService,
     userService: UserService,
     teamService: TeamService,
     projectDAO: ProjectDAO,
@@ -557,6 +558,7 @@ class AnnotationController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation.typ == AnnotationType.Explorational || annotation.typ == AnnotationType.Task) ?~> "annotation.othersMayEdit.onlyExplorationalOrTask"
         _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationDAO.updateOthersMayEdit(annotation._id, othersMayEdit)
       } yield Ok(Json.toJson(othersMayEdit))
@@ -598,5 +600,19 @@ class AnnotationController @Inject()(
         tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, dataSetBoundingBox) ?~> "Failed to duplicate volume tracing."
       }
     } yield annotationLayer.copy(tracingId = newTracingId)
+
+  @ApiOperation(hidden = true, value = "")
+  def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        idValidated <- ObjectId.fromString(id)
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        _ <- bool2Fox(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
+        restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        mutexResult = annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id)
+        resultJson <- annotationMutexService.publicWrites(mutexResult, request.identity)
+      } yield Ok(resultJson)
+    }
 
 }

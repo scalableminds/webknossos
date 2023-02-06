@@ -25,9 +25,9 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   protected def parseJsonFromPath[T: Reads](path: Path): Fox[T] =
     for {
-      fileBytes <- tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "Failed to read remote file"
-      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "Failed to read remote file"
-      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString) ?~> "Failed to parse or validate json against data schema"
+      fileBytes <- tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "dataSet.explore.failed.readFile"
+      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "dataSet.explore.failed.readFile"
+      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
     } yield parsed
 
   protected def looksLikeSegmentationLayer(layerName: String, elementClass: ElementClass.Value): Boolean =

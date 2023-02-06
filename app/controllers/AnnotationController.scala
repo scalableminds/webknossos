@@ -611,7 +611,7 @@ class AnnotationController @Inject()(
         restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
         _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         mutexResult = annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id)
-        resultJson <- annotationMutexService.publicWrites(mutexResult, request.identity)
+        resultJson <- annotationMutexService.publicWrites(mutexResult)
       } yield Ok(resultJson)
     }
 

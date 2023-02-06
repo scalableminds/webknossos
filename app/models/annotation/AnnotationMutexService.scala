@@ -3,7 +3,7 @@ package models.annotation
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import models.user.{User, UserDAO, UserService}
+import models.user.{UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import utils.ObjectId
 
@@ -49,10 +49,10 @@ class AnnotationMutexService @Inject()(userDAO: UserDAO, userService: UserServic
     MutexResult(canEdit = true, None)
   }
 
-  def publicWrites(mutexResult: MutexResult, requestingUser: User)(implicit ec: ExecutionContext): Fox[JsObject] =
+  def publicWrites(mutexResult: MutexResult)(implicit ec: ExecutionContext): Fox[JsObject] =
     for {
       userOpt <- Fox.runOptional(mutexResult.blockedByUser)(user => userDAO.findOne(user)(GlobalAccessContext))
-      userJsonOpt <- Fox.runOptional(userOpt)(user => userService.publicWrites(user, requestingUser))
+      userJsonOpt <- Fox.runOptional(userOpt)(user => userService.compactWrites(user))
     } yield
       Json.obj(
         "canEdit" -> mutexResult.canEdit,

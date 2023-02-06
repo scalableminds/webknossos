@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The target folder of a dataset can now be specified during upload. Also, clicking "Add Dataset" from an active folder will upload the dataset to that folder by default. [#6704](https://github.com/scalableminds/webknossos/pull/6704)
 - The storage used by an organization’s datasets can now be measured. [#6685](https://github.com/scalableminds/webknossos/pull/6685)
 - Precomputed meshes can now be loaded even when a mapping is active (HDF5 or an editable mapping produced by the proofreading tool). The precomputed mesh has to be computed without a mapping for this to work. [#6569](https://github.com/scalableminds/webknossos/pull/6569)
+- Remote datasets can now also be streamed from Google Cloud Storage uris (`gs://`). [#6775](https://github.com/scalableminds/webknossos/pull/6775)
 
 ### Changed
 - For remote datasets that require authentication, credentials are no longer stored in the respective JSON. [#6646](https://github.com/scalableminds/webknossos/pull/6646)

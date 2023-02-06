@@ -13,6 +13,8 @@ import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_lis
 import { OxalisState } from "oxalis/store";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import { FormItemWithInfo } from "./helper_components";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { PricingEnforcedBlur } from "components/pricing_enforcers";
 
 type Props = {
   form: FormInstance | null;
@@ -32,7 +34,9 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
       info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder in which the dataset is located. If you want to grant additional teams access, define these teams here."
       validateStatus="success"
     >
-      <TeamSelectionComponent mode="multiple" allowNonEditableTeams={isDatasetManagerOrAdmin} />
+      <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
+        <TeamSelectionComponent mode="multiple" allowNonEditableTeams={isDatasetManagerOrAdmin} />
+      </PricingEnforcedBlur>
     </FormItemWithInfo>
   );
 
@@ -45,9 +49,8 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     fetch();
   }, []);
 
-  function handleSelectCode(event: React.SyntheticEvent): void {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'select' does not exist on type 'EventTar... Remove this comment to see the full error message
-    event.target.select();
+  function handleSelectCode(event: React.MouseEvent<HTMLInputElement>): void {
+    event.currentTarget.select();
   }
 
   async function handleCopySharingLink(): Promise<void> {

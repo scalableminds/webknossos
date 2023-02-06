@@ -29,14 +29,6 @@ import { getActiveUserCount } from "./pricing_plan_utils";
 import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
-export enum PricingPlanEnum {
-  Basic = "Basic",
-  Team = "Team",
-  Power = "Power",
-  TeamTrial = "Team_Trial",
-  PowerTrial = "Power_Trial",
-  Custom = "Custom",
-}
 
 type Props = {
   organization: APIOrganization;

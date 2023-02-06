@@ -12,13 +12,13 @@ import { OxalisState } from "oxalis/store";
 import React from "react";
 import { useSelector } from "react-redux";
 import { APIOrganization } from "types/api_flow_types";
-import { PricingPlanEnum } from "./organization_edit_view";
 import {
   hasPricingPlanExceededStorage,
   hasPricingPlanExceededUsers,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   powerPlanFeatures,
+  PricingPlanEnum,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";

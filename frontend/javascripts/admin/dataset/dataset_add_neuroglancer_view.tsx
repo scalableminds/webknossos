@@ -41,9 +41,11 @@ export const parseCredentials = async (file: RcFile | undefined): Promise<Object
 export function GoogleAuthFormItem({
   fileList,
   handleChange,
+  showOptionalHint,
 }: {
   fileList: FileList;
   handleChange: (arg: UploadChangeParam<UploadFile<any>>) => void;
+  showOptionalHint?: boolean;
 }) {
   return (
     <FormItem
@@ -58,7 +60,7 @@ export function GoogleAuthFormItem({
           >
             Service Account
           </a>
-          {Unicode.NonBreakingSpace}Key (Optional)
+          {Unicode.NonBreakingSpace}Key {showOptionalHint && "(Optional)"}
         </React.Fragment>
       }
       hasFeedback
@@ -217,7 +219,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
           >
             <Input />
           </FormItem>
-          <GoogleAuthFormItem fileList={fileList} handleChange={handleChange} />
+          <GoogleAuthFormItem fileList={fileList} handleChange={handleChange} showOptionalHint />
           <FormItem
             style={{
               marginBottom: 0,

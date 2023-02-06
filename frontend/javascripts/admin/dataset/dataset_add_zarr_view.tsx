@@ -329,7 +329,9 @@ function AddZarrLayer({
     } else if (userInput.startsWith("gs://")) {
       setSelectedProtocol("gs");
     } else {
-      throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
+      throw new Error(
+        "Dataset URL must employ one of the following protocols: https://, s3:// or gs://",
+      );
     }
   }
 
@@ -407,9 +409,10 @@ function AddZarrLayer({
       microscopy and segmentation data, please add them separately with the ”Add Layer” button
       below. Once you have approved of the resulting datasource you can import it.
       <FormItem
-        style={{ marginTop: 16 }}
+        style={{ marginTop: 16, marginBottom: 16 }}
         name="url"
         label="Dataset URL"
+        tooltip="Supported protocols are HTTPS, Amazon S3 and Google Cloud Storage"
         hasFeedback
         rules={[
           {

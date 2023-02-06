@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.02.0...HEAD)
 
 ### Added
+- Remote volume datasets in the neuroglancer precomputed format can now be viewed in WEBKNOSSOS. [6716](https://github.com/scalableminds/webknossos/pull/6716)
 
 ### Changed
 - Limit paid team sharing features to respective organization plans. [6767](https://github.com/scalableminds/webknossos/pull/6776)

@@ -35,7 +35,12 @@ export const parseCredentials = async (file: RcFile | undefined): Promise<Object
     return null;
   }
   const jsonString = await readFileAsText(file);
-  return JSON.parse(jsonString);
+  try {
+    return JSON.parse(jsonString);
+  } catch (exception) {
+    Toast.error("Cannot parse credentials as valid JSON. Ignoring credentials file.");
+    return null;
+  }
 };
 
 export function GoogleAuthFormItem({

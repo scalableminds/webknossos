@@ -268,8 +268,7 @@ class JpegCompressor() extends Compressor {
   override def toString: String = getId
 
   @throws[IOException]
-  override def compress(is: InputStream, os: OutputStream): Unit =
-    throw new NotImplementedError()
+  override def compress(is: InputStream, os: OutputStream): Unit = ???
 
   @throws[IOException]
   override def uncompress(is: InputStream, os: OutputStream): Unit = {

@@ -49,19 +49,17 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
 
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(precomputedScale.encoding)
 
-  def grid_size: Array[Int] = (chunkSize, precomputedScale.size).zipped.map((c, s) => (s.toDouble / c).ceil.toInt)
-
   override def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] =
-    chunkIndexToBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
+    chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
 
   lazy val voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
-  def chunkIndexToBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
+  def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map(indices => {
-      val (cIndex, i) = indices
-      val beginOffset = voxelOffset(i) + cIndex * precomputedScale.chunk_sizes.head(i)
-      val endOffset = voxelOffset(i) + ((cIndex + 1) * precomputedScale.chunk_sizes.head(i))
-        .min(precomputedScale.size(i))
+      val (cIndex, dim) = indices
+      val beginOffset = voxelOffset(dim) + cIndex * precomputedScale.chunk_sizes.head(dim)
+      val endOffset = voxelOffset(dim) + ((cIndex + 1) * precomputedScale.chunk_sizes.head(dim))
+        .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })
 }
@@ -77,7 +75,7 @@ object PrecomputedScale extends JsonImplicits {
 }
 
 object PrecomputedHeader extends JsonImplicits {
-  val METADATA_PATH = "info"
+  val FILENAME_INFO = "info"
 
   implicit object PrecomputedHeaderFormat extends Format[PrecomputedHeader] {
     override def reads(json: JsValue): JsResult[PrecomputedHeader] =

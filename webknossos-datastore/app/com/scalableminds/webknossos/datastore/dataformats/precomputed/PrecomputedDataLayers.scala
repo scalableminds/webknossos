@@ -15,7 +15,7 @@ import play.api.libs.json.{Json, OFormat}
 
 trait PrecomputedLayer extends DataLayer {
 
-  val dataFormat: DataFormat.Value = DataFormat.precomputed
+  val dataFormat: DataFormat.Value = DataFormat.neuroglancerPrecomputed
 
   def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) =
     new PrecomputedBucketProvider(this, fileSystemServiceOpt)

@@ -118,7 +118,7 @@ object BoundingBox {
         None
     }
 
-  def fromSize(size: Array[Int]): Option[BoundingBox] =
+  def fromSizeArray(size: Array[Int]): Option[BoundingBox] =
     size.length match {
       case 3 => Some(BoundingBox(Vec3Int(0, 0, 0), size(0), size(1), size(2)))
       case _ => None

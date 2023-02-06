@@ -19,11 +19,11 @@ object PrecomputedArray extends LazyLogging {
   def open(magPath: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
 
     val store = new FileSystemStore(magPath.getParent)
-    val headerPath = s"${PrecomputedHeader.METADATA_PATH}"
+    val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
     val headerBytes = store.readBytes(headerPath)
     if (headerBytes.isEmpty)
       throw new IOException(
-        "'" + PrecomputedHeader.METADATA_PATH + "' expected but is not readable or missing in store.")
+        "'" + PrecomputedHeader.FILENAME_INFO + "' expected but is not readable or missing in store.")
     val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
     val rootHeader: PrecomputedHeader =
       Json.parse(headerString).validate[PrecomputedHeader] match {
@@ -36,7 +36,9 @@ object PrecomputedArray extends LazyLogging {
     val key = magPath.getFileName
 
     val scaleHeader: PrecomputedScaleHeader = PrecomputedScaleHeader(
-      rootHeader.getScale(key.toString).getOrElse(throw new IllegalArgumentException()),
+      rootHeader
+        .getScale(key.toString)
+        .getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),
       rootHeader)
     if (scaleHeader.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
       throw new IllegalArgumentException(
@@ -65,7 +67,7 @@ class PrecomputedArray(relativePath: DatasetPath,
   lazy val voxelOffset: Array[Int] = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
 
-    val bbox = header.chunkIndexToBoundingBox(chunkIndex)
+    val bbox = header.chunkIndexToNDimensionalBoundingBox(chunkIndex)
     bbox
       .map(dim => {
         s"${dim._1}-${dim._2}"

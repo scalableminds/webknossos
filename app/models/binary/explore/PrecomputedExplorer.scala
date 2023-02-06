@@ -19,7 +19,7 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
 
   override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(PrecomputedLayer, Vec3Double)]] =
     for {
-      infoPath <- Fox.successful(remotePath.resolve(PrecomputedHeader.METADATA_PATH))
+      infoPath <- Fox.successful(remotePath.resolve(PrecomputedHeader.FILENAME_INFO))
       precomputedHeader <- parseJsonFromPath[PrecomputedHeader](infoPath) ?~> s"Failed to read Precomputed metadata at $infoPath"
       layerAndVoxelSize <- layerFromPrecomputedHeader(precomputedHeader, remotePath, credentialId)
     } yield List(layerAndVoxelSize)
@@ -29,15 +29,16 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
                                          credentialId: Option[String]): Fox[(PrecomputedLayer, Vec3Double)] =
     for {
       name <- guessNameFromPath(remotePath)
-      boundingBox <- BoundingBox.fromSize(precomputedHeader.scales.head.size).toFox
+      firstScale <- precomputedHeader.scales.headOption.toFox
+      boundingBox <- BoundingBox.fromSizeArray(firstScale.size).toFox
       elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> "Unknown data type"
-      smallestResolution = precomputedHeader.scales.head.resolution
-      voxelSize <- Vec3Int.fromList(smallestResolution.toList).toFox
-      mags: Seq[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
+      smallestResolution = firstScale.resolution
+      voxelSize <- Vec3Int.fromArray(smallestResolution).toFox
+      mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
         getMagFromScale(_, smallestResolution, remotePath, credentialId))
       layer = if (precomputedHeader.describesSegmentationLayer) {
-        PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags.toList, None)
-      } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags.toList)
+        PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags, None)
+      } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
     } yield (layer, Vec3Double.fromVec3Int(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Fox[ElementClass.Value] =

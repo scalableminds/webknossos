@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, zarr, n5, precomputed, tracing = Value
+  val wkw, zarr, n5, neuroglancerPrecomputed, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -203,15 +203,16 @@ object DataLayer {
         dataFormat <- json.validate((JsPath \ "dataFormat").read[DataFormat.Value])
         category <- json.validate((JsPath \ "category").read[Category.Value])
         layer <- (dataFormat, category) match {
-          case (DataFormat.wkw, Category.segmentation)         => json.validate[WKWSegmentationLayer]
-          case (DataFormat.wkw, _)                             => json.validate[WKWDataLayer]
-          case (DataFormat.zarr, Category.segmentation)        => json.validate[ZarrSegmentationLayer]
-          case (DataFormat.zarr, _)                            => json.validate[ZarrDataLayer]
-          case (DataFormat.n5, Category.segmentation)          => json.validate[N5SegmentationLayer]
-          case (DataFormat.n5, _)                              => json.validate[N5DataLayer]
-          case (DataFormat.precomputed, Category.segmentation) => json.validate[PrecomputedSegmentationLayer]
-          case (DataFormat.precomputed, _)                     => json.validate[PrecomputedDataLayer]
-          case _                                               => json.validate[WKWDataLayer]
+          case (DataFormat.wkw, Category.segmentation)  => json.validate[WKWSegmentationLayer]
+          case (DataFormat.wkw, _)                      => json.validate[WKWDataLayer]
+          case (DataFormat.zarr, Category.segmentation) => json.validate[ZarrSegmentationLayer]
+          case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
+          case (DataFormat.n5, Category.segmentation)   => json.validate[N5SegmentationLayer]
+          case (DataFormat.n5, _)                       => json.validate[N5DataLayer]
+          case (DataFormat.`neuroglancerPrecomputed`, Category.segmentation) =>
+            json.validate[PrecomputedSegmentationLayer]
+          case (DataFormat.`neuroglancerPrecomputed`, _) => json.validate[PrecomputedDataLayer]
+          case _                                         => json.validate[WKWDataLayer]
         }
       } yield {
         layer

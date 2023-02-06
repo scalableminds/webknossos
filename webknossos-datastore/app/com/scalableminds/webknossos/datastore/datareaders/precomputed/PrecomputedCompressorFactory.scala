@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.webknossos.datastore.datareaders.{Compressor, JpegCompressor, NullCompressor}
 
 object PrecomputedCompressorFactory {
-  val nullCompressor = new NullCompressor
+  private val nullCompressor = new NullCompressor
 
   def create(encoding: String): Compressor =
     encoding.toLowerCase match {

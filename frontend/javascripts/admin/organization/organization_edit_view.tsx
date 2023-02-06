@@ -181,7 +181,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             <FormItem label="Organization Owner">
               <Input
                 prefix={<UserOutlined />}
-                value={`${this.props.organization.owner.firstName} ${this.props.organization.owner.lastName}`}
+                value={this.props.organization.ownerName}
                 readOnly
                 disabled
               />

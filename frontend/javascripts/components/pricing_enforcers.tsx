@@ -14,6 +14,7 @@ import type { OxalisState } from "oxalis/store";
 import { rgbToHex } from "libs/utils";
 import { PRIMARY_COLOR } from "oxalis/constants";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
+import { APIOrganization, APIUser } from "types/api_flow_types";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 
@@ -31,10 +32,10 @@ const handleMenuClick: MenuClickEventHandler = (info) => {
 
 type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
 
-function getUpgradeNowButton() {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
-
+function getUpgradeNowButton(
+  activeUser: APIUser | null | undefined,
+  activeOrganization: APIOrganization | undefined,
+) {
   return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
     <Button
       size="small"
@@ -49,6 +50,7 @@ function getUpgradeNowButton() {
 export const PricingEnforcedMenuItem: React.FunctionComponent<
   RequiredPricingProps & MenuItemProps
 > = ({ children, requiredPricingPlan, ...menuItemProps }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -60,7 +62,7 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
       content={
         <div style={popOverStyle}>
           {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
-          {getUpgradeNowButton()}
+          {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
       placement="right"
@@ -86,6 +88,7 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
   requiredPricingPlan,
   ...buttonProps
 }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -97,7 +100,7 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
       content={
         <div style={popOverStyle}>
           {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
-          {getUpgradeNowButton()}
+          {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
       placement="bottom"
@@ -116,6 +119,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   requiredPricingPlan,
   ...restProps
 }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -141,7 +145,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
       content={
         <div style={popOverStyle}>
           {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
-          {getUpgradeNowButton()}
+          {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
       trigger="hover"

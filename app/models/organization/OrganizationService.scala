@@ -41,7 +41,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       owner <- userDAO.findOwnerByOrg(organization._id)(GlobalAccessContext)
-      ownerJson <- userService.compactWrites(owner)
+      ownerName = s"${owner.firstName} ${owner.lastName}"
     } yield
       Json.obj(
         "id" -> organization._id.toString,
@@ -54,7 +54,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
-        "owner" -> ownerJson
+        "ownerName" -> ownerName
       ) ++ adminOnlyInfo
   }
 

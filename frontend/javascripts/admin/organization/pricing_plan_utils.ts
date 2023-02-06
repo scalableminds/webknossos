@@ -89,10 +89,15 @@ export function getFeatureNotAvailabeInPlanMessage(
   requiredPricingPlan: PricingPlanEnum,
   organization: APIOrganization | null,
 ) {
+  let organizationOwnerName = "";
+
   // expected naming schema for owner: "(M. Mustermann)" | ""
-  const organizationOwnerName = organization
-    ? `(${organization.owner.firstName[0]}. ${organization.owner.lastName})`
-    : "";
+  if (organization) {
+    {
+      const [firstName, ...rest] = organization.ownerName.split(" ");
+      organizationOwnerName = `(${firstName[0]}. ${rest.join(" ")})`;
+    }
+  }
 
   return messages["organization.plan.feature_not_available"](
     requiredPricingPlan,

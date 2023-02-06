@@ -8,6 +8,7 @@ import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
+import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 const FormItem = Form.Item;
 const { Password } = Input;
 type Props = {
@@ -38,12 +39,12 @@ function RegistrationForm(props: Props) {
     const tryAutoLogin = props.tryAutoLogin || props.inviteToken != null || autoVerified;
 
     if (tryAutoLogin) {
-      const user = await loginUser({
+      const [user, organization] = await loginUser({
         email: formValues.email,
         password: formValues.password.password1,
       });
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
       Store.dispatch(setActiveUserAction(user));
+      Store.dispatch(setActiveOrganizationAction(organization));
     }
 
     props.onRegistered(tryAutoLogin);

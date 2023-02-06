@@ -32,7 +32,7 @@
     "abort-controller": "^3.0.0",
     "ava": "^3.13.0",
     "browserslist-to-esbuild": "^1.2.0",
-    "commander": "^2.17.1",
+    "commander": "^10.0.0",
     "coveralls": "^3.0.2",
     "css-loader": "^6.5.1",
     "documentation": "^13.2.5",
@@ -43,7 +43,6 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint_d": "^12.2.1",
     "espree": "^3.5.4",
-    "glob": "^7.1.3",
     "husky": "^0.14.3",
     "jsdoc": "^3.5.5",
     "jsdom": "^11.5.1",
@@ -62,12 +61,9 @@
     "prettier": "2.7.1",
     "proto-loader6": "^0.4.0",
     "puppeteer": "^13.3.2",
-    "randomstring": "^1.1.5",
     "react-test-renderer": "^16.8.0",
     "redux-mock-store": "^1.2.2",
-    "replace-in-file": "1.1.3",
     "retoggle": "^0.3.0",
-    "rimraf": "^2.6.2",
     "shelljs": "^0.8.5",
     "sinon": "^12.0.1",
     "tmp": "0.0.33",
@@ -96,7 +92,7 @@
     "test-watch": "tools/test.sh test --watch",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w --verbose",
-    "test-e2e": "tools/postgres/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
+    "test-e2e": "tools/postgres/dbtool.js prepare-test-db && tools/test.sh test-e2e --timeout=60s --verbose",
     "test-screenshot": "tools/test.sh test-screenshot --timeout=5m",
     "refresh-screenshots": "rm -rf frontend/javascripts/test/screenshots/** && docker-compose up screenshot-tests",
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
@@ -113,13 +109,13 @@
     "licenses-backend": "sbt dumpLicenseReport",
     "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.ts frontend/javascripts/oxalis/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/docs/frontend-api",
-    "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
-    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/set_jobs.sh true",
-    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; ./tools/postgres/set_jobs.sh false",
+    "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
+    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
+    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
     "coverage-local": "c8 report --reporter=html && echo Success! Open coverage/index.html",
     "coverage": "c8 report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated typescript files...' && rm -f frontend/javascripts/test/snapshots/type-check/*.ts",
-    "apply-evolutions": "tools/postgres/apply_evolutions.sh",
+    "apply-evolutions": "tools/postgres/dbtool.js apply-evolutions",
     "postinstall": "cd tools/proxy && yarn install",
     "typecheck": "yarn tsc",
     "ts": "yarn tsc",
@@ -258,11 +254,11 @@
   "madge": {
     "detectiveOptions": {
       "ts": {
-            "skipTypeImports": true
-          },
-          "tsx": {
-            "skipTypeImports": true
-          }
+        "skipTypeImports": true
+      },
+      "tsx": {
+        "skipTypeImports": true
+      }
     }
   }
 }

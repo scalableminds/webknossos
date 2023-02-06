@@ -78,11 +78,26 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
 export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> = ({
   children,
   requiredPricingPlan,
+  ...restProps
 }) => {
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
-  if (isFeatureAllowed) return <>{children}</>;
+  if (isFeatureAllowed)
+    // Spread additional props to the children (required since antd's form implementation
+    // typically fills value and onChange props on children of FormItems).
+    return (
+      <>
+        {React.Children.map(children, (child) => {
+          if (!React.isValidElement(child)) {
+            return child;
+          }
+          return React.cloneElement(child, {
+            ...restProps,
+          });
+        })}
+      </>
+    );
 
   return (
     <Tooltip title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}>

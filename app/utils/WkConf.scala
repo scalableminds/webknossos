@@ -203,6 +203,14 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Slick {
     val checkSchemaOnStartup: Boolean = get[Boolean]("slick.checkSchemaOnStartup")
+
+    object Db {
+      val url: String = get[String]("slick.db.url")
+      val user: String = get[String]("slick.db.user")
+      val password: String = get[String]("slick.db.password")
+    }
+
+    val children = List(Db)
   }
 
   object Voxelytics {

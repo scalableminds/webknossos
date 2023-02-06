@@ -60,6 +60,7 @@ import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { APICompoundTypeEnum, APIUser, TracingTypeEnum } from "types/api_flow_types";
 
 import ErrorBoundary from "components/error_boundary";
+import { Store } from "oxalis/singletons";
 
 const { Content } = Layout;
 
@@ -264,11 +265,15 @@ class ReactRouter extends React.Component<Props> {
               <RouteWithErrorBoundary
                 path="/dashboard"
                 render={() => {
-                  if (isAuthenticated) {
+                  // Imperatively access store state to avoid race condition when logging in.
+                  // The `isAuthenticated` prop could be outdated for a short time frame which
+                  // would lead to an unnecessary browser refresh.
+                  const { activeUser } = Store.getState();
+                  if (activeUser) {
                     return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
                   }
 
-                  // Hard navigate
+                  // Hard navigate so that webknossos.org is shown for the demo instance.
                   window.location.href = "/";
                   return null;
                 }}

@@ -66,7 +66,6 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
 
 case class ShardingSpecification(`@type`: String)
 
-
 object ShardingSpecification extends JsonImplicits {
   implicit object ShardingSpecificationFormat extends Format[ShardingSpecification] {
     override def reads(json: JsValue): JsResult[ShardingSpecification] =

@@ -170,7 +170,7 @@ export default {
       type: "object",
       properties: {
         dataFormat: {
-          const: "precomputed",
+          const: "neuroglancerPrecomputed",
         },
         boundingBox: {
           $ref: "#/definitions/types::BoundingBox",

@@ -35,7 +35,7 @@ type DataLayerN5Partial = BaseRemoteLayer & {
   dataFormat: "n5";
 };
 type DataLayerPrecomputedPartial = BaseRemoteLayer & {
-  dataFormat: "precomputed";
+  dataFormat: "neuroglancerPrecomputed";
 };
 export type DataLayer = {
   name: string;

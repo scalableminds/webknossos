@@ -8,6 +8,7 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import messages from "messages";
 import features from "features";
+import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -34,9 +35,9 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {
-    const user = await loginUser(formValues);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
+    const [user, organization] = await loginUser(formValues);
     Store.dispatch(setActiveUserAction(user));
+    Store.dispatch(setActiveOrganizationAction(organization));
 
     if (onLoggedIn) {
       onLoggedIn();

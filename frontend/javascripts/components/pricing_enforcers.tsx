@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button, Result, Popover } from "antd";
+import { Menu, MenuItemProps, Alert, ButtonProps, Button, Result, Popover } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailabeInPlanMessage,
@@ -15,6 +15,10 @@ import { rgbToHex } from "libs/utils";
 import { PRIMARY_COLOR } from "oxalis/constants";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 
+const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
+
+const popOverStyle = { color: "white", maxWidth: 250 };
+
 const handleMouseClick = (event: React.MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
@@ -27,33 +31,36 @@ const handleMenuClick: MenuClickEventHandler = (info) => {
 
 type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
 
+function getUpgradeNowButton() {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+
+  return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
+    <Button
+      size="small"
+      onClick={() => UpgradePricingPlanModal.upgradePricingPlan(activeOrganization)}
+      style={{ marginTop: 10 }}
+    >
+      Upgrade Now
+    </Button>
+  ) : null;
+}
+
 export const PricingEnforcedMenuItem: React.FunctionComponent<
   RequiredPricingProps & MenuItemProps
 > = ({ children, requiredPricingPlan, ...menuItemProps }) => {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
-  const upgradeNowButton =
-    activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
-      <Button
-        size="small"
-        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(activeOrganization)}
-        style={{ marginTop: 10 }}
-      >
-        Upgrade Now
-      </Button>
-    ) : null;
-
   return (
     <Popover
-      color={rgbToHex(PRIMARY_COLOR)}
+      color={PRIMARY_COLOR_HEX}
       content={
-        <div style={{ color: "white", maxWidth: 250 }}>
+        <div style={popOverStyle}>
           {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
-          {upgradeNowButton}
+          {getUpgradeNowButton()}
         </div>
       }
       placement="right"
@@ -85,15 +92,22 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
   if (isFeatureAllowed) return <Button {...buttonProps}>{children}</Button>;
 
   return (
-    <Tooltip
-      title={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
-      placement="right"
+    <Popover
+      color={PRIMARY_COLOR_HEX}
+      content={
+        <div style={popOverStyle}>
+          {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getUpgradeNowButton()}
+        </div>
+      }
+      placement="bottom"
+      trigger="hover"
     >
       <Button {...buttonProps} disabled>
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
       </Button>
-    </Tooltip>
+    </Popover>
   );
 };
 
@@ -122,7 +136,16 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
     );
 
   return (
-    <Tooltip title={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}>
+    <Popover
+      color={PRIMARY_COLOR_HEX}
+      content={
+        <div style={popOverStyle}>
+          {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getUpgradeNowButton()}
+        </div>
+      }
+      trigger="hover"
+    >
       <div style={{ position: "relative", cursor: "not-allowed" }}>
         <div
           style={{
@@ -149,7 +172,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
           />
         </div>
       </div>
-    </Tooltip>
+    </Popover>
   );
 };
 

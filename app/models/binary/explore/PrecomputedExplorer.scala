@@ -20,7 +20,7 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
   override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(PrecomputedLayer, Vec3Double)]] =
     for {
       infoPath <- Fox.successful(remotePath.resolve(PrecomputedHeader.FILENAME_INFO))
-      precomputedHeader <- parseJsonFromPath[PrecomputedHeader](infoPath) ?~> s"Failed to read Precomputed metadata at $infoPath"
+      precomputedHeader <- parseJsonFromPath[PrecomputedHeader](infoPath) ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
       layerAndVoxelSize <- layerFromPrecomputedHeader(precomputedHeader, remotePath, credentialId)
     } yield List(layerAndVoxelSize)
 
@@ -30,6 +30,7 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
     for {
       name <- guessNameFromPath(remotePath)
       firstScale <- precomputedHeader.scales.headOption.toFox
+      notSharded <- bool2Fox(firstScale.sharding.isEmpty) ?~> "Failed to read dataset: sharding not supported"
       boundingBox <- BoundingBox.fromSizeArray(firstScale.size).toFox
       elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> "Unknown data type"
       smallestResolution = firstScale.resolution

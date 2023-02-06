@@ -24,8 +24,8 @@ case class PrecomputedScale(key: String,
                             chunk_sizes: Array[Array[Int]],
                             encoding: String,
                             voxel_offset: Option[Array[Int]],
-                            compressed_segmentation_block_size: Option[Array[Int]])
-//sharding: Option[ShardingSpecification])
+                            compressed_segmentation_block_size: Option[Array[Int]],
+                            sharding: Option[ShardingSpecification])
 
 case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
     extends DatasetHeader {
@@ -62,6 +62,19 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })
+}
+
+case class ShardingSpecification(`@type`: String)
+
+
+object ShardingSpecification extends JsonImplicits {
+  implicit object ShardingSpecificationFormat extends Format[ShardingSpecification] {
+    override def reads(json: JsValue): JsResult[ShardingSpecification] =
+      Json.using[WithDefaultValues].reads[ShardingSpecification].reads(json)
+
+    override def writes(shardingSpecification: ShardingSpecification): JsValue =
+      Json.writes[ShardingSpecification].writes(shardingSpecification)
+  }
 }
 
 object PrecomputedScale extends JsonImplicits {

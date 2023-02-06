@@ -139,12 +139,6 @@ function _DownloadModalView(props: Props): JSX.Element {
   const userBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
-  const isMergerModeEnabled = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
-  );
-  const activeMappingInfos = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
-  );
 
   const layers = getDataLayers(dataset);
 
@@ -169,12 +163,7 @@ function _DownloadModalView(props: Props): JSX.Element {
       } else {
         const selectedLayer = getLayerByName(dataset, selectedLayerName);
         if (selectedLayer != null && selectedBoundingBox != null) {
-          const layerInfos = getLayerInfos(
-            selectedLayer,
-            tracing,
-            activeMappingInfos,
-            isMergerModeEnabled,
-          );
+          const layerInfos = getLayerInfos(selectedLayer, tracing);
           await handleStartExport(
             dataset,
             layerInfos,

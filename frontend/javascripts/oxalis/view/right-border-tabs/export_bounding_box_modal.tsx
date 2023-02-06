@@ -1,69 +1,68 @@
-import { Button, Modal, Alert } from "antd";
+import { Button, Modal, Alert, Form, Radio, Slider, Divider, Row, Col } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
-import type { APIDataset, APIDataLayer, APIAnnotationType } from "types/api_flow_types";
-import type { BoundingBoxType } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
+import type { APIDataset, APIDataLayer, APIJob } from "types/api_flow_types";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import type { OxalisState, Tracing, HybridTracing } from "oxalis/store";
-import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getResolutionInfo,
+  getDatasetResolutionInfo,
+  ResolutionInfo,
+  getByteCountFromLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
-import { startExportTiffJob } from "admin/admin_rest_api";
+import { doWithToken, getJob, getJobs, startExportTiffJob } from "admin/admin_rest_api";
 import { Model } from "oxalis/singletons";
 import * as Utils from "libs/utils";
 import features from "features";
 import _ from "lodash";
-import { getReadableNameOfVolumeLayer } from "./starting_job_modals";
+import { getReadableNameOfVolumeLayer, LayerSelection } from "./starting_job_modals";
+import { formatBytes } from "libs/format_utils";
+import { usePolling } from "libs/react_hooks";
+import Toast from "libs/toast";
+import { SyncOutlined } from "@ant-design/icons";
+
 type Props = {
   handleClose: () => void;
-  tracing: Tracing | null | undefined;
+  tracing: Tracing;
   dataset: APIDataset;
   boundingBox: BoundingBoxType;
 };
 type LayerInfos = {
   displayName: string;
-  layerName: string | null | undefined;
-  tracingId: string | null | undefined;
-  annotationId: string | null | undefined;
-  annotationType: APIAnnotationType | null | undefined;
-  hasMag1: boolean;
-  mappingName: string | null | undefined;
-  mappingType: string | null | undefined;
-  hideUnmappedIds: boolean | null | undefined;
-  isColorLayer: boolean | null | undefined;
+  layerName: string | null;
+  mags: ResolutionInfo;
+  byteCount: number;
+  tracingId: string | null;
+  annotationId: string | null;
+  isColorLayer: boolean;
 };
 
-const exportKey = (layerInfos: LayerInfos) =>
-  (layerInfos.layerName || "") + (layerInfos.tracingId || "");
+enum ExportFormat {
+  OME_TIFF = "OME_TIFF",
+  TIFF_STACK = "TIFF_STACK",
+}
+
+const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
+
+const exportKey = (layerInfos: LayerInfos, resolutionIndex: number) =>
+  `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${resolutionIndex}`;
 
 export function getLayerInfos(
   layer: APIDataLayer,
   tracing: HybridTracing | null | undefined,
-  activeMappingInfos: any,
-  isMergerModeEnabled: boolean,
 ): LayerInfos {
   const annotationId = tracing != null ? tracing.annotationId : null;
-  const annotationType = tracing != null ? tracing.annotationType : null;
-
-  const hasMag1 = (dataLayer: APIDataLayer) => getResolutionInfo(dataLayer.resolutions).hasIndex(0);
-  const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
-    activeMappingInfos,
-    layer.name,
-  );
-  const existsActivePersistentMapping =
-    mappingStatus === MappingStatusEnum.ENABLED && !isMergerModeEnabled;
   const isColorLayer = layer.category === "color";
 
   if (layer.category === "color" || !layer.tracingId) {
     return {
       displayName: layer.name,
       layerName: layer.name,
+      mags: getResolutionInfo(layer.resolutions),
+      byteCount: getByteCountFromLayer(layer),
       tracingId: null,
       annotationId: null,
-      annotationType: null,
-      hasMag1: hasMag1(layer),
-      hideUnmappedIds: !isColorLayer && existsActivePersistentMapping ? hideUnmappedIds : null,
-      mappingName: !isColorLayer && existsActivePersistentMapping ? mappingName : null,
-      mappingType: !isColorLayer && existsActivePersistentMapping ? mappingType : null,
       isColorLayer,
     };
   }
@@ -81,13 +80,10 @@ export function getLayerInfos(
     return {
       displayName: readableVolumeLayerName,
       layerName: layer.fallbackLayerInfo.name,
+      mags: getResolutionInfo(layer.resolutions),
+      byteCount: getByteCountFromLayer(layer),
       tracingId: volumeTracing.tracingId,
       annotationId,
-      annotationType,
-      hasMag1: hasMag1(layer),
-      hideUnmappedIds: existsActivePersistentMapping ? hideUnmappedIds : null,
-      mappingName: existsActivePersistentMapping ? mappingName : null,
-      mappingType: existsActivePersistentMapping ? mappingType : null,
       isColorLayer: false,
     };
   }
@@ -95,68 +91,37 @@ export function getLayerInfos(
   return {
     displayName: readableVolumeLayerName,
     layerName: null,
+    mags: getResolutionInfo(layer.resolutions),
+    byteCount: getByteCountFromLayer(layer),
     tracingId: volumeTracing.tracingId,
     annotationId,
-    annotationType,
-    hasMag1: hasMag1(layer),
-    hideUnmappedIds: null,
-    mappingName: null,
-    mappingType: null,
     isColorLayer: false,
   };
 }
 
-export async function handleStartExport(
-  dataset: APIDataset,
-  layerInfos: LayerInfos,
-  boundingBox: BoundingBoxType,
-  startedExports: string[],
-  setStartedExports?: React.Dispatch<React.SetStateAction<string[]>>,
-) {
-  if (setStartedExports) {
-    setStartedExports(startedExports.concat(exportKey(layerInfos)));
-  }
-
-  if (layerInfos.tracingId) {
-    await Model.ensureSavedState();
-  }
-
-  await startExportTiffJob(
-    dataset.name,
-    dataset.owningOrganization,
-    Utils.computeArrayFromBoundingBox(boundingBox),
-    layerInfos.layerName,
-    layerInfos.annotationId,
-    layerInfos.annotationType,
-    layerInfos.displayName,
-    layerInfos.mappingName,
-    layerInfos.mappingType,
-    layerInfos.hideUnmappedIds,
-  );
-}
-
-export function isBoundingBoxExportable(boundingBox: BoundingBoxType) {
-  const dimensions = boundingBox.max.map((maxItem, index) => maxItem - boundingBox.min[index]);
-  const volume = dimensions[0] * dimensions[1] * dimensions[2];
+export function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
+  const shape = Utils.computeShapeFromBoundingBox(boundingBox);
+  const volume =
+    Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
   const volumeExceeded = volume > features().exportTiffMaxVolumeMVx * 1024 * 1024;
-  const edgeLengthExceeded = dimensions.some(
-    (length) => length > features().exportTiffMaxEdgeLengthVx,
+  const edgeLengthExceeded = shape.some(
+    (length, index) => length / mag[index] > features().exportTiffMaxEdgeLengthVx,
   );
 
-  const dimensionString = dimensions.join(", ");
-
-  const volumeExceededMessage = volumeExceeded
-    ? `The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
-        features().exportTiffMaxVolumeMVx
-      } Megavoxels.`
-    : null;
-  const edgeLengthExceededMessage = edgeLengthExceeded
-    ? `An edge length of the selected bounding box (${dimensionString}) is too large. Tiff export is only supported for boxes with no edge length over ${
-        features().exportTiffMaxEdgeLengthVx
-      } vx.`
-    : null;
-
-  const alertMessage = _.compact([volumeExceededMessage, edgeLengthExceededMessage]).join("\n");
+  const alertMessage = _.compact([
+    volumeExceeded
+      ? `The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
+          features().exportTiffMaxVolumeMVx
+        } Megavoxels.`
+      : null,
+    edgeLengthExceeded
+      ? `An edge length of the selected bounding box (${shape.join(
+          ", ",
+        )}) is too large. Tiff export is only supported for boxes with no edge length over ${
+          features().exportTiffMaxEdgeLengthVx
+        } vx.`
+      : null,
+  ]).join("\n");
   const alerts = alertMessage.length > 0 ? <Alert type="error" message={alertMessage} /> : null;
 
   return {
@@ -166,49 +131,67 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxType) {
 }
 
 function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: Props) {
-  const [startedExports, setStartedExports] = useState<string[]>([]);
+  const [runningJobs, setRunningJobs] = useState<Array<[string, string]>>([]);
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  const activeMappingInfos = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
+  const [selectedLayerName, setSelectedLayerName] = useState<string>(
+    dataset.dataSource.dataLayers[0].name,
   );
 
-  const allLayerInfos = dataset.dataSource.dataLayers.map((layer: APIDataLayer) =>
-    getLayerInfos(layer, tracing, activeMappingInfos, isMergerModeEnabled),
-  );
-  const exportButtonsList = allLayerInfos.map((layerInfos) => {
-    const parenthesesInfos = [
-      startedExports.includes(exportKey(layerInfos)) ? "started" : null,
-      layerInfos.mappingName != null ? `using mapping "${layerInfos.mappingName}"` : null,
-      !layerInfos.hasMag1 ? "resolution 1 missing" : null,
-    ].filter((el) => el);
-    const parenthesesInfosString =
-      parenthesesInfos.length > 0 ? ` (${parenthesesInfos.join(", ")})` : "";
-    return layerInfos ? (
-      <p key={exportKey(layerInfos)}>
-        <Button
-          onClick={() =>
-            handleStartExport(dataset, layerInfos, boundingBox, startedExports, setStartedExports)
-          }
-          disabled={
-            // The export is already running or...
-            startedExports.includes(exportKey(layerInfos)) || // The layer has no mag 1 or...
-            !layerInfos.hasMag1 || // Merger mode is enabled and this layer is the volume tracing layer.
-            (isMergerModeEnabled && layerInfos.tracingId != null)
-          }
-        >
-          {layerInfos.displayName}
-          {parenthesesInfosString}
-        </Button>
-      </p>
-    ) : null;
-  });
+  const selectedLayer = dataset.dataSource.dataLayers.find(
+    (l) => l.name === selectedLayerName,
+  ) as APIDataLayer;
+  const selectedLayerInfos = getLayerInfos(selectedLayer, tracing);
 
-  const { isExportable, alerts } = isBoundingBoxExportable(boundingBox);
+  const highestResolutionIndex = getResolutionInfo(
+    selectedLayer.resolutions,
+  ).getHighestResolutionIndex();
+  const lowestResolutionIndex = getResolutionInfo(
+    selectedLayer.resolutions,
+  ).getClosestExistingIndex(0);
+  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+
+  const [rawResolutionIndex, setResolutionIndex] = useState<number>(lowestResolutionIndex);
+  const resolutionIndex = Utils.clamp(
+    lowestResolutionIndex,
+    rawResolutionIndex,
+    highestResolutionIndex,
+  );
+
+  const { isExportable, alerts } = isBoundingBoxExportable(
+    boundingBox,
+    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex),
+  );
+
+  async function checkForJobs() {
+    for (const [, jobId] of runningJobs) {
+      const job = await getJob(jobId);
+      if (job.state === "SUCCESS" && job.resultLink != null) {
+        const token = await doWithToken(async (t) => t);
+        window.open(`${job.resultLink}?token=${token}`, "_blank");
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      } else if (job.state === "FAILURE") {
+        Toast.error("Error when exporting data. Please contact us for support.");
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      } else if (job.state === "MANUAL") {
+        Toast.error(
+          "The data could not be exported automatically. The job will be handled by an admin shortly.",
+        );
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      }
+    }
+  }
+
+  usePolling(
+    checkForJobs,
+    runningJobs.length > 0 ? 1000 : null,
+    runningJobs.map(([key]) => key),
+  );
 
   const downloadHint =
-    startedExports.length > 0 ? (
+    runningJobs.length > 0 ? (
       <p>
         Go to{" "}
         <a href="/jobs" target="_blank" rel="noreferrer">
@@ -217,35 +200,125 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
         to see running exports and to download the results.
       </p>
     ) : null;
-  const bboxText = Utils.computeArrayFromBoundingBox(boundingBox).join(", ");
-  let activeMappingMessage = null;
 
-  if (isMergerModeEnabled) {
-    activeMappingMessage =
-      "Exporting a volume layer does not export merger mode currently. Please disable merger mode before exporting data of the volume layer.";
-  }
+  const estimatedFileSize = (() => {
+    const mag = getResolutionInfo(selectedLayer.resolutions).getResolutionByIndexOrThrow(
+      resolutionIndex,
+    );
+    const shape = Utils.computeShapeFromBoundingBox(boundingBox);
+    const volume =
+      Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
+    return (
+      volume *
+      getByteCountFromLayer(selectedLayer) *
+      (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1)
+    );
+  })();
 
   return (
     <Modal
-      title="Export Bounding Box as Tiff Stack"
+      title="Export Bounding Box"
       onCancel={handleClose}
       visible
       width={500}
-      footer={null}
+      footer={
+        <Button
+          key="ok"
+          type="primary"
+          disabled={
+            !isExportable ||
+            runningJobs.some(([key]) => key === exportKey(selectedLayerInfos, resolutionIndex)) || // The export is already running or...
+            isMergerModeEnabled // Merger mode is enabled
+          }
+          onClick={async () => {
+            if (selectedLayerInfos.tracingId != null) {
+              await Model.ensureSavedState();
+            }
+            const job = await startExportTiffJob(
+              dataset.name,
+              dataset.owningOrganization,
+              Utils.computeArrayFromBoundingBox(boundingBox),
+              selectedLayerInfos.layerName,
+              datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-"),
+              selectedLayerInfos.annotationId,
+              selectedLayerInfos.displayName,
+              exportFormat === ExportFormat.OME_TIFF,
+            );
+            setRunningJobs((previous) => [
+              ...previous,
+              [exportKey(selectedLayerInfos, resolutionIndex), job.id],
+            ]);
+          }}
+        >
+          {runningJobs.some(([key]) => key === exportKey(selectedLayerInfos, resolutionIndex)) && (
+            <>
+              <SyncOutlined spin />{" "}
+            </>
+          )}
+          Export
+        </Button>
+      }
     >
       <p>
-        Data from the selected bounding box at {bboxText} will be exported as a tiff stack zip
-        archive. {activeMappingMessage}
+        Data from the selected bounding box at{" "}
+        <code>{Utils.computeArrayFromBoundingBox(boundingBox).join(", ")}</code> will be exported.
       </p>
 
       {alerts}
 
-      {!isExportable ? null : (
-        <div>
-          {" "}
-          <p>Please select a layer to export:</p> {exportButtonsList}
-        </div>
-      )}
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      >
+        Export format
+      </Divider>
+      <Radio.Group value={exportFormat} onChange={(ev) => setExportFormat(ev.target.value)}>
+        <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
+        <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
+      </Radio.Group>
+
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      >
+        Layer
+      </Divider>
+      <LayerSelection
+        layers={dataset.dataSource.dataLayers}
+        onChange={setSelectedLayerName}
+        tracing={tracing}
+        value={selectedLayerName}
+        style={{ width: "100%" }}
+      />
+
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      >
+        Mag
+      </Divider>
+      <Row>
+        <Col span={20}>
+          <Slider
+            tooltip={{
+              formatter: (value) =>
+                datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-"),
+            }}
+            min={lowestResolutionIndex}
+            max={highestResolutionIndex}
+            step={1}
+            value={resolutionIndex}
+            onChange={(value) => setResolutionIndex(value)}
+          />
+        </Col>
+        <Col span={4} style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+          {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
+        </Col>
+      </Row>
+      <p>Estimated file size: {formatBytes(estimatedFileSize)}</p>
 
       {downloadHint}
     </Modal>

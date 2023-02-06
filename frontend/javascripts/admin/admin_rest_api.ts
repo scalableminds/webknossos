@@ -1083,6 +1083,29 @@ export async function getJobs(): Promise<APIJob[]> {
   );
 }
 
+export async function getJob(jobId: string): Promise<APIJob> {
+  const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
+  return {
+    id: job.id,
+    type: job.command,
+    datasetName: job.commandArgs.dataset_name,
+    organizationName: job.commandArgs.organization_name,
+    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
+    annotationLayerName: job.commandArgs.annotation_layer_name,
+    boundingBox: job.commandArgs.bbox,
+    exportFileName: job.commandArgs.export_file_name,
+    tracingId: job.commandArgs.volume_tracing_id,
+    annotationId: job.commandArgs.annotation_id,
+    annotationType: job.commandArgs.annotation_type,
+    mergeSegments: job.commandArgs.merge_segments,
+    state: adaptJobState(job.command, job.state, job.manualState),
+    manualState: job.manualState,
+    result: job.returnValue,
+    resultLink: job.resultLink,
+    createdAt: job.created,
+  };
+}
+
 function adaptJobState(
   command: string,
   celeryState: APIJobCeleryState,
@@ -1138,26 +1161,26 @@ export async function startExportTiffJob(
   organizationName: string,
   bbox: Vector6,
   layerName: string | null | undefined,
+  mag: string | null | undefined,
   annotationId: string | null | undefined,
-  annotationType: APIAnnotationType | null | undefined,
   annotationLayerName: string | null | undefined,
-  mappingName: string | null | undefined,
-  mappingType: string | null | undefined,
-  hideUnmappedIds: boolean | null | undefined,
+  asOmeTiff: boolean,
 ): Promise<APIJob> {
-  const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
-  const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
-  const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
-  const annotationLayerNameSuffix =
-    annotationLayerName != null ? `&annotationLayerName=${annotationLayerName}` : "";
-  const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
-  const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
-  const hideUnmappedIdsSuffix =
-    hideUnmappedIds != null ? `&hideUnmappedIds=${hideUnmappedIds.toString()}` : "";
+  const params = new URLSearchParams({ bbox: bbox.join(","), asOmeTiff: asOmeTiff.toString() });
+  if (layerName != null) {
+    params.append("layerName", layerName);
+  }
+  if (mag != null) {
+    params.append("mag", mag);
+  }
+  if (annotationId != null) {
+    params.append("annotationId", annotationId);
+  }
+  if (annotationLayerName != null) {
+    params.append("annotationLayerName", annotationLayerName);
+  }
   return Request.receiveJSON(
-    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
-      ",",
-    )}${layerNameSuffix}${annotationIdSuffix}${annotationTypeSuffix}${annotationLayerNameSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?${params}`,
     {
       method: "POST",
     },

@@ -299,6 +299,10 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
   ];
 }
 
+export function computeShapeFromBoundingBox(bb: BoundingBoxType): Vector3 {
+  return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
+}
+
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
   if (boundingBoxes.length === 0) {
     return {

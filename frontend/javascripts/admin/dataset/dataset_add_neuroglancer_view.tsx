@@ -37,7 +37,7 @@ export const parseCredentials = async (file: RcFile | undefined): Promise<Object
   const jsonString = await readFileAsText(file);
   try {
     return JSON.parse(jsonString);
-  } catch (exception) {
+  } catch (_exception) {
     Toast.error("Cannot parse credentials as valid JSON. Ignoring credentials file.");
     return null;
   }

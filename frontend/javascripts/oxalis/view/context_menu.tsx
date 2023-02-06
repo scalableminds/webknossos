@@ -80,7 +80,7 @@ import {
   performMinCutAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { roundTo, hexToRgb, rgbToHex } from "libs/utils";
+import { roundTo, hexToRgb, rgbToHex, truncateStringToLength } from "libs/utils";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
@@ -432,7 +432,6 @@ function NodeContextMenuOptions({
   const isProofreadingActive = useSelector(
     (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
   );
-  const dispatch = useDispatch();
 
   if (skeletonTracing == null) {
     throw new Error(
@@ -1201,10 +1200,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     if (segments != null && maybeClickedMeshId != null) {
       const segmentName = getNameOfSegment(segments.get(maybeClickedMeshId));
       if (segmentName != null) {
+        const maxSegmentNameLength = 18;
         infoRows.push(
           <InfoMenuItem key="copy-cell">
-            <div className="cell-context-icon" />
-            Segment Name: {segmentName}
+            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
+              <i className="fas fa-tag" />{" "}
+              {truncateStringToLength(segmentName, maxSegmentNameLength)}
+            </Tooltip>
           </InfoMenuItem>,
         );
       }

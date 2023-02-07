@@ -348,9 +348,15 @@ class UserController @Inject()(userService: UserService,
         adminCount <- userDAO.countAdminsForOrganization(user._organization)
         _ <- bool2Fox(adminCount > 1) ?~> "user.lastAdmin"
       } yield ()
-    } else {
-      Fox.successful(())
-    }
+    } else Fox.successful(())
+
+  private def preventZeroOwners(user: User, isActive: Boolean) =
+    if (user.isOrganizationOwner && !user.isDeactivated && !isActive) {
+      for {
+        ownerCount <- userDAO.countOwnersForOrganization(user._organization)
+        _ <- bool2Fox(ownerCount > 1) ?~> "user.lastOwner"
+      } yield ()
+    } else Fox.successful(())
 
   @ApiOperation(hidden = true, value = "")
   def update(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
@@ -387,6 +393,7 @@ class UserController @Inject()(userService: UserService,
           _ <- checkNoActivateBeyondLimit(user, isActive)
           _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
+          _ <- preventZeroOwners(user, isActive)
           teams <- Fox.combined(assignedMemberships.map(t =>
             teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)

@@ -22,7 +22,12 @@ class N5ArrayExplorer extends RemoteLayerExplorer {
       elementClass <- n5Header.elementClass ?~> "failed to read element class from n5 header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(n5Header.rank)
       boundingBox <- n5Header.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      magLocator = MagLocator(Vec3Int.ones, Some(remotePath.toString), None, Some(guessedAxisOrder), None, credentialId)
+      magLocator = MagLocator(Vec3Int.ones,
+                              Some(remotePath.toUri.toString),
+                              None,
+                              Some(guessedAxisOrder),
+                              None,
+                              credentialId)
       layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         N5SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))

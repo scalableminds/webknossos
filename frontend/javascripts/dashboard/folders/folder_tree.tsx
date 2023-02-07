@@ -16,7 +16,7 @@ import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";
 import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
-import { PricingPlanEnum } from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 const { DirectoryTree } = Tree;
 

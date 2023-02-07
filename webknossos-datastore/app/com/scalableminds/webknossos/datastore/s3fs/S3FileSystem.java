@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.s3fs;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -11,6 +12,7 @@ import java.util.Set;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.Bucket;
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -20,6 +22,14 @@ import com.google.common.collect.ImmutableSet;
  * @see AmazonS3 configured by {@link AmazonS3Factory}
  */
 public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem> {
+
+  public static S3FileSystem forUri(URI uri, String keyId, String secretKey) {
+    return S3FileSystemProvider.forUri(uri, keyId, secretKey);
+  }
+
+  public static S3FileSystem forUri(URI uri) {
+    return forUri(uri, null, null);
+  }
 
     private final S3FileSystemProvider provider;
     private final String key;

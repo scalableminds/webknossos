@@ -184,17 +184,19 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findContributorsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      result <- run(
-        q"""select $columns from $existingCollectionName
-              where _id in (select _user from webknossos.annotation_contributors where _annotation = $annotationId) and $accessQuery"""
-          .as[UsersRow])
+      result <- run(q"""SELECT $columns
+                        FROM $existingCollectionName
+                        WHERE _id in
+                          (SELECT _user FROM webknossos.annotation_contributors WHERE _annotation = $annotationId)
+                        AND NOT isUnlisted
+                        AND $accessQuery""".as[UsersRow])
       parsed <- parseAll(result)
     } yield parsed
 
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
-        q"select count(_id) from $existingCollectionName where _organization = $organizationId and not isDeactivated and not isUnlisted"
+        q"select count(*) from $existingCollectionName where _organization = $organizationId and not isDeactivated and not isUnlisted"
           .as[Int])
       result <- resultList.headOption
     } yield result
@@ -202,14 +204,22 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def countAdminsForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
-        q"select count(_id) from $existingCollectionName where _organization = $organizationId and isAdmin and not isUnlisted"
+        q"select count(*) from $existingCollectionName where _organization = $organizationId and isAdmin and not isUnlisted"
+          .as[Int])
+      result <- resultList.headOption
+    } yield result
+
+  def countOwnersForOrganization(organizationId: ObjectId): Fox[Int] =
+    for {
+      resultList <- run(
+        q"select count(*) from $existingCollectionName where _organization = $organizationId and isOrganizationOwner and not isUnlisted"
           .as[Int])
       result <- resultList.headOption
     } yield result
 
   def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
     for {
-      resultList <- run(q"select count(_id) from $existingCollectionName where _multiUser = $multiUserId".as[Int])
+      resultList <- run(q"select count(*) from $existingCollectionName where _multiUser = $multiUserId".as[Int])
       result <- resultList.headOption
     } yield result
 

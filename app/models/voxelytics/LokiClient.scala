@@ -28,7 +28,8 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
 
   private val POLLING_INTERVAL = 1 second
   private val LOG_TIME_BATCH_INTERVAL = 1 days
-  private val LOG_ENTRY_BATCH_SIZE = 5000L
+  private val LOG_ENTRY_QUERY_BATCH_SIZE = 5000L
+  private val LOG_ENTRY_INSERT_BATCH_SIZE = 1000
 
   private lazy val serverStartupFuture: Fox[Unit] = {
     for {
@@ -94,7 +95,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                              minLevel,
                              currentStartTime,
                              currentEndTime,
-                             limit.getOrElse(LOG_ENTRY_BATCH_SIZE).min(LOG_ENTRY_BATCH_SIZE))
+                             limit.getOrElse(LOG_ENTRY_QUERY_BATCH_SIZE).min(LOG_ENTRY_QUERY_BATCH_SIZE))
       newLimit = limit.map(l => l - headBatch.length)
       buffer <- if (headBatch.isEmpty) {
         if (currentStartTime == startTime) {
@@ -130,13 +131,13 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
     } yield buffer
   }
 
-  def queryLogs(runName: String,
-                organizationId: ObjectId,
-                taskName: Option[String],
-                minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
-                startTime: Instant,
-                endTime: Instant,
-                limit: Long): Fox[List[JsValue]] = {
+  private def queryLogs(runName: String,
+                        organizationId: ObjectId,
+                        taskName: Option[String],
+                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
+                        startTime: Instant,
+                        endTime: Instant,
+                        limit: Long): Fox[List[JsValue]] = {
     val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
 
     val logQLFilter = List(
@@ -171,7 +172,13 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
     } yield logEntries
   }
 
-  def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
+  def bulkInsertBatched(logEntries: List[JsValue], organizationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(logEntries.grouped(LOG_ENTRY_INSERT_BATCH_SIZE).toList)(bulkInsert(_, organizationId))
+    } yield ()
+
+  private def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId)(
+      implicit ec: ExecutionContext): Fox[Unit] =
     if (logEntries.nonEmpty) {
       for {
         _ <- serverStartupFuture

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
@@ -332,7 +333,9 @@ class VolumeTracingController @Inject()(
     Action.async(validateJson[List[EditableMappingUpdateActionGroup]]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
+          before <- Fox.successful(Instant.now)
           tracing <- tracingService.find(tracingId)
+          afterFind = Instant.now
           mappingName <- tracing.mappingName.toFox
           _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
           currentVersion <- editableMappingService.newestMaterializableVersion(mappingName)
@@ -340,6 +343,8 @@ class VolumeTracingController @Inject()(
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
           _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
+          afterStore = Instant.now
+          _ = logger.info(s"find took ${afterFind - before}, storing took ${afterStore - afterFind}")
         } yield Ok
       }
     }

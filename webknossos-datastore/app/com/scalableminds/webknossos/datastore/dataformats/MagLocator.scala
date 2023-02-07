@@ -1,17 +1,16 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{FileSystemCredentials}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.models.datasource.ResolutionFormatHelper
-import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
+import com.scalableminds.webknossos.datastore.storage.{FileSystemsHolder, LegacyFileSystemCredential}
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
 
 case class MagLocator(mag: Vec3Int,
                       path: Option[String],
-                      credentials: Option[FileSystemCredentials],
+                      credentials: Option[LegacyFileSystemCredential],
                       axisOrder: Option[AxisOrder],
                       channelIndex: Option[Int],
                       credentialId: Option[String]) {

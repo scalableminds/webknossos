@@ -127,7 +127,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
-        onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
+        onPressEnter={onPressEnter}
         onKeyDown={this.blurOnEscape}
       />
     ) : (

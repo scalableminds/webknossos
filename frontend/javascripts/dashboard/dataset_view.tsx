@@ -49,7 +49,7 @@ import {
   useFolderQuery,
 } from "./dataset/queries";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
-import { PricingPlanEnum } from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 const { Group: InputGroup } = Input;
 

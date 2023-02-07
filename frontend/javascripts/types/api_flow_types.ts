@@ -8,8 +8,8 @@ import type {
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS } from "oxalis/constants";
-import { PricingPlanEnum } from "admin/organization/organization_edit_view";
 import { Matrix4x4 } from "mjs";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =

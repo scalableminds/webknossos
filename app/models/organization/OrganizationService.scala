@@ -40,8 +40,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-      owner <- userDAO.findOwnerByOrg(organization._id)(GlobalAccessContext)
-      ownerName = s"${owner.firstName} ${owner.lastName}"
+      ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
+      ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
         "id" -> organization._id.toString,

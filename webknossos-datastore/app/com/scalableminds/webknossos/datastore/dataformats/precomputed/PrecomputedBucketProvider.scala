@@ -49,10 +49,7 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOp
           case Some(fileSystemService: FileSystemService) =>
             for {
               magPath: Path <- if (precomputedMag.isRemote) {
-                for {
-                  remoteSource <- fileSystemService.remoteSourceFor(precomputedMag)
-                  remotePath <- remotePathFrom(remoteSource)
-                } yield remotePath
+                fileSystemService.remotePathFor(precomputedMag)
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(
                 PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))

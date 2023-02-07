@@ -30,7 +30,7 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
     for {
       name <- guessNameFromPath(remotePath)
       firstScale <- precomputedHeader.scales.headOption.toFox
-      notSharded <- bool2Fox(firstScale.sharding.isEmpty) ?~> "Failed to read dataset: sharding not supported"
+      _ <- bool2Fox(firstScale.sharding.isEmpty) ?~> "Failed to read dataset: sharding not supported"
       boundingBox <- BoundingBox.fromSizeArray(firstScale.size).toFox
       elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> "Unknown data type"
       smallestResolution = firstScale.resolution
@@ -61,6 +61,6 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
       mag <- Vec3Int.fromList(normalizedResolution.toList)
       path = remotePath.resolve(scale.key)
       axisOrder = AxisOrder(0, 1, 2)
-    } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
+    } yield MagLocator(mag, Some(path.toUri.toString), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 }

@@ -108,7 +108,7 @@ class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
       elementClass <- n5Header.elementClass ?~> s"failed to read element class from n5 header at $headerPath"
       boundingBox <- n5Header.boundingBox(axisOrder) ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toString), None, Some(axisOrder), None, credentialId),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), None, credentialId),
                         magPath,
                         elementClass,
                         boundingBox)

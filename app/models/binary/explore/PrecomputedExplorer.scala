@@ -60,6 +60,9 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
     for {
       mag <- Vec3Int.fromList(normalizedResolution.toList)
       path = remotePath.resolve(scale.key)
+
+      // Neuroglancer precomputed specification does not specify axis order, but uses x,y,z implicitly.
+      // https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#unsharded-chunk-storage
       axisOrder = AxisOrder(0, 1, 2)
     } yield MagLocator(mag, Some(path.toUri.toString), None, Some(axisOrder), channelIndex = None, credentialId)
   }

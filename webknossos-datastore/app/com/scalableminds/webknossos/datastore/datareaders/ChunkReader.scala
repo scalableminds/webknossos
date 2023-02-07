@@ -52,7 +52,8 @@ abstract class TypedChunkReader {
 
   // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
   // associated with the array needs to be adjusted for non-isotropic chunk sizes.
-  def chunkDataShape(chunkShape: Array[Int]) = if (header.order == ArrayOrder.F) chunkShape.reverse else chunkShape
+  def chunkSizeOrdered(chunkSize: Array[Int]): Array[Int] =
+    if (header.order == ArrayOrder.F) chunkSize.reverse else chunkSize
 }
 
 class ByteChunkReader(val header: DatasetHeader) extends TypedChunkReader {
@@ -60,8 +61,8 @@ class ByteChunkReader(val header: DatasetHeader) extends TypedChunkReader {
 
   def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray] =
     Future.successful(bytes.map { result =>
-      MultiArray.factory(ma2DataType, chunkDataShape(chunkShape), result)
-    }.getOrElse(createFilled(ma2DataType, chunkDataShape(chunkShape))))
+      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), result)
+    }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape))))
 }
 
 class DoubleChunkReader(val header: DatasetHeader) extends TypedChunkReader {
@@ -76,8 +77,8 @@ class DoubleChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkDataShape(chunkShape), typedStorage)
-      }.getOrElse(createFilled(ma2DataType, chunkDataShape(chunkShape)))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -93,8 +94,8 @@ class ShortChunkReader(val header: DatasetHeader) extends TypedChunkReader with 
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkDataShape(chunkShape), typedStorage)
-      }.getOrElse(createFilled(ma2DataType, chunkDataShape(chunkShape)))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -110,8 +111,8 @@ class IntChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkDataShape(chunkShape), typedStorage)
-      }.getOrElse(createFilled(ma2DataType, chunkDataShape(chunkShape)))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -127,8 +128,8 @@ class LongChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkDataShape(chunkShape), typedStorage)
-      }.getOrElse(createFilled(ma2DataType, chunkDataShape(chunkShape)))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -144,7 +145,7 @@ class FloatChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkDataShape(chunkShape), typedStorage)
-      }.getOrElse(createFilled(ma2DataType, chunkDataShape(chunkShape)))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }

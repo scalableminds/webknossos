@@ -25,7 +25,14 @@ case class PrecomputedScale(key: String,
                             encoding: String,
                             voxel_offset: Option[Array[Int]],
                             compressed_segmentation_block_size: Option[Array[Int]],
-                            sharding: Option[ShardingSpecification])
+                            sharding: Option[ShardingSpecification]) {
+
+  // From the neuroglancer specification (https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#info-json-file-specification)
+  // > "chunk_sizes": Array of 3-element [x, y, z] arrays of integers specifying the x, y, and z dimensions in voxels of each supported chunk size. Typically just a single chunk size will be specified as [[x, y, z]].
+  // While the format specifies that there can be multiple chunk sizes, we only support the first one.
+  def primaryChunkSize: Array[Int] = chunk_sizes.head
+
+}
 
 case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
     extends DatasetHeader {
@@ -57,8 +64,8 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map(indices => {
       val (cIndex, dim) = indices
-      val beginOffset = voxelOffset(dim) + cIndex * precomputedScale.chunk_sizes.head(dim)
-      val endOffset = voxelOffset(dim) + ((cIndex + 1) * precomputedScale.chunk_sizes.head(dim))
+      val beginOffset = voxelOffset(dim) + cIndex * precomputedScale.primaryChunkSize(dim)
+      val endOffset = voxelOffset(dim) + ((cIndex + 1) * precomputedScale.primaryChunkSize(dim))
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })

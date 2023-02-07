@@ -8,7 +8,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/23.02.1...HEAD)
 
-- WEBKNOSSOS requires Loki instead of Elasticsearch for Voxelytics logging now. Please update the `application.conf`: Remove `voxelytics.elasticsearch.index`, rename `voxelytics.elasticsearch` to `voxelytics.loki`, and update `voxelytics.loki.uri`. [#6770](https://github.com/scalableminds/webknossos/pull/6770)
 - WEBKNOSSOS now requires Node.js not only for development and building, but also for execution. The prebuilt Docker images already contain this dependency. If you're using these, nothing needs to be changed. [#6803](https://github.com/scalableminds/webknossos/pull/6803)
 
 ### Postgres Evolutions:

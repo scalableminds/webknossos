@@ -134,7 +134,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   private def queryLogs(runName: String,
                         organizationId: ObjectId,
                         taskName: Option[String],
-                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
+                        minLevel: VoxelyticsLogLevel,
                         startTime: Instant,
                         endTime: Instant,
                         limit: Long): Fox[List[JsValue]] = {

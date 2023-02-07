@@ -7,7 +7,6 @@ import type { OxalisState, Tracing, HybridTracing } from "oxalis/store";
 import {
   getResolutionInfo,
   getDatasetResolutionInfo,
-  ResolutionInfo,
   getByteCountFromLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
@@ -31,14 +30,15 @@ type Props = {
 type LayerInfos = {
   displayName: string;
   layerName: string | null;
-  mags: ResolutionInfo;
   byteCount: number;
   tracingId: string | null;
   annotationId: string | null;
   isColorLayer: boolean;
+  lowestResolutionIndex: number;
+  highestResolutionIndex: number;
 };
 
-enum ExportFormat {
+export enum ExportFormat {
   OME_TIFF = "OME_TIFF",
   TIFF_STACK = "TIFF_STACK",
 }
@@ -55,15 +55,19 @@ export function getLayerInfos(
   const annotationId = tracing != null ? tracing.annotationId : null;
   const isColorLayer = layer.category === "color";
 
+  const highestResolutionIndex = getResolutionInfo(layer.resolutions).getHighestResolutionIndex();
+  const lowestResolutionIndex = getResolutionInfo(layer.resolutions).getClosestExistingIndex(0);
+
   if (layer.category === "color" || !layer.tracingId) {
     return {
       displayName: layer.name,
       layerName: layer.name,
-      mags: getResolutionInfo(layer.resolutions),
       byteCount: getByteCountFromLayer(layer),
       tracingId: null,
       annotationId: null,
       isColorLayer,
+      lowestResolutionIndex,
+      highestResolutionIndex,
     };
   }
 
@@ -80,7 +84,8 @@ export function getLayerInfos(
     return {
       displayName: readableVolumeLayerName,
       layerName: layer.fallbackLayerInfo.name,
-      mags: getResolutionInfo(layer.resolutions),
+      lowestResolutionIndex,
+      highestResolutionIndex,
       byteCount: getByteCountFromLayer(layer),
       tracingId: volumeTracing.tracingId,
       annotationId,
@@ -91,7 +96,8 @@ export function getLayerInfos(
   return {
     displayName: readableVolumeLayerName,
     layerName: null,
-    mags: getResolutionInfo(layer.resolutions),
+    lowestResolutionIndex,
+    highestResolutionIndex,
     byteCount: getByteCountFromLayer(layer),
     tracingId: volumeTracing.tracingId,
     annotationId,
@@ -130,40 +136,17 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vecto
   };
 }
 
-function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: Props) {
+export function useRunningJobs(): [
+  Array<[string, string]>,
+  (
+    dataset: APIDataset,
+    boundingBox: BoundingBoxType,
+    resolutionIndex: number,
+    selectedLayerInfos: LayerInfos,
+    exportFormat: ExportFormat,
+  ) => Promise<void>,
+] {
   const [runningJobs, setRunningJobs] = useState<Array<[string, string]>>([]);
-  const isMergerModeEnabled = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
-  );
-  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
-  const [selectedLayerName, setSelectedLayerName] = useState<string>(
-    dataset.dataSource.dataLayers[0].name,
-  );
-
-  const selectedLayer = dataset.dataSource.dataLayers.find(
-    (l) => l.name === selectedLayerName,
-  ) as APIDataLayer;
-  const selectedLayerInfos = getLayerInfos(selectedLayer, tracing);
-
-  const highestResolutionIndex = getResolutionInfo(
-    selectedLayer.resolutions,
-  ).getHighestResolutionIndex();
-  const lowestResolutionIndex = getResolutionInfo(
-    selectedLayer.resolutions,
-  ).getClosestExistingIndex(0);
-  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
-
-  const [rawResolutionIndex, setResolutionIndex] = useState<number>(lowestResolutionIndex);
-  const resolutionIndex = Utils.clamp(
-    lowestResolutionIndex,
-    rawResolutionIndex,
-    highestResolutionIndex,
-  );
-
-  const { isExportable, alerts } = isBoundingBoxExportable(
-    boundingBox,
-    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex),
-  );
 
   async function checkForJobs() {
     for (const [, jobId] of runningJobs) {
@@ -190,6 +173,76 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
     runningJobs.map(([key]) => key),
   );
 
+  return [
+    runningJobs,
+    async (dataset, boundingBox, resolutionIndex, selectedLayerInfos, exportFormat) => {
+      const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+      const job = await startExportTiffJob(
+        dataset.name,
+        dataset.owningOrganization,
+        Utils.computeArrayFromBoundingBox(boundingBox),
+        selectedLayerInfos.layerName,
+        datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-"),
+        selectedLayerInfos.annotationId,
+        selectedLayerInfos.displayName,
+        exportFormat === ExportFormat.OME_TIFF,
+      );
+      setRunningJobs((previous) => [
+        ...previous,
+        [exportKey(selectedLayerInfos, resolutionIndex), job.id],
+      ]);
+    },
+  ];
+}
+
+export function estimateFileSize(
+  selectedLayer: APIDataLayer,
+  resolutionIndex: number,
+  boundingBox: BoundingBoxType,
+  exportFormat: ExportFormat,
+) {
+  const mag = getResolutionInfo(selectedLayer.resolutions).getResolutionByIndexOrThrow(
+    resolutionIndex,
+  );
+  const shape = Utils.computeShapeFromBoundingBox(boundingBox);
+  const volume =
+    Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
+  return formatBytes(
+    volume *
+      getByteCountFromLayer(selectedLayer) *
+      (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1),
+  );
+}
+
+function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: Props) {
+  const [runningJobs, triggerJob] = useRunningJobs();
+  const isMergerModeEnabled = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
+  const [selectedLayerName, setSelectedLayerName] = useState<string>(
+    dataset.dataSource.dataLayers[0].name,
+  );
+
+  const selectedLayer = dataset.dataSource.dataLayers.find(
+    (l) => l.name === selectedLayerName,
+  ) as APIDataLayer;
+  const selectedLayerInfos = getLayerInfos(selectedLayer, tracing);
+
+  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+  const { lowestResolutionIndex, highestResolutionIndex } = selectedLayerInfos;
+  const [rawResolutionIndex, setResolutionIndex] = useState<number>(lowestResolutionIndex);
+  const resolutionIndex = Utils.clamp(
+    lowestResolutionIndex,
+    rawResolutionIndex,
+    highestResolutionIndex,
+  );
+
+  const { isExportable, alerts } = isBoundingBoxExportable(
+    boundingBox,
+    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex),
+  );
+
   const downloadHint =
     runningJobs.length > 0 ? (
       <p>
@@ -200,20 +253,6 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
         to see running exports and to download the results.
       </p>
     ) : null;
-
-  const estimatedFileSize = (() => {
-    const mag = getResolutionInfo(selectedLayer.resolutions).getResolutionByIndexOrThrow(
-      resolutionIndex,
-    );
-    const shape = Utils.computeShapeFromBoundingBox(boundingBox);
-    const volume =
-      Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
-    return (
-      volume *
-      getByteCountFromLayer(selectedLayer) *
-      (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1)
-    );
-  })();
 
   return (
     <Modal
@@ -234,20 +273,13 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
             if (selectedLayerInfos.tracingId != null) {
               await Model.ensureSavedState();
             }
-            const job = await startExportTiffJob(
-              dataset.name,
-              dataset.owningOrganization,
-              Utils.computeArrayFromBoundingBox(boundingBox),
-              selectedLayerInfos.layerName,
-              datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-"),
-              selectedLayerInfos.annotationId,
-              selectedLayerInfos.displayName,
-              exportFormat === ExportFormat.OME_TIFF,
+            await triggerJob(
+              dataset,
+              boundingBox,
+              resolutionIndex,
+              selectedLayerInfos,
+              exportFormat,
             );
-            setRunningJobs((previous) => [
-              ...previous,
-              [exportKey(selectedLayerInfos, resolutionIndex), job.id],
-            ]);
           }}
         >
           {runningJobs.some(([key]) => key === exportKey(selectedLayerInfos, resolutionIndex)) && (
@@ -318,7 +350,10 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
           {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
         </Col>
       </Row>
-      <p>Estimated file size: {formatBytes(estimatedFileSize)}</p>
+      <p>
+        Estimated file size:{" "}
+        {estimateFileSize(selectedLayer, resolutionIndex, boundingBox, exportFormat)}
+      </p>
 
       {downloadHint}
     </Modal>

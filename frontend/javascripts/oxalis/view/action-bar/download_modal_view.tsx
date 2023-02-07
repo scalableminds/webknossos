@@ -1,8 +1,8 @@
-import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button } from "antd";
+import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Slider } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { APIAnnotationType } from "types/api_flow_types";
+import type { APIAnnotationType, APIDataLayer } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { Model } from "oxalis/singletons";
@@ -15,14 +15,20 @@ import {
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import { hasVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
-import { getDataLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
 import {
-  handleStartExport,
+  getDataLayers,
+  getDatasetResolutionInfo,
+  getLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
+import { useSelector } from "react-redux";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import {
   getLayerInfos,
   isBoundingBoxExportable,
+  ExportFormat,
+  estimateFileSize,
 } from "../right-border-tabs/export_bounding_box_modal";
+import { clamp, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
@@ -123,30 +129,60 @@ function Footer({
   ) : null;
 }
 
-function _DownloadModalView(props: Props): JSX.Element {
-  const { isOpen, onClose, annotationType, annotationId, hasVolumeFallback } = props;
+function _DownloadModalView({
+  isOpen,
+  onClose,
+  annotationType,
+  annotationId,
+  hasVolumeFallback,
+}: Props): JSX.Element {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
+    getUserBoundingBoxesFromState(state),
+  );
 
   const [activeTabKey, setActiveTabKey] = useState("download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
   const [keepWindowOpen, setKeepWindowOpen] = useState(false);
   const [startedExports, setStartedExports] = useState<string[]>([]);
-  const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
-  const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
-
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const userBoundingBoxes = useSelector((state: OxalisState) =>
-    getUserBoundingBoxesFromState(state),
+  const [selectedLayerName, setSelectedLayerName] = useState<string>(
+    dataset.dataSource.dataLayers[0].name,
   );
 
   const layers = getDataLayers(dataset);
 
-  const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxID);
-  let boundingBoxCompatibleInfo = null;
-  if (selectedBoundingBox != null) {
-    boundingBoxCompatibleInfo = isBoundingBoxExportable(selectedBoundingBox.boundingBox);
-  }
+  const selectedLayer = dataset.dataSource.dataLayers.find(
+    (l) => l.name === selectedLayerName,
+  ) as APIDataLayer;
+  const selectedLayerInfos = getLayerInfos(selectedLayer, tracing);
+
+  const userBoundingBoxes = [
+    ...rawUserBoundingBoxes,
+    {
+      id: -1,
+      name: "Full dataset",
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(selectedLayer.boundingBox),
+      color: [255, 255, 255],
+      isVisible: true,
+    } as UserBoundingBox,
+  ];
+  const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(userBoundingBoxes[0].id);
+
+  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+  const { lowestResolutionIndex, highestResolutionIndex } = selectedLayerInfos;
+  const [rawResolutionIndex, setResolutionIndex] = useState<number>(lowestResolutionIndex);
+  const resolutionIndex = clamp(lowestResolutionIndex, rawResolutionIndex, highestResolutionIndex);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
+
+  const selectedBoundingBox = userBoundingBoxes.find(
+    (bbox) => bbox.id === selectedBoundingBoxId,
+  ) as UserBoundingBox;
+  const boundingBoxCompatibleInfo = isBoundingBoxExportable(
+    selectedBoundingBox.boundingBox,
+    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex),
+  );
 
   const handleOk = async () => {
     if (activeTabKey === "download") {
@@ -154,11 +190,11 @@ function _DownloadModalView(props: Props): JSX.Element {
       downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
       onClose();
     } else if (activeTabKey === "export") {
-      const missingSelection = selectedLayerName == null || selectedBoundingBoxID === -1;
+      const missingSelection = selectedLayerName == null || selectedBoundingBoxId === -1;
       const basicWarning = "Starting an export job with the chosen parameters was not possible.";
       const missingSelectionWarning = " Please choose a layer and a bounding box for export.";
 
-      if (selectedLayerName == null || selectedBoundingBoxID === -1) {
+      if (selectedLayerName == null || selectedBoundingBoxId === -1) {
         Toast.warning(basicWarning + missingSelectionWarning);
       } else {
         const selectedLayer = getLayerByName(dataset, selectedLayerName);
@@ -289,14 +325,13 @@ with wk.webknossos_context(
       title="Download this annotation"
       open={isOpen}
       width={600}
-      footer={[
+      footer={
         <Footer
           tabKey={activeTabKey}
           onClick={handleOk}
-          key="footer"
           boundingBoxCompatible={boundingBoxCompatibleInfo?.isExportable || false}
-        />,
-      ]}
+        />
+      }
       onCancel={onClose}
       style={{ overflow: "visible" }}
     >
@@ -400,6 +435,18 @@ with wk.webknossos_context(
                   margin: "18px 0",
                 }}
               >
+                Export format
+              </Divider>
+              <Radio.Group value={exportFormat} onChange={(ev) => setExportFormat(ev.target.value)}>
+                <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
+                <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
+              </Radio.Group>
+
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
+              >
                 Layer
               </Divider>
               <Row>
@@ -415,6 +462,7 @@ with wk.webknossos_context(
                 <Col span={15}>
                   <LayerSelection
                     layers={layers}
+                    value={selectedLayerName}
                     onChange={setSelectedLayerName}
                     tracing={tracing}
                     style={{ width: 330 }}
@@ -440,12 +488,62 @@ with wk.webknossos_context(
                 </Col>
                 <Col span={15}>
                   <BoundingBoxSelection
+                    value={selectedBoundingBoxId}
                     userBoundingBoxes={userBoundingBoxes}
                     setSelectedBoundingBoxId={setSelectedBoundingBoxId}
                     style={{ width: 330 }}
                   />
                 </Col>
                 {boundingBoxCompatibleInfo?.alerts}
+              </Row>
+
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
+              >
+                Mag
+              </Divider>
+              <Row>
+                <Col
+                  span={9}
+                  style={{
+                    lineHeight: "20px",
+                    padding: "5px 12px",
+                  }}
+                >
+                  Select the layer you would like to prepare for export.
+                </Col>
+                <Col span={11}>
+                  <Slider
+                    tooltip={{
+                      formatter: (value) =>
+                        datasetResolutionInfo
+                          .getResolutionByIndexOrThrow(resolutionIndex)
+                          .join("-"),
+                    }}
+                    min={lowestResolutionIndex}
+                    max={highestResolutionIndex}
+                    step={1}
+                    value={resolutionIndex}
+                    onChange={(value) => setResolutionIndex(value)}
+                  />
+                  <p>
+                    Estimated file size:{" "}
+                    {estimateFileSize(
+                      selectedLayer,
+                      resolutionIndex,
+                      selectedBoundingBox.boundingBox,
+                      exportFormat,
+                    )}
+                  </p>
+                </Col>
+                <Col
+                  span={4}
+                  style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
+                >
+                  {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
+                </Col>
               </Row>
             </div>
           )}

@@ -185,17 +185,18 @@ export function BoundingBoxSelection({
   userBoundingBoxes,
   setSelectedBoundingBoxId,
   style,
+  value,
 }: {
   userBoundingBoxes: UserBoundingBox[];
   setSelectedBoundingBoxId?: (boundingBoxId: number) => void;
   style?: React.CSSProperties;
+  value: number;
 }): JSX.Element {
   const onSelect = setSelectedBoundingBoxId
     ? (boundingBoxId: number) => setSelectedBoundingBoxId(boundingBoxId)
     : undefined;
   return (
     <Select
-      showSearch
       placeholder="Select a bounding box"
       optionFilterProp="children"
       filterOption={(input, option) =>
@@ -205,6 +206,7 @@ export function BoundingBoxSelection({
       disabled={userBoundingBoxes.length < 1}
       onSelect={onSelect}
       style={style}
+      value={value}
     >
       {userBoundingBoxes.map((userBB) => (
         <Select.Option key={userBB.id} value={userBB.id}>

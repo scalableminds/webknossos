@@ -16,15 +16,16 @@ import scala.concurrent.duration.DurationInt
 class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenOption]) extends SeekableByteChannel {
   private var _position: Long = 0L
 
+  private val uri: URI = path.toUri
+
   private val connectionTimeout = 5 seconds
   private val readTimeout = 1 minute
 
-  private val uri: URI = path.toUri
   private val responseBox: Box[HttpResponse[Array[Byte]]] = tryo(
-    path.getBasicAuthCredentials.map { credentials =>
+    path.getBasicAuthCredential.map { credential =>
       Http(uri.toString)
         .timeout(connTimeoutMs = connectionTimeout.toMillis.toInt, readTimeoutMs = readTimeout.toMillis.toInt)
-        .auth(credentials.user, credentials.password)
+        .auth(credential.user, credential.password)
         .asBytes
     }.getOrElse(Http(uri.toString)
       .timeout(connTimeoutMs = connectionTimeout.toMillis.toInt, readTimeoutMs = readTimeout.toMillis.toInt)

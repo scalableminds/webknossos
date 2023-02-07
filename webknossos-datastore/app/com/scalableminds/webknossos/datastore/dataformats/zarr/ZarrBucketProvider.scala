@@ -46,10 +46,7 @@ class ZarrBucketProvider(layer: ZarrLayer, val fileSystemServiceOpt: Option[File
           case Some(fileSystemService: FileSystemService) =>
             for {
               magPath: Path <- if (zarrMag.isRemote) {
-                for {
-                  remoteSource <- fileSystemService.remoteSourceFor(zarrMag)
-                  remotePath <- remotePathFrom(remoteSource)
-                } yield remotePath
+                fileSystemService.remotePathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(
                 ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))
@@ -58,4 +55,5 @@ class ZarrBucketProvider(layer: ZarrLayer, val fileSystemServiceOpt: Option[File
         }
     }
   }
+
 }

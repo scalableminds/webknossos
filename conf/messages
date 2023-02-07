@@ -46,7 +46,8 @@ user.notFound=User not found
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.
 user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.
-user.lastAdmin=Your account is the last remaining admin in your organzation. You cannot remove admin privileges from your account.
+user.lastAdmin=This user is the last remaining admin in your organzation. You cannot remove admin privileges from this account.
+user.lastOwner=Cannot deactivate the organization owner. Please talk to the WEBKNOSSOS team to transfer organization ownership.
 
 user.email.alreadyInUse=This email address is already in use
 user.email.onlySuperUserCanChange=Only super users can change emails of users with multiple organization accounts

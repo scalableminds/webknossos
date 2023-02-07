@@ -36,8 +36,6 @@ object Dependencies {
   private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion
   private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test"
   private val silhouetteCrypto = "io.github.honeycomb-cheesecake" %% "play-silhouette-crypto-jca" % silhouetteVersion
-  private val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
-  private val triremeNode = "io.apigee.trireme" % "trireme-node12src" % "0.9.3"
   private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   private val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
   private val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
@@ -62,7 +60,7 @@ object Dependencies {
     "com.typesafe.slick" %% "slick" % "3.3.3",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
     "com.typesafe.slick" %% "slick-codegen" % "3.3.3",
-    "org.postgresql" % "postgresql" % "42.3.6"
+    "org.postgresql" % "postgresql" % "42.5.2"
   )
 
   val utilDependencies: Seq[ModuleID] = Seq(
@@ -124,8 +122,6 @@ object Dependencies {
     silhouetteTestkit,
     silhouetteCrypto,
     specs2 % Test,
-    trireme,
-    triremeNode,
     xmlWriter,
     woodstoxXml,
     jwt

@@ -18,7 +18,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Rewrite the database tools in `tools/postgres` to JavaScript and adding support for non-default Postgres username-password combinations. [#6803](https://github.com/scalableminds/webknossos/pull/6803)
 
 ### Fixed
-- Fixed saving allowed teams in dataset settings [#6817](https://github.com/scalableminds/webknossos/pull/6817)
+- Fixed saving allowed teams in dataset settings. [#6817](https://github.com/scalableminds/webknossos/pull/6817)
+- Fixed log streaming in Voxelytics workflow reports. [#6828](https://github.com/scalableminds/webknossos/pull/6828)
 
 ### Removed
 

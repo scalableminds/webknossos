@@ -42,7 +42,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object Annotation {
       object Mutex {
-        val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.annotation.mutex.timeout")
+        val expiryTime: FiniteDuration = get[FiniteDuration]("webKnossos.annotation.mutex.expiryTime")
       }
     }
 

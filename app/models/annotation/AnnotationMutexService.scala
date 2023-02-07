@@ -31,7 +31,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     extends IntervalScheduler
     with LazyLogging {
 
-  override protected def tickerInterval: FiniteDuration = wkConf.WebKnossos.Annotation.Mutex.timeout
+  override protected def tickerInterval: FiniteDuration = 1 hour
 
   override protected def tick(): Unit = {
     logger.info("Cleaning up expired annotation mutexes...")
@@ -39,7 +39,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     ()
   }
 
-  private val defaultExpiryTime = 2 minutes
+  private val defaultExpiryTime = wkConf.WebKnossos.Annotation.Mutex.expiryTime
 
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId)(
       implicit ec: ExecutionContext): Fox[MutexResult] =

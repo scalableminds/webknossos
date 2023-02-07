@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [23.02.1](https://github.com/scalableminds/webknossos/releases/tag/23.02.1) - 2023-02-07
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.0...23.02.1)
+
+### Fixed
+- Fixed a benign error message which briefly appeared after logging in. [#6810](https://github.com/scalableminds/webknossos/pull/6810)
+
 ## [23.02.0](https://github.com/scalableminds/webknossos/releases/tag/23.02.0) - 2023-02-01
 [Commits](https://github.com/scalableminds/webknossos/compare/23.01.0...23.02.0)
 

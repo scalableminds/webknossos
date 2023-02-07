@@ -8,14 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.02.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.1...HEAD)
 
 ### Added
 
 ### Changed
 
 ### Fixed
-- Fixed a benign error message which briefly appeared after logging in. [#6810](https://github.com/scalableminds/webknossos/pull/6810)
 
 ### Removed
 

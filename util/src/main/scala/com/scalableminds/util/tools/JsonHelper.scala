@@ -102,7 +102,8 @@ object JsonHelper extends BoxImplicits with LazyLogging {
   }
 
   def parseAndValidateJson[T: Reads](s: String): Box[T] =
-    tryo(Json.parse(s)).flatMap(parsed => validateJsValue[T](parsed))
+    tryo(Json.parse(s))
+      .flatMap(parsed => validateJsValue[T](parsed)) ~> "Failed to parse or validate json against data schema"
 
   def validateJsValue[T: Reads](o: JsValue): Box[T] =
     o.validate[T] match {

@@ -46,10 +46,7 @@ class N5BucketProvider(layer: N5Layer, val fileSystemServiceOpt: Option[FileSyst
           case Some(fileSystemService: FileSystemService) =>
             for {
               magPath: Path <- if (n5Mag.isRemote) {
-                for {
-                  remoteSource <- fileSystemService.remoteSourceFor(n5Mag)
-                  remotePath <- remotePathFrom(remoteSource)
-                } yield remotePath
+                fileSystemService.remotePathFor(n5Mag)
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex))
                 .map(new N5CubeHandle(_))

@@ -27,6 +27,7 @@ import {
   isBoundingBoxExportable,
   ExportFormat,
   estimateFileSize,
+  useRunningJobs,
 } from "../right-border-tabs/export_bounding_box_modal";
 import { clamp, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 const CheckboxGroup = Checkbox.Group;
@@ -184,6 +185,8 @@ function _DownloadModalView({
     datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex),
   );
 
+  const [runningExportJobs, triggerExportJob] = useRunningJobs();
+
   const handleOk = async () => {
     if (activeTabKey === "download") {
       await Model.ensureSavedState();
@@ -200,12 +203,12 @@ function _DownloadModalView({
         const selectedLayer = getLayerByName(dataset, selectedLayerName);
         if (selectedLayer != null && selectedBoundingBox != null) {
           const layerInfos = getLayerInfos(selectedLayer, tracing);
-          await handleStartExport(
+          await triggerExportJob(
             dataset,
-            layerInfos,
             selectedBoundingBox.boundingBox,
-            startedExports,
-            setStartedExports,
+            resolutionIndex,
+            layerInfos,
+            exportFormat,
           );
           Toast.success("A new export job was started successfully.");
         } else {

@@ -53,7 +53,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import features from "features";
 import {
-  getFeatureNotAvailabeInPlanMessage,
+  getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
@@ -323,7 +323,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,
-        title: getFeatureNotAvailabeInPlanMessage(PricingPlanEnum.Team, activeOrganization),
+        title: getFeatureNotAvailableInPlanMessage(PricingPlanEnum.Team, activeOrganization),
       };
     }
 

@@ -11,7 +11,7 @@ import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_acce
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import { APIOrganization } from "types/api_flow_types";
 import {
-  getFeatureNotAvailabeInPlanMessage,
+  getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
@@ -166,7 +166,7 @@ function _getDisabledInfoFromArgs(
         ? !hasSkeleton
           ? disabledSkeletonExplanation
           : disabledAgglomerateMappingsExplanation
-        : getFeatureNotAvailabeInPlanMessage(PricingPlanEnum.Power, activeOrganization),
+        : getFeatureNotAvailableInPlanMessage(PricingPlanEnum.Power, activeOrganization),
     },
   };
 }

@@ -54,7 +54,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
-        "ownerName" -> ownerName
+        "ownerName" -> ownerNameOpt
       ) ++ adminOnlyInfo
   }
 

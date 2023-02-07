@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { Menu, MenuItemProps, Alert, ButtonProps, Button, Result, Popover } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
-  getFeatureNotAvailabeInPlanMessage,
+  getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
@@ -34,16 +34,17 @@ type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
 
 function getUpgradeNowButton(
   activeUser: APIUser | null | undefined,
-  activeOrganization: APIOrganization | undefined,
+  activeOrganization: APIOrganization | null
 ) {
   return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
-    <Button
-      size="small"
-      onClick={() => UpgradePricingPlanModal.upgradePricingPlan(activeOrganization)}
-      style={{ marginTop: 10 }}
-    >
-      Upgrade Now
-    </Button>
+    <div style={{ marginTop: 8 }}>
+      <Button
+        size="small"
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(activeOrganization)}
+      >
+        Upgrade Now
+      </Button>
+    </div>
   ) : null;
 }
 
@@ -61,7 +62,7 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
       color={PRIMARY_COLOR_HEX}
       content={
         <div style={popOverStyle}>
-          {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
           {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
@@ -99,7 +100,7 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
       color={PRIMARY_COLOR_HEX}
       content={
         <div style={popOverStyle}>
-          {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
           {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
@@ -144,7 +145,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
       color={PRIMARY_COLOR_HEX}
       content={
         <div style={popOverStyle}>
-          {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
           {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
@@ -171,7 +172,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
         >
           <Alert
             showIcon
-            message={getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+            message={getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
             icon={<LockOutlined />}
           />
         </div>
@@ -202,7 +203,7 @@ export function PageUnavailableForYourPlanView({
         title="Feature not available"
         subTitle={
           <p style={{ maxWidth: "500px", margin: "0 auto" }}>
-            {getFeatureNotAvailabeInPlanMessage(requiredPricingPlan, activeOrganization)}
+            {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
           </p>
         }
         extra={[

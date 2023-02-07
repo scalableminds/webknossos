@@ -85,14 +85,14 @@ export function isFeatureAllowedByPricingPlan(
   return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
 }
 
-export function getFeatureNotAvailabeInPlanMessage(
+export function getFeatureNotAvailableInPlanMessage(
   requiredPricingPlan: PricingPlanEnum,
   organization: APIOrganization | null,
 ) {
   let organizationOwnerName = "";
 
   // expected naming schema for owner: "(M. Mustermann)" | ""
-  if (organization) {
+  if (organization?.ownerName) {
     {
       const [firstName, ...rest] = organization.ownerName.split(" ");
       organizationOwnerName = `(${firstName[0]}. ${rest.join(" ")})`;

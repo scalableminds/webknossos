@@ -34,7 +34,7 @@ type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
 
 function getUpgradeNowButton(
   activeUser: APIUser | null | undefined,
-  activeOrganization: APIOrganization | null
+  activeOrganization: APIOrganization | null,
 ) {
   return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
     <div style={{ marginTop: 8 }}>

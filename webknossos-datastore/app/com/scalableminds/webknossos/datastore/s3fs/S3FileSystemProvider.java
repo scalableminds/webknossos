@@ -37,8 +37,8 @@ import static java.lang.String.format;
 /**
  * Spec:
  * <p>
- * URI: s3://[endpoint]/{bucket}/{key} If endpoint is missing, it's assumed to
- * be the default S3 endpoint (s3.amazonaws.com)
+ * URI: s3://[user@]{bucket}/{key}
+ * It's assumed to use the default S3 endpoint (s3.amazonaws.com)
  * </p>
  * <p>
  * FileSystem roots: /{bucket}/
@@ -63,8 +63,6 @@ import static java.lang.String.format;
  * </p>
  */
 public class S3FileSystemProvider extends FileSystemProvider {
-
-    public static final String CHARSET_KEY = "s3fs_charset";
     public static final String AMAZON_S3_FACTORY_CLASS = "s3fs_amazon_s3_factory";
 
     private static final ConcurrentMap<String, S3FileSystem> fileSystems = new ConcurrentHashMap<>();
@@ -72,12 +70,31 @@ public class S3FileSystemProvider extends FileSystemProvider {
             AmazonS3Factory.PROXY_HOST, AmazonS3Factory.PROXY_PASSWORD, AmazonS3Factory.PROXY_PORT, AmazonS3Factory.PROXY_USERNAME, AmazonS3Factory.PROXY_WORKSTATION, AmazonS3Factory.SOCKET_SEND_BUFFER_SIZE_HINT, AmazonS3Factory.SOCKET_RECEIVE_BUFFER_SIZE_HINT, AmazonS3Factory.SOCKET_TIMEOUT,
             AmazonS3Factory.USER_AGENT, AMAZON_S3_FACTORY_CLASS, AmazonS3Factory.SIGNER_OVERRIDE, AmazonS3Factory.PATH_STYLE_ACCESS);
 
-    private S3Utils s3Utils = new S3Utils();
+    private final S3Utils s3Utils = new S3Utils();
     private Cache cache = new Cache();
 
     @Override
     public String getScheme() {
         return "s3";
+    }
+
+    public static S3FileSystem forUri(URI uri, String accessKey, String secretKey) {
+      Properties props = new Properties();
+      if (accessKey != null && secretKey != null) {
+        props.put(AmazonS3Factory.ACCESS_KEY, accessKey);
+        props.put(AmazonS3Factory.SECRET_KEY, secretKey);
+      }
+      URI uriWithNormalizedHost = resolveShortcutHost(uri);
+      String key = buildFileSystemKey(uriWithNormalizedHost, accessKey);
+      if (fileSystems.containsKey(key)) {
+        return fileSystems.get(key);
+      }
+      String bucket = S3FileSystemProvider.hostBucketFromUri(uri);
+      S3FileSystemProvider provider = new S3FileSystemProvider();
+      AmazonS3 client = new AmazonS3Factory().getAmazonS3Client(uri, props);
+      S3FileSystem fileSystem = new S3FileSystem(provider, key, client, bucket);
+      fileSystems.put(fileSystem.getKey(), fileSystem);
+      return fileSystem;
     }
 
     @Override
@@ -87,7 +104,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Properties props = getProperties(uri, env);
         validateProperties(props);
         // try to get the filesystem by the key
-        String key = getFileSystemKey(uri, props);
+        String key = S3FileSystemProvider.buildFileSystemKey(uri, (String) props.get(AmazonS3Factory.ACCESS_KEY));
         if (fileSystems.containsKey(key)) {
             throw new FileSystemAlreadyExistsException("File system " + uri.getScheme() + ':' + key + " already exists");
         }
@@ -119,8 +136,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return props;
     }
 
-    private String getFileSystemKey(URI uri) {
-        return getFileSystemKey(uri, getProperties(uri, null));
+    private static String buildFileSystemKey(URI uri) {
+        return buildFileSystemKey(uri, null);
     }
 
     /**
@@ -129,35 +146,34 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * If uri host is empty then s3.amazonaws.com are used as host
      *
      * @param uri   URI with the endpoint
-     * @param props with the access key property
+     * @param accessKey   access key id
      * @return String
      */
-    protected String getFileSystemKey(URI uri, Properties props) {
-        // we don`t use uri.getUserInfo and uri.getHost because secret key and access key have special chars
-        // and dont return the correct strings
-        String uriString = uri.toString().replace("s3://", "");
-        String authority = null;
-        int authoritySeparator = uriString.indexOf("@");
+    protected static String buildFileSystemKey(URI uri, String accessKey) {
+      // we don`t use uri.getUserInfo and uri.getHost because secret key and access key have special chars
+      // and dont return the correct strings
+      String uriString = uri.toString().replace("s3://", "");
+      String authority = null;
+      int authoritySeparator = uriString.indexOf("@");
 
-        if (authoritySeparator > 0) {
-            authority = uriString.substring(0, authoritySeparator);
-        }
+      if (authoritySeparator > 0) {
+        authority = uriString.substring(0, authoritySeparator);
+      }
 
-        if (authority != null) {
-            String host = uriString.substring(uriString.indexOf("@") + 1, uriString.length());
-            int lastPath = host.indexOf("/");
-            if (lastPath > -1) {
-                host = host.substring(0, lastPath);
-            }
-            if (host.length() == 0) {
-                host = Constants.S3_HOSTNAME;
-            }
-            return authority + "@" + host;
-        } else {
-            String accessKey = (String) props.get(AmazonS3Factory.ACCESS_KEY);
-            return (accessKey != null ? accessKey + "@" : "") +
-                    (uri.getHost() != null ? uri.getHost() : Constants.S3_HOSTNAME);
+      if (authority != null) {
+        String host = uriString.substring(uriString.indexOf("@") + 1, uriString.length());
+        int lastPath = host.indexOf("/");
+        if (lastPath > -1) {
+          host = host.substring(0, lastPath);
         }
+        if (host.length() == 0) {
+          host = Constants.S3_HOSTNAME;
+        }
+        return authority + "@" + host;
+      } else {
+        return (accessKey != null ? accessKey + "@" : "") +
+          (uri.getHost() != null ? uri.getHost() : Constants.S3_HOSTNAME);
+      }
     }
 
     protected void validateUri(URI uri) {
@@ -261,7 +277,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public FileSystem getFileSystem(URI uri, Map<String, ?> env) {
         validateUri(uri);
         Properties props = getProperties(uri, env);
-        String key = this.getFileSystemKey(uri, props); // s3fs_access_key is part of the key here.
+        String key = S3FileSystemProvider.buildFileSystemKey(uri, (String) props.get(AmazonS3Factory.ACCESS_KEY)); // s3fs_access_key is part of the key here.
         if (fileSystems.containsKey(key))
             return fileSystems.get(key);
         return newFileSystem(uri, env);
@@ -270,7 +286,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public S3FileSystem getFileSystem(URI uri) {
         validateUri(uri);
-        String key = this.getFileSystemKey(uri);
+        String key = S3FileSystemProvider.buildFileSystemKey(uri);
         if (fileSystems.containsKey(key)) {
             return fileSystems.get(key);
         } else {
@@ -538,8 +554,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException();
     }
 
-    // ~~
-
     /**
      * Create the fileSystem
      *
@@ -547,13 +561,14 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param props Properties
      * @return S3FileSystem never null
      */
-    public S3FileSystem createFileSystem(URI uri, Properties props) {
-        URI uriWithNormalizedHost = resolveShortcutHost(uri);
+    private S3FileSystem createFileSystem(URI uri, Properties props) {
+        URI uriWithNormalizedHost = S3FileSystemProvider.resolveShortcutHost(uri);
         String bucket = hostBucketFromUri(uri);
-        return new S3FileSystem(this, getFileSystemKey(uriWithNormalizedHost, props), getAmazonS3(uriWithNormalizedHost, props), bucket);
+        String key = S3FileSystemProvider.buildFileSystemKey(uri, (String) props.get(AmazonS3Factory.ACCESS_KEY));
+        return new S3FileSystem(this, key, getAmazonS3(uriWithNormalizedHost, props), bucket);
     }
 
-    private URI resolveShortcutHost(URI uri) {
+    public static URI resolveShortcutHost(URI uri) {
       String host = uri.getHost();
       String newHost = host;
       String bucketPrefix = "";
@@ -572,7 +587,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
 
-    private String hostBucketFromUri(URI uri) {
+    private static String hostBucketFromUri(URI uri) {
       String host = uri.getHost();
       if (!host.contains(".")) { // assume host is omitted from uri, shortcut form s3://bucket/key
         return host;

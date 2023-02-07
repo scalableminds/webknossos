@@ -1,8 +1,15 @@
 package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{AnyCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  FileSystemCredential,
+  GoogleServiceAccountCredential,
+  HttpBasicAuthCredential,
+  S3AccessKeyCredential
+}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
+import net.liftweb.util.Helpers.tryo
+import play.api.libs.json.Json
 import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
@@ -42,28 +49,51 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         r._Organization
       )
 
+  private def parseAsGoogleServiceAccountCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
+    for {
+      secret <- r.secret.toFox
+      secretJson <- tryo(Json.parse(secret)).toFox
+    } yield
+      GoogleServiceAccountCredential(
+        r.name,
+        secretJson,
+        r._User,
+        r._Organization
+      )
+
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                     values(${_id}, ${CredentialType.HTTP_Basic_Auth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
+                     values(${_id}, ${CredentialType.HttpBasicAuth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                     values(${_id}, ${CredentialType.S3_Access_Key}, ${credential.name}, ${credential.keyId}, ${credential.key}, ${credential.user}, ${credential.organization})""".asUpdate)
+                       values(${_id}, ${CredentialType.S3AccessKey}, ${credential.name}, ${credential.accessKeyId}, ${credential.secretAccessKey}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
-  def findOne(id: ObjectId): Fox[AnyCredential] =
+  def insertOne(_id: ObjectId, credential: GoogleServiceAccountCredential): Fox[Unit] =
+    for {
+      _ <- run(q"""insert into webknossos.credentials(_id, type, name, secret, _user, _organization)
+                       values(${_id}, ${CredentialType.GoogleServiceAccount}, ${credential.name}, ${credential.secretJson.toString}, ${credential.user}, ${credential.organization})""".asUpdate)
+    } yield ()
+
+  def findOne(id: ObjectId): Fox[FileSystemCredential] =
     for {
       r <- run(q"select $columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed
 
-  private def parseAnyCredential(r: CredentialsRow): Fox[AnyCredential] =
-    r.`type` match {
-      case "HTTP_Basic_Auth" => parseAsHttpBasicAuthCredential(r)
-      case "S3_Access_Key"   => parseAsS3AccessKeyCredential(r)
-    }
+  private def parseAnyCredential(r: CredentialsRow): Fox[FileSystemCredential] =
+    for {
+      typeParsed <- CredentialType.fromString(r.`type`).toFox
+      parsed <- typeParsed match {
+        case CredentialType.HttpBasicAuth        => parseAsHttpBasicAuthCredential(r)
+        case CredentialType.S3AccessKey          => parseAsS3AccessKeyCredential(r)
+        case CredentialType.GoogleServiceAccount => parseAsGoogleServiceAccountCredential(r)
+        case _                                   => Fox.failure(s"Unknown credential type: ${r.`type`}")
+      }
+    } yield parsed
 }

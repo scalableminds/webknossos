@@ -142,11 +142,14 @@ export function sendFailedRequestAnalyticsEvent(
 export async function loginUser(formValues: {
   email: string;
   password: string;
-}): Promise<Record<string, any>> {
+}): Promise<[APIUser, APIOrganization]> {
   await Request.sendJSONReceiveJSON("/api/auth/login", {
     data: formValues,
   });
-  return getActiveUser();
+  const activeUser = await getActiveUser();
+  const organization = await getOrganization(activeUser.organization);
+
+  return [activeUser, organization];
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {
@@ -1525,8 +1528,8 @@ export async function exploreRemoteDataset(
     data: credentials
       ? remoteUris.map((uri) => ({
           remoteUri: uri.trim(),
-          user: credentials.username,
-          password: credentials.pass,
+          credentialIdentifier: credentials.username,
+          credentialSecret: credentials.pass,
         }))
       : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
   });

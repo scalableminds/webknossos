@@ -37,7 +37,7 @@ organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=This organization name contains illegal characters. Please only use letters and numbers.
 organization.name.alreadyInUse=This name is already claimed by a different organization and not available anymore. Please choose a different name.
 organization.alreadyJoined=Your account is already associated with the selected organization.
-organization.users.userLimitReached=Cannot add new user to this organization because it would exceed the organization’s user limit. Please ask the organization owner to upgrade. 
+organization.users.userLimitReached=Cannot add new user to this organization because it would exceed the organization’s user limit. Please ask the organization owner to upgrade.
 organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization WEBKNOSSOS plan. Please ask the organization owner for permission.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
@@ -46,7 +46,8 @@ user.notFound=User not found
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.
 user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.
-user.lastAdmin=Your account is the last remaining admin in your organzation. You cannot remove admin privileges from your account.
+user.lastAdmin=This user is the last remaining admin in your organzation. You cannot remove admin privileges from this account.
+user.lastOwner=Cannot deactivate the organization owner. Please talk to the WEBKNOSSOS team to transfer organization ownership.
 
 user.email.alreadyInUse=This email address is already in use
 user.email.onlySuperUserCanChange=Only super users can change emails of users with multiple organization accounts
@@ -99,6 +100,13 @@ dataSet.upload.validation.failed=Failed to validate Dataset information for uplo
 dataSet.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a failed finish request, see previous errors.
+dataSet.explore.failed.readFile=Failed to read remote file
+dataSet.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
+
+remoteFileSystem.insert.failed=Failed to store remote file system credential
+remoteFileSystem.setup.failed=Failed to set up remote file system
+remoteFileSystem.getPath.failed=Failed to get remote path
+
 
 dataSource.notFound=Datasource not found on datastore server
 

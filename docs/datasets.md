@@ -51,7 +51,7 @@ WEBKNOSSOS can load several Zarr sources and assemble them into a WEBKNOSSOS dat
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Remote Zarr Dataset*
 3. For each layer, provide some metadata information:  
-  - a URL or domain/collection identifier to locate the dataset on the remote service
+  - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
   - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
 5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc) as possible and preview a [WEBKNOSSOS `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 

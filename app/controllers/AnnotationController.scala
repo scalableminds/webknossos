@@ -610,7 +610,7 @@ class AnnotationController @Inject()(
         _ <- bool2Fox(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
         restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
         _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        mutexResult = annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id)
+        mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
         resultJson <- annotationMutexService.publicWrites(mutexResult)
       } yield Ok(resultJson)
     }

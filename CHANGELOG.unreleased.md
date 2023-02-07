@@ -20,7 +20,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a benign error message which briefly appeared after logging in. [#6810](https://github.com/scalableminds/webknossos/pull/6810)
-- Fixed saving allowed teams in dataset settings [#6817](https://github.com/scalableminds/webknossos/pull/6817)
+- Fixed saving allowed teams in dataset settings. [#6817](https://github.com/scalableminds/webknossos/pull/6817)
+- Fixed log streaming in Voxelytics workflow reports. [#6828](https://github.com/scalableminds/webknossos/pull/6828)
 
 ### Removed
 

@@ -95,9 +95,9 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                              currentStartTime,
                              currentEndTime,
                              limit.getOrElse(LOG_ENTRY_BATCH_SIZE).min(LOG_ENTRY_BATCH_SIZE))
-      newLimit = limit.map(l => l - headBatch.length)
+      newLimit = limit.map(l => (l - headBatch.length).max(0))
       buffer <- if (headBatch.isEmpty) {
-        if (currentStartTime == startTime) {
+        if (currentStartTime == startTime || newLimit.contains(0L)) {
           Fox.successful(List())
         } else {
           for {

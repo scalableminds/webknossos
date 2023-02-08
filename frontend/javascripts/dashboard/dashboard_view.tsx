@@ -54,7 +54,6 @@ type State = {
 export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
-  datasetsLegacy: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
 };

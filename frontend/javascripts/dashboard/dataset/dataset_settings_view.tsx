@@ -702,9 +702,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       if (queryClient) {
         queryClient.invalidateQueries({
           queryKey: ["datasetsByFolder", dataset.folderId],
-          exact: true,
         });
-        queryClient.invalidateQueries({ queryKey: ["dataset", "search"], exact: true });
+        queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
       }
     }
 

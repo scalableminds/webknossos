@@ -53,9 +53,8 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
     // Invalidate the dataset list cache to exclude the deleted dataset
     queryClient.invalidateQueries({
       queryKey: ["datasetsByFolder", dataset.folderId],
-      exact: true,
     });
-    queryClient.invalidateQueries({ queryKey: ["dataset", "search"], exact: true });
+    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
 
     history.push("/dashboard");
   }

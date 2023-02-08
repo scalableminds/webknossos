@@ -8,7 +8,7 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.02.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.1...HEAD)
 
 ### Added
 - Remote datasets can now also be streamed from Google Cloud Storage URIs (`gs://`). [#6775](https://github.com/scalableminds/webknossos/pull/6775)
@@ -19,7 +19,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added owner name to organization page. [#6811](https://github.com/scalableminds/webknossos/pull/6811)
 
 ### Fixed
-- Fixed a benign error message which briefly appeared after logging in. [#6810](https://github.com/scalableminds/webknossos/pull/6810)
 - Fixed saving allowed teams in dataset settings. [#6817](https://github.com/scalableminds/webknossos/pull/6817)
 - Fixed log streaming in Voxelytics workflow reports. [#6828](https://github.com/scalableminds/webknossos/pull/6828)
 

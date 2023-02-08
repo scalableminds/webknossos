@@ -15,7 +15,6 @@ import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import { enforceActiveUser } from "./user_accessor";
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
@@ -114,7 +113,7 @@ function _getDisabledInfoFromArgs(
   hasAgglomerateMappings: boolean,
   genericDisabledExplanation: string,
   activeOrganization: APIOrganization | null,
-  activeUser: APIUser,
+  activeUser: APIUser | null | undefined,
 ) {
   const isProofReadingToolAllowed = isFeatureAllowedByPricingPlan(
     activeOrganization,
@@ -242,7 +241,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     hasAgglomerateMappings,
     genericDisabledExplanation,
     state.activeOrganization,
-    enforceActiveUser(state.activeUser),
+    state.activeUser,
   );
 }
 

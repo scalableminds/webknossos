@@ -268,7 +268,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
             LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
               ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
             """
-      _ = logger.info(query.debugInfo)
       rows <- run(
         query.as[(ObjectId, String, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
     } yield

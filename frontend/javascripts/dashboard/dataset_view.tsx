@@ -30,7 +30,6 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIMaybeUnimportedDataset, APIUser, FolderItem } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
-import { type DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";
@@ -55,7 +54,7 @@ const { Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser;
-  context: DatasetCacheContextValue | DatasetCollectionContextValue;
+  context: DatasetCollectionContextValue;
   onSelectDataset: (dataset: APIMaybeUnimportedDataset | null) => void;
   selectedDatasets: APIMaybeUnimportedDataset[];
   hideDetailsColumns: boolean;
@@ -106,9 +105,7 @@ function DatasetView(props: Props) {
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
-  const { data: folder } = useFolderQuery(
-    "activeFolderId" in context ? context.activeFolderId : null,
-  );
+  const { data: folder } = useFolderQuery(context.activeFolderId);
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
@@ -125,18 +122,8 @@ function DatasetView(props: Props) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
 
-    context.fetchDatasets({
-      applyUpdatePredicate: (_newDatasets) => {
-        // Only update the datasets when there are none currently.
-        // This avoids sudden changes in the dataset table (since
-        // a cached version is already shown). As a result, the
-        // dataset list is outdated a bit (shows the list of the
-        // last page load). Since a simple page refresh (or clicking
-        // the Refresh button) will show a newer version, this is acceptable.
-        const updateDatasets = context.datasets.length === 0;
-        return updateDatasets;
-      },
-    });
+    // todo: can be removed?
+    // context.fetchDatasets();
   }, []);
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -196,9 +183,6 @@ function DatasetView(props: Props) {
     <Radio
       onChange={() => {
         setDatasetFilteringMode(key);
-        context.fetchDatasets({
-          datasetFilteringMode: key,
-        });
       }}
       checked={datasetFilteringMode === key}
     >
@@ -280,9 +264,7 @@ function DatasetView(props: Props) {
 
           <Link
             to={
-              "activeFolderId" in context &&
-              context.activeFolderId != null &&
-              (folder == null || folder.isEditable)
+              context.activeFolderId != null && (folder == null || folder.isEditable)
                 ? `/datasets/upload?to=${context.activeFolderId}`
                 : "/datasets/upload"
             }
@@ -292,7 +274,7 @@ function DatasetView(props: Props) {
               Add Dataset
             </Button>
           </Link>
-          {"activeFolderId" in context && context.activeFolderId != null && (
+          {context.activeFolderId != null && (
             <PricingEnforcedButton
               disabled={folder != null && !folder.isEditable}
               style={margin}
@@ -328,7 +310,7 @@ function DatasetView(props: Props) {
         <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
       )}
 
-      {searchQuery && "queries" in context && (
+      {searchQuery && (
         <GlobalSearchHeader
           searchQuery={searchQuery}
           isEmpty={isEmpty}
@@ -507,7 +489,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
 }
 
 function renderPlaceholder(
-  context: DatasetCacheContextValue | DatasetCollectionContextValue,
+  context: DatasetCollectionContextValue,
   user: APIUser,
   searchQuery: string | null,
 ) {
@@ -560,17 +542,9 @@ function renderPlaceholder(
     </OptionCard>
   );
 
-  let emptyListHintText;
-
-  if (context.supportsFolders) {
-    emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
-      ? "There are no datasets in this folder. Import one or move a dataset from another folder."
-      : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
-  } else {
-    emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
-      ? "There are no datasets available yet. Import one or try a public demo dataset."
-      : "There are no datasets available yet. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets.";
-  }
+  const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+    ? "There are no datasets in this folder. Import one or move a dataset from another folder."
+    : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
 
   return (
     <Row

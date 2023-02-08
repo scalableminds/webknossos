@@ -31,7 +31,6 @@ import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/con
 import Shortcut from "libs/shortcut_component";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import { useSelector } from "react-redux";
-import { type DatasetCacheContextValue } from "dashboard/dataset/dataset_cache_provider";
 import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
 
@@ -57,7 +56,7 @@ type Props = {
   onSelectDataset: (dataset: APIMaybeUnimportedDataset | null, multiSelect?: boolean) => void;
   selectedDatasets: APIMaybeUnimportedDataset[];
   hideDetailsColumns?: boolean;
-  context: DatasetCacheContextValue | DatasetCollectionContextValue;
+  context: DatasetCollectionContextValue;
 };
 type State = {
   prevSearchQuery: string;
@@ -543,8 +542,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 </Link>
                 <br />
 
-                {"getBreadcrumbs" in this.props.context &&
-                this.props.context.globalSearchQuery != null ? (
+                {this.props.context.globalSearchQuery != null ? (
                   <BreadcrumbsTag parts={this.props.context.getBreadcrumbs(dataset)} />
                 ) : null}
               </>

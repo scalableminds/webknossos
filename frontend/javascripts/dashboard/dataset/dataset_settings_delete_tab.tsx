@@ -1,13 +1,13 @@
 import { Button } from "antd";
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";
 import { getDataset, deleteDatasetOnDisk } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import { confirmAsync } from "./helper_components";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Props = {
   datasetId: APIDatasetId;
@@ -17,7 +17,7 @@ type Props = {
 const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
-  const datasetContext = useContext(DatasetCacheContext);
+  const queryClient = useQueryClient();
 
   async function fetch() {
     const newDataset = await getDataset(datasetId);
@@ -50,8 +50,13 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
       }),
     );
     setIsDeleting(false);
-    // Refresh the dataset list to exclude the deleted dataset
-    await datasetContext.fetchDatasets();
+    // Invalidate the dataset list cache to exclude the deleted dataset
+    queryClient.invalidateQueries({
+      queryKey: ["datasetsByFolder", dataset.folderId],
+      exact: true,
+    });
+    queryClient.invalidateQueries({ queryKey: ["dataset", "search"], exact: true });
+
     history.push("/dashboard");
   }
 

@@ -30,7 +30,6 @@ import type {
 } from "types/api_flow_types";
 import { Unicode, Vector3 } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
@@ -56,6 +55,7 @@ import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
+import { defaultContext } from "@tanstack/react-query";
 
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
@@ -166,6 +166,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   formRef = React.createRef<FormInstance>();
   unblock: UnregisterCallback | null | undefined;
   blockTimeoutId: number | null | undefined;
+  static contextType = defaultContext;
+  declare context: React.ContextType<typeof defaultContext>;
 
   state: State = {
     hasUnsavedChanges: false,
@@ -693,7 +695,19 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     this.setState({
       hasUnsavedChanges: false,
     });
-    datasetCache.clear();
+
+    if (dataset) {
+      // Update new cache
+      const queryClient = this.context;
+      if (queryClient) {
+        queryClient.invalidateQueries({
+          queryKey: ["datasetsByFolder", dataset.folderId],
+          exact: true,
+        });
+        queryClient.invalidateQueries({ queryKey: ["dataset", "search"], exact: true });
+      }
+    }
+
     trackAction(`Dataset ${verb}`);
     this.props.onComplete();
   };
@@ -910,9 +924,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                 {isUserAdmin && features().allowDeleteDatasets ? (
                   <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
                     <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
-                      <DatasetCacheProvider>
-                        <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
-                      </DatasetCacheProvider>
+                      <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
                     </Hideable>
                   </TabPane>
                 ) : null}

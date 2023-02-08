@@ -16,10 +16,6 @@ import {
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
-import DatasetView from "dashboard/dataset_view";
-import DatasetCacheProvider, {
-  DatasetCacheContext,
-} from "dashboard/dataset/dataset_cache_provider";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
@@ -58,7 +54,7 @@ type State = {
 export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
-  datasetsLegacy: "datasetsLegacy",
+  datasetsLegacy: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
 };
@@ -148,7 +144,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     return {
       publications: features().isDemoInstance,
       datasets: !isAdminView,
-      datasetsLegacy: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
     };
@@ -169,23 +164,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
               ),
             }
           : null,
-        validTabKeys.datasets
-          ? {
-              label: "Datasets",
-              key: "datasetsLegacy",
-              children: (
-                <RenderingTabContext.Provider value="datasetsLegacy">
-                  <DatasetViewWithLegacyContext user={user} />
-                </RenderingTabContext.Provider>
-              ),
-            }
-          : null,
         {
-          label: (
-            <span>
-              Datasets <sup>New</sup>
-            </span>
-          ),
+          label: <span>Datasets</span>,
           key: "datasets",
           children: (
             <RenderingTabContext.Provider value="datasets">
@@ -300,32 +280,19 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
           {pricingPlanWarnings}
           {pricingPlanErrors}
           {userHeader}
-          <DatasetCacheProvider>
-            <ActiveTabContext.Provider value={this.state.activeTabKey}>
-              <Tabs
-                activeKey={this.state.activeTabKey}
-                onChange={onTabChange}
-                items={this.getTabs(user)}
-                tabBarExtraContent={<TabBarExtraContent />}
-              />
-            </ActiveTabContext.Provider>
-          </DatasetCacheProvider>
+
+          <ActiveTabContext.Provider value={this.state.activeTabKey}>
+            <Tabs
+              activeKey={this.state.activeTabKey}
+              onChange={onTabChange}
+              items={this.getTabs(user)}
+              tabBarExtraContent={<TabBarExtraContent />}
+            />
+          </ActiveTabContext.Provider>
         </div>
       </NmlUploadZoneContainer>
     );
   }
-}
-function DatasetViewWithLegacyContext({ user }: { user: APIUser }) {
-  const datasetCacheContext = useContext(DatasetCacheContext);
-  return (
-    <DatasetView
-      user={user}
-      hideDetailsColumns={false}
-      context={datasetCacheContext}
-      selectedDatasets={[]}
-      onSelectDataset={() => {}}
-    />
-  );
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

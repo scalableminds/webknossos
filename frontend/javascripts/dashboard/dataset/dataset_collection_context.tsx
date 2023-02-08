@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { type DatasetFilteringMode } from "dashboard/dataset_view";
 import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
 import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
@@ -18,17 +17,12 @@ import {
 import { useIsMutating } from "@tanstack/react-query";
 import { usePrevious } from "libs/react_hooks";
 
-type Options = {
-  datasetFilteringMode?: DatasetFilteringMode;
-  applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
-  isCalledFromCheckDatasets?: boolean;
-};
 export type DatasetCollectionContextValue = {
   datasets: Array<APIMaybeUnimportedDataset>;
   isLoading: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
-  fetchDatasets: (options?: Options) => Promise<void>;
+  fetchDatasets: () => Promise<void>;
   reloadDataset: (
     datasetId: APIDatasetId,
     datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
@@ -144,7 +138,7 @@ export default function DatasetCollectionContextProvider({
     createFolderMutation.mutateAsync([parentFolderId, folderName]);
   }, []);
 
-  async function fetchDatasets(_options: Options = {}): Promise<void> {
+  async function fetchDatasets(): Promise<void> {
     datasetsInFolderQuery.refetch();
     datasetSearchQuery.refetch();
   }

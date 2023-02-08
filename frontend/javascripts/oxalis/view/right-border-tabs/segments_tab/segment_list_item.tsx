@@ -470,52 +470,54 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
-          <EditableTextLabel
-            value={segment.name || `Segment ${segment.id}`}
-            label="Segment Name"
-            onClick={() => onSelectSegment(segment)}
-            onChange={(name) => {
-              if (visibleSegmentationLayer != null) {
-                updateSegment(
-                  segment.id,
-                  {
-                    name,
-                  },
-                  visibleSegmentationLayer.name,
-                );
-              }
-            }}
-            margin="0 5px"
-            disableEditing={!allowUpdate}
-          />
-          <Tooltip title="Open context menu (also available via right-click)">
-            <EllipsisOutlined
-              onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
+          <div style={{ display: "inline-flex", alignItems: "center" }}>
+            <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+            <EditableTextLabel
+              value={segment.name || `Segment ${segment.id}`}
+              label="Segment Name"
+              onClick={() => onSelectSegment(segment)}
+              onChange={(name) => {
+                if (visibleSegmentationLayer != null) {
+                  updateSegment(
+                    segment.id,
+                    {
+                      name,
+                    },
+                    visibleSegmentationLayer.name,
+                  );
+                }
+              }}
+              margin="0 5px"
+              disableEditing={!allowUpdate}
             />
-          </Tooltip>
-          {/* Show Default Segment Name if another one is already defined*/}
-          {getSegmentIdDetails()}
-          {segment.id === centeredSegmentId ? (
-            <Tooltip title="This segment is currently centered in the data viewports.">
-              <i
-                className="fas fa-crosshairs deemphasized-segment-name"
-                style={{
-                  marginLeft: 4,
-                }}
+            <Tooltip title="Open context menu (also available via right-click)">
+              <EllipsisOutlined
+                onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
               />
             </Tooltip>
-          ) : null}
-          {segment.id === activeCellId ? (
-            <Tooltip title="The currently active segment id belongs to this segment.">
-              <i
-                className="fas fa-paint-brush deemphasized-segment-name"
-                style={{
-                  marginLeft: 4,
-                }}
-              />
-            </Tooltip>
-          ) : null}
+            {/* Show Default Segment Name if another one is already defined*/}
+            {getSegmentIdDetails()}
+            {segment.id === centeredSegmentId ? (
+              <Tooltip title="This segment is currently centered in the data viewports.">
+                <i
+                  className="fas fa-crosshairs deemphasized-segment-name"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+            {segment.id === activeCellId ? (
+              <Tooltip title="The currently active segment id belongs to this segment.">
+                <i
+                  className="fas fa-paint-brush deemphasized-segment-name"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+          </div>
         </Tooltip>
       </Dropdown>
 

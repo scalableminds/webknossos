@@ -257,7 +257,7 @@ class VoxelyticsController @Inject()(
               minLevel: Option[String],
               startTimestamp: Long,
               endTimestamp: Long,
-              limit: Option[Long]): Action[AnyContent] =
+              limit: Option[Int]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
         for {

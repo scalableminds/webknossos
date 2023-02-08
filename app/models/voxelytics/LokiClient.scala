@@ -28,7 +28,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
 
   private val POLLING_INTERVAL = 1 second
   private val LOG_TIME_BATCH_INTERVAL = 1 days
-  private val LOG_ENTRY_QUERY_BATCH_SIZE = 5000L
+  private val LOG_ENTRY_QUERY_BATCH_SIZE = 5000
   private val LOG_ENTRY_INSERT_BATCH_SIZE = 1000
 
   private lazy val serverStartupFuture: Fox[Unit] = {
@@ -84,7 +84,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                        startTime: Instant,
                        endTime: Instant,
-                       limit: Option[Long]): Fox[List[JsValue]] = {
+                       limit: Option[Int]): Fox[List[JsValue]] = {
     val currentEndTime = endTime
     val currentStartTime = startTime.max(endTime - LOG_TIME_BATCH_INTERVAL)
 
@@ -137,7 +137,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                         minLevel: VoxelyticsLogLevel,
                         startTime: Instant,
                         endTime: Instant,
-                        limit: Long): Fox[List[JsValue]] = {
+                        limit: Int): Fox[List[JsValue]] = {
     val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
 
     val logQLFilter = List(

@@ -159,6 +159,18 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def findOwnerByOrg(organizationId: ObjectId): Fox[User] =
+    for {
+      r <- run(q"""select $columns
+                   from $existingCollectionName
+                   where isOrganizationOwner
+                   and not isDeactivated
+                   and _organization = $organizationId
+                   order by _id
+                   limit 1""".as[UsersRow])
+      parsed <- parseFirst(r, organizationId)
+    } yield parsed
+
   def findOneByOrgaAndMultiUser(organizationId: ObjectId, multiUserId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[User] =
     for {

@@ -743,7 +743,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     width: 400,
                   }}
                   allowDecimals
-                  onChange={(scale) => {
+                  onChange={(scale: Vector3) => {
                     if (this.formRef.current == null) return;
                     this.formRef.current.setFieldsValue({
                       scale,

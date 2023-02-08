@@ -1,5 +1,5 @@
 import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Slider } from "antd";
-import { CopyOutlined } from "@ant-design/icons";
+import { CopyOutlined, SyncOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import type { APIAnnotationType, APIDataLayer } from "types/api_flow_types";
@@ -28,6 +28,7 @@ import {
   ExportFormat,
   estimateFileSize,
   useRunningJobs,
+  exportKey,
 } from "../right-border-tabs/export_bounding_box_modal";
 import { clamp, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 const CheckboxGroup = Checkbox.Group;
@@ -104,31 +105,9 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
 
 const okTextForTab = new Map([
   ["download", "Download"],
-  ["export", "Start Export Job"],
+  ["export", "Export"],
   ["python", null],
 ]);
-
-function Footer({
-  tabKey,
-  onClick,
-  boundingBoxCompatible,
-}: {
-  tabKey: string;
-  onClick: () => void;
-  boundingBoxCompatible: boolean;
-}) {
-  const okText = okTextForTab.get(tabKey);
-  return okText != null ? (
-    <Button
-      key="ok"
-      type="primary"
-      disabled={tabKey === "export" && (!features().jobsEnabled || !boundingBoxCompatible)}
-      onClick={onClick}
-    >
-      {okText}
-    </Button>
-  ) : null;
-}
 
 function _DownloadModalView({
   isOpen,
@@ -143,11 +122,13 @@ function _DownloadModalView({
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
+  const isMergerModeEnabled = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
 
   const [activeTabKey, setActiveTabKey] = useState("download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
-  const [keepWindowOpen, setKeepWindowOpen] = useState(false);
-  const [startedExports, setStartedExports] = useState<string[]>([]);
+  const [keepWindowOpen, setKeepWindowOpen] = useState(true);
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
     dataset.dataSource.dataLayers[0].name,
   );
@@ -180,7 +161,7 @@ function _DownloadModalView({
   const selectedBoundingBox = userBoundingBoxes.find(
     (bbox) => bbox.id === selectedBoundingBoxId,
   ) as UserBoundingBox;
-  const boundingBoxCompatibleInfo = isBoundingBoxExportable(
+  const { isExportable, alerts: boundingBoxCompatibilityAlerts } = isBoundingBoxExportable(
     selectedBoundingBox.boundingBox,
     datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex),
   );
@@ -193,29 +174,19 @@ function _DownloadModalView({
       downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
       onClose();
     } else if (activeTabKey === "export") {
-      const missingSelection = selectedLayerName == null || selectedBoundingBoxId === -1;
-      const basicWarning = "Starting an export job with the chosen parameters was not possible.";
-      const missingSelectionWarning = " Please choose a layer and a bounding box for export.";
+      await Model.ensureSavedState();
+      const selectedLayer = getLayerByName(dataset, selectedLayerName);
+      const layerInfos = getLayerInfos(selectedLayer, tracing);
+      await triggerExportJob(
+        dataset,
+        selectedBoundingBox.boundingBox,
+        resolutionIndex,
+        layerInfos,
+        exportFormat,
+      );
+      Toast.success("Export started...");
 
-      if (selectedLayerName == null || selectedBoundingBoxId === -1) {
-        Toast.warning(basicWarning + missingSelectionWarning);
-      } else {
-        const selectedLayer = getLayerByName(dataset, selectedLayerName);
-        if (selectedLayer != null && selectedBoundingBox != null) {
-          const layerInfos = getLayerInfos(selectedLayer, tracing);
-          await triggerExportJob(
-            dataset,
-            selectedBoundingBox.boundingBox,
-            resolutionIndex,
-            layerInfos,
-            exportFormat,
-          );
-          Toast.success("A new export job was started successfully.");
-        } else {
-          Toast.warning(basicWarning);
-        }
-      }
-      if (!keepWindowOpen && !missingSelection) {
+      if (!keepWindowOpen) {
         onClose();
       }
     }
@@ -323,17 +294,39 @@ with wk.webknossos_context(
   const hasVolumes = hasVolumeTracings(tracing);
   const hasSkeleton = tracing.skeleton != null;
 
+  const okText = okTextForTab.get(activeTabKey);
+
   return (
     <Modal
       title="Download this annotation"
       open={isOpen}
       width={600}
       footer={
-        <Footer
-          tabKey={activeTabKey}
-          onClick={handleOk}
-          boundingBoxCompatible={boundingBoxCompatibleInfo?.isExportable || false}
-        />
+        okText != null ? (
+          <Button
+            key="ok"
+            type="primary"
+            disabled={
+              activeTabKey === "export" &&
+              (!isExportable ||
+                runningExportJobs.some(
+                  ([key]) => key === exportKey(selectedLayerInfos, resolutionIndex),
+                ) || // The export is already running or...
+                isMergerModeEnabled) // Merger mode is enabled
+            }
+            onClick={handleOk}
+          >
+            {activeTabKey === "export" &&
+              runningExportJobs.some(
+                ([key]) => key === exportKey(selectedLayerInfos, resolutionIndex),
+              ) && (
+                <>
+                  <SyncOutlined spin />{" "}
+                </>
+              )}
+            {okText}
+          </Button>
+        ) : null
       }
       onCancel={onClose}
       style={{ overflow: "visible" }}
@@ -497,7 +490,7 @@ with wk.webknossos_context(
                     style={{ width: 330 }}
                   />
                 </Col>
-                {boundingBoxCompatibleInfo?.alerts}
+                {boundingBoxCompatibilityAlerts}
               </Row>
 
               <Divider
@@ -515,7 +508,7 @@ with wk.webknossos_context(
                     padding: "5px 12px",
                   }}
                 >
-                  Select the layer you would like to prepare for export.
+                  Select the mag (resolution) you would like to prepare for export.
                 </Col>
                 <Col span={11}>
                   <Slider
@@ -545,7 +538,10 @@ with wk.webknossos_context(
                   span={4}
                   style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
                 >
-                  {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
+                  <p>
+                    {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
+                    <br />
+                  </p>
                 </Col>
               </Row>
             </div>
@@ -557,7 +553,7 @@ with wk.webknossos_context(
           />
           <MoreInfoHint />
           <Checkbox
-            style={{ position: "absolute", bottom: "16px" }}
+            style={{ position: "absolute", bottom: -62 }}
             checked={keepWindowOpen}
             onChange={handleKeepWindowOpenChecked}
             disabled={activeTabKey === "export" && !features().jobsEnabled}

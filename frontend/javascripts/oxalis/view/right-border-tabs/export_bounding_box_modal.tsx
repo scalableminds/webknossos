@@ -45,7 +45,7 @@ export enum ExportFormat {
 
 const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
 
-const exportKey = (layerInfos: LayerInfos, resolutionIndex: number) =>
+export const exportKey = (layerInfos: LayerInfos, resolutionIndex: number) =>
   `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${resolutionIndex}`;
 
 export function getLayerInfos(

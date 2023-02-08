@@ -299,6 +299,7 @@ function UpgradePricingPlanModal({
           ) : null}
         </>
       }
+      zIndex={10000} // overlay everything
     >
       <div
         style={{

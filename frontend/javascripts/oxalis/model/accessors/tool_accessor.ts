@@ -9,12 +9,13 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
-import { APIOrganization } from "types/api_flow_types";
+import { APIOrganization, APIUser } from "types/api_flow_types";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import { enforceActiveUser } from "./user_accessor";
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
@@ -113,6 +114,7 @@ function _getDisabledInfoFromArgs(
   hasAgglomerateMappings: boolean,
   genericDisabledExplanation: string,
   activeOrganization: APIOrganization | null,
+  activeUser: APIUser,
 ) {
   const isProofReadingToolAllowed = isFeatureAllowedByPricingPlan(
     activeOrganization,
@@ -166,7 +168,11 @@ function _getDisabledInfoFromArgs(
         ? !hasSkeleton
           ? disabledSkeletonExplanation
           : disabledAgglomerateMappingsExplanation
-        : getFeatureNotAvailableInPlanMessage(PricingPlanEnum.Power, activeOrganization),
+        : getFeatureNotAvailableInPlanMessage(
+            PricingPlanEnum.Power,
+            activeOrganization,
+            activeUser,
+          ),
     },
   };
 }
@@ -236,6 +242,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     hasAgglomerateMappings,
     genericDisabledExplanation,
     state.activeOrganization,
+    enforceActiveUser(state.activeUser),
   );
 }
 

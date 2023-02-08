@@ -320,10 +320,15 @@ class SegmentsView extends React.Component<Props, State> {
     let disabled = true;
 
     const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+    const activeUser = useSelector((state: OxalisState) => state.activeUser);
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,
-        title: getFeatureNotAvailableInPlanMessage(PricingPlanEnum.Team, activeOrganization),
+        title: getFeatureNotAvailableInPlanMessage(
+          PricingPlanEnum.Team,
+          activeOrganization,
+          activeUser,
+        ),
       };
     }
 

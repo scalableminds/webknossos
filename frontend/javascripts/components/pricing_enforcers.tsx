@@ -62,7 +62,7 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
       color={PRIMARY_COLOR_HEX}
       content={
         <div style={popOverStyle}>
-          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
           {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
@@ -100,7 +100,7 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
       color={PRIMARY_COLOR_HEX}
       content={
         <div style={popOverStyle}>
-          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
           {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
@@ -145,7 +145,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
       color={PRIMARY_COLOR_HEX}
       content={
         <div style={popOverStyle}>
-          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
           {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
@@ -172,7 +172,11 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
         >
           <Alert
             showIcon
-            message={getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
+            message={getFeatureNotAvailableInPlanMessage(
+              requiredPricingPlan,
+              activeOrganization,
+              activeUser,
+            )}
             icon={<LockOutlined />}
           />
         </div>
@@ -203,7 +207,11 @@ export function PageUnavailableForYourPlanView({
         title="Feature not available"
         subTitle={
           <p style={{ maxWidth: "500px", margin: "0 auto" }}>
-            {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization)}
+            {getFeatureNotAvailableInPlanMessage(
+              requiredPricingPlan,
+              activeOrganization,
+              activeUser,
+            )}
           </p>
         }
         extra={[

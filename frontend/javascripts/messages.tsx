@@ -440,5 +440,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     requiredPlan: string,
     organizationOwnerName: string,
   ) =>
-    `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to at least a ${requiredPlan} plan.`,
+    `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
+  "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
+    `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
 };

@@ -126,10 +126,11 @@ class NgffExplorer extends RemoteLayerExplorer {
       elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
       boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toString), None, Some(axisOrder), channelIndex, credentialId),
-                        magPath,
-                        elementClass,
-                        boundingBox)
+      MagWithAttributes(
+        MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), channelIndex, credentialId),
+        magPath,
+        elementClass,
+        boundingBox)
 
   private def extractAxisOrder(axes: List[NgffAxis]): Fox[AxisOrder] = {
     def axisMatches(axis: NgffAxis, name: String) = axis.name.toLowerCase == name && axis.`type` == "space"

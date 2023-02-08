@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.storage.httpsfilesystem
 
+import com.scalableminds.webknossos.datastore.storage.HttpBasicAuthCredential
+
 import java.io.File
 import java.net.URI
 import java.nio.file.{FileSystem, LinkOption, Path, WatchEvent, WatchKey, WatchService}
@@ -65,5 +67,5 @@ class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
 
   override def toString: String = uri.toString
 
-  def getBasicAuthCredentials: Option[HttpsBasicAuthCredentials] = fileSystem.getBasicAuthCredentials
+  def getBasicAuthCredential: Option[HttpBasicAuthCredential] = fileSystem.getBasicAuthCredential
 }

@@ -272,6 +272,7 @@ GET           /shortLinks/byKey/:key                                            
 # Credentials
 POST          /credentials/httpBasicAuth                                                controllers.CredentialController.createHttpBasicAuthCredential
 POST          /credentials/s3AccessKey                                                  controllers.CredentialController.createS3AccessKeyCredential
+POST          /credentials/googleServiceAccount                                         controllers.CredentialController.createGoogleServiceAccountCredential
 
 # Voxelytics
 POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow

@@ -474,7 +474,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Email"
               dataIndex="email"
               key="email"
-              width={350}
+              width={320}
               sorter={Utils.localeCompareBy(typeHint, (user) => user.email)}
               render={(__, user: APIUser) =>
                 this.props.activeUser.isAdmin ? (

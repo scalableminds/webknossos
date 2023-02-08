@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Badge,
@@ -27,7 +27,7 @@ import {
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIJob, APIMaybeUnimportedDataset, APIUser, FolderItem } from "types/api_flow_types";
+import type { APIJob, APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import * as Utils from "libs/utils";
@@ -54,9 +54,8 @@ const { Group: InputGroup } = Input;
 type Props = {
   user: APIUser;
   context: DatasetCollectionContextValue;
-  onSelectDataset: (dataset: APIMaybeUnimportedDataset | null) => void;
-  selectedDatasets: APIMaybeUnimportedDataset[];
-  hideDetailsColumns: boolean;
+  onSelectDataset: (dataset: APIDatasetCompact | null) => void;
+  selectedDatasets: APIDatasetCompact[];
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -79,7 +78,7 @@ const persistence = new Persistence<PersistenceState>(
   "datasetList",
 );
 
-function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[], user: APIUser) {
+function filterDatasetsForUsersOrganization(datasets: APIDatasetCompact[], user: APIUser) {
   return features().isDemoInstance
     ? datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
@@ -151,7 +150,7 @@ function DatasetView(props: Props) {
     setSearchQuery(value);
   }
 
-  function renderTable(filteredDatasets: APIMaybeUnimportedDataset[]) {
+  function renderTable(filteredDatasets: APIDatasetCompact[]) {
     return (
       <DatasetTable
         context={props.context}
@@ -166,7 +165,6 @@ function DatasetView(props: Props) {
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
-        hideDetailsColumns={props.hideDetailsColumns}
       />
     );
   }
@@ -340,7 +338,7 @@ function GlobalSearchHeader({
   context,
 }: {
   searchQuery: string;
-  filteredDatasets: APIMaybeUnimportedDataset[];
+  filteredDatasets: APIDatasetCompact[];
   isEmpty: boolean;
   context: DatasetCollectionContextValue;
 }) {

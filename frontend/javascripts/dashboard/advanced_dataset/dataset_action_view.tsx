@@ -11,7 +11,12 @@ import {
 import window from "libs/window";
 import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
-import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
+import type {
+  APIMaybeUnimportedDataset,
+  APIDatasetId,
+  APIDataset,
+  APIDatasetCompact,
+} from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
 import {
   getFirstSegmentationLayer,
@@ -37,7 +42,7 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal,
   onCloseCreateExplorativeModal,
 }: {
-  dataset: APIDataset;
+  dataset: APIDatasetCompact;
   isReloading: boolean;
   isCreateExplorativeModalVisible: boolean;
   onShowCreateExplorativeModal: () => void;
@@ -93,7 +98,7 @@ function NewAnnotationLink({
 }
 
 type Props = {
-  dataset: APIMaybeUnimportedDataset;
+  dataset: APIDatasetCompact;
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
 };
 type State = {
@@ -135,7 +140,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     isCreateExplorativeModalVisible: false,
   };
 
-  onClearCache = async (dataset: APIMaybeUnimportedDataset) => {
+  onClearCache = async (dataset: APIDatasetCompact) => {
     this.setState({
       isReloading: true,
     });
@@ -256,7 +261,7 @@ export function getDatasetActionContextMenu({
   hideContextMenu,
 }: {
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  datasets: APIMaybeUnimportedDataset[];
+  datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
 }) {
   if (datasets.length !== 1) {

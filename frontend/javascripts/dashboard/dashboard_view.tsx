@@ -3,7 +3,7 @@ import { withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import React, { PureComponent, useContext } from "react";
+import React, { PureComponent } from "react";
 import _ from "lodash";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { WhatsNextHeader } from "admin/welcome_ui";

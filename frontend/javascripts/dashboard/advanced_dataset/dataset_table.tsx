@@ -8,14 +8,13 @@ import { diceCoefficient as dice } from "dice-coefficient";
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
 import type {
-  APITeam,
-  APIMaybeUnimportedDataset,
+  APIDatasetCompact,
   APIDatasetId,
   APIDataset,
+  APIMaybeUnimportedDataset,
 } from "types/api_flow_types";
 import { type DatasetFilteringMode } from "dashboard/dataset_view";
-import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
-import { stringToColor, formatScale } from "libs/format_utils";
+import { stringToColor } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
 import DatasetActionView, {
@@ -36,39 +35,34 @@ import { Unicode } from "oxalis/constants";
 
 const { ThinSpace } = Unicode;
 const { Column } = Table;
-const typeHint: APIMaybeUnimportedDataset[] = [];
+const typeHint: APIDatasetCompact[] = [];
 const useLruRank = true;
 
-// antd does not support Symbols as filter values
-// which is why this is converted to a string.
-const PUBLIC_SYMBOL = Symbol("@public").toString();
-
 type Props = {
-  datasets: Array<APIMaybeUnimportedDataset>;
+  datasets: Array<APIDatasetCompact>;
   searchQuery: string;
   searchTags: Array<string>;
   isUserAdmin: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (arg0: APIDatasetId, arg1?: Array<APIMaybeUnimportedDataset>) => Promise<void>;
+  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
   updateDataset: (arg0: APIDataset) => Promise<void>;
   addTagToSearch: (tag: string) => void;
-  onSelectDataset: (dataset: APIMaybeUnimportedDataset | null, multiSelect?: boolean) => void;
-  selectedDatasets: APIMaybeUnimportedDataset[];
-  hideDetailsColumns?: boolean;
+  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
 };
 type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
   contextMenuPosition: [number, number] | null | undefined;
-  datasetsForContextMenu: APIMaybeUnimportedDataset[];
+  datasetsForContextMenu: APIDatasetCompact[];
 };
 
 type ContextMenuProps = {
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
-  datasets: APIMaybeUnimportedDataset[];
+  datasets: APIDatasetCompact[];
   reloadDataset: Props["reloadDataset"];
 };
 
@@ -238,7 +232,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   // currentPageData is only used for range selection (and not during
   // rendering). That's why it's not included in this.state (also it
   // would lead to infinite loops, too).
-  currentPageData: APIMaybeUnimportedDataset[] = [];
+  currentPageData: APIDatasetCompact[] = [];
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
     const maybeSortedInfo: SorterResult<string> | {} = // Clear the sorting exactly when the search box is initially filled
@@ -269,10 +263,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
   };
 
   reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
-    this.props.reloadDataset(datasetId, this.props.datasets);
+    this.props.reloadDataset(datasetId);
 
   getFilteredDatasets() {
-    const filterByMode = (datasets: APIMaybeUnimportedDataset[]) => {
+    const filterByMode = (datasets: APIDatasetCompact[]) => {
       const { datasetFilteringMode } = this.props;
 
       if (datasetFilteringMode === "onlyShowReported") {
@@ -284,28 +278,19 @@ class DatasetTable extends React.PureComponent<Props, State> {
       }
     };
 
-    const filteredByTags = (datasets: APIMaybeUnimportedDataset[]) =>
+    const filteredByTags = (datasets: APIDatasetCompact[]) =>
       datasets.filter((dataset) => {
         const notIncludedTags = _.difference(this.props.searchTags, dataset.tags);
 
         return notIncludedTags.length === 0;
       });
 
-    const filterByQuery = (datasets: APIMaybeUnimportedDataset[]) =>
-      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description" | "tags">(
-        datasets,
-        ["name", "description", "tags"],
-        this.props.searchQuery,
-      );
-
-    const filterByHasLayers = (datasets: APIMaybeUnimportedDataset[]) =>
+    const filterByHasLayers = (datasets: APIDatasetCompact[]) =>
       this.props.isUserAdmin || this.props.isUserDatasetManager
         ? datasets
-        : datasets.filter(
-            (dataset) => dataset.isActive && dataset.dataSource.dataLayers.length > 0,
-          );
+        : datasets.filter((dataset) => dataset.isActive);
 
-    return filterByQuery(filteredByTags(filterByMode(filterByHasLayers(this.props.datasets))));
+    return filteredByTags(filterByMode(filterByHasLayers(this.props.datasets)));
   }
 
   renderEmptyText() {
@@ -348,7 +333,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       ? _.sortBy(filteredDataSource, ["lastUsedByUser", "created"]).reverse()
       : filteredDataSource;
     // Create a map from dataset to its rank
-    const datasetToRankMap: Map<APIMaybeUnimportedDataset, number> = new Map(
+    const datasetToRankMap: Map<APIDatasetCompact, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
     const sortedDataSource =
@@ -371,33 +356,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
             .reverse()
             .value()
         : dataSourceSortedByRank;
-
-    // antd table filter entries for access permissions / teams
-    const accessPermissionFilters = _.uniqBy(
-      [
-        { text: "public", value: PUBLIC_SYMBOL },
-        ...sortedDataSource.flatMap((dataset) =>
-          dataset.allowedTeams.map((team) => ({ text: team.name, value: team.name })),
-        ),
-      ],
-      "text",
-    );
-
-    // antd table filter entries for data layer names
-    const dataLayersFilter = _.uniqBy(
-      _.compact(
-        sortedDataSource.flatMap((dataset) => {
-          if ("dataLayers" in dataset.dataSource) {
-            return dataset.dataSource.dataLayers.map((layer) => ({
-              text: layer.name,
-              value: layer.name,
-            }));
-          }
-          return null;
-        }),
-      ),
-      "text",
-    );
 
     return (
       <DndProvider backend={HTML5Backend}>
@@ -425,10 +383,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
             // Workaround to get to the currently rendered entries (since the ordering
             // is managed by antd).
             // Also see https://github.com/ant-design/ant-design/issues/24022.
-            this.currentPageData = currentPageData as APIMaybeUnimportedDataset[];
+            this.currentPageData = currentPageData as APIDatasetCompact[];
             return null;
           }}
-          onRow={(record: APIMaybeUnimportedDataset) => ({
+          onRow={(record: APIDatasetCompact) => ({
             onDragStart: () => {
               if (!this.props.selectedDatasets.includes(record)) {
                 this.props.onSelectDataset(record);
@@ -531,7 +489,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             width={280}
             sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(_name: string, dataset: APIMaybeUnimportedDataset) => (
+            render={(_name: string, dataset: APIDatasetCompact) => (
               <>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
@@ -553,7 +511,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             dataIndex="tags"
             key="tags"
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(_tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
+            render={(_tags: Array<string>, dataset: APIDatasetCompact) =>
               dataset.isActive ? (
                 <DatasetTags
                   dataset={dataset}
@@ -571,19 +529,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
               )
             }
           />
-          {!this.props.hideDetailsColumns ? (
-            <Column
-              title="Voxel Size & Extent"
-              dataIndex="scale"
-              key="scale"
-              width={230}
-              render={(__, dataset: APIMaybeUnimportedDataset) =>
-                `${
-                  dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
-                }  ${getDatasetExtentAsString(dataset)}`
-              }
-            />
-          ) : null}
           <Column
             width={180}
             title="Creation Date"
@@ -593,46 +538,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
             sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
             render={(created) => <FormattedDate timestamp={created} />}
           />
-          {!this.props.hideDetailsColumns ? (
-            <Column
-              title="Access Permissions"
-              dataIndex="allowedTeams"
-              key="allowedTeams"
-              filters={accessPermissionFilters}
-              onFilter={(value, dataset) => {
-                if (value === PUBLIC_SYMBOL) {
-                  return dataset.isPublic;
-                }
-                return dataset.allowedTeams.some((team) => team.name === value);
-              }}
-              render={(_teams: APITeam[], dataset: APIMaybeUnimportedDataset) => (
-                <TeamTags dataset={dataset} />
-              )}
-            />
-          ) : null}
-          {!this.props.hideDetailsColumns ? (
-            <Column
-              title="Data Layers"
-              key="dataLayers"
-              dataIndex="dataSource.dataLayers"
-              filters={dataLayersFilter}
-              onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
-                "dataLayers" in dataset.dataSource
-                  ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
-                  : false
-              }
-              render={(__, dataset: APIMaybeUnimportedDataset) => (
-                <DatasetLayerTags dataset={dataset} />
-              )}
-            />
-          ) : null}
 
           <Column
             width={200}
             title="Actions"
             key="actions"
             fixed="right"
-            render={(__, dataset: APIMaybeUnimportedDataset) => (
+            render={(__, dataset: APIDatasetCompact) => (
               <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
             )}
           />
@@ -647,12 +559,12 @@ export function DatasetTags({
   onClickTag,
   updateDataset,
 }: {
-  dataset: APIDataset;
+  dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
   updateDataset: (d: APIDataset) => void;
 }) {
   const editTagFromDataset = (
-    updatedDataset: APIMaybeUnimportedDataset,
+    updatedDataset: APIDatasetCompact,
     shouldAddTag: boolean,
     tag: string,
     event: React.MouseEvent,

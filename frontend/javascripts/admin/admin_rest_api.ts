@@ -65,6 +65,7 @@ import type {
   VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
   VoxelyticsLogLine,
+  APIDatasetCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
@@ -1032,7 +1033,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
-): Promise<Array<APIMaybeUnimportedDataset>> {
+): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
     params.append("isUnreported", String(isUnreported));
@@ -1049,6 +1050,8 @@ export async function getDatasets(
   if (includeSubfolders != null) {
     params.append("includeSubfolders", includeSubfolders ? "true" : "false");
   }
+
+  params.append("compact", "true");
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);

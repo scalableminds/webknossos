@@ -62,7 +62,7 @@ case class DataSet(
 case class DatasetCompactInfo(
     id: ObjectId,
     name: String,
-    organizationName: String,
+    owningOrganization: String,
     folderId: ObjectId,
     isActive: Boolean,
     displayName: String,
@@ -276,7 +276,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
           DatasetCompactInfo(
             id = row._1,
             name = row._2,
-            organizationName = row._3,
+            owningOrganization = row._3,
             folderId = row._4,
             isActive = row._5,
             displayName = row._6,

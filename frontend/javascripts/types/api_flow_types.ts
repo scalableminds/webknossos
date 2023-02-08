@@ -143,6 +143,43 @@ export type APIDataset = APIDatasetBase & {
   readonly dataSource: APIDataSource;
   readonly isActive: true;
 };
+
+// Should be a strict subset of APIMaybeUnimportedDataset which makes
+// typing easier in some places.
+export type APIDatasetCompactWithoutStatus = Pick<
+  APIMaybeUnimportedDataset,
+  | "owningOrganization"
+  | "name"
+  | "folderId"
+  | "isActive"
+  | "displayName"
+  | "created"
+  | "isEditable"
+  | "lastUsedByUser"
+  | "tags"
+  | "isUnreported"
+>;
+export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+  status: MutableAPIDataSourceBase["status"];
+};
+
+// todo: is the parameter guaranteed to be APIDataset this?
+export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+  return {
+    owningOrganization: dataset.owningOrganization,
+    name: dataset.name,
+    folderId: dataset.folderId,
+    isActive: dataset.isActive,
+    displayName: dataset.displayName,
+    created: dataset.created,
+    isEditable: dataset.isEditable,
+    lastUsedByUser: dataset.lastUsedByUser,
+    status: dataset.dataSource.status,
+    tags: dataset.tags,
+    isUnreported: dataset.isUnreported,
+  };
+}
+
 type APIUnimportedDataset = APIDatasetBase & {
   readonly dataSource: APIUnimportedDatasource;
   readonly isActive: false;

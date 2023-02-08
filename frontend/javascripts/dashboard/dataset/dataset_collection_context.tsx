@@ -1,5 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
+import type {
+  APIDatasetId,
+  APIDataset,
+  APIDatasetCompact,
+  APIDatasetCompactWithoutStatus,
+} from "types/api_flow_types";
 import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
@@ -18,27 +23,27 @@ import { useIsMutating } from "@tanstack/react-query";
 import { usePrevious } from "libs/react_hooks";
 
 export type DatasetCollectionContextValue = {
-  datasets: Array<APIMaybeUnimportedDataset>;
+  datasets: Array<APIDatasetCompact>;
   isLoading: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
   fetchDatasets: () => Promise<void>;
   reloadDataset: (
     datasetId: APIDatasetId,
-    datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
+    datasetsToUpdate?: Array<APIDatasetCompact>,
   ) => Promise<void>;
   updateCachedDataset: (dataset: APIDataset) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
   supportsFolders: true;
-  selectedDatasets: APIMaybeUnimportedDataset[];
-  setSelectedDatasets: React.Dispatch<React.SetStateAction<APIMaybeUnimportedDataset[]>>;
+  selectedDatasets: APIDatasetCompact[];
+  setSelectedDatasets: React.Dispatch<React.SetStateAction<APIDatasetCompact[]>>;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   searchRecursively: boolean;
   setSearchRecursively: (val: boolean) => void;
-  getBreadcrumbs: (dataset: APIMaybeUnimportedDataset) => string[] | null;
+  getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatus) => string[] | null;
   showCreateFolderPrompt: (parentFolderId: string) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
@@ -80,7 +85,7 @@ export default function DatasetCollectionContextProvider({
   const isMutating = useIsMutating() > 0;
   const { data: folder } = useFolderQuery(activeFolderId);
 
-  const [selectedDatasets, setSelectedDatasets] = useState<APIMaybeUnimportedDataset[]>([]);
+  const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
     (value: string | null) => {
@@ -143,10 +148,7 @@ export default function DatasetCollectionContextProvider({
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(
-    datasetId: APIDatasetId,
-    _datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
-  ) {
+  async function reloadDataset(datasetId: APIDatasetId) {
     updateDatasetMutation.mutateAsync(datasetId);
   }
 
@@ -154,7 +156,7 @@ export default function DatasetCollectionContextProvider({
     updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
-  const getBreadcrumbs = (dataset: APIMaybeUnimportedDataset) => {
+  const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatus) => {
     if (folderHierarchyQuery.data?.itemById == null) {
       return null;
     }

@@ -185,7 +185,10 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         logEntryGroups <- tryo(
           logEntries
             .groupBy(
-              entry => ((entry \ "vx" \ "workflow_hash").as[String], (entry \ "vx" \ "run_name").as[String])
+              entry =>
+                ((entry \ "vx" \ "workflow_hash").as[String],
+                 (entry \ "vx" \ "run_name").as[String],
+                 (entry \ "pid").as[Long])
             )
             .toList).toFox
         streams <- Fox.serialCombined(logEntryGroups)(
@@ -228,10 +231,13 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
               })
             } yield
               Json.obj(
-                "stream" -> Json.obj("vx_workflow_hash" -> keyValueTuple._1._1,
-                                     "vx_run_name" -> keyValueTuple._1._2,
-                                     "wk_url" -> wkConf.Http.uri,
-                                     "wk_org" -> organizationId.id),
+                "stream" -> Json.obj(
+                  "vx_workflow_hash" -> keyValueTuple._1._1,
+                  "vx_run_name" -> keyValueTuple._1._2,
+                  "pid" -> keyValueTuple._1._3,
+                  "wk_url" -> wkConf.Http.uri,
+                  "wk_org" -> organizationId.id
+                ),
                 "values" -> JsArray(values)
             ))
         _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent

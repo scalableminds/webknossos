@@ -241,7 +241,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     this.nextComment(false);
   };
 
-  handleChangeInput = (evt: React.SyntheticEvent, insertLineBreaks: boolean = false) => {
+  handleChangeInput = (
+    evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    insertLineBreaks: boolean = false,
+  ) => {
     // @ts-ignore
     const commentText = evt.target.value;
 
@@ -456,8 +459,12 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                         ? undefined
                         : messages["tracing.read_only_mode_notification"]
                     }
-                    onChange={(evt) => this.handleChangeInput(evt, true)}
-                    onPressEnter={(evt) => (evt.target as HTMLElement).blur()}
+                    onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
+                      this.handleChangeInput(evt, true)
+                    }
+                    onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
+                      (evt.target as HTMLElement).blur()
+                    }
                     placeholder="Add comment"
                     style={{
                       width: "50%",

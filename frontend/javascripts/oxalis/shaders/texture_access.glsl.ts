@@ -155,19 +155,20 @@ export const getColorForCoords: ShaderModule = {
       // align with the bucket borders.
       <% if (isFragment) { %>
       {
-        uvec4 compressedEntry = outputCompressedEntry[globalLayerIndex];
+        return outputAddress[globalLayerIndex];
+        // uvec4 compressedEntry = outputCompressedEntry[globalLayerIndex];
 
-        uint compressedBytes = compressedEntry.a;
-        uint foundMagIdx = compressedBytes >> (32u - 5u);
-        uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
-        if (compressedEntry.xyz != bucketAddress.xyz
-          || globalLayerIndex != foundLayerIndex
-          || foundMagIdx != bucketAddress.a) {
-          // cache miss
-        } else {
-          return outputAddress[globalLayerIndex];
-          // return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed[globalLayerIndex]);
-        }
+        // uint compressedBytes = compressedEntry.a;
+        // uint foundMagIdx = compressedBytes >> (32u - 5u);
+        // uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
+        // if (compressedEntry.xyz != bucketAddress.xyz
+        //   || globalLayerIndex != foundLayerIndex
+        //   || foundMagIdx != bucketAddress.a) {
+        //   // cache miss
+        // } else {
+        //   return outputAddress[globalLayerIndex];
+        //   // return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed[globalLayerIndex]);
+        // }
       }
       <% } %>
 

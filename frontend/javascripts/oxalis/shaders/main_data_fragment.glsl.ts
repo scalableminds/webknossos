@@ -106,6 +106,7 @@ uniform vec3 addressSpaceDimensions;
 uniform vec4 hoveredSegmentIdLow;
 uniform vec4 hoveredSegmentIdHigh;
 
+flat in vec3 flatVertexPos;
 flat in uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
@@ -144,6 +145,11 @@ ${compileShader(
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
+
+  if (floor(flatVertexPos.x) == floor(worldCoordUVW.x) && floor(flatVertexPos.y) == floor(worldCoordUVW.y)) {
+    gl_FragColor = vec4(1., 0., 1., 1.);
+    return;
+  }
 
   if (renderBucketIndices) {
     // Only used for debugging purposes. Will render bucket positions for the
@@ -272,6 +278,7 @@ precision highp float;
 
 
 out vec4 worldCoord;
+flat out vec3 flatVertexPos;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
@@ -385,13 +392,27 @@ void main() {
   vUv = uv;
   modelCoord = vec4(position, 1.0);
   savedModelMatrix = modelMatrix;
+mat4 modelInv = inverseMatrix(modelMatrix);
   worldCoord = modelMatrix * vec4(position, 1.0);
+
+
+
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
-
+  // instead of clamping all vertices, they should be enumerated somehow and assigned
+  // evenly so that borders render well
+  if (gl_Position.y > -0.9999999) {
+float d = 32.;
+    worldCoord = modelMatrix * vec4(position, 1.0);
+  worldCoord.y = floor(worldCoord.y / d) * d;
+ worldCoord.x = floor(worldCoord.x / d) * d;
+  vec3 posRec = (modelInv * worldCoord).xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(posRec, 1.0);
+  }
 
 
   vec3 worldCoordUVW = getWorldCoordUVW();
+  flatVertexPos = worldCoordUVW;
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
   const float bucketWidth = 32.;
   const float bucketSize = 32.*32.*32.;

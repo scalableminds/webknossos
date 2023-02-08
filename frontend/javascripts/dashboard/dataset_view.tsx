@@ -40,7 +40,6 @@ import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
@@ -95,9 +94,6 @@ const refreshMenuItems = [
 
 function DatasetView(props: Props) {
   const { user } = props;
-  const activeTab = useContext(ActiveTabContext);
-  const renderingTab = useContext(RenderingTabContext);
-
   const context = props.context;
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
@@ -306,9 +302,7 @@ function DatasetView(props: Props) {
 
   return (
     <div>
-      {activeTab === renderingTab && (
-        <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
-      )}
+      <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
 
       {searchQuery && (
         <GlobalSearchHeader

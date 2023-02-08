@@ -457,7 +457,7 @@ export default function TaskListView({
                 }}
               />
               {taskGroup.key}
-
+              <wbr />
               <span className="task-panel-state">
                 <TaskStateTag taskInfo={taskInfo} />
               </span>
@@ -507,9 +507,11 @@ export default function TaskListView({
               }}
             />
             {task.taskName}
+            <wbr />
             {task.config.name != null && (
               <span className="task-panel-name">{task.config.name}</span>
             )}
+            <wbr />
             <span className="task-panel-state">
               <TaskStateTag taskInfo={taskInfo} />
             </span>

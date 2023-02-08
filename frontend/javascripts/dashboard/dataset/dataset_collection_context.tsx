@@ -27,12 +27,12 @@ export type DatasetCollectionContextValue = {
   isLoading: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
-  fetchDatasets: () => Promise<void>;
+  fetchDatasets: () => void;
   reloadDataset: (
     datasetId: APIDatasetId,
     datasetsToUpdate?: Array<APIDatasetCompact>,
   ) => Promise<void>;
-  updateCachedDataset: (dataset: APIDataset) => Promise<void>;
+  updateCachedDataset: (dataset: APIDatasetCompact) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -143,17 +143,17 @@ export default function DatasetCollectionContextProvider({
     createFolderMutation.mutateAsync([parentFolderId, folderName]);
   }, []);
 
-  async function fetchDatasets(): Promise<void> {
+  function fetchDatasets(): void {
     datasetsInFolderQuery.refetch();
     datasetSearchQuery.refetch();
   }
 
   async function reloadDataset(datasetId: APIDatasetId) {
-    updateDatasetMutation.mutateAsync(datasetId);
+    await updateDatasetMutation.mutateAsync(datasetId);
   }
 
-  async function updateCachedDataset(dataset: APIDataset) {
-    updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
+  async function updateCachedDataset(dataset: APIDatasetCompact) {
+    await updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
   }
 
   const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatus) => {

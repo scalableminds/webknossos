@@ -17,7 +17,7 @@ import type {
   APIDataset,
   APIDatasetCompact,
 } from "types/api_flow_types";
-import { clearCache } from "admin/admin_rest_api";
+import { clearCache, getDataset } from "admin/admin_rest_api";
 import {
   getFirstSegmentationLayer,
   doesSupportVolumeWithFallback,
@@ -48,19 +48,20 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal: () => void;
   onCloseCreateExplorativeModal: () => void;
 }) {
-  const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
-  const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
-    ? "true"
-    : "false";
-  const fallbackLayerGetParameter =
-    firstSegmentationLayer != null && supportsFallback
-      ? `?fallbackLayerName=${firstSegmentationLayer.name}`
-      : "";
+  // todo: do in backend?
+  // const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
+  // const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
+  //   ? "true"
+  //   : "false";
+  // const fallbackLayerGetParameter =
+  //   firstSegmentationLayer != null && supportsFallback
+  //     ? `?fallbackLayerName=${firstSegmentationLayer.name}`
+  //     : "";
 
   return (
     <div>
       <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid`}
         style={{
           display: "inline-block",
         }}
@@ -140,10 +141,11 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     isCreateExplorativeModalVisible: false,
   };
 
-  onClearCache = async (dataset: APIDatasetCompact) => {
+  onClearCache = async (compactDataset: APIDatasetCompact) => {
     this.setState({
       isReloading: true,
     });
+    const dataset = await getDataset(compactDataset);
     await clearCache(dataset);
     await this.props.reloadDataset(dataset);
     Toast.success(
@@ -186,7 +188,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           onClick={() =>
             Modal.error({
               title: "Cannot load this dataset",
-              content: dataset.dataSource.status,
+              content: dataset.status,
             })
           }
         >
@@ -323,7 +325,10 @@ export function getDatasetActionContextMenu({
 
       <Menu.Item
         key="reload"
-        onClick={() => (dataset.isActive ? onClearCache(dataset, reloadDataset) : null)}
+        onClick={async () => {
+          const fullDataset = await getDataset(dataset);
+          return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
+        }}
       >
         Reload
       </Menu.Item>

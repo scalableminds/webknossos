@@ -46,7 +46,7 @@ type Props = {
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  updateDataset: (arg0: APIDataset) => Promise<void>;
+  updateDataset: (arg0: APIDatasetCompact) => Promise<void>;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   selectedDatasets: APIDatasetCompact[];
@@ -561,7 +561,7 @@ export function DatasetTags({
 }: {
   dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
-  updateDataset: (d: APIDataset) => void;
+  updateDataset: (d: APIDatasetCompact) => void;
 }) {
   const editTagFromDataset = (
     updatedDataset: APIDatasetCompact,

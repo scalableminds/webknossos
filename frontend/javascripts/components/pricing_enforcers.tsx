@@ -1,16 +1,24 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Tooltip, Menu, MenuItemProps, Alert, ButtonProps, Button } from "antd";
+import { Menu, MenuItemProps, Alert, ButtonProps, Button, Result, Popover } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
+  getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import { Link } from "react-router-dom";
-import messages from "messages";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { OxalisState } from "oxalis/store";
+import { rgbToHex } from "libs/utils";
+import { PRIMARY_COLOR } from "oxalis/constants";
+import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
+import { APIOrganization, APIUser } from "types/api_flow_types";
+
+const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
+
+const popOverStyle = { color: "white", maxWidth: 250 };
 
 const handleMouseClick = (event: React.MouseEvent) => {
   event.preventDefault();
@@ -24,18 +32,42 @@ const handleMenuClick: MenuClickEventHandler = (info) => {
 
 type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
 
+function getUpgradeNowButton(
+  activeUser: APIUser | null | undefined,
+  activeOrganization: APIOrganization | null,
+) {
+  return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
+    <div style={{ marginTop: 8 }}>
+      <Button
+        size="small"
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(activeOrganization)}
+      >
+        Upgrade Now
+      </Button>
+    </div>
+  ) : null;
+}
+
 export const PricingEnforcedMenuItem: React.FunctionComponent<
   RequiredPricingProps & MenuItemProps
 > = ({ children, requiredPricingPlan, ...menuItemProps }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
 
   return (
-    <Tooltip
-      title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
+    <Popover
+      color={PRIMARY_COLOR_HEX}
+      content={
+        <div style={popOverStyle}>
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
+          {getUpgradeNowButton(activeUser, activeOrganization)}
+        </div>
+      }
       placement="right"
+      trigger="hover"
     >
       <Menu.Item
         onClick={handleMenuClick}
@@ -48,7 +80,7 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
       </Menu.Item>
-    </Tooltip>
+    </Popover>
   );
 };
 
@@ -57,21 +89,29 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
   requiredPricingPlan,
   ...buttonProps
 }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Button {...buttonProps}>{children}</Button>;
 
   return (
-    <Tooltip
-      title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
-      placement="right"
+    <Popover
+      color={PRIMARY_COLOR_HEX}
+      content={
+        <div style={popOverStyle}>
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
+          {getUpgradeNowButton(activeUser, activeOrganization)}
+        </div>
+      }
+      placement="bottom"
+      trigger="hover"
     >
       <Button {...buttonProps} disabled>
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
       </Button>
-    </Tooltip>
+    </Popover>
   );
 };
 
@@ -80,6 +120,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   requiredPricingPlan,
   ...restProps
 }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -100,7 +141,16 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
     );
 
   return (
-    <Tooltip title={messages["organization.plan.feature_not_available"](requiredPricingPlan)}>
+    <Popover
+      color={PRIMARY_COLOR_HEX}
+      content={
+        <div style={popOverStyle}>
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
+          {getUpgradeNowButton(activeUser, activeOrganization)}
+        </div>
+      }
+      trigger="hover"
+    >
       <div style={{ position: "relative", cursor: "not-allowed" }}>
         <div
           style={{
@@ -122,44 +172,54 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
         >
           <Alert
             showIcon
-            message={messages["organization.plan.feature_not_available"](requiredPricingPlan)}
+            message={getFeatureNotAvailableInPlanMessage(
+              requiredPricingPlan,
+              activeOrganization,
+              activeUser,
+            )}
             icon={<LockOutlined />}
           />
         </div>
       </div>
-    </Tooltip>
+    </Popover>
   );
 };
 
-export function PageUnavailableForYourPlanView() {
+export function PageUnavailableForYourPlanView({
+  requiredPricingPlan,
+}: {
+  requiredPricingPlan: PricingPlanEnum;
+}) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
 
   const linkToOrganizationSettings =
     activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
-      <Link to={`/organizations/${activeOrganization.name}`}>Go to Organization Settings</Link>
-    ) : null;
+      <Link to={`/organizations/${activeOrganization.name}`}>
+        <Button>Go to Organization Settings</Button>
+      </Link>
+    ) : undefined;
 
   return (
     <div className="container">
-      <Alert
-        style={{
-          maxWidth: "500px",
-          margin: "0 auto",
-        }}
-        message="Feature not available"
-        description={
-          <>
-            <p>
-              The requested feature is not available in your WEBKNOSSOS organization. Consider
-              upgrading to a higher WEBKNOSSOS plan to unlock it or ask your organization's owner to
-              upgrade.
-            </p>
-            {linkToOrganizationSettings}
-          </>
+      <Result
+        status="warning"
+        title="Feature not available"
+        subTitle={
+          <p style={{ maxWidth: "500px", margin: "0 auto" }}>
+            {getFeatureNotAvailableInPlanMessage(
+              requiredPricingPlan,
+              activeOrganization,
+              activeUser,
+            )}
+          </p>
         }
-        type="error"
-        showIcon
+        extra={[
+          <Link to="/">
+            <Button type="primary">Return to Dashboard</Button>
+          </Link>,
+          linkToOrganizationSettings,
+        ]}
       />
     </div>
   );

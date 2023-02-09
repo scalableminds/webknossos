@@ -33,7 +33,7 @@ export function MarkdownModal({
   label: string;
   isOpen?: boolean;
   onOk: () => void;
-  onChange: (arg0: React.SyntheticEvent) => void;
+  onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
 }) {
   return (
     <Modal

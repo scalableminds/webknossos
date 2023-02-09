@@ -98,6 +98,12 @@ object Vec3Int {
     else
       None
 
+  def fromArray(a: Array[Int]): Option[Vec3Int] =
+    if (a.length >= 3)
+      Some(Vec3Int(a(0), a(1), a(2)))
+    else
+      None
+
   def full(i: Int): Vec3Int = Vec3Int(i, i, i)
 
   def zeros: Vec3Int = Vec3Int(0, 0, 0)

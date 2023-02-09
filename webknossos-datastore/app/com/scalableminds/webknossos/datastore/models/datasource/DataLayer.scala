@@ -254,7 +254,8 @@ object AbstractDataLayer {
       layer.resolutions,
       layer.elementClass,
       layer.defaultViewConfiguration,
-      layer.adminViewConfiguration
+      layer.adminViewConfiguration,
+      layer.coordinateTransformations
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -285,7 +286,8 @@ object AbstractSegmentationLayer {
       layer.largestSegmentId,
       layer.mappings,
       layer.defaultViewConfiguration,
-      layer.adminViewConfiguration
+      layer.adminViewConfiguration,
+      layer.coordinateTransformations
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

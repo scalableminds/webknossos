@@ -15,6 +15,8 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 
+type RaycastIntersection = THREE.Intersection<THREE.Object3D<THREE.Event>>;
+
 const createDirLight = (
   position: Vector3,
   target: Vector3,
@@ -41,7 +43,9 @@ class PlaneView {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
   listenTo: (...args: Array<any>) => any;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformIsosurfaceHitTest: (arg0: [number, number]) => THREE.Vector3 | null | undefined;
+  throttledPerformIsosurfaceHitTest: (
+    arg0: [number, number],
+  ) => RaycastIntersection | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
@@ -141,7 +145,9 @@ class PlaneView {
     }
   }
 
-  performIsosurfaceHitTest(mousePosition: [number, number]): THREE.Vector3 | null | undefined {
+  performIsosurfaceHitTest(
+    mousePosition: [number, number],
+  ): RaycastIntersection | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;
@@ -175,7 +181,7 @@ class PlaneView {
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
     if (hitObject === oldRaycasterHit) {
-      return intersections.length > 0 ? intersections[0].point : null;
+      return intersections.length > 0 ? intersections[0] : null;
     }
 
     // Undo highlighting of old hit
@@ -199,7 +205,7 @@ class PlaneView {
       });
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.cellId));
-      return intersections[0].point;
+      return intersections[0];
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
       return null;

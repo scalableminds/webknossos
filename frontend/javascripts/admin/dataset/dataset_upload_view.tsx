@@ -52,7 +52,7 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg1: string, arg2: boolean) => Promise<void> | void;
+  onUploaded: (arg0: string, arg1: string, arg2: boolean, arg3: boolean) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -337,6 +337,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               this.props.onUploaded(
                 activeUser.organization,
                 formValues.name,
+                false,
                 this.state.needsConversion,
               );
             }

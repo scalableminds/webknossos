@@ -133,6 +133,8 @@ export function handleOpenContextMenu(
   isTouch: boolean,
   event: MouseEvent,
   showNodeContextMenuAt: ShowContextMenuFunction,
+  meshId?: number | null | undefined,
+  meshIntersectionPosition?: Vector3 | null | undefined,
 ) {
   const { activeViewport } = Store.getState().viewModeData.plane;
 
@@ -150,6 +152,8 @@ export function handleOpenContextMenu(
     clickedBoundingBoxId,
     globalPosition,
     activeViewport,
+    meshId,
+    meshIntersectionPosition,
   );
 }
 export function moveNode(

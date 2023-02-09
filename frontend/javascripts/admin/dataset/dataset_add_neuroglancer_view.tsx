@@ -21,7 +21,7 @@ import { RcFile, UploadChangeParam } from "antd/lib/upload";
 const FormItem = Form.Item;
 type OwnProps = {
   datastores: Array<APIDataStore>;
-  onAdded: (arg0: string, arg1: string) => Promise<void>;
+  onAdded: (arg0: string, arg1: string, arg2: boolean) => Promise<void>;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -171,7 +171,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     Toast.success(messages["dataset.add_success"]);
     await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
 
-    onAdded(activeUser.organization, formValues.name);
+    onAdded(activeUser.organization, formValues.name, true);
   }
 
   return (

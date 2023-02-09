@@ -6,6 +6,10 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Mappi
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
@@ -14,7 +18,7 @@ import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, zarr, n5, tracing = Value
+  val wkw, zarr, n5, neuroglancerPrecomputed, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -205,7 +209,10 @@ object DataLayer {
           case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
           case (DataFormat.n5, Category.segmentation)   => json.validate[N5SegmentationLayer]
           case (DataFormat.n5, _)                       => json.validate[N5DataLayer]
-          case _                                        => json.validate[WKWDataLayer]
+          case (DataFormat.`neuroglancerPrecomputed`, Category.segmentation) =>
+            json.validate[PrecomputedSegmentationLayer]
+          case (DataFormat.`neuroglancerPrecomputed`, _) => json.validate[PrecomputedDataLayer]
+          case _                                         => json.validate[WKWDataLayer]
         }
       } yield {
         layer
@@ -213,12 +220,14 @@ object DataLayer {
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {
-        case l: WKWDataLayer          => WKWDataLayer.jsonFormat.writes(l)
-        case l: WKWSegmentationLayer  => WKWSegmentationLayer.jsonFormat.writes(l)
-        case l: ZarrDataLayer         => ZarrDataLayer.jsonFormat.writes(l)
-        case l: ZarrSegmentationLayer => ZarrSegmentationLayer.jsonFormat.writes(l)
-        case l: N5DataLayer           => N5DataLayer.jsonFormat.writes(l)
-        case l: N5SegmentationLayer   => N5SegmentationLayer.jsonFormat.writes(l)
+        case l: WKWDataLayer                 => WKWDataLayer.jsonFormat.writes(l)
+        case l: WKWSegmentationLayer         => WKWSegmentationLayer.jsonFormat.writes(l)
+        case l: ZarrDataLayer                => ZarrDataLayer.jsonFormat.writes(l)
+        case l: ZarrSegmentationLayer        => ZarrSegmentationLayer.jsonFormat.writes(l)
+        case l: N5DataLayer                  => N5DataLayer.jsonFormat.writes(l)
+        case l: N5SegmentationLayer          => N5SegmentationLayer.jsonFormat.writes(l)
+        case l: PrecomputedDataLayer         => PrecomputedDataLayer.jsonFormat.writes(l)
+        case l: PrecomputedSegmentationLayer => PrecomputedSegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat

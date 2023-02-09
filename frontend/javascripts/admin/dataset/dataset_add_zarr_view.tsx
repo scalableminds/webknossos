@@ -177,7 +177,7 @@ function DatasetAddZarrView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
-      <CardContainer title="Add Remote Zarr / N5 Dataset">
+      <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
         <Form form={form} layout="vertical">
           <Modal
             title="Add Layer"
@@ -404,10 +404,10 @@ function AddZarrLayer({
 
   return (
     <>
-      Please enter a URL that points to the Zarr or N5 data you would like to import. If necessary,
-      specify the credentials for the dataset. For datasets with multiple layers, e.g. raw
-      microscopy and segmentation data, please add them separately with the ”Add Layer” button
-      below. Once you have approved of the resulting datasource you can import it.
+      Please enter a URL that points to the Zarr, Neuroglancer Precomputed or N5 data you would like
+      to import. If necessary, specify the credentials for the dataset. For datasets with multiple
+      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add
+      Layer” button below. Once you have approved of the resulting datasource you can import it.
       <FormItem
         style={{ marginTop: 16, marginBottom: 16 }}
         name="url"

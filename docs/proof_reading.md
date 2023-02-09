@@ -34,6 +34,8 @@ To fix a merge error:
 
 Note, the proofreading operations rely directly on the information and quality of an initial over-segmentation. If cells/segments are already erroneously connected in this state, then WEBKNOSSOS cannot split them apart (this might change in the future, though).
 
+If case you want to reload, hide or remove a 3D mesh during proofreading, you can use the context menu in the 3D viewport by hovering the mesh.
+
 In addition to the handy shortcuts available from the right-click context menu, users can also directly modify the super-voxel graph like any other skeleton to manually add/remove nodes and edges for fine-grained control.
 
 -- The proofreading tool requires a super-voxel graph representation of a segmentation to work. At this time, these can only be obtained from the [Voxelytics AI segmentation pipeline](https://voxelytics.com). We are actively working to make this available for more users, so please reach out to us to get you started and provide feedback: [hello@webknossos.org](mailto:hello@webknossos.org) -- 

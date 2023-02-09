@@ -436,6 +436,11 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
   "organization.plan.upgrage_request_sent":
     "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
-  "organization.plan.feature_not_available": (requiredPlan: string) =>
-    `This feature is not available in your organization's plan. Ask your organization owner to upgrade at least a ${requiredPlan} plan.`,
+  "organization.plan.feature_not_available": (
+    requiredPlan: string,
+    organizationOwnerName: string,
+  ) =>
+    `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
+  "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
+    `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
 };

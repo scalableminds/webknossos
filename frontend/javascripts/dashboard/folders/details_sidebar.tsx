@@ -1,4 +1,10 @@
-import { FileOutlined, FolderOpenOutlined, SearchOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  SearchOutlined,
+  EditOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { pluralize } from "libs/utils";
@@ -72,52 +78,57 @@ function getMaybeSelectMessage(datasetCount: number) {
 
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
-  const { data: fullDataset } = useDatasetQuery(selectedDataset);
+  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
 
   return (
     <>
       <h4 style={{ wordBreak: "break-all" }}>
-        <FileOutlined style={{ marginRight: 4 }} />{" "}
+        {isFetching ? (
+          <LoadingOutlined style={{ marginRight: 4 }} />
+        ) : (
+          <FileOutlined style={{ marginRight: 4 }} />
+        )}{" "}
         {selectedDataset.displayName || selectedDataset.name}
       </h4>
-      {selectedDataset.isActive && (
-        <div>
-          <span className="sidebar-label">Voxel Size & Extent</span>
-          {fullDataset && (
-            <div className="info-tab-block" style={{ marginTop: -3 }}>
-              <table
-                style={{
-                  fontSize: 14,
-                }}
-              >
-                <tbody>
-                  <VoxelSizeRow dataset={fullDataset} />
-                  <DatasetExtentRow dataset={fullDataset} />
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-      {fullDataset?.description && (
+      <Spin spinning={fullDataset == null}>
+        {selectedDataset.isActive && (
+          <div>
+            <span className="sidebar-label">Voxel Size & Extent</span>
+            {fullDataset && (
+              <div className="info-tab-block" style={{ marginTop: -3 }}>
+                <table
+                  style={{
+                    fontSize: 14,
+                  }}
+                >
+                  <tbody>
+                    <VoxelSizeRow dataset={fullDataset} />
+                    <DatasetExtentRow dataset={fullDataset} />
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ marginBottom: 4 }}>
           <span className="sidebar-label">Description</span>
-          <div>{fullDataset.description}</div>
+          <div>{fullDataset?.description}</div>
         </div>
-      )}
-      {fullDataset && (
+
         <div style={{ marginBottom: 4 }}>
           <span className="sidebar-label">Access Permissions</span>
           <br />
-          <TeamTags dataset={fullDataset} emptyValue="Administrators & Dataset Managers" />
+          {fullDataset && (
+            <TeamTags dataset={fullDataset} emptyValue="Administrators & Dataset Managers" />
+          )}
         </div>
-      )}
-      {fullDataset && (
+
         <div style={{ marginBottom: 4 }}>
           <span className="sidebar-label">Layers</span>
-          <br /> <DatasetLayerTags dataset={fullDataset} />
+          <br /> {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
         </div>
-      )}
+      </Spin>
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>
           <span className="sidebar-label">Tags</span>

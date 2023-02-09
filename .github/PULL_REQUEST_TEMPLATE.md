@@ -14,5 +14,6 @@
 - [ ] Updated [documentation](../blob/master/docs) if applicable
 - [ ] Adapted [wk-connect](https://github.com/scalableminds/webknossos-connect) if datastore API changes
 - [ ] Adapted [wk-libs python client](https://github.com/scalableminds/webknossos-libs/tree/master/webknossos/webknossos/client) if relevant API parts change
+- [ ] Removed dev-only changes like prints and application.conf edits
 - [ ] Considered [common edge cases](../blob/master/.github/common_edge_cases.md)
 - [ ] Needs datastore update after deployment

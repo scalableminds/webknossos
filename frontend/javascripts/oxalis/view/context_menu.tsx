@@ -956,7 +956,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
         ]
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
-  if (volumeTracing == null && visibleSegmentationLayer != null) {
+  if (volumeTracing == null && visibleSegmentationLayer != null && globalPosition != null) {
     nonSkeletonActions.push(loadPrecomputedMeshItem);
     nonSkeletonActions.push(computeMeshAdHocItem);
   }

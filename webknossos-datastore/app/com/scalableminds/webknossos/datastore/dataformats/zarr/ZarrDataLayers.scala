@@ -45,6 +45,7 @@ case class ZarrDataLayer(
     mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends ZarrLayer
 
@@ -61,6 +62,7 @@ case class ZarrSegmentationLayer(
     mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends SegmentationLayer
     with ZarrLayer

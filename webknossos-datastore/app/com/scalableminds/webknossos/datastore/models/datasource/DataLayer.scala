@@ -20,7 +20,7 @@ object DataFormat extends ExtendedEnumeration {
 object Category extends ExtendedEnumeration {
   val color, mask, segmentation = Value
 
-  def fromElementClass(elementClass: ElementClass.Value): Category.Value =
+  def guessFromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
       case ElementClass.uint16 => segmentation
       case ElementClass.uint32 => segmentation
@@ -139,6 +139,8 @@ trait DataLayerLike {
 
   // This is the default from the DataSet Edit View.
   def adminViewConfiguration: Option[LayerViewConfiguration]
+
+  def coordinateTransformations: Option[List[CoordinateTransformation]]
 }
 
 object DataLayerLike {
@@ -227,14 +229,8 @@ object DataLayer {
 }
 
 trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
-
   val category: Category.Value = Category.segmentation
-
   lazy val mappingProvider: MappingProvider = new MappingProvider(this)
-}
-
-object SegmentationLayer {
-  val defaultLargestSegmentId = 0
 }
 
 case class AbstractDataLayer(
@@ -244,7 +240,8 @@ case class AbstractDataLayer(
     resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -272,7 +269,8 @@ case class AbstractSegmentationLayer(
     largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {

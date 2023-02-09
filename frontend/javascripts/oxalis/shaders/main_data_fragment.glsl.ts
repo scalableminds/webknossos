@@ -395,23 +395,30 @@ void main() {
 mat4 modelInv = inverseMatrix(modelMatrix);
   worldCoord = modelMatrix * vec4(position, 1.0);
 
-
-
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
   // instead of clamping all vertices, they should be enumerated somehow and assigned
   // evenly so that borders render well
   if (gl_Position.y > -0.9999999) {
-float d = 32.;
-    worldCoord = modelMatrix * vec4(position, 1.0);
-  worldCoord.y = floor(worldCoord.y / d) * d;
- worldCoord.x = floor(worldCoord.x / d) * d;
-  vec3 posRec = (modelInv * worldCoord).xyz;
+    float d = 32.;
+    vec3 datasetScaleUVW = transDim(datasetScale);
+    vec3 transWorldCoord = transDim(worldCoord.xyz);
+
+    transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d) * d * datasetScaleUVW.x;
+    transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d) * d * datasetScaleUVW.y;
+
+    worldCoord = vec4(transDim(transWorldCoord), 1.);
+    vec3 posRec = (modelInv * worldCoord).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(posRec, 1.0);
   }
 
-
   vec3 worldCoordUVW = getWorldCoordUVW();
+  // Offset the bucket calculation for the current vertex by a bit
+  // to avoid picking the wrong bucket (which would lead to an rendering offset
+  // of 32 vx).
+  worldCoordUVW.x -= 1.;
+  worldCoordUVW.y += 1.;
+
   flatVertexPos = worldCoordUVW;
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
   const float bucketWidth = 32.;

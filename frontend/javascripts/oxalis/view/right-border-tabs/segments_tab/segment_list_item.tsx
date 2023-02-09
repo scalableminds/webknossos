@@ -45,10 +45,6 @@ function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vect
   );
 }
 
-export function getNameOfSegment(segment: Segment) {
-  return segment.name || `Segment ${segment.id}`;
-}
-
 const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
   MenuItemProps,
   typeof Menu.Item
@@ -477,7 +473,7 @@ function _SegmentListItem({
           <div style={{ display: "inline-flex", alignItems: "center" }}>
             <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
             <EditableTextLabel
-              value={getNameOfSegment(segment)}
+              value={segment.name || `Segment ${segment.id}`}
               label="Segment Name"
               onClick={() => onSelectSegment(segment)}
               onChange={(name) => {

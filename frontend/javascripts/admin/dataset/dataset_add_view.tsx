@@ -41,14 +41,17 @@ function DatasetAddView({ history }: RouteComponentProps) {
   const [datasetName, setDatasetName] = useState("");
   const [organization, setOrganization] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
+  const [isRemoteDataset, setIsRemoteDataset] = useState(false);
 
   const handleDatasetAdded = async (
     datasetOrganization: string,
     uploadedDatasetName: string,
+    isRemoteDataset: boolean,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
     setOrganization(datasetOrganization);
     setDatasetName(uploadedDatasetName);
+    setIsRemoteDataset(isRemoteDataset);
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'boolean | null | undefined' is n... Remove this comment to see the full error message
     setDatasetNeedsConversion(needsConversion);
   };
@@ -68,7 +71,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
           textAlign: "center",
         }}
       >
-        The dataset was uploaded successfully
+        The dataset was {isRemoteDataset ? "imported" : "uploaded"} successfully
         {datasetNeedsConversion ? " and a conversion job was started." : null}.
         <br />
         <div

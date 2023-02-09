@@ -2,7 +2,7 @@ import { Alert, Modal, Button, Row, Col } from "antd";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
-import InputComponent from "oxalis/view/components/input_component";
+import TextArea from "antd/lib/input/TextArea";
 
 function getFirstLine(comment: string) {
   const newLineIndex = comment.indexOf("\n");
@@ -22,6 +22,7 @@ export function MarkdownWrapper({ source, singleLine }: { source: string; single
     />
   );
 }
+
 export function MarkdownModal({
   source,
   isOpen,
@@ -68,7 +69,7 @@ export function MarkdownModal({
       />
       <Row gutter={16}>
         <Col span={12}>
-          <InputComponent
+          <TextArea
             value={source}
             placeholder={`Add ${label}`}
             onChange={onChange}
@@ -77,7 +78,14 @@ export function MarkdownModal({
               minRows: 5,
               maxRows: 20,
             }}
-            isTextArea
+
+            // style={title == null ? style : undefined}
+            // onChange={this.handleChange}
+            // onFocus={this.handleFocus}
+            // onBlur={this.handleBlur}
+            // value={this.state.currentValue}
+            // onPressEnter={onPressEnter}
+            // onKeyDown={this.blurOnEscape}
           />
         </Col>
         <Col

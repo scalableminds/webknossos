@@ -10,7 +10,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-trait AbstractRequestLogging extends LazyLogging {
+trait RequestLogging extends LazyLogging {
+  // Hint: within webKnossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
   def logRequestFormatted(request: Request[_],
                           result: Result,
@@ -29,11 +30,6 @@ trait AbstractRequestLogging extends LazyLogging {
       case HttpEntity.Strict(byteString, _) => byteString.take(20000).decodeString("utf-8")
       case _                                => ""
     }
-
-}
-
-trait RequestLogging extends AbstractRequestLogging {
-  // Hint: within webKnossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
   def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[_],
                                                                              ec: ExecutionContext): Future[Result] =

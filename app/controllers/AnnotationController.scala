@@ -604,15 +604,17 @@ class AnnotationController @Inject()(
   @ApiOperation(hidden = true, value = "")
   def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      for {
-        idValidated <- ObjectId.fromString(id)
-        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        _ <- bool2Fox(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
-        restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
-        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
-        resultJson <- annotationMutexService.publicWrites(mutexResult)
-      } yield Ok(resultJson)
+      logTime(slackNotificationService.noticeSlowRequest) {
+        for {
+          idValidated <- ObjectId.fromString(id)
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          _ <- bool2Fox(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
+          restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
+          resultJson <- annotationMutexService.publicWrites(mutexResult)
+        } yield Ok(resultJson)
+      }
     }
 
 }

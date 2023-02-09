@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
@@ -21,6 +22,7 @@ import net.liftweb.util.Helpers.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc._
+import scala.concurrent.duration.DurationInt
 
 import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
@@ -57,14 +59,14 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       logTime(slackNotificationService.noticeSlowRequest) {
-        val t = System.currentTimeMillis()
+        val t = Instant.now
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
                                                                                     dataLayerName) ~> NOT_FOUND
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
-          duration = System.currentTimeMillis() - t
-          _ = if (duration > 10000)
+          duration = Instant.now - t
+          _ = if (duration > (10 seconds))
             logger.info(
               s"Complete data request took $duration ms.\n"
                 + s"  dataSource: $organizationName/$dataSetName\n"

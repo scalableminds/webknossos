@@ -1,3 +1,4 @@
+import messages from "messages";
 import { APIOrganization, APIUser } from "types/api_flow_types";
 
 export enum PricingPlanEnum {
@@ -82,4 +83,28 @@ export function isFeatureAllowedByPricingPlan(
   if (!organization) return false;
 
   return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
+}
+
+export function getFeatureNotAvailableInPlanMessage(
+  requiredPricingPlan: PricingPlanEnum,
+  organization: APIOrganization | null,
+  activeUser: APIUser | null | undefined,
+) {
+  if (activeUser?.isOrganizationOwner) {
+    return messages["organization.plan.feature_not_available.owner"](requiredPricingPlan);
+  }
+
+  let organizationOwnerName = "";
+  // expected naming schema for owner: "(M. Mustermann)" | ""
+  if (organization?.ownerName) {
+    {
+      const [firstName, ...rest] = organization.ownerName.split(" ");
+      organizationOwnerName = `(${firstName[0]}. ${rest.join(" ")})`;
+    }
+  }
+
+  return messages["organization.plan.feature_not_available"](
+    requiredPricingPlan,
+    organizationOwnerName,
+  );
 }

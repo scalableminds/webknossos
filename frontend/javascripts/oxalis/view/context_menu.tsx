@@ -1191,7 +1191,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     }
 
     // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
-    // segmentIdAtPosition is only set if a segment is hovered in one of the xy,x z, or yz viewports.
+    // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
     // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
     // Thus the segment id is always unambiguous / clearly defined.
     if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
@@ -1204,13 +1204,15 @@ function ContextMenuInner(propsWithInputRef: Props) {
       );
     }
     if (segments != null && maybeClickedMeshId != null) {
-      const segmentName = getNameOfSegment(segments.get(maybeClickedMeshId));
+      const segmentName = segments.get(maybeClickedMeshId)?.name;
       if (segmentName != null) {
         const maxSegmentNameLength = 18;
         infoRows.push(
           <InfoMenuItem key="copy-cell">
-            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
+            <Tooltip title="Segment Name">
               <i className="fas fa-tag" />{" "}
+            </Tooltip>
+            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
               {truncateStringToLength(segmentName, maxSegmentNameLength)}
             </Tooltip>
           </InfoMenuItem>,

@@ -76,7 +76,7 @@ type State = {
   contextMenuPosition: [number, number] | null | undefined;
   clickedNodeId: number | null | undefined;
   contextMenuMeshId: number | null | undefined;
-  contextMenuMeshIntersectionPosition: THREE.Vector3 | null | undefined;
+  contextMenuMeshIntersectionPosition: Vector3 | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
   contextMenuGlobalPosition: Vector3 | null | undefined;
   contextMenuViewport: OrthoView | null | undefined;
@@ -177,8 +177,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     boundingBoxId: number | null | undefined,
     globalPosition: Vector3 | null | undefined,
     viewport: OrthoView,
-    isosurfaceId?: number,
-    meshIntersectionPosition?: THREE.Vector3,
+    isosurfaceId?: number | null | undefined,
+    meshIntersectionPosition?: Vector3 | null | undefined,
   ) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
     // of the context menu. This causes the context menu to instantly close after opening.

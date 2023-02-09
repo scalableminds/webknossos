@@ -357,6 +357,7 @@ function getMaybeMeshItems(
   maybeClickedMeshId: number | null | undefined,
   maybeMeshIntersectionPosition: Vector3 | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
+  datasetScale: Vector3,
   removeMesh: (segmentationLayerName: string, meshId: number) => void,
   hideMesh: (segmentationLayerName: string, meshId: number) => void,
   setPosition: (position: Vector3) => void,
@@ -386,10 +387,7 @@ function getMaybeMeshItems(
     <Menu.Item
       key="jump-to-mesh"
       onClick={() => {
-        const storeState = Store.getState();
-        const datasetScale = storeState.dataset.dataSource.scale;
         const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScale);
-
         setPosition(unscaledPosition);
       }}
     >
@@ -410,6 +408,7 @@ function NodeContextMenuOptions({
   maybeClickedMeshId,
   maybeMeshIntersectionPosition,
   visibleSegmentationLayer,
+  datasetScale,
   hideContextMenu,
   deleteEdge,
   mergeTrees,
@@ -562,6 +561,7 @@ function NodeContextMenuOptions({
         maybeClickedMeshId,
         maybeMeshIntersectionPosition,
         visibleSegmentationLayer,
+        datasetScale,
         removeMesh,
         hideMesh,
         setPosition,
@@ -757,6 +757,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     visibleSegmentationLayer,
     segmentIdAtPosition,
     dataset,
+    datasetScale,
     currentMeshFile,
     currentConnectomeFile,
     createTree,
@@ -968,6 +969,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
+    datasetScale,
     removeMesh,
     hideMesh,
     setPosition,
@@ -1188,6 +1190,10 @@ function ContextMenuInner(propsWithInputRef: Props) {
       );
     }
 
+    // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+    // segmentIdAtPosition is only set if a segment is hovered in one of the xy,x z, or yz viewports.
+    // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+    // Thus the segment id is always unambiguous / clearly defined.
     if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
       const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
       infoRows.push(

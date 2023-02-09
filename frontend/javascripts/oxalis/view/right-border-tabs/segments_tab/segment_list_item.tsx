@@ -180,7 +180,6 @@ type Props = {
 
 function getSegmentTooltip(segment: Segment) {
   if (segment.creationTime == null) {
-    // TODO: Ask whether the segment name would be better here.
     return `Segment ${segment.id}`;
   }
 

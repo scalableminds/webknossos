@@ -1,12 +1,12 @@
 package oxalis.security
 
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import com.scalableminds.util.requestlogging.RequestLogging
+import com.scalableminds.util.requestlogging.AbstractRequestLogging
 import play.api.mvc.{Request, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait UserAwareRequestLogging extends RequestLogging {
+trait UserAwareRequestLogging extends AbstractRequestLogging {
 
   case class RequesterIdOpt(id: Option[String]) //forcing implicit conversion
 

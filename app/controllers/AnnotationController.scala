@@ -22,7 +22,8 @@ import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
-import oxalis.security.{URLSharing, WkEnv}
+import oxalis.security.{URLSharing, UserAwareRequestLogging, WkEnv}
+import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -63,10 +64,12 @@ class AnnotationController @Inject()(
     provider: AnnotationInformationProvider,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     analyticsService: AnalyticsService,
+    slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
     conf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
+    with UserAwareRequestLogging
     with FoxImplicits {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
@@ -604,7 +607,7 @@ class AnnotationController @Inject()(
   @ApiOperation(hidden = true, value = "")
   def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      logTime(slackNotificationService.noticeSlowRequest) {
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
           idValidated <- ObjectId.fromString(id)
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND

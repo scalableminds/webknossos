@@ -48,4 +48,10 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
       title = "Task creation with base",
       msg = s"$numberOfTasks tasks with BaseAnnotation for TaskTypes ${taskType.mkString(", ")} have been created"
     )
+
+  def noticeSlowRequest(msg: String): Unit =
+    slackClient.info(
+      title = s"Slow request",
+      msg = msg
+    )
 }

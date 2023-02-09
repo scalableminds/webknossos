@@ -1,11 +1,11 @@
 import { Input } from "antd";
-// @ts-expect-error ts-migrate(2724) FIXME: '"react"' has no exported member named 'Element'. ... Remove this comment to see the full error message
-import type { Element } from "react";
 import React from "react";
+
 type Props = {
-  icon: Element<any>;
-  onChange: (...args: Array<any>) => any;
+  icon: React.ReactElement;
+  onChange: (value: string, event: React.SyntheticEvent<HTMLInputElement>) => void;
 };
+
 type State = {
   isEditing: boolean;
   value: string;
@@ -17,14 +17,13 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
     value: "",
   };
 
-  handleInputChange = (event: React.SyntheticEvent) => {
+  handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       value: event.target.value,
     });
   };
 
-  handleInputSubmit = (event: React.SyntheticEvent) => {
+  handleInputSubmit = (event: React.SyntheticEvent<HTMLInputElement>) => {
     const { value } = this.state;
 
     if (value !== "") {

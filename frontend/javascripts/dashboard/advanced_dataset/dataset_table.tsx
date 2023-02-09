@@ -657,7 +657,7 @@ export function DatasetTags({
     updatedDataset: APIMaybeUnimportedDataset,
     shouldAddTag: boolean,
     tag: string,
-    event: React.MouseEvent,
+    event: React.SyntheticEvent,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
 

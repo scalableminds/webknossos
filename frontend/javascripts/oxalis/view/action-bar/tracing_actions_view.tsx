@@ -76,7 +76,6 @@ const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeo
 
 type OwnProps = {
   layoutMenu: React.ReactNode;
-  hasVolumeFallback: boolean;
 };
 type StateProps = {
   annotationType: APIAnnotationType;
@@ -450,7 +449,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       hasTracing,
       restrictions,
       task,
-      hasVolumeFallback,
       annotationType,
       annotationId,
       activeUser,

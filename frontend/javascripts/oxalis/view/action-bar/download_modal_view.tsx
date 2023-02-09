@@ -51,7 +51,6 @@ import {
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   computeShapeFromBoundingBox,
-  sleep,
 } from "libs/utils";
 import { formatBytes, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
@@ -165,7 +164,7 @@ function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
   };
 }
 
-export function useRunningJobs(): [
+function useRunningJobs(): [
   Array<[string, string]>,
   (
     dataset: APIDataset,
@@ -224,7 +223,7 @@ export function useRunningJobs(): [
   ];
 }
 
-export function estimateFileSize(
+function estimateFileSize(
   selectedLayer: APIDataLayer,
   resolutionIndex: number,
   boundingBox: BoundingBoxType,
@@ -243,6 +242,12 @@ export function estimateFileSize(
   );
 }
 
+function formatSelectedScale(dataset: APIDataset, resolutionIndex: number) {
+  const scale = dataset.dataSource.scale;
+  const mag = getDatasetResolutionInfo(dataset).getResolutionByIndexOrThrow(resolutionIndex);
+  formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
+}
+
 export function Hint({
   children,
   style,
@@ -255,7 +260,7 @@ export function Hint({
   );
 }
 
-export async function copyToClipboard(code: string) {
+async function copyToClipboard(code: string) {
   await navigator.clipboard.writeText(code);
   Toast.success("Snippet copied to clipboard.");
 }
@@ -695,7 +700,7 @@ with wk.webknossos_context(
                 <Col span={19}>
                   <Slider
                     tooltip={{
-                      formatter: (value) =>
+                      formatter: () =>
                         datasetResolutionInfo
                           .getResolutionByIndexOrThrow(resolutionIndex)
                           .join("-"),
@@ -728,15 +733,7 @@ with wk.webknossos_context(
                   exportFormat,
                 )}
                 <br />
-                Resolution:{" "}
-                {formatScale([
-                  dataset.dataSource.scale[0] *
-                    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex)[0],
-                  dataset.dataSource.scale[1] *
-                    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex)[1],
-                  dataset.dataSource.scale[2] *
-                    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex)[2],
-                ])}
+                Resolution: {formatSelectedScale(dataset, resolutionIndex)}
               </Text>
 
               {downloadHint}

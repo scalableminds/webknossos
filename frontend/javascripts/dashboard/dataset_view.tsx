@@ -459,7 +459,6 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       }}
     >
       {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map((job) => {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
         return (
           <Row key={job.id} gutter={16}>

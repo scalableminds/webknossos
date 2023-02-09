@@ -92,7 +92,7 @@ export function LayerSelection({
   style?: React.CSSProperties;
   // onChange and value should not be renamed, because these are the
   // default property names for controlled antd FormItems.
-  onChange?: React.Dispatch<React.SetStateAction<string | null>>;
+  onChange?: (a: string) => void;
   value?: string | null;
 }): JSX.Element {
   const onSelect = onChange ? (layerName: string) => onChange(layerName) : undefined;
@@ -244,6 +244,7 @@ function BoundingBoxSelectionFormItem({
         <BoundingBoxSelection
           userBoundingBoxes={userBoundingBoxes}
           setSelectedBoundingBoxId={onChangeSelectedBoundingBox}
+          value={userBoundingBoxes[0].id}
         />
       </Form.Item>
     </div>

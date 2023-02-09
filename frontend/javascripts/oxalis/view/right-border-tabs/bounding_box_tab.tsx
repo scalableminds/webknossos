@@ -14,11 +14,11 @@ import { StartGlobalizeFloodfillsModal } from "oxalis/view/right-border-tabs/sta
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
 import * as Utils from "libs/utils";
 import features from "features";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import { APISegmentationLayer, APIUser } from "types/api_flow_types";
+import DownloadModalView from "../action-bar/download_modal_view";
 
 // NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
 // That way, bboxes created by the floodfill can be detected as such and
@@ -190,11 +190,11 @@ export default function BoundingBoxTab() {
         </div>
       ) : null}
       {selectedBoundingBoxForExport != null ? (
-        <ExportBoundingBoxModal
-          dataset={dataset}
-          tracing={tracing}
-          boundingBox={selectedBoundingBoxForExport.boundingBox}
-          handleClose={() => setSelectedBoundingBoxForExport(null)}
+        <DownloadModalView
+          isOpen={true}
+          onClose={() => setSelectedBoundingBoxForExport(null)}
+          initialBoundingBoxId={selectedBoundingBoxForExport.id}
+          initialTab="export"
         />
       ) : null}
       {isGlobalizeFloodfillsModalVisible ? (

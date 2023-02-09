@@ -1,46 +1,247 @@
-import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Slider } from "antd";
+import {
+  Divider,
+  Modal,
+  Checkbox,
+  Row,
+  Col,
+  Tabs,
+  Typography,
+  Button,
+  Radio,
+  Slider,
+  Alert,
+} from "antd";
 import { CopyOutlined, SyncOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { APIAnnotationType, APIDataLayer } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { Model } from "oxalis/singletons";
 import features from "features";
-import { downloadAnnotation, getAuthToken } from "admin/admin_rest_api";
+import {
+  doWithToken,
+  downloadAnnotation,
+  getAuthToken,
+  getJob,
+  startExportTiffJob,
+} from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
 import {
   LayerSelection,
   BoundingBoxSelection,
+  getReadableNameOfVolumeLayer,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import { hasVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
+  getVolumeTracingById,
+  hasVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getByteCountFromLayer,
   getDataLayers,
   getDatasetResolutionInfo,
   getLayerByName,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { useSelector } from "react-redux";
-import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
 import {
-  getLayerInfos,
-  isBoundingBoxExportable,
-  ExportFormat,
-  estimateFileSize,
-  useRunningJobs,
-  exportKey,
-} from "../right-border-tabs/export_bounding_box_modal";
-import { clamp, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
+  clamp,
+  computeArrayFromBoundingBox,
+  computeBoundingBoxFromBoundingBoxObject,
+  computeShapeFromBoundingBox,
+  sleep,
+} from "libs/utils";
+import { formatBytes, formatScale } from "libs/format_utils";
+import { BoundingBoxType, Vector3 } from "oxalis/constants";
+import { usePolling } from "libs/react_hooks";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
+
+type TabKeys = "download" | "export" | "python";
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  annotationType: APIAnnotationType;
-  annotationId: string;
-  hasVolumeFallback: boolean;
+  initialTab?: TabKeys;
+  initialBoundingBoxId?: number;
 };
+
+type ExportLayerInfos = {
+  displayName: string;
+  layerName: string | null;
+  tracingId: string | null;
+  annotationId: string | null;
+  lowestResolutionIndex: number;
+  highestResolutionIndex: number;
+};
+
+enum ExportFormat {
+  OME_TIFF = "OME_TIFF",
+  TIFF_STACK = "TIFF_STACK",
+}
+
+const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
+
+const exportKey = (layerInfos: ExportLayerInfos, resolutionIndex: number) =>
+  `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${resolutionIndex}`;
+
+function getExportLayerInfos(
+  layer: APIDataLayer,
+  tracing: HybridTracing | null | undefined,
+): ExportLayerInfos {
+  const annotationId = tracing != null ? tracing.annotationId : null;
+
+  const highestResolutionIndex = getResolutionInfo(layer.resolutions).getHighestResolutionIndex();
+  const lowestResolutionIndex = getResolutionInfo(layer.resolutions).getClosestExistingIndex(0);
+
+  if (layer.category === "color" || !layer.tracingId) {
+    return {
+      displayName: layer.name,
+      layerName: layer.name,
+      tracingId: null,
+      annotationId: null,
+      lowestResolutionIndex,
+      highestResolutionIndex,
+    };
+  }
+
+  // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
+  // must exist.
+  if (tracing == null) {
+    // Satisfy TS.
+    throw new Error("Tracing is null, but layer.tracingId is defined.");
+  }
+  const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";
+  const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
+
+  return {
+    displayName: readableVolumeLayerName,
+    layerName: layer.fallbackLayerInfo?.name ?? null,
+    lowestResolutionIndex,
+    highestResolutionIndex,
+    tracingId: volumeTracing.tracingId,
+    annotationId,
+  };
+}
+
+function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
+  const shape = computeShapeFromBoundingBox(boundingBox);
+  const volume =
+    Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
+  const volumeExceeded = volume > features().exportTiffMaxVolumeMVx * 1024 * 1024;
+  const edgeLengthExceeded = shape.some(
+    (length, index) => length / mag[index] > features().exportTiffMaxEdgeLengthVx,
+  );
+
+  const alerts = (
+    <>
+      {volumeExceeded && (
+        <Alert
+          type="error"
+          message={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
+            features().exportTiffMaxVolumeMVx
+          } Megavoxels.`}
+        />
+      )}
+      {edgeLengthExceeded && (
+        <Alert
+          type="error"
+          message={`An edge length of the selected bounding box (${shape.join(
+            ", ",
+          )}) is too large. Tiff export is only supported for boxes with no edge length over ${
+            features().exportTiffMaxEdgeLengthVx
+          } vx.`}
+        />
+      )}
+    </>
+  );
+
+  return {
+    isExportable: !volumeExceeded && !edgeLengthExceeded,
+    alerts,
+  };
+}
+
+export function useRunningJobs(): [
+  Array<[string, string]>,
+  (
+    dataset: APIDataset,
+    boundingBox: BoundingBoxType,
+    resolutionIndex: number,
+    selectedLayerInfos: ExportLayerInfos,
+    exportFormat: ExportFormat,
+  ) => Promise<void>,
+] {
+  const [runningJobs, setRunningJobs] = useState<Array<[string, string]>>([]);
+
+  async function checkForJobs() {
+    for (const [, jobId] of runningJobs) {
+      const job = await getJob(jobId);
+      if (job.state === "SUCCESS" && job.resultLink != null) {
+        const token = await doWithToken(async (t) => t);
+        window.open(`${job.resultLink}?token=${token}`, "_blank");
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      } else if (job.state === "FAILURE") {
+        Toast.error("Error when exporting data. Please contact us for support.");
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      } else if (job.state === "MANUAL") {
+        Toast.error(
+          "The data could not be exported automatically. The job will be handled by an admin shortly.",
+        );
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      }
+    }
+  }
+
+  usePolling(
+    checkForJobs,
+    runningJobs.length > 0 ? 1000 : null,
+    runningJobs.map(([key]) => key),
+  );
+
+  return [
+    runningJobs,
+    async (dataset, boundingBox, resolutionIndex, selectedLayerInfos, exportFormat) => {
+      const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+      const job = await startExportTiffJob(
+        dataset.name,
+        dataset.owningOrganization,
+        computeArrayFromBoundingBox(boundingBox),
+        selectedLayerInfos.layerName,
+        datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-"),
+        selectedLayerInfos.annotationId,
+        selectedLayerInfos.displayName,
+        exportFormat === ExportFormat.OME_TIFF,
+      );
+      setRunningJobs((previous) => [
+        ...previous,
+        [exportKey(selectedLayerInfos, resolutionIndex), job.id],
+      ]);
+    },
+  ];
+}
+
+export function estimateFileSize(
+  selectedLayer: APIDataLayer,
+  resolutionIndex: number,
+  boundingBox: BoundingBoxType,
+  exportFormat: ExportFormat,
+) {
+  const mag = getResolutionInfo(selectedLayer.resolutions).getResolutionByIndexOrThrow(
+    resolutionIndex,
+  );
+  const shape = computeShapeFromBoundingBox(boundingBox);
+  const volume =
+    Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
+  return formatBytes(
+    volume *
+      getByteCountFromLayer(selectedLayer) *
+      (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1),
+  );
+}
 
 export function Hint({
   children,
@@ -103,7 +304,7 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
   );
 }
 
-const okTextForTab = new Map([
+const okTextForTab = new Map<TabKeys, string | null>([
   ["download", "Download"],
   ["export", "Export"],
   ["python", null],
@@ -112,9 +313,8 @@ const okTextForTab = new Map([
 function _DownloadModalView({
   isOpen,
   onClose,
-  annotationType,
-  annotationId,
-  hasVolumeFallback,
+  initialTab,
+  initialBoundingBoxId,
 }: Props): JSX.Element {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const tracing = useSelector((state: OxalisState) => state.tracing);
@@ -125,8 +325,9 @@ function _DownloadModalView({
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
+  const hasVolumeFallback = tracing.volumes.some((volume) => volume.fallbackLayer != null);
 
-  const [activeTabKey, setActiveTabKey] = useState("download");
+  const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
@@ -135,10 +336,8 @@ function _DownloadModalView({
 
   const layers = getDataLayers(dataset);
 
-  const selectedLayer = dataset.dataSource.dataLayers.find(
-    (l) => l.name === selectedLayerName,
-  ) as APIDataLayer;
-  const selectedLayerInfos = getLayerInfos(selectedLayer, tracing);
+  const selectedLayer = getLayerByName(dataset, selectedLayerName);
+  const selectedLayerInfos = getExportLayerInfos(selectedLayer, tracing);
 
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
@@ -150,7 +349,9 @@ function _DownloadModalView({
       isVisible: true,
     } as UserBoundingBox,
   ];
-  const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(userBoundingBoxes[0].id);
+  const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
+    initialBoundingBoxId ?? userBoundingBoxes[0].id,
+  );
 
   const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
   const { lowestResolutionIndex, highestResolutionIndex } = selectedLayerInfos;
@@ -171,20 +372,23 @@ function _DownloadModalView({
   const handleOk = async () => {
     if (activeTabKey === "download") {
       await Model.ensureSavedState();
-      downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
+      downloadAnnotation(
+        tracing.annotationId,
+        tracing.annotationType,
+        hasVolumeFallback,
+        {},
+        includeVolumeData,
+      );
       onClose();
     } else if (activeTabKey === "export") {
       await Model.ensureSavedState();
-      const selectedLayer = getLayerByName(dataset, selectedLayerName);
-      const layerInfos = getLayerInfos(selectedLayer, tracing);
       await triggerExportJob(
         dataset,
         selectedBoundingBox.boundingBox,
         resolutionIndex,
-        layerInfos,
+        selectedLayerInfos,
         exportFormat,
       );
-      Toast.success("Export started...");
 
       if (!keepWindowOpen) {
         onClose();
@@ -226,7 +430,7 @@ function _DownloadModalView({
   };
 
   const handleTabChange = (key: string) => {
-    setActiveTabKey(key);
+    setActiveTabKey(key as TabKeys);
   };
 
   const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
@@ -251,7 +455,7 @@ function _DownloadModalView({
         type="warning"
       >
         {messages["annotation.export_no_worker"]}
-        <a href="mailto:hello@webknossos.com">hello@webknossos.com.</a>
+        <a href="mailto:hello@webknossos.org">hello@webknossos.org.</a>
       </Text>
     </Row>
   );
@@ -277,10 +481,7 @@ with wk.webknossos_context(
     token="${authToken || "<insert token here>"}",
     url="${window.location.origin}"
 ):
-    annotation = wk.Annotation.download(
-        "${annotationId}",
-        annotation_type="${annotationType}",
-    )
+    annotation = wk.Annotation.download("${tracing.annotationId}")
 `;
 
   const alertTokenIsPrivate = () => {
@@ -290,6 +491,20 @@ with wk.webknossos_context(
       );
     }
   };
+
+  const downloadHint =
+    runningExportJobs.length > 0 ? (
+      <>
+        <Divider />
+        <p>
+          Go to{" "}
+          <a href="/jobs" target="_blank" rel="noreferrer">
+            Jobs Overview Page
+          </a>{" "}
+          to see running exports and to download the results.
+        </p>
+      </>
+    ) : null;
 
   const hasVolumes = hasVolumeTracings(tracing);
   const hasSkeleton = tracing.skeleton != null;
@@ -416,10 +631,6 @@ with wk.webknossos_context(
               }}
             >
               {messages["annotation.export"]}
-              <a href="/jobs" target="_blank" rel="noreferrer">
-                Jobs Overview Page
-              </a>
-              .
             </Text>
           </Row>
           {activeTabKey === "export" && !features().jobsEnabled ? (
@@ -433,10 +644,15 @@ with wk.webknossos_context(
               >
                 Export format
               </Divider>
-              <Radio.Group value={exportFormat} onChange={(ev) => setExportFormat(ev.target.value)}>
-                <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
-                <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
-              </Radio.Group>
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <Radio.Group
+                  value={exportFormat}
+                  onChange={(ev) => setExportFormat(ev.target.value)}
+                >
+                  <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
+                  <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
+                </Radio.Group>
+              </div>
 
               <Divider
                 style={{
@@ -445,26 +661,14 @@ with wk.webknossos_context(
               >
                 Layer
               </Divider>
-              <Row>
-                <Col
-                  span={9}
-                  style={{
-                    lineHeight: "20px",
-                    padding: "5px 12px",
-                  }}
-                >
-                  Select the layer you would like to prepare for export.
-                </Col>
-                <Col span={15}>
-                  <LayerSelection
-                    layers={layers}
-                    value={selectedLayerName}
-                    onChange={setSelectedLayerName}
-                    tracing={tracing}
-                    style={{ width: 330 }}
-                  />
-                </Col>
-              </Row>
+              <LayerSelection
+                layers={layers}
+                value={selectedLayerName}
+                onChange={setSelectedLayerName}
+                tracing={tracing}
+                style={{ width: "100%" }}
+              />
+
               <Divider
                 style={{
                   margin: "18px 0",
@@ -472,26 +676,13 @@ with wk.webknossos_context(
               >
                 Bounding Box
               </Divider>
-              <Row>
-                <Col
-                  span={9}
-                  style={{
-                    lineHeight: "20px",
-                    padding: "5px 12px",
-                  }}
-                >
-                  Select a bounding box to constrain the data for export.
-                </Col>
-                <Col span={15}>
-                  <BoundingBoxSelection
-                    value={selectedBoundingBoxId}
-                    userBoundingBoxes={userBoundingBoxes}
-                    setSelectedBoundingBoxId={setSelectedBoundingBoxId}
-                    style={{ width: 330 }}
-                  />
-                </Col>
-                {boundingBoxCompatibilityAlerts}
-              </Row>
+              <BoundingBoxSelection
+                value={selectedBoundingBoxId}
+                userBoundingBoxes={userBoundingBoxes}
+                setSelectedBoundingBoxId={setSelectedBoundingBoxId}
+                style={{ width: "100%" }}
+              />
+              {boundingBoxCompatibilityAlerts}
 
               <Divider
                 style={{
@@ -501,16 +692,7 @@ with wk.webknossos_context(
                 Mag
               </Divider>
               <Row>
-                <Col
-                  span={9}
-                  style={{
-                    lineHeight: "20px",
-                    padding: "5px 12px",
-                  }}
-                >
-                  Select the mag (resolution) you would like to prepare for export.
-                </Col>
-                <Col span={11}>
+                <Col span={19}>
                   <Slider
                     tooltip={{
                       formatter: (value) =>
@@ -524,26 +706,40 @@ with wk.webknossos_context(
                     value={resolutionIndex}
                     onChange={(value) => setResolutionIndex(value)}
                   />
-                  <p>
-                    Estimated file size:{" "}
-                    {estimateFileSize(
-                      selectedLayer,
-                      resolutionIndex,
-                      selectedBoundingBox.boundingBox,
-                      exportFormat,
-                    )}
-                  </p>
                 </Col>
                 <Col
-                  span={4}
+                  span={5}
                   style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
                 >
-                  <p>
-                    {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
-                    <br />
-                  </p>
+                  {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
                 </Col>
               </Row>
+              <Text
+                style={{
+                  margin: "0 6px 12px",
+                  display: "block",
+                }}
+              >
+                Estimated file size:{" "}
+                {estimateFileSize(
+                  selectedLayer,
+                  resolutionIndex,
+                  selectedBoundingBox.boundingBox,
+                  exportFormat,
+                )}
+                <br />
+                Resolution:{" "}
+                {formatScale([
+                  dataset.dataSource.scale[0] *
+                    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex)[0],
+                  dataset.dataSource.scale[1] *
+                    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex)[1],
+                  dataset.dataSource.scale[2] *
+                    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex)[2],
+                ])}
+              </Text>
+
+              {downloadHint}
             </div>
           )}
           <Divider

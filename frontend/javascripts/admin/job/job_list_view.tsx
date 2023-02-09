@@ -283,7 +283,6 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderState = (__: any, job: APIJob) => {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
     const jobStateNormalized = _.capitalize(job.state.toLowerCase());
@@ -299,75 +298,68 @@ class JobListView extends React.PureComponent<Props, State> {
   render() {
     return (
       <div className="container">
-        <div
-          style={{
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
-            marginTag: 20,
-          }}
-        >
-          <div className="pull-right">
-            <Search
-              style={{
-                width: 200,
-              }}
-              onPressEnter={this.handleSearch}
-              onChange={this.handleSearch}
-              value={this.state.searchQuery}
-            />
-          </div>
-          <h3>Jobs</h3>
-          <div
-            className="clearfix"
+        <div className="pull-right">
+          <Search
             style={{
-              margin: "20px 0px",
+              width: 200,
             }}
+            onPressEnter={this.handleSearch}
+            onChange={this.handleSearch}
+            value={this.state.searchQuery}
           />
-
-          <Spin spinning={this.state.isLoading} size="large">
-            <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.jobs,
-                ["datasetName"],
-                this.state.searchQuery,
-              )}
-              rowKey="id"
-              pagination={{
-                defaultPageSize: 50,
-              }}
-              style={{
-                marginTop: 30,
-                marginBottom: 30,
-              }}
-            >
-              <Column
-                title="Job Id"
-                dataIndex="id"
-                key="id"
-                sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
-              />
-              <Column title="Description" key="datasetName" render={this.renderDescription} />
-              <Column
-                title="Created at"
-                key="createdAt"
-                render={(job) => <FormattedDate timestamp={job.createdAt} />}
-                sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
-              />
-              <Column
-                title="State"
-                key="state"
-                render={this.renderState}
-                sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
-              />
-              <Column
-                title="Action"
-                key="actions"
-                fixed="right"
-                width={150}
-                render={this.renderActions}
-              />
-            </Table>
-          </Spin>
         </div>
+        <h3>Jobs</h3>
+        <div
+          className="clearfix"
+          style={{
+            margin: "20px 0px",
+          }}
+        />
+
+        <Spin spinning={this.state.isLoading} size="large">
+          <Table
+            dataSource={Utils.filterWithSearchQueryAND(
+              this.state.jobs,
+              ["datasetName"],
+              this.state.searchQuery,
+            )}
+            rowKey="id"
+            pagination={{
+              defaultPageSize: 50,
+            }}
+            style={{
+              marginTop: 30,
+              marginBottom: 30,
+            }}
+          >
+            <Column
+              title="Job Id"
+              dataIndex="id"
+              key="id"
+              sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
+            />
+            <Column title="Description" key="datasetName" render={this.renderDescription} />
+            <Column
+              title="Created at"
+              key="createdAt"
+              render={(job) => <FormattedDate timestamp={job.createdAt} />}
+              sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
+            />
+            <Column
+              title="State"
+              key="state"
+              render={this.renderState}
+              sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
+            />
+            <Column
+              title="Action"
+              key="actions"
+              fixed="right"
+              width={150}
+              render={this.renderActions}
+            />
+          </Table>
+        </Spin>
       </div>
     );
   }

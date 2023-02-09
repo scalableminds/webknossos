@@ -15,7 +15,7 @@ function getRenderer(): THREE.WebGLRenderer {
           canvas: renderCanvasElement,
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,
-          antialias: true,
+          antialias: false,
         })
       : {}
   ) as THREE.WebGLRenderer;

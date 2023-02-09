@@ -51,7 +51,7 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
 
   def noticeSlowRequest(msg: String): Unit =
     slackClient.info(
-      title = s"Slow request",
+      title = "Slow request",
       msg = msg
     )
 }

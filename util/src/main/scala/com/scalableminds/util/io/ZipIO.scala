@@ -145,6 +145,27 @@ object ZipIO extends LazyLogging {
     }
   }
 
+  def tryGunzip(possiblyCompressed: Array[Byte]): Array[Byte] =
+    tryo(gunzip(possiblyCompressed)).toOption.getOrElse(possiblyCompressed)
+
+  def gunzip(compressed: Array[Byte]): Array[Byte] = {
+    val is = new GZIPInputStream(new ByteArrayInputStream(compressed))
+    val os = new ByteArrayOutputStream()
+    try {
+      val buffer = new Array[Byte](1024)
+      var len = 0
+      do {
+        len = is.read(buffer)
+        if (len > 0)
+          os.write(buffer, 0, len)
+      } while (len > 0)
+      os.toByteArray
+    } finally {
+      is.close()
+      os.close()
+    }
+  }
+
   def zipToTempFile(files: List[File]): File = {
     val outfile = File.createTempFile("data", System.nanoTime().toString + ".zip")
     val zip: OpenZip = startZip(new FileOutputStream(outfile))

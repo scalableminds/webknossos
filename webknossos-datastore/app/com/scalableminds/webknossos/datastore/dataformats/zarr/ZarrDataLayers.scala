@@ -7,19 +7,6 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import play.api.libs.json.{Json, OFormat}
 
-import java.net.URI
-
-case class FileSystemCredentials(user: String, password: Option[String])
-
-object FileSystemCredentials {
-  implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
-}
-
-case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String]) {
-  lazy val remotePath: String = uri.getPath
-  lazy val credentials: Option[FileSystemCredentials] = user.map(u => FileSystemCredentials(u, password))
-}
-
 trait ZarrLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr

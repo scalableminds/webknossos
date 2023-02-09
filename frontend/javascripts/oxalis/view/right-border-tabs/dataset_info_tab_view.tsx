@@ -459,7 +459,11 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     } else {
       // Or display the editable explorative tracing name
       annotationTypeLabel = (
-        <span>
+        <span
+          style={{
+            display: "inline-flex",
+          }}
+        >
           Annotation:
           <EditableTextLabel
             value={tracingName}
@@ -477,7 +481,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       descriptionEditField = (
         <span
           style={{
-            verticalAlign: "top",
+            display: "inline-flex",
           }}
         >
           Description:

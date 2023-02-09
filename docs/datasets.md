@@ -42,16 +42,16 @@ In particular, the following file formats are supported for uploading (and conve
 
 Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
-### Working with Zarr and N5 datasets
-WEBKNOSSOS supports loading and remotely streaming [Zarr](https://zarr.dev) and [N5](https://github.com/saalfeldlab/n5) datasets from a remote source, e.g. Cloud storage (S3) or HTTP server. 
+### Working with Zarr, Neuroglancer Precomputed and N5 datasets
+WEBKNOSSOS supports loading and remotely streaming [Zarr](https://zarr.dev), [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) and [N5](https://github.com/saalfeldlab/n5) datasets from a remote source, e.g. Cloud storage (S3) or HTTP server. 
 WEBKNOSSOS supports loading Zarr datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
 
-WEBKNOSSOS can load several Zarr sources and assemble them into a WEBKNOSSOS dataset with several layers, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer.
+WEBKNOSSOS can load several remote sources and assemble them into a WEBKNOSSOS dataset with several layers, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer.
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
-2. Select the *Add Remote Zarr Dataset*
+2. Select the *Add Remote Dataset* tab
 3. For each layer, provide some metadata information:  
-  - a URL or domain/collection identifier to locate the dataset on the remote service
+  - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
   - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
 5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc) as possible and preview a [WEBKNOSSOS `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
@@ -67,7 +67,7 @@ Note that data streaming may count against any usage limits or minutes as define
 Hint: If you happen to have any Zarr dataset locally that you would like to view in WEBKNOSSOS, consider running an HTTP server locally to serve the dataset. Then WEBKNOSSOS can easily stream the data.
 Alternatively, convert the dataset to wkw using [webknossos-libs](https://github.com/scalableminds/webknossos-libs/).
 
-### Working with Neuroglancer and BossDB datasets
+### Working with Neuroglancer and BossDB datasets on webknossos.org
 webknossos.org supports loading and remotely streaming datasets in the [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) stored in the Google Cloud or datasets served from [BossDB](https://bossdb.org).
 
 To import these datasets:

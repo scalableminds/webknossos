@@ -564,8 +564,7 @@ export default function TaskListView({
           style={{
             marginBottom: 0,
             maxWidth: "100%",
-            textOverflow: "ellipsis",
-            overflow: "hidden",
+            overflowWrap: "anywhere",
           }}
           title={readableWorkflowName}
         >

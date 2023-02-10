@@ -272,6 +272,7 @@ GET           /shortLinks/byKey/:key                                            
 # Credentials
 POST          /credentials/httpBasicAuth                                                controllers.CredentialController.createHttpBasicAuthCredential
 POST          /credentials/s3AccessKey                                                  controllers.CredentialController.createS3AccessKeyCredential
+POST          /credentials/googleServiceAccount                                         controllers.CredentialController.createGoogleServiceAccountCredential
 
 # Voxelytics
 POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow
@@ -281,4 +282,4 @@ POST          /voxelytics/workflows/:workflowHash/events                        
 GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: Option[String], taskName: String)
 GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: Option[String], taskName: String, artifactName: Option[String])
 POST          /voxelytics/logs                                                          controllers.VoxelyticsController.appendLogs
-GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String], startTimestamp:Long, endTimestamp: Long, limit: Option[Long])
+GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String], startTimestamp:Long, endTimestamp: Long, limit: Option[Int])

@@ -248,7 +248,7 @@ class VoxelyticsController @Inject()(
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         organization <- organizationDAO.findOne(request.identity._organization)
         logEntries = request.body
-        _ <- lokiClient.bulkInsert(logEntries, organization._id)
+        _ <- lokiClient.bulkInsertBatched(logEntries, organization._id)
       } yield Ok
     }
 
@@ -257,7 +257,7 @@ class VoxelyticsController @Inject()(
               minLevel: Option[String],
               startTimestamp: Long,
               endTimestamp: Long,
-              limit: Option[Long]): Action[AnyContent] =
+              limit: Option[Int]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
         for {

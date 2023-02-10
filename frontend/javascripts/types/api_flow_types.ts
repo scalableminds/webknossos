@@ -520,6 +520,7 @@ export type APIOrganization = {
   readonly includedUsers: number;
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
+  readonly ownerName?: string;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;

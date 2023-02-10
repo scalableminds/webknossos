@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
-import models.user.{Invite, MultiUserDAO, User, UserDAO}
+import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -22,6 +22,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
+                                    userService: UserService,
                                     rpc: RPC,
                                     initialDataService: InitialDataService,
                                     conf: WkConf,
@@ -29,6 +30,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits {
 
   def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
+
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
         "newUserMailingList" -> organization.newUserMailingList,
@@ -38,6 +40,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
+      ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
+      ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
         "id" -> organization._id.toString,
@@ -49,7 +53,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
-        "usedStorageBytes" -> usedStorageBytes
+        "usedStorageBytes" -> usedStorageBytes,
+        "ownerName" -> ownerNameOpt
       ) ++ adminOnlyInfo
   }
 

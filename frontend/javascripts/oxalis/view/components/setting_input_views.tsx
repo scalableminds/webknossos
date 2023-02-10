@@ -499,8 +499,8 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   placeholder="Bounding Box Name"
                   size="small"
                   value={name}
-                  onChange={(evt: React.SyntheticEvent) => {
-                    this.setState({ name: (evt.target as HTMLInputElement).value });
+                  onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+                    this.setState({ name: evt.target.value });
                   }}
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}

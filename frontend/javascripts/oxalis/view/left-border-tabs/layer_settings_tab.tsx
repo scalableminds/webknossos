@@ -1060,9 +1060,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             <Row justify="center" align="middle">
               <Button
                 onClick={this.showAddVolumeLayerModal}
-                style={{
-                  width: 235,
-                }}
               >
                 <PlusOutlined />
                 Add Volume Annotation Layer

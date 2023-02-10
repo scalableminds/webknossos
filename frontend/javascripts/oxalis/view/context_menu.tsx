@@ -2,7 +2,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input, MenuItemProps } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, MouseEvent, useContext, useEffect } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -578,8 +578,7 @@ function getBoundingBoxMenuOptions({
     setBoundingBoxName(clickedBoundingBoxId, evt.target.value);
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
-  const preventContextMenuFromClosing = (evt) => {
+  const preventContextMenuFromClosing = (evt: MouseEvent) => {
     evt.stopPropagation();
   };
 
@@ -638,8 +637,7 @@ function getBoundingBoxMenuOptions({
             top: 0,
             opacity: 0,
           }}
-          onChange={(evt: React.SyntheticEvent) => {
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+          onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
             let color = hexToRgb(evt.target.value);
             color = color.map((colorPart) => colorPart / 255) as any as Vector3;
             setBoundingBoxColor(clickedBoundingBoxId, color);

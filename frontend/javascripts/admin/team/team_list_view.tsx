@@ -55,9 +55,8 @@ class TeamListView extends React.PureComponent<Props, State> {
     });
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -142,7 +141,6 @@ class TeamListView extends React.PureComponent<Props, State> {
               style={{
                 width: 200,
               }}
-              onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
               value={this.state.searchQuery}
             />

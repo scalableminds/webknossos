@@ -60,9 +60,8 @@ class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProp
       });
   }
 
-  handleCodeChange = (event: React.SyntheticEvent) => {
+  handleCodeChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       code: event.target.value,
       isCodeChanged: true,
     });

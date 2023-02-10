@@ -1058,9 +1058,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <Button
-                onClick={this.showAddVolumeLayerModal}
-              >
+              <Button onClick={this.showAddVolumeLayerModal}>
                 <PlusOutlined />
                 Add Volume Annotation Layer
               </Button>

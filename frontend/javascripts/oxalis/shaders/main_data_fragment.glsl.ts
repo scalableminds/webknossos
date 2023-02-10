@@ -62,7 +62,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 resolutions[<%= globalLayerCount %>];
+uniform vec3 resolutions[20];
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
@@ -316,7 +316,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 resolutions[<%= globalLayerCount %>];
+uniform vec3 resolutions[20];
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table

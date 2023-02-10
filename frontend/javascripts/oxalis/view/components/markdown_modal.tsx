@@ -78,14 +78,6 @@ export function MarkdownModal({
               minRows: 5,
               maxRows: 20,
             }}
-
-            // style={title == null ? style : undefined}
-            // onChange={this.handleChange}
-            // onFocus={this.handleFocus}
-            // onBlur={this.handleBlur}
-            // value={this.state.currentValue}
-            // onPressEnter={onPressEnter}
-            // onKeyDown={this.blurOnEscape}
           />
         </Col>
         <Col

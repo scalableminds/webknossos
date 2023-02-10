@@ -35,7 +35,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   input.setAttribute(
     "style",
     `position: absolute;
-        top: 0;
+        top: ${shaderType === "fragmentShader" ? 0 : "50%"};
         right: 0px;
         z-index: 10000;
         background: white;

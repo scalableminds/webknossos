@@ -96,7 +96,6 @@ uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
-uniform vec3 uvw;
 uniform bool useBilinearFiltering;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
@@ -148,7 +147,7 @@ void main() {
 
   if (floor(flatVertexPos.x) == floor(worldCoordUVW.x) && floor(flatVertexPos.y) == floor(worldCoordUVW.y)) {
     gl_FragColor = vec4(1., 0., 1., 1.);
-    return;
+    // return;
   }
 
   if (renderBucketIndices) {
@@ -350,7 +349,6 @@ uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
-uniform vec3 uvw;
 uniform bool useBilinearFiltering;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
@@ -397,9 +395,22 @@ mat4 modelInv = inverseMatrix(modelMatrix);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
-  // instead of clamping all vertices, they should be enumerated somehow and assigned
-  // evenly so that borders render well
-  if (gl_Position.y > -0.9999999) {
+  float planeWidth = 376.;
+  float subdivisionCount = 200.;
+  vec2 index = (position.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
+
+
+  // TODO: depending on the amount of vertices and the zoom value, it could be
+  // that not only the first/last vertices have to be pinned, but multiple ones
+  // might need pinning (otherwise, the second vertex is moved by 32 vx which could
+  // move it in front of the first vertex).
+  // Also:
+  // These border vertices might need special handling regarding the worldCoordUVW
+  // biasing.
+
+  // instead of clamping all vertices, they are enumerated so that the first/last few
+  // are still clipped to the plane boundary.
+  if (true && index.y >= 1. && index.y <= subdivisionCount - 1. && index.x >= 1. && index.x <= subdivisionCount - 1.) {
     float d = 32.;
     vec3 datasetScaleUVW = transDim(datasetScale);
     vec3 transWorldCoord = transDim(worldCoord.xyz);
@@ -413,11 +424,15 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   }
 
   vec3 worldCoordUVW = getWorldCoordUVW();
+
   // Offset the bucket calculation for the current vertex by a bit
   // to avoid picking the wrong bucket (which would lead to an rendering offset
   // of 32 vx).
-  worldCoordUVW.x -= 1.;
-  worldCoordUVW.y += 1.;
+  if (true && index.y > 0. && index.y < 200. &&
+      index.x > 0. && index.x < 200.) {
+    worldCoordUVW.x -= 1.;
+    worldCoordUVW.y += 1.;
+  }
 
   flatVertexPos = worldCoordUVW;
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;

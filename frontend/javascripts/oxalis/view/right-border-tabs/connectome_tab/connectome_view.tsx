@@ -1,4 +1,4 @@
-import { Alert, Empty, Input, Tooltip } from "antd";
+import { Alert, Empty, Input, Tooltip, TreeProps } from "antd";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -653,20 +653,7 @@ class ConnectomeView extends React.Component<Props, State> {
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
   };
 
-  handleCheck = (
-    {
-      checked,
-    }: {
-      checked: Array<string>;
-    },
-    {
-      node,
-      checked: isChecked,
-    }: {
-      node: TreeNode;
-      checked: boolean;
-    },
-  ) => {
+  handleCheck: TreeProps<TreeNode>["onCheck"] = ({ checked }, { node, checked: isChecked }) => {
     // The trailing ; is important to avoid matching 1234 if the id is 12
     const checkedNodeKeyPrefix = `segment;${node.data.id};`;
 
@@ -692,7 +679,7 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   };
 
-  handleExpand = (expandedKeys: Array<string>) => {
+  handleExpand: TreeProps<TreeNode>["onExpand"] = (expandedKeys) => {
     this.setState({
       expandedKeys,
     });

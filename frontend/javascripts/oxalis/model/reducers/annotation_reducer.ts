@@ -3,7 +3,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox, IsosurfaceInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/helpers/deep_update"' has no... Remove this comment to see the full error message
-import type { StateShape1, WriteableShape } from "oxalis/model/helpers/deep_update";
+import type { WriteableShape } from "oxalis/model/helpers/deep_update";
 import { updateKey, updateKey2, updateKey4 } from "oxalis/model/helpers/deep_update";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
@@ -11,7 +11,7 @@ import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_m
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import _ from "lodash";
 
-const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
+const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
   updateKey(state, "tracing", shape);
 
 const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<UserBoundingBox>) => {

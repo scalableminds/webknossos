@@ -1,5 +1,5 @@
 import { AutoSizer } from "react-virtualized";
-import { Dropdown, Menu, Tag, Tree } from "antd";
+import { Dropdown, Menu, Tag, Tree, TreeProps } from "antd";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -90,8 +90,8 @@ const noneData: NoneData = {
 
 function _convertConnectomeToTreeData(
   connectomeData: ConnectomeData | null | undefined,
-): TreeData | null | undefined {
-  if (connectomeData == null) return null;
+): TreeData | undefined {
+  if (connectomeData == null) return undefined;
   const { agglomerates, synapses } = connectomeData;
 
   const convertSynapsesForPartner = (
@@ -155,16 +155,8 @@ type State = {
 type Props = {
   checkedKeys: Array<string>;
   expandedKeys: Array<string>;
-  onCheck: (
-    arg0: {
-      checked: Array<string>;
-    },
-    arg1: {
-      node: TreeNode;
-      checked: boolean;
-    },
-  ) => void;
-  onExpand: (arg0: Array<string>) => void;
+  onCheck: TreeProps["onCheck"];
+  onExpand: TreeProps["onExpand"];
   onChangeActiveAgglomerateIds: (arg0: Array<number>) => void;
   connectomeData: ConnectomeData | null | undefined;
 };
@@ -174,15 +166,7 @@ class SynapseTree extends React.Component<Props, State> {
     activeSegmentDropdownKey: null,
   };
 
-  handleSelect = (
-    _selectedKeys: Array<string>,
-    evt: {
-      selected: boolean;
-      selectedNodes: Array<TreeNode>;
-      node: TreeNode;
-      event: string;
-    },
-  ) => {
+  handleSelect: TreeProps<TreeNode>["onSelect"] = (_selectedKeys, evt) => {
     const { data } = evt.node;
 
     if (data.type === "synapse" && evt.selected) {
@@ -299,19 +283,15 @@ class SynapseTree extends React.Component<Props, State> {
                 checkStrictly
                 height={height}
                 showLine={showLine}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(selectedKeys: Array<string>, evt: {    sele... Remove this comment to see the full error message
                 onSelect={this.handleSelect} // Although clicking on some nodes triggers an action, the node should not remain selected
                 // as repeated clicks wouldn't retrigger the action, then
                 // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key[] | und... Remove this comment to see the full error message
                 selectedKeys={null}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: { checked: string[]; }, arg1: { node:... Remove this comment to see the full error message
                 onCheck={onCheck}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: string[]) => void' is not assignable ... Remove this comment to see the full error message
                 onExpand={onExpand}
                 checkedKeys={checkedKeys}
                 expandedKeys={expandedKeys}
                 titleRender={this.renderNode}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'TreeData | null | undefined' is not assignab... Remove this comment to see the full error message
                 treeData={convertConnectomeToTreeData(connectomeData)}
               />
             </div>

@@ -2,8 +2,6 @@ import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox, IsosurfaceInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/helpers/deep_update"' has no... Remove this comment to see the full error message
-import type { WriteableShape } from "oxalis/model/helpers/deep_update";
 import { updateKey, updateKey2, updateKey4 } from "oxalis/model/helpers/deep_update";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
@@ -215,7 +213,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
-      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = {
+      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isVisible: visibility,
       };
       return updateKey4(
@@ -295,7 +293,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "STARTED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
-      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = {
+      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isLoading: true,
       };
       return updateKey4(
@@ -310,7 +308,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "FINISHED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
-      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = {
+      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isLoading: false,
       };
       return updateKey4(

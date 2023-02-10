@@ -155,8 +155,8 @@ type State = {
 type Props = {
   checkedKeys: Array<string>;
   expandedKeys: Array<string>;
-  onCheck: TreeProps["onCheck"];
-  onExpand: TreeProps["onExpand"];
+  onCheck: TreeProps<TreeNode>["onCheck"];
+  onExpand: TreeProps<TreeNode>["onExpand"];
   onChangeActiveAgglomerateIds: (arg0: Array<number>) => void;
   connectomeData: ConnectomeData | null | undefined;
 };
@@ -285,8 +285,7 @@ class SynapseTree extends React.Component<Props, State> {
                 showLine={showLine}
                 onSelect={this.handleSelect} // Although clicking on some nodes triggers an action, the node should not remain selected
                 // as repeated clicks wouldn't retrigger the action, then
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key[] | und... Remove this comment to see the full error message
-                selectedKeys={null}
+                selectedKeys={undefined}
                 onCheck={onCheck}
                 onExpand={onExpand}
                 checkedKeys={checkedKeys}

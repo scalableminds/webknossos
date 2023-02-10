@@ -189,7 +189,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = (evt: React.MouseEvent<any>) => {
-    const treeId = parseInt(evt.currentTarget.getAttribute("dataset").id, 10);
+    const treeId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
 
     if (evt.ctrlKey || evt.metaKey) {
       this.props.onSelectTree(treeId);
@@ -205,7 +205,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectGroup = (evt: React.MouseEvent<any>) => {
-    const groupId = parseInt(evt.currentTarget.getAttribute("dataset").id, 10);
+    const groupId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;
 
     if (numberOfSelectedTrees > 0) {

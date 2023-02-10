@@ -28,7 +28,7 @@ function ActiveCommentPopover({
   isActive,
 }: {
   comment: CommentType;
-  children: React.ReactElement;
+  children: React.ReactNode;
   isActive: boolean;
 }) {
   if (!isActive) {

@@ -76,6 +76,9 @@ export function HelpModal(props: HelpModalProps) {
         await sendHelpEmail(helpText);
         setHelpText("");
         message.success("Message has been sent. We'll reply via email shortly.");
+      } catch (err) {
+        message.error("Sorry, we could not send the help message. Please try again later.");
+        throw err;
       } finally {
         setSending(false);
       }

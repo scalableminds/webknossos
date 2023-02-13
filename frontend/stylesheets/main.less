@@ -607,3 +607,26 @@ i.without-icon-margin,
   font-weight: 50;
   letter-spacing: 0.5px;
 }
+
+
+.login-view {
+
+  & {
+    height: calc(100vh - 48px);
+    background-color: @primary-color;
+    background-image: url(/assets/images/background_neurons_drawn.svg);
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  
+  .login-content {
+    background-color: white;
+    width: 600px;
+    padding: 100px; 
+
+    @media @smartphones {
+      padding: 20px;
+      margin: 20px;
+    }
+  }
+}

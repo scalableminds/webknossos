@@ -30,8 +30,7 @@ function ChangePasswordView({ history }: Props) {
     });
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-  function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
+  function checkPasswordsAreMatching(value: string, otherPasswordFieldKey: string[]) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
 
     if (value && otherFieldValue) {
@@ -47,16 +46,8 @@ function ChangePasswordView({ history }: Props) {
   }
 
   return (
-    <Row
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-      type="flex"
-      justify="center"
-      style={{
-        padding: 50,
-      }}
-      align="middle"
-    >
-      <Col span={8}>
+    <Row className="login-view" justify="center" align="middle">
+      <Col className="login-content">
         <h3>Change Password</h3>
         <Alert
           type="info"
@@ -100,7 +91,7 @@ function ChangePasswordView({ history }: Props) {
                 message: messages["auth.registration_password_length"],
               },
               {
-                validator: (_, value) =>
+                validator: (_, value: string) =>
                   checkPasswordsAreMatching(value, ["password", "password2"]),
               },
             ]}
@@ -129,7 +120,7 @@ function ChangePasswordView({ history }: Props) {
                 message: messages["auth.registration_password_length"],
               },
               {
-                validator: (_, value) =>
+                validator: (_, value: string) =>
                   checkPasswordsAreMatching(value, ["password", "password1"]),
               },
             ]}

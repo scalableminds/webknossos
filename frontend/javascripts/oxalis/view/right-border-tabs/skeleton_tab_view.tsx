@@ -390,7 +390,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     },
   );
 
-  handleChangeTreeName = (evt: React.SyntheticEvent) => {
+  handleChangeTreeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -398,10 +398,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { activeGroupId } = this.props.skeletonTracing;
 
     if (activeGroupId != null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       api.tracing.renameGroup(activeGroupId, evt.target.value);
     } else {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       this.props.onChangeTreeName(evt.target.value);
     }
   };

@@ -92,11 +92,12 @@ class DatasetArray(relativePath: DatasetPath,
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
+    val chunkShape = header.chunkSizeAtIndex(chunkIndex)
 
-    chunkContentsCache.getOrLoad(storeKey, chunkReader.read)
+    chunkContentsCache.getOrLoad(storeKey, key => chunkReader.read(key, chunkShape))
   }
 
-  private def getChunkFilename(chunkIndex: Array[Int]): String =
+  protected def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int],

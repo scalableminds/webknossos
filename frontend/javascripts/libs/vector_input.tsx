@@ -2,14 +2,16 @@ import * as React from "react";
 import _ from "lodash";
 import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
-import InputComponent, { InputComponentProps } from "oxalis/view/components/input_component";
+import InputComponent from "oxalis/view/components/input_component";
 import * as Utils from "libs/utils";
+import { InputProps } from "antd";
 
-type BaseProps<T> = Omit<InputComponentProps, "value"> & {
+type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
   value: T | string;
   onChange: (value: T) => void;
   changeOnlyOnBlur?: boolean;
   allowDecimals?: boolean;
+  autoSize?: boolean;
 };
 type State = {
   isEditing: boolean;
@@ -51,7 +53,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     return value;
   }
 
-  handleBlur = () => {
+  handleBlur = (_: React.FocusEvent<HTMLInputElement>) => {
     this.setState({
       isEditing: false,
     });
@@ -89,7 +91,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     return vector;
   }
 
-  handleFocus = () => {
+  handleFocus = (_event: React.FocusEvent<HTMLInputElement>) => {
     this.setState({
       isEditing: true,
       text: this.getText(this.props.value),
@@ -127,7 +129,6 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
 
     return (
       <InputComponent
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
@@ -147,7 +148,7 @@ export class Vector3Input extends BaseVector<Vector3> {
 export class Vector6Input extends BaseVector<Vector6> {
   defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
 }
-type BoundingBoxInputProps = Omit<InputComponentProps, "value"> & {
+type BoundingBoxInputProps = Omit<InputProps, "value"> & {
   value: ServerBoundingBoxTypeTuple;
   onChange: (arg0: ServerBoundingBoxTypeTuple) => void;
 };
@@ -179,7 +180,6 @@ export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps>
         {...props}
         value={vector6Value}
         changeOnlyOnBlur
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '([x, y, z, width, height, depth]: [any, any,... Remove this comment to see the full error message
         onChange={([x, y, z, width, height, depth]) =>
           onChange({
             topLeft: [x, y, z],

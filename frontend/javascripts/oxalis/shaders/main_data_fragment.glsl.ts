@@ -147,7 +147,7 @@ void main() {
 
   if (floor(flatVertexPos.x) == floor(worldCoordUVW.x) && floor(flatVertexPos.y) == floor(worldCoordUVW.y)) {
     gl_FragColor = vec4(1., 0., 1., 1.);
-    // return;
+    return;
   }
 
   if (renderBucketIndices) {
@@ -397,6 +397,11 @@ mat4 modelInv = inverseMatrix(modelMatrix);
 
   float planeWidth = 376.;
   float subdivisionCount = 200.;
+
+  // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
+  vec4 worldCoordTopLeft     = modelMatrix * vec4(vec3(-planeWidth/2.,  planeWidth/2., 0.), 1.);
+  vec4 worldCoordBottomRight = modelMatrix * vec4(vec3( planeWidth/2., -planeWidth/2., 0.), 1.);
+
   vec2 index = (position.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
 
 
@@ -410,13 +415,20 @@ mat4 modelInv = inverseMatrix(modelMatrix);
 
   // instead of clamping all vertices, they are enumerated so that the first/last few
   // are still clipped to the plane boundary.
-  if (true && index.y >= 1. && index.y <= subdivisionCount - 1. && index.x >= 1. && index.x <= subdivisionCount - 1.) {
+  if (true) {
     float d = 32.;
     vec3 datasetScaleUVW = transDim(datasetScale);
     vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-    transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d) * d * datasetScaleUVW.x;
-    transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d) * d * datasetScaleUVW.y;
+    if (index.x >= 1. && index.x <= subdivisionCount - 1.) {
+      transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d) * d * datasetScaleUVW.x;
+      transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
+    }
+
+    if (index.y >= 1. && index.y <= subdivisionCount - 1.) {
+      transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d) * d * datasetScaleUVW.y;
+      transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
+    }
 
     worldCoord = vec4(transDim(transWorldCoord), 1.);
     vec3 posRec = (modelInv * worldCoord).xyz;
@@ -428,10 +440,11 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   // Offset the bucket calculation for the current vertex by a bit
   // to avoid picking the wrong bucket (which would lead to an rendering offset
   // of 32 vx).
-  if (true && index.y > 0. && index.y < 200. &&
-      index.x > 0. && index.x < 200.) {
-    worldCoordUVW.x -= 1.;
-    worldCoordUVW.y += 1.;
+  if (true && (index.x > 0. && index.x < 200.)) {
+      worldCoordUVW.x -= 1.;
+  //    worldCoordUVW.y += 1.;
+    } else {
+      worldCoordUVW.x -= 5.;
   }
 
   flatVertexPos = worldCoordUVW;

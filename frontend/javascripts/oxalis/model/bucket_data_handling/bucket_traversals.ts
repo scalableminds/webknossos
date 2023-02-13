@@ -40,7 +40,7 @@ export default function traverse(
     Math.abs(voxelSize[1] / v[1]),
     Math.abs(voxelSize[2] / v[2]),
   ];
-  const intersectedBuckets = [[X, Y, Z]];
+  const intersectedBuckets: Vector3[] = [[X, Y, Z]];
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dim' implicitly has an 'any' type.
   const behindLastBucket = (dim, pos) => {
@@ -112,13 +112,11 @@ export default function traverse(
 
   while (loopProtection++ < maximumIterations) {
     if (X === lastBucket[0] && Y === lastBucket[1] && Z === lastBucket[2]) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
       return intersectedBuckets;
     }
 
     if (behindLastBucket(0, X) || behindLastBucket(1, Y) || behindLastBucket(2, Z)) {
       // We didn't cross the lastBucket for some reason?
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
       return intersectedBuckets;
     }
 

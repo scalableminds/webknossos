@@ -418,24 +418,22 @@ export function concatVector3(a: Vector3, b: Vector3): Vector6 {
 }
 
 export function numberArrayToVector3(array: Array<number>): Vector3 {
-  const output = [0, 0, 0];
+  const output: Vector3 = [0, 0, 0];
 
   for (let i = 0; i < Math.min(3, array.length); i++) {
     output[i] = array[i];
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return output;
 }
 
 export function numberArrayToVector6(array: Array<number>): Vector6 {
-  const output = [0, 0, 0, 0, 0, 0];
+  const output: Vector6 = [0, 0, 0, 0, 0, 0];
 
   for (let i = 0; i < Math.min(6, array.length); i++) {
     output[i] = array[i];
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector6... Remove this comment to see the full error message
   return output;
 }
 
@@ -1073,7 +1071,10 @@ export function diffObjects(
   return changes(object, base);
 }
 
-export function coalesce<T>(obj: { [key: string]: T }, field: T): T | null {
+export function coalesce<T extends string | number | symbol>(
+  obj: { [key: string]: T },
+  field: T,
+): T | null {
   if (obj && typeof obj === "object" && (field in obj || Object.values(obj).includes(field))) {
     return field;
   }

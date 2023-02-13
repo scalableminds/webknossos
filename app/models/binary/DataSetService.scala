@@ -312,8 +312,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
-                   organization: Option[Organization],
-                   dataStore: Option[DataStore],
+                   organization: Option[Organization] = None,
+                   dataStore: Option[DataStore] = None,
                    skipResolutions: Boolean = false,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
       implicit ctx: DBAccessContext): Fox[JsObject] =

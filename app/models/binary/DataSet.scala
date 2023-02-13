@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.schema.Tables._
+import controllers.DatasetUpdateParameters
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
@@ -425,8 +426,32 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       _ <- run(
-        q"update webknossos.datasets_ set sharingToken = $sharingToken where name = $name and _organization = $organizationId and $accessQuery".asUpdate)
+        q"update webknossos.datasets set sharingToken = $sharingToken where name = $name and _organization = $organizationId and $accessQuery".asUpdate)
     } yield ()
+
+  def updatePartial(dataSetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val setQueries = List(
+      params.description.map(d => q"description = $d"),
+      params.displayName.map(v => q"displayName = $v"),
+      params.sortingKey.map(v => q"sortingKey = $v"),
+      params.isPublic.map(v => q"isPublic = $v"),
+      params.tags.map(v => q"tags = $v"),
+      params.folderId.map(v => q"folderId = $v"),
+    ).flatten
+    if (setQueries.isEmpty) {
+      Fox.successful(())
+    } else {
+      for {
+        _ <- assertUpdateAccess(dataSetId)
+        setQueriesJoined = SqlToken.joinBySeparator(setQueries, ", ")
+        _ <- run(q"""UPDATE webknossos.datasets
+                     SET
+                     $setQueriesJoined
+                     WHERE _id = $dataSetId
+                     """.asUpdate)
+      } yield ()
+    }
+  }
 
   def updateFields(_id: ObjectId,
                    description: Option[String],

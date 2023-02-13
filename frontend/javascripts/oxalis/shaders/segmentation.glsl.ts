@@ -267,7 +267,8 @@ export const getSegmentationId: ShaderModule = {
           <%= segmentationName %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,
           worldPositionUVW,
-          vec4(0.0, 0.0, 0.0, 0.0)
+          vec4(0.0, 0.0, 0.0, 0.0),
+          !<%= segmentationName %>_has_transform
         );
 
       // Depending on the packing degree, the returned volume color contains extra values

@@ -8,16 +8,17 @@ export const getBilinearColorFor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coordsUVW
+      vec3 coordsUVW,
+      bool supportsPrecomputedBucketAddress
     ) {
       coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
       vec2 bifilteringParams = (coordsUVW - floor(coordsUVW)).xy;
       coordsUVW = floor(coordsUVW);
 
-      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW);
-      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0));
-      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0));
-      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0));
+      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
+      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
+      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
+      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
       if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
         // We need to check all four colors for a negative parts, because there will be black
         // lines at the borders otherwise (black gets mixed with data)
@@ -39,21 +40,22 @@ export const getTrilinearColorFor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coordsUVW
+      vec3 coordsUVW,
+      bool supportsPrecomputedBucketAddress
     ) {
       coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
       vec3 bifilteringParams = (coordsUVW - floor(coordsUVW)).xyz;
       coordsUVW = floor(coordsUVW);
 
-      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW);
-      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0));
-      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0));
-      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0));
+      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
+      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
+      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
+      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
 
-      vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 0, 1));
-      vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 1));
-      vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 1));
-      vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 1));
+      vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 0, 1), supportsPrecomputedBucketAddress);
+      vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 1), supportsPrecomputedBucketAddress);
+      vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 1), supportsPrecomputedBucketAddress);
+      vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 1), supportsPrecomputedBucketAddress);
 
       if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0 ||
         a2.a < 0.0 || b2.a < 0.0 || c2.a < 0.0 || d2.a < 0.0) {
@@ -84,17 +86,18 @@ const getMaybeFilteredColor: ShaderModule = {
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW,
-      bool suppressBilinearFiltering
+      bool suppressBilinearFiltering,
+      bool supportsPrecomputedBucketAddress
     ) {
       vec4 color;
       if (!suppressBilinearFiltering && useBilinearFiltering) {
         <% if (isOrthogonal) { %>
-          color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+          color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
         <% } else { %>
-          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
         <% } %>
       } else {
-        color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+        color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
       }
       return color;
     }
@@ -110,9 +113,10 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       float packingDegree,
       vec3 worldPositionUVW,
       bool suppressBilinearFiltering,
-      vec4 fallbackColor
+      vec4 fallbackColor,
+      bool supportsPrecomputedBucketAddress
     ) {
-      vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering);
+      vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering, supportsPrecomputedBucketAddress);
 
       if (color.a < 0.0) {
         // Render gray for not-yet-existing data
@@ -128,9 +132,10 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW,
-      vec4 fallbackColor
+      vec4 fallbackColor,
+      bool supportsPrecomputedBucketAddress
     ) {
-      vec4[2] color = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+      vec4[2] color = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
 
       if (color[1].a < 0.0) {
         // Render gray for not-yet-existing data

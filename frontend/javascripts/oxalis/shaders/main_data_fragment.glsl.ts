@@ -50,6 +50,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float <%= name %>_max;
   uniform float <%= name %>_is_inverted;
   uniform mat4 <%= name %>_transform;
+  uniform bool <%= name %>_has_transform;
 <% }) %>
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
@@ -189,7 +190,8 @@ void main() {
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
           transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz),
           false,
-          fallbackGray
+          fallbackGray,
+          !<%= name %>_has_transform
         ).xyz;
 
       <% if (packingDegreeLookup[name] === 2.0) { %>
@@ -303,6 +305,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float <%= name %>_max;
   uniform float <%= name %>_is_inverted;
   uniform mat4 <%= name %>_transform;
+  uniform bool <%= name %>_has_transform;
 <% }) %>
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
@@ -402,8 +405,9 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   vec4 worldCoordTopLeft     = modelMatrix * vec4(vec3(-planeWidth/2.,  planeWidth/2., 0.), 1.);
   vec4 worldCoordBottomRight = modelMatrix * vec4(vec3( planeWidth/2., -planeWidth/2., 0.), 1.);
 
+  // vec3 positionUVW = transDim(position);
+  // vec2 index = (positionUVW.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
   vec2 index = (position.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
-
 
   // TODO: depending on the amount of vertices and the zoom value, it could be
   // that not only the first/last vertices have to be pinned, but multiple ones
@@ -456,7 +460,7 @@ mat4 modelInv = inverseMatrix(modelMatrix);
 
   // todo: seg layer is missing!
   <% _.each(colorLayerNames, function(name, layerIndex) { %>
-  {
+  if (!<%= name %>_has_transform) {
     float bucketAddress;
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u];
     uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
@@ -469,7 +473,8 @@ mat4 modelInv = inverseMatrix(modelMatrix);
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
       bucketAddress = lookUpBucket(
         globalLayerIndex,
-        uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i)
+        uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i),
+        false
       );
 
       if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {

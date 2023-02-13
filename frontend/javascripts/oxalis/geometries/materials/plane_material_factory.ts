@@ -228,6 +228,9 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_transform`] = {
         value: layer.transformMatrix || Identity4x4,
       };
+      this.uniforms[`${layerName}_has_transform`] = {
+        value: !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4),
+      };
     }
 
     for (const name of getSanitizedColorLayerNames()) {
@@ -490,6 +493,9 @@ class PlaneMaterialFactory {
           for (const layer of layers) {
             const name = sanitizeName(layer.name);
             this.uniforms[`${name}_transform`].value = layer.transformMatrix || Identity4x4;
+            this.uniforms[`${name}_has_transform`] = {
+              value: !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4),
+            };
           }
         },
         true,

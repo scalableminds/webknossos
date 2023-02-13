@@ -148,14 +148,16 @@ export const getColorForCoords: ShaderModule = {
       return float(address);
     }
 
-    float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress) {
+    float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress, bool supportsPrecomputedBucketAddress) {
       // The fragment shader can read the entry that was
       // calculated by the vertex shader. However, this won't always
       // be precise because the triangles of the plane won't necessarily
       // align with the bucket borders.
       <% if (isFragment) { %>
       {
-        return outputAddress[globalLayerIndex];
+        if (supportsPrecomputedBucketAddress) {
+          return outputAddress[globalLayerIndex];
+        }
         // uvec4 compressedEntry = outputCompressedEntry[globalLayerIndex];
 
         // uint compressedBytes = compressedEntry.a;
@@ -188,7 +190,8 @@ export const getColorForCoords: ShaderModule = {
       float localLayerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 worldPositionUVW
+      vec3 worldPositionUVW,
+      bool supportsPrecomputedBucketAddress
     ) {
       // This method looks up the color data at the given position.
       // The data will be clamped to be non-negative, since negative data
@@ -210,7 +213,7 @@ export const getColorForCoords: ShaderModule = {
       vec3 offsetInBucket;
       uint renderedMagIdx;
 
-      if (false) {
+      if (!supportsPrecomputedBucketAddress) {
         for (uint i = 0u; i < 4u; i++) {
           renderedMagIdx = activeMagIdx + i;
           vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
@@ -218,7 +221,8 @@ export const getColorForCoords: ShaderModule = {
           offsetInBucket = mod(coords, bucketWidth);
           bucketAddress = lookUpBucket(
             globalLayerIndex,
-            uvec4(uvec3(absoluteBucketPosition), renderedMagIdx)
+            uvec4(uvec3(absoluteBucketPosition), renderedMagIdx),
+            supportsPrecomputedBucketAddress
           );
 
           if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
@@ -233,7 +237,8 @@ export const getColorForCoords: ShaderModule = {
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
           globalLayerIndex,
-          uvec4(uvec3(absoluteBucketPosition), renderedMagIdx)
+          uvec4(uvec3(absoluteBucketPosition), renderedMagIdx),
+          supportsPrecomputedBucketAddress
         );
         // new end
       }
@@ -383,12 +388,13 @@ export const getColorForCoords: ShaderModule = {
       float localLayerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 worldPositionUVW
+      vec3 worldPositionUVW,
+      bool supportsPrecomputedBucketAddress
     ) {
       // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
       // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
       // No clear negative impact could be measured which is why this delegation should be ok.
-      vec4[2] retVal = getColorForCoords64(lookUpTexture, localLayerIndex, d_texture_width, packingDegree, worldPositionUVW);
+      vec4[2] retVal = getColorForCoords64(lookUpTexture, localLayerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
       return retVal[1];
     }
   `,

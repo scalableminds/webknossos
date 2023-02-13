@@ -1,5 +1,5 @@
 import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
-import { Modal, Input, Alert } from "antd";
+import { Modal, Input, Alert, message } from "antd";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { OxalisState } from "oxalis/store";
 import React, { CSSProperties, useState } from "react";
@@ -66,14 +66,21 @@ type HelpModalProps = {
 
 export function HelpModal(props: HelpModalProps) {
   const [helpText, setHelpText] = useState("");
+  const [sending, setSending] = useState(false);
   const positionStyle: CSSProperties = { right: 10, bottom: 40, top: "auto", position: "fixed" };
 
-  const sendHelp = () => {
-    props.onCancel();
-
+  const sendHelp = async () => {
     if (helpText.length > 0) {
-      sendHelpEmail(helpText);
+      try {
+        setSending(true);
+        await sendHelpEmail(helpText);
+        setHelpText("");
+        message.success("Message has been sent. We'll reply via email shortly.");
+      } finally {
+        setSending(false);
+      }
     }
+    props.onCancel();
   };
 
   return (
@@ -83,6 +90,7 @@ export function HelpModal(props: HelpModalProps) {
       open={props.isModalOpen}
       onOk={sendHelp}
       onCancel={props.onCancel}
+      confirmLoading={sending}
       mask={props.centeredLayout}
       okText="Send"
       width={300}

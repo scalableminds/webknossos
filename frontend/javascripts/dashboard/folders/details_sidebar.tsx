@@ -80,7 +80,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIMaybeUnimport
       </h4>
       {selectedDataset.isActive && (
         <div>
-          <span className="sidebar-label">Voxel Size & Extent</span>
+          <div className="sidebar-label">Voxel Size & Extent</div>
           <div className="info-tab-block" style={{ marginTop: -3 }}>
             <table
               style={{
@@ -97,22 +97,21 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIMaybeUnimport
       )}
       {selectedDataset.description && (
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Description</span>
+          <div className="sidebar-label">Description</div>
           <div>{selectedDataset.description}</div>
         </div>
       )}
       <div style={{ marginBottom: 4 }}>
-        <span className="sidebar-label">Access Permissions</span>
-        <br />
+        <div className="sidebar-label">Access Permissions</div>
         <TeamTags dataset={selectedDataset} emptyValue="Administrators & Dataset Managers" />
       </div>
       <div style={{ marginBottom: 4 }}>
-        <span className="sidebar-label">Layers</span>
-        <br /> <DatasetLayerTags dataset={selectedDataset} />
+        <div className="sidebar-label">Layers</div>
+        <DatasetLayerTags dataset={selectedDataset} />
       </div>
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Tags</span>
+          <div className="sidebar-label">Tags</div>
           <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
         </div>
       ) : null}
@@ -195,8 +194,7 @@ function FolderDetails({
             </Tooltip>
             . {maybeSelectMsg}
           </p>
-          <span className="sidebar-label">Access Permissions</span>
-          <br />
+          <div className="sidebar-label">Access Permissions</div>
           <FolderTeamTags folder={folder} />
         </div>
       ) : error ? (

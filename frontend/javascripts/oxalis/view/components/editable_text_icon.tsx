@@ -1,4 +1,4 @@
-import { Input } from "antd";
+import { Button, Input } from "antd";
 import React from "react";
 
 type Props = {
@@ -37,10 +37,6 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const iconStyle = {
-      cursor: "pointer",
-    };
-
     if (this.state.isEditing) {
       return (
         <Input
@@ -55,15 +51,20 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
           autoFocus
         />
       );
-    } else {
-      return React.cloneElement(this.props.icon, {
-        style: iconStyle,
-        onClick: () =>
+    }
+
+    return (
+      <Button
+        size="small"
+        icon={this.props.icon}
+        style={{ height: 22, width: 22 }}
+        onClick={() =>
           this.setState({
             isEditing: true,
-          }),
-      });
-    }
+          })
+        }
+      />
+    );
   }
 }
 

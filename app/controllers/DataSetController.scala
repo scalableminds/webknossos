@@ -31,7 +31,7 @@ import com.scalableminds.util.tools.TristateOptionJsonHelper
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
     displayName: Option[Option[String]] = Some(None),
-    sortingKey: Option[Option[Instant]] = Some(None),
+    sortingKey: Option[Instant],
     isPublic: Option[Boolean],
     tags: Option[List[String]],
     folderId: Option[ObjectId]

@@ -4,7 +4,6 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.TristateOptionJsonHelper.tristateOptionParsing
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataLayerLike, GenericDataSource}
 import io.swagger.annotations._
@@ -27,13 +26,14 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import com.scalableminds.util.tools.TristateOptionJsonHelper
 
 case class DatasetUpdateParameters(
     tags: Option[List[String]],
     folderId: Option[Option[ObjectId]] = Some(None)
 )
 
-object DatasetUpdateParameters {
+object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
 }

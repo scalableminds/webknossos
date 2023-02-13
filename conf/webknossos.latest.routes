@@ -75,7 +75,7 @@ POST          /datasets/exploreRemote                                           
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                           controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
 PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String, skipResolutions: Option[Boolean])
-PATCH         /datasets/:organizationName/:dataSetName/partialUpdate                    controllers.DataSetController.updatePartial(organizationName: String, dataSetName: String, skipResolutions: Option[Boolean])
+PATCH         /datasets/:organizationName/:dataSetName/updatePartial                    controllers.DataSetController.updatePartial(organizationName: String, dataSetName: String, skipResolutions: Option[Boolean])
 GET           /datasets/:organizationName/:dataSetName/accessList                       controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
 DELETE        /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)

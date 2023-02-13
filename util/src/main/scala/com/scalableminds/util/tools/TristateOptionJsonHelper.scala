@@ -4,12 +4,16 @@ import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json.JsonConfiguration.Aux
 import play.api.libs.json._
 
-object TristateOptionJsonHelper {
+trait TristateOptionJsonHelper {
 
-  implicit private def optionFormat[T](implicit tf: Format[T]): Format[Option[T]] = Format(
-    tf.reads(_).map(r => Some(r)),
-    Writes(v => v.map(tf.writes).getOrElse(JsNull))
-  )
+  implicit protected def optionFormat[T: Format]: Format[Option[T]] = new Format[Option[T]] {
+    override def reads(json: JsValue): JsResult[Option[T]] = json.validateOpt[T]
+
+    override def writes(o: Option[T]): JsValue = o match {
+      case Some(t) ⇒ implicitly[Writes[T]].writes(t)
+      case None ⇒ JsNull
+    }
+  }
 
   private object InvertedDefaultHandler extends OptionHandlers {
     def readHandler[T](jsPath: JsPath)(implicit r: Reads[T]): Reads[Option[T]] = jsPath.readNullable
@@ -26,7 +30,7 @@ object TristateOptionJsonHelper {
     def writeHandler[T](jsPath: JsPath)(implicit writes: Writes[T]): OWrites[Option[T]] = jsPath.writeNullable
   }
 
-  val tristateOptionParsing: Aux[WithDefaultValues] =
+  protected val tristateOptionParsing: Aux[WithDefaultValues] =
     JsonConfiguration[Json.WithDefaultValues](optionHandlers = InvertedDefaultHandler)
 
 }

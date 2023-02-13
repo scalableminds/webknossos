@@ -425,20 +425,26 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       if (request.body.typ == "volume") None
       else
         Some(
-          AnnotationLayerParameters(AnnotationLayerType.Skeleton,
-                                    request.body.fallbackLayerName,
-                                    None,
-                                    request.body.resolutionRestrictions,
-                                    name = AnnotationLayer.defaultSkeletonLayerName))
+          AnnotationLayerParameters(
+            AnnotationLayerType.Skeleton,
+            request.body.fallbackLayerName,
+            autoFallbackLayer = false,
+            None,
+            request.body.resolutionRestrictions,
+            name = Some(AnnotationLayer.defaultSkeletonLayerName)
+          ))
     val volumeParameters =
       if (request.body.typ == "skeleton") None
       else
         Some(
-          AnnotationLayerParameters(AnnotationLayerType.Volume,
-                                    request.body.fallbackLayerName,
-                                    None,
-                                    request.body.resolutionRestrictions,
-                                    name = AnnotationLayer.defaultVolumeLayerName))
+          AnnotationLayerParameters(
+            AnnotationLayerType.Volume,
+            request.body.fallbackLayerName,
+            autoFallbackLayer = false,
+            None,
+            request.body.resolutionRestrictions,
+            name = Some(AnnotationLayer.defaultVolumeLayerName)
+          ))
     List(skeletonParameters, volumeParameters).flatten
   }
 

@@ -803,6 +803,8 @@ export function createExplorational(
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   let layers: Array<AnnotationLayerCreateDescriptor> = [];
 
+  const autoFallbackLayer = true;
+
   if (typ === "skeleton") {
     layers = [
       {
@@ -814,8 +816,9 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },
@@ -828,8 +831,9 @@ export function createExplorational(
       },
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },

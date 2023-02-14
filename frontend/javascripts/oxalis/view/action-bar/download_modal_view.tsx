@@ -56,6 +56,8 @@ import {
 import { formatBytes, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { usePolling } from "libs/react_hooks";
+import { useRunningJobs } from "admin/job/job_hooks";
+import { saveAs } from "file-saver";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
@@ -156,62 +158,6 @@ function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
   };
 }
 
-function useRunningJobs(): [
-  Array<[string, string]>,
-  (
-    dataset: APIDataset,
-    boundingBox: BoundingBoxType,
-    mag: Vector3,
-    selectedLayerInfos: ExportLayerInfos,
-    exportFormat: ExportFormat,
-  ) => Promise<void>,
-] {
-  const [runningJobs, setRunningJobs] = useState<Array<[string, string]>>([]);
-
-  async function checkForJobs() {
-    for (const [, jobId] of runningJobs) {
-      const job = await getJob(jobId);
-      if (job.state === "SUCCESS" && job.resultLink != null) {
-        const token = await doWithToken(async (t) => t);
-        window.open(`${job.resultLink}?token=${token}`, "_blank");
-        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
-      } else if (job.state === "FAILURE") {
-        Toast.error("Error when exporting data. Please contact us for support.");
-        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
-      } else if (job.state === "MANUAL") {
-        Toast.error(
-          "The data could not be exported automatically. The job will be handled by an admin shortly.",
-        );
-        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
-      }
-    }
-  }
-
-  usePolling(
-    checkForJobs,
-    runningJobs.length > 0 ? 1000 : null,
-    runningJobs.map(([key]) => key),
-  );
-
-  return [
-    runningJobs,
-    async (dataset, boundingBox, mag, selectedLayerInfos, exportFormat) => {
-      const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
-      const job = await startExportTiffJob(
-        dataset.name,
-        dataset.owningOrganization,
-        computeArrayFromBoundingBox(boundingBox),
-        selectedLayerInfos.layerName,
-        mag.join("-"),
-        selectedLayerInfos.annotationId,
-        selectedLayerInfos.displayName,
-        exportFormat === ExportFormat.OME_TIFF,
-      );
-      setRunningJobs((previous) => [...previous, [exportKey(selectedLayerInfos, mag), job.id]]);
-    },
-  ];
-}
-
 function estimateFileSize(
   selectedLayer: APIDataLayer,
   mag: Vector3,
@@ -230,7 +176,7 @@ function estimateFileSize(
 
 function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
   const scale = dataset.dataSource.scale;
-  formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
+  return formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
 }
 
 export function Hint({
@@ -358,7 +304,17 @@ function _DownloadModalView({
     mag,
   );
 
-  const [runningExportJobs, triggerExportJob] = useRunningJobs();
+  const [runningExportJobs, startJob] = useRunningJobs({
+    async onSuccess(job) {
+      if (job.resultLink != null) {
+        const token = await doWithToken(async (t) => t);
+        saveAs(`${job.resultLink}?token=${token}`);
+      }
+    },
+    onFailure(job) {
+      Toast.error("Error when exporting data. Please contact us for support.");
+    },
+  });
 
   const handleOk = async () => {
     if (activeTabKey === "download") {
@@ -371,15 +327,21 @@ function _DownloadModalView({
         includeVolumeData,
       );
       onClose();
-    } else if (activeTabKey === "export") {
+    } else if (activeTabKey === "export" && startJob != null) {
       await Model.ensureSavedState();
-      await triggerExportJob(
-        dataset,
-        selectedBoundingBox.boundingBox,
-        mag,
-        selectedLayerInfos,
-        exportFormat,
-      );
+      await startJob(async () => {
+        const job = await startExportTiffJob(
+          dataset.name,
+          dataset.owningOrganization,
+          computeArrayFromBoundingBox(selectedBoundingBox.boundingBox),
+          selectedLayerInfos.layerName,
+          mag.join("-"),
+          selectedLayerInfos.annotationId,
+          selectedLayerInfos.displayName,
+          exportFormat === ExportFormat.OME_TIFF,
+        );
+        return [exportKey(selectedLayerInfos, mag), job.id];
+      });
 
       if (!keepWindowOpen) {
         onClose();
@@ -482,20 +444,6 @@ with wk.webknossos_context(
       );
     }
   };
-
-  const downloadHint =
-    runningExportJobs.length > 0 ? (
-      <>
-        <Divider />
-        <p>
-          Go to{" "}
-          <a href="/jobs" target="_blank" rel="noreferrer">
-            Jobs Overview Page
-          </a>{" "}
-          to see running exports and to download the results.
-        </p>
-      </>
-    ) : null;
 
   const hasVolumes = hasVolumeTracings(tracing);
   const hasSkeleton = tracing.skeleton != null;
@@ -707,7 +655,14 @@ with wk.webknossos_context(
                 Resolution: {formatSelectedScale(dataset, mag)}
               </Text>
 
-              {downloadHint}
+              <Divider />
+              <p>
+                Go to the{" "}
+                <a href="/jobs" target="_blank" rel="noreferrer">
+                  Jobs Overview Page
+                </a>{" "}
+                to see running exports and to download the results.
+              </p>
             </div>
           )}
           <Divider

@@ -1,11 +1,76 @@
 import features from "features";
-import { getJobs } from "admin/admin_rest_api";
+import { doWithToken, getJob, getJobs } from "admin/admin_rest_api";
 import { useInterval } from "beautiful-react-hooks";
 import Toast from "libs/toast";
 import { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { APIJob } from "types/api_flow_types";
+import { usePolling } from "libs/react_hooks";
+
+export function useRunningJobs({
+  onSuccess = () => {},
+  onFailure = () => {},
+  onManual = () => {},
+  initialJobKeyExtractor,
+}: {
+  onSuccess?: (job: APIJob) => void;
+  onFailure?: (job: APIJob) => void;
+  onManual?: (job: APIJob) => void;
+  initialJobKeyExtractor?: (job: APIJob) => string | null;
+}): [
+  Array<[string, string]>,
+  ((startJobFn: () => Promise<[string, string]>) => Promise<void>) | null,
+] {
+  const [runningJobs, setRunningJobs] = useState<Array<[string, string]>>([]);
+
+  useEffect(() => {
+    if (initialJobKeyExtractor != null) {
+      (async () => {
+        const jobs = await getJobs();
+        for (const job of jobs) {
+          const key = initialJobKeyExtractor(job);
+          if (key != null) {
+            setRunningJobs((previous) => [...previous, [key, job.id]]);
+          }
+        }
+      })();
+    }
+  }, []);
+
+  const areJobsEnabled = features().jobsEnabled;
+
+  async function checkForJobs() {
+    for (const [, jobId] of runningJobs) {
+      const job = await getJob(jobId);
+      console.log(job);
+      if (job.state === "SUCCESS") {
+        onSuccess(job);
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      } else if (job.state === "FAILURE") {
+        onFailure(job);
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      } else if (job.state === "MANUAL") {
+        onManual(job);
+        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+      }
+    }
+  }
+
+  usePolling(checkForJobs, runningJobs.length > 0 ? 1000 : null, [
+    runningJobs.map(([key]) => key).join("-"),
+  ]);
+
+  return [
+    runningJobs,
+    areJobsEnabled
+      ? async (startJobFn) => {
+          const [key, jobId] = await startJobFn();
+          setRunningJobs((previous) => [...previous, [key, jobId]]);
+        }
+      : null,
+  ];
+}
 
 export function useStartAndPollJob({
   startJobFn,

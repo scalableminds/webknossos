@@ -31,9 +31,10 @@ import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
-import { APIDataLayer, APIDatasetId } from "types/api_flow_types";
-import { useStartAndPollJob } from "admin/job/job_hooks";
+import { APIDataLayer, APIDatasetId, APIJob } from "types/api_flow_types";
+import { useRunningJobs, useStartAndPollJob } from "admin/job/job_hooks";
 import { Vector3 } from "oxalis/constants";
+import Toast from "libs/toast";
 
 const FormItem = Form.Item;
 
@@ -313,6 +314,7 @@ function SimpleLayerForm({
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
   const isSegmentation = category === "segmentation";
   const bitDepth = getBitDepth(layer);
+  const [mostRecentSuccessfulJob, setMostRecentSuccessfulJob] = React.useState<APIJob | null>(null);
 
   const mayLayerBeRemoved = !isReadOnlyDataset && dataLayers?.length > 1;
 
@@ -324,21 +326,39 @@ function SimpleLayerForm({
     form.validateFields();
   }, [dataLayers]);
 
-  const { startJob, activeJob, mostRecentSuccessfulJob } = useStartAndPollJob({
-    startJobFn:
-      datasetId != null
-        ? () =>
-            startFindLargestSegmentIdJob(datasetId.name, datasetId.owningOrganization, layer.name)
+  const [runningJobs, startJob] = useRunningJobs({
+    onSuccess(job) {
+      Toast.success(
+        "The computation of the largest segment id for this dataset has finished. Reload the page to see it.",
+      );
+      setMostRecentSuccessfulJob(job);
+    },
+    onFailure(job) {
+      Toast.error(
+        "The computation of the largest segment id for this dataset didn't finish properly.",
+      );
+    },
+    initialJobKeyExtractor: (job) =>
+      job.type === "find_largest_segment_id" && job.datasetName === datasetId?.name
+        ? job.datasetName ?? "largest_segment_id"
         : null,
-    findJobPred: (job) =>
-      job.type === "find_largest_segment_id" && job.datasetName === datasetId?.name,
-    jobStartedMessage:
-      "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
-    successMessage:
-      "The computation of the largest segment id for this dataset has finished. Reload the page to see it.",
-    failureMessage:
-      "The computation of the largest segment id for this dataset didn't finish properly.",
   });
+  const activeJob = runningJobs[0];
+
+  const startJobFn =
+    datasetId != null
+      ? async () => {
+          const job = await startFindLargestSegmentIdJob(
+            datasetId.name,
+            datasetId.owningOrganization,
+            layer.name,
+          );
+          Toast.info(
+            "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
+          );
+          return [job.datasetName ?? "largest_segment_id", job.id] as [string, string];
+        }
+      : null;
 
   return (
     <div
@@ -561,7 +581,11 @@ function SimpleLayerForm({
                         style={{ marginLeft: 8 }}
                         loading={activeJob != null}
                         disabled={activeJob != null || startJob == null}
-                        onClick={startJob || (() => Promise.resolve())}
+                        onClick={
+                          startJob != null && startJobFn != null
+                            ? () => startJob(startJobFn)
+                            : () => Promise.resolve()
+                        }
                       >
                         Detect
                       </Button>

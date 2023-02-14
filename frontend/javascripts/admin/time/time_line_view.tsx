@@ -3,7 +3,7 @@ import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
 import type { OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "types/api_flow_types";
@@ -15,6 +15,7 @@ import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import TimeTrackingChart from "./time_line_chart_view";
+
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
 const dayFormat = "dd, MMM, YYYY";
@@ -48,7 +49,7 @@ function compressTimeLogs(logs) {
 
   for (const timeLog of logs) {
     // If the current log is within 1s of the previous log, merge these two logs
-    const previousDuration = previousLog != null ? moment.duration(previousLog.time) : null;
+    const previousDuration = previousLog != null ? dayjs.duration(previousLog.time) : null;
 
     if (
       previousDuration != null &&
@@ -57,7 +58,7 @@ function compressTimeLogs(logs) {
         1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
-      const newDuration = previousDuration.add(moment.duration(timeLog.time));
+      const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
       // @ts-expect-error ts-migrate(7022) FIXME: 'copiedLog' implicitly has type 'any' because it d... Remove this comment to see the full error message
       const copiedLog = { ...compressedLogs[compressedLogs.length - 1] };
       copiedLog.time = newDuration.toISOString();
@@ -76,7 +77,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   state: State = {
     user: null,
     users: [],
-    dateRange: [moment().startOf("day"), moment().endOf("day")],
+    dateRange: [dayjs().startOf("day"), dayjs().endOf("day")],
     timeTrackingData: [],
     stats: {
       totalTime: 0,
@@ -137,7 +138,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   calculateStats() {
     this.setState((prevState) => {
       const totalTime = _.sumBy(prevState.timeTrackingData, (timeSpan) =>
-        moment.duration(timeSpan.time).asMilliseconds(),
+        dayjs.duration(timeSpan.time).asMilliseconds(),
       );
 
       const numberTasks = _.uniq(
@@ -194,7 +195,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
     const duration = end - start;
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
-    const dayFormatForMomentJs = "DD MMM, YYYY";
+    const dayFormatForDayJs = "DD MMM, YYYY";
     const tooltip = (
       <div>
         <div className="highlighted">
@@ -208,11 +209,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
               <td className="highlighted">Date:</td>
               <td>
                 {isSameDay ? (
-                  <FormattedDate timestamp={start} format={dayFormatForMomentJs} />
+                  <FormattedDate timestamp={start} format={dayFormatForDayJs} />
                 ) : (
                   <React.Fragment>
-                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> –{" "}
-                    <FormattedDate timestamp={end} format={dayFormatForMomentJs} />
+                    <FormattedDate timestamp={start} format={dayFormatForDayJs} /> –{" "}
+                    <FormattedDate timestamp={end} format={dayFormatForDayJs} />
                   </React.Fragment>
                 )}
               </td>
@@ -269,7 +270,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
     const totalSumColumnLabel = "Sum Tracking Time";
     this.state.timeTrackingData.forEach((datum: APITimeTracking) => {
-      const duration = moment.duration(datum.time).asMilliseconds();
+      const duration = dayjs.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
       const individualTooltipAsString = this.getTooltipForEntry(datum.task_id, start, end);

@@ -1,10 +1,23 @@
-import moment, { Duration } from "moment";
 import { presetPalettes } from "@ant-design/colors";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import * as dayjs from "dayjs"
+import duration from "dayjs/plugin/duration";
+import updateLocale from "dayjs/plugin/updateLocale";
+import relativeTime from "dayjs/plugin/relativeTime";
+import calendar from "dayjs/plugin/calendar";
+import utc from "dayjs/plugin/utc";
 import type { BoundingBoxObject } from "oxalis/store";
+import type { Duration } from "dayjs/plugin/duration";
+
+dayjs.extend(updateLocale);
+dayjs.extend(duration);
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(calendar);
+
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 const COLOR_MAP: Array<string> = [
   "#575AFF",
@@ -146,7 +159,7 @@ export function formatMilliseconds(durationMilliSeconds: number): string {
   return formatSeconds(durationMilliSeconds / 1000);
 }
 export function formatSeconds(durationSeconds: number): string {
-  const t = moment.duration(durationSeconds, "seconds");
+  const t = dayjs.duration(durationSeconds, "seconds");
   const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];
   let timeString;
 
@@ -164,24 +177,25 @@ export function formatSeconds(durationSeconds: number): string {
 }
 export function formatDurationToMinutesAndSeconds(durationInMillisecons: number) {
   // Moment does not provide a format method for durations, so we have to do it manually.
-  const duration = moment.duration(durationInMillisecons);
-  const minuteDuration = duration.minutes() + 60 * duration.hours();
-  const minutesAsString = `${minuteDuration < 10 ? 0 : ""}${minuteDuration}`;
-  const hoursAsSeconds = `${duration.seconds() < 10 ? 0 : ""}${duration.seconds()}`;
-  return `${minutesAsString}:${hoursAsSeconds}`;
+  const duration = dayjs.duration(durationInMillisecons);
+  // const minuteDuration = duration.minutes() + 60 * duration.hours();
+  // const minutesAsString = `${minuteDuration < 10 ? 0 : ""}${minuteDuration}`;
+  // const hoursAsSeconds = `${duration.seconds() < 10 ? 0 : ""}${duration.seconds()}`;
+  // return `${minutesAsString}:${hoursAsSeconds}`;
+  return duration.format("mm:ss")
 }
 export function formatHash(id: string): string {
   return id.slice(-6);
 }
 
 export function formatDateMedium(date: Date | number): string {
-  return moment(date).format("lll");
+  return dayjs(date).format("lll");
 }
 export function formatDistance(start: Date | number, end: Date | number): string {
-  return moment.duration(moment(start).diff(moment(end))).humanize(true);
+  return dayjs.duration(dayjs(start).diff(dayjs(end))).humanize(true);
 }
 export function formatDistanceStrict(start: Date | number, end: Date | number): string {
-  const duration = moment.duration(moment(start).diff(moment(end)));
+  const duration = dayjs.duration(dayjs(start).diff(dayjs(end)));
   return formatDurationStrict(duration);
 }
 export function formatDurationStrict(duration: Duration): string {

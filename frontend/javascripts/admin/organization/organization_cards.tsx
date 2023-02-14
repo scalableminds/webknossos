@@ -6,7 +6,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import moment from "moment";
+import dayjs from "dayjs";
 import Constants from "oxalis/constants";
 import { OxalisState } from "oxalis/store";
 import React from "react";
@@ -332,7 +332,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
   const alerts = [];
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isAboutToExpire =
-    moment.duration(moment(organization.paidUntil).diff(moment())).asWeeks() <= 6 &&
+    dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);
 
   if (isAboutToExpire)

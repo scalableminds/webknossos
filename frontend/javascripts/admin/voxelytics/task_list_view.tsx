@@ -27,7 +27,7 @@ import MiniSearch from "minisearch";
 import ColorHash from "color-hash";
 
 import { Link, useHistory, useLocation, useParams } from "react-router-dom";
-import moment from "moment";
+import dayjs from "dayjs";
 import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
 import {
   VoxelyticsRunState,
@@ -128,10 +128,10 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               <>
                 Begin Time: {formatDateMedium(taskInfo.beginTime)}
                 <br />
-                Current Duration: {formatDurationStrict(moment.duration(currentDuration))}
+                Current Duration: {formatDurationStrict(dayjs.duration(currentDuration))}
                 <br />
                 Estimated Remaining Duration:{" "}
-                {formatDurationStrict(moment.duration(estimatedRemainingDuration))}
+                {formatDurationStrict(dayjs.duration(estimatedRemainingDuration))}
                 <br />
                 Estimated End Time: {formatDateMedium(estimatedEndTime)}
               </>
@@ -140,8 +140,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <Tag icon={<SyncOutlined spin />} color="processing">
               running
             </Tag>
-            started {moment(taskInfo.beginTime).fromNow()}, probably finishes{" "}
-            {moment(estimatedEndTime).fromNow()}
+            started {dayjs(taskInfo.beginTime).fromNow()}, probably finishes{" "}
+            {dayjs(estimatedEndTime).fromNow()}
           </Tooltip>
         );
       } else {
@@ -151,14 +151,14 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               <>
                 Begin Time: {formatDateMedium(taskInfo.beginTime)}
                 <br />
-                Current Duration: {formatDurationStrict(moment.duration(currentDuration))}
+                Current Duration: {formatDurationStrict(dayjs.duration(currentDuration))}
               </>
             }
           >
             <Tag icon={<SyncOutlined spin />} color="processing">
               running
             </Tag>
-            started {moment(taskInfo.beginTime).fromNow()}
+            started {dayjs(taskInfo.beginTime).fromNow()}
           </Tooltip>
         );
       }
@@ -177,7 +177,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             timed out
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()}, after{" "}
+          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -195,7 +195,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<ExclamationCircleOutlined />} color="error">
             cancelled
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()}, after{" "}
+          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -213,7 +213,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             failed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()}, after{" "}
+          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -231,7 +231,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()},{" "}
+          {dayjs(taskInfo.endTime).fromNow()},{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -534,13 +534,13 @@ export default function TaskListView({
 
   const totalRuntime = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
-      return sum.add(moment.duration(moment().diff(moment(t.beginTime))));
+      return sum.add(dayjs.duration(dayjs().diff(dayjs(t.beginTime))));
     } else if (t.beginTime != null && t.endTime != null) {
-      return sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime))));
+      return sum.add(dayjs.duration(dayjs(t.endTime).diff(dayjs(t.beginTime))));
     } else {
       return sum;
     }
-  }, moment.duration(0));
+  }, dayjs.duration(0));
 
   const {
     workflow: { name: readableWorkflowName },

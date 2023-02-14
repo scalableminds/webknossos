@@ -1,7 +1,7 @@
 import { Button, List } from "antd";
 import React, { useState, useEffect } from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import { chunkIntoTimeWindows } from "libs/utils";
@@ -38,14 +38,7 @@ type Props = {
 // The string key is a date string
 // The value is an array of chunked APIUpdateActionBatches
 type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch>>>;
-const MOMENT_CALENDAR_FORMAT = {
-  sameDay: "[Today]",
-  nextDay: "[Tomorrow]",
-  nextWeek: "dddd",
-  lastDay: "[Yesterday]",
-  lastWeek: "[Last] dddd (YYYY-MM-DD)",
-  sameElse: "YYYY-MM-DD",
-};
+
 const VERSION_LIST_PLACEHOLDER = {
   emptyText: "No versions created yet.",
 };
@@ -133,9 +126,9 @@ const getGroupedAndChunkedVersions = _.memoize(
     // Then, the versions for each day are chunked into x-minute intervals,
     // so that the actions of one chunk are all from within one x-minute interval.
     const groupedVersions = _.groupBy(versions, (batch) =>
-      moment
+      dayjs
         .utc(_.max(batch.value.map((action) => action.value.actionTimestamp)))
-        .calendar(null, MOMENT_CALENDAR_FORMAT),
+        .calendar(null),
     );
 
     const getBatchTime = (batch: APIUpdateActionBatch): number =>

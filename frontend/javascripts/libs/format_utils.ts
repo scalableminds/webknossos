@@ -22,6 +22,17 @@ dayjs.extend(utc);
 dayjs.extend(calendar);
 dayjs.extend(weekday);
 dayjs.extend(localeData);
+dayjs.updateLocale("en", {
+  weekStart: 1,
+  calendar: {
+    sameDay: "[Today]",
+    nextDay: "[Tomorrow]",
+    nextWeek: "dddd",
+    lastDay: "[Yesterday]",
+    lastWeek: "[Last] dddd (YYYY-MM-DD)",
+    sameElse: "YYYY-MM-DD",
+  },
+});
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 const COLOR_MAP: Array<string> = [

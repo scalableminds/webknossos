@@ -5,8 +5,10 @@ import _ from "lodash";
 import dayjs from "dayjs";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
+import { APIUser } from "types/api_flow_types";
 
 const { Column } = Table;
+
 type TimeEntry = {
   start: string;
   end: string;
@@ -18,20 +20,22 @@ type State = {
     numberOfDatasets: number;
     numberOfAnnotations: number;
     numberOfOpenAssignments: number;
-    tracingTimes: Array<TimeEntry>;
+    tracingTimes: TimeEntry[];
   };
-  timeEntries: Array<TimeEntry>;
+  timeEntries: Array<{
+    tracingTimes: TimeEntry[];
+    user: APIUser;
+  }>;
   isAchievementsLoading: boolean;
   isTimeEntriesLoading: boolean;
-
   startDate: dayjs.Dayjs;
-
   endDate: dayjs.Dayjs;
 };
+
 type GoogleCharts = {
   chartWrapper: {
     getChart: () => {
-      getSelection: (...args: Array<any>) => any;
+      getSelection: Function;
     };
   }; // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
 };
@@ -53,24 +57,6 @@ class StatisticView extends React.PureComponent<{}, State> {
   };
 
   componentDidMount() {
-    dayjs.updateLocale(
-      "en",
-      {
-        calendar: {
-          sameDay: "[Today]",
-          nextDay: "[Tomorrow]",
-          nextWeek: "dddd",
-          lastDay: "[Yesterday]",
-          lastWeek: "[Last] dddd (YYYY-MM-DD)",
-          sameElse: "YYYY-MM-DD",
-        },
-      },
-      // { TODO
-      //     week: {
-      //       dow: 1,
-      //     },
-      //   }
-    );
     this.fetchAchievementData();
     this.fetchTimeEntryData();
   }
@@ -235,7 +221,6 @@ class StatisticView extends React.PureComponent<{}, State> {
               <Spin spinning={this.state.isTimeEntriesLoading} size="large">
                 <Table
                   dataSource={this.state.timeEntries}
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'user' does not exist on type 'TimeEntry'... Remove this comment to see the full error message
                   rowKey={(entry) => entry.user.id}
                   style={{
                     marginTop: 30,
@@ -253,8 +238,7 @@ class StatisticView extends React.PureComponent<{}, State> {
                     title="Duration"
                     dataIndex="tracingTimes"
                     key="tracingTimes"
-                    render={(tracingTimes) => {
-                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+                    render={(tracingTimes: TimeEntry[]) => {
                       const duration = _.sumBy(tracingTimes, (timeEntry) => timeEntry.tracingTime);
 
                       const minutes = duration / 1000 / 60;

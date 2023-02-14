@@ -32,6 +32,7 @@ import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import { useSelector } from "react-redux";
 import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
+import { DatasetUpdater } from "admin/admin_rest_api";
 
 const { ThinSpace } = Unicode;
 const { Column } = Table;
@@ -46,7 +47,7 @@ type Props = {
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  updateDataset: (arg0: APIDatasetCompact) => Promise<void>;
+  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   selectedDatasets: APIDatasetCompact[];
@@ -561,43 +562,37 @@ export function DatasetTags({
 }: {
   dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
-  updateDataset: (d: APIDatasetCompact) => void;
+  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
 }) {
   const editTagFromDataset = (
-    updatedDataset: APIDatasetCompact,
     shouldAddTag: boolean,
     tag: string,
     event: React.MouseEvent,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
 
-    if (!updatedDataset.isActive) {
+    if (!dataset.isActive) {
       console.error(
-        `Tags can only be modified for active datasets. ${updatedDataset.name} is not active.`,
+        `Tags can only be modified for active datasets. ${dataset.name} is not active.`,
       );
       return;
     }
-
+    let updater = {};
     if (shouldAddTag) {
       if (!dataset.tags.includes(tag)) {
-        updatedDataset = update(dataset, {
-          tags: {
-            $push: [tag],
-          },
-        });
+        updater = {
+          tags: [...dataset.tags, tag],
+        };
       }
     } else {
       const newTags = _.without(dataset.tags, tag);
-
-      updatedDataset = update(dataset, {
-        tags: {
-          $set: newTags,
-        },
-      });
+      updater = {
+        tags: newTags,
+      };
     }
 
     trackAction("Edit dataset tag");
-    updateDataset(updatedDataset);
+    updateDataset(dataset, updater);
   };
 
   return (
@@ -608,15 +603,12 @@ export function DatasetTags({
           key={tag}
           kind="datasets"
           onClick={_.partial(onClickTag || _.noop, tag)}
-          onClose={_.partial(editTagFromDataset, dataset, false, tag)}
+          onClose={_.partial(editTagFromDataset, false, tag)}
           closable={dataset.isEditable}
         />
       ))}
       {dataset.isEditable ? (
-        <EditableTextIcon
-          icon={<PlusOutlined />}
-          onChange={_.partial(editTagFromDataset, dataset, true)}
-        />
+        <EditableTextIcon icon={<PlusOutlined />} onChange={_.partial(editTagFromDataset, true)} />
       ) : null}
     </div>
   );

@@ -5,7 +5,7 @@ import type {
   APIDatasetCompact,
   APIDatasetCompactWithoutStatus,
 } from "types/api_flow_types";
-import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
+import { DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import {
@@ -32,7 +32,7 @@ export type DatasetCollectionContextValue = {
     datasetId: APIDatasetId,
     datasetsToUpdate?: Array<APIDatasetCompact>,
   ) => Promise<void>;
-  updateCachedDataset: (dataset: APIDatasetCompact) => Promise<void>;
+  updateCachedDataset: (id: APIDatasetId, updater: DatasetUpdater) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -152,8 +152,8 @@ export default function DatasetCollectionContextProvider({
     await updateDatasetMutation.mutateAsync(datasetId);
   }
 
-  async function updateCachedDataset(dataset: APIDatasetCompact) {
-    await updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
+  async function updateCachedDataset(id: APIDatasetId, updater: DatasetUpdater) {
+    await updateDatasetMutation.mutateAsync([id, updater]);
   }
 
   const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatus) => {

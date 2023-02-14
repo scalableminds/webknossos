@@ -1362,6 +1362,7 @@ export function updateDataset(
   datasetId: APIDatasetId,
   dataset: APIMaybeUnimportedDataset,
   folderId?: string,
+  // todo: can this be removed now?
   skipResolutions?: boolean,
 ): Promise<APIDataset> {
   folderId = folderId || dataset.folderId;
@@ -1376,6 +1377,28 @@ export function updateDataset(
     {
       method: "PATCH",
       data: { ...dataset, folderId },
+    },
+  );
+}
+
+export type DatasetUpdater = {
+  description?: string | null;
+  displayName?: string | null;
+  sortingKey?: number;
+  isPublic?: boolean;
+  tags?: string[];
+  folderId?: string;
+};
+
+export function updateDatasetPartial(
+  datasetId: APIDatasetId,
+  updater: DatasetUpdater,
+): Promise<APIDataset> {
+  return Request.sendJSONReceiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/updatePartial`,
+    {
+      method: "PATCH",
+      data: updater,
     },
   );
 }

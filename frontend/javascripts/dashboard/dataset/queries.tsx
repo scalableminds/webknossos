@@ -1,7 +1,12 @@
 import _ from "lodash";
 import React, { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Utils from "libs/utils";
-import { getDataset, getDatasets, updateDataset } from "admin/admin_rest_api";
+import {
+  DatasetUpdater,
+  getDataset,
+  getDatasets,
+  updateDatasetPartial,
+} from "admin/admin_rest_api";
 import {
   createFolder,
   deleteFolder,
@@ -375,15 +380,15 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    (params: [APIMaybeUnimportedDataset, string] | APIDatasetId) => {
+    (params: [APIDatasetId, DatasetUpdater] | APIDatasetId) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
       if ("owningOrganization" in params) {
         const datasetId = params;
         return getDataset(datasetId);
       }
-      const [dataset, newFolderId] = params;
-      return updateDataset(dataset, dataset, newFolderId, true);
+      const [id, updater] = params;
+      return updateDatasetPartial(id, updater);
     },
     {
       mutationKey,

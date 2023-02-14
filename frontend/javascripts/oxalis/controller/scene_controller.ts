@@ -637,7 +637,7 @@ class SceneController {
             layer.transformMatrix[11],
             layer.transformMatrix[15],
           );
-          matrix.invert();
+          matrix.transpose();
           mesh.applyMatrix4(matrix);
         }
         newLayerBoundingBoxGroup.add(mesh);

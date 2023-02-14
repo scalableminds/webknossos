@@ -186,9 +186,8 @@ class UserListView extends React.PureComponent<Props, State> {
     }));
   };
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -416,7 +415,6 @@ class UserListView extends React.PureComponent<Props, State> {
               width: 200,
               float: "right",
             }}
-            onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
             value={this.state.searchQuery}
           />

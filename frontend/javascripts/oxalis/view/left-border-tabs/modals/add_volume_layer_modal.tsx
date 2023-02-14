@@ -125,7 +125,7 @@ export default function AddVolumeLayerModal({
   const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
 
-  const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>
     setNewLayerName(evt.target.value);
 
   const segmentationLayers = getSegmentationLayers(dataset);
@@ -199,7 +199,7 @@ export default function AddVolumeLayerModal({
       width={500}
       maskClosable={false}
       onCancel={onCancel}
-      visible
+      open
     >
       Layer Name:{" "}
       <InputComponent

@@ -420,6 +420,8 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   // instead of clamping all vertices, they are enumerated so that the first/last few
   // are still clipped to the plane boundary.
   if (true) {
+    // todo: this should be adapted with the current mag (use the active mag of a layer
+    // that hasn't any transforms)
     float d = 32.;
     vec3 datasetScaleUVW = transDim(datasetScale);
     vec3 transWorldCoord = transDim(worldCoord.xyz);

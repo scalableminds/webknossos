@@ -161,6 +161,52 @@ const M4x4 = {
     return dest;
   },
 
+  transpose(m: Matrix4x4, r?: Matrix4x4): Matrix4x4 {
+    if (m == r) {
+      var tmp = 0.0;
+      tmp = m[1];
+      m[1] = m[4];
+      m[4] = tmp;
+      tmp = m[2];
+      m[2] = m[8];
+      m[8] = tmp;
+      tmp = m[3];
+      m[3] = m[12];
+      m[12] = tmp;
+      tmp = m[6];
+      m[6] = m[9];
+      m[9] = tmp;
+      tmp = m[7];
+      m[7] = m[13];
+      m[13] = tmp;
+      tmp = m[11];
+      m[11] = m[14];
+      m[14] = tmp;
+      return m;
+    }
+
+    if (r == undefined) r = new Float32Array(16);
+
+    r[0] = m[0];
+    r[1] = m[4];
+    r[2] = m[8];
+    r[3] = m[12];
+    r[4] = m[1];
+    r[5] = m[5];
+    r[6] = m[9];
+    r[7] = m[13];
+    r[8] = m[2];
+    r[9] = m[6];
+    r[10] = m[10];
+    r[11] = m[14];
+    r[12] = m[3];
+    r[13] = m[7];
+    r[14] = m[11];
+    r[15] = m[15];
+
+    return r;
+  },
+
   extractTranslation(m: Matrix4x4, r?: Float32Array | null | undefined): Float32Array {
     if (r == null) {
       r = new Float32Array(3);

@@ -48,7 +48,10 @@ import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
-import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import {
+  getGlobalLayerIndexForLayerName,
+  invertAndTranspose,
+} from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -226,7 +229,7 @@ class PlaneMaterialFactory {
       const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
 
       this.uniforms[`${layerName}_transform`] = {
-        value: layer.transformMatrix || Identity4x4,
+        value: invertAndTranspose(layer.transformMatrix || Identity4x4),
       };
       this.uniforms[`${layerName}_has_transform`] = {
         value: !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4),
@@ -492,7 +495,9 @@ class PlaneMaterialFactory {
         (layers) => {
           for (const layer of layers) {
             const name = sanitizeName(layer.name);
-            this.uniforms[`${name}_transform`].value = layer.transformMatrix || Identity4x4;
+            this.uniforms[`${name}_transform`].value = invertAndTranspose(
+              layer.transformMatrix || Identity4x4,
+            );
             this.uniforms[`${name}_has_transform`] = {
               value: !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4),
             };

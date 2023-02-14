@@ -436,7 +436,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
       params.sortingKey.map(v => q"sortingKey = $v"),
       params.isPublic.map(v => q"isPublic = $v"),
       params.tags.map(v => q"tags = $v"),
-      params.folderId.map(v => q"folderId = $v"),
+      params.folderId.map(v => q"_folder = $v"),
     ).flatten
     if (setQueries.isEmpty) {
       Fox.successful(())

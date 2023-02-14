@@ -314,20 +314,20 @@ export async function initialize(
 
   // setScale("C556_versaCT", 8, [219, -6, 784]);
 
-  transformer.setTransforms(
-    "C556_versaCT",
-    transformer.makeChain([
-      { type: "rotate", args: [-1, [579, 332, 784]] },
-      {
-        type: "scale",
-        args: [
-          [11, 11, 5],
-          [219, -6, 784],
-        ],
-      },
-      { type: "translate", args: [-212, 0, 0] },
-    ]),
-  );
+  // transformer.setTransforms(
+  //   "C556_versaCT",
+  //   transformer.makeChain([
+  //     { type: "rotate", args: [-1, [579, 332, 784]] },
+  //     {
+  //       type: "scale",
+  //       args: [
+  //         [11, 11, 5],
+  //         [219, -6, 784],
+  //       ],
+  //     },
+  //     { type: "translate", args: [-212, 0, 0] },
+  //   ]),
+  // );
 
   return initializationInformation;
 }

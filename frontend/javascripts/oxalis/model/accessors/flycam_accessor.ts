@@ -189,7 +189,9 @@ export function _getMaximumZoomForAllResolutions(
 }
 // const getMaximumZoomForAllResolutions = memoizeOne(_getMaximumZoomForAllResolutions);
 
-export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+export const Identity4x4 = M4x4.inverse(
+  M4x4.transpose(new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])),
+);
 
 // todo: make this cleaner. since the maximum zoom depends on the layer name and the right matrix,
 // a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?

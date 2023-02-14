@@ -31,6 +31,7 @@ import {
   LayerSelection,
   BoundingBoxSelection,
   getReadableNameOfVolumeLayer,
+  MagSlider,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -73,8 +74,6 @@ type ExportLayerInfos = {
   layerName: string | null;
   tracingId: string | null;
   annotationId: string | null;
-  lowestResolutionIndex: number;
-  highestResolutionIndex: number;
 };
 
 enum ExportFormat {
@@ -84,8 +83,8 @@ enum ExportFormat {
 
 const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
 
-const exportKey = (layerInfos: ExportLayerInfos, resolutionIndex: number) =>
-  `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${resolutionIndex}`;
+const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
+  `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${mag.join("-")}`;
 
 function getExportLayerInfos(
   layer: APIDataLayer,
@@ -93,17 +92,12 @@ function getExportLayerInfos(
 ): ExportLayerInfos {
   const annotationId = tracing != null ? tracing.annotationId : null;
 
-  const highestResolutionIndex = getResolutionInfo(layer.resolutions).getHighestResolutionIndex();
-  const lowestResolutionIndex = getResolutionInfo(layer.resolutions).getClosestExistingIndex(0);
-
   if (layer.category === "color" || !layer.tracingId) {
     return {
       displayName: layer.name,
       layerName: layer.name,
       tracingId: null,
       annotationId: null,
-      lowestResolutionIndex,
-      highestResolutionIndex,
     };
   }
 
@@ -119,8 +113,6 @@ function getExportLayerInfos(
   return {
     displayName: readableVolumeLayerName,
     layerName: layer.fallbackLayerInfo?.name ?? null,
-    lowestResolutionIndex,
-    highestResolutionIndex,
     tracingId: volumeTracing.tracingId,
     annotationId,
   };
@@ -169,7 +161,7 @@ function useRunningJobs(): [
   (
     dataset: APIDataset,
     boundingBox: BoundingBoxType,
-    resolutionIndex: number,
+    mag: Vector3,
     selectedLayerInfos: ExportLayerInfos,
     exportFormat: ExportFormat,
   ) => Promise<void>,
@@ -203,35 +195,29 @@ function useRunningJobs(): [
 
   return [
     runningJobs,
-    async (dataset, boundingBox, resolutionIndex, selectedLayerInfos, exportFormat) => {
+    async (dataset, boundingBox, mag, selectedLayerInfos, exportFormat) => {
       const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
       const job = await startExportTiffJob(
         dataset.name,
         dataset.owningOrganization,
         computeArrayFromBoundingBox(boundingBox),
         selectedLayerInfos.layerName,
-        datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-"),
+        mag.join("-"),
         selectedLayerInfos.annotationId,
         selectedLayerInfos.displayName,
         exportFormat === ExportFormat.OME_TIFF,
       );
-      setRunningJobs((previous) => [
-        ...previous,
-        [exportKey(selectedLayerInfos, resolutionIndex), job.id],
-      ]);
+      setRunningJobs((previous) => [...previous, [exportKey(selectedLayerInfos, mag), job.id]]);
     },
   ];
 }
 
 function estimateFileSize(
   selectedLayer: APIDataLayer,
-  resolutionIndex: number,
+  mag: Vector3,
   boundingBox: BoundingBoxType,
   exportFormat: ExportFormat,
 ) {
-  const mag = getResolutionInfo(selectedLayer.resolutions).getResolutionByIndexOrThrow(
-    resolutionIndex,
-  );
   const shape = computeShapeFromBoundingBox(boundingBox);
   const volume =
     Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
@@ -242,9 +228,8 @@ function estimateFileSize(
   );
 }
 
-function formatSelectedScale(dataset: APIDataset, resolutionIndex: number) {
+function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
   const scale = dataset.dataSource.scale;
-  const mag = getDatasetResolutionInfo(dataset).getResolutionByIndexOrThrow(resolutionIndex);
   formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
 }
 
@@ -343,25 +328,26 @@ function _DownloadModalView({
 
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
   const selectedLayerInfos = getExportLayerInfos(selectedLayer, tracing);
+  const selectedLayerResolutionInfo = getResolutionInfo(selectedLayer.resolutions);
 
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
     {
       id: -1,
-      name: "Full dataset",
+      name: "Full layer",
       boundingBox: computeBoundingBoxFromBoundingBoxObject(selectedLayer.boundingBox),
       color: [255, 255, 255],
       isVisible: true,
     } as UserBoundingBox,
   ];
+
   const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
-
-  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
-  const { lowestResolutionIndex, highestResolutionIndex } = selectedLayerInfos;
-  const [rawResolutionIndex, setResolutionIndex] = useState<number>(lowestResolutionIndex);
-  const resolutionIndex = clamp(lowestResolutionIndex, rawResolutionIndex, highestResolutionIndex);
+  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getLowestResolution());
+  const mag = selectedLayerResolutionInfo.hasResolution(rawMag)
+    ? rawMag
+    : selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 
   const selectedBoundingBox = userBoundingBoxes.find(
@@ -369,7 +355,7 @@ function _DownloadModalView({
   ) as UserBoundingBox;
   const { isExportable, alerts: boundingBoxCompatibilityAlerts } = isBoundingBoxExportable(
     selectedBoundingBox.boundingBox,
-    datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex),
+    mag,
   );
 
   const [runningExportJobs, triggerExportJob] = useRunningJobs();
@@ -390,7 +376,7 @@ function _DownloadModalView({
       await triggerExportJob(
         dataset,
         selectedBoundingBox.boundingBox,
-        resolutionIndex,
+        mag,
         selectedLayerInfos,
         exportFormat,
       );
@@ -515,6 +501,9 @@ with wk.webknossos_context(
   const hasSkeleton = tracing.skeleton != null;
 
   const okText = okTextForTab.get(activeTabKey);
+  const isCurrentlyRunningExportJob =
+    activeTabKey === "export" &&
+    runningExportJobs.some(([key]) => key === exportKey(selectedLayerInfos, mag));
 
   return (
     <Modal
@@ -526,24 +515,10 @@ with wk.webknossos_context(
           <Button
             key="ok"
             type="primary"
-            disabled={
-              activeTabKey === "export" &&
-              (!isExportable ||
-                runningExportJobs.some(
-                  ([key]) => key === exportKey(selectedLayerInfos, resolutionIndex),
-                ) || // The export is already running or...
-                isMergerModeEnabled) // Merger mode is enabled
-            }
+            disabled={!isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled}
             onClick={handleOk}
+            loading={isCurrentlyRunningExportJob}
           >
-            {activeTabKey === "export" &&
-              runningExportJobs.some(
-                ([key]) => key === exportKey(selectedLayerInfos, resolutionIndex),
-              ) && (
-                <>
-                  <SyncOutlined spin />{" "}
-                </>
-              )}
             {okText}
           </Button>
         ) : null
@@ -684,7 +659,11 @@ with wk.webknossos_context(
               <BoundingBoxSelection
                 value={selectedBoundingBoxId}
                 userBoundingBoxes={userBoundingBoxes}
-                setSelectedBoundingBoxId={setSelectedBoundingBoxId}
+                setSelectedBoundingBoxId={(boxId: number | null) => {
+                  if (boxId != null) {
+                    setSelectedBoundingBoxId(boxId);
+                  }
+                }}
                 style={{ width: "100%" }}
               />
               {boundingBoxCompatibilityAlerts}
@@ -698,25 +677,17 @@ with wk.webknossos_context(
               </Divider>
               <Row>
                 <Col span={19}>
-                  <Slider
-                    tooltip={{
-                      formatter: () =>
-                        datasetResolutionInfo
-                          .getResolutionByIndexOrThrow(resolutionIndex)
-                          .join("-"),
-                    }}
-                    min={lowestResolutionIndex}
-                    max={highestResolutionIndex}
-                    step={1}
-                    value={resolutionIndex}
-                    onChange={(value) => setResolutionIndex(value)}
+                  <MagSlider
+                    resolutionInfo={selectedLayerResolutionInfo}
+                    value={mag}
+                    onChange={setMag}
                   />
                 </Col>
                 <Col
                   span={5}
                   style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
                 >
-                  {datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndex).join("-")}
+                  {mag.join("-")}
                 </Col>
               </Row>
               <Text
@@ -728,12 +699,12 @@ with wk.webknossos_context(
                 Estimated file size:{" "}
                 {estimateFileSize(
                   selectedLayer,
-                  resolutionIndex,
+                  mag,
                   selectedBoundingBox.boundingBox,
                   exportFormat,
                 )}
                 <br />
-                Resolution: {formatSelectedScale(dataset, resolutionIndex)}
+                Resolution: {formatSelectedScale(dataset, mag)}
               </Text>
 
               {downloadHint}

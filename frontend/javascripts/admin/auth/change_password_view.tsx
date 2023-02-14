@@ -46,8 +46,14 @@ function ChangePasswordView({ history }: Props) {
   }
 
   return (
-    <Row className="login-view" justify="center" align="middle">
-      <Col className="login-content">
+    <Row
+      justify="center"
+      align="middle"
+      style={{
+        padding: 50,
+      }}
+    >
+      <Col span={8}>
         <h3>Change Password</h3>
         <Alert
           type="info"

@@ -3,7 +3,7 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import * as dayjs from "dayjs";
+import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import updateLocale from "dayjs/plugin/updateLocale";
 import relativeTime from "dayjs/plugin/relativeTime";

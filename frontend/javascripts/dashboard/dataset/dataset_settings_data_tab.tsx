@@ -32,7 +32,7 @@ import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_compo
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
 import { APIDataLayer, APIDatasetId, APIJob } from "types/api_flow_types";
-import { useRunningJobs, useStartAndPollJob } from "admin/job/job_hooks";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 
@@ -326,14 +326,16 @@ function SimpleLayerForm({
     form.validateFields();
   }, [dataLayers]);
 
-  const [runningJobs, startJob] = useRunningJobs({
-    onSuccess(job) {
-      Toast.success(
-        "The computation of the largest segment id for this dataset has finished. Reload the page to see it.",
-      );
+  const [runningJobs, startJob] = useStartAndPollJob({
+    onSuccess(job, isInitial) {
+      if (!isInitial) {
+        Toast.success(
+          "The computation of the largest segment id for this dataset has finished. Please reload the page to see it.",
+        );
+      }
       setMostRecentSuccessfulJob(job);
     },
-    onFailure(job) {
+    onFailure() {
       Toast.error(
         "The computation of the largest segment id for this dataset didn't finish properly.",
       );

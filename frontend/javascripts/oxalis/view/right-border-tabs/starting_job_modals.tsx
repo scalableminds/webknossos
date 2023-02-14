@@ -26,6 +26,7 @@ import { Unicode, type Vector3 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import { clamp, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { V3 } from "libs/mjs";
 
 const { ThinSpace } = Unicode;
 const enum JobNames {
@@ -276,7 +277,7 @@ export function MagSlider({
       step={1}
       value={clamp(
         0,
-        allMags.findIndex(([, v]) => v[0] === value[0] && v[1] === value[1] && v[2] === value[2]),
+        allMags.findIndex(([, v]) => V3.equals(v, value)),
         allMags.length - 1,
       )}
       onChange={(value) => onChange(allMags[value][1])}

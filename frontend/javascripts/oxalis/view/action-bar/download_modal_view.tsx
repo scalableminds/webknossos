@@ -1,17 +1,5 @@
-import {
-  Divider,
-  Modal,
-  Checkbox,
-  Row,
-  Col,
-  Tabs,
-  Typography,
-  Button,
-  Radio,
-  Slider,
-  Alert,
-} from "antd";
-import { CopyOutlined, SyncOutlined } from "@ant-design/icons";
+import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Alert } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import type { APIDataLayer, APIDataset } from "types/api_flow_types";
@@ -23,7 +11,6 @@ import {
   doWithToken,
   downloadAnnotation,
   getAuthToken,
-  getJob,
   startExportTiffJob,
 } from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
@@ -41,22 +28,19 @@ import {
 import {
   getByteCountFromLayer,
   getDataLayers,
-  getDatasetResolutionInfo,
   getLayerByName,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { useSelector } from "react-redux";
 import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
 import {
-  clamp,
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   computeShapeFromBoundingBox,
 } from "libs/utils";
 import { formatBytes, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
-import { usePolling } from "libs/react_hooks";
-import { useRunningJobs } from "admin/job/job_hooks";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import { saveAs } from "file-saver";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
@@ -291,9 +275,7 @@ function _DownloadModalView({
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
   const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getLowestResolution());
-  const mag = selectedLayerResolutionInfo.hasResolution(rawMag)
-    ? rawMag
-    : selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
+  const mag = selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 
   const selectedBoundingBox = userBoundingBoxes.find(
@@ -304,14 +286,14 @@ function _DownloadModalView({
     mag,
   );
 
-  const [runningExportJobs, startJob] = useRunningJobs({
+  const [runningExportJobs, startJob] = useStartAndPollJob({
     async onSuccess(job) {
       if (job.resultLink != null) {
         const token = await doWithToken(async (t) => t);
         saveAs(`${job.resultLink}?token=${token}`);
       }
     },
-    onFailure(job) {
+    onFailure() {
       Toast.error("Error when exporting data. Please contact us for support.");
     },
   });

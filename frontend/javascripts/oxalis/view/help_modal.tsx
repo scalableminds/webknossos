@@ -66,13 +66,13 @@ type HelpModalProps = {
 
 export function HelpModal(props: HelpModalProps) {
   const [helpText, setHelpText] = useState("");
-  const [sending, setSending] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const positionStyle: CSSProperties = { right: 10, bottom: 40, top: "auto", position: "fixed" };
 
   const sendHelp = async () => {
     if (helpText.length > 0) {
       try {
-        setSending(true);
+        setIsSending(true);
         await sendHelpEmail(helpText);
         setHelpText("");
         message.success("Message has been sent. We'll reply via email shortly.");
@@ -80,7 +80,7 @@ export function HelpModal(props: HelpModalProps) {
         message.error("Sorry, we could not send the help message. Please try again later.");
         throw err;
       } finally {
-        setSending(false);
+        setIsSending(false);
       }
     }
     props.onCancel();
@@ -93,7 +93,7 @@ export function HelpModal(props: HelpModalProps) {
       open={props.isModalOpen}
       onOk={sendHelp}
       onCancel={props.onCancel}
-      confirmLoading={sending}
+      confirmLoading={isSending}
       mask={props.centeredLayout}
       okText="Send"
       width={300}

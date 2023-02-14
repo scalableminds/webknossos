@@ -457,7 +457,7 @@ export default function TaskListView({
                 }}
               />
               {taskGroup.key}
-
+              <wbr />
               <span className="task-panel-state">
                 <TaskStateTag taskInfo={taskInfo} />
               </span>
@@ -507,9 +507,11 @@ export default function TaskListView({
               }}
             />
             {task.taskName}
+            <wbr />
             {task.config.name != null && (
               <span className="task-panel-name">{task.config.name}</span>
             )}
+            <wbr />
             <span className="task-panel-state">
               <TaskStateTag taskInfo={taskInfo} />
             </span>
@@ -558,7 +560,16 @@ export default function TaskListView({
       }}
     >
       <Col xs={10} style={{ display: "flex", flexDirection: "column" }}>
-        <h3 style={{ marginBottom: 0 }}>{readableWorkflowName} </h3>
+        <h3
+          style={{
+            marginBottom: 0,
+            maxWidth: "100%",
+            overflowWrap: "anywhere",
+          }}
+          title={readableWorkflowName}
+        >
+          {readableWorkflowName}
+        </h3>
         <h4 style={{ color: "#51686e" }}>
           {formatDateMedium(new Date(runBeginTimeString))}{" "}
           <Tooltip title={formatDurationStrict(totalRuntime)}>
@@ -611,6 +622,7 @@ export default function TaskListView({
                   : addUrlParam(history.location, "runId", value),
               )
             }
+            style={{ maxWidth: 300 }}
           >
             <Select.Option value="">Consolidated</Select.Option>
             {report.runs.map((run) => (

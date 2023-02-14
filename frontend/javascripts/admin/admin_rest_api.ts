@@ -665,7 +665,8 @@ export function updateAnnotationLayer(
 
 type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
-  name: string;
+  name: string | null | undefined;
+  autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
@@ -795,6 +796,7 @@ export function getEmptySandboxAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
+  autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
   mappingName?: string | null | undefined,
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
@@ -802,8 +804,6 @@ export function createExplorational(
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   let layers: Array<AnnotationLayerCreateDescriptor> = [];
-
-  const autoFallbackLayer = true;
 
   if (typ === "skeleton") {
     layers = [

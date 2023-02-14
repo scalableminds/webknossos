@@ -48,20 +48,10 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal: () => void;
   onCloseCreateExplorativeModal: () => void;
 }) {
-  // todo: do in backend?
-  // const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
-  // const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
-  //   ? "true"
-  //   : "false";
-  // const fallbackLayerGetParameter =
-  //   firstSegmentationLayer != null && supportsFallback
-  //     ? `?fallbackLayerName=${firstSegmentationLayer.name}`
-  //     : "";
-
   return (
     <div>
       <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid`}
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid?autoFallbackLayer=true`}
         style={{
           display: "inline-block",
         }}

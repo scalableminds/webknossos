@@ -82,6 +82,7 @@ async function _screenshotAnnotationHelper(
   const createdExplorational = await createExplorational(
     datasetId,
     typ,
+    false,
     fallbackLayerName,
     null,
     null,
@@ -106,6 +107,7 @@ export async function screenshotDatasetWithMapping(
   const createdExplorational = await createExplorational(
     datasetId,
     "skeleton",
+    false,
     null,
     null,
     null,
@@ -128,6 +130,7 @@ export async function screenshotDatasetWithMappingLink(
   const createdExplorational = await createExplorational(
     datasetId,
     "skeleton",
+    false,
     null,
     null,
     null,

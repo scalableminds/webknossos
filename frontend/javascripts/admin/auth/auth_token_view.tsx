@@ -48,8 +48,6 @@ function AuthTokenView() {
   return (
     <div>
       <Row
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-        type="flex"
         justify="center"
         style={{
           padding: 50,

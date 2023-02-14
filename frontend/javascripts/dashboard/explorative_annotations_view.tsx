@@ -51,6 +51,7 @@ import TextWithDescription from "components/text_with_description";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { SearchProps } from "antd/lib/input";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -314,9 +315,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     return this.getCurrentModeState().tracings;
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearchChanged = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -439,13 +439,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleSearchPressEnter = (event: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-    const { value } = event.target;
-
+  handleOnSearch: SearchProps["onSearch"] = (value, _event) => {
     if (value !== "") {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-      this.addTagToSearch(event.target.value);
+      this.addTagToSearch(value);
       this.setState({
         searchQuery: "",
       });
@@ -760,8 +756,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       <div className="TestExplorativeAnnotationsView">
         <TopBar
           isAdminView={this.props.isAdminView}
-          handleSearchPressEnter={this.handleSearchPressEnter}
-          handleSearch={this.handleSearch}
+          handleOnSearch={this.handleOnSearch}
+          handleSearchChanged={this.handleSearchChanged}
           searchQuery={this.state.searchQuery}
           toggleShowArchived={this.toggleShowArchived}
           shouldShowArchivedTracings={this.state.shouldShowArchivedTracings}
@@ -792,16 +788,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
 function TopBar({
   isAdminView,
-  handleSearchPressEnter,
-  handleSearch,
+  handleOnSearch,
+  handleSearchChanged,
   searchQuery,
   toggleShowArchived,
   shouldShowArchivedTracings,
   archiveAll,
 }: {
   isAdminView: boolean;
-  handleSearchPressEnter: (event: React.SyntheticEvent) => void;
-  handleSearch: (event: React.SyntheticEvent) => void;
+  handleOnSearch: SearchProps["onSearch"];
+  handleSearchChanged: (event: React.ChangeEvent<HTMLInputElement>) => void;
   searchQuery: string;
   toggleShowArchived: () => void;
   shouldShowArchivedTracings: boolean;
@@ -819,8 +815,8 @@ function TopBar({
         width: 200,
         float: "right",
       }}
-      onPressEnter={handleSearchPressEnter}
-      onChange={handleSearch}
+      onSearch={handleOnSearch}
+      onChange={handleSearchChanged}
       value={searchQuery}
     />
   );

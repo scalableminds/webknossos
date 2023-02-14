@@ -7,7 +7,7 @@ import {
 } from "@ant-design/icons";
 import { List, Tooltip, Dropdown, Menu, MenuItemProps } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import Checkbox from "antd/lib/checkbox/Checkbox";
+import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
@@ -255,8 +255,7 @@ function _MeshInfoItem(props: {
     <Tooltip title="Change visibility">
       <Checkbox
         checked={isVisible}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
-        onChange={(event: React.SyntheticEvent) => {
+        onChange={(event: CheckboxChangeEvent) => {
           if (!props.visibleSegmentationLayer) {
             return;
           }
@@ -264,7 +263,6 @@ function _MeshInfoItem(props: {
           onChangeMeshVisibility(
             props.visibleSegmentationLayer.name,
             segment.id,
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
             event.target.checked,
           );
         }}
@@ -470,52 +468,54 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
-          <EditableTextLabel
-            value={segment.name || `Segment ${segment.id}`}
-            label="Segment Name"
-            onClick={() => onSelectSegment(segment)}
-            onChange={(name) => {
-              if (visibleSegmentationLayer != null) {
-                updateSegment(
-                  segment.id,
-                  {
-                    name,
-                  },
-                  visibleSegmentationLayer.name,
-                );
-              }
-            }}
-            margin="0 5px"
-            disableEditing={!allowUpdate}
-          />
-          <Tooltip title="Open context menu (also available via right-click)">
-            <EllipsisOutlined
-              onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
+          <div style={{ display: "inline-flex", alignItems: "center" }}>
+            <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+            <EditableTextLabel
+              value={segment.name || `Segment ${segment.id}`}
+              label="Segment Name"
+              onClick={() => onSelectSegment(segment)}
+              onChange={(name) => {
+                if (visibleSegmentationLayer != null) {
+                  updateSegment(
+                    segment.id,
+                    {
+                      name,
+                    },
+                    visibleSegmentationLayer.name,
+                  );
+                }
+              }}
+              margin="0 5px"
+              disableEditing={!allowUpdate}
             />
-          </Tooltip>
-          {/* Show Default Segment Name if another one is already defined*/}
-          {getSegmentIdDetails()}
-          {segment.id === centeredSegmentId ? (
-            <Tooltip title="This segment is currently centered in the data viewports.">
-              <i
-                className="fas fa-crosshairs deemphasized-segment-name"
-                style={{
-                  marginLeft: 4,
-                }}
+            <Tooltip title="Open context menu (also available via right-click)">
+              <EllipsisOutlined
+                onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
               />
             </Tooltip>
-          ) : null}
-          {segment.id === activeCellId ? (
-            <Tooltip title="The currently active segment id belongs to this segment.">
-              <i
-                className="fas fa-paint-brush deemphasized-segment-name"
-                style={{
-                  marginLeft: 4,
-                }}
-              />
-            </Tooltip>
-          ) : null}
+            {/* Show Default Segment Name if another one is already defined*/}
+            {getSegmentIdDetails()}
+            {segment.id === centeredSegmentId ? (
+              <Tooltip title="This segment is currently centered in the data viewports.">
+                <i
+                  className="fas fa-crosshairs deemphasized-segment-name"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+            {segment.id === activeCellId ? (
+              <Tooltip title="The currently active segment id belongs to this segment.">
+                <i
+                  className="fas fa-paint-brush deemphasized-segment-name"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+          </div>
         </Tooltip>
       </Dropdown>
 

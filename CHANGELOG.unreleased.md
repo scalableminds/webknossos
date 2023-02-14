@@ -8,18 +8,25 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.02.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.1...HEAD)
 
 ### Added
 - Remote datasets can now also be streamed from Google Cloud Storage URIs (`gs://`). [#6775](https://github.com/scalableminds/webknossos/pull/6775)
+- Remote volume datasets in the neuroglancer precomputed format can now be viewed in WEBKNOSSOS. [#6716](https://github.com/scalableminds/webknossos/pull/6716)
+- Added new mesh-related menu items to the context menu when a mesh is hovered in the 3d viewport. [#](https://github.com/scalableminds/webknossos/pull/6813)
+- Highlight 'organization owner' in Admin>User page. [#6832](https://github.com/scalableminds/webknossos/pull/6832
+
 
 ### Changed
 - Limit paid team sharing features to respective organization plans. [#6767](https://github.com/scalableminds/webknossos/pull/6776)
 - Rewrite the database tools in `tools/postgres` to JavaScript and adding support for non-default Postgres username-password combinations. [#6803](https://github.com/scalableminds/webknossos/pull/6803)
+- Added owner name to organization page. [#6811](https://github.com/scalableminds/webknossos/pull/6811)
+- Remove multiline <TextArea> support from <InputComponent>. [#6839](https://github.com/scalableminds/webknossos/pull/6839)
 
 ### Fixed
-- Fixed a benign error message which briefly appeared after logging in. [#6810](https://github.com/scalableminds/webknossos/pull/6810)
-- Fixed saving allowed teams in dataset settings [#6817](https://github.com/scalableminds/webknossos/pull/6817)
+- Fixed saving allowed teams in dataset settings. [#6817](https://github.com/scalableminds/webknossos/pull/6817)
+- Fixed log streaming in Voxelytics workflow reports. [#6828](https://github.com/scalableminds/webknossos/pull/6828) [#6831](https://github.com/scalableminds/webknossos/pull/6831)
+- Fixed some layouting issues with line breaks in segment list/dataset info tab [#6799](https://github.com/scalableminds/webknossos/pull/6799)
 
 ### Removed
 

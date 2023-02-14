@@ -126,9 +126,7 @@ const getGroupedAndChunkedVersions = _.memoize(
     // Then, the versions for each day are chunked into x-minute intervals,
     // so that the actions of one chunk are all from within one x-minute interval.
     const groupedVersions = _.groupBy(versions, (batch) =>
-      dayjs
-        .utc(_.max(batch.value.map((action) => action.value.actionTimestamp)))
-        .calendar(null),
+      dayjs.utc(_.max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
     );
 
     const getBatchTime = (batch: APIUpdateActionBatch): number =>

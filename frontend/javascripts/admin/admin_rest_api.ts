@@ -525,10 +525,7 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: dayjs()
-        .endOf("day")
-        .add(initialExpirationPeriodInDays, "days")
-        .valueOf(),
+      expirationDateTime: dayjs().endOf("day").add(initialExpirationPeriodInDays, "days").valueOf(),
     },
   });
 }
@@ -1847,7 +1844,7 @@ export function updateUserConfiguration(
 // ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
-  
+
   day: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const month = day.format("M");
@@ -1862,9 +1859,7 @@ export async function getTimeTrackingForUserByMonth(
 
 export async function getTimeTrackingForUser(
   userId: string,
-  
   startDate: dayjs.Dayjs,
-  
   endDate: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const timeTrackingData = await Request.receiveJSON(

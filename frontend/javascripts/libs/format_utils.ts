@@ -3,12 +3,15 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import * as dayjs from "dayjs"
+import * as dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import updateLocale from "dayjs/plugin/updateLocale";
 import relativeTime from "dayjs/plugin/relativeTime";
 import calendar from "dayjs/plugin/calendar";
 import utc from "dayjs/plugin/utc";
+import weekday from "dayjs/plugin/weekday";
+import localeData from "dayjs/plugin/localeData";
+
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
 
@@ -17,6 +20,8 @@ dayjs.extend(duration);
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 dayjs.extend(calendar);
+dayjs.extend(weekday);
+dayjs.extend(localeData);
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 const COLOR_MAP: Array<string> = [
@@ -182,7 +187,7 @@ export function formatDurationToMinutesAndSeconds(durationInMillisecons: number)
   // const minutesAsString = `${minuteDuration < 10 ? 0 : ""}${minuteDuration}`;
   // const hoursAsSeconds = `${duration.seconds() < 10 ? 0 : ""}${duration.seconds()}`;
   // return `${minutesAsString}:${hoursAsSeconds}`;
-  return duration.format("mm:ss")
+  return duration.format("mm:ss");
 }
 export function formatHash(id: string): string {
   return id.slice(-6);

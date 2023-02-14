@@ -1,26 +1,32 @@
-import { Select, Card, Form, Row, Col, DatePicker, Spin } from "antd";
+import { Select, Card, Form, Row, Col, Spin } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
 import _ from "lodash";
 import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
-import type { OxalisState } from "oxalis/store";
-import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import TimeTrackingChart from "./time_line_chart_view";
+import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
+import generatePicker from "antd/es/date-picker/generatePicker";
+
+import type { APIUser, APITimeTracking } from "types/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 
 const FormItem = Form.Item;
+const DatePicker = generatePicker(dayjsGenerateConfig);
 const { RangePicker } = DatePicker;
+
 const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
 const hourFormatPrecise = "HH:mm:ss";
+
 type TimeTrackingStats = {
   totalTime: number;
   numberTasks: number;

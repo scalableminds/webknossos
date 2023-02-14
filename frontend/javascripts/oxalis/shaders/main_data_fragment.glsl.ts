@@ -402,14 +402,14 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   float subdivisionCount = 200.;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
-  vec4 worldCoordTopLeft     = modelMatrix * vec4(vec3(-planeWidth/2.,  planeWidth/2., 0.), 1.);
-  vec4 worldCoordBottomRight = modelMatrix * vec4(vec3( planeWidth/2., -planeWidth/2., 0.), 1.);
+  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(vec3(-planeWidth/2.,  planeWidth/2., 0.), 1.)).xyz);
+  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4(vec3( planeWidth/2., -planeWidth/2., 0.), 1.)).xyz);
 
   // vec3 positionUVW = transDim(position);
   // vec2 index = (positionUVW.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
   vec2 index = (position.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
 
-  // TODO: depending on the amount of vertices and the zoom value, it could be
+  // Depending on the amount of vertices and the zoom value, it could be
   // that not only the first/last vertices have to be pinned, but multiple ones
   // might need pinning (otherwise, the second vertex is moved by 32 vx which could
   // move it in front of the first vertex).
@@ -422,17 +422,17 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   if (true) {
     // todo: this should be adapted with the current mag (use the active mag of a layer
     // that hasn't any transforms)
-    float d = 32.;
+    vec2 d = vec2(32.);
     vec3 datasetScaleUVW = transDim(datasetScale);
     vec3 transWorldCoord = transDim(worldCoord.xyz);
 
     if (index.x >= 1. && index.x <= subdivisionCount - 1.) {
-      transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d) * d * datasetScaleUVW.x;
+      transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d.x) * d.x * datasetScaleUVW.x;
       transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
     }
 
     if (index.y >= 1. && index.y <= subdivisionCount - 1.) {
-      transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d) * d * datasetScaleUVW.y;
+      transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d.y) * d.y * datasetScaleUVW.y;
       transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
     }
 
@@ -447,10 +447,11 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   // to avoid picking the wrong bucket (which would lead to an rendering offset
   // of 32 vx).
   if (true && (index.x > 0. && index.x < 200.)) {
-      worldCoordUVW.x -= 1.;
-  //    worldCoordUVW.y += 1.;
-    } else {
-      worldCoordUVW.x -= 5.;
+    worldCoordUVW.x -= 1.;
+    worldCoordUVW.y += 1.;
+  } else {
+    worldCoordUVW.x -= 5.;
+    worldCoordUVW.y += 1.;
   }
 
   flatVertexPos = worldCoordUVW;

@@ -259,7 +259,6 @@ class DataSetController @Inject()(userService: UserService,
                   requestingUser,
                   Some(organization),
                   Some(dataStore),
-                  skipResolutions = true,
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
               }
             } yield resultByDataStore
@@ -362,9 +361,7 @@ Expects:
                            paramType = "body")))
   def updatePartial(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                               example = "sample_organization") organizationName: String,
-                    @ApiParam(value = "The name of the dataset") dataSetName: String,
-                    @ApiParam(value = "If true, the resolutions of the dataset layers in the returned json are skipped")
-                    skipResolutions: Option[Boolean]): Action[DatasetUpdateParameters] =
+                    @ApiParam(value = "The name of the dataset") dataSetName: String): Action[DatasetUpdateParameters] =
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
@@ -373,9 +370,7 @@ Expects:
         _ <- dataSetDAO.updatePartial(dataSet._id, request.body)
         updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-        js <- dataSetService.publicWrites(updated,
-                                          Some(request.identity),
-                                          skipResolutions = skipResolutions.getOrElse(false))
+        js <- dataSetService.publicWrites(updated, Some(request.identity))
       } yield Ok(js)
     }
 
@@ -403,9 +398,7 @@ Expects:
                            paramType = "body")))
   def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                        example = "sample_organization") organizationName: String,
-             @ApiParam(value = "The name of the dataset") dataSetName: String,
-             @ApiParam(value = "If true, the resolutions of the dataset layers in the returned json are skipped")
-             skipResolutions: Option[Boolean]): Action[JsValue] =
+             @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags, folderId) =>
@@ -422,9 +415,7 @@ Expects:
             _ <- dataSetDAO.updateTags(dataSet._id, tags)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-            js <- dataSetService.publicWrites(updated,
-                                              Some(request.identity),
-                                              skipResolutions = skipResolutions.getOrElse(false))
+            js <- dataSetService.publicWrites(updated, Some(request.identity))
           } yield Ok(Json.toJson(js))
       }
     }

@@ -619,16 +619,14 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId, skipResolutions: Boolean): Fox[DataLayer] = {
+  private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      standinResolutions: Option[List[Vec3Int]] = if (skipResolutions) Some(List.empty[Vec3Int]) else None
-      resolutions <- Fox.fillOption(standinResolutions)(
-        dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer")
+      resolutions <- dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
         JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
@@ -666,10 +664,10 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     result.flatten
   }
 
-  def findAllForDataSet(dataSetId: ObjectId, skipResolutions: Boolean = false): Fox[List[DataLayer]] =
+  def findAllForDataSet(dataSetId: ObjectId): Fox[List[DataLayer]] =
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId, skipResolutions)))
+      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
     } yield rowsParsed
 
   private def insertLayerQuery(dataSetId: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =

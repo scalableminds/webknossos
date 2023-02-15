@@ -207,7 +207,7 @@ class AnnotationService @Inject()(
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
 
-    def getAutoFallbackLayerName: Fox[String] =
+    def getAutoFallbackLayerName: Option[String] =
       dataSource.dataLayers.find {
         case _: SegmentationLayer => true
         case _                    => false
@@ -254,9 +254,10 @@ class AnnotationService @Inject()(
                 AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
             } yield (tracingId, name)
           case AnnotationLayerType.Volume =>
+            val autoFallbackLayerName =
+              if (annotationLayerParameters.autoFallbackLayer) getAutoFallbackLayerName else None
+            val fallbackLayerName = annotationLayerParameters.fallbackLayerName.orElse(autoFallbackLayerName)
             for {
-              autoFallbackLayerName <- Fox.runIf(annotationLayerParameters.autoFallbackLayer)(getAutoFallbackLayerName)
-              fallbackLayerName = annotationLayerParameters.fallbackLayerName.orElse(autoFallbackLayerName)
               fallbackLayer <- Fox.runOptional(fallbackLayerName)(getFallbackLayer)
               volumeTracing <- createVolumeTracing(
                 dataSource,

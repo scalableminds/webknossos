@@ -77,7 +77,11 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
               this.props.requiredPricingPlan,
             )
           ) {
-            return <PageUnavailableForYourPlanView />;
+            return (
+              <PageUnavailableForYourPlanView
+                requiredPricingPlan={this.props.requiredPricingPlan}
+              />
+            );
           }
 
           if (Component != null) {

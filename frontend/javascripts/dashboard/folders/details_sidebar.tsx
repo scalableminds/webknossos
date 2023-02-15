@@ -93,7 +93,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>
-            <span className="sidebar-label">Voxel Size & Extent</span>
+            <div className="sidebar-label">Voxel Size & Extent</div>
             {fullDataset && (
               <div className="info-tab-block" style={{ marginTop: -3 }}>
                 <table
@@ -112,26 +112,26 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         )}
 
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Description</span>
+          <div className="sidebar-label">Description</div>
           <div>{fullDataset?.description}</div>
         </div>
 
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Access Permissions</span>
-          <br />
+          <div className="sidebar-label">Access Permissions</div>
+
           {fullDataset && (
             <TeamTags dataset={fullDataset} emptyValue="Administrators & Dataset Managers" />
           )}
         </div>
 
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Layers</span>
-          <br /> {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
+          <div className="sidebar-label">Layers</div>
+          {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
         </div>
       </Spin>
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Tags</span>
+          <div className="sidebar-label">Tags</div>
           <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
         </div>
       ) : null}
@@ -214,8 +214,7 @@ function FolderDetails({
             </Tooltip>
             . {maybeSelectMsg}
           </p>
-          <span className="sidebar-label">Access Permissions</span>
-          <br />
+          <div className="sidebar-label">Access Permissions</div>
           <FolderTeamTags folder={folder} />
         </div>
       ) : error ? (

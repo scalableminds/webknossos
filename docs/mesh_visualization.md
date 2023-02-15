@@ -27,6 +27,8 @@ CTRL + Click on any mesh will unload that mesh.
 
 ![Segments Tab](images/segments_tab2.jpeg)
 
+Additionally, hiding, removing, reloading a mesh or jumping to its hovered position can be done with the context menu in the 3d viewport via right-click on a hovered mesh.
+
 ## Pre-Computed Mesh Generation
 Instead of having to slowly compute individual mesh every time you open a dataset, it might make more sense to pre-compute all meshes within a dataset. Pre-computed meshes have the advantage of loading very quickly - even for larger meshes.
 

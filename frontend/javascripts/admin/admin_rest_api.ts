@@ -2490,9 +2490,15 @@ export function getVoxelyticsArtifactChecksums(
 
 // ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
-  return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
-    method: "POST",
-  });
+  return Request.receiveJSON(
+    `/api/helpEmail?${new URLSearchParams({
+      message,
+      currentUrl: window.location.href,
+    })}`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function requestSingleSignOnLogin() {

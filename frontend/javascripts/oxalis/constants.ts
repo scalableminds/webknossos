@@ -272,6 +272,8 @@ export type ShowContextMenuFunction = (
   arg3: number | null | undefined,
   arg4: Vector3 | null | undefined,
   arg5: OrthoView,
+  arg6?: number | null | undefined,
+  arg7?: Vector3 | null | undefined,
 ) => void;
 
 const Constants = {
@@ -335,7 +337,7 @@ export type TypedArray =
 
 export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
 
-export const PRIMARY_COLOR = [86, 96, 255];
+export const PRIMARY_COLOR: Vector3 = [86, 96, 255];
 
 export enum LOG_LEVELS {
   NOTSET = "NOTSET",

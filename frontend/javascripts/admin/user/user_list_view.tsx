@@ -186,9 +186,8 @@ class UserListView extends React.PureComponent<Props, State> {
     }));
   };
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -416,7 +415,6 @@ class UserListView extends React.PureComponent<Props, State> {
               width: 200,
               float: "right",
             }}
-            onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
             value={this.state.searchQuery}
           />
@@ -474,7 +472,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Email"
               dataIndex="email"
               key="email"
-              width={350}
+              width={320}
               sorter={Utils.localeCompareBy(typeHint, (user) => user.email)}
               render={(__, user: APIUser) =>
                 this.props.activeUser.isAdmin ? (
@@ -545,35 +543,27 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="teams"
               key="teams_"
               width={250}
-              render={(teams: Array<APITeamMembership>, user: APIUser) => {
-                if (user.isAdmin) {
-                  return (
-                    <Tag key={`team_role_${user.id}`} color="red">
-                      Admin - Access to all Teams
-                    </Tag>
-                  );
-                } else {
-                  const teamTags = user.isDatasetManager
-                    ? [
-                        <Tag key={`dataset_manager_${user.id}`} color="geekblue">
-                          Dataset Manager - Edit all Datasets
-                        </Tag>,
-                      ]
-                    : [];
-                  return teamTags.concat(
-                    teams.map((team) => {
-                      const roleName = team.isTeamManager ? "Team Manager" : "Member";
-                      return (
-                        <Tag
-                          key={`team_role_${user.id}_${team.id}`}
-                          color={stringToColor(roleName)}
-                        >
-                          {team.name}: {roleName}
-                        </Tag>
-                      );
-                    }),
-                  );
-                }
+              render={(_teams: APITeamMembership[], user: APIUser) => {
+                const tags = [
+                  ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
+                  ...(user.isAdmin
+                    ? [["Admin - Access to all Teams", "red"]]
+                    : [
+                        ...(user.isDatasetManager
+                          ? [["Dataset Manager - Edit all Datasets", "geekblue"]]
+                          : []),
+                        ...user.teams.map((team) => {
+                          const roleName = team.isTeamManager ? "Team Manager" : "Member";
+                          return [`${team.name}: ${roleName}`, stringToColor(roleName)];
+                        }),
+                      ]),
+                ];
+
+                return tags.map(([text, color]) => (
+                  <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+                    {text}
+                  </Tag>
+                ));
               }}
             />
             <Column

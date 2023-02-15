@@ -24,7 +24,6 @@ import {
   Folder,
   FolderItem,
   FolderUpdater,
-  APIMaybeUnimportedDataset,
   convertDatasetToCompact,
 } from "types/api_flow_types";
 import { handleGenericError } from "libs/error_handling";

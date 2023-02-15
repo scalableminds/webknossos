@@ -1,7 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
   APIDatasetId,
-  APIDataset,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatus,
 } from "types/api_flow_types";

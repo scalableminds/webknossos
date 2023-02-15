@@ -5,12 +5,10 @@ import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/
 import * as React from "react";
 import _ from "lodash";
 import { diceCoefficient as dice } from "dice-coefficient";
-import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
 import type {
   APIDatasetCompact,
   APIDatasetId,
-  APIDataset,
   APIMaybeUnimportedDataset,
 } from "types/api_flow_types";
 import { type DatasetFilteringMode } from "dashboard/dataset_view";

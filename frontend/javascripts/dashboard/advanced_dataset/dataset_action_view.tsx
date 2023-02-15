@@ -11,17 +11,8 @@ import {
 import window from "libs/window";
 import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
-import type {
-  APIMaybeUnimportedDataset,
-  APIDatasetId,
-  APIDataset,
-  APIDatasetCompact,
-} from "types/api_flow_types";
+import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
 import { clearCache, getDataset } from "admin/admin_rest_api";
-import {
-  getFirstSegmentationLayer,
-  doesSupportVolumeWithFallback,
-} from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";

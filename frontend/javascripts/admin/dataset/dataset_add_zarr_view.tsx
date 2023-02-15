@@ -17,7 +17,6 @@ import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
   exploreRemoteDataset,
-  getDataset,
   isDatasetNameValid,
   storeRemoteDataset,
   updateDatasetPartial,

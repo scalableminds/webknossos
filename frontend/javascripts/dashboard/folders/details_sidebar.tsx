@@ -128,6 +128,15 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           <div className="sidebar-label">Layers</div>
           {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
         </div>
+
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Datastore</div>
+          {fullDataset && (
+            <Tag color={stringToColor(fullDataset.dataStore.name)}>
+              {fullDataset.dataStore.name}
+            </Tag>
+          )}
+        </div>
       </Spin>
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>

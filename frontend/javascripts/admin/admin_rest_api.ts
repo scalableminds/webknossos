@@ -1362,18 +1362,11 @@ export function updateDataset(
   datasetId: APIDatasetId,
   dataset: APIMaybeUnimportedDataset,
   folderId?: string,
-  // todo: can this be removed now?
-  skipResolutions?: boolean,
 ): Promise<APIDataset> {
   folderId = folderId || dataset.folderId;
 
-  const params = new URLSearchParams();
-  if (skipResolutions) {
-    params.append("skipResolutions", "true");
-  }
-
   return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}?${params}`,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
     {
       method: "PATCH",
       data: { ...dataset, folderId },

@@ -9,7 +9,12 @@ import {
   getSegmentationId,
 } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
-import { getAbsoluteCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
+import {
+  getAbsoluteCoords,
+  getResolution,
+  getWorldCoordUVW,
+  isOutsideOfBoundingBox,
+} from "./coords.glsl";
 import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import compileShader from "./shader_module_system";
 type Params = {
@@ -319,6 +324,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 resolutions[20];
+uniform int representativeLayerIdxForMag;
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
@@ -384,6 +390,7 @@ ${compileShader(
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentationId : null,
+  getResolution,
 )}
 
 
@@ -420,9 +427,9 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   // instead of clamping all vertices, they are enumerated so that the first/last few
   // are still clipped to the plane boundary.
   if (true) {
-    // todo: this should be adapted with the current mag (use the active mag of a layer
-    // that hasn't any transforms)
-    vec2 d = vec2(32.);
+    uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
+    vec2 d = transDim(vec3(32.) * getResolution(activeMagIdx)).xy;
+
     vec3 datasetScaleUVW = transDim(datasetScale);
     vec3 transWorldCoord = transDim(worldCoord.xyz);
 

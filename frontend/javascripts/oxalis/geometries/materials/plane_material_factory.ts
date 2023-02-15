@@ -493,15 +493,27 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.dataLayers,
         (layers) => {
-          for (const layer of layers) {
+          let representativeLayerIdxForMag = null;
+          for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+            const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
             this.uniforms[`${name}_transform`].value = invertAndTranspose(
               layer.transformMatrix || Identity4x4,
             );
+            const hasTransform = !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4);
             this.uniforms[`${name}_has_transform`] = {
-              value: !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4),
+              value: hasTransform,
             };
+            if (representativeLayerIdxForMag == null && !hasTransform) {
+              representativeLayerIdxForMag = layerIdx;
+            }
           }
+
+          // If all layers have a transform, the representativeLayerIdxForMag
+          // isn't relevant which is why it can default to 0.
+          this.uniforms.representativeLayerIdxForMag = {
+            value: representativeLayerIdxForMag || 0,
+          };
         },
         true,
       ),

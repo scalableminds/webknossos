@@ -111,6 +111,7 @@ uniform vec3 addressSpaceDimensions;
 uniform vec4 hoveredSegmentIdLow;
 uniform vec4 hoveredSegmentIdHigh;
 
+flat in vec2 index;
 flat in vec3 flatVertexPos;
 flat in uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat in uint outputMagIdx[<%= globalLayerCount %>];
@@ -153,8 +154,16 @@ void main() {
 
   if (floor(flatVertexPos.x) == floor(worldCoordUVW.x) && floor(flatVertexPos.y) == floor(worldCoordUVW.y)) {
     gl_FragColor = vec4(1., 0., 1., 1.);
-    return;
+    // return;
   }
+
+  if (index.x == 200.) {
+      gl_FragColor = vec4(0., 1., 1., 1.);
+//      return;
+  }
+
+
+
 
   if (renderBucketIndices) {
     // Only used for debugging purposes. Will render bucket positions for the
@@ -284,6 +293,7 @@ precision highp float;
 
 
 out vec4 worldCoord;
+flat out vec2 index;
 flat out vec3 flatVertexPos;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
@@ -414,7 +424,7 @@ mat4 modelInv = inverseMatrix(modelMatrix);
 
   // vec3 positionUVW = transDim(position);
   // vec2 index = (positionUVW.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
-  vec2 index = (position.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
+  index = (position.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
 
   // Depending on the amount of vertices and the zoom value, it could be
   // that not only the first/last vertices have to be pinned, but multiple ones
@@ -433,14 +443,22 @@ mat4 modelInv = inverseMatrix(modelMatrix);
     vec3 datasetScaleUVW = transDim(datasetScale);
     vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-    if (index.x >= 1. && index.x <= subdivisionCount - 1.) {
+    if (index.x >= 1. && index.x <= subdivisionCount - 2.) {
       transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d.x) * d.x * datasetScaleUVW.x;
       transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
+    } else if (index.x == subdivisionCount - 1.) {
+      // The second-last vertex should be clipped to the next-lower bucket boundary beginning from
+      // worldCoordBottomRight.
+      transWorldCoord.x = floor(worldCoordBottomRight.x / datasetScaleUVW.x / d.x) * d.x * datasetScaleUVW.x;
     }
 
     if (index.y >= 1. && index.y <= subdivisionCount - 1.) {
       transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d.y) * d.y * datasetScaleUVW.y;
       transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
+    } else if (index.y == subdivisionCount - 1.) {
+      // The second-last vertex should be clipped to the next-lower bucket boundary beginning from
+      // worldCoordBottomRight.
+      transWorldCoord.y = floor(worldCoordBottomRight.y / datasetScaleUVW.y / d.y) * d.y * datasetScaleUVW.y;
     }
 
     worldCoord = vec4(transDim(transWorldCoord), 1.);
@@ -453,11 +471,15 @@ mat4 modelInv = inverseMatrix(modelMatrix);
   // Offset the bucket calculation for the current vertex by a bit
   // to avoid picking the wrong bucket (which would lead to an rendering offset
   // of 32 vx).
+  // still necessary?
   if (true && (index.x > 0. && index.x < 200.)) {
     worldCoordUVW.x -= 1.;
     worldCoordUVW.y += 1.;
+  } else if (index.x == subdivisionCount - 1.) {
+    worldCoordUVW.x -= 1.;
+    worldCoordUVW.y += 1.;
   } else {
-    worldCoordUVW.x -= 5.;
+    worldCoordUVW.x -= 1.;
     worldCoordUVW.y += 1.;
   }
 

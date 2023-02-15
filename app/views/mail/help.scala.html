@@ -1,4 +1,4 @@
-@( name: String, organizationDisplayName: String, message: String)
+@( name: String, organizationDisplayName: String, message: String, currentUrl: String)
 
 @emailBaseTemplate() {
 <p>Hi WEBKNOSSOS team</p>
@@ -6,6 +6,8 @@
 <p>
   @{message}
 </p>
+
+<p>Current URL: @{currentUrl}</p>
 
 <p>With best regards,<br />@{name} from @{organizationDisplayName}</p>
 }

@@ -36,7 +36,6 @@ import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
 import { Model } from "oxalis/singletons";
-import { Matrix4x4 } from "mjs";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 

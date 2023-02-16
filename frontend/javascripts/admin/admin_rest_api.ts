@@ -65,6 +65,7 @@ import type {
   VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
   VoxelyticsLogLine,
+  APIUserCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
@@ -856,6 +857,19 @@ export async function getTracingsForAnnotation(
   }
 
   return fullAnnotationLayers;
+}
+
+export async function acquireAnnotationMutex(
+  annotationId: string,
+): Promise<{ canEdit: boolean; blockedByUser: APIUserCompact | undefined | null }> {
+  const { canEdit, blockedByUser } = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/acquireMutex`,
+    {
+      method: "POST",
+    },
+  );
+  console.log("acquiring mutex", canEdit, blockedByUser);
+  return { canEdit, blockedByUser };
 }
 
 function extractVersion(

@@ -1,14 +1,32 @@
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-import type { EditAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
+import {
+  EditAnnotationLayerAction,
+  setAnnotationAllowUpdateAction,
+  type SetOthersMayEditForAnnotationAction,
+} from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
-import { editAnnotation, updateAnnotationLayer } from "admin/admin_rest_api";
+import {
+  editAnnotation,
+  updateAnnotationLayer,
+  acquireAnnotationMutex,
+} from "admin/admin_rest_api";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeLatest, select, take, retry, delay } from "typed-redux-saga";
+import {
+  takeLatest,
+  select,
+  take,
+  retry,
+  delay,
+  call,
+  put,
+  fork,
+  takeEvery,
+} from "typed-redux-saga";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
@@ -16,6 +34,8 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import messages from "messages";
+import { sleep } from "libs/utils";
+import { APIUserCompact } from "types/api_flow_types";
 
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -159,4 +179,81 @@ export function* watchAnnotationAsync(): Saga<void> {
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
-export default [warnAboutSegmentationZoom, watchAnnotationAsync];
+
+export function* acquireAnnotationMutexMaybe(): Saga<void> {
+  yield* take("WK_READY");
+  // TODO: write tests.
+  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
+  if (!allowUpdate) {
+    return;
+  }
+  const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+  const ONE_MINUTE = 1000 * 5;
+  let isInitialRequest = true;
+  let doesHaveMutex = false;
+  let shallTryAcquireMutex = othersMayEdit;
+
+  function onMutexStateChanged(canEdit: boolean, blockedByUser: APIUserCompact | null | undefined) {
+    if (!canEdit) {
+      const message =
+        blockedByUser != null
+          ? messages["annotation.acquiringMutexFailed"]({
+              userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
+            })
+          : messages["annotation.acquiringMutexFailed.noUser"];
+      Toast.error(message, { sticky: true, key: "MutexCouldNotBeAcquired" });
+    } else {
+      Toast.close("MutexCouldNotBeAcquired");
+      // TODO: Is refreshing the annotation needed? -> show toast that the user needs to reload the page or do it automatically
+      if (!isInitialRequest) {
+        Toast.success(messages["annotation.acquiringMutexSucceeded"]);
+        location.reload();
+      }
+    }
+  }
+
+  function* tryAcquireMutex(): Saga<void> {
+    while (shallTryAcquireMutex) {
+      if (!doesHaveMutex) {
+        yield* put(setAnnotationAllowUpdateAction(false));
+      }
+      try {
+        const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
+        console.log({ canEdit, blockedByUser });
+        yield* put(setAnnotationAllowUpdateAction(canEdit));
+        if (canEdit !== doesHaveMutex || isInitialRequest) {
+          doesHaveMutex = canEdit;
+          onMutexStateChanged(canEdit, blockedByUser);
+        }
+      } catch (error) {
+        if (doesHaveMutex == true || isInitialRequest) {
+          onMutexStateChanged(false, null);
+          yield* put(setAnnotationAllowUpdateAction(false));
+        }
+      }
+      isInitialRequest = false;
+      yield* delay(ONE_MINUTE);
+    }
+  }
+  if (shallTryAcquireMutex) {
+    yield* fork(tryAcquireMutex);
+  }
+  function* reactToOthersMayEditChanges({
+    othersMayEdit,
+  }: SetOthersMayEditForAnnotationAction): Saga<void> {
+    shallTryAcquireMutex = othersMayEdit;
+    if (shallTryAcquireMutex) {
+      yield* call(tryAcquireMutex);
+    } else {
+      // The setting was edited. The person editing it should be able to edit the annotation.
+      yield* put(setAnnotationAllowUpdateAction(true));
+    }
+  }
+  // Fork saga and listen for changes on othersMayEdit
+  function* listenForOthersMayEdit(): Saga<void> {
+    yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
+  }
+  yield* fork(listenForOthersMayEdit);
+}
+export default [warnAboutSegmentationZoom, watchAnnotationAsync, acquireAnnotationMutexMaybe];

@@ -154,24 +154,9 @@ export const getColorForCoords: ShaderModule = {
       // be precise because the triangles of the plane won't necessarily
       // align with the bucket borders.
       <% if (isFragment) { %>
-      {
         if (supportsPrecomputedBucketAddress) {
           return outputAddress[globalLayerIndex];
         }
-        // uvec4 compressedEntry = outputCompressedEntry[globalLayerIndex];
-
-        // uint compressedBytes = compressedEntry.a;
-        // uint foundMagIdx = compressedBytes >> (32u - 5u);
-        // uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
-        // if (compressedEntry.xyz != bucketAddress.xyz
-        //   || globalLayerIndex != foundLayerIndex
-        //   || foundMagIdx != bucketAddress.a) {
-        //   // cache miss
-        // } else {
-        //   return outputAddress[globalLayerIndex];
-        //   // return attemptLookUpLookUp(globalLayerIndex, bucketAddress, outputSeed[globalLayerIndex]);
-        // }
-      }
       <% } %>
 
 
@@ -230,7 +215,8 @@ export const getColorForCoords: ShaderModule = {
           }
         }
       } else {
-        // new
+        // Use mag that was precomputed in vertex shader. Also,
+        // lookUpBucket() will use the precomputed address.
         renderedMagIdx = outputMagIdx[globalLayerIndex];
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
@@ -240,7 +226,6 @@ export const getColorForCoords: ShaderModule = {
           uvec4(uvec3(absoluteBucketPosition), renderedMagIdx),
           supportsPrecomputedBucketAddress
         );
-        // new end
       }
 
 

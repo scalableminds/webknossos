@@ -2,10 +2,13 @@ import { Chart } from "react-google-charts";
 import { Row, Col, Spin, Table, Card } from "antd";
 import * as React from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
+import { APIUser } from "types/api_flow_types";
+
 const { Column } = Table;
+
 type TimeEntry = {
   start: string;
   end: string;
@@ -17,20 +20,22 @@ type State = {
     numberOfDatasets: number;
     numberOfAnnotations: number;
     numberOfOpenAssignments: number;
-    tracingTimes: Array<TimeEntry>;
+    tracingTimes: TimeEntry[];
   };
-  timeEntries: Array<TimeEntry>;
+  timeEntries: Array<{
+    tracingTimes: TimeEntry[];
+    user: APIUser;
+  }>;
   isAchievementsLoading: boolean;
   isTimeEntriesLoading: boolean;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  startDate: moment$Moment;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  endDate: moment$Moment;
+  startDate: dayjs.Dayjs;
+  endDate: dayjs.Dayjs;
 };
+
 type GoogleCharts = {
   chartWrapper: {
     getChart: () => {
-      getSelection: (...args: Array<any>) => any;
+      getSelection: Function;
     };
   }; // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
 };
@@ -39,8 +44,8 @@ class StatisticView extends React.PureComponent<{}, State> {
   state: State = {
     isAchievementsLoading: true,
     isTimeEntriesLoading: true,
-    startDate: moment().startOf("week"),
-    endDate: moment().endOf("week"),
+    startDate: dayjs().startOf("week"),
+    endDate: dayjs().endOf("week"),
     timeEntries: [],
     achievements: {
       numberOfUsers: 0,
@@ -52,17 +57,11 @@ class StatisticView extends React.PureComponent<{}, State> {
   };
 
   componentDidMount() {
-    moment.updateLocale("en", {
-      week: {
-        dow: 1,
-      },
-    });
     this.fetchAchievementData();
     this.fetchTimeEntryData();
   }
 
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  toTimestamp(date: moment$Moment) {
+  toTimestamp(date: dayjs.Dayjs) {
     return date.unix() * 1000;
   }
 
@@ -98,8 +97,8 @@ class StatisticView extends React.PureComponent<{}, State> {
     const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(
       {
-        startDate: moment(startDate),
-        endDate: moment(startDate).endOf("week"),
+        startDate: dayjs(startDate),
+        endDate: dayjs(startDate).endOf("week"),
         isTimeEntriesLoading: true,
       },
       () => this.fetchTimeEntryData(),
@@ -123,11 +122,11 @@ class StatisticView extends React.PureComponent<{}, State> {
       },
     ];
     const rows = this.state.achievements.tracingTimes.map((item) => {
-      const duration = Utils.roundTo(moment.duration(item.tracingTime).asHours(), 2);
+      const duration = Utils.roundTo(dayjs.duration(item.tracingTime).asHours(), 2);
       return [
         new Date(item.start),
         duration,
-        `${moment(item.start).format("DD.MM.YYYY")} - ${moment(item.end).format("DD.MM.YYYY")}
+        `${dayjs(item.start).format("DD.MM.YYYY")} - ${dayjs(item.end).format("DD.MM.YYYY")}
         ${duration}h`,
       ];
     });
@@ -222,7 +221,6 @@ class StatisticView extends React.PureComponent<{}, State> {
               <Spin spinning={this.state.isTimeEntriesLoading} size="large">
                 <Table
                   dataSource={this.state.timeEntries}
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'user' does not exist on type 'TimeEntry'... Remove this comment to see the full error message
                   rowKey={(entry) => entry.user.id}
                   style={{
                     marginTop: 30,
@@ -240,8 +238,7 @@ class StatisticView extends React.PureComponent<{}, State> {
                     title="Duration"
                     dataIndex="tracingTimes"
                     key="tracingTimes"
-                    render={(tracingTimes) => {
-                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+                    render={(tracingTimes: TimeEntry[]) => {
                       const duration = _.sumBy(tracingTimes, (timeEntry) => timeEntry.tracingTime);
 
                       const minutes = duration / 1000 / 60;

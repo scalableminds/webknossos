@@ -23,6 +23,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added owner name to organization page. [#6811](https://github.com/scalableminds/webknossos/pull/6811)
 - Remove multiline <TextArea> support from <InputComponent>. [#6839](https://github.com/scalableminds/webknossos/pull/6839)
 - Updated the styling and background of login, password reset/change and sign up pages. [#6844](https://github.com/scalableminds/webknossos/pull/6844)
+- Replaced date handling and formatting library momentjs with dayjs. [#6849](https://github.com/scalableminds/webknossos/pull/6849)
 
 ### Fixed
 - Fixed saving allowed teams in dataset settings. [#6817](https://github.com/scalableminds/webknossos/pull/6817)

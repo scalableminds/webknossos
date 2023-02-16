@@ -182,14 +182,13 @@ export function* watchAnnotationAsync(): Saga<void> {
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* take("WK_READY");
-  // TODO: write tests.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
   if (!allowUpdate) {
     return;
   }
   const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
-  const ONE_MINUTE = 1000 * 5;
+  const ONE_MINUTE = 1000 * 60;
   let isInitialRequest = true;
   let doesHaveMutex = false;
   let shallTryAcquireMutex = othersMayEdit;
@@ -205,7 +204,6 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
       Toast.error(message, { sticky: true, key: "MutexCouldNotBeAcquired" });
     } else {
       Toast.close("MutexCouldNotBeAcquired");
-      // TODO: Is refreshing the annotation needed? -> show toast that the user needs to reload the page or do it automatically
       if (!isInitialRequest) {
         Toast.success(messages["annotation.acquiringMutexSucceeded"]);
         location.reload();
@@ -215,25 +213,27 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 
   function* tryAcquireMutex(): Saga<void> {
     while (shallTryAcquireMutex) {
+      console.log("starting tryAcquireMutex saga");
       if (!doesHaveMutex) {
         yield* put(setAnnotationAllowUpdateAction(false));
       }
       try {
-        const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
-        console.log({ canEdit, blockedByUser });
+        const retVal = yield* call(acquireAnnotationMutex, annotationId);
+        const { canEdit, blockedByUser } = retVal;
         yield* put(setAnnotationAllowUpdateAction(canEdit));
         if (canEdit !== doesHaveMutex || isInitialRequest) {
           doesHaveMutex = canEdit;
           onMutexStateChanged(canEdit, blockedByUser);
         }
       } catch (error) {
+        console.log("error", error);
         if (doesHaveMutex == true || isInitialRequest) {
           onMutexStateChanged(false, null);
           yield* put(setAnnotationAllowUpdateAction(false));
         }
       }
       isInitialRequest = false;
-      yield* delay(ONE_MINUTE);
+      yield* call(delay, ONE_MINUTE);
     }
   }
   if (shallTryAcquireMutex) {
@@ -251,9 +251,6 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
     }
   }
   // Fork saga and listen for changes on othersMayEdit
-  function* listenForOthersMayEdit(): Saga<void> {
-    yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
-  }
-  yield* fork(listenForOthersMayEdit);
+  yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
 }
 export default [warnAboutSegmentationZoom, watchAnnotationAsync, acquireAnnotationMutexMaybe];

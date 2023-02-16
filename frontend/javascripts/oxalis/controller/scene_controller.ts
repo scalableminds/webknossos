@@ -617,9 +617,11 @@ class SceneController {
       });
       bbCube.setVisibility(true);
       bbCube.getMeshes().forEach((mesh) => {
-        if (layer.transformMatrix) {
+        const { transformMatrix } = layer;
+        if (transformMatrix) {
           const matrix = new THREE.Matrix4();
-          matrix.set(...layer.transformMatrix);
+          // @ts-ignore
+          matrix.set(...transformMatrix);
           mesh.applyMatrix4(matrix);
         }
         newLayerBoundingBoxGroup.add(mesh);

@@ -20,7 +20,6 @@ class Plane {
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
-  lastPositionUV: Vector2;
   baseScaleVector: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
   crosshair: Array<THREE.LineSegments>;
@@ -39,7 +38,6 @@ class Plane {
     const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
-    this.lastPositionUV = [0, 0];
     this.createMeshes();
   }
 
@@ -142,7 +140,6 @@ class Plane {
     this.TDViewBorders.scale.copy(scaleVec);
     this.crosshair[0].scale.copy(scaleVec);
     this.crosshair[1].scale.copy(scaleVec);
-    this.updateTesselation();
   }
 
   setRotation = (rotVec: THREE.Euler): void => {
@@ -173,124 +170,7 @@ class Plane {
         originalPosition[2],
       );
     }
-    this.updateTesselation();
   };
-
-  updateTesselation() {
-    return;
-    const newestPosUV = Dimensions.transDim(this.plane.position.toArray(), this.planeID).slice(
-      0,
-      2,
-    ) as Vector2;
-    if (_.isEqual(this.lastPositionUV, newestPosUV)) {
-      // todo: also check whether scale changed
-      return;
-    }
-    this.lastPositionUV = newestPosUV;
-    const positions = this.plane.geometry.attributes.position.array;
-
-    let x, y, z, index;
-    x = y = z = index = 0;
-
-    const width = constants.VIEWPORT_WIDTH,
-      height = constants.VIEWPORT_WIDTH;
-    const widthSegments = 100;
-    const heightSegments = 100;
-    const width_half = width / 2;
-    const height_half = height / 2;
-    const gridX = Math.floor(widthSegments);
-    const gridY = Math.floor(heightSegments);
-    const gridX1 = gridX + 1;
-    const gridY1 = gridY + 1;
-    const segment_width = width / gridX;
-    const segment_height = height / gridY;
-
-    for (let iy = 0; iy < gridY1; iy++) {
-      const y = iy * segment_height - height_half;
-
-      for (let ix = 0; ix < gridX1; ix++) {
-        const x = ix * segment_width - width_half;
-
-        // @ts-ignore
-        positions[index++] = x;
-        // @ts-ignore
-        positions[index++] = -y;
-        // @ts-ignore
-        positions[index++] = 0;
-      }
-    }
-  }
-
-  // updateTesselation() {
-  //   const newestPosUV = Dimensions.transDim(this.plane.position.toArray(), this.planeID).slice(
-  //     0,
-  //     2,
-  //   ) as Vector2;
-  //   if (_.isEqual(this.lastPositionUV, newestPosUV)) {
-  //     // todo: also check whether scale changed
-  //     return;
-  //   }
-  //   this.lastPositionUV = newestPosUV;
-  //   const positions = this.plane.geometry.attributes.position.array;
-
-  //   let index = 0;
-
-  //   // x and y will range from -188 to +188 (== 376/2)
-  //   const width = constants.VIEWPORT_WIDTH; // 376
-  //   const height = constants.VIEWPORT_WIDTH;
-  //   const widthSegments = 100;
-  //   const heightSegments = 100;
-  //   const width_half = width / 2;
-  //   const height_half = height / 2;
-  //   const gridX = Math.floor(widthSegments); // 50
-  //   const gridY = Math.floor(heightSegments);
-  //   const gridX1 = gridX + 1; // 51
-  //   const gridY1 = gridY + 1;
-  //   const segment_width = width / gridX; // 7.52
-  //   const segment_height = height / gridY;
-
-  //   const logs = [];
-  //   // todo!
-  //   const downToNearestMultiple = (x: number, m: number) => Math.floor(x / m) * m;
-  //   const scale = 1;
-  //   let vertexCount = 0;
-  //   for (let iy = 0; iy < gridY1; iy++) {
-  //     const y = iy * segment_height - height_half;
-
-  //     for (let ix = 0; ix < gridX1; ix++) {
-  //       let x = ix * segment_width - width_half;
-
-  //       if (ix === 0) {
-  //         x = -width_half;
-  //       } else {
-  //         x = Math.min(
-  //           downToNearestMultiple(newestPosUV[0] - width_half / scale, 32) +
-  //             32 * ix -
-  //             newestPosUV[0],
-  //           width_half,
-  //         );
-  //       }
-  //       if (iy === 0) {
-  //         logs.push(x);
-  //       }
-  //       if (x >= width_half) {
-  //         break;
-  //       }
-
-  //       // @ts-ignore
-  //       positions[index++] = x;
-  //       // @ts-ignore
-  //       positions[index++] = -y;
-  //       // @ts-ignore
-  //       positions[index++] = 0;
-  //       vertexCount += 3;
-  //     }
-  //   }
-  //   this.plane.geometry.attributes.position.needsUpdate = true;
-  //   this.plane.geometry.setDrawRange(0, vertexCount);
-  //   // this.plane.geometry.setIndex(null);
-  //   console.log("logs", logs);
-  // }
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {
     this.plane.visible = isDataVisible != null ? isDataVisible : isVisible;

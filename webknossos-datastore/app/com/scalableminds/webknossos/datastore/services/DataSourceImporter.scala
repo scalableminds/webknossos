@@ -32,7 +32,7 @@ trait DataSourceImporter {
                         baseDir: Path,
                         previous: Option[DataSource],
                         report: DataSourceImportReport[Path]): Box[DataSource] =
-    PathUtils.listDirectories(baseDir).map { layerDirs =>
+    PathUtils.listDirectories(baseDir, silent = false).map { layerDirs =>
       val layers = layerDirs.flatMap { layerDir =>
         val layerName = layerDir.getFileName.toString
         val previousLayer = previous.flatMap(_.getDataLayer(layerName))

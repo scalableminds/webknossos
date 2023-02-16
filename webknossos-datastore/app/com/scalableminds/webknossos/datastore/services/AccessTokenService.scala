@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -57,9 +58,10 @@ object UserAccessRequest {
 
 trait AccessTokenService {
   val remoteWebKnossosClient: RemoteWebKnossosClient
-  val cache: SyncCacheApi
 
   val AccessExpiration: FiniteDuration = 2.minutes
+  private lazy val accessAnswersCache: AlfuFoxCache[UserAccessRequest, UserAccessAnswer] =
+    AlfuFoxCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
   def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
       implicit ec: ExecutionContext): Fox[Result] =
@@ -74,12 +76,9 @@ trait AccessTokenService {
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
 
-  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String]): Fox[UserAccessAnswer] = {
-    val key = accessRequest.toCacheKey(token)
-    cache.getOrElseUpdate(key, AccessExpiration) {
-      remoteWebKnossosClient.requestUserAccess(token, accessRequest)
-    }
-  }
+  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
+      implicit ec: ExecutionContext): Fox[UserAccessAnswer] =
+    accessAnswersCache.getOrLoad(accessRequest, key => remoteWebKnossosClient.requestUserAccess(token, key))
 
   private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer,
                                               block: => Future[Result]): Future[Result] =
@@ -93,6 +92,5 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient,
-                                            val cache: SyncCacheApi)
+class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient)
     extends AccessTokenService

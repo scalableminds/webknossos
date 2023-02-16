@@ -86,7 +86,7 @@ class TSRemoteDatastoreClient @Inject()(
                           userToken: Option[String]): Fox[AgglomerateGraph] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId")
+      result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId").silent
         .addQueryStringOptional("token", userToken)
         .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
     } yield result
@@ -102,6 +102,7 @@ class TSRemoteDatastoreClient @Inject()(
           remoteLayerUri <- getRemoteLayerUri(k._1)
           result <- rpc(s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId")
             .addQueryStringOptional("token", k._3)
+            .silent
             .getWithJsonResponse[Long]
         } yield result
     )

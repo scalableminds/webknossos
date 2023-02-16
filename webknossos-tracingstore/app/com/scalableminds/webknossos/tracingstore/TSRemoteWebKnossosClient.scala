@@ -47,6 +47,7 @@ class TSRemoteWebKnossosClient @Inject()(
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
+      .silent
       .post(Json.toJson(tracingUpdatesReport))
 
   def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
@@ -84,6 +85,5 @@ class TSRemoteWebKnossosClient @Inject()(
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 
-class TracingStoreAccessTokenService @Inject()(val remoteWebKnossosClient: TSRemoteWebKnossosClient,
-                                               val cache: SyncCacheApi)
+class TracingStoreAccessTokenService @Inject()(val remoteWebKnossosClient: TSRemoteWebKnossosClient)
     extends AccessTokenService

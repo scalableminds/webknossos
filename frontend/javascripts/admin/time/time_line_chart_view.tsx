@@ -1,6 +1,8 @@
 import { Chart } from "react-google-charts";
 import * as React from "react";
 import { getWindowBounds } from "libs/utils";
+import dayjs from "dayjs";
+
 export type ColumnDefinition = {
   id?: string;
   type: string;
@@ -8,8 +10,8 @@ export type ColumnDefinition = {
   p?: Record<string, any>;
 };
 export type RowContent = [string, string, string, Date, Date];
-// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-export type DateRange = [moment$Moment, moment$Moment];
+
+export type DateRange = [dayjs.Dayjs, dayjs.Dayjs];
 type Props = {
   columns: Array<ColumnDefinition>;
   rows: Array<RowContent>;

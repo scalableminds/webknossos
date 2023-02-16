@@ -37,7 +37,7 @@ import {
 } from "@ant-design/icons";
 import { ZarrPrivateLink } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
-import moment from "moment";
+import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
 import { ColumnsType } from "antd/lib/table";
 import { makeComponentLazy } from "libs/react_helpers";
@@ -210,7 +210,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
     key: "1 day" | "1 week" | "6 months" | "1 year";
   }) => {
     const expirationDateTime = (() => {
-      const endOfToday = moment().endOf("day");
+      const endOfToday = dayjs().endOf("day");
       switch (key) {
         case "1 day":
           return endOfToday.add(24, "hours");
@@ -270,7 +270,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
       </Tooltip>
     ) : null;
 
-  const expirationMoment = moment(linkItem.expirationDateTime);
+  const expirationDate = dayjs(linkItem.expirationDateTime);
   return (
     <span>
       <FormattedDate timestamp={linkItem.expirationDateTime} />
@@ -281,7 +281,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
               <DatePicker
                 onChange={onChange}
                 // @ts-ignore
-                defaultValue={expirationMoment}
+                defaultValue={expirationDate}
                 allowClear={false}
               />
             </div>
@@ -297,24 +297,24 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
         trigger="click"
       >
         <EditOutlined style={{ marginLeft: 4 }} />
-        {maybeWarning || <HumanizedDuration expirationMoment={expirationMoment} />}
+        {maybeWarning || <HumanizedDuration expirationDate={expirationDate} />}
       </Popover>
     </span>
   );
 }
 
-function HumanizedDuration({ expirationMoment }: { expirationMoment: moment.Moment }) {
-  const now = moment();
-  const hourDiff = expirationMoment.diff(now, "hours");
+function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) {
+  const now = dayjs();
+  const hourDiff = expirationDate.diff(now, "hours");
 
   const duration =
     hourDiff < 24
-      ? now.to(expirationMoment)
+      ? now.to(expirationDate)
       : // Expiration dates usually end at 23:59 UTC. If now == 1 day before the
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now.endOf("day").to(expirationMoment.endOf("day"));
+        now.endOf("day").to(expirationDate.endOf("day"));
   return <span style={{ color: "var(--ant-text-secondary)", marginLeft: 4 }}>{duration}</span>;
 }
 

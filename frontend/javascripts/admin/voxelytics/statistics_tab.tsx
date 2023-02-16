@@ -12,7 +12,7 @@ import {
 } from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
 import { Result } from "./utils";
-import moment from "moment";
+import dayjs from "dayjs";
 import { pluralize } from "libs/utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
@@ -219,7 +219,7 @@ export default function StatisticsTab({
                   {row.wallTime != null && (
                     <>
                       <span className="stats-label">Wall</span>{" "}
-                      {formatDurationStrict(moment.duration(row.wallTime, "seconds"))}
+                      {formatDurationStrict(dayjs.duration(row.wallTime, "seconds"))}
                     </>
                   )}
                 </td>

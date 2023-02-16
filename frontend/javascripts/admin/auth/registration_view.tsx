@@ -79,14 +79,8 @@ function RegistrationViewNotDemo() {
 
   return (
     <Spin spinning={isLoading}>
-      <Row
-        justify="center"
-        style={{
-          padding: 50,
-        }}
-        align="middle"
-      >
-        <Col span={8}>
+      <Row justify="center" align="middle" className="login-view">
+        <Col className="login-content" style={{ width: 1000 }}>
           <h3>Sign Up</h3>
           {content}
           <Link to="/auth/login">Already have an account? Login instead.</Link>

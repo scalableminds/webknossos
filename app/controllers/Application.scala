@@ -75,11 +75,12 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   }
 
   @ApiOperation(hidden = true, value = "")
-  def helpEmail(message: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def helpEmail(message: String, currentUrl: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.displayName, message))
+      _ = Mailer ! Send(
+        defaultMails.helpMail(request.identity, userEmail, organization.displayName, message, currentUrl))
     } yield Ok
   }
 

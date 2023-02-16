@@ -111,13 +111,11 @@ export default function traverse(
 
   while (loopProtection++ < maximumIterations) {
     if (X === lastBucket[0] && Y === lastBucket[1] && Z === lastBucket[2]) {
-      // return [intersectedBuckets[0], intersectedBuckets[intersectedBuckets.length - 1]];
       return intersectedBuckets;
     }
 
     if (behindLastBucket(0, X) || behindLastBucket(1, Y) || behindLastBucket(2, Z)) {
       // We didn't cross the lastBucket for some reason?
-      // return [intersectedBuckets[0], intersectedBuckets[intersectedBuckets.length - 1]];
       return intersectedBuckets;
     }
 

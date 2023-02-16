@@ -9,13 +9,17 @@ import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 type Key = Vector5; // [x, y, z, requestedMagIdx, layerIdx]
 type Value = number; // bucket address in texture
 type Entry = [Key, Value];
-// CompressedEntry = [
-//    x, // 32 bit
-//    y, // 32 bit
-//    z, // 32 bit
-//    // 32 bit = 5 (magIdx) + 6 (layerIdx) + 21 bit (bucket address)
-//    requestedMagIdxAndLayerIdxAndBucketAddress
-// ]
+/* CompressedEntry = [
+      // 32 bit
+      x,
+      // 32 bit
+      y,
+      // 32 bit
+      z,
+      // 32 bit = 5 (magIdx) + 6 (layerIdx) + 21 bit (bucket address)
+      requestedMagIdxAndLayerIdxAndBucketAddress
+   ]
+*/
 type CompressedEntry = Vector4;
 
 const EMPTY_KEY_VALUE = 2 ** 32 - 1;

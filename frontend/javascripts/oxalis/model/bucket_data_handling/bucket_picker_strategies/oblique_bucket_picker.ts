@@ -79,15 +79,12 @@ function addNecessaryBucketsToPriorityQueueOblique(
   abortLimit?: number,
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
-  // debugger;
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
 
   const planeIds: Array<OrthoViewWithoutTD> =
     viewMode === "orthogonal" ? ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] : ["PLANE_XY"];
-  // const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_YZ"];
   let traversedBuckets: Vector3[] = [];
-  // for (const planeId of OrthoViewValuesWithoutTDView) {
   for (const planeId of planeIds) {
     let extent: Vector2;
     let enlargedHalfExtent: Vector2;

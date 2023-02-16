@@ -4,13 +4,15 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
-import type { OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "oxalis/constants";
+
+export const PLANE_SUBDIVISION = 200;
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
@@ -44,7 +46,7 @@ class Plane {
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 200, 200);
+    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       true,

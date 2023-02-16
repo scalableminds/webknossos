@@ -619,25 +619,7 @@ class SceneController {
       bbCube.getMeshes().forEach((mesh) => {
         if (layer.transformMatrix) {
           const matrix = new THREE.Matrix4();
-          matrix.set(
-            layer.transformMatrix[0],
-            layer.transformMatrix[4],
-            layer.transformMatrix[8],
-            layer.transformMatrix[12],
-            layer.transformMatrix[1],
-            layer.transformMatrix[5],
-            layer.transformMatrix[9],
-            layer.transformMatrix[13],
-            layer.transformMatrix[2],
-            layer.transformMatrix[6],
-            layer.transformMatrix[10],
-            layer.transformMatrix[14],
-            layer.transformMatrix[3],
-            layer.transformMatrix[7],
-            layer.transformMatrix[11],
-            layer.transformMatrix[15],
-          );
-          matrix.transpose();
+          matrix.set(...layer.transformMatrix);
           mesh.applyMatrix4(matrix);
         }
         newLayerBoundingBoxGroup.add(mesh);

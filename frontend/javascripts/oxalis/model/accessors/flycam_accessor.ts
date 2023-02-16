@@ -33,6 +33,10 @@ import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import {
+  getGlobalLayerIndexForLayerName,
+  invertAndTranspose,
+} from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -204,7 +208,7 @@ function getMaximumZoomForAllResolutionsFromStore(
   const { viewMode } = state.temporaryConfiguration;
 
   const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = layer.transformMatrix || Identity4x4;
+  const layerMatrix = invertAndTranspose(layer.transformMatrix || Identity4x4);
 
   let fn = perLayerFnCache.get(layerName);
   if (fn == null) {

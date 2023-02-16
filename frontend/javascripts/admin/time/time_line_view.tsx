@@ -186,11 +186,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
     }
 
     // Force an interval of at least one minute.
-    const dateRange = dates[0].isSame(dates[1], "minute")
+    const dateRange: DateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
     await this.setState({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'DateRange'... Remove this comment to see the full error message
       dateRange,
     });
     this.fetchTimeTrackingData();
@@ -198,8 +197,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
   getTooltipForEntry(taskId: string, start: Date, end: Date) {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
-    // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
-    const duration = end - start;
+    const duration = end.getTime() - start.getTime();
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
     const dayFormatForDayJs = "DD MMM, YYYY";
     const tooltip = (

@@ -192,12 +192,7 @@ export function formatSeconds(durationSeconds: number): string {
   return timeString;
 }
 export function formatDurationToMinutesAndSeconds(durationInMillisecons: number) {
-  // Moment does not provide a format method for durations, so we have to do it manually.
   const duration = dayjs.duration(durationInMillisecons);
-  // const minuteDuration = duration.minutes() + 60 * duration.hours();
-  // const minutesAsString = `${minuteDuration < 10 ? 0 : ""}${minuteDuration}`;
-  // const hoursAsSeconds = `${duration.seconds() < 10 ? 0 : ""}${duration.seconds()}`;
-  // return `${minutesAsString}:${hoursAsSeconds}`;
   return duration.format("mm:ss");
 }
 export function formatHash(id: string): string {

@@ -33,7 +33,7 @@ import {
   SETTING_MIDDLE_SPAN,
   SETTING_VALUE_SPAN,
 } from "oxalis/view/components/setting_input_views";
-import { V3 } from "libs/mjs";
+import { M4x4, V3 } from "libs/mjs";
 import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
 import {
   enforceSkeletonTracing,
@@ -104,6 +104,7 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import { invertAndTranspose } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -779,7 +780,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       foundResolution = resolution;
     }
 
-    if (!foundPosition || !foundResolution) {
+    if (foundPosition && foundResolution) {
+      const layer = getLayerByName(dataset, layerName, true);
+      if (layer.transformMatrix) {
+        const matrix = M4x4.transpose(layer.transformMatrix);
+        // Transform the found position according to the matrix.
+        V3.mul4x4(matrix, foundPosition, foundPosition);
+      }
+    } else {
       const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
       const centerPosition = V3.add(lowerBoundary, upperBoundary).map(
         (el: number) => el / 2,

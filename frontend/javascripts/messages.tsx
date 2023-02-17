@@ -263,9 +263,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This annotation is currently being edited by <%- userName %>. To avoid conflicts, you can only view it. If you want to edit it, please ask <%- userName %> to finish their work first.",
   ),
   "annotation.acquiringMutexFailed.noUser":
-    "This annotation is currently being edited. To avoid conflicts, you can only view it. The server did not provide any information about the user who is currently editing it. You should check your connection to the server.",
+    "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
   "annotation.acquiringMutexSucceeded":
-    "This annotation is now available for editing. You can now edit it after the page reloaded to fetch the newest version of the annotation.",
+    "This annotation is not being edited available for editing. Reload the page to see its newest version and to edit it.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

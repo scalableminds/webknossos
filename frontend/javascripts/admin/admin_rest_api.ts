@@ -865,7 +865,6 @@ export async function acquireAnnotationMutex(
       method: "POST",
     },
   );
-  console.log("acquiring mutex", canEdit, blockedByUser);
   return { canEdit, blockedByUser };
 }
 

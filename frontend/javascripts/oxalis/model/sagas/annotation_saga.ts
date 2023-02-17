@@ -193,7 +193,13 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   let shallTryAcquireMutex = othersMayEdit;
 
   function onMutexStateChanged(canEdit: boolean, blockedByUser: APIUserCompact | null | undefined) {
-    if (!canEdit) {
+    if (canEdit) {
+      Toast.close("MutexCouldNotBeAcquired");
+      if (!isInitialRequest) {
+        Toast.success(messages["annotation.acquiringMutexSucceeded"]);
+        location.reload();
+      }
+    } else {
       const message =
         blockedByUser != null
           ? messages["annotation.acquiringMutexFailed"]({
@@ -201,12 +207,6 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
             })
           : messages["annotation.acquiringMutexFailed.noUser"];
       Toast.error(message, { sticky: true, key: "MutexCouldNotBeAcquired" });
-    } else {
-      Toast.close("MutexCouldNotBeAcquired");
-      if (!isInitialRequest) {
-        Toast.success(messages["annotation.acquiringMutexSucceeded"]);
-        location.reload();
-      }
     }
   }
 
@@ -216,8 +216,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
         yield* put(setAnnotationAllowUpdateAction(false));
       }
       try {
-        const retVal = yield* call(acquireAnnotationMutex, annotationId);
-        const { canEdit, blockedByUser } = retVal;
+        const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
         yield* put(setAnnotationAllowUpdateAction(canEdit));
         if (canEdit !== doesHaveMutex || isInitialRequest) {
           doesHaveMutex = canEdit;
@@ -244,11 +243,10 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
     if (shallTryAcquireMutex) {
       yield* call(tryAcquireMutex);
     } else {
-      // The setting was edited. The person editing it should be able to edit the annotation.
+      // othersMayEdit was turned off. The user editing it should be able to edit the annotation.
       yield* put(setAnnotationAllowUpdateAction(true));
     }
   }
-  // Fork saga and listen for changes on othersMayEdit
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
 }
 export default [warnAboutSegmentationZoom, watchAnnotationAsync, acquireAnnotationMutexMaybe];

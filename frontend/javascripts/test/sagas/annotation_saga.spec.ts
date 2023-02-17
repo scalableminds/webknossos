@@ -1,4 +1,3 @@
-import "test/mocks/lz4";
 import test, { ExecutionContext } from "ava";
 import mockRequire from "mock-require";
 import { OxalisState } from "oxalis/store";

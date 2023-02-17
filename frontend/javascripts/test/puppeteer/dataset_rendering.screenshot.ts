@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { TestInterface } from "ava";
 import anyTest from "ava";

@@ -62,7 +62,7 @@ function ensureUpToDateTests {
 # For faster, local testing, you may want to remove the `c8` part of the following statement.
 if [ $cmd == "test" ]; then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "annotation_saga.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-debug" ]; then
   export NODE_PATH="$testBundlePath" && ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-changed" ]; then

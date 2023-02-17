@@ -34,7 +34,6 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import messages from "messages";
-import { sleep } from "libs/utils";
 import { APIUserCompact } from "types/api_flow_types";
 
 /* Note that this must stay in sync with the back-end constant
@@ -213,7 +212,6 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 
   function* tryAcquireMutex(): Saga<void> {
     while (shallTryAcquireMutex) {
-      console.log("starting tryAcquireMutex saga");
       if (!doesHaveMutex) {
         yield* put(setAnnotationAllowUpdateAction(false));
       }
@@ -226,8 +224,8 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
           onMutexStateChanged(canEdit, blockedByUser);
         }
       } catch (error) {
-        console.log("error", error);
-        if (doesHaveMutex == true || isInitialRequest) {
+        console.error("Error while trying to acquire mutex.", error);
+        if (doesHaveMutex === true || isInitialRequest) {
           onMutexStateChanged(false, null);
           yield* put(setAnnotationAllowUpdateAction(false));
         }

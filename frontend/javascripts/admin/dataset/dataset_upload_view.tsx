@@ -3,7 +3,7 @@ import { Location as HistoryLocation, Action as HistoryAction } from "history";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
-import moment from "moment";
+import dayjs from "dayjs";
 
 import classnames from "classnames";
 import _ from "lodash";
@@ -52,7 +52,7 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg1: string, arg2: boolean) => Promise<void> | void;
+  onUploaded: (arg0: string, arg1: string, arg2: boolean, arg3: boolean) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -246,7 +246,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
       };
 
-      const uploadId = `${moment(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
+      const uploadId = `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
         datasetId.name
       }__${getRandomString()}`;
       const reserveUploadInformation = {
@@ -337,6 +337,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               this.props.onUploaded(
                 activeUser.organization,
                 formValues.name,
+                false,
                 this.state.needsConversion,
               );
             }

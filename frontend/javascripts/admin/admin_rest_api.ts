@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -526,10 +526,7 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: moment()
-        .endOf("day")
-        .add(initialExpirationPeriodInDays, "days")
-        .valueOf(),
+      expirationDateTime: dayjs().endOf("day").add(initialExpirationPeriodInDays, "days").valueOf(),
     },
   });
 }
@@ -1861,8 +1858,8 @@ export function updateUserConfiguration(
 // ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  day: moment$Moment,
+
+  day: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const month = day.format("M");
   const year = day.format("YYYY");
@@ -1876,10 +1873,8 @@ export async function getTimeTrackingForUserByMonth(
 
 export async function getTimeTrackingForUser(
   userId: string,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  startDate: moment$Moment,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  endDate: moment$Moment,
+  startDate: dayjs.Dayjs,
+  endDate: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const timeTrackingData = await Request.receiveJSON(
     `/api/time/user/${userId}?startDate=${startDate.unix() * 1000}&endDate=${
@@ -2474,9 +2469,15 @@ export function getVoxelyticsArtifactChecksums(
 
 // ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
-  return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
-    method: "POST",
-  });
+  return Request.receiveJSON(
+    `/api/helpEmail?${new URLSearchParams({
+      message,
+      currentUrl: window.location.href,
+    })}`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function requestSingleSignOnLogin() {

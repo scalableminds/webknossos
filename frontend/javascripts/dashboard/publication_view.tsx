@@ -23,8 +23,7 @@ export function PublicationViewWithHeader() {
     })();
   }, []);
 
-  function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  function handleSearch(event: React.ChangeEvent<HTMLInputElement>) {
     setSearchQuery(event.target.value);
   }
 
@@ -35,7 +34,6 @@ export function PublicationViewWithHeader() {
         float: "right",
       }}
       placeholder="Search Publication"
-      onPressEnter={handleSearch}
       onChange={handleSearch}
       value={searchQuery}
     />

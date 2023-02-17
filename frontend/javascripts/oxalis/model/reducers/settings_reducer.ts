@@ -8,8 +8,6 @@ import {
   getVisibleSegmentationLayers,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/helpers/deep_update"' has no... Remove this comment to see the full error message
-import type { StateShape1 } from "oxalis/model/helpers/deep_update";
 import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
 import { userSettings } from "types/schemas/user_settings.schema";
 import {
@@ -22,14 +20,18 @@ import {
 //
 const updateUserConfig = (
   state: OxalisState,
-  shape: StateShape1<"userConfiguration">,
+  shape: Partial<OxalisState["userConfiguration"]>,
 ): OxalisState => updateKey(state, "userConfiguration", shape);
 
-const updateDatasetConfig = (state: OxalisState, shape: StateShape1<"datasetConfiguration">) =>
-  updateKey(state, "datasetConfiguration", shape);
+const updateDatasetConfig = (
+  state: OxalisState,
+  shape: Partial<OxalisState["datasetConfiguration"]>,
+) => updateKey(state, "datasetConfiguration", shape);
 
-const updateTemporaryConfig = (state: OxalisState, shape: StateShape1<"temporaryConfiguration">) =>
-  updateKey(state, "temporaryConfiguration", shape);
+const updateTemporaryConfig = (
+  state: OxalisState,
+  shape: Partial<OxalisState["temporaryConfiguration"]>,
+) => updateKey(state, "temporaryConfiguration", shape);
 
 const updateActiveMapping = (
   state: OxalisState,

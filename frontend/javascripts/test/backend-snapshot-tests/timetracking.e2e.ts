@@ -1,5 +1,5 @@
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import {
   tokenUserA,
   setCurrToken,
@@ -26,7 +26,7 @@ test.before("Reset database and initialize values", async () => {
 test("getTimeTrackingForUserByMonth", async (t) => {
   const timeTrackingForUserByMonth = await api.getTimeTrackingForUserByMonth(
     activeUser.email,
-    moment("20160401", "YYYYMMDD"),
+    dayjs("20160401", "YYYYMMDD"),
   );
   t.true(timeTrackingForUserByMonth.length > 0);
   writeTypeCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTracking", {
@@ -40,8 +40,8 @@ test("getTimeTrackingForUserByMonth", async (t) => {
 test("getTimeTrackingForUser", async (t) => {
   const timeTrackingForUser = await api.getTimeTrackingForUser(
     activeUser.id,
-    moment("20180101", "YYYYMMDD"),
-    moment("20181001", "YYYYMMDD"),
+    dayjs("20180101", "YYYYMMDD"),
+    dayjs("20181001", "YYYYMMDD"),
   );
   t.true(timeTrackingForUser.length > 0);
   t.snapshot(timeTrackingForUser, {
@@ -53,8 +53,8 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
   const idUserC = "770b9f4d2a7c0e4d008da6ef";
   const timeTrackingForUser = await api.getTimeTrackingForUser(
     idUserC,
-    moment("20160401", "YYYYMMDD"),
-    moment("20160420", "YYYYMMDD"),
+    dayjs("20160401", "YYYYMMDD"),
+    dayjs("20160420", "YYYYMMDD"),
   );
   t.true(timeTrackingForUser.length > 0);
   t.snapshot(timeTrackingForUser, {

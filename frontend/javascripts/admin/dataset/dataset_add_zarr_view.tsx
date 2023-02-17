@@ -49,7 +49,7 @@ const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
 type OwnProps = {
-  onAdded: (arg0: string, arg1: string) => Promise<void>;
+  onAdded: (arg0: string, arg1: string, arg2: boolean) => Promise<void>;
   datastores: Array<APIDataStore>;
 };
 type StateProps = {
@@ -169,7 +169,7 @@ function DatasetAddZarrView(props: Props) {
         const dataset = await getDataset(datasetId);
         await updateDataset(datasetId, dataset, targetFolderId, true);
       }
-      onAdded(activeUser.organization, configJSON.id.name);
+      onAdded(activeUser.organization, configJSON.id.name, true);
     }
   }
 

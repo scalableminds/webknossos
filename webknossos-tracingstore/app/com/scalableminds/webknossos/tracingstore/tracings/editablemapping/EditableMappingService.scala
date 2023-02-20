@@ -29,13 +29,12 @@ import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.alg.flow.PushRelabelMFImpl
-import org.jgrapht.graph.{DefaultEdge, DefaultUndirectedGraph, DefaultWeightedEdge, Multigraph, SimpleWeightedGraph}
+import org.jgrapht.graph.{DefaultEdge, DefaultUndirectedGraph, DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
 import java.nio.file.Paths
 import java.util
 import java.util.UUID
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters.asScalaSetConverter
@@ -195,6 +194,7 @@ class EditableMappingService @Inject()(
                            desiredVersion: Long,
   ): Fox[EditableMapping] =
     for {
+      _ <- Fox.successful(logger.info("loading materialized editable mapping from fossildb..."))
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- TimeLogger.logTimeF("load existing",
                                                                                                 logger)(
         tracingDataStore.editableMappings.get(editableMappingId, Some(desiredVersion))(

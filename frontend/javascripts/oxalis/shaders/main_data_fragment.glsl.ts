@@ -54,8 +54,6 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float <%= name %>_min;
   uniform float <%= name %>_max;
   uniform float <%= name %>_is_inverted;
-  uniform mat4 <%= name %>_transform;
-  uniform bool <%= name %>_has_transform;
 <% }) %>
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
@@ -64,6 +62,8 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
   uniform float <%= name %>_unrenderable;
+  uniform mat4 <%= name %>_transform;
+  uniform bool <%= name %>_has_transform;
 <% }) %>
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
@@ -319,8 +319,6 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float <%= name %>_min;
   uniform float <%= name %>_max;
   uniform float <%= name %>_is_inverted;
-  uniform mat4 <%= name %>_transform;
-  uniform bool <%= name %>_has_transform;
 <% }) %>
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
@@ -329,6 +327,8 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
   uniform float <%= name %>_unrenderable;
+  uniform mat4 <%= name %>_transform;
+  uniform bool <%= name %>_has_transform;
 <% }) %>
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
@@ -490,8 +490,7 @@ mat4 modelInv = inverseMatrix(modelMatrix);
 
   const uint FALLBACK_COUNT = 3u;
 
-  // todo: seg layer is missing!
-  <% _.each(colorLayerNames, function(name, layerIndex) { %>
+  <% _.each(layerNamesWithSegmentation, function(name, layerIndex) { %>
   if (!<%= name %>_has_transform) {
     float bucketAddress;
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u];

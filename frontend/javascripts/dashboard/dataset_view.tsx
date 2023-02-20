@@ -116,9 +116,6 @@ function DatasetView(props: Props) {
     if (features().jobsEnabled) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
-
-    // todo: can be removed?
-    // context.fetchDatasets();
   }, []);
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;

@@ -41,7 +41,6 @@ import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedMenuItem2 } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 
-const { SubMenu } = Menu;
 const { Header } = Layout;
 
 const HELP_MENU_KEY = "helpMenu";
@@ -172,25 +171,6 @@ function UserInitials({
   );
 }
 
-function CollapsibleMenuTitle({ title, collapse }: { title: string; collapse: boolean }) {
-  if (collapse) {
-    return "";
-  }
-
-  return title;
-}
-
-function getPricingEnforceMenuItem(
-  key: MenuItemType["key"],
-  label: MenuItemType["label"],
-  requiredPricingPlan: PricingPlanEnum,
-): MenuItemType {
-  return {
-    key,
-    label,
-  };
-}
-
 function getAdministrationSubMenu(
   collapse: boolean,
   isAdmin: boolean,
@@ -245,27 +225,21 @@ function getAdministrationSubMenu(
     });
 
   return {
-    // className={collapse ? "hide-on-small-screen" : ""}
     key: "adminMenu",
-    label: getCollapsibleMenuTitle("Administration", collapse),
-    icon: <TeamOutlined />,
-    // {...menuProps}
+    label: getCollapsibleMenuTitle("Administration", <TeamOutlined />, collapse, true),
     children: adminstrationSubMenuItems,
   };
 }
 
-function getCollapsibleMenuTitle(title: string, collapse: boolean) {
-  return collapse ? "" : title;
+function getCollapsibleMenuTitle(title: string, icon: MenuItemType["icon"], collapse: boolean, isHiddenOnSmallScreens: boolean = false) {
+  const cssClass = isHiddenOnSmallScreens ? "hide-on-small-screen": ""
+  return collapse ? <span className={cssClass}>{icon}</span> : <span className={cssClass}>{icon} {title}</span>;
 }
 
 function getStatisticsSubMenu(collapse: boolean): SubMenuType {
   return {
-    // className={collapse ? "hide-on-small-screen" : ""}
     key: "statisticMenu",
-    label: getCollapsibleMenuTitle("Statistics", collapse),
-    icon: <BarChartOutlined />,
-    // {...menuProps}
-
+    label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse, true),
     children: [
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       {
@@ -299,7 +273,7 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
 function getTimeTrackingMenu(collapse: boolean): MenuItemType {
   return {
     key: "timeStatisticMenu",
-    icon: <BarChartOutlined />,
+    
     label: (
       <Link
         to="/reports/timetracking"
@@ -307,7 +281,7 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
           fontWeight: 400,
         }}
       >
-        {getCollapsibleMenuTitle("Time Tracking", collapse)}
+        {getCollapsibleMenuTitle("Time Tracking", <BarChartOutlined />, collapse)}
       </Link>
     ),
   };
@@ -409,19 +383,15 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
-    label:         getCollapsibleMenuTitle("Help", collapse),
-    icon: <QuestionCircleOutlined />,
+    label: getCollapsibleMenuTitle("Help",  <QuestionCircleOutlined />, collapse),
     children: helSubMenuItems,
   };
 }
 
 function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
-    // className={collapse ? "hide-on-small-screen" : ""}
     key: "dashboardMenu",
-    icon: <HomeOutlined />,
-    label: getCollapsibleMenuTitle("Dashboard", collapse),
-    // {...other}
+    label: getCollapsibleMenuTitle("Dashboard", <HomeOutlined />, collapse, true),
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
       { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
@@ -474,7 +444,6 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-  ...other
 }: { activeUser: APIUser; handleLogout: (event: React.SyntheticEvent) => void } & SubMenuProps) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -567,49 +536,51 @@ function LoggedInAvatar({
               label: orgDisplayName,
               disabled: true,
             },
-            // {activeOrganization && Utils.isUserAdmin(activeUser) ? (
-            //   <Menu.Item key="manage-organization">
-            //     <Link to={`/organizations/${activeOrganization.name}`}>Manage Organization</Link>
-            //   </Menu.Item>
-            // ) : null}
-            // {isMultiMember ? (
-            //   /* The explicit width is a workaround for a layout bug (probably in antd) */
-            //   <Menu.SubMenu
-            //     title="Switch Organization"
-            //     style={{
-            //       width: 180,
-            //     }}
-            //   >
-            //     {switchableOrganizations.map((org) => (
-            //       <Menu.Item key={org.name} onClick={() => switchTo(org)}>
-            //         {org.displayName || org.name}
-            //       </Menu.Item>
-            //     ))}
-            //   </Menu.SubMenu>
-            // ) : null}
+            activeOrganization && Utils.isUserAdmin(activeUser)
+              ? {
+                  key: "manage-organization",
+                  label: (
+                    <Link to={`/organizations/${activeOrganization.name}`}>
+                      Manage Organization
+                    </Link>
+                  ),
+                }
+              : null,
+            isMultiMember
+              ? {
+                  key: "switch-organization",
+                  label: "Switch Organization",
+                  children: switchableOrganizations.map((org) => ({
+                    key: org.name,
+                    onClick: () => switchTo(org),
+                    label: org.displayName || org.name,
+                  })),
+                }
+              : null,
             {
               key: "resetpassword",
               label: <Link to="/auth/changePassword">Change Password</Link>,
             },
             { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
-            // {
-            //   title:"Theme",
-            //   key:"theme",
-            //   children: [
-            //     ["auto", "System-default"],
-            //     ["light", "Light"],
-            //     ["dark", "Dark"],
-            //   ].map(([key, _label]) => {
-            //     return {
-            //       key,
-            //       onClick: () => {
-            //         // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-            //         setSelectedTheme(key);
-            //       },
-            //       label: (selectedTheme === key && (<CheckOutlined /> _label)),
-            //     }
-            //   })
-            //   },
+            {
+              key:"theme",
+              label:"Theme",
+              children: [
+                ["auto", "System-default"],
+                ["light", "Light"],
+                ["dark", "Dark"],
+              ].map(([key, label]) => {
+                return {
+                  key,
+                  label: label,
+                  icon: selectedTheme === key ? <CheckOutlined /> : null,
+                  onClick: () => {
+                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
+                    setSelectedTheme(key);
+                  },
+                }
+              })
+            },
             {
               key: "logout",
               label: (
@@ -708,7 +679,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const menuItems: ItemType[] = [
     {
       key: "0",
-      icon: <span className="logo" />,
       label: (
         <Link
           to="/dashboard"
@@ -717,7 +687,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle("WEBKNOSSOS", collapseAllNavItems)}
+          {getCollapsibleMenuTitle("WEBKNOSSOS", <span className="logo" />, collapseAllNavItems)}
         </Link>
       ),
     },
@@ -824,7 +794,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
           mode="horizontal"
           disabledOverflow
           items={trailingNavItems}
-        ></Menu>
+        />
       </div>
     </Header>
   );

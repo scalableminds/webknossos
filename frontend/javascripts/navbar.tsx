@@ -38,8 +38,9 @@ import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { PricingEnforcedMenuItem2 } from "components/pricing_enforcers";
+import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { MenuClickEventHandler } from "rc-menu/lib/interface";
 
 const { Header } = Layout;
 
@@ -118,22 +119,6 @@ function useOlvyUnreadReleasesCount(activeUser: APIUser) {
   return unreadCount;
 }
 
-function NavbarMenuItem({ items, ...props }: { items: ItemType[]; props?: any }) {
-  return (
-    <Menu
-      mode="horizontal"
-      style={{
-        lineHeight: "48px",
-      }}
-      theme="dark"
-      subMenuCloseDelay={subMenuCloseDelay}
-      triggerSubMenuAction="click"
-      items={items}
-      {...props}
-    />
-  );
-}
-
 function UserInitials({
   activeUser,
   isMultiMember,
@@ -182,25 +167,25 @@ function getAdministrationSubMenu(
     {
       key: "/projects",
       label: (
-        <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+        <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
           <Link to="/projects">Projects</Link>
-        </PricingEnforcedMenuItem2>
+        </PricingEnforcedMenuItem>
       ),
     },
     {
       key: "/tasks",
       label: (
-        <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+        <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
           <Link to="/tasks">Tasks</Link>
-        </PricingEnforcedMenuItem2>
+        </PricingEnforcedMenuItem>
       ),
     },
     {
       key: "/taskTypes",
       label: (
-        <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+        <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
           <Link to="/taskTypes">Task Types</Link>
-        </PricingEnforcedMenuItem2>
+        </PricingEnforcedMenuItem>
       ),
     },
     { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
@@ -231,9 +216,21 @@ function getAdministrationSubMenu(
   };
 }
 
-function getCollapsibleMenuTitle(title: string, icon: MenuItemType["icon"], collapse: boolean, isHiddenOnSmallScreens: boolean = false) {
-  const cssClass = isHiddenOnSmallScreens ? "hide-on-small-screen": ""
-  return collapse ? <span className={cssClass}>{icon}</span> : <span className={cssClass}>{icon} {title}</span>;
+function getCollapsibleMenuTitle(
+  title: string,
+  icon: MenuItemType["icon"],
+  collapse: boolean,
+  isHiddenOnSmallScreens: boolean = false,
+) {
+  const cssClass = collapse && isHiddenOnSmallScreens ? "hide-on-small-screen" : "";
+  return collapse ? (
+    <span className={cssClass}>{icon}</span>
+  ) : (
+    <span className={cssClass}>
+      {icon}
+      {title}
+    </span>
+  );
 }
 
 function getStatisticsSubMenu(collapse: boolean): SubMenuType {
@@ -245,25 +242,25 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
       {
         key: "/reports/timetracking",
         label: (
-          <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Power}>
+          <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Power}>
             <Link to="/reports/timetracking">Time Tracking</Link>
-          </PricingEnforcedMenuItem2>
+          </PricingEnforcedMenuItem>
         ),
       },
       {
         key: "/reports/projectProgress",
         label: (
-          <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+          <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
             <Link to="/reports/projectProgress">Project Progress</Link>
-          </PricingEnforcedMenuItem2>
+          </PricingEnforcedMenuItem>
         ),
       },
       {
         key: "/reports/openTasks",
         label: (
-          <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+          <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
             <Link to="/reports/openTasks">Open Tasks</Link>
-          </PricingEnforcedMenuItem2>
+          </PricingEnforcedMenuItem>
         ),
       },
     ],
@@ -273,7 +270,7 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
 function getTimeTrackingMenu(collapse: boolean): MenuItemType {
   return {
     key: "timeStatisticMenu",
-    
+
     label: (
       <Link
         to="/reports/timetracking"
@@ -293,8 +290,8 @@ function getHelpSubMenu(
   isAuthenticated: boolean,
   isAdminOrTeamManager: boolean,
   collapse: boolean,
+  openHelpModal: MenuClickEventHandler,
 ) {
-  // const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const polledVersionString =
     polledVersion != null && polledVersion !== version
       ? `(Server is currently at ${polledVersion}!)`
@@ -345,7 +342,7 @@ function getHelpSubMenu(
   if (isAuthenticated)
     helSubMenuItems.push({
       key: "get_help",
-      // onClick={() => setIsHelpModalOpen(true)}>,
+      onClick: openHelpModal,
       label: "Ask a Question",
     });
 
@@ -376,14 +373,9 @@ function getHelpSubMenu(
       label: `Version: ${version} ${polledVersionString}`,
     });
 
-  // title={
-  //   <CollapsibleMenuTitle title="Help" icon={<QuestionCircleOutlined />} collapse={collapse} />
-  // }
-  // {...other}
-
   return {
     key: HELP_MENU_KEY,
-    label: getCollapsibleMenuTitle("Help",  <QuestionCircleOutlined />, collapse),
+    label: getCollapsibleMenuTitle("Help", <QuestionCircleOutlined />, collapse),
     children: helSubMenuItems,
   };
 }
@@ -515,16 +507,22 @@ function LoggedInAvatar({
 
   const isMultiMember = switchableOrganizations.length > 0;
   return (
-    <NavbarMenuItem
+    <Menu
+      mode="horizontal"
+      style={{
+        lineHeight: "48px",
+      }}
+      theme="dark"
+      subMenuCloseDelay={subMenuCloseDelay}
+      triggerSubMenuAction="click"
       items={[
         {
           key: "loggedMenu",
           label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
-          // style={{
-          //   padding: 0,
-          // }}
+          style: {
+            padding: 0,
+          },
           // className="sub-menu-without-padding vertical-center-flex-fix"
-          // {...other}
           children: [
             {
               key: "userName",
@@ -563,8 +561,8 @@ function LoggedInAvatar({
             },
             { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
             {
-              key:"theme",
-              label:"Theme",
+              key: "theme",
+              label: "Theme",
               children: [
                 ["auto", "System-default"],
                 ["light", "Light"],
@@ -578,8 +576,8 @@ function LoggedInAvatar({
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
                     setSelectedTheme(key);
                   },
-                }
-              })
+                };
+              }),
             },
             {
               key: "logout",
@@ -647,6 +645,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const version = useFetch(getAndTrackVersion, null, []);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [polledVersion, setPolledVersion] = useState<string | null>(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   useInterval(
     async () => {
@@ -692,7 +691,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       ),
     },
   ];
-  const trailingNavItems: ItemType[] = [];
+  const trailingNavItems = [];
 
   if (_isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
@@ -704,25 +703,21 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       );
       menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
     } else {
-      // JSX can not be used here directly as it adds a item between the menu and the actual menu item and this leads to a bug.
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    trailingNavItems.push({
-      key: "notification-icon",
-      label: <NotificationIcon activeUser={loggedInUser} />,
-    });
-    trailingNavItems.push({
-      key: "logged-in-avatar",
-      label: <LoggedInAvatar activeUser={loggedInUser} handleLogout={handleLogout} />,
-    });
+    trailingNavItems.push(<NotificationIcon key="notification-icon" activeUser={loggedInUser} />);
+    trailingNavItems.push(
+      <LoggedInAvatar
+        key="logged-in-avatar"
+        activeUser={loggedInUser}
+        handleLogout={handleLogout}
+      />,
+    );
   }
 
   if (!(_isAuthenticated || hideNavbarLogin)) {
-    trailingNavItems.push({
-      key: "anonymous-avatar",
-      label: <AnonymousAvatar />,
-    });
+    trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
   menuItems.push(
@@ -732,6 +727,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       _isAuthenticated,
       isAdminOrTeamManager,
       collapseAllNavItems,
+      () => setIsHelpModalOpen(true),
     ),
   );
   // Don't highlight active menu items, when showing the narrow version of the navbar,
@@ -763,12 +759,11 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       />
 
       {isInAnnotationView ? separator : null}
-      {/* 
       <HelpModal
-          isModalOpen={isHelpModalOpen}
-          onCancel={() => setIsHelpModalOpen(false)}
-          centeredLayout
-        /> */}
+        isModalOpen={isHelpModalOpen}
+        onCancel={() => setIsHelpModalOpen(false)}
+        centeredLayout
+      />
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{
@@ -784,17 +779,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
           marginRight: 12,
         }}
       >
-        <Menu
-          style={{
-            lineHeight: "48px",
-          }}
-          theme="dark"
-          subMenuCloseDelay={subMenuCloseDelay}
-          triggerSubMenuAction="click"
-          mode="horizontal"
-          disabledOverflow
-          items={trailingNavItems}
-        />
+        {trailingNavItems}
       </div>
     </Header>
   );

@@ -7,7 +7,7 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Menu, Modal } from "antd";
+import { Dropdown, MenuProps, Modal } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
@@ -143,13 +143,9 @@ export function FolderTreeSidebar({
     [context],
   );
 
-  const createMenu = () => (
-    <Menu>
-      <Menu.Item key="disabled" disabled>
-        Please right-click an existing folder.
-      </Menu.Item>
-    </Menu>
-  );
+  const createMenu: MenuProps = {
+    items: [{ key: "disabled", disabled: true, label: "Please right-click an existing folder." }],
+  };
 
   return (
     <div
@@ -188,7 +184,7 @@ export function FolderTreeSidebar({
         />
       </div>
       <Dropdown
-        overlay={createMenu}
+        menu={createMenu}
         placement="bottom"
         // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
@@ -221,44 +217,43 @@ function generateTitle(
     setFolderIdForEditModal(id);
   }
 
-  const createMenu = () => (
-    <Menu>
-      <PricingEnforcedMenuItem
-        key="create"
-        data-group-id={id}
-        onClick={() => context.showCreateFolderPrompt(id)}
-        disabled={!folder.isEditable}
-        requiredPricingPlan={PricingPlanEnum.Team}
-      >
-        <PlusOutlined />
-        New Folder
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem
-        key="edit"
-        data-group-id={id}
-        onClick={editFolder}
-        disabled={!folder.isEditable}
-        requiredPricingPlan={PricingPlanEnum.Team}
-      >
-        <EditOutlined />
-        Edit Folder
-      </PricingEnforcedMenuItem>
-
-      <Menu.Item
-        key="delete"
-        data-group-id={id}
-        onClick={deleteFolder}
-        disabled={!folder.isEditable}
-      >
-        <DeleteOutlined />
-        Delete Folder
-      </Menu.Item>
-    </Menu>
-  );
+  const createMenu: MenuProps = {
+    items: [
+      {
+        key: "create",
+        disabled: !folder.isEditable,
+        onClick: () => context.showCreateFolderPrompt(id),
+        label: (
+          <PricingEnforcedMenuItem data-group-id={id} requiredPricingPlan={PricingPlanEnum.Team}>
+            <PlusOutlined />
+            New Folder
+          </PricingEnforcedMenuItem>
+        ),
+      },
+      {
+        key: "edit",
+        disabled: !folder.isEditable,
+        onClick: editFolder,
+        label: (
+          <PricingEnforcedMenuItem data-group-id={id} requiredPricingPlan={PricingPlanEnum.Team}>
+            <EditOutlined />
+            Edit Folder
+          </PricingEnforcedMenuItem>
+        ),
+      },
+      {
+        key: "delete",
+        onClick: deleteFolder,
+        disabled: !folder.isEditable,
+        icon: <DeleteOutlined />,
+        label: <span data-group-id={id}>Delete Folder</span>,
+      },
+    ],
+  };
 
   return (
     <Dropdown
-      overlay={createMenu}
+      menu={createMenu}
       placement="bottom"
       // The overlay is generated lazily. By default, this would make the overlay
       // re-render on each parent's render() after it was shown for the first time.

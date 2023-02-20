@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
+import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateGraph, EditableMappingProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMapping,
   EditableMappingService,
   EditableMappingUpdateActionGroup,
   MinCutParameters
@@ -389,6 +390,11 @@ class VolumeTracingController @Inject()(
       tracing <- tracingService.find(tracingId)
       bytes = Files.readAllBytes(Paths.get("/home/f/Downloads/perfreading/mapping.proto.bin"))
       editableMappingProto = EditableMappingProto.parseFrom(bytes)
+      editableMapping = EditableMapping.fromProto(editableMappingProto)
+      largestGraph = editableMapping.agglomerateToGraph.maxBy((agglomerateGraphTuple: (Long, AgglomerateGraph)) =>
+        agglomerateGraphTuple._2.edges.length)
+      _ = logger.info(
+        s"Agglomerate with largest editable graph ${largestGraph._1.toString}. ${largestGraph._2.positions(1)}")
       newId = editableMappingService.generateId
       _ <- editableMappingService.save(newId, editableMappingProto)
       _ <- tracingService.save(tracing.copy(mappingName = Some(newId), mappingIsEditable = Some(true)),

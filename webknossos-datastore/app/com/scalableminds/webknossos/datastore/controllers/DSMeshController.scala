@@ -88,6 +88,10 @@ class DSMeshController @Inject()(
                                                                          editableMappingTracingId,
                                                                          request.body.segmentId,
                                                                          urlOrHeaderToken(token, request))
+                    _ = if (segmentIds.isEmpty) {
+                      logger.info(
+                        s"mapping $editableMappingTracingId yielded no segment ids for agglomerate ${request.body.segmentId}")
+                    }
                     meshChunksForUnmappedSegments = segmentIds.map(
                       segmentId =>
                         meshFileService
@@ -96,6 +100,7 @@ class DSMeshController @Inject()(
                                                       dataLayerName,
                                                       ListMeshChunksRequest(request.body.meshFile, segmentId))
                           .toOption)
+                    _ <- bool2Fox(meshChunksForUnmappedSegments.flatten.nonEmpty) ?~> "No mesh chunks available for selected mapping"
                     chunkInfos = meshChunksForUnmappedSegments.flatten.reduce(_.merge(_))
                   } yield chunkInfos
               }

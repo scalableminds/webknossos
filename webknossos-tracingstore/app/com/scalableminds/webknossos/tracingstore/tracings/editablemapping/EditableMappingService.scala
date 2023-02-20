@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
 import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateEdge, AgglomerateGraph, EditableMappingProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -24,6 +24,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
@@ -83,7 +84,8 @@ class EditableMappingService @Inject()(
     extends KeyValueStoreImplicits
     with FallbackDataHelper
     with FoxImplicits
-    with ProtoGeometryImplicits {
+    with ProtoGeometryImplicits
+    with LazyLogging {
 
   def generateId: String = UUID.randomUUID.toString // TODO make private again
 
@@ -180,7 +182,10 @@ class EditableMappingService @Inject()(
     val key = EditableMappingKey(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
     materializedEditableMappingCache.getOrLoad(
       key,
-      key => getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion))
+      key =>
+        TimeLogger.logTimeF("getVersioned", logger)(
+          getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion))
+    )
   }
 
   private def getVersioned(editableMappingId: String,
@@ -189,19 +194,25 @@ class EditableMappingService @Inject()(
                            desiredVersion: Long,
   ): Fox[EditableMapping] =
     for {
-      closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
-        .get(editableMappingId, Some(desiredVersion))(bytes =>
-          fromProtoBytes[EditableMappingProto](bytes).map(EditableMapping.fromProto))
-      materialized <- applyPendingUpdates(
-        editableMappingId,
-        desiredVersion,
-        closestMaterializedVersion.value,
-        remoteFallbackLayer,
-        closestMaterializedVersion.version,
-        userToken
-      )
+      closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- TimeLogger.logTimeF("load existing",
+                                                                                                logger)(
+        tracingDataStore.editableMappings.get(editableMappingId, Some(desiredVersion))(
+          bytes =>
+            TimeLogger
+              .logTime("protoFromBytes", logger)(fromProtoBytes[EditableMappingProto](bytes))
+              .map(proto => TimeLogger.logTime("fromProto", logger)(EditableMapping.fromProto(proto)))))
+      materialized <- TimeLogger.logTimeF("applyPendingUpdates", logger)(
+        applyPendingUpdates(
+          editableMappingId,
+          desiredVersion,
+          closestMaterializedVersion.value,
+          remoteFallbackLayer,
+          closestMaterializedVersion.version,
+          userToken
+        ))
       _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
-        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized.toProto)
+        TimeLogger.logTimeF("save new", logger)(
+          tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized.toProto))
       }
     } yield materialized
 

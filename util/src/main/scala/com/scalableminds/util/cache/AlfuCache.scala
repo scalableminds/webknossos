@@ -33,7 +33,15 @@ class AlfuFoxCache[K, V](underlyingAkkaCache: Cache[K, Box[V]]) extends FoxImpli
       result <- box.toFox
     } yield result
 
+  def get(key: K)(implicit ec: ExecutionContext): Fox[V] =
+    underlyingAkkaCache.get(key) match {
+      case Some(future) => future.toFox
+      case None         => Fox.empty
+    }
+
   def clear(): Unit = underlyingAkkaCache.clear()
+
+  def keys: Set[K] = underlyingAkkaCache.keys
 }
 
 object AlfuFoxCache {

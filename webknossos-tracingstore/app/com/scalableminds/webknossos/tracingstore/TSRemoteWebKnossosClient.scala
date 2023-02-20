@@ -13,7 +13,6 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.typesafe.scalalogging.LazyLogging
-import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.libs.ws.WSResponse

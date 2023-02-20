@@ -18,9 +18,11 @@ import com.scalableminds.webknossos.datastore.services.{
   IsosurfaceService,
   IsosurfaceServiceHolder
 }
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   TracingDataStore,
+  VersionedKey,
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
@@ -79,7 +81,8 @@ class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val previousMaterializedEditableMappingCache: TemporaryStore[(String, Long), VersionedKeyValuePair[EditableMapping]]
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
@@ -100,6 +103,12 @@ class EditableMappingService @Inject()(
     tracingDataStore.editableMappingUpdates.getVersion(editableMappingId,
                                                        mayBeEmpty = Some(true),
                                                        emptyFallback = Some(0L))
+
+  def newestMaterializedPersistedVersion(editableMappingId: String, desiredVersion: Long): Fox[Long] =
+    tracingDataStore.editableMappings.getVersion(editableMappingId,
+                                                 version = Some(desiredVersion),
+                                                 mayBeEmpty = Some(true),
+                                                 emptyFallback = Some(0L))
 
   def infoJson(tracingId: String, editableMapping: EditableMapping, editableMappingId: String): Fox[JsObject] =
     for {
@@ -188,6 +197,8 @@ class EditableMappingService @Inject()(
     )
   }
 
+  // TODO: cache previous materialized! remove older from cache
+
   private def getVersioned(editableMappingId: String,
                            remoteFallbackLayer: RemoteFallbackLayer,
                            userToken: Option[String],
@@ -195,13 +206,11 @@ class EditableMappingService @Inject()(
   ): Fox[EditableMapping] =
     for {
       _ <- Fox.successful(logger.info("loading materialized editable mapping from fossildb..."))
-      closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- TimeLogger.logTimeF("load existing",
-                                                                                                logger)(
-        tracingDataStore.editableMappings.get(editableMappingId, Some(desiredVersion))(
-          bytes =>
-            TimeLogger
-              .logTime("protoFromBytes", logger)(fromProtoBytes[EditableMappingProto](bytes))
-              .map(proto => TimeLogger.logTime("fromProto", logger)(EditableMapping.fromProto(proto)))))
+      closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- TimeLogger.logTimeF(
+        "load existing from cache or db",
+        logger)(
+        getClosestMaterializedVersion(editableMappingId, desiredVersion)
+      )
       materialized <- TimeLogger.logTimeF("applyPendingUpdates", logger)(
         applyPendingUpdates(
           editableMappingId,
@@ -215,7 +224,29 @@ class EditableMappingService @Inject()(
         TimeLogger.logTimeF("save new", logger)(
           tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized.toProto))
       }
+      _ <- previousMaterializedEditableMappingCache.insert(
+        (editableMappingId, desiredVersion),
+        VersionedKeyValuePair(VersionedKey(editableMappingId, desiredVersion), materialized),
+        to = Some(5 minutes))
     } yield materialized
+
+  private def getClosestMaterializedVersion(editableMappingId: String,
+                                            desiredVersion: Long): Fox[VersionedKeyValuePair[EditableMapping]] = {
+    // TODO: direct cache hit won’t happen, as we expect to find desiredVersion - 1. However, we need to find out if the fossildb has desiredVersion itself.
+    // fossildb version check is needed
+    val fromCacheOpt = previousMaterializedEditableMappingCache.find((editableMappingId, desiredVersion))
+    fromCacheOpt match {
+      case Some(fromCache) =>
+        logger.info("Cache hit!")
+        Fox.successful(fromCache)
+      case None =>
+        tracingDataStore.editableMappings.get(editableMappingId, Some(desiredVersion))(
+          bytes =>
+            TimeLogger
+              .logTime("protoFromBytes", logger)(fromProtoBytes[EditableMappingProto](bytes))
+              .map(proto => TimeLogger.logTime("fromProto", logger)(EditableMapping.fromProto(proto))))
+    }
+  }
 
   private def shouldPersistMaterialized(previouslyMaterializedVersion: Long, newVersion: Long): Boolean =
     newVersion > previouslyMaterializedVersion && newVersion % 10 == 5

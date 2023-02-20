@@ -38,7 +38,7 @@ import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
+import { PricingEnforcedMenuItem2 } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 
 const { SubMenu } = Menu;
@@ -172,25 +172,23 @@ function UserInitials({
   );
 }
 
-function CollapsibleMenuTitle({
-  title,
-  collapse,
-  icon,
-}: {
-  title: string;
-  collapse: boolean;
-  icon: any;
-}) {
+function CollapsibleMenuTitle({ title, collapse }: { title: string; collapse: boolean }) {
   if (collapse) {
-    return <span title={title}>{icon}</span>;
-  } else {
-    return (
-      <span>
-        {icon}
-        {title}
-      </span>
-    );
+    return "";
   }
+
+  return title;
+}
+
+function getPricingEnforceMenuItem(
+  key: MenuItemType["key"],
+  label: MenuItemType["label"],
+  requiredPricingPlan: PricingPlanEnum,
+): MenuItemType {
+  return {
+    key,
+    label,
+  };
 }
 
 function getAdministrationSubMenu(
@@ -198,73 +196,102 @@ function getAdministrationSubMenu(
   isAdmin: boolean,
   organization: string,
 ): SubMenuType {
+  const adminstrationSubMenuItems = [
+    { key: "/users", label: <Link to="/users">Users</Link> },
+    { key: "/teams", label: <Link to="/teams">Teams</Link> },
+    {
+      key: "/projects",
+      label: (
+        <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+          <Link to="/projects">Projects</Link>
+        </PricingEnforcedMenuItem2>
+      ),
+    },
+    {
+      key: "/tasks",
+      label: (
+        <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+          <Link to="/tasks">Tasks</Link>
+        </PricingEnforcedMenuItem2>
+      ),
+    },
+    {
+      key: "/taskTypes",
+      label: (
+        <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+          <Link to="/taskTypes">Task Types</Link>
+        </PricingEnforcedMenuItem2>
+      ),
+    },
+    { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+  ];
+
+  if (features().jobsEnabled)
+    adminstrationSubMenuItems.push({
+      key: "/jobs",
+      label: <Link to="/jobs">Processing Jobs</Link>,
+    });
+
+  if (isAdmin)
+    adminstrationSubMenuItems.push({
+      key: "/organization",
+      label: <Link to={`/organizations/${organization}`}>Organization</Link>,
+    });
+
+  if (features().voxelyticsEnabled)
+    adminstrationSubMenuItems.push({
+      key: "/workflows",
+      label: <Link to="/workflows">Voxelytics</Link>,
+    });
+
   return {
     // className={collapse ? "hide-on-small-screen" : ""}
     key: "adminMenu",
-    label: "Administration",
+    label: getCollapsibleMenuTitle("Administration", collapse),
     icon: <TeamOutlined />,
-    // title: <CollapsibleMenuTitle title="Administration" icon={<TeamOutlined />} collapse={collapse} />,
     // {...menuProps}
-    children: [
-      { key: "/users", label: <Link to="/users">Users</Link> },
-      { key: "/teams", label: <Link to="/teams">Teams</Link> },
-      // <PricingEnforcedMenuItem key="/projects" requiredPricingPlan={PricingPlanEnum.Team}>
-      //   <Link to="/projects">Projects</Link>
-      // </PricingEnforcedMenuItem>
-      // <PricingEnforcedMenuItem key="/tasks" requiredPricingPlan={PricingPlanEnum.Team}>
-      //   <Link to="/tasks">Tasks</Link>
-      // </PricingEnforcedMenuItem>
-      // <PricingEnforcedMenuItem key="/taskTypes" requiredPricingPlan={PricingPlanEnum.Team}>
-      //   <Link to="/taskTypes">Task Types</Link>
-      // </PricingEnforcedMenuItem>
-      // {features().jobsEnabled && (
-      //   {key:"/jobs",
-      //   label:           <Link to="/jobs">Processing Jobs</Link>
-      //   },
-      // )}
-      { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
-      // {isAdmin && (
-      //   {key:"/organization",
-      //   label:           <Link to={`/organizations/${organization}`}>Organization</Link>
-      //   },
-      // )}
-      // {features().voxelyticsEnabled && (
-      //   {key:"/workflows",
-      //   label:           <Link to="/workflows">Voxelytics</Link>
-      //   },
-      //   )}
-    ],
+    children: adminstrationSubMenuItems,
   };
+}
+
+function getCollapsibleMenuTitle(title: string, collapse: boolean) {
+  return collapse ? "" : title;
 }
 
 function getStatisticsSubMenu(collapse: boolean): SubMenuType {
   return {
     // className={collapse ? "hide-on-small-screen" : ""}
     key: "statisticMenu",
-    label: "Statistics",
+    label: getCollapsibleMenuTitle("Statistics", collapse),
     icon: <BarChartOutlined />,
-    // title: {
-    //   <CollapsibleMenuTitle title="Statistics" icon={<BarChartOutlined />} collapse={collapse} />
-    // }
     // {...menuProps}
 
     children: [
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
-      /* <PricingEnforcedMenuItem
-        key="/reports/timetracking"
-        requiredPricingPlan={PricingPlanEnum.Power}
-      >
-        <Link to="/reports/timetracking">Time Tracking</Link>
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem
-        key="/reports/projectProgress"
-        requiredPricingPlan={PricingPlanEnum.Team}
-      >
-        <Link to="/reports/projectProgress">Project Progress</Link>
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem key="/reports/openTasks" requiredPricingPlan={PricingPlanEnum.Team}>
-        <Link to="/reports/openTasks">Open Tasks</Link>
-      </PricingEnforcedMenuItem> */
+      {
+        key: "/reports/timetracking",
+        label: (
+          <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Power}>
+            <Link to="/reports/timetracking">Time Tracking</Link>
+          </PricingEnforcedMenuItem2>
+        ),
+      },
+      {
+        key: "/reports/projectProgress",
+        label: (
+          <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/reports/projectProgress">Project Progress</Link>
+          </PricingEnforcedMenuItem2>
+        ),
+      },
+      {
+        key: "/reports/openTasks",
+        label: (
+          <PricingEnforcedMenuItem2 requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/reports/openTasks">Open Tasks</Link>
+          </PricingEnforcedMenuItem2>
+        ),
+      },
     ],
   };
 }
@@ -272,6 +299,7 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
 function getTimeTrackingMenu(collapse: boolean): MenuItemType {
   return {
     key: "timeStatisticMenu",
+    icon: <BarChartOutlined />,
     label: (
       <Link
         to="/reports/timetracking"
@@ -279,11 +307,7 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
           fontWeight: 400,
         }}
       >
-        <CollapsibleMenuTitle
-          title="Time Tracking"
-          icon={<BarChartOutlined />}
-          collapse={collapse}
-        />
+        {getCollapsibleMenuTitle("Time Tracking", collapse)}
       </Link>
     ),
   };
@@ -297,86 +321,97 @@ function getHelpSubMenu(
   collapse: boolean,
 ) {
   // const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const polledVersionString =
+    polledVersion != null && polledVersion !== version
+      ? `(Server is currently at ${polledVersion}!)`
+      : "";
+
+  const helSubMenuItems: ItemType[] = [
+    {
+      key: "user-documentation",
+      label: (
+        <a target="_blank" href="https://docs.webknossos.org" rel="noreferrer noopener">
+          User Documentation
+        </a>
+      ),
+    },
+    (!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
+    features().discussionBoard !== false
+      ? {
+          key: "discussion-board",
+          label: (
+            <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
+              Community Support
+            </a>
+          ),
+        }
+      : null,
+    {
+      key: "frontend-api",
+      label: (
+        <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
+          Frontend API Documentation
+        </a>
+      ),
+    },
+    {
+      key: "keyboard-shortcuts",
+      label: (
+        <a
+          target="_blank"
+          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
+          rel="noopener noreferrer"
+        >
+          Keyboard Shortcuts
+        </a>
+      ),
+    },
+  ];
+
+  if (isAuthenticated)
+    helSubMenuItems.push({
+      key: "get_help",
+      // onClick={() => setIsHelpModalOpen(true)}>,
+      label: "Ask a Question",
+    });
+
+  if (features().isDemoInstance) {
+    helSubMenuItems.push({
+      key: "contact",
+      label: (
+        <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+          Email Us
+        </a>
+      ),
+    });
+  } else {
+    helSubMenuItems.push({
+      key: "credits",
+      label: (
+        <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+          About & Credits
+        </a>
+      ),
+    });
+  }
+
+  if (version !== "")
+    helSubMenuItems.push({
+      key: "version",
+      disabled: true,
+      label: `Version: ${version} ${polledVersionString}`,
+    });
+
+  // title={
+  //   <CollapsibleMenuTitle title="Help" icon={<QuestionCircleOutlined />} collapse={collapse} />
+  // }
+  // {...other}
 
   return {
-    // title={
-    //   <CollapsibleMenuTitle title="Help" icon={<QuestionCircleOutlined />} collapse={collapse} />
-    // }
-    // {...other}
     key: HELP_MENU_KEY,
-    label: "Help",
+    label:         getCollapsibleMenuTitle("Help", collapse),
     icon: <QuestionCircleOutlined />,
-    children: [
-      {
-        key: "user-documentation",
-        label: (
-          <a target="_blank" href="https://docs.webknossos.org" rel="noreferrer noopener">
-            User Documentation
-          </a>
-        ),
-      },
-      // {(!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
-      // features().discussionBoard !== false ? (
-      //   {key:"discussion-board">,
-      //   label:           <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
-      //       Community Support
-      //     </a>
-      //   },
-      // ) : null}
-      {
-        key: "frontend-api",
-        label: (
-          <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
-            Frontend API Documentation
-          </a>
-        ),
-      },
-      {
-        key: "keyboard-shortcuts",
-        label: (
-          <a
-            target="_blank"
-            href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
-            rel="noopener noreferrer"
-          >
-            Keyboard Shortcuts
-          </a>
-        ),
-      },
-      // {isAuthenticated ? (
-      //   <>
-      //     {key:"get_help" onClick={() => setIsHelpModalOpen(true)}>,
-      //     label:             Ask a Question
-      //     },
-      //     <HelpModal
-      //       isModalOpen={isHelpModalOpen}
-      //       onCancel={() => setIsHelpModalOpen(false)}
-      //       centeredLayout
-      //     />
-      //   </>
-      // ) : null}
-      // {features().isDemoInstance ? (
-      //   {key:"contact">,
-      //   label:           <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
-      //       Email Us
-      //     </a>
-      //   },
-      // ) : (
-      //   {key:"credits">,
-      //   label:           <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
-      //       About & Credits
-      //     </a>
-      //   },
-      // )}
-      // {version !== "" ? (
-      //   {disabled:key="version">,
-      //   label:           Version: {version}
-      //     {polledVersion != null && polledVersion !== version
-      //       ? ` (Server is currently at ${polledVersion}!)`
-      //       : null}
-      //   },
-      // ) : null}
-    ],
+    children: helSubMenuItems,
   };
 }
 
@@ -384,7 +419,8 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     // className={collapse ? "hide-on-small-screen" : ""}
     key: "dashboardMenu",
-    label: <CollapsibleMenuTitle title="Dashboard" icon={<HomeOutlined />} collapse={collapse} />,
+    icon: <HomeOutlined />,
+    label: getCollapsibleMenuTitle("Dashboard", collapse),
     // {...other}
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
@@ -672,6 +708,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const menuItems: ItemType[] = [
     {
       key: "0",
+      icon: <span className="logo" />,
       label: (
         <Link
           to="/dashboard"
@@ -680,11 +717,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
             verticalAlign: "middle",
           }}
         >
-          <CollapsibleMenuTitle
-            title="WEBKNOSSOS"
-            icon={<span className="logo" />}
-            collapse={collapseAllNavItems}
-          />
+          {getCollapsibleMenuTitle("WEBKNOSSOS", collapseAllNavItems)}
         </Link>
       ),
     },
@@ -736,8 +769,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
   const separator = <div className="navbar-separator" />;
 
-  debugger;
-
   return (
     <Header
       style={navbarStyle}
@@ -762,7 +793,12 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       />
 
       {isInAnnotationView ? separator : null}
-
+      {/* 
+      <HelpModal
+          isModalOpen={isHelpModalOpen}
+          onCancel={() => setIsHelpModalOpen(false)}
+          centeredLayout
+        /> */}
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{

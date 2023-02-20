@@ -84,6 +84,43 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
   );
 };
 
+export const PricingEnforcedMenuItem2: React.FunctionComponent<
+  RequiredPricingProps & MenuItemProps
+> = ({ children, requiredPricingPlan, ...menuItemProps }) => {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+
+  if (isFeatureAllowed) return <>{children}</>;
+
+  return (
+    <Popover
+      color={PRIMARY_COLOR_HEX}
+      content={
+        <div style={popOverStyle}>
+          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
+          {getUpgradeNowButton(activeUser, activeOrganization)}
+        </div>
+      }
+      placement="right"
+      trigger="hover"
+      zIndex={1500}
+    >
+      <span
+        onClick={handleMenuClick}
+        onAuxClick={handleMouseClick}
+        onDoubleClick={handleMouseClick}
+        onClickCapture={handleMouseClick}
+        className="ant-menu-title-content ant-menu-item-disabled"
+        {...menuItemProps}
+      >
+        {children}
+        <LockOutlined style={{ marginLeft: 5 }} />
+      </span>
+    </Popover>
+  );
+};
+
 export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps & ButtonProps> = ({
   children,
   requiredPricingPlan,

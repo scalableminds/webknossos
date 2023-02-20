@@ -38,7 +38,6 @@ import {
   invertAndTranspose,
 } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
-import { Matrix4x4 } from "mjs";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 

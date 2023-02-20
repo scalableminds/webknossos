@@ -162,7 +162,7 @@ const M4x4 = {
   },
 
   transpose(m: Matrix4x4, r?: Matrix4x4): Matrix4x4 {
-    if (m == r) {
+    if (m === r) {
       var tmp = 0.0;
       tmp = m[1];
       m[1] = m[4];
@@ -185,7 +185,7 @@ const M4x4 = {
       return m;
     }
 
-    if (r == undefined) r = new Float32Array(16);
+    if (r == null) r = new Float32Array(16);
 
     r[0] = m[0];
     r[1] = m[4];

@@ -2,7 +2,6 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { Area, Identity4x4 } from "oxalis/model/accessors/flycam_accessor";
-import { getAreasFromState, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -24,8 +23,7 @@ import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store, { SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import UpdatableTexture from "libs/UpdatableTexture";
-import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
+import type { ViewMode, Vector3, Vector4 } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
 import DiffableMap from "libs/diffable_map";
@@ -48,20 +46,6 @@ const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 
 const getLookUpCuckooTable = memoizeOne(() => new CuckooTableVec5(256));
-
-// each index of the returned Vector3 is either -1 or +1.
-function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
-  // E.g., modAndDivide(63, 32) === 31 / 32 === ~0.97
-  const modAndDivide = (a: number, b: number) => (a % b) / b;
-
-  const roundToNearestBucketBoundary = (pos: Vector3, dimension: 0 | 1 | 2) => {
-    const bucketExtentInVoxel = constants.BUCKET_WIDTH * resolution[dimension];
-    // Math.round returns 0 or 1 which will be mapped to -1 or 1
-    return Math.round(modAndDivide(pos[dimension], bucketExtentInVoxel)) * 2 - 1;
-  };
-
-  return map3((_pos, idx) => roundToNearestBucketBoundary(position, idx), position);
-}
 
 function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
@@ -136,10 +120,6 @@ export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
 
 export default class LayerRenderingManager {
   lastSphericalCapRadius: number | undefined;
-  // Indicates whether the current position is closer to the previous or next bucket for each dimension
-  // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
-  lastSubBucketLocality: Vector3 = [-1, -1, -1];
-  lastAreas: OrthoViewMap<Area> | undefined;
   lastZoomedMatrix: Matrix4x4 | undefined;
   lastViewMode: ViewMode | undefined;
   lastIsVisible: boolean | undefined;
@@ -225,11 +205,6 @@ export default class LayerRenderingManager {
     }
 
     const resolutions = getResolutions(dataset);
-    const subBucketLocality = getSubBucketLocality(
-      position,
-      resolutionInfo.getResolutionByIndexWithFallback(logZoomStep, datasetResolutionInfo),
-    );
-    const areas = getAreasFromState(state);
 
     const layerMatrix = invertAndTranspose(layer.transformMatrix || Identity4x4);
 
@@ -239,21 +214,16 @@ export default class LayerRenderingManager {
     );
 
     const { viewMode } = state.temporaryConfiguration;
-    const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
     const { sphericalCapRadius } = state.userConfiguration;
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
 
     if (
-      !_.isEqual(areas, this.lastAreas) ||
-      !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       this.needsRefresh
     ) {
-      this.lastSubBucketLocality = subBucketLocality;
-      this.lastAreas = areas;
       this.lastZoomedMatrix = matrix;
       this.lastViewMode = viewMode;
       this.lastSphericalCapRadius = sphericalCapRadius;
@@ -264,8 +234,6 @@ export default class LayerRenderingManager {
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
       if (isVisible) {
-        const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
-
         const rects = getViewportRects(Store.getState());
 
         pickingPromise = this.latestTaskExecutor.schedule(() =>
@@ -277,10 +245,7 @@ export default class LayerRenderingManager {
             matrix,
             logZoomStep,
             datasetConfiguration.loadingStrategy,
-            areas,
             rects,
-            subBucketLocality,
-            initializedGpuFactor,
           ),
         );
       }

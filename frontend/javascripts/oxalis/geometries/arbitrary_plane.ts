@@ -3,7 +3,6 @@ import _ from "lodash";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
-import type { Vector4 } from "oxalis/constants";
 import constants, { OrthoViews } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import shaderEditor from "oxalis/model/helpers/shader_editor";

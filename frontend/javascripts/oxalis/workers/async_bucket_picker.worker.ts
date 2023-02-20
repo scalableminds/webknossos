@@ -47,10 +47,7 @@ function pick(
   matrix: Matrix4x4,
   logZoomStep: number,
   loadingStrategy: LoadingStrategy,
-  areas: OrthoViewMap<Area>,
   rects: PlaneRects,
-  subBucketLocality: Vector3,
-  gpuFactor: number,
 ): ArrayBuffer {
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence

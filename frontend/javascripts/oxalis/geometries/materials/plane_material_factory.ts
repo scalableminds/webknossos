@@ -868,8 +868,6 @@ class PlaneMaterialFactory {
     const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
-    const availableLayerNames = colorLayerNames.concat(segmentationLayerNames);
-
     const packingDegreeLookup = getPackingDegreeLookup();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;

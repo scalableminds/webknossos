@@ -1,8 +1,7 @@
 import PriorityQueue from "js-priority-queue";
-import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type { LoadingStrategy, PlaneRects } from "oxalis/store";
 import { Matrix4x4 } from "libs/mjs";
-import type { OrthoViewMap, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";

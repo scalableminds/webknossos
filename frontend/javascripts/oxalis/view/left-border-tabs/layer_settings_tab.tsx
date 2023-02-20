@@ -104,7 +104,6 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
-import { invertAndTranspose } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;

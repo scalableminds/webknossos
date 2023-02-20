@@ -11,10 +11,10 @@ import {
 import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { sleep, waitForCondition } from "libs/utils";
+import { waitForCondition } from "libs/utils";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";

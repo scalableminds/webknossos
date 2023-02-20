@@ -691,8 +691,6 @@ export class DataBucket {
       return;
     }
 
-    const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
-
     const colors = [
       new THREE.Color(0, 0, 0),
       new THREE.Color(255, 0, 0),

@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { Area, Identity4x4 } from "oxalis/model/accessors/flycam_accessor";
+import { Identity4x4 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, Matrix4x4, V3 } from "libs/mjs";
+import { M4x4, Matrix4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { map3 } from "libs/utils";
 import {
@@ -195,7 +195,6 @@ export default class LayerRenderingManager {
     const { dataset, datasetConfiguration } = state;
     const layer = getLayerByName(dataset, this.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
     const maximumResolutionIndex = resolutionInfo.getHighestResolutionIndex();
 
     if (logZoomStep > maximumResolutionIndex) {

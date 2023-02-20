@@ -3,7 +3,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";
-import { M4x4, V3 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getDataLayers,
@@ -33,10 +33,7 @@ import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import {
-  getGlobalLayerIndexForLayerName,
-  invertAndTranspose,
-} from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import { invertAndTranspose } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -44,14 +41,12 @@ export const ZOOM_STEP_INTERVAL = 1.1;
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  datasetScale: Vector3,
   resolutions: Array<Vector3>,
   logZoomStep: number,
   zoomFactor: number,
   viewportRects: OrthoViewRects,
   unzoomedMatrix: Matrix4x4,
   abortLimit: number,
-  initializedGpuFactor: number,
 ) {
   let counter = 0;
 
@@ -63,9 +58,7 @@ function calculateTotalBucketCountForZoomLevel(
 
   // Define dummy values
   const position: Vector3 = [0, 0, 0];
-  const subBucketLocality: Vector3 = [1, 1, 1];
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
-  const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
   const matrix = M4x4.scale1(zoomFactor, unzoomedMatrix);
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
@@ -166,7 +159,6 @@ export function _getMaximumZoomForAllResolutions(
     const nextCapacity = calculateTotalBucketCountForZoomLevel(
       viewMode,
       loadingStrategy,
-      datasetScale,
       resolutions,
       currentResolutionIndex,
       nextZoomValue,
@@ -176,7 +168,6 @@ export function _getMaximumZoomForAllResolutions(
       // Increment the limit by one, so that rendering is still possible
       // when exactly meeting the limit.
       maximumCapacity + 1,
-      initializedGpuFactor,
     );
 
     if (nextCapacity > maximumCapacity) {

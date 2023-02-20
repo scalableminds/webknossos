@@ -1,7 +1,6 @@
 import React from "react";
 import _ from "lodash";
 import { document } from "libs/window";
-import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { ElementClass } from "types/api_flow_types";
 import Toast from "libs/toast";

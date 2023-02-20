@@ -134,7 +134,6 @@ class SceneController {
       resolution: Vector3,
       optColor?: string,
     ) => {
-      const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
       const bucketSize = [
         constants.BUCKET_WIDTH * resolution[0],
         constants.BUCKET_WIDTH * resolution[1],

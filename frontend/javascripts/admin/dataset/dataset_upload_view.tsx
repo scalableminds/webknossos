@@ -3,7 +3,7 @@ import { Location as HistoryLocation, Action as HistoryAction } from "history";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
-import moment from "moment";
+import dayjs from "dayjs";
 
 import classnames from "classnames";
 import _ from "lodash";
@@ -246,7 +246,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
       };
 
-      const uploadId = `${moment(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
+      const uploadId = `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
         datasetId.name
       }__${getRandomString()}`;
       const reserveUploadInformation = {

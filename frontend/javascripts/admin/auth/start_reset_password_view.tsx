@@ -23,16 +23,8 @@ function StartResetPasswordView({ history }: Props) {
   };
 
   return (
-    <Row
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-      type="flex"
-      justify="center"
-      style={{
-        padding: 50,
-      }}
-      align="middle"
-    >
-      <Col span={8}>
+    <Row className="login-view" justify="center" align="middle">
+      <Col className="login-content">
         <h3>Reset Password</h3>
         <Form onFinish={onFinish} form={form}>
           <FormItem

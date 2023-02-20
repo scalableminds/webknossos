@@ -32,8 +32,7 @@ function FinishResetPasswordView(props: Props) {
     });
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-  function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
+  function checkPasswordsAreMatching(value: string, otherPasswordFieldKey: string[]) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
 
     if (value && otherFieldValue) {
@@ -49,16 +48,8 @@ function FinishResetPasswordView(props: Props) {
   }
 
   return (
-    <Row
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-      type="flex"
-      justify="center"
-      style={{
-        padding: 50,
-      }}
-      align="middle"
-    >
-      <Col span={8}>
+    <Row className="login-view" justify="center" align="middle">
+      <Col className="login-content">
         <h3>Reset Password</h3>
         <Form onFinish={onFinish} form={form}>
           <FormItem
@@ -74,7 +65,7 @@ function FinishResetPasswordView(props: Props) {
                 message: messages["auth.registration_password_length"],
               },
               {
-                validator: (_, value) =>
+                validator: (_, value: string) =>
                   checkPasswordsAreMatching(value, ["password", "password2"]),
               },
             ]}
@@ -103,7 +94,7 @@ function FinishResetPasswordView(props: Props) {
                 message: messages["auth.registration_password_length"],
               },
               {
-                validator: (_, value) =>
+                validator: (_, value: string) =>
                   checkPasswordsAreMatching(value, ["password", "password1"]),
               },
             ]}

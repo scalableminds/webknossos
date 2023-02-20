@@ -14,7 +14,7 @@ import {
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
@@ -332,7 +332,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],
-          sortingKey: moment(dataset.sortingKey),
+          sortingKey: dayjs(dataset.sortingKey),
         },
       });
       // This call cannot be combined with the previous setFieldsValue,

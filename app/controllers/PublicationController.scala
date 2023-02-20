@@ -4,13 +4,13 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import io.swagger.annotations._
-import javax.inject.Inject
 import models.binary.{PublicationDAO, PublicationService}
 import oxalis.security.WkEnv
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
@@ -20,6 +20,8 @@ class PublicationController @Inject()(publicationService: PublicationService,
     extends Controller
     with ProtoGeometryImplicits
     with FoxImplicits {
+
+  override def allowRemoteOrigin: Boolean = true
 
   @ApiOperation(value = "Information about a publication", nickname = "publicationInfo")
   @ApiResponses(

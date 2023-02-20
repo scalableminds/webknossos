@@ -395,6 +395,17 @@ class VolumeTracingController @Inject()(
         agglomerateGraphTuple._2.edges.length)
       _ = logger.info(
         s"Agglomerate with largest editable graph ${largestGraph._1.toString}. ${largestGraph._2.positions(1)}")
+      _ = {
+        var sum = 0
+        editableMapping.agglomerateToGraph.foreach { agglomerateGraphTuple =>
+          sum += agglomerateGraphTuple._2.edges.length;
+          if (agglomerateGraphTuple._2.edges.length > 2) {
+            logger.info(f"agglomerate ${agglomerateGraphTuple._1}: ${agglomerateGraphTuple._2.edges.length}%07d edges")
+          }
+        }
+        logger.info(s"total edges: $sum")
+        logger.info(s"segmentToAgglomerate: ${editableMapping.segmentToAgglomerate.keys.length} items")
+      }
       newId = editableMappingService.generateId
       _ <- editableMappingService.save(newId, editableMappingProto)
       _ <- tracingService.save(tracing.copy(mappingName = Some(newId), mappingIsEditable = Some(true)),

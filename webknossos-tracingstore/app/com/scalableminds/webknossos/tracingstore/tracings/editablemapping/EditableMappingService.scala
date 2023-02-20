@@ -27,8 +27,9 @@ import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRem
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
+import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.alg.flow.PushRelabelMFImpl
-import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
+import org.jgrapht.graph.{DefaultEdge, DefaultUndirectedGraph, DefaultWeightedEdge, Multigraph, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
 import java.nio.file.Paths
@@ -266,9 +267,11 @@ class EditableMappingService @Inject()(
                              userToken: Option[String]): Fox[EditableMapping] =
     update match {
       case splitAction: SplitAgglomerateUpdateAction =>
-        applySplitAction(mapping, splitAction, remoteFallbackLayer, userToken)
+        TimeLogger.logTimeF("applySplit", logger)(
+          applySplitAction(mapping, splitAction, remoteFallbackLayer, userToken))
       case mergeAction: MergeAgglomerateUpdateAction =>
-        applyMergeAction(mapping, mergeAction, remoteFallbackLayer, userToken)
+        TimeLogger.logTimeF("applyMerge", logger)(
+          applyMergeAction(mapping, mergeAction, remoteFallbackLayer, userToken))
     }
 
   private def applySplitAction(mapping: EditableMapping,
@@ -300,7 +303,10 @@ class EditableMappingService @Inject()(
         case (AgglomerateEdge(from, to, _), _) =>
           (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
       }
-    val graph1Nodes: Set[Long] = computeConnectedComponent(startNode = segmentId1, edgesAndAffinitiesMinusOne.map(_._1))
+    val graph1Nodes: Set[Long] = TimeLogger.logTime("connected component 2", logger)(
+      computeConnectedComponent(startNode = segmentId1,
+                                agglomerateGraph.segments,
+                                edgesAndAffinitiesMinusOne.map(_._1)))
     val graph1NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
       case (seg, _) => graph1Nodes.contains(seg)
     }
@@ -330,24 +336,13 @@ class EditableMappingService @Inject()(
     (graph1, graph2)
   }
 
-  private def computeConnectedComponent(startNode: Long, edges: Seq[AgglomerateEdge]): Set[Long] = {
-    val neighborsByNode =
-      mutable.HashMap[Long, List[Long]]().withDefaultValue(List[Long]())
+  private def computeConnectedComponent(startNode: Long, nodes: Seq[Long], edges: Seq[AgglomerateEdge]): Set[Long] = {
+    val g = new DefaultUndirectedGraph[Long, DefaultEdge](classOf[DefaultEdge])
+    nodes.foreach(g.addVertex)
     edges.foreach { e =>
-      neighborsByNode(e.source) = e.target :: neighborsByNode(e.source)
-      neighborsByNode(e.target) = e.source :: neighborsByNode(e.target)
+      g.addEdge(e.source, e.target)
     }
-    val nodesToVisit = mutable.HashSet[Long](startNode)
-    val visitedNodes = mutable.HashSet[Long]()
-    while (nodesToVisit.nonEmpty) {
-      val node = nodesToVisit.head
-      nodesToVisit -= node
-      if (!visitedNodes.contains(node)) {
-        visitedNodes += node
-        nodesToVisit ++= neighborsByNode(node)
-      }
-    }
-    visitedNodes.toSet
+    new ConnectivityInspector(g).connectedSetOf(startNode).asScala.toSet
   }
 
   private def largestAgglomerateId(mapping: EditableMapping,

@@ -1234,7 +1234,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     // for the following two expressions, since this breaks
     // antd's internal population of the correct class names
     // for the menu.
-    overlay =
+    menu =
       maybeClickedNodeId != null
         ? NodeContextMenuOptions({
             clickedNodeId: maybeClickedNodeId,
@@ -1256,7 +1256,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     <React.Fragment>
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
       <Dropdown
-        overlay={overlay}
+        menu={menu}
         overlayClassName="dropdown-overlay-container-for-context-menu"
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}

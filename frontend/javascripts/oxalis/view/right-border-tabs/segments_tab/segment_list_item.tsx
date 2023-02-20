@@ -5,7 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, Menu, MenuItemProps } from "antd";
+import { List, Tooltip, Dropdown, Menu, MenuItemProps, MenuProps } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -355,54 +355,57 @@ function _SegmentListItem({
 
   const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(0, false);
 
-  const createSegmentContextMenu = () => (
-    <Menu>
-      {getLoadPrecomputedMeshMenuItem(
+  const createSegmentContextMenu = (): MenuProps => ({
+    items: [
+      getLoadPrecomputedMeshMenuItem(
         segment,
         currentMeshFile,
         loadPrecomputedMesh,
         andCloseContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
-      )}
-      {getComputeMeshAdHocMenuItem(
+      ),
+      getComputeMeshAdHocMenuItem(
         segment,
         loadAdHocMesh,
         visibleSegmentationLayer != null,
         andCloseContextMenu,
-      )}
-      {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
-      {/*
+      ),
+      getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu),
+      /*
        * Disable the change-color menu if the segment was mapped to another segment, because
        * changing the color wouldn't do anything as long as the mapping is still active.
        * This is because the id (A) is mapped to another one (B). So, the user would need
        * to change the color of B to see the effect for A.
-       */}
-      <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
-        <ChangeColorMenuItemContent
-          isDisabled={isEditingDisabled}
-          title="Change Segment Color"
-          onSetColor={(color) => {
-            if (visibleSegmentationLayer == null) {
-              return;
-            }
-            updateSegment(
-              segment.id,
-              {
-                color,
-              },
-              visibleSegmentationLayer.name,
-            );
-          }}
-          rgb={Utils.take3(segmentColorRGBA)}
-          hidePickerIcon
-        />
-      </Menu.Item>
-
-      <Menu.Item
-        key="resetSegmentColor"
-        disabled={isEditingDisabled || segment.color == null}
-        onClick={() => {
+       */
+      {
+        key: "changeSegmentColor",
+        disabled: isEditingDisabled || segment.id !== mappedId,
+        label: (
+          <ChangeColorMenuItemContent
+            isDisabled={isEditingDisabled}
+            title="Change Segment Color"
+            onSetColor={(color) => {
+              if (visibleSegmentationLayer == null) {
+                return;
+              }
+              updateSegment(
+                segment.id,
+                {
+                  color,
+                },
+                visibleSegmentationLayer.name,
+              );
+            }}
+            rgb={Utils.take3(segmentColorRGBA)}
+            hidePickerIcon
+          />
+        ),
+      },
+      {
+        key: "resetSegmentColor",
+        disabled: isEditingDisabled || segment.color == null,
+        onClick: () => {
           if (isEditingDisabled || visibleSegmentationLayer == null) {
             return;
           }
@@ -413,12 +416,11 @@ function _SegmentListItem({
             },
             visibleSegmentationLayer.name,
           );
-        }}
-      >
-        Reset Segment Color
-      </Menu.Item>
-    </Menu>
-  );
+        },
+        label: "Reset Segment Color",
+      },
+    ],
+  });
 
   function getSegmentIdDetails() {
     if (isJSONMappingEnabled && segment.id !== mappedId)
@@ -454,7 +456,7 @@ function _SegmentListItem({
       }}
     >
       <Dropdown
-        overlay={createSegmentContextMenu} // The overlay is generated lazily. By default, this would make the overlay
+        menu={createSegmentContextMenu} // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
         // The reason for this is that it's not destroyed after closing.
         // Therefore, autoDestroy is passed.

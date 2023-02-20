@@ -19,7 +19,7 @@ import {
   DatePickerProps,
   Dropdown,
   Input,
-  Menu,
+  MenuProps,
   Modal,
   Popover,
   Space,
@@ -147,28 +147,26 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
     Toast.success("URL copied to clipboard");
   };
 
-  const copyLayerUrlMenu = (
-    <Menu
-      // @ts-ignore
-      onClick={copyTokenToClipboard}
-      items={[
-        {
-          type: "group",
-          label: "Select layer to copy URL",
-          children: dataLayers.map((layer) => {
-            const readableLayerName =
-              "tracingId" in layer && layer.tracingId != null
-                ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
-                : layer.name;
-            return {
-              label: readableLayerName,
-              key: readableLayerName,
-            };
-          }),
-        },
-      ]}
-    />
-  );
+  const copyLayerUrlMenu: MenuProps = {
+    // @ts-ignore
+    onClick: copyTokenToClipboard,
+    items: [
+      {
+        type: "group",
+        label: "Select layer to copy URL",
+        children: dataLayers.map((layer) => {
+          const readableLayerName =
+            "tracingId" in layer && layer.tracingId != null
+              ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+              : layer.name;
+          return {
+            label: readableLayerName,
+            key: readableLayerName,
+          };
+        }),
+      },
+    ],
+  };
 
   return { baseUrl, copyLayerUrlMenu };
 }
@@ -190,7 +188,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
         disabled
       />
 
-      <Dropdown overlay={copyLayerUrlMenu}>
+      <Dropdown menu={copyLayerUrlMenu}>
         <Button size="small" icon={<CopyOutlined />} style={{ background: "transparent" }} />
       </Dropdown>
     </Input.Group>
@@ -227,34 +225,32 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
 
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(expirationDateTime) });
   };
-  const expirationMenu = (
-    <Menu
-      // @ts-ignore
-      onClick={handleExpirationMenuClick}
-      items={[
-        {
-          label: "1 day",
-          key: "1 day",
-        },
-        {
-          label: "1 week",
-          key: "1 week",
-        },
-        {
-          label: "6 months",
-          key: "6 months",
-        },
-        {
-          label: "1 year",
-          key: "1 year",
-        },
-      ]}
-    />
-  );
+  const expirationMenu: MenuProps = {
+    // @ts-ignore
+    onClick: handleExpirationMenuClick,
+    items: [
+      {
+        label: "1 day",
+        key: "1 day",
+      },
+      {
+        label: "1 week",
+        key: "1 week",
+      },
+      {
+        label: "6 months",
+        key: "6 months",
+      },
+      {
+        label: "1 year",
+        key: "1 year",
+      },
+    ],
+  };
 
   if (linkItem.expirationDateTime == null) {
     return (
-      <Dropdown overlay={expirationMenu}>
+      <Dropdown menu={expirationMenu}>
         <Space style={{ color: "var(--ant-text-secondary)" }}>
           Add Expiration Date
           <DownOutlined />

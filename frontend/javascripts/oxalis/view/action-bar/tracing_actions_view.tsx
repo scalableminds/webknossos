@@ -69,6 +69,7 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -561,24 +562,24 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Undo Finish
       </ButtonComponent>
     ) : null;
-    const elements = [];
+    const menuItems: ItemType[] = [];
     const modals = [];
 
     if (restrictions.allowFinish) {
-      elements.push(
-        <Menu.Item key="finish-button" onClick={this.handleFinish}>
-          <CheckCircleOutlined />
-          {archiveButtonText}
-        </Menu.Item>,
+      menuItems.push(
+        {key:"finish-button", onClick: this.handleFinish,
+          icon: <CheckCircleOutlined />,
+       label: archiveButtonText
+      }
       );
     }
 
     if (restrictions.allowDownload) {
-      elements.push(
-        <Menu.Item key="download-button" onClick={this.handleDownloadOpen}>
-          <DownloadOutlined />
-          Download
-        </Menu.Item>,
+      menuItems.push(
+        {key:"download-button", onClick: this.handleDownloadOpen,
+          icon: <DownloadOutlined />,
+       label:"Download"
+      }
       );
       modals.push(
         <DownloadModalView
@@ -589,20 +590,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       );
     }
 
-    elements.push(
-      <Menu.Item key="share-button" onClick={this.handleShareOpen}>
-        <ShareAltOutlined />
-        Share
-      </Menu.Item>,
+    menuItems.push(
+      {key:"share-button", onClick: this.handleShareOpen,
+        icon: <ShareAltOutlined />,
+     labels: "Share"
+    }
     );
-    elements.push(
-      <Menu.Item
-        key="zarr-links-button"
-        onClick={() => this.setState({ isZarrPrivateLinksModalOpen: true })}
-      >
-        <LinkOutlined />
-        Zarr Links
-      </Menu.Item>,
+    menuItems.push(
+      {
+        key: "zarr-links-button",
+        onClick: () => this.setState({ isZarrPrivateLinksModalOpen: true }),
+      
+        icon: <LinkOutlined />,
+     label:"Zarr Links"
+    }
     );
 
     modals.push(
@@ -623,19 +624,19 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       />,
     );
     if (activeUser != null) {
-      elements.push(
-        <Menu.Item key="duplicate-button" onClick={this.handleDuplicate}>
-          <CopyOutlined />
-          Duplicate
-        </Menu.Item>,
+      menuItems.push(
+        {key:"duplicate-button", onClick: this.handleDuplicate,
+          icon: <CopyOutlined />,
+       label:"Duplicate"
+      }
       );
     }
-    elements.push(screenshotMenuItem);
-    elements.push(
-      <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
-        <SettingOutlined />
-        Add Script
-      </Menu.Item>,
+    menuItems.push(screenshotMenuItem);
+    menuItems.push(
+      {key:"user-scripts-button", onClick: this.handleUserScriptsOpen,
+        icon: <SettingOutlined />,
+     label:"Add Script"
+    }
     );
     modals.push(
       <UserScriptsModalView
@@ -646,11 +647,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     );
 
     if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
-      elements.push(
-        <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
-          <FolderOpenOutlined />
-          Merge Annotation
-        </Menu.Item>,
+      menuItems.push(
+        {key:"merge-button", onClick: this.handleMergeOpen,
+          icon: <FolderOpenOutlined />,
+       label:"Merge Annotation"
+      }
       );
       modals.push(
         <MergeModalView
@@ -661,26 +662,25 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       );
     }
     if (controlMode !== ControlModeEnum.SANDBOX) {
-      elements.push(
-        <Menu.Item key="restore-button" onClick={this.handleRestore}>
-          <HistoryOutlined />
-          Restore Older Version
-        </Menu.Item>,
+      menuItems.push(
+        {key:"restore-button", onClick: this.handleRestore,
+          icon: <HistoryOutlined />,
+       label:"Restore Older Version"
+      }
       );
     }
 
-    elements.push(layoutMenu);
+    menuItems.push(layoutMenu);
 
     if (restrictions.allowSave && !task) {
-      elements.push(
-        <Menu.Item key="disable-saving" onClick={this.handleDisableSaving}>
-          <StopOutlined />
-          Disable saving
-        </Menu.Item>,
+      menuItems.push(
+        {key: "disable-saving", onClick: this.handleDisableSaving,
+          icon: <StopOutlined />,
+       label:"Disable saving"
+      }
       );
     }
 
-    const menu = <Menu>{elements}</Menu>;
     return (
       <>
         <div className="antd-legacy-group">
@@ -690,7 +690,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {modals}
         </div>
         <div>
-          <Dropdown overlay={menu} trigger={["click"]}>
+          <Dropdown menu={{items: menuItems}} trigger={["click"]}>
             <ButtonComponent className="narrow">
               Menu
               <DownOutlined />

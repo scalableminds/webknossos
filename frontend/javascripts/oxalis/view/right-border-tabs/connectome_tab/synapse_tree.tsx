@@ -1,5 +1,5 @@
 import { AutoSizer } from "react-virtualized";
-import { Dropdown, Menu, Tag, Tree, TreeProps } from "antd";
+import { Dropdown, Menu, MenuProps, Tag, Tree, TreeProps } from "antd";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -191,17 +191,19 @@ class SynapseTree extends React.Component<Props, State> {
     Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", agglomerateId || null));
   }
 
-  createSegmentDropdownMenu = (agglomerateId: number) => (
-    <Menu>
-      <Menu.Item
-        key="setActiveAgglomerateId"
-        onClick={() => this.props.onChangeActiveAgglomerateIds([agglomerateId])}
-        title="Show All Synapses of This Segment"
-      >
-        Show All Synapses of This Segment
-      </Menu.Item>
-    </Menu>
-  );
+  createSegmentDropdownMenu = (agglomerateId: number): MenuProps => {
+    return {
+      items: [
+        {
+          key: "setActiveAgglomerateId",
+          onClick: () => this.props.onChangeActiveAgglomerateIds([agglomerateId]),
+          title: "Show All Synapses of This Segment",
+
+          label: "Show All Synapses of This Segment",
+        },
+      ],
+    };
+  };
 
   renderNode = (node: TreeNode) => {
     const { data, key } = node;
@@ -216,7 +218,7 @@ class SynapseTree extends React.Component<Props, State> {
       } else {
         title = (
           <Dropdown // Lazily create the dropdown menu and destroy it again, afterwards
-            overlay={() => this.createSegmentDropdownMenu(data.id)}
+            menu={() => this.createSegmentDropdownMenu(data.id)}
             autoDestroy
             placement="bottom"
             open={this.state.activeSegmentDropdownKey === key}

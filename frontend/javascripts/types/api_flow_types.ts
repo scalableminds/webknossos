@@ -160,6 +160,7 @@ export type APIDatasetCompactWithoutStatus = Pick<
   | "isUnreported"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+  id?: string;
   status: MutableAPIDataSourceBase["status"];
 };
 

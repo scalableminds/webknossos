@@ -3,18 +3,19 @@ import { getColorForCoords } from "./texture_access.glsl";
 export const getBilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
+
     vec4 getBilinearColorFor(
       highp usampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coordsUVW,
-      bool supportsPrecomputedBucketAddress
+      vec3 coordsUVW
     ) {
       coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
       vec2 bifilteringParams = (coordsUVW - floor(coordsUVW)).xy;
       coordsUVW = floor(coordsUVW);
 
+      bool supportsPrecomputedBucketAddress = false;
       vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
       vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
       vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
@@ -40,12 +41,12 @@ export const getTrilinearColorFor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coordsUVW,
-      bool supportsPrecomputedBucketAddress
+      vec3 coordsUVW
     ) {
       coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
       vec3 bifilteringParams = (coordsUVW - floor(coordsUVW)).xyz;
       coordsUVW = floor(coordsUVW);
+      bool supportsPrecomputedBucketAddress = false;
 
       vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
       vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
@@ -92,9 +93,9 @@ const getMaybeFilteredColor: ShaderModule = {
       vec4 color;
       if (!suppressBilinearFiltering && useBilinearFiltering) {
         <% if (isOrthogonal) { %>
-          color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
+          color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
         <% } else { %>
-          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
+          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
         <% } %>
       } else {
         color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);

@@ -25,6 +25,7 @@ import {
   FolderItem,
   FolderUpdater,
   convertDatasetToCompact,
+  APIDataset,
 } from "types/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 
@@ -391,7 +392,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
     },
     {
       mutationKey,
-      onSuccess: (updatedDataset) => {
+      onSuccess: (updatedDataset: APIDataset) => {
         queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
           (oldItems || [])
             .map((oldDataset: APIDatasetCompact) => {

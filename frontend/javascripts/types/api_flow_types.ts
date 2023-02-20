@@ -163,7 +163,6 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
   status: MutableAPIDataSourceBase["status"];
 };
 
-// todo: is the parameter guaranteed to be APIDataset this?
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
   return {
     owningOrganization: dataset.owningOrganization,

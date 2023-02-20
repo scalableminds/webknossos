@@ -32,7 +32,7 @@ export function useStartAndPollJob({
     if (initialJobKeyExtractor != null && areJobsEnabled) {
       (async () => {
         const jobs = await getJobs();
-        jobs.sort((a, b) => a.createdAt - b.createdAt);
+        jobs.sort((a, b) => b.createdAt - a.createdAt); // sort in descending order
         for (const job of jobs) {
           const key = initialJobKeyExtractor(job);
           if (key != null && job.state === "SUCCESS") {

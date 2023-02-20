@@ -34,13 +34,13 @@ import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
-  updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
   sendAnalyticsEvent,
+  updateDatasetPartial,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -668,7 +668,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     }
 
     const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
-    await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });
+    await updateDatasetPartial(this.props.datasetId, datasetChangeValues);
 
     if (datasetDefaultConfiguration != null) {
       await updateDatasetDefaultConfiguration(

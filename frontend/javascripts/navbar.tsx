@@ -38,7 +38,7 @@ import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 
@@ -156,6 +156,23 @@ function UserInitials({
   );
 }
 
+function getCollapsibleMenuTitle(
+  title: string,
+  icon: MenuItemType["icon"],
+  collapse: boolean,
+  isHiddenOnSmallScreens: boolean = false,
+) {
+  const cssClass = collapse && isHiddenOnSmallScreens ? "hide-on-small-screen" : "";
+  return collapse ? (
+    <span className={cssClass}>{icon}</span>
+  ) : (
+    <span className={cssClass}>
+      {icon}
+      {title}
+    </span>
+  );
+}
+
 function getAdministrationSubMenu(
   collapse: boolean,
   isAdmin: boolean,
@@ -167,25 +184,25 @@ function getAdministrationSubMenu(
     {
       key: "/projects",
       label: (
-        <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
+        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
           <Link to="/projects">Projects</Link>
-        </PricingEnforcedMenuItem>
+        </PricingEnforcedSpan>
       ),
     },
     {
       key: "/tasks",
       label: (
-        <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
+        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
           <Link to="/tasks">Tasks</Link>
-        </PricingEnforcedMenuItem>
+        </PricingEnforcedSpan>
       ),
     },
     {
       key: "/taskTypes",
       label: (
-        <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
+        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
           <Link to="/taskTypes">Task Types</Link>
-        </PricingEnforcedMenuItem>
+        </PricingEnforcedSpan>
       ),
     },
     { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
@@ -216,23 +233,6 @@ function getAdministrationSubMenu(
   };
 }
 
-function getCollapsibleMenuTitle(
-  title: string,
-  icon: MenuItemType["icon"],
-  collapse: boolean,
-  isHiddenOnSmallScreens: boolean = false,
-) {
-  const cssClass = collapse && isHiddenOnSmallScreens ? "hide-on-small-screen" : "";
-  return collapse ? (
-    <span className={cssClass}>{icon}</span>
-  ) : (
-    <span className={cssClass}>
-      {icon}
-      {title}
-    </span>
-  );
-}
-
 function getStatisticsSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "statisticMenu",
@@ -242,25 +242,25 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
       {
         key: "/reports/timetracking",
         label: (
-          <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Power}>
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Power}>
             <Link to="/reports/timetracking">Time Tracking</Link>
-          </PricingEnforcedMenuItem>
+          </PricingEnforcedSpan>
         ),
       },
       {
         key: "/reports/projectProgress",
         label: (
-          <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             <Link to="/reports/projectProgress">Project Progress</Link>
-          </PricingEnforcedMenuItem>
+          </PricingEnforcedSpan>
         ),
       },
       {
         key: "/reports/openTasks",
         label: (
-          <PricingEnforcedMenuItem requiredPricingPlan={PricingPlanEnum.Team}>
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             <Link to="/reports/openTasks">Open Tasks</Link>
-          </PricingEnforcedMenuItem>
+          </PricingEnforcedSpan>
         ),
       },
     ],

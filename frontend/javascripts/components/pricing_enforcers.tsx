@@ -42,7 +42,7 @@ function getUpgradeNowButton(
   ) : null;
 }
 
-export const PricingEnforcedMenuItem: React.FunctionComponent<RequiredPricingProps> = ({
+export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> = ({
   children,
   requiredPricingPlan,
 }) => {

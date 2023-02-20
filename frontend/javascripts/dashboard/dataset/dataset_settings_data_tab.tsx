@@ -31,7 +31,7 @@ import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
-import { APIDataLayer, APIDatasetId, APIJob } from "types/api_flow_types";
+import { APIDataLayer, APIDatasetId } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
@@ -314,7 +314,6 @@ function SimpleLayerForm({
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
   const isSegmentation = category === "segmentation";
   const bitDepth = getBitDepth(layer);
-  const [mostRecentSuccessfulJob, setMostRecentSuccessfulJob] = React.useState<APIJob | null>(null);
 
   const mayLayerBeRemoved = !isReadOnlyDataset && dataLayers?.length > 1;
 
@@ -326,14 +325,11 @@ function SimpleLayerForm({
     form.validateFields();
   }, [dataLayers]);
 
-  const [runningJobs, startJob] = useStartAndPollJob({
-    onSuccess(job, isInitial) {
-      if (!isInitial) {
-        Toast.success(
-          "The computation of the largest segment id for this dataset has finished. Please reload the page to see it.",
-        );
-      }
-      setMostRecentSuccessfulJob(job);
+  const { runningJobs, startJob, mostRecentSuccessfulJob } = useStartAndPollJob({
+    onSuccess() {
+      Toast.success(
+        "The computation of the largest segment id for this dataset has finished. Please reload the page to see it.",
+      );
     },
     onFailure() {
       Toast.error(

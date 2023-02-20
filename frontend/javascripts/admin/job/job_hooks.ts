@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { APIJob } from "types/api_flow_types";
 import { usePolling } from "libs/react_hooks";
 
+type JobInfo = [jobKey: string, jobId: string];
+
 export function useStartAndPollJob({
   onSuccess = () => {},
   onFailure = () => {},
@@ -11,68 +13,66 @@ export function useStartAndPollJob({
   initialJobKeyExtractor,
   interval = 2000,
 }: {
-  onSuccess?: (job: APIJob, isInitial: boolean) => void;
-  onFailure?: (job: APIJob, isInitial: boolean) => void;
-  onManual?: (job: APIJob, isInitial: boolean) => void;
+  onSuccess?: (job: APIJob) => void;
+  onFailure?: (job: APIJob) => void;
+  onManual?: (job: APIJob) => void;
   initialJobKeyExtractor?: (job: APIJob) => string | null;
   interval?: number;
-}): [
-  Array<[string, string]>,
-  ((startJobFn: () => Promise<[string, string]>) => Promise<void>) | null,
-] {
-  const [runningJobs, setRunningJobs] = useState<Array<[string, string]>>([]);
+}): {
+  runningJobs: Array<JobInfo>;
+  startJob: ((startJobFn: () => Promise<JobInfo>) => Promise<void>) | null;
+  mostRecentSuccessfulJob: APIJob | null;
+} {
+  const areJobsEnabled = features().jobsEnabled;
+
+  const [runningJobs, setRunningJobs] = useState<Array<JobInfo>>([]);
+  const [mostRecentSuccessfulJob, setMostRecentSuccessfulJob] = useState<APIJob | null>(null);
 
   useEffect(() => {
-    if (initialJobKeyExtractor != null) {
+    if (initialJobKeyExtractor != null && areJobsEnabled) {
       (async () => {
         const jobs = await getJobs();
+        jobs.sort((a, b) => a.createdAt - b.createdAt);
         for (const job of jobs) {
           const key = initialJobKeyExtractor(job);
-          if (key != null) {
-            if (job.state === "SUCCESS") {
-              onSuccess(job, true);
-            } else if (job.state === "FAILURE") {
-              onFailure(job, true);
-            } else if (job.state === "MANUAL") {
-              onManual(job, true);
-            } else {
-              setRunningJobs((previous) => [...previous, [key, job.id]]);
-            }
+          if (key != null && job.state === "SUCCESS") {
+            setMostRecentSuccessfulJob(job);
+            break;
           }
         }
       })();
     }
   }, []);
 
-  const areJobsEnabled = features().jobsEnabled;
-
   async function checkForJobs() {
     for (const [, jobId] of runningJobs) {
       const job = await getJob(jobId);
       if (job.state === "SUCCESS") {
-        onSuccess(job, false);
+        onSuccess(job);
         setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
+        if (mostRecentSuccessfulJob == null || job.createdAt > mostRecentSuccessfulJob.createdAt) {
+          setMostRecentSuccessfulJob(job);
+        }
       } else if (job.state === "FAILURE") {
-        onFailure(job, false);
+        onFailure(job);
         setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
       } else if (job.state === "MANUAL") {
-        onManual(job, false);
+        onManual(job);
         setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
       }
     }
   }
 
-  usePolling(checkForJobs, runningJobs.length > 0 ? interval : null, [
-    runningJobs.map(([key]) => key).join("-"),
-  ]);
+  usePolling(checkForJobs, runningJobs.length > 0 ? interval : null);
 
-  return [
+  return {
     runningJobs,
-    areJobsEnabled
+    startJob: areJobsEnabled
       ? async (startJobFn) => {
           const [key, jobId] = await startJobFn();
           setRunningJobs((previous) => [...previous, [key, jobId]]);
         }
       : null,
-  ];
+    mostRecentSuccessfulJob,
+  };
 }

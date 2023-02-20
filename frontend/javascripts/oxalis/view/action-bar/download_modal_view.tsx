@@ -286,7 +286,7 @@ function _DownloadModalView({
     mag,
   );
 
-  const [runningExportJobs, startJob] = useStartAndPollJob({
+  const { runningJobs: runningExportJobs, startJob } = useStartAndPollJob({
     async onSuccess(job) {
       if (job.resultLink != null) {
         const token = await doWithToken(async (t) => t);

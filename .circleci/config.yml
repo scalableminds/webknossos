@@ -298,6 +298,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - nightly:
+          context:
+            - DockerHub
+          filters:
+            tags:
+              only: /.*/
   circleci_nightly:
     jobs:
       - nightly

@@ -85,7 +85,7 @@ class EditableMappingService @Inject()(
     with FoxImplicits
     with ProtoGeometryImplicits {
 
-  private def generateId: String = UUID.randomUUID.toString
+  def generateId: String = UUID.randomUUID.toString // TODO make private again
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None)
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
@@ -123,6 +123,11 @@ class EditableMappingService @Inject()(
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(newEditableMapping.toProto))
     } yield (newId, newEditableMapping)
   }
+
+  def save(newId: String, editableMapping: EditableMappingProto): Fox[Unit] =
+    for {
+      _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping))
+    } yield ()
 
   def exists(editableMappingId: String): Fox[Boolean] =
     for {

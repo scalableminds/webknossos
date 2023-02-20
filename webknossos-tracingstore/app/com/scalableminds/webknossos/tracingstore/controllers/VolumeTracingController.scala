@@ -38,6 +38,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
+import java.nio.file.{Files, Paths}
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
@@ -380,6 +381,20 @@ class VolumeTracingController @Inject()(
           } yield Ok(infoJson)
         }
       }
+  }
+
+  // TODO remove
+  def resetMapping(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      tracing <- tracingService.find(tracingId)
+      bytes = Files.readAllBytes(Paths.get("/home/f/Downloads/perfreading/mapping.proto.bin"))
+      editableMappingProto = EditableMappingProto.parseFrom(bytes)
+      newId = editableMappingService.generateId
+      _ <- editableMappingService.save(newId, editableMappingProto)
+      _ <- tracingService.save(tracing.copy(mappingName = Some(newId), mappingIsEditable = Some(true)),
+                               Some(tracingId),
+                               tracing.version)
+    } yield Ok(s"successfully changed mapping id of tracing $tracingId to $newId")
   }
 
   def editableMappingProto(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {

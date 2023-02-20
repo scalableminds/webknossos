@@ -1358,22 +1358,6 @@ export function getDataset(
   );
 }
 
-export function updateDataset(
-  datasetId: APIDatasetId,
-  dataset: APIMaybeUnimportedDataset,
-  folderId?: string,
-): Promise<APIDataset> {
-  folderId = folderId || dataset.folderId;
-
-  return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
-    {
-      method: "PATCH",
-      data: { ...dataset, folderId },
-    },
-  );
-}
-
 export type DatasetUpdater = {
   description?: string | null;
   displayName?: string | null;

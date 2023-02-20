@@ -37,6 +37,8 @@ import {
   getGlobalLayerIndexForLayerName,
   invertAndTranspose,
 } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { Matrix4x4 } from "mjs";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -53,13 +55,11 @@ function calculateTotalBucketCountForZoomLevel(
   initializedGpuFactor: number,
 ) {
   let counter = 0;
-  let minPerDim: Vector3 = [Infinity, Infinity, Infinity];
-  let maxPerDim: Vector3 = [0, 0, 0];
 
+  const addresses = [];
   const enqueueFunction = (bucketAddress: Vector4) => {
-    minPerDim = minPerDim.map((el, index) => Math.min(el, bucketAddress[index])) as Vector3;
-    maxPerDim = maxPerDim.map((el, index) => Math.max(el, bucketAddress[index])) as Vector3;
     counter++;
+    addresses.push(bucketAddress);
   };
 
   // Define dummy values
@@ -197,6 +197,11 @@ export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
 // a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
 const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllResolutions> = new Map();
 
+const getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
+  const scaleMatrix = getMatrixScale(scale);
+  return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity, []), Math.PI, [0, 0, 1]);
+});
+
 function getMaximumZoomForAllResolutionsFromStore(
   state: OxalisState,
   layerName: string,
@@ -211,6 +216,8 @@ function getMaximumZoomForAllResolutionsFromStore(
     fn = memoizeOne(_getMaximumZoomForAllResolutions);
     perLayerFnCache.set(layerName, fn);
   }
+
+  const dummyFlycamMatrix = getDummyFlycamMatrix(state.dataset.dataSource.scale);
 
   return fn(
     viewMode,
@@ -228,7 +235,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     // a rotation.
     // Todo: Maybe change the strategy to store/cache these values directly in the store and only
     // update them when critical actions are triggered?
-    Identity4x4,
+    dummyFlycamMatrix,
   );
 }
 

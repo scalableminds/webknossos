@@ -1,5 +1,7 @@
 START TRANSACTION;
 
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 99, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+
 CREATE TABLE webknossos.annotation_mutexes(
   _annotation CHAR(24) PRIMARY KEY,
   _user CHAR(24) NOT NULL,

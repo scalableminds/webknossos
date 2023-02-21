@@ -128,19 +128,20 @@ function addNecessaryBucketsToPriorityQueueOblique(
     // of horizontal lines which cover the entire rendered plane.
     // These "scan lines" are traversed to find out which buckets need to be
     // sent to the GPU.
+    const zDiff = 10;
     const scanLinesPoints = M4x4.transformVectorsAffine(
       queryMatrix,
       _.flatten(
         _.range(steps + 1).map((idx) => [
           // Cast lines at z=-10
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -10],
+          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
           // Cast lines at z=0
           [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
           [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
           // Cast lines at z=10
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 10],
+          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
         ]),
       ),
     );

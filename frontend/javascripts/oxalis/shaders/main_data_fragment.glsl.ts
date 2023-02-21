@@ -468,20 +468,12 @@ mat4 modelInv = inverseMatrix(modelMatrix);
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 
-  // Offset the bucket calculation for the current vertex by a bit
-  // to avoid picking the wrong bucket (which would lead to an rendering offset
-  // of 32 vx).
-  // still necessary?
-  if (true && (index.x > 0. && index.x < 200.)) {
-    worldCoordUVW.x -= 1.;
-    worldCoordUVW.y += 1.;
-  } else if (index.x == subdivisionCount - 1.) {
-    worldCoordUVW.x -= 1.;
-    worldCoordUVW.y += 1.;
-  } else {
-    worldCoordUVW.x -= 1.;
-    worldCoordUVW.y += 1.;
-  }
+  // Offset the bucket calculation for the current vertex by a voxel to ensure
+  // that the provoking vertex (the one that is used by the flat varyings in
+  // the corresponding triangle) looks up the correct bucket. Otherwise,
+  // a rendering offset of 32 vx occurs.
+  worldCoordUVW.x -= 1.;
+  worldCoordUVW.y += 1.;
 
   flatVertexPos = worldCoordUVW;
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;

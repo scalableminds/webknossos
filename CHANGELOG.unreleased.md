@@ -29,6 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed saving allowed teams in dataset settings. [#6817](https://github.com/scalableminds/webknossos/pull/6817)
 - Fixed log streaming in Voxelytics workflow reports. [#6828](https://github.com/scalableminds/webknossos/pull/6828) [#6831](https://github.com/scalableminds/webknossos/pull/6831)
 - Fixed some layouting issues with line breaks in segment list/dataset info tab [#6799](https://github.com/scalableminds/webknossos/pull/6799)
+- Fixed basic auth for exploring remote http datasets [#6866](https://github.com/scalableminds/webknossos/pull/6866)
 
 ### Removed
 

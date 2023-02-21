@@ -28,7 +28,7 @@ export const getAbsoluteCoords: ShaderModule = {
 export const getWorldCoordUVW: ShaderModule = {
   requirements: [getW, isFlightMode],
   code: `
-    vec3 getWorldCoordUVW() {
+    vec3 _getWorldCoordUVWHelper(vec4 worldCoord) {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
 
       if (isFlightMode()) {
@@ -62,6 +62,14 @@ export const getWorldCoordUVW: ShaderModule = {
       );
 
       return worldCoordUVW;
+    }
+
+    vec3 getWorldCoordUVW() {
+      return _getWorldCoordUVWHelper(worldCoord);
+    }
+
+    vec3 getWorldCoordUVWForAA() {
+      return _getWorldCoordUVWHelper(worldCoordForAA);
     }
   `,
 };

@@ -104,7 +104,7 @@ export const convertCellIdToRGB: ShaderModule = {
       // Round the zoomValue so that the pattern frequency only changes at distinct steps. Otherwise, zooming out
       // wouldn't change the pattern at all, which would feel weird.
       float zoomAdaption = ceil(zoomValue);
-      vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
+      vec3 worldCoordUVW = coordScaling * getWorldCoordUVWForAA()  / zoomAdaption;
 
       float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
       vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;

@@ -8,7 +8,7 @@ import {
   MappingStatusEnum,
   AnnotationToolEnum,
 } from "oxalis/constants";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveCellId,
@@ -139,6 +139,9 @@ class PlaneMaterialFactory {
       },
       useBilinearFiltering: {
         value: true,
+      },
+      viewportExtent: {
+        value: [0, 0],
       },
       isMappingEnabled: {
         value: false,
@@ -372,7 +375,7 @@ class PlaneMaterialFactory {
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
     this.material.extensions = {
       // Necessary for anti-aliasing via fwidth in shader
-      derivatives: true,
+      // derivatives: true,
     };
     shaderEditor.addMaterial(this.shaderId, this.material);
 
@@ -396,6 +399,16 @@ class PlaneMaterialFactory {
         true,
       ),
     );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getViewportExtents(storeState),
+        (extents) => {
+          this.uniforms.viewportExtent.value = extents[this.planeID];
+        },
+        true,
+      ),
+    );
+
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) =>

@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Rewrite the database tools in `tools/postgres` to JavaScript and adding support for non-default Postgres username-password combinations. [#6803](https://github.com/scalableminds/webknossos/pull/6803)
 - Added owner name to organization page. [#6811](https://github.com/scalableminds/webknossos/pull/6811)
 - Remove multiline <TextArea> support from <InputComponent>. [#6839](https://github.com/scalableminds/webknossos/pull/6839)
+- Improved the performance of the dataset table in the dashboard. [#6834](https://github.com/scalableminds/webknossos/pull/6834)
 - Updated the styling and background of login, password reset/change and sign up pages. [#6844](https://github.com/scalableminds/webknossos/pull/6844)
 - Replaced date handling and formatting library momentjs with dayjs. [#6849](https://github.com/scalableminds/webknossos/pull/6849)
 
@@ -32,5 +33,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed basic auth for exploring remote http datasets [#6866](https://github.com/scalableminds/webknossos/pull/6866)
 
 ### Removed
+- Removed the old Datasets tab in favor of the Dataset Folders tab. [#6834](https://github.com/scalableminds/webknossos/pull/6834)
 
 ### Breaking Changes

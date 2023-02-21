@@ -17,10 +17,9 @@ import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
   exploreRemoteDataset,
-  getDataset,
   isDatasetNameValid,
   storeRemoteDataset,
-  updateDataset,
+  updateDatasetPartial,
 } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
@@ -166,8 +165,7 @@ function DatasetAddZarrView(props: Props) {
           owningOrganization: activeUser.organization,
           name: configJSON.id.name,
         };
-        const dataset = await getDataset(datasetId);
-        await updateDataset(datasetId, dataset, targetFolderId, true);
+        await updateDatasetPartial(datasetId, { folderId: targetFolderId });
       }
       onAdded(activeUser.organization, configJSON.id.name, true);
     }

@@ -7,7 +7,7 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, MenuProps, Modal } from "antd";
+import { Dropdown, Menu, MenuProps, Modal } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
@@ -143,9 +143,11 @@ export function FolderTreeSidebar({
     [context],
   );
 
-  const createMenu: MenuProps = {
-    items: [{ key: "disabled", disabled: true, label: "Please right-click an existing folder." }],
-  };
+  const createMenu = () => (
+    <Menu
+      items={[{ key: "disabled", disabled: true, label: "Please right-click an existing folder." }]}
+    />
+  );
 
   return (
     <div
@@ -184,7 +186,7 @@ export function FolderTreeSidebar({
         />
       </div>
       <Dropdown
-        menu={createMenu}
+        overlay={createMenu}
         placement="bottom"
         // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
@@ -217,8 +219,8 @@ function generateTitle(
     setFolderIdForEditModal(id);
   }
 
-  const createMenu: MenuProps = {
-    items: [
+  const createMenu = () => {
+    const menuItems = [
       {
         key: "create",
         disabled: !folder.isEditable,
@@ -246,14 +248,16 @@ function generateTitle(
         onClick: deleteFolder,
         disabled: !folder.isEditable,
         icon: <DeleteOutlined />,
-        label: "Delete Folder",
+        label: <span>Delete Folder</span>,
       },
-    ],
+    ];
+
+    return <Menu items={menuItems} />;
   };
 
   return (
     <Dropdown
-      menu={createMenu}
+      overlay={createMenu}
       placement="bottom"
       // The overlay is generated lazily. By default, this would make the overlay
       // re-render on each parent's render() after it was shown for the first time.

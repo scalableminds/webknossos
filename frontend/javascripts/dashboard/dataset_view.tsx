@@ -35,7 +35,7 @@ import { CategorizationSearch } from "oxalis/view/components/categorization_labe
 import features, { getDemoDatasetUrl } from "features";
 import Persistence from "libs/persistence";
 import { getJobs } from "admin/admin_rest_api";
-import moment from "moment";
+import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
@@ -399,12 +399,12 @@ function GlobalSearchHeader({
 }
 
 function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
-  const now = moment();
+  const now = dayjs();
   const newJobs = jobs
     .filter(
       (job) =>
         job.type === "convert_to_wkw" &&
-        moment.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
+        dayjs.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
     )
     .sort((a, b) => b.createdAt - a.createdAt);
 

@@ -8,7 +8,7 @@ import { Modal, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { useFetch } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
-import moment from "moment";
+import dayjs from "dayjs";
 import type { OxalisState } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -48,8 +48,8 @@ export function CheckTermsOfServices() {
     }
 
     const lastWarningString = UserLocalStorage.getItem(LAST_TERMS_OF_SERVICE_WARNING_KEY);
-    const lastWarning = moment(lastWarningString ? parseInt(lastWarningString) : 0);
-    const isLastWarningOld = moment().diff(lastWarning, "days") > SNOOZE_DURATION_IN_DAYS;
+    const lastWarning = dayjs(lastWarningString ? parseInt(lastWarningString) : 0);
+    const isLastWarningOld = dayjs().diff(lastWarning, "days") > SNOOZE_DURATION_IN_DAYS;
     setIsModalOpen(isLastWarningOld);
   }, [acceptanceInfo]);
   const onAccept = async (version: number) => {

@@ -27,16 +27,8 @@ function LoginView({ history, redirect }: Props) {
   };
 
   return (
-    <Row
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-      type="flex"
-      justify="center"
-      style={{
-        padding: 50,
-      }}
-      align="middle"
-    >
-      <Col xs={24} sm={16} md={8}>
+    <Row justify="center" align="middle" className="login-view">
+      <Col className="login-content">
         <h3>Login</h3>
         <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
       </Col>

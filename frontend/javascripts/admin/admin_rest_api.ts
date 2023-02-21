@@ -66,6 +66,7 @@ import type {
   APIPricingPlanStatus,
   VoxelyticsLogLine,
   APIUserCompact,
+  APIDatasetCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
@@ -662,7 +663,8 @@ export function updateAnnotationLayer(
 
 type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
-  name: string;
+  name: string | null | undefined;
+  autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
@@ -792,6 +794,7 @@ export function getEmptySandboxAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
+  autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
   mappingName?: string | null | undefined,
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
@@ -811,8 +814,9 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },
@@ -825,8 +829,9 @@ export function createExplorational(
       },
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },
@@ -1042,7 +1047,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
-): Promise<Array<APIMaybeUnimportedDataset>> {
+): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
     params.append("isUnreported", String(isUnreported));
@@ -1059,6 +1064,8 @@ export async function getDatasets(
   if (includeSubfolders != null) {
     params.append("includeSubfolders", includeSubfolders ? "true" : "false");
   }
+
+  params.append("compact", "true");
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
@@ -1361,24 +1368,24 @@ export function getDataset(
   );
 }
 
-export function updateDataset(
+export type DatasetUpdater = {
+  description?: string | null;
+  displayName?: string | null;
+  sortingKey?: number;
+  isPublic?: boolean;
+  tags?: string[];
+  folderId?: string;
+};
+
+export function updateDatasetPartial(
   datasetId: APIDatasetId,
-  dataset: APIMaybeUnimportedDataset,
-  folderId?: string,
-  skipResolutions?: boolean,
+  updater: DatasetUpdater,
 ): Promise<APIDataset> {
-  folderId = folderId || dataset.folderId;
-
-  const params = new URLSearchParams();
-  if (skipResolutions) {
-    params.append("skipResolutions", "true");
-  }
-
   return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}?${params}`,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/updatePartial`,
     {
       method: "PATCH",
-      data: { ...dataset, folderId },
+      data: updater,
     },
   );
 }

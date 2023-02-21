@@ -322,7 +322,7 @@ function AddZarrLayer({
   };
 
   function validateUrls(userInput: string) {
-    if (userInput.startsWith("https://")) {
+    if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {
       setSelectedProtocol("s3");
@@ -330,7 +330,7 @@ function AddZarrLayer({
       setSelectedProtocol("gs");
     } else {
       throw new Error(
-        "Dataset URL must employ one of the following protocols: https://, s3:// or gs://",
+        "Dataset URL must employ one of the following protocols: https://, http://, s3:// or gs://",
       );
     }
   }

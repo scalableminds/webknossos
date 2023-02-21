@@ -119,7 +119,6 @@ flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
 flat in float outputAddress[<%= globalLayerCount %>];
 in vec4 worldCoord;
-in vec4 worldCoordForAA;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
 
@@ -296,7 +295,6 @@ precision highp float;
 uniform vec2 viewportExtent;
 
 out vec4 worldCoord;
-out vec4 worldCoordForAA;
 flat out vec2 index;
 flat out vec3 flatVertexPos;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
@@ -416,7 +414,6 @@ void main() {
   savedModelMatrix = modelMatrix;
   mat4 modelInv = inverseMatrix(modelMatrix);
   worldCoord = modelMatrix * vec4(position, 1.0);
-  worldCoordForAA = worldCoord;
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 

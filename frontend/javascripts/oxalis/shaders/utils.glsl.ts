@@ -129,7 +129,7 @@ export const aaStep: ShaderModule = {
     float aaStep(float x) {
       // float w = fwidth(x);    // pixel width
       // inspired by https://www.shadertoy.com/view/MlByRD
-      float w = 1./viewportExtent.x;
+      float w = pow(2., zoomValue)/viewportExtent.x;
 
       return smoothstep(.7, -.7, (abs(fract(x - .25) - .5) - .25) / w);
     }

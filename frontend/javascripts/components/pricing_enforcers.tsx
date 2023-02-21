@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Alert, ButtonProps, Button, Result, Popover, Menu } from "antd";
+import { Alert, ButtonProps, Button, Result, Popover } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailableInPlanMessage,

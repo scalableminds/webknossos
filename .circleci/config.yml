@@ -279,7 +279,10 @@ jobs:
       - run:
           name: Run screenshot-tests
           command: |
+            # CircleCI cancels the job after 60 minutes. To ensure that screenshots are still
+            # uploaded as artifacts, we define a timeout of 50 minutes for the screenshot tests.
             URL=https://multimodality.webknossos.xyz/ \
+            timeout 3000 \
             yarn test-screenshot
 
       - store_artifacts:

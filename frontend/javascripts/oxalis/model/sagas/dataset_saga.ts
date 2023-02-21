@@ -86,6 +86,11 @@ export function* watchZ1Downsampling(): Saga<void> {
       }
 
       const currentRes = yield* select((state) => getCurrentResolution(state, dataLayer.name));
+      if (currentRes == null) {
+        // The layer cannot be rendered. For example, because the user zoomed out and there
+        // is no appropriate mag for that layer.
+        break;
+      }
       const resolutionInfo = getResolutionInfo(dataLayer.resolutions);
       const bestExistingIndex = resolutionInfo.getClosestExistingIndex(0);
       const currentIndex = resolutionInfo.getIndexByResolution(currentRes);

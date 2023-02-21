@@ -10,7 +10,6 @@ import {
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
-  getResolutionByMax,
   getResolutionInfo,
   getResolutions,
   SmallerOrHigherInfo,
@@ -295,14 +294,30 @@ function _getActiveMagIndicesForLayers(state: OxalisState): { [layerName: string
 
 export const getActiveMagIndicesForLayers = reuseInstanceOnEquality(_getActiveMagIndicesForLayers);
 
+/*
+  Note that the return value indicates which mag can be rendered theoretically for the given layer
+   (ignoring which mags actually exist). This means the return mag index might not exist for the given layer.
+ */
 export function getActiveMagIndexForLayer(state: OxalisState, layerName: string): number {
   return getActiveMagIndicesForLayers(state)[layerName];
 }
 
-export function getCurrentResolution(state: OxalisState, layerName: string): Vector3 {
-  const resolutions = getResolutions(state.dataset);
-  const logZoomStep = getActiveMagIndexForLayer(state, layerName);
-  return resolutions[logZoomStep] || [1, 1, 1];
+/*
+  Returns the resolution is supposed to be rendered for the given layer. The return resolution
+  is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
+  because no appropriate mag exists.
+ */
+export function getCurrentResolution(
+  state: OxalisState,
+  layerName: string,
+): Vector3 | null | undefined {
+  const resolutionInfo = getResolutionInfo(getLayerByName(state.dataset, layerName).resolutions);
+  const magIndex = getActiveMagIndexForLayer(state, layerName);
+  const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(magIndex);
+  if (existingMagIndex == null) {
+    return null;
+  }
+  return resolutionInfo.getResolutionByIndex(existingMagIndex);
 }
 
 function _getValidZoomRangeForUser(state: OxalisState): [number, number] {

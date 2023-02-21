@@ -29,7 +29,6 @@ import {
   takeEvery,
   cancel,
   cancelled,
-  FixedTask,
 } from "typed-redux-saga";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -194,10 +193,10 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
   const ONE_MINUTE = 1000 * 60;
   const RETRY_COUNT = 12;
+  const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
   let isInitialRequest = true;
   let doesHaveMutex = false;
   let shallTryAcquireMutex = othersMayEdit;
-  let runningTryAcquireMutexContinuouslySaga: FixedTask<void> | null = null;
 
   function onMutexStateChanged(canEdit: boolean, blockedByUser: APIUserCompact | null | undefined) {
     if (canEdit) {
@@ -209,7 +208,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
             <Button onClick={() => location.reload()}>Reload the annotation</Button>
           </React.Fragment>
         );
-        Toast.success(message, { key: "annotationMutexAcquired" });
+        Toast.success(message, { sticky: true, key: "annotationMutexAcquired" });
       }
     } else {
       const message =
@@ -218,13 +217,13 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
               userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
             })
           : messages["annotation.acquiringMutexFailed.noUser"];
-      Toast.error(message, { sticky: true, key: "MutexCouldNotBeAcquired" });
+      Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
     }
   }
 
   function* tryAcquireMutexContinuously(): Saga<void> {
     while (shallTryAcquireMutex) {
-      if (!doesHaveMutex) {
+      if (isInitialRequest || !doesHaveMutex) {
         yield* put(setAnnotationAllowUpdateAction(false));
       }
       try {
@@ -234,19 +233,23 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
           acquireAnnotationMutex,
           annotationId,
         );
-        yield* put(setAnnotationAllowUpdateAction(canEdit));
+        if (isInitialRequest && canEdit) {
+          // Only set allow update to true in case the first try to get the mutex succeeded.
+          yield* put(setAnnotationAllowUpdateAction(true));
+        } else {
+          yield* put(setAnnotationAllowUpdateAction(false));
+        }
         if (canEdit !== doesHaveMutex || isInitialRequest) {
           doesHaveMutex = canEdit;
           onMutexStateChanged(canEdit, blockedByUser);
         }
       } catch (error) {
-        const ifGotCanceled = yield* cancelled();
-        if (!ifGotCanceled) {
+        const wasCanceled = yield* cancelled();
+        if (!wasCanceled) {
           console.error("Error while trying to acquire mutex.", error);
-          if (doesHaveMutex === true || isInitialRequest) {
+          if (doesHaveMutex || isInitialRequest) {
             onMutexStateChanged(false, null);
             doesHaveMutex = false;
-            yield* put(setAnnotationAllowUpdateAction(false));
           }
         }
       }
@@ -254,9 +257,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
       yield* call(delay, ONE_MINUTE);
     }
   }
-  if (shallTryAcquireMutex) {
-    runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);
-  }
+  let runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);
   function* reactToOthersMayEditChanges({
     othersMayEdit,
   }: SetOthersMayEditForAnnotationAction): Saga<void> {

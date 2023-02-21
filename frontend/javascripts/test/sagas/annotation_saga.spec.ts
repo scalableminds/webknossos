@@ -1,6 +1,7 @@
 import test, { ExecutionContext } from "ava";
 import mockRequire from "mock-require";
 import { OxalisState } from "oxalis/store";
+import { createMockTask } from "@redux-saga/testing-utils";
 import { take, put } from "redux-saga/effects";
 import defaultState from "oxalis/default_state";
 import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
@@ -39,34 +40,10 @@ test.serial(
   },
 );
 
-function prepareListenForOthersMayEdit(t: ExecutionContext) {
-  const storeState = createInitialState(false);
-  const saga = acquireAnnotationMutexMaybe();
-  expectValueDeepEqual(t, saga.next(), take("WK_READY"));
-  t.deepEqual(
-    saga.next(wkReadyAction()).value.type,
-    "SELECT",
-    "The saga should select the allowUpdate next.",
-  );
-  t.deepEqual(
-    saga.next(storeState.tracing.restrictions.allowUpdate).value.type,
-    "SELECT",
-    "The saga should select the annotationId next.",
-  );
-  t.deepEqual(
-    saga.next(storeState.tracing.annotationId).value.type,
-    "SELECT",
-    "The saga should select the othersMayEdit next.",
-  );
-  let sagaValue = saga.next(storeState.tracing.othersMayEdit).value;
-  const listenForOthersMayEdit = sagaValue.payload.args[1];
-  t.deepEqual(sagaValue.type, "FORK", "The saga should fork listenForOthersMayEdit.");
-  t.deepEqual(saga.next().done, true, "The saga should terminate.");
-  return listenForOthersMayEdit;
-}
-
-function prepareTryAcquireMutexSaga(t: ExecutionContext) {
-  const storeState = createInitialState(true);
+function prepareTryAcquireMutexSaga(t: ExecutionContext, othersMayEdit: boolean) {
+  const tryAcquireMutexContinuouslyMocked = createMockTask();
+  const listenForOthersMayEditMocked = createMockTask();
+  const storeState = createInitialState(othersMayEdit);
   const saga = acquireAnnotationMutexMaybe();
   expectValueDeepEqual(t, saga.next(), take("WK_READY"));
   t.deepEqual(
@@ -87,10 +64,10 @@ function prepareTryAcquireMutexSaga(t: ExecutionContext) {
   let sagaValue = saga.next(storeState.tracing.othersMayEdit).value;
   const tryAcquireMutexContinuously = sagaValue.payload.fn();
   t.deepEqual(sagaValue.type, "FORK", "The saga should fork tryAcquireMutexContinuously.");
-  sagaValue = saga.next(storeState.tracing.othersMayEdit).value;
+  sagaValue = saga.next(tryAcquireMutexContinuouslyMocked).value;
   const listenForOthersMayEdit = sagaValue.payload.args[1];
   t.deepEqual(sagaValue.type, "FORK", "The saga should fork listenForOthersMayEdit.");
-  t.deepEqual(saga.next().done, true, "The saga should terminate.");
+  t.deepEqual(saga.next(listenForOthersMayEditMocked).done, true, "The saga should terminate.");
   return { tryAcquireMutexContinuously, listenForOthersMayEdit };
 }
 
@@ -124,21 +101,21 @@ function testReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinuously: 
 test.serial(
   "A annotation with othersMayEdit = false should not try to acquire the annotation mutex.",
   (t) => {
-    prepareListenForOthersMayEdit(t);
+    prepareTryAcquireMutexSaga(t, false);
   },
 );
 
 test.serial(
   "A annotation with othersMayEdit = true should try to acquire the annotation mutex.",
   (t) => {
-    prepareTryAcquireMutexSaga(t);
+    prepareTryAcquireMutexSaga(t, true);
   },
 );
 
 test.serial(
   "A annotation with othersMayEdit = true should retry to acquire the annotation mutex.",
   (t) => {
-    const { tryAcquireMutexContinuously } = prepareTryAcquireMutexSaga(t);
+    const { tryAcquireMutexContinuously } = prepareTryAcquireMutexSaga(t, true);
     testReacquiringMutex(t, tryAcquireMutexContinuously);
   },
 );
@@ -146,7 +123,10 @@ test.serial(
 test.serial(
   "It should not try to acquire the annotation mutex if othersMayEdit is set to false.",
   (t) => {
-    const { tryAcquireMutexContinuously, listenForOthersMayEdit } = prepareTryAcquireMutexSaga(t);
+    const { tryAcquireMutexContinuously, listenForOthersMayEdit } = prepareTryAcquireMutexSaga(
+      t,
+      true,
+    );
 
     // testing the tryAcquireMutexContinuously saga
     expectValueDeepEqual(
@@ -188,15 +168,18 @@ test.serial(
 test.serial(
   "A annotation with othersMayEdit getting set to true should try to acquire the annotation mutex.",
   (t) => {
-    const listenForOthersMayEdit = prepareListenForOthersMayEdit(t);
+    const tryAcquireMutexContinuouslyMocked = createMockTask();
+    const { tryAcquireMutexContinuously: cancelledTryAcquireMutexSaga, listenForOthersMayEdit } =
+      prepareTryAcquireMutexSaga(t, false);
     const listenForOthersMayEditSaga = listenForOthersMayEdit(
       setOthersMayEditForAnnotationAction(true),
     );
-    const sagaValue = listenForOthersMayEditSaga.next().value;
+    t.deepEqual(listenForOthersMayEditSaga.next(cancelledTryAcquireMutexSaga).value.type, "CANCEL");
+    const sagaValue = listenForOthersMayEditSaga.next(cancelledTryAcquireMutexSaga).value;
     const tryAcquireMutexContinuously = sagaValue.payload.fn();
     t.deepEqual(sagaValue.type, "FORK");
     t.deepEqual(
-      listenForOthersMayEditSaga.next().done,
+      listenForOthersMayEditSaga.next(tryAcquireMutexContinuouslyMocked).done,
       true,
       "The listenForOthersMayEdit saga should terminate.",
     );

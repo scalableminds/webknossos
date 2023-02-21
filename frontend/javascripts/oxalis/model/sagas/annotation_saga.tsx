@@ -194,7 +194,9 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   const ONE_MINUTE = 1000 * 60;
   const RETRY_COUNT = 12;
   const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
+  const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
   let isInitialRequest = true;
+  let doesHaveMutexFromBeginning = false;
   let doesHaveMutex = false;
   let shallTryAcquireMutex = othersMayEdit;
 
@@ -208,9 +210,10 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
             <Button onClick={() => location.reload()}>Reload the annotation</Button>
           </React.Fragment>
         );
-        Toast.success(message, { sticky: true, key: "annotationMutexAcquired" });
+        Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
       }
     } else {
+      Toast.close(MUTEX_ACQUIRED_KEY);
       const message =
         blockedByUser != null
           ? messages["annotation.acquiringMutexFailed"]({
@@ -223,7 +226,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 
   function* tryAcquireMutexContinuously(): Saga<void> {
     while (shallTryAcquireMutex) {
-      if (isInitialRequest || !doesHaveMutex) {
+      if (isInitialRequest) {
         yield* put(setAnnotationAllowUpdateAction(false));
       }
       try {
@@ -234,9 +237,13 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
           annotationId,
         );
         if (isInitialRequest && canEdit) {
+          doesHaveMutexFromBeginning = true;
           // Only set allow update to true in case the first try to get the mutex succeeded.
           yield* put(setAnnotationAllowUpdateAction(true));
-        } else {
+        }
+        if (!canEdit || !doesHaveMutexFromBeginning) {
+          // If the mutex could not be acquired anymore or the user does not have it from the beginning, set allow update to false.
+          doesHaveMutexFromBeginning = false;
           yield* put(setAnnotationAllowUpdateAction(false));
         }
         if (canEdit !== doesHaveMutex || isInitialRequest) {
@@ -247,6 +254,8 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
         const wasCanceled = yield* cancelled();
         if (!wasCanceled) {
           console.error("Error while trying to acquire mutex.", error);
+          yield* put(setAnnotationAllowUpdateAction(false));
+          doesHaveMutexFromBeginning = false;
           if (doesHaveMutex || isInitialRequest) {
             onMutexStateChanged(false, null);
             doesHaveMutex = false;
@@ -266,6 +275,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
       if (runningTryAcquireMutexContinuouslySaga != null) {
         yield* cancel(runningTryAcquireMutexContinuouslySaga);
       }
+      isInitialRequest = true;
       runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);
     } else {
       // othersMayEdit was turned off. The user editing it should be able to edit the annotation.

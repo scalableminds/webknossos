@@ -144,8 +144,6 @@ async function withRetry(
   testFn: () => Promise<boolean>,
   resolveFn: (arg0: boolean) => void,
 ) {
-  // todo: revert
-  retryCount = 1;
   for (let i = 0; i < retryCount; i++) {
     // eslint-disable-next-line no-await-in-loop
     const condition = await testFn();

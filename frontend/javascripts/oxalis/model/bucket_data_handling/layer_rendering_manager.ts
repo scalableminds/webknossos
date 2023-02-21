@@ -13,14 +13,13 @@ import {
   isLayerVisible,
   getLayerByName,
   getResolutionInfo,
-  getDatasetResolutionInfo,
   getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import Store, { SegmentMap } from "oxalis/store";
+import Store, { PlaneRects, SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import UpdatableTexture from "libs/UpdatableTexture";
 import type { ViewMode, Vector3, Vector4 } from "oxalis/constants";
@@ -123,6 +122,7 @@ export default class LayerRenderingManager {
   lastZoomedMatrix: Matrix4x4 | undefined;
   lastViewMode: ViewMode | undefined;
   lastIsVisible: boolean | undefined;
+  lastRects: PlaneRects | undefined;
   textureBucketManager!: TextureBucketManager;
   textureWidth: number;
   cube: DataCube;
@@ -215,26 +215,27 @@ export default class LayerRenderingManager {
     const { viewMode } = state.temporaryConfiguration;
     const { sphericalCapRadius } = state.userConfiguration;
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
+    const rects = getViewportRects(Store.getState());
 
     if (
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
+      rects != this.lastRects ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
       this.lastViewMode = viewMode;
       this.lastSphericalCapRadius = sphericalCapRadius;
       this.lastIsVisible = isVisible;
+      this.lastRects = rects;
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
       this.pullQueue.clear();
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
       if (isVisible) {
-        const rects = getViewportRects(Store.getState());
-
         pickingPromise = this.latestTaskExecutor.schedule(() =>
           asyncBucketPick(
             viewMode,

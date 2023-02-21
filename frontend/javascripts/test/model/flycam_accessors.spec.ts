@@ -113,7 +113,6 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     resolutions,
     rects,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    DEFAULT_GPU_MEMORY_FACTOR,
     accessors.Identity4x4,
     accessors.Identity4x4,
   );

@@ -118,7 +118,6 @@ export function _getMaximumZoomForAllResolutions(
   resolutions: Array<Vector3>,
   viewportRects: OrthoViewRects,
   maximumCapacity: number,
-  initializedGpuFactor: number,
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
 ): Array<number> {
@@ -216,7 +215,6 @@ function getMaximumZoomForAllResolutionsFromStore(
     getResolutions(state.dataset),
     getViewportRects(state),
     state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
-    state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
     layerMatrix,
     // Theoretically, the following parameter should be state.flycam.currentMatrix.
     // However, that matrix changes on each move and for the ortho mode, the difference

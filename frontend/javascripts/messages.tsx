@@ -265,7 +265,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.acquiringMutexFailed.noUser":
     "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
   "annotation.acquiringMutexSucceeded":
-    "This annotation is not being edited available for editing. Reload the page to see its newest version and to edit it.",
+    "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

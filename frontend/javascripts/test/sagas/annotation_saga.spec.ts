@@ -28,7 +28,7 @@ const { wkReadyAction } = mockRequire.reRequire("oxalis/model/actions/actions");
 const { acquireAnnotationMutexMaybe } = mockRequire.reRequire("oxalis/model/sagas/annotation_saga");
 
 test.serial(
-  "A annotation with allowUpdate = false should not try to acquire the annotation mutex.",
+  "An annotation with allowUpdate = false should not try to acquire the annotation mutex.",
   (t) => {
     const storeState = createInitialState(false, false);
     const saga = acquireAnnotationMutexMaybe();

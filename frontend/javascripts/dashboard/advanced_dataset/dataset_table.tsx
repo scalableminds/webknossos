@@ -68,7 +68,7 @@ type ContextMenuProps = {
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
   const { datasets, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
-  let menu = <div />;
+  let menu = {};
 
   if (contextMenuPosition != null) {
     // getDatasetActionContextMenu should not be turned into <DatasetActionMenu />

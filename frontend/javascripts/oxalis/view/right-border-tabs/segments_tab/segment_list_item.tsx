@@ -30,6 +30,8 @@ import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+import MenuItem from "antd/lib/menu/MenuItem";
+import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -104,29 +106,26 @@ const getComputeMeshAdHocMenuItem = (
   loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
-) => {
+): MenuItemType => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
-  return (
-    <Menu.Item
-      key="loadAdHocMesh"
-      onClick={() => {
-        if (!segment.somePosition) {
-          Toast.info(
-            <React.Fragment>
-              Cannot load a mesh for this segment, because its position is unknown.
-            </React.Fragment>,
-          );
-          andCloseContextMenu();
-          return;
-        }
+  return {
+    key: "loadAdHocMesh",
+    onClick: () => {
+      if (!segment.somePosition) {
+        Toast.info(
+          <React.Fragment>
+            Cannot load a mesh for this segment, because its position is unknown.
+          </React.Fragment>,
+        );
+        andCloseContextMenu();
+        return;
+      }
 
-        andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
-      }}
-      disabled={disabled}
-    >
-      <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
-    </Menu.Item>
-  );
+      andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
+    },
+    disabled,
+    label: <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>,
+  };
 };
 
 const getMakeSegmentActiveMenuItem = (
@@ -134,20 +133,17 @@ const getMakeSegmentActiveMenuItem = (
   setActiveCell: (arg0: number, somePosition?: Vector3) => void,
   activeCellId: number | null | undefined,
   andCloseContextMenu: (_ignore?: any) => void,
-) => {
+): MenuItemType => {
   const disabled = segment.id === activeCellId;
   const title = disabled
     ? "This segment ID is already active."
     : "Make this the active segment ID.";
-  return (
-    <Menu.Item
-      key="setActiveCell"
-      onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
-      disabled={disabled}
-    >
-      <Tooltip title={title}>Activate Segment ID</Tooltip>
-    </Menu.Item>
-  );
+  return {
+    key: "setActiveCell",
+    onClick: () => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition)),
+    disabled,
+    label: <Tooltip title={title}>Activate Segment ID</Tooltip>,
+  };
 };
 
 type Props = {
@@ -456,7 +452,7 @@ function _SegmentListItem({
       }}
     >
       <Dropdown
-        menu={createSegmentContextMenu} // The overlay is generated lazily. By default, this would make the overlay
+        menu={createSegmentContextMenu()} // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
         // The reason for this is that it's not destroyed after closing.
         // Therefore, autoDestroy is passed.

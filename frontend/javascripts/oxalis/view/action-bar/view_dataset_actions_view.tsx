@@ -21,11 +21,12 @@ import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 type Props = {
   layoutMenu: React.ReactNode;
 };
-export const screenshotMenuItem: MenuItemType = 
-  {key: "screenshot-button", onClick: downloadScreenshot>,
-    icon: <CameraOutlined />,
-    label: "Screenshot (Q)"
-}
+export const screenshotMenuItem: MenuItemType = {
+  key: "screenshot-button",
+  onClick: downloadScreenshot,
+  icon: <CameraOutlined />,
+  label: "Screenshot (Q)",
+};
 
 export default function ViewDatasetActionsView(props: Props) {
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
@@ -45,24 +46,24 @@ export default function ViewDatasetActionsView(props: Props) {
     />
   );
   const overlayMenu: MenuProps = {
-    items:
-  [
+    items: [
       {
         key: "share-button",
         onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
-      icon:        <ShareAltOutlined />,
-        label: "Share"
+        icon: <ShareAltOutlined />,
+        label: "Share",
       },
       screenshotMenuItem,
       {
         key: "python-client-button",
         onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
-      icon:        <DownloadOutlined />,
-        label: "Download"
+        icon: <DownloadOutlined />,
+        label: "Download",
       },
-      {props.layoutMenu}
-  ]};
-  
+      // {props.layoutMenu}
+    ],
+  };
+
   return (
     <div
       style={{

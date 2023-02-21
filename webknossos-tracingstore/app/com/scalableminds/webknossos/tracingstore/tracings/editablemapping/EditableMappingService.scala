@@ -234,6 +234,7 @@ class EditableMappingService @Inject()(
                                             desiredVersion: Long): Fox[VersionedKeyValuePair[EditableMapping]] = {
     // TODO: direct cache hit won’t happen, as we expect to find desiredVersion - 1. However, we need to find out if the fossildb has desiredVersion itself.
     // fossildb version check is needed
+    val newestMaterializedVersion = newestMaterializedPersistedVersion(editableMappingId, desiredVersion)
     val fromCacheOpt = previousMaterializedEditableMappingCache.find((editableMappingId, desiredVersion))
     fromCacheOpt match {
       case Some(fromCache) =>

@@ -98,6 +98,11 @@ class FossilDBClient(collection: String,
                  emptyFallback: Option[Long] = None): Fox[Long] =
     try {
       val reply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
+      val listVersionsReply = blockingStub.listVersions(ListVersionsRequest(collection, key))
+      if (reply.success && listVersionsReply.success) {
+        logger.info(
+          s"got version ${reply.actualVersion} and ${listVersionsReply.versions.headOption} (asked for version $version)")
+      }
       if (reply.success) Fox.successful(reply.actualVersion)
       else {
         if (mayBeEmpty.contains(true) && emptyFallback.isDefined && reply.errorMessage.contains("No such element")) {

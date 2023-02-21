@@ -24,7 +24,7 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                           userId: ObjectId,
                           organizationId: ObjectId): Option[FileSystemCredential] =
     uri.getScheme match {
-      case FileSystemsHolder.schemeHttps =>
+      case FileSystemsHolder.schemeHttps | FileSystemsHolder.schemeHttp =>
         credentialIdentifier.map(
           username =>
             HttpBasicAuthCredential(uri.toString,

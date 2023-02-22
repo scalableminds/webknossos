@@ -32,7 +32,7 @@ test.serial("getDatasets", async (t) => {
   }
 
   datasets = _.sortBy(datasets, (d) => d.name);
-  writeTypeCheckingFile(datasets, "dataset", "APIMaybeUnimportedDataset", {
+  writeTypeCheckingFile(datasets, "dataset", "APIDatasetCompact", {
     isArray: true,
   });
   t.snapshot(datasets, {

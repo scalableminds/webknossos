@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -65,6 +65,7 @@ import type {
   VoxelyticsWorkflowListing,
   APIPricingPlanStatus,
   VoxelyticsLogLine,
+  APIDatasetCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
@@ -525,10 +526,7 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: moment()
-        .endOf("day")
-        .add(initialExpirationPeriodInDays, "days")
-        .valueOf(),
+      expirationDateTime: dayjs().endOf("day").add(initialExpirationPeriodInDays, "days").valueOf(),
     },
   });
 }
@@ -664,7 +662,8 @@ export function updateAnnotationLayer(
 
 type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
-  name: string;
+  name: string | null | undefined;
+  autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
@@ -794,6 +793,7 @@ export function getEmptySandboxAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
+  autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
   mappingName?: string | null | undefined,
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
@@ -813,8 +813,9 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },
@@ -827,8 +828,9 @@ export function createExplorational(
       },
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },
@@ -1032,7 +1034,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
-): Promise<Array<APIMaybeUnimportedDataset>> {
+): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
     params.append("isUnreported", String(isUnreported));
@@ -1049,6 +1051,8 @@ export async function getDatasets(
   if (includeSubfolders != null) {
     params.append("includeSubfolders", includeSubfolders ? "true" : "false");
   }
+
+  params.append("compact", "true");
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
@@ -1351,24 +1355,24 @@ export function getDataset(
   );
 }
 
-export function updateDataset(
+export type DatasetUpdater = {
+  description?: string | null;
+  displayName?: string | null;
+  sortingKey?: number;
+  isPublic?: boolean;
+  tags?: string[];
+  folderId?: string;
+};
+
+export function updateDatasetPartial(
   datasetId: APIDatasetId,
-  dataset: APIMaybeUnimportedDataset,
-  folderId?: string,
-  skipResolutions?: boolean,
+  updater: DatasetUpdater,
 ): Promise<APIDataset> {
-  folderId = folderId || dataset.folderId;
-
-  const params = new URLSearchParams();
-  if (skipResolutions) {
-    params.append("skipResolutions", "true");
-  }
-
   return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}?${params}`,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/updatePartial`,
     {
       method: "PATCH",
-      data: { ...dataset, folderId },
+      data: updater,
     },
   );
 }
@@ -1847,8 +1851,8 @@ export function updateUserConfiguration(
 // ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  day: moment$Moment,
+
+  day: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const month = day.format("M");
   const year = day.format("YYYY");
@@ -1862,10 +1866,8 @@ export async function getTimeTrackingForUserByMonth(
 
 export async function getTimeTrackingForUser(
   userId: string,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  startDate: moment$Moment,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  endDate: moment$Moment,
+  startDate: dayjs.Dayjs,
+  endDate: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const timeTrackingData = await Request.receiveJSON(
     `/api/time/user/${userId}?startDate=${startDate.unix() * 1000}&endDate=${

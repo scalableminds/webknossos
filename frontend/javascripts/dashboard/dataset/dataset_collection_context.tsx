@@ -1,7 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { type DatasetFilteringMode } from "dashboard/dataset_view";
-import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
-import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
+import type {
+  APIDatasetId,
+  APIDatasetCompact,
+  APIDatasetCompactWithoutStatus,
+} from "types/api_flow_types";
+import { DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import {
@@ -18,33 +21,28 @@ import {
 import { useIsMutating } from "@tanstack/react-query";
 import { usePrevious } from "libs/react_hooks";
 
-type Options = {
-  datasetFilteringMode?: DatasetFilteringMode;
-  applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean;
-  isCalledFromCheckDatasets?: boolean;
-};
 export type DatasetCollectionContextValue = {
-  datasets: Array<APIMaybeUnimportedDataset>;
+  datasets: Array<APIDatasetCompact>;
   isLoading: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
-  fetchDatasets: (options?: Options) => Promise<void>;
+  fetchDatasets: () => void;
   reloadDataset: (
     datasetId: APIDatasetId,
-    datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
+    datasetsToUpdate?: Array<APIDatasetCompact>,
   ) => Promise<void>;
-  updateCachedDataset: (dataset: APIDataset) => Promise<void>;
+  updateCachedDataset: (id: APIDatasetId, updater: DatasetUpdater) => Promise<void>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
   supportsFolders: true;
-  selectedDatasets: APIMaybeUnimportedDataset[];
-  setSelectedDatasets: React.Dispatch<React.SetStateAction<APIMaybeUnimportedDataset[]>>;
+  selectedDatasets: APIDatasetCompact[];
+  setSelectedDatasets: React.Dispatch<React.SetStateAction<APIDatasetCompact[]>>;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   searchRecursively: boolean;
   setSearchRecursively: (val: boolean) => void;
-  getBreadcrumbs: (dataset: APIMaybeUnimportedDataset) => string[] | null;
+  getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatus) => string[] | null;
   showCreateFolderPrompt: (parentFolderId: string) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
@@ -86,7 +84,7 @@ export default function DatasetCollectionContextProvider({
   const isMutating = useIsMutating() > 0;
   const { data: folder } = useFolderQuery(activeFolderId);
 
-  const [selectedDatasets, setSelectedDatasets] = useState<APIMaybeUnimportedDataset[]>([]);
+  const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
     (value: string | null) => {
@@ -144,23 +142,20 @@ export default function DatasetCollectionContextProvider({
     createFolderMutation.mutateAsync([parentFolderId, folderName]);
   }, []);
 
-  async function fetchDatasets(_options: Options = {}): Promise<void> {
+  function fetchDatasets(): void {
     datasetsInFolderQuery.refetch();
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(
-    datasetId: APIDatasetId,
-    _datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
-  ) {
-    updateDatasetMutation.mutateAsync(datasetId);
+  async function reloadDataset(datasetId: APIDatasetId) {
+    await updateDatasetMutation.mutateAsync(datasetId);
   }
 
-  async function updateCachedDataset(dataset: APIDataset) {
-    updateDatasetMutation.mutateAsync([dataset, dataset.folderId]);
+  async function updateCachedDataset(id: APIDatasetId, updater: DatasetUpdater) {
+    await updateDatasetMutation.mutateAsync([id, updater]);
   }
 
-  const getBreadcrumbs = (dataset: APIMaybeUnimportedDataset) => {
+  const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatus) => {
     if (folderHierarchyQuery.data?.itemById == null) {
       return null;
     }

@@ -1,6 +1,6 @@
 import { filterNullValues } from "libs/utils";
 import React, { useEffect, useState } from "react";
-import { APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
+import { APIDatasetCompact, APIUser } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
@@ -27,7 +27,7 @@ function DatasetFolderViewInner(props: Props) {
   const { selectedDatasets, setSelectedDatasets } = context;
   const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
 
-  const setSelectedDataset = (ds: APIMaybeUnimportedDataset | null, multiSelect?: boolean) => {
+  const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
     if (!ds) {
       setSelectedDatasets([]);
       return;
@@ -101,7 +101,6 @@ function DatasetFolderViewInner(props: Props) {
           onSelectDataset={setSelectedDataset}
           selectedDatasets={selectedDatasets}
           context={context}
-          hideDetailsColumns
         />
       </main>
       <div

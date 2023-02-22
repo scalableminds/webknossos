@@ -16,6 +16,11 @@ export default class ErrorBoundary extends React.Component<
     ErrorHandling.notify(error, { info });
   }
 
+  clearLocalStorageAndReload = () => {
+    localStorage.clear();
+    location.reload();
+  };
+
   render() {
     if (this.state.error != null) {
       const { error, info } = this.state;
@@ -34,6 +39,13 @@ export default class ErrorBoundary extends React.Component<
             <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
               contact us.
             </a>
+          </p>
+          <p>
+            Clearing the browser's local storage might also help. Click{" "}
+            <a href="#" onClick={this.clearLocalStorageAndReload}>
+              here
+            </a>{" "}
+            to do so.
           </p>
 
           <Alert

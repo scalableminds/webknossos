@@ -310,7 +310,7 @@ function FolderItemAsDropTarget(props: {
         let successCounter = 0;
         Promise.all(
           selectedDatasets.map((ds) =>
-            context.queries.updateDatasetMutation.mutateAsync([ds, folderId]).then(() => {
+            context.queries.updateDatasetMutation.mutateAsync([ds, { folderId }]).then(() => {
               successCounter++;
               modal.update({
                 content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
@@ -337,7 +337,7 @@ function FolderItemAsDropTarget(props: {
         const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
         if (dataset) {
-          context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+          context.queries.updateDatasetMutation.mutateAsync([dataset, { folderId }]);
         } else {
           Toast.error("Could not move dataset. Please try again.");
         }

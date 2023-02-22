@@ -338,7 +338,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     // volume tracings
     const fallbackLayer =
       sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
-    const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
+    const newAnnotation = await createExplorational(dataset, tracingType, false, fallbackLayer);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
     await api.tracing.restart(null, newAnnotation.id, ControlModeEnum.TRACE, undefined, true);
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);

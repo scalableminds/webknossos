@@ -15,7 +15,7 @@ object HttpsFileSystemProvider {
 
   def fileSystemKey(uri: URI, basicAuthCredentials: Option[HttpBasicAuthCredential]): String = {
     val uriWithUser = basicAuthCredentials.map { c =>
-      new URI(uri.getScheme, c.user, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
+      new URI(uri.getScheme, c.username, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
     }.getOrElse(uri)
     uriWithUser.toString
   }

@@ -28,7 +28,8 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
 
   private val POLLING_INTERVAL = 1 second
   private val LOG_TIME_BATCH_INTERVAL = 1 days
-  private val LOG_ENTRY_BATCH_SIZE = 5000L
+  private val LOG_ENTRY_QUERY_BATCH_SIZE = 5000
+  private val LOG_ENTRY_INSERT_BATCH_SIZE = 1000
 
   private lazy val serverStartupFuture: Fox[Unit] = {
     for {
@@ -83,102 +84,117 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                        startTime: Instant,
                        endTime: Instant,
-                       limit: Option[Long]): Fox[List[JsValue]] = {
+                       limit: Option[Int]): Fox[List[JsValue]] = {
     val currentEndTime = endTime
     val currentStartTime = startTime.max(endTime - LOG_TIME_BATCH_INTERVAL)
+    val currentLimit = limit.getOrElse(LOG_ENTRY_QUERY_BATCH_SIZE).min(LOG_ENTRY_QUERY_BATCH_SIZE)
 
-    for {
-      headBatch <- queryLogs(runName,
-                             organizationId,
-                             taskName,
-                             minLevel,
-                             currentStartTime,
-                             currentEndTime,
-                             limit.getOrElse(LOG_ENTRY_BATCH_SIZE).min(LOG_ENTRY_BATCH_SIZE))
-      newLimit = limit.map(l => (l - headBatch.length).max(0))
-      buffer <- if (headBatch.isEmpty) {
-        if (currentStartTime == startTime || newLimit.contains(0L)) {
-          Fox.successful(List())
+    if (currentLimit > 0) {
+      for {
+        headBatch <- queryLogs(runName,
+                               organizationId,
+                               taskName,
+                               minLevel,
+                               currentStartTime,
+                               currentEndTime,
+                               currentLimit)
+        newLimit = limit.map(l => (l - headBatch.length).max(0))
+        buffer <- if (headBatch.isEmpty) {
+          if (currentStartTime == startTime || newLimit.contains(0)) {
+            Fox.successful(List())
+          } else {
+            for {
+              tailBatch <- queryLogsBatched(
+                runName,
+                organizationId,
+                taskName,
+                minLevel,
+                startTime,
+                currentStartTime,
+                newLimit
+              )
+            } yield tailBatch ++ headBatch
+          }
         } else {
           for {
+            batchHead <- headBatch.headOption.toFox
+            batchHeadTime <- tryo(Instant((batchHead \ "timestamp").as[Long])).toFox
             tailBatch <- queryLogsBatched(
               runName,
               organizationId,
               taskName,
               minLevel,
               startTime,
-              currentStartTime,
+              batchHeadTime,
               newLimit
             )
           } yield tailBatch ++ headBatch
         }
-      } else {
-        for {
-          batchHead <- headBatch.headOption.toFox
-          batchHeadTime <- tryo(Instant((batchHead \ "timestamp").as[Long])).toFox
-          tailBatch <- queryLogsBatched(
-            runName,
-            organizationId,
-            taskName,
-            minLevel,
-            startTime,
-            batchHeadTime,
-            newLimit
-          )
-        } yield tailBatch ++ headBatch
-      }
-    } yield buffer
+      } yield buffer
+    } else {
+      Fox.successful(List())
+    }
   }
 
-  def queryLogs(runName: String,
-                organizationId: ObjectId,
-                taskName: Option[String],
-                minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
-                startTime: Instant,
-                endTime: Instant,
-                limit: Long): Fox[List[JsValue]] = {
-    val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
+  private def queryLogs(runName: String,
+                        organizationId: ObjectId,
+                        taskName: Option[String],
+                        minLevel: VoxelyticsLogLevel,
+                        startTime: Instant,
+                        endTime: Instant,
+                        limit: Int): Fox[List[JsValue]] =
+    if (limit > 0) {
+      val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
 
-    val logQLFilter = List(
-      taskName.map(t => s"""vx_task_name="$t""""),
-      Some(s"""level=~"(${levels.mkString("|")})"""")
-    ).flatten.mkString(" | ")
-    val logQL =
-      s"""{vx_run_name="$runName",wk_org="${organizationId.id}",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
+      val logQLFilter = List(
+        taskName.map(t => s"""vx_task_name="$t""""),
+        Some(s"""level=~"(${levels.mkString("|")})"""")
+      ).flatten.mkString(" | ")
+      val logQL =
+        s"""{vx_run_name="$runName",wk_org="${organizationId.id}",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
 
-    val queryString =
-      List("query" -> logQL,
-           "start" -> startTime.toString,
-           "end" -> endTime.toString,
-           "limit" -> limit.toString,
-           "direction" -> "backward")
-        .map(keyValueTuple => s"${keyValueTuple._1}=${java.net.URLEncoder.encode(keyValueTuple._2, "UTF-8")}")
-        .mkString("&")
+      val queryString =
+        List("query" -> logQL,
+             "start" -> startTime.toString,
+             "end" -> endTime.toString,
+             "limit" -> limit.toString,
+             "direction" -> "backward")
+          .map(keyValueTuple => s"${keyValueTuple._1}=${java.net.URLEncoder.encode(keyValueTuple._2, "UTF-8")}")
+          .mkString("&")
+      for {
+        _ <- serverStartupFuture
+        res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
+        logEntries <- tryo(
+          (res \ "data" \ "result")
+            .as[List[JsValue]]
+            .flatMap(
+              stream =>
+                (stream \ "values")
+                  .as[List[(String, String)]]
+                  .map(value =>
+                    Json.parse(value._2).as[JsObject] ++ (stream \ "stream").as[JsObject] ++ Json.obj(
+                      "timestamp" -> Instant.fromNanosecondsString(value._1))))
+            .sortBy(entry => (entry \ "timestamp").as[Long])).toFox
+      } yield logEntries
+    } else Fox.successful(List())
+
+  def bulkInsertBatched(logEntries: List[JsValue], organizationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- serverStartupFuture
-      res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
-      logEntries <- tryo(
-        (res \ "data" \ "result")
-          .as[List[JsValue]]
-          .flatMap(
-            stream =>
-              (stream \ "values")
-                .as[List[(String, String)]]
-                .map(value =>
-                  Json.parse(value._2).as[JsObject] ++ (stream \ "stream").as[JsObject] ++ Json.obj(
-                    "timestamp" -> Instant.fromNanosecondsString(value._1))))
-          .sortBy(entry => (entry \ "timestamp").as[Long])).toFox
-    } yield logEntries
-  }
+      _ <- Fox.serialCombined(logEntries.grouped(LOG_ENTRY_INSERT_BATCH_SIZE).toList)(bulkInsert(_, organizationId))
+    } yield ()
 
-  def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
+  private def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId)(
+      implicit ec: ExecutionContext): Fox[Unit] =
     if (logEntries.nonEmpty) {
       for {
         _ <- serverStartupFuture
         logEntryGroups <- tryo(
           logEntries
             .groupBy(
-              entry => ((entry \ "vx" \ "workflow_hash").as[String], (entry \ "vx" \ "run_name").as[String])
+              entry =>
+                ((entry \ "vx" \ "workflow_hash").as[String],
+                 (entry \ "vx" \ "run_name").as[String],
+                 (entry \ "pid").as[Long])
             )
             .toList).toFox
         streams <- Fox.serialCombined(logEntryGroups)(
@@ -221,10 +237,13 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
               })
             } yield
               Json.obj(
-                "stream" -> Json.obj("vx_workflow_hash" -> keyValueTuple._1._1,
-                                     "vx_run_name" -> keyValueTuple._1._2,
-                                     "wk_url" -> wkConf.Http.uri,
-                                     "wk_org" -> organizationId.id),
+                "stream" -> Json.obj(
+                  "vx_workflow_hash" -> keyValueTuple._1._1,
+                  "vx_run_name" -> keyValueTuple._1._2,
+                  "pid" -> keyValueTuple._1._3,
+                  "wk_url" -> wkConf.Http.uri,
+                  "wk_org" -> organizationId.id
+                ),
                 "values" -> JsArray(values)
             ))
         _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent

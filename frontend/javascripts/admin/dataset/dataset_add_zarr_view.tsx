@@ -17,10 +17,9 @@ import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
   exploreRemoteDataset,
-  getDataset,
   isDatasetNameValid,
   storeRemoteDataset,
-  updateDataset,
+  updateDatasetPartial,
 } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
@@ -49,7 +48,7 @@ const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
 type OwnProps = {
-  onAdded: (arg0: string, arg1: string) => Promise<void>;
+  onAdded: (arg0: string, arg1: string, arg2: boolean) => Promise<void>;
   datastores: Array<APIDataStore>;
 };
 type StateProps = {
@@ -166,10 +165,9 @@ function DatasetAddZarrView(props: Props) {
           owningOrganization: activeUser.organization,
           name: configJSON.id.name,
         };
-        const dataset = await getDataset(datasetId);
-        await updateDataset(datasetId, dataset, targetFolderId, true);
+        await updateDatasetPartial(datasetId, { folderId: targetFolderId });
       }
-      onAdded(activeUser.organization, configJSON.id.name);
+      onAdded(activeUser.organization, configJSON.id.name, true);
     }
   }
 
@@ -177,7 +175,7 @@ function DatasetAddZarrView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
-      <CardContainer title="Add Remote Zarr / N5 Dataset">
+      <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
         <Form form={form} layout="vertical">
           <Modal
             title="Add Layer"
@@ -322,7 +320,7 @@ function AddZarrLayer({
   };
 
   function validateUrls(userInput: string) {
-    if (userInput.startsWith("https://")) {
+    if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {
       setSelectedProtocol("s3");
@@ -330,7 +328,7 @@ function AddZarrLayer({
       setSelectedProtocol("gs");
     } else {
       throw new Error(
-        "Dataset URL must employ one of the following protocols: https://, s3:// or gs://",
+        "Dataset URL must employ one of the following protocols: https://, http://, s3:// or gs://",
       );
     }
   }
@@ -404,10 +402,10 @@ function AddZarrLayer({
 
   return (
     <>
-      Please enter a URL that points to the Zarr or N5 data you would like to import. If necessary,
-      specify the credentials for the dataset. For datasets with multiple layers, e.g. raw
-      microscopy and segmentation data, please add them separately with the ”Add Layer” button
-      below. Once you have approved of the resulting datasource you can import it.
+      Please enter a URL that points to the Zarr, Neuroglancer Precomputed or N5 data you would like
+      to import. If necessary, specify the credentials for the dataset. For datasets with multiple
+      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add
+      Layer” button below. Once you have approved of the resulting datasource you can import it.
       <FormItem
         style={{ marginTop: 16, marginBottom: 16 }}
         name="url"

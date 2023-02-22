@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { Button, Divider, InputNumber, Modal } from "antd";
-import moment from "moment";
+import dayjs from "dayjs";
 import {
   DatabaseOutlined,
   FieldTimeOutlined,
@@ -34,7 +34,7 @@ const ModalInformationFooter = (
 );
 
 function extendPricingPlan(organization: APIOrganization) {
-  const extendedDate = moment(organization.paidUntil).add(1, "year");
+  const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
   Modal.confirm({
     title: "Extend Current Plan",
@@ -299,6 +299,7 @@ function UpgradePricingPlanModal({
           ) : null}
         </>
       }
+      zIndex={10000} // overlay everything
     >
       <div
         style={{

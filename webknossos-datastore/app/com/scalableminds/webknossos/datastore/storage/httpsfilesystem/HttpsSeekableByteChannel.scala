@@ -25,7 +25,7 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
     path.getBasicAuthCredential.map { credential =>
       Http(uri.toString)
         .timeout(connTimeoutMs = connectionTimeout.toMillis.toInt, readTimeoutMs = readTimeout.toMillis.toInt)
-        .auth(credential.user, credential.password)
+        .auth(credential.username, credential.password)
         .asBytes
     }.getOrElse(Http(uri.toString)
       .timeout(connTimeoutMs = connectionTimeout.toMillis.toInt, readTimeoutMs = readTimeout.toMillis.toInt)

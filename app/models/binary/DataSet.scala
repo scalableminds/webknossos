@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.schema.Tables._
+import controllers.DatasetUpdateParameters
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
@@ -62,7 +63,7 @@ case class DataSet(
 case class DatasetCompactInfo(
     id: ObjectId,
     name: String,
-    organizationName: String,
+    owningOrganization: String,
     folderId: ObjectId,
     isActive: Boolean,
     displayName: String,
@@ -268,7 +269,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
             LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
               ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
             """
-      _ = logger.info(query.debugInfo)
       rows <- run(
         query.as[(ObjectId, String, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
     } yield
@@ -277,7 +277,7 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
           DatasetCompactInfo(
             id = row._1,
             name = row._2,
-            organizationName = row._3,
+            owningOrganization = row._3,
             folderId = row._4,
             isActive = row._5,
             displayName = row._6,
@@ -426,8 +426,32 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
     for {
       accessQuery <- readAccessQuery
       _ <- run(
-        q"update webknossos.datasets_ set sharingToken = $sharingToken where name = $name and _organization = $organizationId and $accessQuery".asUpdate)
+        q"update webknossos.datasets set sharingToken = $sharingToken where name = $name and _organization = $organizationId and $accessQuery".asUpdate)
     } yield ()
+
+  def updatePartial(dataSetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val setQueries = List(
+      params.description.map(d => q"description = $d"),
+      params.displayName.map(v => q"displayName = $v"),
+      params.sortingKey.map(v => q"sortingKey = $v"),
+      params.isPublic.map(v => q"isPublic = $v"),
+      params.tags.map(v => q"tags = $v"),
+      params.folderId.map(v => q"_folder = $v"),
+    ).flatten
+    if (setQueries.isEmpty) {
+      Fox.successful(())
+    } else {
+      for {
+        _ <- assertUpdateAccess(dataSetId)
+        setQueriesJoined = SqlToken.joinBySeparator(setQueries, ", ")
+        _ <- run(q"""UPDATE webknossos.datasets
+                     SET
+                     $setQueriesJoined
+                     WHERE _id = $dataSetId
+                     """.asUpdate)
+      } yield ()
+    }
+  }
 
   def updateFields(_id: ObjectId,
                    description: Option[String],
@@ -595,16 +619,14 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId, skipResolutions: Boolean): Fox[DataLayer] = {
+  private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      standinResolutions: Option[List[Vec3Int]] = if (skipResolutions) Some(List.empty[Vec3Int]) else None
-      resolutions <- Fox.fillOption(standinResolutions)(
-        dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer")
+      resolutions <- dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
         JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
@@ -642,10 +664,10 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     result.flatten
   }
 
-  def findAllForDataSet(dataSetId: ObjectId, skipResolutions: Boolean = false): Fox[List[DataLayer]] =
+  def findAllForDataSet(dataSetId: ObjectId): Fox[List[DataLayer]] =
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId, skipResolutions)))
+      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
     } yield rowsParsed
 
   private def insertLayerQuery(dataSetId: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =

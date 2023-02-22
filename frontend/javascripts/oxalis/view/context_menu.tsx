@@ -94,6 +94,7 @@ import {
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 const { SubMenu } = Menu;
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -361,7 +362,7 @@ function getMaybeMeshItems(
   hideMesh: (segmentationLayerName: string, meshId: number) => void,
   setPosition: (position: Vector3) => void,
   refreshMesh: (segmentationLayerName: string, meshId: number) => void,
-) {
+): MenuItemType[] | null {
   if (
     maybeClickedMeshId == null ||
     maybeMeshIntersectionPosition == null ||
@@ -371,33 +372,29 @@ function getMaybeMeshItems(
   }
 
   return [
-    <Menu.Item
-      key="hide-mesh"
-      onClick={() => hideMesh(visibleSegmentationLayer.name, maybeClickedMeshId)}
-    >
-      Hide Mesh
-    </Menu.Item>,
-    <Menu.Item
-      key="reload-mesh"
-      onClick={() => refreshMesh(visibleSegmentationLayer.name, maybeClickedMeshId)}
-    >
-      Reload Mesh
-    </Menu.Item>,
-    <Menu.Item
-      key="jump-to-mesh"
-      onClick={() => {
+    {
+      key: "hide-mesh",
+      onClick: () => hideMesh(visibleSegmentationLayer.name, maybeClickedMeshId),
+      label: "Hide Mesh",
+    },
+    {
+      key: "reload-mesh",
+      onClick: () => refreshMesh(visibleSegmentationLayer.name, maybeClickedMeshId),
+      label: "Reload Mesh",
+    },
+    {
+      key: "jump-to-mesh",
+      onClick: () => {
         const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScale);
         setPosition(unscaledPosition);
-      }}
-    >
-      Jump to Position
-    </Menu.Item>,
-    <Menu.Item
-      key="remove-mesh"
-      onClick={() => removeMesh(visibleSegmentationLayer.name, maybeClickedMeshId)}
-    >
-      Remove Mesh
-    </Menu.Item>,
+      },
+      label: "Jump to Position",
+    },
+    {
+      key: "remove-mesh",
+      onClick: () => removeMesh(visibleSegmentationLayer.name, maybeClickedMeshId),
+      label: "Remove Mesh",
+    },
   ];
 }
 
@@ -449,9 +446,10 @@ function NodeContextMenuOptions({
           borderRadius: 6,
         }}
         mode="vertical"
-      >
-        <Menu.Item disabled>Error: Could not find clicked node</Menu.Item>
-      </Menu>
+        items={[
+          { key: "disabled-error", disabled: true, label: "Error: Could not find clicked node" },
+        ]}
+      />
     );
   }
 
@@ -811,69 +809,79 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
-  const skeletonActions =
+  const skeletonActions: MenuItemType[] =
     skeletonTracing != null && globalPosition != null && allowUpdate
       ? [
-          <Menu.Item key="create-node" onClick={() => setWaypoint(globalPosition, viewport, false)}>
-            Create Node here
-          </Menu.Item>,
-          <Menu.Item
-            key="create-node-with-tree"
-            onClick={() => {
+          {
+            key: "create-node",
+            onClick: () => setWaypoint(globalPosition, viewport, false),
+            label: "Create Node here",
+          },
+          {
+            key: "create-node-with-tree",
+            onClick: () => {
               createTree();
               setWaypoint(globalPosition, viewport, false);
-            }}
-          >
-            Create new Tree here{" "}
-            {!isVolumeBasedToolActive && !isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
-          </Menu.Item>,
-          <Menu.Item
-            key="load-agglomerate-skeleton"
-            disabled={!isAgglomerateMappingEnabled.value}
-            onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
-          >
-            <Tooltip
-              title={
-                isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
+            },
+            label: (
+              <>
+                Create new Tree here{" "}
+                {!isVolumeBasedToolActive && !isBoundingBoxToolActive
+                  ? shortcutBuilder(["C"])
+                  : null}
+              </>
+            ),
+          },
+          {
+            key: "load-agglomerate-skeleton",
+            disabled: !isAgglomerateMappingEnabled.value,
+            onClick: () => loadAgglomerateSkeletonAtPosition(globalPosition),
+            label: (
+              <Tooltip
+                title={
+                  isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
+                }
+              >
+                <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
+              </Tooltip>
+            ),
+          },
+          isAgglomerateMappingEnabled.value
+            ? {
+                key: "merge-agglomerate-skeleton",
+                disabled: !isProofreadingActive,
+                onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot merge because the proofreading tool is not active."
+                    }
+                  >
+                    <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
+                  </Tooltip>
+                ),
               }
-            >
-              <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
-            </Tooltip>
-          </Menu.Item>,
-          isAgglomerateMappingEnabled.value ? (
-            <Menu.Item
-              key="merge-agglomerate-skeleton"
-              disabled={!isProofreadingActive}
-              onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
-            >
-              <Tooltip
-                title={
-                  isProofreadingActive
-                    ? undefined
-                    : "Cannot merge because the proofreading tool is not active."
-                }
-              >
-                <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
-              </Tooltip>
-            </Menu.Item>
-          ) : null,
-          isAgglomerateMappingEnabled.value ? (
-            <Menu.Item
-              key="min-cut-agglomerate-at-position"
-              disabled={!isProofreadingActive}
-              onClick={() => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition))}
-            >
-              <Tooltip
-                title={
-                  isProofreadingActive
-                    ? undefined
-                    : "Cannot merge because the proofreading tool is not active."
-                }
-              >
-                <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
-              </Tooltip>
-            </Menu.Item>
-          ) : null,
+            : null,
+          isAgglomerateMappingEnabled.value
+            ? {
+                key: "min-cut-agglomerate-at-position",
+                disabled: !isProofreadingActive,
+                onClick: () => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot merge because the proofreading tool is not active."
+                    }
+                  >
+                    <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+                  </Tooltip>
+                ),
+              }
+            : null,
         ]
       : [];
   const segmentationLayerName =
@@ -920,37 +928,39 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
       Load Mesh (precomputed)
     </MenuItemWithMappingActivationConfirmation>
   );
-  const computeMeshAdHocItem = (
-    <Menu.Item key="compute-mesh-adhc" onClick={computeMeshAdHoc}>
-      Compute Mesh (ad-hoc)
-    </Menu.Item>
-  );
-  const nonSkeletonActions =
+  const computeMeshAdHocItem = {
+    key: "compute-mesh-adhc",
+    onClick: computeMeshAdHoc,
+    label: "Compute Mesh (ad-hoc)",
+  };
+  const nonSkeletonActions: MenuItemType[] =
     volumeTracing != null && globalPosition != null
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition > 0 ? (
-            <Menu.Item
-              key="select-cell"
-              onClick={() => {
-                setActiveCell(segmentIdAtPosition, globalPosition);
-              }}
-            >
-              Select Segment ({segmentIdAtPosition}){" "}
-              {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
-            </Menu.Item>
-          ) : null,
+          segmentIdAtPosition > 0
+            ? {
+                key: "select-cell",
+                onClick: () => {
+                  setActiveCell(segmentIdAtPosition, globalPosition);
+                },
+                label: (
+                  <>
+                    Select Segment ({segmentIdAtPosition}){" "}
+                    {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
+                  </>
+                ),
+              }
+            : null,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
-          allowUpdate ? (
-            <Menu.Item
-              key="fill-cell"
-              onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
-            >
-              Fill Segment (flood-fill region)
-            </Menu.Item>
-          ) : null,
+          allowUpdate
+            ? {
+                key: "fill-cell",
+                onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
+                label: "Fill Segment (flood-fill region)",
+              }
+            : null,
         ]
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
@@ -984,11 +994,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     allActions = allActions.concat(maybeMeshRelatedItems);
   }
 
-  const empty = (
-    <Menu.Item key="empty">
-      <Empty description="No actions available" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-    </Menu.Item>
-  );
+  const empty = {
+    key: "empty",
+    label: <Empty description="No actions available" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
+  };
 
   return (
     <Menu
@@ -1083,7 +1092,7 @@ function ContextMenuContainer(props: Props) {
   );
 }
 
-function InfoMenuItem(propsWithEventKey: MenuItemProps) {
+function getInfoMenuItem(key: MenuItemType["key"], label: MenuItemType["label"]): MenuItemType {
   /*
    * This component can be used within an antd Menu, even though
    * the docs dictate to always use a <Menu.Item /> or <Menu.Divider />.
@@ -1094,8 +1103,10 @@ function InfoMenuItem(propsWithEventKey: MenuItemProps) {
    * warning.
    */
 
-  const { children } = propsWithEventKey;
-  return <div className="node-context-menu-item">{children}</div>;
+  const infoMenuStyle: React.CSSProperties = {
+    pointerEvents: "none",
+  };
+  return { key, label, style: infoMenuStyle };
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
@@ -1153,37 +1164,36 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
     if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
       infoRows.push(
-        <InfoMenuItem key="nodeInfo">
-          {/* @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'never'.*/}
-          Node with Id {maybeClickedNodeId} in Tree {nodeContextMenuTree.treeId}
-        </InfoMenuItem>,
+        getInfoMenuItem("nodeInfo", 
+          `Node with Id ${maybeClickedNodeId} in Tree ${nodeContextMenuTree.treeId}`
+        ),
       );
     }
 
     if (nodeContextMenuNode != null) {
       infoRows.push(
-        <InfoMenuItem key="positionInfo">
+        getInfoMenuItem("positionInfo",<>
           Position: {nodePositionAsString}
-          {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-        </InfoMenuItem>,
+          {copyIconWithTooltip(nodePositionAsString, "Copy node position")}</>
+        )
       );
     } else if (globalPosition != null) {
       const positionAsString = positionToString(globalPosition);
       infoRows.push(
-        <InfoMenuItem key="positionInfo">
+        getInfoMenuItem("positionInfo", <>
           Position: {positionAsString}
-          {copyIconWithTooltip(positionAsString, "Copy position")}
-        </InfoMenuItem>,
+          {copyIconWithTooltip(positionAsString, "Copy position")}</>
+        )
       );
     }
 
     if (distanceToSelection != null) {
       infoRows.push(
-        <InfoMenuItem key="distanceInfo">
+        getInfoMenuItem("distanceInfo",<>
           <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
           {maybeClickedNodeId != null ? "Node" : "Position"}
-          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-        </InfoMenuItem>,
+          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}</>
+        )
       );
     }
 
@@ -1194,10 +1204,10 @@ function ContextMenuInner(propsWithInputRef: Props) {
     if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
       const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
       infoRows.push(
-        <InfoMenuItem key="copy-cell">
+        getInfoMenuItem("copy-cell",<>
           <div className="cell-context-icon" />
-          Segment ID: {`${segmentId}`} {copyIconWithTooltip(segmentId, "Copy Segment ID")}
-        </InfoMenuItem>,
+          Segment ID: {`${segmentId}`} {copyIconWithTooltip(segmentId, "Copy Segment ID")}</>
+        )
       );
     }
     if (segments != null && maybeClickedMeshId != null) {
@@ -1205,14 +1215,17 @@ function ContextMenuInner(propsWithInputRef: Props) {
       if (segmentName != null) {
         const maxSegmentNameLength = 18;
         infoRows.push(
-          <InfoMenuItem key="copy-cell">
-            <Tooltip title="Segment Name">
-              <i className="fas fa-tag" />{" "}
-            </Tooltip>
-            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
-              {truncateStringToLength(segmentName, maxSegmentNameLength)}
-            </Tooltip>
-          </InfoMenuItem>,
+          getInfoMenuItem(
+            "copy-cell",
+            <>
+              <Tooltip title="Segment Name">
+                <i className="fas fa-tag" />{" "}
+              </Tooltip>
+              <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
+                {truncateStringToLength(segmentName, maxSegmentNameLength)}
+              </Tooltip>
+            </>,
+          ),
         );
       }
     }

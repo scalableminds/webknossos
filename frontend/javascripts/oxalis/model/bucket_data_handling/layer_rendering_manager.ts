@@ -117,6 +117,13 @@ export function getGlobalLayerIndexForLayerName(
   return layerIndex;
 }
 
+// Transposition is often needed so that the matrix has the right format
+// for matrix operations (e.g., on the GPU; but not for ThreeJS).
+// Inversion is needed when the position of an "output voxel" (e.g., during
+// rendering in the fragment shader) needs to be mapped to its original
+// data position (i.e., how it's stored without the transformation).
+// Without the inversion, the matrix maps from stored position to the position
+// where it should be rendered.
 export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
   return M4x4.transpose(M4x4.inverse(mat));
 });

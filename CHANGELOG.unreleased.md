@@ -14,7 +14,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Remote datasets can now also be streamed from Google Cloud Storage URIs (`gs://`). [#6775](https://github.com/scalableminds/webknossos/pull/6775)
 - Remote volume datasets in the neuroglancer precomputed format can now be viewed in WEBKNOSSOS. [#6716](https://github.com/scalableminds/webknossos/pull/6716)
 - Added new mesh-related menu items to the context menu when a mesh is hovered in the 3d viewport. [#](https://github.com/scalableminds/webknossos/pull/6813)
-- Highlight 'organization owner' in Admin>User page. [#6832](https://github.com/scalableminds/webknossos/pull/6832
+- Highlight 'organization owner' in Admin>User page. [#6832](https://github.com/scalableminds/webknossos/pull/6832)
+- Added functions to get and set segment colors to the frontend API (`api.data.{getSegmentColor,setSegmentColor}`). [#6853](https://github.com/scalableminds/webknossos/pull/6853)
 
 
 ### Changed
@@ -32,6 +33,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed some layouting issues with line breaks in segment list/dataset info tab. [#6799](https://github.com/scalableminds/webknossos/pull/6799)
 - Fixed basic auth for exploring remote http datasets. [#6866](https://github.com/scalableminds/webknossos/pull/6866)
 - Fixed the layouting in the connectome tab. [#6864](https://github.com/scalableminds/webknossos/pull/6864)
+- Fixed that the quick-select and floodfill tool didn't update the segment list. [#6867](https://github.com/scalableminds/webknossos/pull/6867)
 - Fixed deprecation warnings for antd' <Menu> component in Navbar. [#6860](https://github.com/scalableminds/webknossos/pull/6860)
 
 ### Removed

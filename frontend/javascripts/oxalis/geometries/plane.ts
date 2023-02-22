@@ -12,7 +12,13 @@ import constants, {
   OrthoViewValues,
 } from "oxalis/constants";
 
-export const PLANE_SUBDIVISION = 200;
+// A subdivision of 80 means that there will be 80 segments per axis
+// and thus 81 vertices per axis (i.e., the vertex shader is executed 81**2).
+// In an extreme scenario, these vertices would have a distance to each other
+// of 32 voxels. Thus, each square (two triangles) would render one bucket.
+// 80**2 == 6400 buckets per plane are currently unrealistic and therefore
+// a valid upper bound.
+export const PLANE_SUBDIVISION = 80;
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as

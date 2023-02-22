@@ -17,6 +17,8 @@ import {
 } from "./coords.glsl";
 import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import compileShader from "./shader_module_system";
+import Constants from "oxalis/constants";
+import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
@@ -405,7 +407,8 @@ ${compileShader(
 )}
 
 
-
+float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
+float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
 void main() {
   vUv = uv;
@@ -416,12 +419,10 @@ void main() {
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
-  float planeWidth = 376.;
-  float subdivisionCount = 200.;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
-  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(vec3(-planeWidth/2.,  planeWidth/2., 0.), 1.)).xyz);
-  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4(vec3( planeWidth/2., -planeWidth/2., 0.), 1.)).xyz);
+  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(vec3(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0.), 1.)).xyz);
+  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4(vec3( PLANE_WIDTH/2., -PLANE_WIDTH/2., 0.), 1.)).xyz);
 
   // The following code ensures that the vertices are aligned with the bucket borders
   // of the currently rendered magnification.
@@ -441,7 +442,7 @@ void main() {
   //                               instead of the left.
 
   // Calculate the index of the vertex (e.g., index.x=0 is the first horizontal vertex).
-  index = (position.xy / (planeWidth / 2.) + 1.) / 2. * subdivisionCount;
+  index = (position.xy / (PLANE_WIDTH / 2.) + 1.) / 2. * PLANE_SUBDIVISION;
 
   uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
   vec2 d = transDim(vec3(32.) * getResolution(activeMagIdx)).xy;
@@ -449,19 +450,19 @@ void main() {
   vec3 datasetScaleUVW = transDim(datasetScale);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-  if (index.x >= 1. && index.x <= subdivisionCount - 2.) {
+  if (index.x >= 1. && index.x <= PLANE_SUBDIVISION - 2.) {
     transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d.x) * d.x * datasetScaleUVW.x;
     transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
-  } else if (index.x == subdivisionCount - 1.) {
+  } else if (index.x == PLANE_SUBDIVISION - 1.) {
     // The second-last vertex should be clipped to the next-lower bucket boundary beginning from
     // worldCoordBottomRight.
     transWorldCoord.x = floor(worldCoordBottomRight.x / datasetScaleUVW.x / d.x) * d.x * datasetScaleUVW.x;
   }
 
-  if (index.y >= 1. && index.y <= subdivisionCount - 1.) {
+  if (index.y >= 1. && index.y <= PLANE_SUBDIVISION - 1.) {
     transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d.y) * d.y * datasetScaleUVW.y;
     transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
-  } else if (index.y == subdivisionCount - 1.) {
+  } else if (index.y == PLANE_SUBDIVISION - 1.) {
     // The second-last vertex should be clipped to the next-lower bucket boundary beginning from
     // worldCoordBottomRight.
     transWorldCoord.y = floor(worldCoordBottomRight.y / datasetScaleUVW.y / d.y) * d.y * datasetScaleUVW.y;

@@ -842,7 +842,6 @@ class PlaneMaterialFactory {
   getFragmentShaderWithUniforms(): [string, Uniforms] {
     const { initializedGpuFactor, maximumLayerCountToRender } =
       Store.getState().temporaryConfiguration.gpuSetup;
-    // Don't compile code for segmentation in arbitrary mode
     const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
@@ -877,7 +876,6 @@ class PlaneMaterialFactory {
   getVertexShader(): string {
     const { initializedGpuFactor, maximumLayerCountToRender } =
       Store.getState().temporaryConfiguration.gpuSetup;
-    // Don't compile code for segmentation in arbitrary mode
     const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 

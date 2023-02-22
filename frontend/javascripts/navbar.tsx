@@ -1,4 +1,14 @@
-import { Avatar, Button, Badge, Tooltip, Layout, Menu, Popover, type SubMenuProps } from "antd";
+import {
+  Avatar,
+  Button,
+  Badge,
+  Tooltip,
+  Layout,
+  Menu,
+  Popover,
+  type SubMenuProps,
+  Tag,
+} from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -15,7 +25,7 @@ import classnames from "classnames";
 import { connect } from "react-redux";
 import React, { useState, useEffect } from "react";
 import Toast from "libs/toast";
-import type { APIOrganization, APIUser, APIUserTheme } from "types/api_flow_types";
+import type { APIOrganization, APIUser, APIUserCompact, APIUserTheme } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import {
   getBuildInfo,
@@ -39,6 +49,7 @@ import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
+import messages from "messages";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -52,6 +63,9 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   isInAnnotationView: boolean;
   hasOrganizations: boolean;
+  othersMayEdit: boolean;
+  allowUpdate: boolean;
+  blockedByUser: APIUserCompact | null | undefined;
 };
 type Props = OwnProps & StateProps;
 export const navbarHeight = 48;
@@ -625,7 +639,54 @@ async function getAndTrackVersion(dontTrack: boolean = false) {
   return version;
 }
 
-function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizations }: Props) {
+function AnnotationLockedByUserTag({
+  blockedByUser,
+  activeUser,
+}: {
+  blockedByUser: APIUserCompact | null | undefined;
+  activeUser: APIUser;
+}) {
+  let content;
+  if (blockedByUser == null) {
+    content = (
+      <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
+        <Tag color="warning">Locked by unknown user.</Tag>
+      </Tooltip>
+    );
+  } else if (blockedByUser.id === activeUser.id) {
+    content = (
+      <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
+        <Tag color="success">Locked by you. Reload to edit.</Tag>
+      </Tooltip>
+    );
+  } else {
+    const blockingUserName = `${blockedByUser.firstName} ${blockedByUser.lastName}`;
+    content = (
+      <Tooltip
+        title={messages["annotation.acquiringMutexFailed"]({
+          userName: blockingUserName,
+        })}
+      >
+        <Tag color="warning">Locked by {blockingUserName}</Tag>
+      </Tooltip>
+    );
+  }
+  return (
+    <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+      {content}
+    </span>
+  );
+}
+
+function Navbar({
+  activeUser,
+  isAuthenticated,
+  isInAnnotationView,
+  hasOrganizations,
+  othersMayEdit,
+  blockedByUser,
+  allowUpdate,
+}: Props) {
   const history = useHistory();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
@@ -692,6 +753,11 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       );
     }
 
+    if (othersMayEdit && !allowUpdate) {
+      trailingNavItems.push(
+        <AnnotationLockedByUserTag blockedByUser={blockedByUser} activeUser={activeUser} />,
+      );
+    }
     trailingNavItems.push(<NotificationIcon key="notification-icon" activeUser={loggedInUser} />);
     trailingNavItems.push(
       <LoggedInAvatar
@@ -787,6 +853,9 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   isInAnnotationView: state.uiInformation.isInAnnotationView,
   hasOrganizations: state.uiInformation.hasOrganizations,
+  othersMayEdit: state.tracing.othersMayEdit,
+  blockedByUser: state.tracing.blockedByUser,
+  allowUpdate: state.tracing.restrictions.allowUpdate,
 });
 
 const connector = connect(mapStateToProps);

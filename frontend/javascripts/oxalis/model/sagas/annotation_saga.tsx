@@ -4,6 +4,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import {
   EditAnnotationLayerAction,
   setAnnotationAllowUpdateAction,
+  setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
@@ -191,7 +192,8 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
     return;
   }
   const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
-  const ONE_MINUTE = 1000 * 60;
+  const activeUser = yield* select((state) => state.activeUser);
+  const acquireMutexInterval = 1000 * 60;
   const RETRY_COUNT = 12;
   const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
   const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
@@ -232,7 +234,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
       try {
         const { canEdit, blockedByUser } = yield* retry(
           RETRY_COUNT,
-          ONE_MINUTE / RETRY_COUNT,
+          acquireMutexInterval / RETRY_COUNT,
           acquireAnnotationMutex,
           annotationId,
         );
@@ -246,6 +248,11 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
           doesHaveMutexFromBeginning = false;
           yield* put(setAnnotationAllowUpdateAction(false));
         }
+        if (canEdit) {
+          yield* put(setBlockedByUserAction(activeUser));
+        } else {
+          yield* put(setBlockedByUserAction(blockedByUser));
+        }
         if (canEdit !== doesHaveMutex || isInitialRequest) {
           doesHaveMutex = canEdit;
           onMutexStateChanged(canEdit, blockedByUser);
@@ -254,6 +261,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
         const wasCanceled = yield* cancelled();
         if (!wasCanceled) {
           console.error("Error while trying to acquire mutex.", error);
+          yield* put(setBlockedByUserAction(undefined));
           yield* put(setAnnotationAllowUpdateAction(false));
           doesHaveMutexFromBeginning = false;
           if (doesHaveMutex || isInitialRequest) {
@@ -263,7 +271,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
         }
       }
       isInitialRequest = false;
-      yield* call(delay, ONE_MINUTE);
+      yield* call(delay, acquireMutexInterval);
     }
   }
   let runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);

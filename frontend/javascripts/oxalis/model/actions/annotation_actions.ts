@@ -4,6 +4,7 @@ import type {
   APIDataLayer,
   APIDataset,
   APIMeshFile,
+  APIUserCompact,
   EditableLayerProperties,
   LocalMeshMetaData,
   MeshMetaData,
@@ -26,6 +27,7 @@ type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAc
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
 type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<typeof setAnnotationAllowUpdateAction>;
+type SetBlockedByUserAction = ReturnType<typeof setBlockedByUserAction>;
 type SetUserBoundingBoxesAction = ReturnType<typeof setUserBoundingBoxesAction>;
 type FinishedResizingUserBoundingBoxAction = ReturnType<
   typeof finishedResizingUserBoundingBoxAction
@@ -63,6 +65,7 @@ export type AnnotationActionTypes =
   | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
+  | SetBlockedByUserAction
   | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -142,6 +145,12 @@ export const setAnnotationAllowUpdateAction = (allowUpdate: boolean) =>
   ({
     type: "SET_ANNOTATION_ALLOW_UPDATE",
     allowUpdate,
+  } as const);
+
+export const setBlockedByUserAction = (blockedByUser: APIUserCompact | null | undefined) =>
+  ({
+    type: "SET_BLOCKED_BY_USER",
+    blockedByUser,
   } as const);
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with

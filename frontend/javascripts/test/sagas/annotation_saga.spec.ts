@@ -4,15 +4,18 @@ import mockRequire from "mock-require";
 import { OxalisState } from "oxalis/store";
 import { createMockTask } from "@redux-saga/testing-utils";
 import { take, put } from "redux-saga/effects";
+import dummyUser from "test/fixtures/dummy_user";
 import defaultState from "oxalis/default_state";
 import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
 import {
   setAnnotationAllowUpdateAction,
+  setBlockedByUserAction,
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 
 const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true): OxalisState => ({
   ...defaultState,
+  activeUser: dummyUser,
   tracing: {
     ...defaultState.tracing,
     restrictions: {
@@ -69,7 +72,12 @@ function prepareTryAcquireMutexSaga(t: ExecutionContext, othersMayEdit: boolean)
     "SELECT",
     "The saga should select the othersMayEdit next.",
   );
-  let sagaValue = saga.next(storeState.tracing.othersMayEdit).value;
+  t.deepEqual(
+    saga.next(storeState.tracing.othersMayEdit).value.type,
+    "SELECT",
+    "The saga should select the activeUser next.",
+  );
+  let sagaValue = saga.next(storeState.activeUser).value;
   const tryAcquireMutexContinuously = sagaValue.payload.fn();
   t.deepEqual(sagaValue.type, "FORK", "The saga should fork tryAcquireMutexContinuously.");
   sagaValue = saga.next(tryAcquireMutexContinuouslyMocked).value;
@@ -94,15 +102,22 @@ function testReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinuously: 
     }),
     put(setAnnotationAllowUpdateAction(true)),
   );
+  expectValueDeepEqual(
+    t,
+    tryAcquireMutexContinuously.next(),
+    put(setBlockedByUserAction(dummyUser)),
+  );
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL"); // delay is called
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL");
-  t.deepEqual(
+  expectValueDeepEqual(
+    t,
     tryAcquireMutexContinuously.next({
       canEdit: true,
       blockedByUser: null,
-    }).value.type,
-    "CALL",
-  ); // delay is called
+    }),
+    put(setBlockedByUserAction(dummyUser)),
+  );
+  t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL"); // delay is called
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL");
   expectValueDeepEqual(
     t,
@@ -112,6 +127,12 @@ function testReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinuously: 
     }),
     put(setAnnotationAllowUpdateAction(false)),
   );
+  expectValueDeepEqual(
+    t,
+    tryAcquireMutexContinuously.next(),
+    put(setBlockedByUserAction(blockingUser)),
+  );
+  t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL"); // delay is called
 }
 
 function testFailingReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinuously: any) {
@@ -131,6 +152,11 @@ function testFailingReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinu
     }),
     put(setAnnotationAllowUpdateAction(false)),
   );
+  expectValueDeepEqual(
+    t,
+    tryAcquireMutexContinuously.next(),
+    put(setBlockedByUserAction(blockingUser)),
+  );
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL"); // delay is called
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL");
   expectValueDeepEqual(
@@ -140,6 +166,11 @@ function testFailingReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinu
       blockedByUser: blockingUser,
     }),
     put(setAnnotationAllowUpdateAction(false)),
+  );
+  expectValueDeepEqual(
+    t,
+    tryAcquireMutexContinuously.next(),
+    put(setBlockedByUserAction(blockingUser)),
   );
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL"); // delay is called
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL");
@@ -151,6 +182,11 @@ function testFailingReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinu
     }),
     put(setAnnotationAllowUpdateAction(false)),
   );
+  expectValueDeepEqual(
+    t,
+    tryAcquireMutexContinuously.next(),
+    put(setBlockedByUserAction(dummyUser)),
+  );
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL"); // delay is called
   t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL");
   expectValueDeepEqual(
@@ -161,6 +197,12 @@ function testFailingReacquiringMutex(t: ExecutionContext, tryAcquireMutexContinu
     }),
     put(setAnnotationAllowUpdateAction(false)),
   );
+  expectValueDeepEqual(
+    t,
+    tryAcquireMutexContinuously.next(),
+    put(setBlockedByUserAction(blockingUser)),
+  );
+  t.deepEqual(tryAcquireMutexContinuously.next().value.type, "CALL"); // delay is called
 }
 
 test.serial(
@@ -215,6 +257,11 @@ test.serial(
         blockedByUser: null,
       }),
       put(setAnnotationAllowUpdateAction(true)),
+    );
+    expectValueDeepEqual(
+      t,
+      tryAcquireMutexContinuously.next(),
+      put(setBlockedByUserAction(dummyUser)),
     );
     tryAcquireMutexContinuously.next(); // delay is called
     const listenForOthersMayEditSaga = listenForOthersMayEdit(

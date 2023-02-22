@@ -231,17 +231,17 @@ export async function initialize(
       M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),
       makeTranslation(-anchor[0], -anchor[1], -anchor[2]),
     );
-  const makeRotation = (theta: number, pos: Vector3) =>
+  const makeRotation = (thetaInRad: number, pos: Vector3) =>
     M4x4.mul(
       M4x4.mul(
         makeTranslation(pos[0], pos[1], pos[2]),
         new Float32Array([
-          Math.cos(theta),
-          Math.sin(theta),
+          Math.cos(thetaInRad),
+          Math.sin(thetaInRad),
           0,
           0,
-          -Math.sin(theta),
-          Math.cos(theta),
+          -Math.sin(thetaInRad),
+          Math.cos(thetaInRad),
           0,
           0,
           0,
@@ -259,18 +259,6 @@ export async function initialize(
 
   const setTransforms = (layerName: string, transforms: Matrix4x4) =>
     Store.dispatch(setLayerTransforms(layerName, Array.from(transforms) as Vector16));
-
-  const setScale = (layerName: string, scale: Vector3, anchor: Vector3) => {
-    setTransforms(layerName, makeScale(scale, anchor));
-  };
-
-  const setRotation = (layerName: string, _theta: number, pos: Vector3 | null = null) => {
-    const theta = (_theta / 360) * 2 * Math.PI;
-    if (pos == null) {
-      pos = [3496, 3379, 0];
-    }
-    setTransforms(layerName, makeRotation(theta, pos));
-  };
 
   type Spec =
     | { type: "scale"; args: [Vector3, Vector3] }
@@ -298,9 +286,6 @@ export async function initialize(
   };
 
   const transformer = {
-    setScale,
-    setRotation,
-    makeTranslation,
     setTransforms,
     makeChain,
   };

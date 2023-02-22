@@ -2,13 +2,11 @@ import * as React from "react";
 import _ from "lodash";
 import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
-import InputComponent, {
-  InputComponentCommonProps,
-  InputElementProps,
-} from "oxalis/view/components/input_component";
+import InputComponent from "oxalis/view/components/input_component";
 import * as Utils from "libs/utils";
+import { InputProps } from "antd";
 
-type BaseProps<T> = Omit<InputComponentCommonProps & InputElementProps, "value" | "onChange"> & {
+type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
   value: T | string;
   onChange: (value: T) => void;
   changeOnlyOnBlur?: boolean;
@@ -139,7 +137,6 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
           autoSize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
         }
         {...props}
-        isTextArea={false}
       />
     );
   }
@@ -151,7 +148,7 @@ export class Vector3Input extends BaseVector<Vector3> {
 export class Vector6Input extends BaseVector<Vector6> {
   defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
 }
-type BoundingBoxInputProps = Omit<InputComponentCommonProps & InputElementProps, "value"> & {
+type BoundingBoxInputProps = Omit<InputProps, "value"> & {
   value: ServerBoundingBoxTypeTuple;
   onChange: (arg0: ServerBoundingBoxTypeTuple) => void;
 };

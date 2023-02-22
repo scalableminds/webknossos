@@ -436,6 +436,16 @@ export function* floodFill(): Saga<void> {
     }
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+    yield* put(
+      updateSegmentAction(
+        volumeTracing.activeCellId,
+        {
+          somePosition: seedPosition,
+        },
+        volumeTracing.tracingId,
+      ),
+    );
+
     console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
 
     if (wasBoundingBoxExceeded) {

@@ -26,6 +26,21 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import com.scalableminds.util.tools.TristateOptionJsonHelper
+
+case class DatasetUpdateParameters(
+    description: Option[Option[String]] = Some(None),
+    displayName: Option[Option[String]] = Some(None),
+    sortingKey: Option[Instant],
+    isPublic: Option[Boolean],
+    tags: Option[List[String]],
+    folderId: Option[ObjectId]
+)
+
+object DatasetUpdateParameters extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
+    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
 
 @Api
 class DataSetController @Inject()(userService: UserService,
@@ -244,7 +259,6 @@ class DataSetController @Inject()(userService: UserService,
                   requestingUser,
                   Some(organization),
                   Some(dataStore),
-                  skipResolutions = true,
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
               }
             } yield resultByDataStore
@@ -319,9 +333,45 @@ class DataSetController @Inject()(userService: UserService,
           .clientFor(dataSet)(GlobalAccessContext)
           .flatMap(_.findPositionWithData(organizationName, dataSet, datalayer.name).flatMap(posWithData =>
             bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
-      } yield {
-        Ok("Ok")
-      }
+      } yield Ok("Ok")
+    }
+
+  @ApiOperation(
+    value =
+      """Update information for a dataset.
+Expects:
+ - As JSON object body with all optional keys (missing keys will not be updated, keys set to null will be set to null):
+  - description (string, nullable)
+  - displayName (string, nullable)
+  - sortingKey (timestamp)
+  - isPublic (boolean)
+  - tags (list of string)
+  - folderId (string)
+ - As GET parameters:
+  - organizationName (string): url-safe name of the organization owning the dataset
+  - dataSetName (string): name of the dataset
+""",
+    nickname = "datasetUpdatePartial"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "datasetPartialUpdateInformation",
+                           required = true,
+                           dataTypeClass = classOf[JsObject],
+                           paramType = "body")))
+  def updatePartial(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+                              example = "sample_organization") organizationName: String,
+                    @ApiParam(value = "The name of the dataset") dataSetName: String): Action[DatasetUpdateParameters] =
+    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+      for {
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
+          dataSetName) ~> NOT_FOUND
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- dataSetDAO.updatePartial(dataSet._id, request.body)
+        updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
+        _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
+        js <- dataSetService.publicWrites(updated, Some(request.identity))
+      } yield Ok(js)
     }
 
   @ApiOperation(
@@ -348,9 +398,7 @@ Expects:
                            paramType = "body")))
   def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                        example = "sample_organization") organizationName: String,
-             @ApiParam(value = "The name of the dataset") dataSetName: String,
-             @ApiParam(value = "If true, the resolutions of the dataset layers in the returned json are skipped")
-             skipResolutions: Option[Boolean]): Action[JsValue] =
+             @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags, folderId) =>
@@ -367,13 +415,7 @@ Expects:
             _ <- dataSetDAO.updateTags(dataSet._id, tags)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-            organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
-            dataStore <- dataSetService.dataStoreFor(updated)
-            js <- dataSetService.publicWrites(updated,
-                                              Some(request.identity),
-                                              Some(organization),
-                                              Some(dataStore),
-                                              skipResolutions.getOrElse(false))
+            js <- dataSetService.publicWrites(updated, Some(request.identity))
           } yield Ok(Json.toJson(js))
       }
     }

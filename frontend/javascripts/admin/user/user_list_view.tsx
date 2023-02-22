@@ -18,7 +18,7 @@ import {
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import { location } from "libs/window";
 import type {
   APIUser,
@@ -186,9 +186,8 @@ class UserListView extends React.PureComponent<Props, State> {
     }));
   };
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -200,9 +199,9 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   renderNewUsersAlert() {
-    const now = moment();
+    const now = dayjs();
     const newInactiveUsers = this.state.users.filter(
-      (user) => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
+      (user) => !user.isActive && dayjs.duration(now.diff(user.created)).asDays() <= 14,
     );
     const newInactiveUsersHeader = (
       <React.Fragment>
@@ -416,7 +415,6 @@ class UserListView extends React.PureComponent<Props, State> {
               width: 200,
               float: "right",
             }}
-            onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
             value={this.state.searchQuery}
           />

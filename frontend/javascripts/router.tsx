@@ -58,7 +58,12 @@ import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
-import { APICompoundTypeEnum, APIUser, TracingTypeEnum } from "types/api_flow_types";
+import {
+  APICompoundTypeEnum,
+  APIResolutionRestrictions,
+  APIUser,
+  TracingTypeEnum,
+} from "types/api_flow_types";
 
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
@@ -627,8 +632,8 @@ class ReactRouter extends React.Component<Props> {
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
-                      const { fallbackLayerName } = getParams;
-                      const resolutionRestrictions: { min?: number; max?: number } = {};
+                      const { autoFallbackLayer, fallbackLayerName } = getParams;
+                      const resolutionRestrictions: APIResolutionRestrictions = {};
 
                       if (getParams.minRes !== undefined) {
                         resolutionRestrictions.min = parseInt(getParams.minRes);
@@ -649,6 +654,7 @@ class ReactRouter extends React.Component<Props> {
                       const annotation = await createExplorational(
                         dataset,
                         type,
+                        !!autoFallbackLayer,
                         fallbackLayerName,
                         null,
                         resolutionRestrictions,

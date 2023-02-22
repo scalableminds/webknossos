@@ -1,4 +1,10 @@
-import { FileOutlined, FolderOpenOutlined, SearchOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  SearchOutlined,
+  EditOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { pluralize } from "libs/utils";
@@ -8,10 +14,10 @@ import {
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
-import { APIMaybeUnimportedDataset, Folder } from "types/api_flow_types";
+import { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
-import { SEARCH_RESULTS_LIMIT, useFolderQuery } from "../dataset/queries";
+import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -21,8 +27,8 @@ export function DetailsSidebar({
   activeFolderId,
   setFolderIdForEditModal,
 }: {
-  selectedDatasets: APIMaybeUnimportedDataset[];
-  setSelectedDataset: (ds: APIMaybeUnimportedDataset | null) => void;
+  selectedDatasets: APIDatasetCompact[];
+  setSelectedDataset: (ds: APIDatasetCompact | null) => void;
   datasetCount: number;
   searchQuery: string | null;
   activeFolderId: string | null;
@@ -70,49 +76,71 @@ function getMaybeSelectMessage(datasetCount: number) {
   return datasetCount > 0 ? "Select one to see details." : "";
 }
 
-function DatasetDetails({ selectedDataset }: { selectedDataset: APIMaybeUnimportedDataset }) {
+function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
+  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
+
   return (
     <>
       <h4 style={{ wordBreak: "break-all" }}>
-        <FileOutlined style={{ marginRight: 4 }} />{" "}
+        {isFetching ? (
+          <LoadingOutlined style={{ marginRight: 4 }} />
+        ) : (
+          <FileOutlined style={{ marginRight: 4 }} />
+        )}{" "}
         {selectedDataset.displayName || selectedDataset.name}
       </h4>
-      {selectedDataset.isActive && (
-        <div>
-          <span className="sidebar-label">Voxel Size & Extent</span>
-          <div className="info-tab-block" style={{ marginTop: -3 }}>
-            <table
-              style={{
-                fontSize: 14,
-              }}
-            >
-              <tbody>
-                <VoxelSizeRow dataset={selectedDataset} />
-                <DatasetExtentRow dataset={selectedDataset} />
-              </tbody>
-            </table>
+      <Spin spinning={fullDataset == null}>
+        {selectedDataset.isActive && (
+          <div>
+            <div className="sidebar-label">Voxel Size & Extent</div>
+            {fullDataset && (
+              <div className="info-tab-block" style={{ marginTop: -3 }}>
+                <table
+                  style={{
+                    fontSize: 14,
+                  }}
+                >
+                  <tbody>
+                    <VoxelSizeRow dataset={fullDataset} />
+                    <DatasetExtentRow dataset={fullDataset} />
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </div>
-      )}
-      {selectedDataset.description && (
+        )}
+
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Description</span>
-          <div>{selectedDataset.description}</div>
+          <div className="sidebar-label">Description</div>
+          <div>{fullDataset?.description}</div>
         </div>
-      )}
-      <div style={{ marginBottom: 4 }}>
-        <span className="sidebar-label">Access Permissions</span>
-        <br />
-        <TeamTags dataset={selectedDataset} emptyValue="Administrators & Dataset Managers" />
-      </div>
-      <div style={{ marginBottom: 4 }}>
-        <span className="sidebar-label">Layers</span>
-        <br /> <DatasetLayerTags dataset={selectedDataset} />
-      </div>
+
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Access Permissions</div>
+
+          {fullDataset && (
+            <TeamTags dataset={fullDataset} emptyValue="Administrators & Dataset Managers" />
+          )}
+        </div>
+
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Layers</div>
+          {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
+        </div>
+
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Datastore</div>
+          {fullDataset && (
+            <Tag color={stringToColor(fullDataset.dataStore.name)}>
+              {fullDataset.dataStore.name}
+            </Tag>
+          )}
+        </div>
+      </Spin>
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>
-          <span className="sidebar-label">Tags</span>
+          <div className="sidebar-label">Tags</div>
           <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
         </div>
       ) : null}
@@ -124,7 +152,7 @@ function DatasetsDetails({
   selectedDatasets,
   datasetCount,
 }: {
-  selectedDatasets: APIMaybeUnimportedDataset[];
+  selectedDatasets: APIDatasetCompact[];
   datasetCount: number;
 }) {
   return (
@@ -195,8 +223,7 @@ function FolderDetails({
             </Tooltip>
             . {maybeSelectMsg}
           </p>
-          <span className="sidebar-label">Access Permissions</span>
-          <br />
+          <div className="sidebar-label">Access Permissions</div>
           <FolderTeamTags folder={folder} />
         </div>
       ) : error ? (

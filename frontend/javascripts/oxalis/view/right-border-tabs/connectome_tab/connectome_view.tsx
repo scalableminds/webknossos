@@ -1,4 +1,4 @@
-import { Alert, Empty, Input, Tooltip } from "antd";
+import { Alert, Empty, Input, Tooltip, TreeProps } from "antd";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -653,22 +653,11 @@ class ConnectomeView extends React.Component<Props, State> {
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
   };
 
-  handleCheck = (
-    {
-      checked,
-    }: {
-      checked: Array<string>;
-    },
-    {
-      node,
-      checked: isChecked,
-    }: {
-      node: TreeNode;
-      checked: boolean;
-    },
-  ) => {
+  handleCheck: TreeProps<TreeNode>["onCheck"] = (checked, { node, checked: isChecked }) => {
     // The trailing ; is important to avoid matching 1234 if the id is 12
     const checkedNodeKeyPrefix = `segment;${node.data.id};`;
+    // @ts-ignore antd's <Tree> component uses objects instead of simple string if "checkable" prop is present
+    const checkedKeys = checked.checked as string[];
 
     if (isChecked) {
       // Find out which keys should also be checked, because they represent the same agglomerate
@@ -681,20 +670,19 @@ class ConnectomeView extends React.Component<Props, State> {
         ),
       );
       this.setState({
-        checkedKeys: [...checked, ...additionalCheckedKeys],
+        checkedKeys: [...checkedKeys, ...additionalCheckedKeys],
       });
     } else {
       // Find out which keys should also be unchecked, because they represent the same agglomerate
-      const checkedKeys = checked.filter((key) => !key.startsWith(checkedNodeKeyPrefix));
       this.setState({
-        checkedKeys,
+        checkedKeys: checkedKeys.filter((key) => !key.startsWith(checkedNodeKeyPrefix)),
       });
     }
   };
 
-  handleExpand = (expandedKeys: Array<string>) => {
+  handleExpand: TreeProps<TreeNode>["onExpand"] = (expandedKeys) => {
     this.setState({
-      expandedKeys,
+      expandedKeys: expandedKeys as string[],
     });
   };
 

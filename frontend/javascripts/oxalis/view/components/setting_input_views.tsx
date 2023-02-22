@@ -407,8 +407,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     });
   };
 
-  handleChange = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
@@ -500,8 +499,8 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   placeholder="Bounding Box Name"
                   size="small"
                   value={name}
-                  onChange={(evt: React.SyntheticEvent) => {
-                    this.setState({ name: (evt.target as HTMLInputElement).value });
+                  onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+                    this.setState({ name: evt.target.value });
                   }}
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
@@ -591,8 +590,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
     disabled: false,
   };
 
-  onColorChange = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   };
 

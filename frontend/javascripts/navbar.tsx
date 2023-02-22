@@ -160,16 +160,14 @@ function getCollapsibleMenuTitle(
   title: string,
   icon: MenuItemType["icon"],
   collapse: boolean,
-  isHiddenOnSmallScreens: boolean = false,
-) {
-  const cssClass = collapse && isHiddenOnSmallScreens ? "hide-on-small-screen" : "";
+): MenuItemType["label"] {
   return collapse ? (
-    <span className={cssClass}>{icon}</span>
+    icon
   ) : (
-    <span className={cssClass}>
+    <>
       {icon}
       {title}
-    </span>
+    </>
   );
 }
 
@@ -228,7 +226,8 @@ function getAdministrationSubMenu(
 
   return {
     key: "adminMenu",
-    label: getCollapsibleMenuTitle("Administration", <TeamOutlined />, collapse, true),
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle("Administration", <TeamOutlined />, collapse),
     children: adminstrationSubMenuItems,
   };
 }
@@ -236,7 +235,8 @@ function getAdministrationSubMenu(
 function getStatisticsSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "statisticMenu",
-    label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse, true),
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse),
     children: [
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       {
@@ -297,7 +297,7 @@ function getHelpSubMenu(
       ? `(Server is currently at ${polledVersion}!)`
       : "";
 
-  const helSubMenuItems: ItemType[] = [
+  const helpSubMenuItems: ItemType[] = [
     {
       key: "user-documentation",
       label: (
@@ -340,14 +340,14 @@ function getHelpSubMenu(
   ];
 
   if (isAuthenticated)
-    helSubMenuItems.push({
+    helpSubMenuItems.push({
       key: "get_help",
       onClick: openHelpModal,
       label: "Ask a Question",
     });
 
   if (features().isDemoInstance) {
-    helSubMenuItems.push({
+    helpSubMenuItems.push({
       key: "contact",
       label: (
         <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
@@ -356,7 +356,7 @@ function getHelpSubMenu(
       ),
     });
   } else {
-    helSubMenuItems.push({
+    helpSubMenuItems.push({
       key: "credits",
       label: (
         <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
@@ -367,7 +367,7 @@ function getHelpSubMenu(
   }
 
   if (version !== "")
-    helSubMenuItems.push({
+    helpSubMenuItems.push({
       key: "version",
       disabled: true,
       label: `Version: ${version} ${polledVersionString}`,
@@ -376,14 +376,15 @@ function getHelpSubMenu(
   return {
     key: HELP_MENU_KEY,
     label: getCollapsibleMenuTitle("Help", <QuestionCircleOutlined />, collapse),
-    children: helSubMenuItems,
+    children: helpSubMenuItems,
   };
 }
 
 function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "dashboardMenu",
-    label: getCollapsibleMenuTitle("Dashboard", <HomeOutlined />, collapse, true),
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle("Dashboard", <HomeOutlined />, collapse),
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
       { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },

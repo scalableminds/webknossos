@@ -27,6 +27,7 @@ import {
   FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
   registerLabelPointAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { api } from "oxalis/singletons";
@@ -504,6 +505,15 @@ function* finalizeQuickSelect(
   );
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
+  yield* put(
+    updateSegmentAction(
+      volumeTracing.activeCellId,
+      {
+        somePosition: boundingBoxMag1.getCenter(),
+      },
+      volumeTracing.tracingId,
+    ),
+  );
 }
 
 function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {

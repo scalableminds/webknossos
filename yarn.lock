@@ -851,10 +851,10 @@
     exenv "^1.2.2"
     prop-types "^15.6.2"
 
-"@shaderfrog/glsl-parser@^0.2.2":
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/@shaderfrog/glsl-parser/-/glsl-parser-0.2.2.tgz#71c73dae290df4108001ad94fdba61f5ec7da836"
-  integrity sha512-OLLrUo3btylw+fRZJfVnBQYbzbUzf8s3jIEn/x6kfVNQxFxhNOn0AsX+k0bxCaG/XVkSxOC3IyU7wTC31SJSLw==
+"@shaderfrog/glsl-parser@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@shaderfrog/glsl-parser/-/glsl-parser-0.3.0.tgz#1cd116e915186d3bfaaf64a671a3f0c21597bbbd"
+  integrity sha512-83sY1vjI/ZJmo4KbHnENepxz3Eo8+oKfZQKY5qoilGQfWcpRyoVnZJan3UgBNoV6M/Czb3ynAWEZmh9KPc9J/g==
 
 "@sindresorhus/is@^0.14.0":
   version "0.14.0"

@@ -6,10 +6,12 @@ import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
+  getColorLayers,
   getDataLayers,
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
+  getResolutionByMax,
   getResolutionInfo,
   getResolutions,
   SmallerOrHigherInfo,
@@ -372,33 +374,46 @@ export function getValidTaskZoomRange(
 ): [number, number] {
   const defaultRange = [baseDatasetViewConfiguration.zoom.minimum, Infinity] as Vector2;
   const { resolutionRestrictions } = state.tracing.restrictions;
+  // We use the first color layer as a heuristic to check the validity of the zoom range,
+  // as we don't know to which layer a restriction is meant to be applied.
+  // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
+  const firstColorLayerNameMaybe = _.first(getColorLayers(state.dataset))?.name;
 
-  return defaultRange;
+  if (!respectRestriction || !firstColorLayerNameMaybe) {
+    return defaultRange;
+  }
 
-  // todo: the resolution restrictions need to be stored per layer (backend + frontend).
-  // if (!respectRestriction) {
-  //   return defaultRange;
-  // }
+  const firstColorLayerName = firstColorLayerNameMaybe;
 
-  // function getMinMax(value: number | undefined, isMin: boolean) {
-  //   const idx = isMin ? 0 : 1;
-  //   return (
-  //     (value == null
-  //       ? defaultRange[idx]
-  //       : // If the value is defined, but doesn't match any resolution, we default to the defaultRange values
-  //         getValidZoomRangeForResolution(state, getResolutionByMax(state.dataset, value))[idx]) ||
-  //     defaultRange[idx]
-  //   );
-  // }
+  function getMinMax(value: number | undefined, isMin: boolean) {
+    const idx = isMin ? 0 : 1;
+    return (
+      (value == null
+        ? defaultRange[idx]
+        : // If the value is defined, but doesn't match any resolution, we default to the defaultRange values
+          getValidZoomRangeForResolution(
+            state,
+            firstColorLayerName,
+            getResolutionByMax(state.dataset, value),
+          )[idx]) || defaultRange[idx]
+    );
+  }
 
-  // const min = getMinMax(resolutionRestrictions.min, true);
-  // const max = getMinMax(resolutionRestrictions.max, false);
-  // return [min, max];
+  const min = getMinMax(resolutionRestrictions.min, true);
+  const max = getMinMax(resolutionRestrictions.max, false);
+  return [min, max];
 }
+
 export function isMagRestrictionViolated(state: OxalisState): boolean {
   const { resolutionRestrictions } = state.tracing.restrictions;
-  // todo: the resolution restrictions need to be stored per layer (backend + frontend).
-  const zoomStep = 0; // getRequestLogZoomStep(state);
+  // We use the first color layer as a heuristic to check the validity of the zoom range,
+  // as we don't know to which layer a restriction is meant to be applied.
+  // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
+  const firstColorLayerName = _.first(getColorLayers(state.dataset))?.name;
+  if (!firstColorLayerName) {
+    return false;
+  }
+  const zoomStep = getActiveMagIndexForLayer(state, firstColorLayerName);
 
   if (resolutionRestrictions.min != null && zoomStep < Math.log2(resolutionRestrictions.min)) {
     return true;

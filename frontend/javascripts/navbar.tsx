@@ -48,10 +48,11 @@ import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
 import messages from "messages";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { MenuClickEventHandler } from "rc-menu/lib/interface";
 
-const { SubMenu } = Menu;
 const { Header } = Layout;
 
 const HELP_MENU_KEY = "helpMenu";
@@ -132,24 +133,6 @@ function useOlvyUnreadReleasesCount(activeUser: APIUser) {
   return unreadCount;
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'children' implicitly has an 'any'... Remove this comment to see the full error message
-function NavbarMenuItem({ children, ...props }) {
-  return (
-    <Menu
-      mode="horizontal"
-      style={{
-        lineHeight: "48px",
-      }}
-      theme="dark"
-      subMenuCloseDelay={subMenuCloseDelay}
-      triggerSubMenuAction="click"
-      {...props}
-    >
-      {children}
-    </Menu>
-  );
-}
-
 function UserInitials({
   activeUser,
   isMultiMember,
@@ -187,172 +170,178 @@ function UserInitials({
   );
 }
 
-function CollapsibleMenuTitle({
-  title,
-  collapse,
-  icon,
-}: {
-  title: string;
-  collapse: boolean;
-  icon: any;
-}) {
-  if (collapse) {
-    return <span title={title}>{icon}</span>;
-  } else {
-    return (
-      <span>
-        {icon}
-        {title}
-      </span>
-    );
-  }
-}
-
-function AdministrationSubMenu({
-  collapse,
-  isAdmin,
-  organization,
-  ...menuProps
-}: { collapse: boolean; isAdmin: boolean; organization: string } & SubMenuProps) {
-  return (
-    <SubMenu
-      className={collapse ? "hide-on-small-screen" : ""}
-      key="adminMenu"
-      title={
-        <CollapsibleMenuTitle title="Administration" icon={<TeamOutlined />} collapse={collapse} />
-      }
-      {...menuProps}
-    >
-      <Menu.Item key="/users">
-        <Link to="/users">Users</Link>
-      </Menu.Item>
-      <Menu.Item key="/teams">
-        <Link to="/teams">Teams</Link>
-      </Menu.Item>
-      <PricingEnforcedMenuItem key="/projects" requiredPricingPlan={PricingPlanEnum.Team}>
-        <Link to="/projects">Projects</Link>
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem key="/tasks" requiredPricingPlan={PricingPlanEnum.Team}>
-        <Link to="/tasks">Tasks</Link>
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem key="/taskTypes" requiredPricingPlan={PricingPlanEnum.Team}>
-        <Link to="/taskTypes">Task Types</Link>
-      </PricingEnforcedMenuItem>
-      {features().jobsEnabled && (
-        <Menu.Item key="/jobs">
-          <Link to="/jobs">Processing Jobs</Link>
-        </Menu.Item>
-      )}
-      <Menu.Item key="/scripts">
-        <Link to="/scripts">Scripts</Link>
-      </Menu.Item>
-      {isAdmin && (
-        <Menu.Item key="/organization">
-          <Link to={`/organizations/${organization}`}>Organization</Link>
-        </Menu.Item>
-      )}
-      {features().voxelyticsEnabled && (
-        <Menu.Item key="/workflows">
-          <Link to="/workflows">Voxelytics</Link>
-        </Menu.Item>
-      )}
-    </SubMenu>
+function getCollapsibleMenuTitle(
+  title: string,
+  icon: MenuItemType["icon"],
+  collapse: boolean,
+): MenuItemType["label"] {
+  return collapse ? (
+    <Tooltip title={title}>{icon}</Tooltip>
+  ) : (
+    <>
+      {icon}
+      {title}
+    </>
   );
 }
 
-function StatisticsSubMenu({ collapse, ...menuProps }: { collapse: boolean } & SubMenuProps) {
-  return (
-    <SubMenu
-      className={collapse ? "hide-on-small-screen" : ""}
-      key="statisticMenu"
-      title={
-        <CollapsibleMenuTitle title="Statistics" icon={<BarChartOutlined />} collapse={collapse} />
-      }
-      {...menuProps}
-    >
-      <Menu.Item key="/statistics">
-        <Link to="/statistics">Overview</Link>
-      </Menu.Item>
-      <PricingEnforcedMenuItem
-        key="/reports/timetracking"
-        requiredPricingPlan={PricingPlanEnum.Power}
-      >
-        <Link to="/reports/timetracking">Time Tracking</Link>
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem
-        key="/reports/projectProgress"
-        requiredPricingPlan={PricingPlanEnum.Team}
-      >
-        <Link to="/reports/projectProgress">Project Progress</Link>
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem key="/reports/openTasks" requiredPricingPlan={PricingPlanEnum.Team}>
-        <Link to="/reports/openTasks">Open Tasks</Link>
-      </PricingEnforcedMenuItem>
-    </SubMenu>
-  );
+function getAdministrationSubMenu(
+  collapse: boolean,
+  isAdmin: boolean,
+  organization: string,
+): SubMenuType {
+  const adminstrationSubMenuItems = [
+    { key: "/users", label: <Link to="/users">Users</Link> },
+    { key: "/teams", label: <Link to="/teams">Teams</Link> },
+    {
+      key: "/projects",
+      label: (
+        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+          <Link to="/projects">Projects</Link>
+        </PricingEnforcedSpan>
+      ),
+    },
+    {
+      key: "/tasks",
+      label: (
+        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+          <Link to="/tasks">Tasks</Link>
+        </PricingEnforcedSpan>
+      ),
+    },
+    {
+      key: "/taskTypes",
+      label: (
+        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+          <Link to="/taskTypes">Task Types</Link>
+        </PricingEnforcedSpan>
+      ),
+    },
+    { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+  ];
+
+  if (features().jobsEnabled)
+    adminstrationSubMenuItems.push({
+      key: "/jobs",
+      label: <Link to="/jobs">Processing Jobs</Link>,
+    });
+
+  if (isAdmin)
+    adminstrationSubMenuItems.push({
+      key: "/organization",
+      label: <Link to={`/organizations/${organization}`}>Organization</Link>,
+    });
+
+  if (features().voxelyticsEnabled)
+    adminstrationSubMenuItems.push({
+      key: "/workflows",
+      label: <Link to="/workflows">Voxelytics</Link>,
+    });
+
+  return {
+    key: "adminMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle("Administration", <TeamOutlined />, collapse),
+    children: adminstrationSubMenuItems,
+  };
 }
 
-function getTimeTrackingMenu({ collapse }: { collapse: boolean }) {
-  return (
-    <Menu.Item key="timeStatisticMenu">
+function getStatisticsSubMenu(collapse: boolean): SubMenuType {
+  return {
+    key: "statisticMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse),
+    children: [
+      { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
+      {
+        key: "/reports/timetracking",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Power}>
+            <Link to="/reports/timetracking">Time Tracking</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/reports/projectProgress",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/reports/projectProgress">Project Progress</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/reports/openTasks",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/reports/openTasks">Open Tasks</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+    ],
+  };
+}
+
+function getTimeTrackingMenu(collapse: boolean): MenuItemType {
+  return {
+    key: "timeStatisticMenu",
+
+    label: (
       <Link
         to="/reports/timetracking"
         style={{
           fontWeight: 400,
         }}
       >
-        <CollapsibleMenuTitle
-          title="Time Tracking"
-          icon={<BarChartOutlined />}
-          collapse={collapse}
-        />
+        {getCollapsibleMenuTitle("Time Tracking", <BarChartOutlined />, collapse)}
       </Link>
-    </Menu.Item>
-  );
+    ),
+  };
 }
 
-function HelpSubMenu({
-  isAuthenticated,
-  isAdminOrTeamManager,
-  version,
-  polledVersion,
-  collapse,
-  ...other
-}: {
-  isAuthenticated: boolean;
-  isAdminOrTeamManager: boolean;
-  version: string | null;
-  polledVersion: string | null;
-  collapse: boolean;
-} & SubMenuProps) {
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+function getHelpSubMenu(
+  version: string | null,
+  polledVersion: string | null,
+  isAuthenticated: boolean,
+  isAdminOrTeamManager: boolean,
+  collapse: boolean,
+  openHelpModal: MenuClickEventHandler,
+) {
+  const polledVersionString =
+    polledVersion != null && polledVersion !== version
+      ? `(Server is currently at ${polledVersion}!)`
+      : "";
 
-  return (
-    <SubMenu
-      title={
-        <CollapsibleMenuTitle title="Help" icon={<QuestionCircleOutlined />} collapse={collapse} />
-      }
-      {...other}
-    >
-      <Menu.Item key="user-documentation">
+  const helpSubMenuItems: ItemType[] = [
+    {
+      key: "user-documentation",
+      label: (
         <a target="_blank" href="https://docs.webknossos.org" rel="noreferrer noopener">
           User Documentation
         </a>
-      </Menu.Item>
-      {(!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
-      features().discussionBoard !== false ? (
-        <Menu.Item key="discussion-board">
-          <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
-            Community Support
-          </a>
-        </Menu.Item>
-      ) : null}
-      <Menu.Item key="frontend-api">
+      ),
+    },
+    (!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
+    features().discussionBoard !== false
+      ? {
+          key: "discussion-board",
+          label: (
+            <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
+              Community Support
+            </a>
+          ),
+        }
+      : null,
+    {
+      key: "frontend-api",
+      label: (
         <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
           Frontend API Documentation
         </a>
-      </Menu.Item>
-      <Menu.Item key="keyboard-shortcuts">
+      ),
+    },
+    {
+      key: "keyboard-shortcuts",
+      label: (
         <a
           target="_blank"
           href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
@@ -360,63 +349,65 @@ function HelpSubMenu({
         >
           Keyboard Shortcuts
         </a>
-      </Menu.Item>
-      {isAuthenticated ? (
-        <>
-          <Menu.Item key="get_help" onClick={() => setIsHelpModalOpen(true)}>
-            Ask a Question
-          </Menu.Item>
-          <HelpModal
-            isModalOpen={isHelpModalOpen}
-            onCancel={() => setIsHelpModalOpen(false)}
-            centeredLayout
-          />
-        </>
-      ) : null}
-      {features().isDemoInstance ? (
-        <Menu.Item key="contact">
-          <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
-            Email Us
-          </a>
-        </Menu.Item>
-      ) : (
-        <Menu.Item key="credits">
-          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
-            About & Credits
-          </a>
-        </Menu.Item>
-      )}
-      {version !== "" ? (
-        <Menu.Item disabled key="version">
-          Version: {version}
-          {polledVersion != null && polledVersion !== version
-            ? ` (Server is currently at ${polledVersion}!)`
-            : null}
-        </Menu.Item>
-      ) : null}
-    </SubMenu>
-  );
+      ),
+    },
+  ];
+
+  if (isAuthenticated)
+    helpSubMenuItems.push({
+      key: "get_help",
+      onClick: openHelpModal,
+      label: "Ask a Question",
+    });
+
+  if (features().isDemoInstance) {
+    helpSubMenuItems.push({
+      key: "contact",
+      label: (
+        <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+          Email Us
+        </a>
+      ),
+    });
+  } else {
+    helpSubMenuItems.push({
+      key: "credits",
+      label: (
+        <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+          About & Credits
+        </a>
+      ),
+    });
+  }
+
+  if (version !== "")
+    helpSubMenuItems.push({
+      key: "version",
+      disabled: true,
+      label: `Version: ${version} ${polledVersionString}`,
+    });
+
+  return {
+    key: HELP_MENU_KEY,
+    label: getCollapsibleMenuTitle("Help", <QuestionCircleOutlined />, collapse),
+    children: helpSubMenuItems,
+  };
 }
 
-function DashboardSubMenu({ collapse, ...other }: { collapse: boolean } & SubMenuProps) {
-  return (
-    <SubMenu
-      className={collapse ? "hide-on-small-screen" : ""}
-      key="dashboardMenu"
-      title={<CollapsibleMenuTitle title="Dashboard" icon={<HomeOutlined />} collapse={collapse} />}
-      {...other}
-    >
-      <Menu.Item key="/dashboard/datasets">
-        <Link to="/dashboard/datasets">Datasets</Link>
-      </Menu.Item>
-      <Menu.Item key="/dashboard/tasks">
-        <Link to="/dashboard/tasks">Tasks</Link>
-      </Menu.Item>
-      <Menu.Item key="/dashboard/annotations">
-        <Link to="/dashboard/annotations">Annotations</Link>
-      </Menu.Item>
-    </SubMenu>
-  );
+function getDashboardSubMenu(collapse: boolean): SubMenuType {
+  return {
+    key: "dashboardMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle("Dashboard", <HomeOutlined />, collapse),
+    children: [
+      { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
+      { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
+      {
+        key: "/dashboard/annotations",
+        label: <Link to="/dashboard/annotations">Annotations</Link>,
+      },
+    ],
+  };
 }
 
 function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
@@ -460,7 +451,6 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-  ...other
 }: { activeUser: APIUser; handleLogout: (event: React.SyntheticEvent) => void } & SubMenuProps) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -532,73 +522,89 @@ function LoggedInAvatar({
 
   const isMultiMember = switchableOrganizations.length > 0;
   return (
-    <NavbarMenuItem>
-      <SubMenu
-        key="loggedMenu"
-        title={<UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />}
-        style={{
-          padding: 0,
-        }}
-        className="sub-menu-without-padding vertical-center-flex-fix"
-        {...other}
-      >
-        <Menu.Item disabled key="userName">
-          {`${firstName} ${lastName}`}
-        </Menu.Item>
-        <Menu.Item disabled key="organization">
-          {orgDisplayName}
-        </Menu.Item>
-        {activeOrganization && Utils.isUserAdmin(activeUser) ? (
-          <Menu.Item key="manage-organization">
-            <Link to={`/organizations/${activeOrganization.name}`}>Manage Organization</Link>
-          </Menu.Item>
-        ) : null}
-        {isMultiMember ? (
-          /* The explicit width is a workaround for a layout bug (probably in antd) */
-          <Menu.SubMenu
-            title="Switch Organization"
-            style={{
-              width: 180,
-            }}
-          >
-            {switchableOrganizations.map((org) => (
-              <Menu.Item key={org.name} onClick={() => switchTo(org)}>
-                {org.displayName || org.name}
-              </Menu.Item>
-            ))}
-          </Menu.SubMenu>
-        ) : null}
-        <Menu.Item key="resetpassword">
-          <Link to="/auth/changePassword">Change Password</Link>
-        </Menu.Item>
-        <Menu.Item key="token">
-          <Link to="/auth/token">Auth Token</Link>
-        </Menu.Item>
-        <Menu.SubMenu title="Theme" key="theme">
-          {[
-            ["auto", "System-default"],
-            ["light", "Light"],
-            ["dark", "Dark"],
-          ].map(([key, label]) => (
-            <Menu.Item
-              key={key}
-              onClick={() => {
-                // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-                setSelectedTheme(key);
-              }}
-            >
-              {selectedTheme === key && <CheckOutlined />} {label}
-            </Menu.Item>
-          ))}
-        </Menu.SubMenu>
-
-        <Menu.Item key="logout">
-          <a href="/" onClick={handleLogout}>
-            Logout
-          </a>
-        </Menu.Item>
-      </SubMenu>
-    </NavbarMenuItem>
+    <Menu
+      mode="horizontal"
+      style={{
+        lineHeight: "48px",
+      }}
+      theme="dark"
+      subMenuCloseDelay={subMenuCloseDelay}
+      triggerSubMenuAction="click"
+      items={[
+        {
+          key: "loggedMenu",
+          label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
+          style: {
+            padding: 0,
+          },
+          children: [
+            {
+              key: "userName",
+              label: `${firstName} ${lastName}`,
+              disabled: true,
+            },
+            {
+              key: "organization",
+              label: orgDisplayName,
+              disabled: true,
+            },
+            activeOrganization && Utils.isUserAdmin(activeUser)
+              ? {
+                  key: "manage-organization",
+                  label: (
+                    <Link to={`/organizations/${activeOrganization.name}`}>
+                      Manage Organization
+                    </Link>
+                  ),
+                }
+              : null,
+            isMultiMember
+              ? {
+                  key: "switch-organization",
+                  label: "Switch Organization",
+                  children: switchableOrganizations.map((org) => ({
+                    key: org.name,
+                    onClick: () => switchTo(org),
+                    label: org.displayName || org.name,
+                  })),
+                }
+              : null,
+            {
+              key: "resetpassword",
+              label: <Link to="/auth/changePassword">Change Password</Link>,
+            },
+            { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
+            {
+              key: "theme",
+              label: "Theme",
+              children: [
+                ["auto", "System-default"],
+                ["light", "Light"],
+                ["dark", "Dark"],
+              ].map(([key, label]) => {
+                return {
+                  key,
+                  label: label,
+                  icon: selectedTheme === key ? <CheckOutlined /> : null,
+                  onClick: () => {
+                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
+                    setSelectedTheme(key);
+                  },
+                };
+              }),
+            },
+            {
+              key: "logout",
+              label: (
+                <a href="/" onClick={handleLogout}>
+                  Logout
+                </a>
+              ),
+            },
+          ],
+        },
+      ]}
+    />
   );
 }
 
@@ -700,6 +706,8 @@ function Navbar({
   const version = useFetch(getAndTrackVersion, null, []);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [polledVersion, setPolledVersion] = useState<string | null>(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
   useInterval(
     async () => {
       if (isHelpMenuOpen) {
@@ -709,6 +717,7 @@ function Navbar({
     2000,
     isHelpMenuOpen,
   );
+
   const navbarStyle: Record<string, any> = {
     padding: 0,
     overflowX: "auto",
@@ -727,30 +736,35 @@ function Navbar({
     activeUser != null ? Utils.isUserAdminOrTeamManager(activeUser) : false;
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
-  const menuItems = [];
+  const menuItems: ItemType[] = [
+    {
+      key: "0",
+      label: (
+        <Link
+          to="/dashboard"
+          style={{
+            fontWeight: 400,
+            verticalAlign: "middle",
+          }}
+        >
+          {getCollapsibleMenuTitle("WEBKNOSSOS", <span className="logo" />, collapseAllNavItems)}
+        </Link>
+      ),
+    },
+  ];
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
-    menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
+    menuItems.push(getDashboardSubMenu(collapseAllNavItems));
 
     if (isAdminOrTeamManager && activeUser != null) {
       menuItems.push(
-        <AdministrationSubMenu
-          key="admin"
-          collapse={collapseAllNavItems}
-          isAdmin={isAdmin}
-          organization={activeUser.organization}
-        />,
+        getAdministrationSubMenu(collapseAllNavItems, isAdmin, activeUser.organization),
       );
-      menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);
+      menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
     } else {
-      // JSX can not be used here directly as it adds a item between the menu and the actual menu item and this leads to a bug.
-      menuItems.push(
-        getTimeTrackingMenu({
-          collapse: collapseAllNavItems,
-        }),
-      );
+      menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
     if (othersMayEdit && !allowUpdate) {
@@ -773,19 +787,20 @@ function Navbar({
   }
 
   menuItems.push(
-    <HelpSubMenu
-      key={HELP_MENU_KEY}
-      version={version}
-      polledVersion={polledVersion}
-      isAdminOrTeamManager={isAdminOrTeamManager}
-      isAuthenticated={_isAuthenticated}
-      collapse={collapseAllNavItems}
-    />,
+    getHelpSubMenu(
+      version,
+      polledVersion,
+      _isAuthenticated,
+      isAdminOrTeamManager,
+      collapseAllNavItems,
+      () => setIsHelpModalOpen(true),
+    ),
   );
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
   const separator = <div className="navbar-separator" />;
+
   return (
     <Header
       style={navbarStyle}
@@ -806,28 +821,15 @@ function Navbar({
         // There is a bug where the last menu entry disappears behind the overflow indicator
         // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
         disabledOverflow
-      >
-        {[
-          <Menu.Item key="0">
-            <Link
-              to="/dashboard"
-              style={{
-                fontWeight: 400,
-                verticalAlign: "middle",
-              }}
-            >
-              <CollapsibleMenuTitle
-                title="WEBKNOSSOS"
-                icon={<span className="logo" />}
-                collapse={collapseAllNavItems}
-              />
-            </Link>
-          </Menu.Item>,
-        ].concat(menuItems)}
-      </Menu>
+        items={menuItems}
+      />
 
       {isInAnnotationView ? separator : null}
-
+      <HelpModal
+        isModalOpen={isHelpModalOpen}
+        onCancel={() => setIsHelpModalOpen(false)}
+        centeredLayout
+      />
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{

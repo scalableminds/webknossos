@@ -35,6 +35,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed basic auth for exploring remote http datasets. [#6866](https://github.com/scalableminds/webknossos/pull/6866)
 - Fixed the layouting in the connectome tab. [#6864](https://github.com/scalableminds/webknossos/pull/6864)
 - Fixed that the quick-select and floodfill tool didn't update the segment list. [#6867](https://github.com/scalableminds/webknossos/pull/6867)
+- Fixed deprecation warnings for antd' <Menu> component in Navbar. [#6860](https://github.com/scalableminds/webknossos/pull/6860)
 
 ### Removed
 - Removed the old Datasets tab in favor of the Dataset Folders tab. [#6834](https://github.com/scalableminds/webknossos/pull/6834)

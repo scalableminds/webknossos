@@ -216,12 +216,12 @@ function getMaximumZoomForAllResolutionsFromStore(
     state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
     layerMatrix,
     // Theoretically, the following parameter should be state.flycam.currentMatrix.
-    // However, that matrix changes on each move and for the ortho mode, the difference
-    // is only a translation which can be ignored for gauging the maximum zoom here.
-    // Todo: This differs for oblique and flight mode where the matrix can also cause
-    // a rotation.
-    // Todo: Maybe change the strategy to store/cache these values directly in the store and only
-    // update them when critical actions are triggered?
+    // However, that matrix changes on each move which means that the raanges would need
+    // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
+    // should only differ in its translation which can be ignored for gauging the maximum
+    // zoom here.
+    // However, for oblique and flight mode this is not really accurate. As a heuristic,
+    // this already proved to be fine, though.
     dummyFlycamMatrix,
   );
 }

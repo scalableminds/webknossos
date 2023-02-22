@@ -35,6 +35,8 @@ import { CuckooTableVec5 } from "./cuckoo_table_vec5";
 import { Model } from "oxalis/singletons";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
+// 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
+const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
 
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
 const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
@@ -44,7 +46,9 @@ const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 
-const getLookUpCuckooTable = memoizeOne(() => new CuckooTableVec5(256));
+const getSharedLookUpCuckooTable = memoizeOne(
+  () => new CuckooTableVec5(LOOKUP_CUCKOO_TEXTURE_WIDTH),
+);
 
 function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
@@ -169,7 +173,7 @@ export default class LayerRenderingManager {
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 
-    this.textureBucketManager.setupDataTextures(bytes, getLookUpCuckooTable(), layerIndex);
+    this.textureBucketManager.setupDataTextures(bytes, getSharedLookUpCuckooTable(), layerIndex);
     shaderEditor.addBucketManagers(this.textureBucketManager);
 
     if (this.cube.isSegmentation) {
@@ -186,8 +190,8 @@ export default class LayerRenderingManager {
     return this.textureBucketManager.getTextures();
   }
 
-  getLookUpCuckooTable() {
-    return getLookUpCuckooTable();
+  getSharedLookUpCuckooTable() {
+    return getSharedLookUpCuckooTable();
   }
 
   updateDataTextures(position: Vector3, logZoomStep: number): void {

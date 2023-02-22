@@ -43,6 +43,7 @@ import { mergeVertices } from "libs/BufferGeometryUtils";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
 
 const CUBE_COLOR = 0x999999;
+const LAYER_CUBE_COLOR = 0xffff99;
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -522,7 +523,6 @@ class SceneController {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
-    // todo: this method is called very frequently. optimize?
 
     const magIndices = getActiveMagIndicesForLayers(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
@@ -605,12 +605,10 @@ class SceneController {
     this.layerBoundingBoxes = layers.map((layer) => {
       const boundingBox = getLayerBoundingBox(dataset, layer.name);
       const { min, max } = boundingBox;
-      // todo: use layer color? (avoid white on white or black on black, though)
-      const bbColor: Vector3 = [0.5 * 255, 0.5 * 255, 0.5 * 255];
       const bbCube = new Cube({
         min,
         max,
-        color: Utils.rgbToInt(bbColor),
+        color: LAYER_CUBE_COLOR,
         showCrossSections: false,
         isHighlighted: false,
       });

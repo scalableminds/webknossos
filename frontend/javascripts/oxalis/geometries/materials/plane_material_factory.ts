@@ -267,7 +267,7 @@ class PlaneMaterialFactory {
       const { name } = dataLayer;
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
       sharedLookUpTexture = lookUpTexture;
-      sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getLookUpCuckooTable();
+      sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
       const layerName = sanitizeName(name);
       this.uniforms[`${layerName}_textures`] = {
         value: dataTextures,

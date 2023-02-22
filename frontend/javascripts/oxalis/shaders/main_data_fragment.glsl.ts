@@ -199,7 +199,6 @@ void main() {
       // Get grayscale value for <%= name %>
       color_value =
         getMaybeFilteredColorOrFallback(
-          lookup_texture,
           <%= formatNumberAsGLSLFloat(layerIndex) %>,
           <%= name %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,

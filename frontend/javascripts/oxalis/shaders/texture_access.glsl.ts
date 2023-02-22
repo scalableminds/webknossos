@@ -39,15 +39,6 @@ export const getRgbaAtIndex: ShaderModule = {
           )
         ).rgba;
     }
-
-    uvec4 getUnsignedRgbaAtIndex(highp usampler2D dtexture, float textureWidth, float idx) {
-      float finalPosX = mod(idx, textureWidth);
-      float finalPosY = div(idx, textureWidth);
-
-      return texelFetch(
-        dtexture, ivec2(finalPosX, finalPosY), 0
-      ).rgba;
-    }
   `,
 };
 export const getRgbaAtXYIndex: ShaderModule = {
@@ -171,7 +162,6 @@ export const getColorForCoords: ShaderModule = {
     }
 
     vec4[2] getColorForCoords64(
-      highp usampler2D lookUpTexture,
       float localLayerIndex,
       float d_texture_width,
       float packingDegree,
@@ -369,7 +359,6 @@ export const getColorForCoords: ShaderModule = {
     }
 
     vec4 getColorForCoords(
-      highp usampler2D lookUpTexture,
       float localLayerIndex,
       float d_texture_width,
       float packingDegree,
@@ -379,7 +368,7 @@ export const getColorForCoords: ShaderModule = {
       // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
       // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
       // No clear negative impact could be measured which is why this delegation should be ok.
-      vec4[2] retVal = getColorForCoords64(lookUpTexture, localLayerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
+      vec4[2] retVal = getColorForCoords64(localLayerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
       return retVal[1];
     }
   `,

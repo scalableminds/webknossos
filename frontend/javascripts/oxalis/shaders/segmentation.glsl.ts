@@ -262,7 +262,6 @@ export const getSegmentationId: ShaderModule = {
     vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
       vec4[2] volume_color =
         getSegmentIdOrFallback(
-          lookup_texture,
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,

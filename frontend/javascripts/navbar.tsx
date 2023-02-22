@@ -162,7 +162,7 @@ function getCollapsibleMenuTitle(
   collapse: boolean,
 ): MenuItemType["label"] {
   return collapse ? (
-    icon
+    <Tooltip title={title}>{icon}</Tooltip>
   ) : (
     <>
       {icon}
@@ -523,7 +523,6 @@ function LoggedInAvatar({
           style: {
             padding: 0,
           },
-          // className="sub-menu-without-padding vertical-center-flex-fix"
           children: [
             {
               key: "userName",

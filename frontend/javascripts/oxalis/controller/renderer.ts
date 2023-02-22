@@ -15,6 +15,11 @@ function getRenderer(): THREE.WebGLRenderer {
           canvas: renderCanvasElement,
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,
+          // Apparently, there's a bug in the antialias implementation of browsers so that
+          // varyings that are marked with a flat modifier are still being interpolated.
+          // This caused 1-fragment-wide stripes in the rendering output. Debugging the shader code
+          // showed that the bucket addresses which are passed from vertex to fragment shader
+          // were interpolated sometimes. Therefore, antialiasing is disabled for now.
           antialias: false,
         })
       : {}

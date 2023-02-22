@@ -163,7 +163,7 @@ const M4x4 = {
 
   transpose(m: Matrix4x4, r?: Matrix4x4): Matrix4x4 {
     if (m === r) {
-      var tmp = 0.0;
+      let tmp = 0.0;
       tmp = m[1];
       m[1] = m[4];
       m[4] = tmp;

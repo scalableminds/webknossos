@@ -152,8 +152,13 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     getSegmentationLayerForTracing(state, volumeTracing),
   );
 
-  // todo: this will only work if volume layer and color layer use the same transforms.
-  // enforce this somehow?
+  if (!_.isEqual(colorLayer.transformMatrix, volumeLayer.transformMatrix)) {
+    Toast.warning(
+      "Quick select is currently not supported if the color and volume layer use different transforms.",
+    );
+    return;
+  }
+
   const requestedZoomStep = yield* select((store) =>
     getActiveMagIndexForLayer(store, colorLayer.name),
   );

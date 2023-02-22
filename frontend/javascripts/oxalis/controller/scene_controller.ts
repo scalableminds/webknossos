@@ -11,6 +11,7 @@ import {
   getBoundaries,
   getDataLayers,
   getLayerBoundingBox,
+  getLayerNameToIsDisabled,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getActiveMagIndicesForLayers } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
@@ -56,7 +57,7 @@ class SceneController {
   userBoundingBoxGroup: THREE.Group;
   layerBoundingBoxGroup!: THREE.Group;
   userBoundingBoxes!: Array<Cube>;
-  layerBoundingBoxes!: Array<Cube>;
+  layerBoundingBoxes!: { [layerName: string]: Cube };
   annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
@@ -474,12 +475,13 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
-    this.layerBoundingBoxes.forEach((bbCube) => {
-      const visible = id !== OrthoViews.TDView || tdViewDisplayLayerBorders;
+    const layerNameToIsDisabled = getLayerNameToIsDisabled(Store.getState().datasetConfiguration);
+    Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
+      const bbCube = this.layerBoundingBoxes[layerName];
+      const visible =
+        id === OrthoViews.TDView && tdViewDisplayLayerBorders && !layerNameToIsDisabled[layerName];
       bbCube.setVisibility(visible);
-      if (visible) {
-        bbCube.updateForCam(id);
-      }
+      bbCube.updateForCam(id);
     });
 
     this.taskBoundingBox?.updateForCam(id);
@@ -600,31 +602,34 @@ class SceneController {
   }
 
   setLayerBoundingBoxes(layers: APIDataLayer[]): void {
+    const state = Store.getState();
+    const dataset = state.dataset;
+
     const newLayerBoundingBoxGroup = new THREE.Group();
-    const dataset = Store.getState().dataset;
-    this.layerBoundingBoxes = layers.map((layer) => {
-      const boundingBox = getLayerBoundingBox(dataset, layer.name);
-      const { min, max } = boundingBox;
-      const bbCube = new Cube({
-        min,
-        max,
-        color: LAYER_CUBE_COLOR,
-        showCrossSections: false,
-        isHighlighted: false,
-      });
-      bbCube.setVisibility(true);
-      bbCube.getMeshes().forEach((mesh) => {
-        const { transformMatrix } = layer;
-        if (transformMatrix) {
-          const matrix = new THREE.Matrix4();
-          // @ts-ignore
-          matrix.set(...transformMatrix);
-          mesh.applyMatrix4(matrix);
-        }
-        newLayerBoundingBoxGroup.add(mesh);
-      });
-      return bbCube;
-    });
+    this.layerBoundingBoxes = Object.fromEntries(
+      layers.map((layer) => {
+        const boundingBox = getLayerBoundingBox(dataset, layer.name);
+        const { min, max } = boundingBox;
+        const bbCube = new Cube({
+          min,
+          max,
+          color: LAYER_CUBE_COLOR,
+          showCrossSections: false,
+          isHighlighted: false,
+        });
+        bbCube.getMeshes().forEach((mesh) => {
+          const { transformMatrix } = layer;
+          if (transformMatrix) {
+            const matrix = new THREE.Matrix4();
+            // @ts-ignore
+            matrix.set(...transformMatrix);
+            mesh.applyMatrix4(matrix);
+          }
+          newLayerBoundingBoxGroup.add(mesh);
+        });
+        return [layer.name, bbCube];
+      }),
+    );
     this.rootNode.remove(this.layerBoundingBoxGroup);
     this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
     this.rootNode.add(this.layerBoundingBoxGroup);

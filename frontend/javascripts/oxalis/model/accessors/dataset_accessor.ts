@@ -24,6 +24,7 @@ import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils"
 import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
   smaller: boolean;
@@ -868,6 +869,17 @@ export function isLayerVisible(
   const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
+
+function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
+  const nameToIsDisabled: { [name: string]: boolean } = {};
+  for (const layerName of Object.keys(datasetConfiguration.layers)) {
+    nameToIsDisabled[layerName] = datasetConfiguration.layers[layerName].isDisabled;
+  }
+  return nameToIsDisabled;
+}
+
+export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
+
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.
   // This avoids that the empty dummy dataset is rendered with a 2D layout

@@ -24,6 +24,7 @@ import models.user.{User, UserDAO, UserService}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
@@ -34,11 +35,13 @@ import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
+                                     autoFallbackLayer: Boolean = false,
                                      mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: String)
+                                     name: Option[String])
 object AnnotationLayerParameters {
-  implicit val jsonFormat: OFormat[AnnotationLayerParameters] = Json.format[AnnotationLayerParameters]
+  implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
+    Json.using[WithDefaultValues].format[AnnotationLayerParameters]
 }
 
 @Api
@@ -55,7 +58,6 @@ class AnnotationController @Inject()(
     teamService: TeamService,
     projectDAO: ProjectDAO,
     teamDAO: TeamDAO,
-    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
     timeSpanService: TimeSpanService,
     annotationMerger: AnnotationMerger,
     tracingStoreService: TracingStoreService,

@@ -14,6 +14,7 @@ import {
   getLayerByName,
   getResolutionInfo,
   getColorLayers,
+  getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -101,19 +102,10 @@ export function getGlobalLayerIndexForLayerName(
   optSanitizer?: (arg: string) => string,
 ): number {
   const sanitizer = optSanitizer || _.identity;
-  const allColorLayers = getColorLayers(Store.getState().dataset);
-  let layerIndex = allColorLayers.findIndex((layer) => sanitizer(layer.name) === layerName);
+  const dataset = Store.getState().dataset;
+  const allLayers = [...getColorLayers(dataset), ...getSegmentationLayers(dataset)];
+  const layerIndex = allLayers.findIndex((layer) => sanitizer(layer.name) === layerName);
 
-  if (layerIndex < 0) {
-    const segmentationLayers = Model.getSegmentationLayers();
-    const segLayerIndex = segmentationLayers.findIndex(
-      (layer) => sanitizer(layer.name) === layerName,
-    );
-    if (segLayerIndex < 0) {
-      throw new Error("Could not determine segmentation layer index");
-    }
-    layerIndex = allColorLayers.length + segLayerIndex;
-  }
   return layerIndex;
 }
 

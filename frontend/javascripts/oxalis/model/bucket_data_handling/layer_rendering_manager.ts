@@ -47,6 +47,7 @@ const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 
+// Lazily-initialized singleton.
 const getSharedLookUpCuckooTable = memoizeOne(
   () => new CuckooTableVec5(LOOKUP_CUCKOO_TEXTURE_WIDTH),
 );

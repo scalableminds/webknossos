@@ -15,7 +15,7 @@ import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";
-import { PricingEnforcedMenuItem } from "components/pricing_enforcers";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 const { DirectoryTree } = Tree;
@@ -144,11 +144,9 @@ export function FolderTreeSidebar({
   );
 
   const createMenu = () => (
-    <Menu>
-      <Menu.Item key="disabled" disabled>
-        Please right-click an existing folder.
-      </Menu.Item>
-    </Menu>
+    <Menu
+      items={[{ key: "disabled", disabled: true, label: "Please right-click an existing folder." }]}
+    />
   );
 
   return (
@@ -221,40 +219,41 @@ function generateTitle(
     setFolderIdForEditModal(id);
   }
 
-  const createMenu = () => (
-    <Menu>
-      <PricingEnforcedMenuItem
-        key="create"
-        data-group-id={id}
-        onClick={() => context.showCreateFolderPrompt(id)}
-        disabled={!folder.isEditable}
-        requiredPricingPlan={PricingPlanEnum.Team}
-      >
-        <PlusOutlined />
-        New Folder
-      </PricingEnforcedMenuItem>
-      <PricingEnforcedMenuItem
-        key="edit"
-        data-group-id={id}
-        onClick={editFolder}
-        disabled={!folder.isEditable}
-        requiredPricingPlan={PricingPlanEnum.Team}
-      >
-        <EditOutlined />
-        Edit Folder
-      </PricingEnforcedMenuItem>
+  const createMenu = () => {
+    const menuItems = [
+      {
+        key: "create",
+        disabled: !folder.isEditable,
+        onClick: () => context.showCreateFolderPrompt(id),
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <PlusOutlined />
+            New Folder
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "edit",
+        disabled: !folder.isEditable,
+        onClick: editFolder,
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <EditOutlined />
+            Edit Folder
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "delete",
+        onClick: deleteFolder,
+        disabled: !folder.isEditable,
+        icon: <DeleteOutlined />,
+        label: <span>Delete Folder</span>,
+      },
+    ];
 
-      <Menu.Item
-        key="delete"
-        data-group-id={id}
-        onClick={deleteFolder}
-        disabled={!folder.isEditable}
-      >
-        <DeleteOutlined />
-        Delete Folder
-      </Menu.Item>
-    </Menu>
-  );
+    return <Menu items={menuItems} />;
+  };
 
   return (
     <Dropdown
@@ -310,7 +309,7 @@ function FolderItemAsDropTarget(props: {
         let successCounter = 0;
         Promise.all(
           selectedDatasets.map((ds) =>
-            context.queries.updateDatasetMutation.mutateAsync([ds, folderId]).then(() => {
+            context.queries.updateDatasetMutation.mutateAsync([ds, { folderId }]).then(() => {
               successCounter++;
               modal.update({
                 content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
@@ -337,7 +336,7 @@ function FolderItemAsDropTarget(props: {
         const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
         if (dataset) {
-          context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+          context.queries.updateDatasetMutation.mutateAsync([dataset, { folderId }]);
         } else {
           Toast.error("Could not move dataset. Please try again.");
         }

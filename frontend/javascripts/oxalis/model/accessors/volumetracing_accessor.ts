@@ -32,7 +32,7 @@ import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_st
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { V3 } from "libs/mjs";
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
@@ -510,22 +510,37 @@ export function getLabelActionFromPreviousSlice(
   );
 }
 
-// Output is in [0,1] for H, S, L and A
-export function getSegmentColorAsHSL(state: OxalisState, mappedId: number): Vector4 {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  if (!visibleSegmentationLayer) {
+// Output is in [0,1] for R, G, B, and A
+export function getSegmentColorAsRGBA(
+  state: OxalisState,
+  mappedId: number,
+  layerName?: string | null | undefined,
+): Vector4 {
+  const segmentationLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
+  if (!segmentationLayer) {
     return [1, 1, 1, 1];
   }
 
-  const visibleSegments = getVisibleSegments(state);
-  if (visibleSegments) {
-    const segment = visibleSegments.getNullable(mappedId);
+  const segments = getSegmentsForLayer(state, segmentationLayer.name);
+  if (segments) {
+    const segment = segments.getNullable(mappedId);
 
     if (segment?.color) {
-      const [hue, saturation, value] = jsRgb2hsl(segment.color);
-      return [hue, saturation, value, 1];
+      const [r, g, b] = segment.color;
+      return [r, g, b, 1];
     }
   }
 
-  return jsConvertCellIdToHSLA(mappedId);
+  return jsConvertCellIdToRGBA(mappedId);
+}
+
+// Output is in [0,1] for H, S, L, and A
+export function getSegmentColorAsHSLA(
+  state: OxalisState,
+  mappedId: number,
+  layerName?: string | null | undefined,
+): Vector4 {
+  const [r, g, b, a] = getSegmentColorAsRGBA(state, mappedId, layerName);
+  const [hue, saturation, value] = jsRgb2hsl([r, g, b]);
+  return [hue, saturation, value, a];
 }

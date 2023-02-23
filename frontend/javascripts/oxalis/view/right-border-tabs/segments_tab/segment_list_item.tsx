@@ -25,7 +25,7 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
-import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
@@ -343,7 +343,7 @@ function _SegmentListItem({
   const mappedId = mapId(segment.id);
 
   const segmentColorHSLA = useSelector(
-    (state: OxalisState) => getSegmentColorAsHSL(state, mappedId),
+    (state: OxalisState) => getSegmentColorAsHSLA(state, mappedId),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
 

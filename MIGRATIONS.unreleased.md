@@ -12,3 +12,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - Requires Voxelytics worker version 23.02.xx for long-running jobs. [#6838](https://github.com/scalableminds/webknossos/pull/6838)
 
 ### Postgres Evolutions:
+
+- [099-rename-credential-types.sql](conf/evolutions/099-rename-credential-types.sql)
+- [100-annotation-mutexes.sql](conf/evolutions/100-annotation-mutexes.sql)

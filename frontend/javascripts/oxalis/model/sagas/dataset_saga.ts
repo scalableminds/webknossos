@@ -95,7 +95,7 @@ export function* watchZ1Downsampling(): Saga<void> {
       const bestExistingIndex = resolutionInfo.getClosestExistingIndex(0);
       const currentIndex = resolutionInfo.getIndexByResolution(currentRes);
       if (currentIndex <= bestExistingIndex) {
-        // There's not a better mag to render the current layer.
+        // There's no better mag to render the current layer in.
         continue;
       }
 

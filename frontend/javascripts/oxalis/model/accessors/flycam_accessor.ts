@@ -305,7 +305,7 @@ export function getActiveMagIndexForLayer(state: OxalisState, layerName: string)
 }
 
 /*
-  Returns the resolution is supposed to be rendered for the given layer. The return resolution
+  Returns the resolution that is supposed to be rendered for the given layer. The return resolution
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */

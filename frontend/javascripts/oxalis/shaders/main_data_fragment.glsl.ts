@@ -156,18 +156,11 @@ ${compileShader(
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
 
-  if (floor(flatVertexPos.x) == floor(worldCoordUVW.x) && floor(flatVertexPos.y) == floor(worldCoordUVW.y)) {
-    gl_FragColor = vec4(1., 0., 1., 1.);
-    // return;
-  }
-
-  if (index.x == 200.) {
-      gl_FragColor = vec4(0., 1., 1., 1.);
-//      return;
-  }
-
-
-
+  // Debugging code. Comment in when you want to render the tessellation of the rendered plane.
+  // if (floor(flatVertexPos.x) == floor(worldCoordUVW.x) && floor(flatVertexPos.y) == floor(worldCoordUVW.y)) {
+  //   gl_FragColor = vec4(1., 0., 1., 1.);
+  //   return;
+  // }
 
   if (renderBucketIndices) {
     // Only used for debugging purposes. Will render bucket positions for the

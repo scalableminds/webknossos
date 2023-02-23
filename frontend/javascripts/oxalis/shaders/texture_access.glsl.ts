@@ -177,7 +177,8 @@ export const getColorForCoords: ShaderModule = {
       vec4 returnValue[2];
 
       if (worldPositionUVW.x < 0. || worldPositionUVW.y < 0. || worldPositionUVW.z < 0.) {
-        // should alpha be -1.0?
+        // Negative coordinates would likely produce incorrect bucket look ups due to casting
+        // (the keys are stored as uint). Render black.
         returnValue[1] = vec4(0.0, 0.0, 0.0, 0.0);
         return returnValue;
       }

@@ -863,7 +863,7 @@ class PlaneMaterialFactory {
       packingDegreeLookup,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
-      resolutions: getResolutions(dataset),
+      resolutionsCount: getResolutions(dataset).length,
       datasetScale,
       isOrthogonal: this.isOrthogonal,
       lookupTextureWidth,
@@ -892,7 +892,7 @@ class PlaneMaterialFactory {
       packingDegreeLookup,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
-      resolutions: getResolutions(dataset),
+      resolutionsCount: getResolutions(dataset).length,
       datasetScale,
       isOrthogonal: this.isOrthogonal,
       lookupTextureWidth,

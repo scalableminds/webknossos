@@ -1,3 +1,4 @@
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getResolutionFactors, getAbsoluteCoords } from "oxalis/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
@@ -189,7 +190,7 @@ export const getColorForCoords: ShaderModule = {
       uint renderedMagIdx;
 
       if (!supportsPrecomputedBucketAddress) {
-        for (uint i = 0u; i < 4u; i++) {
+        for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
           renderedMagIdx = activeMagIdx + i;
           vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
           vec3 absoluteBucketPosition = div(coords, bucketWidth);

@@ -36,6 +36,9 @@ import { CuckooTableVec5 } from "./cuckoo_table_vec5";
 // If i == 2**21 - 1, the bucket is not yet committed.
 // Otherwise, i denotes the index in the data texture where the bucket is stored.
 
+// See the explanations in the module that defines CuckooTableVec5 to read about
+// the theoretical limitations of the look up approach.
+
 const NOT_YET_COMMITTED_VALUE = 2 ** 21 - 1;
 
 export const channelCountForLookupBuffer = 2;

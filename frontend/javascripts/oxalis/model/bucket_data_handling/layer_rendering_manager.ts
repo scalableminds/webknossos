@@ -34,7 +34,6 @@ import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
-import { Model } from "oxalis/singletons";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
@@ -216,7 +215,7 @@ export default class LayerRenderingManager {
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
-      rects != this.lastRects ||
+      rects !== this.lastRects ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;

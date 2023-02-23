@@ -576,7 +576,7 @@ function _getActiveResolutionInfo(state: OxalisState) {
   );
 
   const isActiveResolutionGlobal =
-    _.uniq(Object.values(activeMagIndicesOfEnabledLayers)).length == 1;
+    _.uniq(Object.values(activeMagIndicesOfEnabledLayers)).length === 1;
   const resolutions = getResolutions(state.dataset);
   let representativeResolution: Vector3 | undefined;
   if (isActiveResolutionGlobal) {

@@ -68,7 +68,7 @@ import {
   loadAgglomerateSkeletonAction,
   setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setDatasetAction, setLayerTransforms } from "oxalis/model/actions/dataset_actions";
+import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
 import {
   setPositionAction,
   setZoomStepAction,

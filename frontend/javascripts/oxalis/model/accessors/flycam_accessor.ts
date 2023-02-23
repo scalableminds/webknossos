@@ -566,3 +566,34 @@ function _getUnrenderableLayerInfosForCurrentZoom(
 export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
   _getUnrenderableLayerInfosForCurrentZoom,
 );
+
+function _getActiveResolutionInfo(state: OxalisState) {
+  const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration);
+  const activeMagIndices = getActiveMagIndicesForLayers(state);
+  const activeMagIndicesOfEnabledLayers = Object.fromEntries(
+    enabledLayers.map((l) => [l.name, activeMagIndices[l.name]]),
+  );
+
+  const isActiveResolutionGlobal =
+    _.uniq(Object.values(activeMagIndicesOfEnabledLayers)).length == 1;
+  const resolutions = getResolutions(state.dataset);
+  let representativeResolution: Vector3 | undefined;
+  if (isActiveResolutionGlobal) {
+    const someResolutionIndex = Object.values(activeMagIndicesOfEnabledLayers)[0];
+    representativeResolution = resolutions[someResolutionIndex];
+  } else {
+    const bestMagIndex = _.min(Object.values(activeMagIndicesOfEnabledLayers));
+    if (bestMagIndex != null) {
+      representativeResolution = resolutions[bestMagIndex];
+    }
+  }
+
+  return {
+    representativeResolution,
+    activeMagIndicesOfEnabledLayers,
+    isActiveResolutionGlobal,
+    resolutions,
+  };
+}
+
+export const getActiveResolutionInfo = reuseInstanceOnEquality(_getActiveResolutionInfo);

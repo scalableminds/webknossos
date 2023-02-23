@@ -23,7 +23,7 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
   private var _isOpen: Boolean = true
 
   private lazy val backend = HttpClientSyncBackend(options = SttpBackendOptions.connectionTimeout(connectionTimeout))
-  private val rangeRequestsActive = false
+  private val rangeRequestsActive = openOptions.contains(ByteChannelOptions.RANGE)
 
   private lazy val authenticatedRequest = path.getBasicAuthCredential.map { credential =>
     basicRequest.auth.basic(credential.username, credential.password)

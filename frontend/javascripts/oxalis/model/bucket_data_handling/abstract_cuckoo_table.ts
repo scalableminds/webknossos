@@ -5,8 +5,7 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/plane_materi
 
 const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
-const EMPTY_KEY = 2 ** 32 - 1;
-const EMPTY_KEY_VALUE = 2 ** 32 - 1;
+export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 
@@ -119,11 +118,11 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
-  checkValidKey(key: K) {
-    if (key === EMPTY_KEY) {
-      throw new Error(`The key ${EMPTY_KEY} is not allowed for the CuckooTable.`);
-    }
-  }
+  /*
+    Should throw an error if the provided key is not valid (e.g., because it contains
+    reserved values).
+   */
+  abstract checkValidKey(key: K): void;
 
   set(pendingKey: K, pendingValue: V, rehashAttempt: number = 0) {
     this.checkValidKey(pendingKey);
@@ -192,7 +191,16 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     }
   }
 
+  /*
+   The empty key should be either EMPTY_KEY_VALUE or a tuple in the form of
+   [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE, ..., EMPTY_KEY_VALUE].
+   */
   abstract getEmptyKey(): K;
+
+  /*
+   The empty value should be either EMPTY_KEY_VALUE or a tuple in the form of
+   [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE, ..., EMPTY_KEY_VALUE].
+   */
   abstract getEmptyValue(): V;
 
   private rehash(rehashAttempt: number): void {
@@ -205,7 +213,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       offset < this.entryCapacity * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
       offset += AbstractCuckooTable.ELEMENTS_PER_ENTRY
     ) {
-      if (oldTable[offset] === EMPTY_KEY) {
+      if (oldTable[offset] === EMPTY_KEY_VALUE) {
         continue;
       }
       const [key, value] = this.getEntryAtAddress(

@@ -1,7 +1,7 @@
 import { Vector3 } from "oxalis/constants";
-import { AbstractCuckooTable } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
-const EMPTY_KEY = 2 ** 32 - 1;
+const EMPTY_KEY = EMPTY_KEY_VALUE;
 const EMPTY_VALUE = [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY] as Value;
 
 type Key = number;
@@ -34,6 +34,12 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
       // or the slot already refers to the key
       displacedKey === newKey
     );
+  }
+
+  checkValidKey(key: Key) {
+    if (key === EMPTY_KEY) {
+      throw new Error(`The key ${EMPTY_KEY} is not allowed for the CuckooTable.`);
+    }
   }
 
   _areKeysEqual(key1: Key, key2: Key): boolean {

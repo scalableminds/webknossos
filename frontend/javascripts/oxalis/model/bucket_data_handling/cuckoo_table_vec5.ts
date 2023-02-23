@@ -1,5 +1,5 @@
 import { Vector4, Vector5 } from "oxalis/constants";
-import { AbstractCuckooTable } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
 // Note that AbstractCuckooTable uses a 4-channel texture which
 // lends itself ideally to an entry type of Vector4.
@@ -22,7 +22,6 @@ type Entry = [Key, Value];
 */
 type CompressedEntry = Vector4;
 
-const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 const EMPTY_KEY = [
   EMPTY_KEY_VALUE,
   EMPTY_KEY_VALUE,

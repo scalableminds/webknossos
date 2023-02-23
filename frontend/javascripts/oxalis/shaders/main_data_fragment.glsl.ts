@@ -454,7 +454,8 @@ void main() {
   index = round((position.xy / (PLANE_WIDTH / 2.) + 1.) / 2. * PLANE_SUBDIVISION);
 
   uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
-  vec2 d = transDim(vec3(32.) * getResolution(activeMagIdx)).xy;
+  // d is the width/height of a bucket in the current resolution.
+  vec2 d = transDim(vec3(bucketWidth) * getResolution(activeMagIdx)).xy;
 
   vec3 datasetScaleUVW = transDim(datasetScale);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
@@ -492,8 +493,6 @@ void main() {
 
   flatVertexPos = worldCoordUVW;
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
-  const float bucketWidth = 32.;
-  const float bucketSize = 32.*32.*32.;
 
   const uint FALLBACK_COUNT = 3u;
 

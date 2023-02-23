@@ -40,25 +40,21 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
     return aNumber.toFixed(1);
   }
 }
-export default function getMainFragmentShader(params: Params) {
-  const hasSegmentation = params.segmentationLayerNames.length > 0;
-  return _.template(`
-precision highp float;
-const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
+
+const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
+const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
+
+uniform float activeMagIndices[<%= globalLayerCount %>];
+uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
+uniform vec3 resolutions[<%= resolutionsCount %>];
+
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
 uniform highp uint LOOKUP_CUCKOO_ENTRY_CAPACITY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
-
-<% _.each(colorLayerNames, function(name) { %>
-  uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_min;
-  uniform float <%= name %>_max;
-  uniform float <%= name %>_is_inverted;
-<% }) %>
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
   uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
@@ -70,9 +66,12 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool <%= name %>_has_transform;
 <% }) %>
 
-uniform float activeMagIndices[<%= globalLayerCount %>];
-uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 resolutions[<%= resolutionsCount %>];
+<% _.each(colorLayerNames, function(name) { %>
+  uniform vec3 <%= name %>_color;
+  uniform float <%= name %>_min;
+  uniform float <%= name %>_max;
+  uniform float <%= name %>_is_inverted;
+<% }) %>
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
@@ -115,6 +114,24 @@ uniform vec3 addressSpaceDimensions;
 uniform vec4 hoveredSegmentIdLow;
 uniform vec4 hoveredSegmentIdHigh;
 
+// For some reason, taking the dataset scale from the uniform results in imprecise
+// rendering of the brush circle (and issues in the arbitrary modes). That's why it
+// is directly inserted into the source via templating.
+const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
+
+const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
+const float bucketWidth = <%= bucketWidth %>;
+const float bucketSize = <%= bucketSize %>;
+const float l_texture_width = <%= l_texture_width %>;
+`;
+
+export default function getMainFragmentShader(params: Params) {
+  const hasSegmentation = params.segmentationLayerNames.length > 0;
+  return _.template(`
+precision highp float;
+
+${SHARED_UNIFORM_DECLARATIONS}
+
 flat in vec2 index;
 flat in vec3 flatVertexPos;
 flat in uvec4 outputCompressedEntry[<%= globalLayerCount %>];
@@ -122,20 +139,8 @@ flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
 flat in float outputAddress[<%= globalLayerCount %>];
 in vec4 worldCoord;
-varying vec4 modelCoord;
-varying mat4 savedModelMatrix;
-
-const float bucketWidth = <%= bucketWidth %>;
-const float bucketSize = <%= bucketSize %>;
-const float l_texture_width = <%= l_texture_width %>;
-
-
-// For some reason, taking the dataset scale from the uniform results in imprecise
-// rendering of the brush circle (and issues in the arbitrary modes). That's why it
-// is directly inserted into the source via templating.
-const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
-
-const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
+in vec4 modelCoord;
+in mat4 savedModelMatrix;
 
 ${compileShader(
   inverse,
@@ -287,104 +292,20 @@ export function getMainVertexShader(params: Params) {
   return _.template(`
 precision highp float;
 
-uniform vec2 viewportExtent;
-
 out vec4 worldCoord;
+out vec4 modelCoord;
+out vec2 vUv;
+out mat4 savedModelMatrix;
 flat out vec2 index;
 flat out vec3 flatVertexPos;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
-varying vec4 modelCoord;
-varying vec2 vUv;
-varying mat4 savedModelMatrix;
 
-
-
-
-const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
-uniform highp usampler2D lookup_texture;
-uniform highp uint lookup_seeds[3];
-uniform highp uint LOOKUP_CUCKOO_ENTRY_CAPACITY;
-uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
-uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
-uniform highp uint LOOKUP_CUCKOO_TWIDTH;
-
-<% _.each(colorLayerNames, function(name) { %>
-  uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_min;
-  uniform float <%= name %>_max;
-  uniform float <%= name %>_is_inverted;
-<% }) %>
-
-<% _.each(layerNamesWithSegmentation, function(name) { %>
-  uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
-  uniform float <%= name %>_data_texture_width;
-  uniform float <%= name %>_alpha;
-  uniform float <%= name %>_gammaCorrectionValue;
-  uniform float <%= name %>_unrenderable;
-  uniform mat4 <%= name %>_transform;
-  uniform bool <%= name %>_has_transform;
-<% }) %>
-
-uniform float activeMagIndices[<%= globalLayerCount %>];
-uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 resolutions[<%= resolutionsCount %>];
 uniform int representativeLayerIdxForMag;
 
-<% if (hasSegmentation) { %>
-  // Custom color cuckoo table
-  uniform highp usampler2D custom_color_texture;
-  uniform highp uint custom_color_seeds[3];
-  uniform highp uint CUCKOO_ENTRY_CAPACITY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;
-  uniform highp uint CUCKOO_TWIDTH;
-
-  uniform vec4 activeCellIdHigh;
-  uniform vec4 activeCellIdLow;
-  uniform bool isMouseInActiveViewport;
-  uniform bool showBrush;
-  uniform bool isProofreading;
-  uniform float segmentationPatternOpacity;
-
-  uniform bool isMappingEnabled;
-  uniform float mappingSize;
-  uniform bool hideUnmappedIds;
-  uniform sampler2D segmentation_mapping_texture;
-  uniform sampler2D segmentation_mapping_lookup_texture;
-<% } %>
-
-uniform float sphericalCapRadius;
-uniform float viewMode;
-uniform float alpha;
-uniform bool renderBucketIndices;
-uniform vec3 bboxMin;
-uniform vec3 bboxMax;
-uniform vec3 globalPosition;
-uniform vec3 activeSegmentPosition;
-uniform float zoomValue;
-uniform bool useBilinearFiltering;
-uniform vec3 globalMousePosition;
-uniform bool isMouseInCanvas;
-uniform float brushSizeInPixel;
-uniform float planeID;
-uniform vec3 addressSpaceDimensions;
-uniform vec4 hoveredSegmentIdLow;
-uniform vec4 hoveredSegmentIdHigh;
-
-const float bucketWidth = <%= bucketWidth %>;
-const float bucketSize = <%= bucketSize %>;
-const float l_texture_width = <%= l_texture_width %>;
-
-
-// For some reason, taking the dataset scale from the uniform results in imprecise
-// rendering of the brush circle (and issues in the arbitrary modes). That's why it
-// is directly inserted into the source via templating.
-const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
-
-const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
+${SHARED_UNIFORM_DECLARATIONS}
 
 ${compileShader(
   inverse,
@@ -400,7 +321,6 @@ ${compileShader(
   getResolution,
 )}
 
-
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
@@ -412,7 +332,6 @@ void main() {
   worldCoord = modelMatrix * vec4(position, 1.0);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
   vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(vec3(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0.), 1.)).xyz);

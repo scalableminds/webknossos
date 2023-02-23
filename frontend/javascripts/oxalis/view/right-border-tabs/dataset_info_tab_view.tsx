@@ -580,7 +580,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               Rendered magnification per layer:
               <ul>
                 {Object.entries(activeMagIndicesOfEnabledLayers).map(([layerName, magIndex]) => (
-                  <li>
+                  <li key={layerName}>
                     {layerName}: {resolutions[magIndex].join("-")}
                   </li>
                 ))}

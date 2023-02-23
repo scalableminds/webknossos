@@ -465,11 +465,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             layerName
           )}
         </div>
-        {/* todo: remove or make nice */}
-
-        {resolutionInfo
-          .getResolutionByIndex(this.props.activeMagIndicesForLayers[layerName])
-          ?.join("-")}
         <div
           className="flex-container"
           style={{

@@ -24,6 +24,7 @@ import type {
   APIMeshFile,
   ServerEditableMapping,
   APIOrganization,
+  APIUserCompact,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -186,6 +187,7 @@ export type Annotation = {
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
+  readonly blockedByUser: APIUserCompact | null | undefined;
 };
 type TracingBase = {
   readonly createdTimestamp: number;

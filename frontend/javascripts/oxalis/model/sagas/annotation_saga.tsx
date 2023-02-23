@@ -1,14 +1,36 @@
+import React from "react";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-import type { EditAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
+import {
+  EditAnnotationLayerAction,
+  setAnnotationAllowUpdateAction,
+  setBlockedByUserAction,
+  type SetOthersMayEditForAnnotationAction,
+} from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
-import { editAnnotation, updateAnnotationLayer } from "admin/admin_rest_api";
+import {
+  editAnnotation,
+  updateAnnotationLayer,
+  acquireAnnotationMutex,
+} from "admin/admin_rest_api";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeLatest, select, take, retry, delay } from "typed-redux-saga";
+import {
+  takeLatest,
+  select,
+  take,
+  retry,
+  delay,
+  call,
+  put,
+  fork,
+  takeEvery,
+  cancel,
+  cancelled,
+} from "typed-redux-saga";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
@@ -16,6 +38,8 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import messages from "messages";
+import { APIUserCompact } from "types/api_flow_types";
+import { Button } from "antd";
 
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -159,4 +183,113 @@ export function* watchAnnotationAsync(): Saga<void> {
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
-export default [warnAboutSegmentationZoom, watchAnnotationAsync];
+
+export function* acquireAnnotationMutexMaybe(): Saga<void> {
+  yield* take("WK_READY");
+  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
+  if (!allowUpdate) {
+    return;
+  }
+  const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+  const activeUser = yield* select((state) => state.activeUser);
+  const acquireMutexInterval = 1000 * 60;
+  const RETRY_COUNT = 12;
+  const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
+  const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
+  let isInitialRequest = true;
+  let doesHaveMutexFromBeginning = false;
+  let doesHaveMutex = false;
+  let shallTryAcquireMutex = othersMayEdit;
+
+  function onMutexStateChanged(canEdit: boolean, blockedByUser: APIUserCompact | null | undefined) {
+    if (canEdit) {
+      Toast.close("MutexCouldNotBeAcquired");
+      if (!isInitialRequest) {
+        const message = (
+          <React.Fragment>
+            {messages["annotation.acquiringMutexSucceeded"]}{" "}
+            <Button onClick={() => location.reload()}>Reload the annotation</Button>
+          </React.Fragment>
+        );
+        Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
+      }
+    } else {
+      Toast.close(MUTEX_ACQUIRED_KEY);
+      const message =
+        blockedByUser != null
+          ? messages["annotation.acquiringMutexFailed"]({
+              userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
+            })
+          : messages["annotation.acquiringMutexFailed.noUser"];
+      Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
+    }
+  }
+
+  function* tryAcquireMutexContinuously(): Saga<void> {
+    while (shallTryAcquireMutex) {
+      if (isInitialRequest) {
+        yield* put(setAnnotationAllowUpdateAction(false));
+      }
+      try {
+        const { canEdit, blockedByUser } = yield* retry(
+          RETRY_COUNT,
+          acquireMutexInterval / RETRY_COUNT,
+          acquireAnnotationMutex,
+          annotationId,
+        );
+        if (isInitialRequest && canEdit) {
+          doesHaveMutexFromBeginning = true;
+          // Only set allow update to true in case the first try to get the mutex succeeded.
+          yield* put(setAnnotationAllowUpdateAction(true));
+        }
+        if (!canEdit || !doesHaveMutexFromBeginning) {
+          // If the mutex could not be acquired anymore or the user does not have it from the beginning, set allow update to false.
+          doesHaveMutexFromBeginning = false;
+          yield* put(setAnnotationAllowUpdateAction(false));
+        }
+        if (canEdit) {
+          yield* put(setBlockedByUserAction(activeUser));
+        } else {
+          yield* put(setBlockedByUserAction(blockedByUser));
+        }
+        if (canEdit !== doesHaveMutex || isInitialRequest) {
+          doesHaveMutex = canEdit;
+          onMutexStateChanged(canEdit, blockedByUser);
+        }
+      } catch (error) {
+        const wasCanceled = yield* cancelled();
+        if (!wasCanceled) {
+          console.error("Error while trying to acquire mutex.", error);
+          yield* put(setBlockedByUserAction(undefined));
+          yield* put(setAnnotationAllowUpdateAction(false));
+          doesHaveMutexFromBeginning = false;
+          if (doesHaveMutex || isInitialRequest) {
+            onMutexStateChanged(false, null);
+            doesHaveMutex = false;
+          }
+        }
+      }
+      isInitialRequest = false;
+      yield* call(delay, acquireMutexInterval);
+    }
+  }
+  let runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);
+  function* reactToOthersMayEditChanges({
+    othersMayEdit,
+  }: SetOthersMayEditForAnnotationAction): Saga<void> {
+    shallTryAcquireMutex = othersMayEdit;
+    if (shallTryAcquireMutex) {
+      if (runningTryAcquireMutexContinuouslySaga != null) {
+        yield* cancel(runningTryAcquireMutexContinuouslySaga);
+      }
+      isInitialRequest = true;
+      runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);
+    } else {
+      // othersMayEdit was turned off. The user editing it should be able to edit the annotation.
+      yield* put(setAnnotationAllowUpdateAction(true));
+    }
+  }
+  yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
+}
+export default [warnAboutSegmentationZoom, watchAnnotationAsync, acquireAnnotationMutexMaybe];

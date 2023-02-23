@@ -95,6 +95,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_BLOCKED_BY_USER": {
+      const { blockedByUser } = action;
+      return updateKey(state, "tracing", {
+        blockedByUser,
+      });
+    }
+
     case "SET_USER_BOUNDING_BOXES": {
       return updateUserBoundingBoxes(state, action.userBoundingBoxes);
     }

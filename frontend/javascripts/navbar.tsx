@@ -379,6 +379,22 @@ function getHelpSubMenu(
       ),
     });
   }
+  helpSubMenuItems.push({
+    key: "imprint",
+    label: (
+      <a target="_blank" href="/imprint" rel="noopener noreferrer">
+        Imprint
+      </a>
+    ),
+  });
+  helpSubMenuItems.push({
+    key: "privacy",
+    label: (
+      <a target="_blank" href="/privacy" rel="noopener noreferrer">
+        Privacy
+      </a>
+    ),
+  });
 
   if (version !== "")
     helpSubMenuItems.push({
@@ -769,7 +785,11 @@ function Navbar({
 
     if (othersMayEdit && !allowUpdate) {
       trailingNavItems.push(
-        <AnnotationLockedByUserTag blockedByUser={blockedByUser} activeUser={activeUser} />,
+        <AnnotationLockedByUserTag
+          key="locked-by-user-tag"
+          blockedByUser={blockedByUser}
+          activeUser={activeUser}
+        />,
       );
     }
     trailingNavItems.push(<NotificationIcon key="notification-icon" activeUser={loggedInUser} />);

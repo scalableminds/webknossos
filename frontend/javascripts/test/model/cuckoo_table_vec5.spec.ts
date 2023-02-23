@@ -44,6 +44,7 @@ function generateRandomEntrySet() {
 
 function isValueEqual(t: ExecutionContext<any>, val1: Value, val2: Value) {
   if (!(val1 === val2)) {
+    // Throw an error to avoid that ava executes the rest of the test.
     throw new Error(`${val1} !== ${val2}`);
   }
 

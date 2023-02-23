@@ -24,6 +24,7 @@ import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils"
 import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import { M4x4, Matrix4x4 } from "libs/mjs";
 
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
@@ -917,3 +918,14 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
     layer ? layer.name : null,
   );
 }
+
+// Transposition is often needed so that the matrix has the right format
+// for matrix operations (e.g., on the GPU; but not for ThreeJS).
+// Inversion is needed when the position of an "output voxel" (e.g., during
+// rendering in the fragment shader) needs to be mapped to its original
+// data position (i.e., how it's stored without the transformation).
+// Without the inversion, the matrix maps from stored position to the position
+// where it should be rendered.
+export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
+  return M4x4.transpose(M4x4.inverse(mat));
+});

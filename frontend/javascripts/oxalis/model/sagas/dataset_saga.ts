@@ -6,10 +6,14 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { sleep } from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getEnabledLayers, getResolutionInfo, isLayerVisible } from "../accessors/dataset_accessor";
+import {
+  getEnabledLayers,
+  getResolutionInfo,
+  invertAndTranspose,
+  isLayerVisible,
+} from "../accessors/dataset_accessor";
 import { getCurrentResolution } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
-import { invertAndTranspose } from "../bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {

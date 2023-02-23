@@ -65,17 +65,19 @@ const initialState: OxalisState = {
 test("Flycam Accessors should calculate the max zoom step", (t) => {
   t.is(getMaxZoomStep(initialState.dataset), 16);
 });
-// todo
-// test("Flycam Accessors should calculate the request log zoom step (1/2)", (t) => {
-//   t.is(accessors.getRequestLogZoomStep(initialState), 0);
-// });
-// test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) => {
-//   const state = _.cloneDeep(initialState);
 
-//   // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'zoomStep' because it is a read-o... Remove this comment to see the full error message
-//   state.flycam.zoomStep = 8;
-//   t.is(accessors.getRequestLogZoomStep(state), 3);
-// });
+test("Flycam Accessors should calculate the request log zoom step (1/2)", (t) => {
+  t.is(accessors.getActiveMagIndexForLayer(initialState, "layer1"), 0);
+});
+
+test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) => {
+  const state = _.cloneDeep(initialState);
+
+  // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'zoomStep' because it is a read-o... Remove this comment to see the full error message
+  state.flycam.zoomStep = 8;
+  t.is(accessors.getActiveMagIndexForLayer(state, "layer1"), 3);
+});
+
 test("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", (t) => {
   const scale: Vector3 = [4, 4, 35];
   const resolutions: Vector3[] = [
@@ -114,16 +116,27 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     rects,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
     accessors.Identity4x4,
-    accessors.Identity4x4,
+    accessors._getDummyFlycamMatrix(scale),
   );
 
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
+  // prettier-ignore
   const expectedZoomValues = [
-    1.3309999999999997, 2.593742460100001, 4.177248169415654, 7.400249944258169, 15.863092971714945,
-    30.912680532870745, 60.24006916124236, 117.39085287969571, 251.63771862927217,
-    490.3707252978515, 955.5938177273264, 2048.400214585478, 4390.927778387033,
+    1.6105099999999999,
+    2.853116706110001,
+    5.0544702849929415,
+    8.954302432552387,
+    17.44940226888644,
+    34.00394858615782,
+    72.89048368510326,
+    142.04293198443185,
+    276.80149049219943,
+    593.3485776104004,
+    1156.2685194500652,
+    2478.564259648429,
+    5313.0226118483115
   ];
   t.deepEqual(maximumZoomPerResolution, expectedZoomValues);
 });

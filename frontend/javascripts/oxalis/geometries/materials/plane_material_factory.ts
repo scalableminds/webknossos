@@ -31,6 +31,7 @@ import {
   getMappingInfoForSupportedLayer,
   getVisibleSegmentationLayer,
   getLayerByName,
+  invertAndTranspose,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -48,10 +49,7 @@ import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
-import {
-  getGlobalLayerIndexForLayerName,
-  invertAndTranspose,
-} from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;

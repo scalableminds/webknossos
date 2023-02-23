@@ -99,8 +99,6 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
-import { M4x4, Matrix4x4, Vector16 } from "libs/mjs";
-import { invertAndTranspose } from "./model/bucket_data_handling/layer_rendering_manager";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;

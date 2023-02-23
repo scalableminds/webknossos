@@ -14,6 +14,7 @@ import {
   getResolutionByMax,
   getResolutionInfo,
   getResolutions,
+  invertAndTranspose,
   SmallerOrHigherInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
@@ -34,7 +35,6 @@ import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { invertAndTranspose } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -187,7 +187,8 @@ export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
 // a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
 const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllResolutions> = new Map();
 
-const getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
+// Only exported for testing.
+export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
   const scaleMatrix = getMatrixScale(scale);
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity, []), Math.PI, [0, 0, 1]);
 });
@@ -207,7 +208,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     perLayerFnCache.set(layerName, fn);
   }
 
-  const dummyFlycamMatrix = getDummyFlycamMatrix(state.dataset.dataSource.scale);
+  const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
 
   return fn(
     viewMode,

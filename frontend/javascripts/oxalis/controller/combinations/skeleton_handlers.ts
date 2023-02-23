@@ -9,7 +9,7 @@ import type {
 import { OUTER_CSS_BORDER, OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import _ from "lodash";
-import { enforce } from "libs/utils";
+import { enforce, values } from "libs/utils";
 import {
   enforceSkeletonTracing,
   getSkeletonTracing,
@@ -23,9 +23,9 @@ import {
   calculateMaybeGlobalPos,
 } from "oxalis/model/accessors/view_mode_accessor";
 import {
+  getActiveMagIndicesForLayers,
   getPosition,
   getRotationOrtho,
-  getZoomValue,
   isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -48,6 +48,7 @@ import { renderToTexture } from "oxalis/view/rendering_utils";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
+import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -263,13 +264,26 @@ function addNode(
     Store.dispatch(createTreeAction());
   }
 
+  const state = Store.getState();
+  const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
+  const activeMagIndices = getActiveMagIndicesForLayers(state);
+  const activeMagIndicesOfEnabledColorLayers = _.pick(
+    activeMagIndices,
+    enabledColorLayers.map((l) => l.name),
+  );
+  const finestMagIdx =
+    _.min(values(activeMagIndicesOfEnabledColorLayers)) || _.min(values(activeMagIndices)) || 0;
+
   Store.dispatch(
     createNodeAction(
       position,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
-      // todo: this would be a breaking change. clarify.
-      getZoomValue(Store.getState().flycam),
+      // This is the magnification index at which the node was created. Since
+      // different layers can be rendered at different mags, it's not really clear
+      // which mag should be used, but the above heuristic defaults to the best
+      // magnification (of visible color layers or as a fallback of all layers).
+      finestMagIdx,
       null,
       !activate,
     ),

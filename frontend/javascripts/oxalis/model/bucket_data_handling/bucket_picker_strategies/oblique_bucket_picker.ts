@@ -84,12 +84,14 @@ function addNecessaryBucketsToPriorityQueueOblique(
   let traversedBuckets: Vector3[] = [];
   for (const planeId of planeIds) {
     let extent: Vector2;
+    let enlargedExtent: Vector2;
     let enlargedHalfExtent: Vector2;
     let queryMatrix = [...matrix] as Matrix4x4;
 
     if (viewMode === "orthogonal") {
       extent = [rects[planeId].width, rects[planeId].height];
       enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)] as Vector2;
+      enlargedExtent = [enlargedHalfExtent[0] * 2, enlargedHalfExtent[1] * 2];
       if (planeId === "PLANE_YZ") {
         M4x4.mul(matrix, YZ_ROTATION, queryMatrix);
       } else if (planeId === "PLANE_XZ") {
@@ -100,7 +102,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
       // buckets are already on the GPU when the user moves a little.
       extent = [constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH];
       const enlargementFactor = 1.1;
-      const enlargedExtent = [
+      enlargedExtent = [
         constants.VIEWPORT_WIDTH * enlargementFactor,
         constants.VIEWPORT_WIDTH * enlargementFactor,
       ];
@@ -120,7 +122,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
       logZoomStep,
     );
     const steps = stepRateBuckets.length + 1;
-    const stepSize = [extent[0] / steps, extent[1] / steps];
+    const stepSize = [enlargedExtent[0] / steps, enlargedExtent[1] / steps];
     // This array holds the start and end points
     // of horizontal lines which cover the entire rendered plane.
     // These "scan lines" are traversed to find out which buckets need to be

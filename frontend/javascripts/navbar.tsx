@@ -382,7 +382,7 @@ function getHelpSubMenu(
   helpSubMenuItems.push({
     key: "imprint",
     label: (
-      <a target="_blank" href="https://webknossos.org/imprint" rel="noopener noreferrer">
+      <a target="_blank" href="/imprint" rel="noopener noreferrer">
         Imprint
       </a>
     ),
@@ -390,7 +390,7 @@ function getHelpSubMenu(
   helpSubMenuItems.push({
     key: "privacy",
     label: (
-      <a target="_blank" href="https://webknossos.org/privacy" rel="noopener noreferrer">
+      <a target="_blank" href="/privacy" rel="noopener noreferrer">
         Privacy
       </a>
     ),

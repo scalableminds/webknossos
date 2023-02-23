@@ -9,7 +9,7 @@ import { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import { LoadingStrategy, PlaneRects } from "oxalis/store";
-import { getMaxZoomStepDiff, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
+import { MAX_ZOOM_STEP_DIFF, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).
@@ -46,10 +46,7 @@ export default function determineBucketsForOblique(
 ): void {
   let zoomStepDiff = 0;
 
-  while (
-    logZoomStep + zoomStepDiff < resolutions.length &&
-    zoomStepDiff <= getMaxZoomStepDiff(loadingStrategy)
-  ) {
+  while (logZoomStep + zoomStepDiff < resolutions.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
     addNecessaryBucketsToPriorityQueueOblique(
       loadingStrategy,
       viewMode,

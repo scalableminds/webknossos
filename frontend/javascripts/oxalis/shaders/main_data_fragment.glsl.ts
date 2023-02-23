@@ -19,6 +19,7 @@ import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import compileShader from "./shader_module_system";
 import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
@@ -494,8 +495,6 @@ void main() {
   flatVertexPos = worldCoordUVW;
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
-  const uint FALLBACK_COUNT = 3u;
-
   <% _.each(layerNamesWithSegmentation, function(name, layerIndex) { %>
   if (!<%= name %>_has_transform) {
     float bucketAddress;
@@ -504,7 +503,7 @@ void main() {
 
     uint renderedMagIdx;
     outputMagIdx[globalLayerIndex] = 100u;
-    for (uint i = 0u; i < FALLBACK_COUNT; i++) {
+    for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
       renderedMagIdx = activeMagIdx + i;
       vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);

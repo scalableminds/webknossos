@@ -33,7 +33,7 @@ import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { invertAndTranspose } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 
@@ -524,7 +524,6 @@ function _getUnrenderableLayerInfosForCurrentZoom(
   const { dataset } = state;
   const activeMagIndices = getActiveMagIndicesForLayers(state);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
   const unrenderableLayers = getEnabledLayers(dataset, state.datasetConfiguration)
     .map((layer: DataLayerType) => ({
       layer,
@@ -549,7 +548,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
       // The current resolution is missing and fallback rendering
       // is activated. Thus, check whether one of the fallback
       // zoomSteps can be rendered.
-      return !_.range(1, maxZoomStepDiff + 1).some((diff) => {
+      return !_.range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {
         const fallbackZoomStep = activeMagIdx + diff;
         return resolutionInfo.hasIndex(fallbackZoomStep);
       });

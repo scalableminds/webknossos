@@ -28,7 +28,7 @@ import {
   getVisibleSegmentationLayer,
   getDataLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import {
   getFlooredPosition,
   getActiveMagIndexForLayer,
@@ -376,7 +376,6 @@ function _getRenderableResolutionForSegmentationTracing(
 
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
   const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
@@ -404,7 +403,7 @@ function _getRenderableResolutionForSegmentationTracing(
   // zoomSteps can be rendered.
   for (
     let fallbackZoomStep = requestedZoomStep + 1;
-    fallbackZoomStep <= requestedZoomStep + maxZoomStepDiff;
+    fallbackZoomStep <= requestedZoomStep + MAX_ZOOM_STEP_DIFF;
     fallbackZoomStep++
   ) {
     if (resolutionInfo.hasIndex(fallbackZoomStep)) {

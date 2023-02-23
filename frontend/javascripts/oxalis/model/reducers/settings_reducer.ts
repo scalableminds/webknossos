@@ -185,7 +185,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         if (action.viewMode !== "orthogonal") {
           return newState;
         }
-        // Restore rotation
+        // Restore rotation because it might have been changed by the user
+        // in flight/oblique mode. Since this affects the matrix (which is
+        // also used in orthogonal mode), the rotation needs to be reset.
         return setRotationReducer(newState, [0, 0, 0]);
       } else {
         return state;

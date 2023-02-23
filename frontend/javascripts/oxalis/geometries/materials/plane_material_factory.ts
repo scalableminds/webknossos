@@ -775,15 +775,16 @@ class PlaneMaterialFactory {
     // into account (a) which layers are activated and (b) which
     // layers were least-recently activated (but are now disabled).
     // The first array contains the color layer names and the second the segmentation layer names.
-    if (maximumLayerCountToRender <= 0) {
-      return [[], [], 0];
-    }
-
+    // The third parameter returns the number of globally available layers (this is not always equal
+    // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
     );
     const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
+    if (maximumLayerCountToRender <= 0) {
+      return [[], [], globalLayerCount];
+    }
 
     if (maximumLayerCountToRender >= globalLayerCount) {
       // We can simply render all available layers.

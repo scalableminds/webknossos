@@ -442,7 +442,16 @@ void main() {
   //                               instead of the left.
 
   // Calculate the index of the vertex (e.g., index.x=0 is the first horizontal vertex).
-  index = (position.xy / (PLANE_WIDTH / 2.) + 1.) / 2. * PLANE_SUBDIVISION;
+  // Let's only consider x:
+  // The plane itself is PLANE_WIDTH wide which is why x is in the range [-PLANE_WIDTH/2, +PLANE_WIDTH/2].
+  // This is regardless of the scale of the plane (the scale is reflected in the modelMatrix).
+  // The calculation transforms x
+  //   - to the interval [-1, +1] and then
+  //   - to [0, 1] (via (... + 1) * 2) and then
+  //   - to [0, PLANE_SUBDIVISION]
+  // Rounding is only done to fight potential numerical inaccuracies. In theory, the result should be
+  // integer without the rounding.
+  index = round((position.xy / (PLANE_WIDTH / 2.) + 1.) / 2. * PLANE_SUBDIVISION);
 
   uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
   vec2 d = transDim(vec3(32.) * getResolution(activeMagIdx)).xy;

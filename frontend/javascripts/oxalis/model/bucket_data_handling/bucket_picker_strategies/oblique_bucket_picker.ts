@@ -120,7 +120,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
       logZoomStep,
     );
     const steps = stepRateBuckets.length + 1;
-    const stepSize = [extent[0] / steps, extent[1] / steps];
+    const stepSize = [enlargedExtent[0] / steps, enlargedExtent[1] / steps];
     // This array holds the start and end points
     // of horizontal lines which cover the entire rendered plane.
     // These "scan lines" are traversed to find out which buckets need to be

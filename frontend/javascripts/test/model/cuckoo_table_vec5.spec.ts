@@ -104,7 +104,7 @@ test.serial("CuckooTableVec5: Repeated sets should work", (t) => {
   // This is a regression test for a bug which resulted in the
   // same key being multiple times in the table. Due to the random
   // usage of seeds, the bug did not always occur. Therefore,
-  // the following loop iterates 1000th times to be extra thorough.
+  // the following loop iterates 1000 times to be extra thorough.
   for (let n = 0; n < 1000; n++) {
     for (let _idx = 0; _idx < ct.entryCapacity; _idx++) {
       const entry: Entry = [[1, 2, 3, 4, 5], n];

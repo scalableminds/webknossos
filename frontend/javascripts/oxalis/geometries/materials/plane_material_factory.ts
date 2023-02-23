@@ -522,6 +522,15 @@ class PlaneMaterialFactory {
             }
           }
 
+          // The vertex shader looks up the buckets for rendering so that the
+          // fragment shader doesn't need to do so. Currently, this only works
+          // for layers that don't have a transformation (otherwise, the differing
+          // grids wouldn't align with each other).
+          // To align the vertices with the buckets, the current magnification is
+          // needed. Since the current mag can differ from layer to layer, the shader
+          // needs to know which mag is safe to use.
+          // For this purpose, we define the representativeLayerIdxForMag which is
+          // essentially an index to *some* layer that doesn't have any transforms.
           // If all layers have a transform, the representativeLayerIdxForMag
           // isn't relevant which is why it can default to 0.
           this.uniforms.representativeLayerIdxForMag = {

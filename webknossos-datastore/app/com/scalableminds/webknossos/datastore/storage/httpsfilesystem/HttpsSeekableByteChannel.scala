@@ -43,7 +43,7 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
   }
 
   private lazy val headerInfos = getHeaderInformation
-  private lazy val acceptsPartialRequests: Boolean = getHeaderInformation._1
+  private lazy val acceptsPartialRequests: Boolean = headerInfos._1
 
   private def getDataRequest: Request[Either[String, Array[Byte]], Any] =
     authenticatedRequest.get(Uri(uri)).response(asByteArray)

@@ -49,7 +49,9 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
     authenticatedRequest.get(Uri(uri)).response(asByteArray)
 
   private def getRangeRequest(bufferSize: Int): Request[Either[String, Array[Byte]], Any] =
-    getDataRequest.header("Range", s"bytes=${_position}-${(bufferSize + _position).min(size())}").response(asByteArray)
+    getDataRequest
+      .header("Range", s"bytes=${_position}-${(bufferSize + _position).min(size()) - 1}")
+      .response(asByteArray)
 
   private def getResponse: Identity[Response[Either[String, Array[Byte]]]] = {
     val request: Request[Either[String, Array[Byte]], Any] = getDataRequest
@@ -68,12 +70,12 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
       if (rangeRequestsActive && acceptsPartialRequests) getResponseForRangeRequest(byteBuffer.limit())
       else fullResponse
     if (!response.isSuccess) {
-      throw new Exception(s"Https read failed for uri $uri: Response was not successful")
+      throw new Exception(s"Https read failed for uri $uri: Response was not successful ${response.statusText}")
     }
     response.body match {
       case Left(e) => throw new Exception(s"Https read failed for uri $uri: $e: Response empty")
       case Right(bytes) =>
-        val availableBytes = bytes.length - position
+        val availableBytes = size() - position
         val bytesToCopy = availableBytes.min(byteBuffer.limit)
         byteBuffer.put(bytes.slice(_position.toInt, (_position + bytesToCopy).toInt))
         _position += bytesToCopy

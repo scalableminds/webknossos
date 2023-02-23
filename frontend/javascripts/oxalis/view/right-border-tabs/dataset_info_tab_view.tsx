@@ -7,12 +7,11 @@ import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setAnnotationNameAction,
@@ -39,7 +38,7 @@ type StateProps = {
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
-  activeResolution: Vector3;
+  activeResolutionInfo: ReturnType<typeof getActiveResolutionInfo>;
   isDatasetViewMode: boolean;
 };
 type DispatchProps = {
@@ -569,15 +568,23 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { dataset, activeResolution, activeUser } = this.props;
+    const { dataset, activeResolutionInfo, activeUser } = this.props;
+    const { activeMagIndicesOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
+      activeResolutionInfo;
     const resolutions = getResolutions(dataset);
     const resolutionInfo =
-      activeResolution != null ? (
+      representativeResolution != null ? (
         <Tooltip
           title={
             <div>
-              Currently rendered resolution {activeResolution.join("-")}.<br />
-              <br />
+              Rendered magnification per layer:
+              <ul>
+                {Object.entries(activeMagIndicesOfEnabledLayers).map(([layerName, magIndex]) => (
+                  <li>
+                    {layerName}: {resolutions[magIndex].join("-")}
+                  </li>
+                ))}
+              </ul>
               Available resolutions:
               <ul>
                 {resolutions.map((r) => (
@@ -609,7 +616,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                 verticalAlign: "top",
               }}
             >
-              {activeResolution.join("-")}
+              {representativeResolution.join("-")}
+              {isActiveResolutionGlobal ? "" : "*"}{" "}
             </td>
           </tr>
         </Tooltip>
@@ -651,15 +659,13 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 }
 
-const dummyResolution = [1, 1, 1] as Vector3;
 const mapStateToProps = (state: OxalisState): StateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
-  // todo:
-  activeResolution: dummyResolution, // getCurrentResolution(state),
+  activeResolutionInfo: getActiveResolutionInfo(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

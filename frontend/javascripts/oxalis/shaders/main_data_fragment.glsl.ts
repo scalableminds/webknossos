@@ -420,20 +420,10 @@ void main() {
 
   // The following code ensures that the vertices are aligned with the bucket borders
   // of the currently rendered magnification.
-  // In general, each vertex is floored to the next lower multiple of a bucket's extent.
-  // Exceptions are the following:
-  // - the first and the last vertex isn't moved so that the plane keeps its original extent
-  // - the second last vertex is moved so that it's positioned at the beginning of the last
-  //   rendered bucket. If this isn't handled additionally, the second last vertex might be
-  //   still correct in most cases, but at certain positions, the second last vertex is
-  //   already in the second last bucket and would be moved to far to the left.
-  //   Example:
-  //   *------|------|------|----a-|---*
-  //   ^ first vertex
-  //          ^ second vertex
-  //                   ...             ^ last vertex
-  //                             ^ if a is the second last vertex, it needs to be moved to the right
-  //                               instead of the left.
+  // In general, an index i is computed for each vertex so that each vertex can be moved
+  // to the right/bottom border of the i-th bucket.
+  // Exceptions are the first and the last vertex which aren't moved so that the plane
+  // keeps its original extent.
 
   // Calculate the index of the vertex (e.g., index.x=0 is the first horizontal vertex).
   // Let's only consider x:
@@ -446,6 +436,8 @@ void main() {
   // Rounding is only done to fight potential numerical inaccuracies. In theory, the result should be
   // integer without the rounding.
   index = round((position.xy / (PLANE_WIDTH / 2.) + 1.) / 2. * PLANE_SUBDIVISION);
+  // Invert vertical axis to make calculation more intuitive with top-left coordinates.
+  index.y = PLANE_SUBDIVISION - index.y;
 
   uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
   // d is the width/height of a bucket in the current resolution.
@@ -454,22 +446,27 @@ void main() {
   vec3 datasetScaleUVW = transDim(datasetScale);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-  if (index.x >= 1. && index.x <= PLANE_SUBDIVISION - 2.) {
-    transWorldCoord.x = floor(transWorldCoord.x / datasetScaleUVW.x / d.x) * d.x * datasetScaleUVW.x;
+  if (index.x >= 1. && index.x <= PLANE_SUBDIVISION - 1.) {
+    transWorldCoord.x =
+      (
+        // Left border of left-most bucket (probably outside of visible plane)
+        floor(worldCoordTopLeft.x / datasetScaleUVW.x / d.x) * d.x
+        // Move by index.x buckets to the right.
+        + index.x * d.x
+      ) * datasetScaleUVW.x;
+
     transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
-  } else if (index.x == PLANE_SUBDIVISION - 1.) {
-    // The second-last vertex should be clipped to the next-lower bucket boundary beginning from
-    // worldCoordBottomRight.
-    transWorldCoord.x = floor(worldCoordBottomRight.x / datasetScaleUVW.x / d.x) * d.x * datasetScaleUVW.x;
   }
 
   if (index.y >= 1. && index.y <= PLANE_SUBDIVISION - 1.) {
-    transWorldCoord.y = floor(transWorldCoord.y / datasetScaleUVW.y / d.y) * d.y * datasetScaleUVW.y;
+    transWorldCoord.y =
+      (
+        // Top border of top-most bucket (probably outside of visible plane)
+        floor(worldCoordTopLeft.y / datasetScaleUVW.y / d.y) * d.y
+        // Move by index.y buckets to the bottom.
+        + index.y * d.y
+      ) * datasetScaleUVW.y;
     transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
-  } else if (index.y == PLANE_SUBDIVISION - 1.) {
-    // The second-last vertex should be clipped to the next-lower bucket boundary beginning from
-    // worldCoordBottomRight.
-    transWorldCoord.y = floor(worldCoordBottomRight.y / datasetScaleUVW.y / d.y) * d.y * datasetScaleUVW.y;
   }
 
   worldCoord = vec4(transDim(transWorldCoord), 1.);

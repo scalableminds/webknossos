@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Menu, MenuItemProps, Alert, ButtonProps, Button, Result, Popover } from "antd";
+import { Alert, ButtonProps, Button, Result, Popover } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -9,7 +9,6 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import { Link } from "react-router-dom";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { OxalisState } from "oxalis/store";
 import { rgbToHex } from "libs/utils";
 import { PRIMARY_COLOR } from "oxalis/constants";
@@ -23,11 +22,6 @@ const popOverStyle = { color: "white", maxWidth: 250 };
 const handleMouseClick = (event: React.MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
-};
-
-const handleMenuClick: MenuClickEventHandler = (info) => {
-  info.domEvent.preventDefault();
-  info.domEvent.stopPropagation();
 };
 
 type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
@@ -48,14 +42,15 @@ function getUpgradeNowButton(
   ) : null;
 }
 
-export const PricingEnforcedMenuItem: React.FunctionComponent<
-  RequiredPricingProps & MenuItemProps
-> = ({ children, requiredPricingPlan, ...menuItemProps }) => {
+export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> = ({
+  children,
+  requiredPricingPlan,
+}) => {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
-  if (isFeatureAllowed) return <Menu.Item {...menuItemProps}>{children}</Menu.Item>;
+  if (isFeatureAllowed) return <>{children}</>;
 
   return (
     <Popover
@@ -68,18 +63,18 @@ export const PricingEnforcedMenuItem: React.FunctionComponent<
       }
       placement="right"
       trigger="hover"
+      zIndex={1500}
     >
-      <Menu.Item
-        onClick={handleMenuClick}
+      <span
+        onClick={handleMouseClick}
         onAuxClick={handleMouseClick}
         onDoubleClick={handleMouseClick}
         onClickCapture={handleMouseClick}
-        className="ant-dropdown-menu-item-disabled"
-        {...menuItemProps}
+        className="ant-menu-title-content ant-menu-item-disabled"
       >
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
-      </Menu.Item>
+      </span>
     </Popover>
   );
 };

@@ -160,6 +160,7 @@ const defaultState: OxalisState = {
     owner: null,
     contributors: [],
     othersMayEdit: false,
+    blockedByUser: null,
     annotationLayers: [],
   },
   save: {

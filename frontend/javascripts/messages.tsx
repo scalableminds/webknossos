@@ -260,6 +260,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
     "If you reopen your old annotation, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
+  "annotation.acquiringMutexFailed": _.template(
+    "This annotation is currently being edited by <%- userName %>. To avoid conflicts, you can only view it. If you want to edit it, please ask <%- userName %> to finish their work first.",
+  ),
+  "annotation.acquiringMutexFailed.noUser":
+    "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
+  "annotation.acquiringMutexSucceeded":
+    "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

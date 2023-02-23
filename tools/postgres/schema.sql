@@ -19,6 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
+
 INSERT INTO webknossos.releaseInformation(schemaVersion) values(101);
 COMMIT TRANSACTION;
 
@@ -71,6 +72,12 @@ CREATE TABLE webknossos.annotation_contributors(
   _annotation CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
   PRIMARY KEY (_annotation, _user)
+);
+
+CREATE TABLE webknossos.annotation_mutexes(
+  _annotation CHAR(24) PRIMARY KEY,
+  _user CHAR(24) NOT NULL,
+  expiry TIMESTAMP NOT NULL
 );
 
 CREATE TABLE webknossos.meshes(
@@ -661,6 +668,9 @@ ALTER TABLE webknossos.annotation_sharedTeams
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.annotation_contributors
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.annotation_mutexes
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.meshes

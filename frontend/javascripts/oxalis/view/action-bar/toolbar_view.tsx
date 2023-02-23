@@ -20,7 +20,7 @@ import {
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
-  getSegmentColorAsHSL,
+  getSegmentColorAsHSLA,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -419,7 +419,7 @@ function CreateCellButton() {
     if (!activeCellId) {
       return null;
     }
-    return hslaToCSS(getSegmentColorAsHSL(state, activeCellId));
+    return hslaToCSS(getSegmentColorAsHSLA(state, activeCellId));
   });
 
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";

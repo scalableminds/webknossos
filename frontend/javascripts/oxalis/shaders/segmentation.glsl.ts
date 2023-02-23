@@ -7,7 +7,7 @@ import {
   colormapJet,
   jsColormapJet,
 } from "oxalis/shaders/utils.glsl";
-import { Vector4 } from "oxalis/constants";
+import { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
@@ -155,10 +155,10 @@ export const convertCellIdToRGB: ShaderModule = {
   `,
 };
 // This function mirrors the above convertCellIdToRGB-function.
-// Output is in [0,1] for H, S, L and A
-export const jsConvertCellIdToHSLA = (
+// Output is in [0,1] for R, G, B, and A
+export const jsConvertCellIdToRGBA = (
   id: number,
-  customColors?: Array<number> | null | undefined,
+  customColors?: Array<Vector3> | null | undefined,
   alpha: number = 1,
 ): Vector4 => {
   if (id === 0) {
@@ -166,11 +166,11 @@ export const jsConvertCellIdToHSLA = (
     return [1, 1, 1, 1];
   }
 
-  let hue;
+  let rgb;
 
   if (customColors != null) {
     const last8Bits = id % 2 ** 8;
-    hue = customColors[last8Bits] || 0;
+    rgb = customColors[last8Bits] || [0, 0, 0];
   } else {
     // The shader always derives the segment color by using a 64-bit id from which
     // - the lower 16 bits of the lower 32 bits and
@@ -184,11 +184,22 @@ export const jsConvertCellIdToHSLA = (
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);
     const colorValueDecimal = (1.0 / colorCount) * colorIndex;
-    hue = (1 / 360) * jsRgb2hsv(jsColormapJet(colorValueDecimal))[0];
+    rgb = jsColormapJet(colorValueDecimal);
   }
 
+  return [...rgb, alpha];
+};
+// Output is in [0,1] for H, S, L, and A
+export const jsConvertCellIdToHSLA = (
+  id: number,
+  customColors?: Array<Vector3> | null | undefined,
+  alpha: number = 1,
+): Vector4 => {
+  const [r, g, b] = jsConvertCellIdToRGBA(id, customColors, alpha);
+  const hue = (1 / 360) * jsRgb2hsv([r, g, b])[0];
   return [hue, 1, 0.5, alpha];
 };
+
 export const getBrushOverlay: ShaderModule = {
   code: `
     vec4 getBrushOverlay(vec3 worldCoordUVW) {

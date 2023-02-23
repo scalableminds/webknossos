@@ -39,7 +39,7 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
-import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
 
@@ -209,7 +209,7 @@ class SceneController {
   }
 
   getColorObjectForSegment(cellId: number) {
-    const [hue, saturation, light] = getSegmentColorAsHSL(Store.getState(), cellId);
+    const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), cellId);
     const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
     return color;
   }

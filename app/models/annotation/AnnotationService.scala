@@ -1,6 +1,5 @@
 package models.annotation
 
-import java.io.{BufferedOutputStream, File, FileOutputStream}
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
@@ -37,8 +36,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
-
-import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
@@ -57,6 +54,8 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.ObjectId
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],

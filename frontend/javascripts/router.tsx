@@ -58,7 +58,12 @@ import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
-import { APICompoundTypeEnum, APIUser, TracingTypeEnum } from "types/api_flow_types";
+import {
+  APICompoundTypeEnum,
+  APIResolutionRestrictions,
+  APIUser,
+  TracingTypeEnum,
+} from "types/api_flow_types";
 
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
@@ -616,7 +621,7 @@ class ReactRouter extends React.Component<Props> {
                         !match.params.dataSetName ||
                         !match.params.type
                       ) {
-                        // Typehint for flow
+                        // Typehint for TS
                         throw new Error("Invalid URL");
                       }
 
@@ -627,24 +632,20 @@ class ReactRouter extends React.Component<Props> {
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
-                      const { fallbackLayerName } = getParams;
-                      const resolutionRestrictions = {};
+                      const { autoFallbackLayer, fallbackLayerName } = getParams;
+                      const resolutionRestrictions: APIResolutionRestrictions = {};
 
                       if (getParams.minRes !== undefined) {
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         resolutionRestrictions.min = parseInt(getParams.minRes);
 
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.min)) {
                           throw new Error("Invalid minRes parameter");
                         }
                       }
 
                       if (getParams.maxRes !== undefined) {
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         resolutionRestrictions.max = parseInt(getParams.maxRes);
 
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.max)) {
                           throw new Error("Invalid maxRes parameter");
                         }
@@ -653,6 +654,7 @@ class ReactRouter extends React.Component<Props> {
                       const annotation = await createExplorational(
                         dataset,
                         type,
+                        !!autoFallbackLayer,
                         fallbackLayerName,
                         null,
                         resolutionRestrictions,

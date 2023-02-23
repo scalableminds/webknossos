@@ -11,12 +11,8 @@ import {
 import window from "libs/window";
 import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
-import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
-import { clearCache } from "admin/admin_rest_api";
-import {
-  getFirstSegmentationLayer,
-  doesSupportVolumeWithFallback,
-} from "oxalis/model/accessors/dataset_accessor";
+import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
+import { clearCache, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
@@ -37,25 +33,16 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal,
   onCloseCreateExplorativeModal,
 }: {
-  dataset: APIDataset;
+  dataset: APIDatasetCompact;
   isReloading: boolean;
   isCreateExplorativeModalVisible: boolean;
   onShowCreateExplorativeModal: () => void;
   onCloseCreateExplorativeModal: () => void;
 }) {
-  const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
-  const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
-    ? "true"
-    : "false";
-  const fallbackLayerGetParameter =
-    firstSegmentationLayer != null && supportsFallback
-      ? `?fallbackLayerName=${firstSegmentationLayer.name}`
-      : "";
-
   return (
     <div>
       <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid?autoFallbackLayer=true`}
         style={{
           display: "inline-block",
         }}
@@ -93,7 +80,7 @@ function NewAnnotationLink({
 }
 
 type Props = {
-  dataset: APIMaybeUnimportedDataset;
+  dataset: APIDatasetCompact;
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
 };
 type State = {
@@ -135,10 +122,11 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     isCreateExplorativeModalVisible: false,
   };
 
-  onClearCache = async (dataset: APIMaybeUnimportedDataset) => {
+  onClearCache = async (compactDataset: APIDatasetCompact) => {
     this.setState({
       isReloading: true,
     });
+    const dataset = await getDataset(compactDataset);
     await clearCache(dataset);
     await this.props.reloadDataset(dataset);
     Toast.success(
@@ -181,7 +169,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           onClick={() =>
             Modal.error({
               title: "Cannot load this dataset",
-              content: dataset.dataSource.status,
+              content: dataset.status,
             })
           }
         >
@@ -256,7 +244,7 @@ export function getDatasetActionContextMenu({
   hideContextMenu,
 }: {
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  datasets: APIMaybeUnimportedDataset[];
+  datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
 }) {
   if (datasets.length !== 1) {
@@ -318,7 +306,10 @@ export function getDatasetActionContextMenu({
 
       <Menu.Item
         key="reload"
-        onClick={() => (dataset.isActive ? onClearCache(dataset, reloadDataset) : null)}
+        onClick={async () => {
+          const fullDataset = await getDataset(dataset);
+          return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
+        }}
       >
         Reload
       </Menu.Item>

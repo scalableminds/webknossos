@@ -60,6 +60,7 @@ import {
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
+  getSegmentColorAsRGBA,
   getVolumeDescriptors,
   getVolumeTracings,
   hasVolumeTracings,
@@ -86,7 +87,10 @@ import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinati
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setActiveCellAction,
+  updateSegmentAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
@@ -1936,6 +1940,47 @@ class DataApi {
     for (const segmentId of segmentIds) {
       Store.dispatch(removeIsosurfaceAction(effectiveLayerName, Number(segmentId)));
     }
+  }
+
+  /**
+   * Get the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
+   * the currently visible segmentation layer will be used.
+   *
+   * @example
+   * api.data.getSegmentColor(3);
+   */
+  getSegmentColor(segmentId: number, layerName?: string): Vector3 {
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
+      Store.getState(),
+      layerName,
+    ).name;
+
+    const [r, g, b] = getSegmentColorAsRGBA(Store.getState(), segmentId, effectiveLayerName);
+    return [r, g, b];
+  }
+
+  /**
+   * Set the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
+   * the currently visible segmentation layer will be used.
+   *
+   * @example
+   * api.data.setSegmentColor(3, [0, 1, 1]);
+   */
+  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string) {
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
+      Store.getState(),
+      layerName,
+    ).name;
+
+    Store.dispatch(
+      updateSegmentAction(
+        segmentId,
+        {
+          color: rgbColor,
+        },
+        effectiveLayerName,
+      ),
+    );
   }
 }
 /**

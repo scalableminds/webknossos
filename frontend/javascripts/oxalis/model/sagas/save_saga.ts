@@ -1129,6 +1129,12 @@ const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 function* watchForSaveConflicts() {
   function* checkForNewVersion() {
     const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
+    const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+    const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+    if (!allowUpdate && othersMayEdit) {
+      // The user does not have the annotation's mutex and therefore no repeated version check is needed.
+      return;
+    }
 
     const maybeSkeletonTracing = yield* select((state) => state.tracing.skeleton);
     const volumeTracings = yield* select((state) => state.tracing.volumes);

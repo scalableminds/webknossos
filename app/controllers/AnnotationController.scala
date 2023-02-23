@@ -22,8 +22,10 @@ import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
-import oxalis.security.{URLSharing, WkEnv}
+import oxalis.security.{URLSharing, UserAwareRequestLogging, WkEnv}
+import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
@@ -34,11 +36,13 @@ import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
+                                     autoFallbackLayer: Boolean = false,
                                      mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: String)
+                                     name: Option[String])
 object AnnotationLayerParameters {
-  implicit val jsonFormat: OFormat[AnnotationLayerParameters] = Json.format[AnnotationLayerParameters]
+  implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
+    Json.using[WithDefaultValues].format[AnnotationLayerParameters]
 }
 
 @Api
@@ -51,21 +55,23 @@ class AnnotationController @Inject()(
     dataSetDAO: DataSetDAO,
     dataSetService: DataSetService,
     annotationService: AnnotationService,
+    annotationMutexService: AnnotationMutexService,
     userService: UserService,
     teamService: TeamService,
     projectDAO: ProjectDAO,
     teamDAO: TeamDAO,
-    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
     timeSpanService: TimeSpanService,
     annotationMerger: AnnotationMerger,
     tracingStoreService: TracingStoreService,
     provider: AnnotationInformationProvider,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     analyticsService: AnalyticsService,
+    slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
     conf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
+    with UserAwareRequestLogging
     with FoxImplicits {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
@@ -557,6 +563,7 @@ class AnnotationController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation.typ == AnnotationType.Explorational || annotation.typ == AnnotationType.Task) ?~> "annotation.othersMayEdit.onlyExplorationalOrTask"
         _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationDAO.updateOthersMayEdit(annotation._id, othersMayEdit)
       } yield Ok(Json.toJson(othersMayEdit))
@@ -598,5 +605,21 @@ class AnnotationController @Inject()(
         tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, dataSetBoundingBox) ?~> "Failed to duplicate volume tracing."
       }
     } yield annotationLayer.copy(tracingId = newTracingId)
+
+  @ApiOperation(hidden = true, value = "")
+  def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+        for {
+          idValidated <- ObjectId.fromString(id)
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          _ <- bool2Fox(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
+          restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
+          resultJson <- annotationMutexService.publicWrites(mutexResult)
+        } yield Ok(resultJson)
+      }
+    }
 
 }

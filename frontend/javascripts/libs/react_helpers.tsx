@@ -1,22 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
+
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(
-  callback: (...args: Array<any>) => any,
+  callback: Function,
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef();
+  const savedCallback = useRef<Function>();
   // Remember the latest callback.
   useEffect(() => {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '(...args: any[]) => any' is not assignable t... Remove this comment to see the full error message
     savedCallback.current = callback;
   });
   // Set up the interval.
   useEffect(() => {
     function tick() {
-      // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
       if (savedCallback.current != null) savedCallback.current();
     }
 

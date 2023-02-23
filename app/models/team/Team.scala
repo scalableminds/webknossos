@@ -133,8 +133,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def countByNameAndOrganization(teamName: String, organizationId: ObjectId): Fox[Int] =
     for {
       countList <- run(
-        q"select count(_id) from $existingCollectionName where name = $teamName and _organization = $organizationId"
-          .as[Int])
+        q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
       count <- countList.headOption
     } yield count
 

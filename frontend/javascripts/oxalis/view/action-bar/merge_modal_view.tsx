@@ -135,9 +135,8 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
   };
 
-  handleChangeMergeExplorativeAnnotation = (event: React.SyntheticEvent) => {
+  handleChangeMergeExplorativeAnnotation = (event: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       selectedExplorativeAnnotation: event.target.value,
     });
   };

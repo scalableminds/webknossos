@@ -17,10 +17,9 @@ import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
   exploreRemoteDataset,
-  getDataset,
   isDatasetNameValid,
   storeRemoteDataset,
-  updateDataset,
+  updateDatasetPartial,
 } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
@@ -49,7 +48,7 @@ const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
 type OwnProps = {
-  onAdded: (arg0: string, arg1: string) => Promise<void>;
+  onAdded: (arg0: string, arg1: string, arg2: boolean) => Promise<void>;
   datastores: Array<APIDataStore>;
 };
 type StateProps = {
@@ -166,10 +165,9 @@ function DatasetAddZarrView(props: Props) {
           owningOrganization: activeUser.organization,
           name: configJSON.id.name,
         };
-        const dataset = await getDataset(datasetId);
-        await updateDataset(datasetId, dataset, targetFolderId, true);
+        await updateDatasetPartial(datasetId, { folderId: targetFolderId });
       }
-      onAdded(activeUser.organization, configJSON.id.name);
+      onAdded(activeUser.organization, configJSON.id.name, true);
     }
   }
 
@@ -322,7 +320,7 @@ function AddZarrLayer({
   };
 
   function validateUrls(userInput: string) {
-    if (userInput.startsWith("https://")) {
+    if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {
       setSelectedProtocol("s3");
@@ -330,7 +328,7 @@ function AddZarrLayer({
       setSelectedProtocol("gs");
     } else {
       throw new Error(
-        "Dataset URL must employ one of the following protocols: https://, s3:// or gs://",
+        "Dataset URL must employ one of the following protocols: https://, http://, s3:// or gs://",
       );
     }
   }

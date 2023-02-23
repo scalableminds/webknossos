@@ -10,6 +10,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
+    "@redux-saga/testing-utils": "^1.1.5",
     "@shaderfrog/glsl-parser": "^0.2.2",
     "@types/color-hash": "^1.0.2",
     "@types/cwise": "^1.0.4",
@@ -162,6 +163,7 @@
     "cwise": "^1.0.10",
     "dagre": "^0.8.5",
     "data.maybe": "^1.2.2",
+    "dayjs": "^1.11.7",
     "deep-for-each": "^2.0.3",
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^2.1.0",
@@ -185,7 +187,6 @@
     "mini-css-extract-plugin": "^2.5.2",
     "minisearch": "^5.0.0",
     "mjs": "^1.0.0",
-    "moment": "^2.21.0",
     "nanoevents": "^5.1.8",
     "ndarray": "^1.0.19",
     "ndarray-convolve": "^2.0.0",

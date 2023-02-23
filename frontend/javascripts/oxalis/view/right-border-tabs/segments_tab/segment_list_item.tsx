@@ -7,7 +7,7 @@ import {
 } from "@ant-design/icons";
 import { List, Tooltip, Dropdown, Menu, MenuItemProps } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import Checkbox from "antd/lib/checkbox/Checkbox";
+import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
@@ -25,7 +25,7 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
-import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
@@ -255,8 +255,7 @@ function _MeshInfoItem(props: {
     <Tooltip title="Change visibility">
       <Checkbox
         checked={isVisible}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
-        onChange={(event: React.SyntheticEvent) => {
+        onChange={(event: CheckboxChangeEvent) => {
           if (!props.visibleSegmentationLayer) {
             return;
           }
@@ -264,7 +263,6 @@ function _MeshInfoItem(props: {
           onChangeMeshVisibility(
             props.visibleSegmentationLayer.name,
             segment.id,
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
             event.target.checked,
           );
         }}
@@ -345,7 +343,7 @@ function _SegmentListItem({
   const mappedId = mapId(segment.id);
 
   const segmentColorHSLA = useSelector(
-    (state: OxalisState) => getSegmentColorAsHSL(state, mappedId),
+    (state: OxalisState) => getSegmentColorAsHSLA(state, mappedId),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
 

@@ -18,8 +18,8 @@ None.
 
 ### Postgres Evolutions:
 
-- [094-pricing-plans.sql](conf/evolutions/reversions/094-pricing-plans.sql)
-- [095-constraint-naming.sql](conf/evolutions/reversions/095-constraint-naming.sql)
+- [094-pricing-plans.sql](conf/evolutions/094-pricing-plans.sql)
+- [095-constraint-naming.sql](conf/evolutions/095-constraint-naming.sql)
 - [096-storage.sql](conf/evolutions/096-storage.sql)
 - [097-credentials.sql](conf/evolutions/097-credentials.sql)
 - [098-voxelytics-states.sql](conf/evolutions/098-voxelytics-states.sql)

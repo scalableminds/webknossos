@@ -1,14 +1,13 @@
 package oxalis.mail
 
-import java.net.URL
-
-import javax.inject.Inject
 import models.organization.Organization
 import models.user.User
 import play.api.i18n.Messages
 import utils.WkConf
 import views._
 
+import java.net.URL
+import javax.inject.Inject
 import scala.util.Try
 
 class DefaultMails @Inject()(conf: WkConf) {
@@ -93,11 +92,15 @@ class DefaultMails @Inject()(conf: WkConf) {
     )
   }
 
-  def helpMail(user: User, userEmail: String, organizationDisplayName: String, message: String): Mail =
+  def helpMail(user: User,
+               userEmail: String,
+               organizationDisplayName: String,
+               message: String,
+               currentUrl: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Help requested // Feedback provided",
-      bodyHtml = html.mail.help(user.name, organizationDisplayName, message).body,
+      bodyHtml = html.mail.help(user.name, organizationDisplayName, message, currentUrl).body,
       recipients = List("hello@webknossos.org", userEmail)
     )
 

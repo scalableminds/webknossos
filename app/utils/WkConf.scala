@@ -40,6 +40,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
     }
 
+    object Annotation {
+      object Mutex {
+        val expiryTime: FiniteDuration = get[FiniteDuration]("webKnossos.annotation.mutex.expiryTime")
+      }
+    }
+
     object Cache {
       object User {
         val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.cache.user.timeout")

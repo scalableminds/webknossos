@@ -12,7 +12,7 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getContourTracingMode,
-  getSegmentColorAsHSL,
+  getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   handleAgglomerateSkeletonAtClick,
@@ -669,7 +669,7 @@ export class QuickSelectTool {
           return;
         }
 
-        const [h, s, l] = getSegmentColorAsHSL(state, volumeTracing.activeCellId);
+        const [h, s, l] = getSegmentColorAsHSLA(state, volumeTracing.activeCellId);
         const activeCellColor = new THREE.Color().setHSL(h, s, l);
         quickSelectGeometry.setColor(activeCellColor);
         startPos = V3.floor(calculateGlobalPos(state, pos));

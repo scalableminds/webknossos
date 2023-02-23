@@ -2,8 +2,6 @@ import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox, IsosurfaceInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/helpers/deep_update"' has no... Remove this comment to see the full error message
-import type { StateShape1, WriteableShape } from "oxalis/model/helpers/deep_update";
 import { updateKey, updateKey2, updateKey4 } from "oxalis/model/helpers/deep_update";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
@@ -11,7 +9,7 @@ import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_m
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import _ from "lodash";
 
-const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
+const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
   updateKey(state, "tracing", shape);
 
 const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<UserBoundingBox>) => {
@@ -94,6 +92,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const { allowUpdate } = action;
       return updateKey2(state, "tracing", "restrictions", {
         allowUpdate,
+      });
+    }
+
+    case "SET_BLOCKED_BY_USER": {
+      const { blockedByUser } = action;
+      return updateKey(state, "tracing", {
+        blockedByUser,
       });
     }
 
@@ -215,7 +220,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
-      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = {
+      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isVisible: visibility,
       };
       return updateKey4(
@@ -295,7 +300,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "STARTED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
-      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = {
+      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isLoading: true,
       };
       return updateKey4(
@@ -310,7 +315,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "FINISHED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
-      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = {
+      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isLoading: false,
       };
       return updateKey4(

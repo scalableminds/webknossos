@@ -1,7 +1,12 @@
 import _ from "lodash";
 import React, { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Utils from "libs/utils";
-import { getDataset, getDatasets, updateDataset } from "admin/admin_rest_api";
+import {
+  DatasetUpdater,
+  getDataset,
+  getDatasets,
+  updateDatasetPartial,
+} from "admin/admin_rest_api";
 import {
   createFolder,
   deleteFolder,
@@ -13,13 +18,14 @@ import {
 import Toast from "libs/toast";
 import { useEffect, useRef } from "react";
 import {
-  APIDataset,
   APIDatasetId,
-  APIMaybeUnimportedDataset,
+  APIDatasetCompact,
   FlatFolderTreeItem,
   Folder,
   FolderItem,
   FolderUpdater,
+  convertDatasetToCompact,
+  APIDataset,
 } from "types/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 
@@ -40,6 +46,19 @@ export function useFolderQuery(folderId: string | null) {
     {
       refetchOnWindowFocus: false,
       enabled: folderId != null,
+    },
+  );
+}
+
+export function useDatasetQuery(datasetId: APIDatasetId) {
+  const queryKey = ["datasetById", datasetId];
+  return useQuery(
+    queryKey,
+    () => {
+      return getDataset(datasetId);
+    },
+    {
+      refetchOnWindowFocus: false,
     },
   );
 }
@@ -101,7 +120,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
   const queryClient = useQueryClient();
   const queryKey = ["datasetsByFolder", folderId];
-  const fetchedDatasetsRef = useRef<APIMaybeUnimportedDataset[] | null>(null);
+  const fetchedDatasetsRef = useRef<APIDatasetCompact[] | null>(null);
 
   const queryData = useQuery(
     queryKey,
@@ -163,7 +182,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
           return;
         }
 
-        const oldDatasets = queryClient.getQueryData<APIDataset[]>(queryKey);
+        const oldDatasets = queryClient.getQueryData<APIDatasetCompact[]>(queryKey);
         const diff = diffDatasets(oldDatasets, newDatasets);
         if (diff.changed === 0 && diff.onlyInOld === 0 && diff.onlyInNew === 0) {
           // Nothing changed
@@ -208,8 +227,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
               return;
             }
             const newDatasets = await getDatasets(null, folderId);
-            const oldDatasets = (queryClient.getQueryData(queryKey) ||
-              []) as APIMaybeUnimportedDataset[];
+            const oldDatasets = (queryClient.getQueryData(queryKey) || []) as APIDatasetCompact[];
             queryClient.setQueryData(
               queryKey,
               getUnobtrusivelyUpdatedDatasets(newDatasets, oldDatasets),
@@ -356,41 +374,44 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   /*
    * This mutation can either trigger a simple refresh of the dataset
    * (only pass the APIDatasetId) or it can update the actual dataset
-   * when the tuple [APIMaybeUnimportedDataset, string] is passed.
+   * when the tuple [APIDatasetCompact, string] is passed.
    */
   const queryClient = useQueryClient();
   const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    (params: [APIMaybeUnimportedDataset, string] | APIDatasetId) => {
+    (params: [APIDatasetId, DatasetUpdater] | APIDatasetId) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
       if ("owningOrganization" in params) {
         const datasetId = params;
         return getDataset(datasetId);
       }
-      const [dataset, newFolderId] = params;
-      return updateDataset(dataset, dataset, newFolderId, true);
+      const [id, updater] = params;
+      return updateDatasetPartial(id, updater);
     },
     {
       mutationKey,
-      onSuccess: (updatedDataset) => {
-        queryClient.setQueryData(mutationKey, (oldItems: APIMaybeUnimportedDataset[] | undefined) =>
+      onSuccess: (updatedDataset: APIDataset) => {
+        queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
           (oldItems || [])
-            .map((oldDataset: APIMaybeUnimportedDataset) =>
-              oldDataset.name === updatedDataset.name
+            .map((oldDataset: APIDatasetCompact) => {
+              return oldDataset.name === updatedDataset.name
                 ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
-                  { ...updatedDataset, lastUsedByUser: oldDataset.lastUsedByUser }
-                : oldDataset,
-            )
-            .filter((dataset: APIMaybeUnimportedDataset) => dataset.folderId === folderId),
+                  convertDatasetToCompact({
+                    ...updatedDataset,
+                    lastUsedByUser: oldDataset.lastUsedByUser,
+                  })
+                : oldDataset;
+            })
+            .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
         );
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
           queryClient.setQueryData(
             ["datasetsByFolder", targetFolderId],
-            (oldItems: APIMaybeUnimportedDataset[] | undefined) => {
+            (oldItems: APIDatasetCompact[] | undefined) => {
               if (oldItems == null) {
                 // Don't update the query data, if it doesn't exist, yet.
                 // Otherwise, this would lead to weird intermediate states
@@ -405,7 +426,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
                   // for some reason (e.g., a bug), we filter it away to avoid
                   // duplicates.
                   .filter((el) => el.name !== updatedDataset.name)
-                  .concat([updatedDataset])
+                  .concat([convertDatasetToCompact(updatedDataset)])
               );
             },
           );
@@ -428,8 +449,8 @@ export function useUpdateDatasetMutation(folderId: string | null) {
 }
 
 function diffDatasets(
-  oldDatasets: APIMaybeUnimportedDataset[] | undefined,
-  newDatasets: APIMaybeUnimportedDataset[],
+  oldDatasets: APIDatasetCompact[] | undefined,
+  newDatasets: APIDatasetCompact[],
 ): {
   changed: number;
   onlyInOld: number;
@@ -510,17 +531,16 @@ export function generateDiffMessage(diff: {
 }
 
 function getUnobtrusivelyUpdatedDatasets(
-  newDatasets: APIMaybeUnimportedDataset[],
-  oldDatasets: APIMaybeUnimportedDataset[],
-): APIMaybeUnimportedDataset[] {
+  newDatasets: APIDatasetCompact[],
+  oldDatasets: APIDatasetCompact[],
+): APIDatasetCompact[] {
   /*
    * Only update existing datasets from oldDatasets with the ones from new datasets, so that the rendered
    * dataset list doesn't change in size (which would cause annoying scroll jumps). Also, don't change the
    * lastUsedByUser property, as this would change the ordering when the default sorting is used.
    */
 
-  const idFn = (dataset: APIMaybeUnimportedDataset) =>
-    `${dataset.owningOrganization}#${dataset.name}`;
+  const idFn = (dataset: APIDatasetCompact) => `${dataset.owningOrganization}#${dataset.name}`;
 
   const newDatasetsById = _.keyBy(newDatasets, idFn);
   return oldDatasets.map((oldDataset) => {

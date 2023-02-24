@@ -24,7 +24,7 @@ A unique aspect of WEBKNOSSOS is private Zarr links. Any annotation shared throu
 
 The WEBKNOSSOS UI comes with a fully featured `Download` panel offering a wide variety of download export options:
 
-- Export any layer as Tif stack triggering a [long-running job](./jobs.md)
+- Export cutouts of the data as OME-TIFF or TIFF stack (uses [long-running jobs](./jobs.md) for export)
 - Download skeleton annotation as [NML files](./data_formats.md#nml-files)
 - Download volume annotations as [WKW files](./data_formats.md#wkw-datasets)
 - Instructions for using the WEBKNOSSOS Python library for download (see below)

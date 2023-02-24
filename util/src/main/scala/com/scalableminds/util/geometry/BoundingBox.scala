@@ -71,7 +71,8 @@ object BoundingBox {
 
   import play.api.libs.json._
 
-  private val literalPattern = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
+  private val literalPattern =
+    "\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
   def empty: BoundingBox =
     BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)

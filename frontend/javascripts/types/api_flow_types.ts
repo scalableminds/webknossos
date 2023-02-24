@@ -638,7 +638,7 @@ export type APIJob = {
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
-  readonly state: string;
+  readonly state: APIJobState;
   readonly manualState: string;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;

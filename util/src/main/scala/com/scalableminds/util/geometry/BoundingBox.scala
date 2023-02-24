@@ -25,9 +25,9 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
     if (newTopLeft.x < newBottomRight.x && newTopLeft.y < newBottomRight.y && newTopLeft.z < newBottomRight.z) {
       Some(
         BoundingBox(newTopLeft,
-                    newBottomRight.x - newTopLeft.x,
-                    newBottomRight.y - newTopLeft.y,
-                    newBottomRight.z - newTopLeft.z))
+          newBottomRight.x - newTopLeft.x,
+          newBottomRight.y - newTopLeft.y,
+          newBottomRight.z - newTopLeft.z))
     } else None
   }
 
@@ -54,6 +54,8 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
   def *(that: Vec3Int): BoundingBox =
     BoundingBox(topLeft * that, width * that.x, height * that.y, depth * that.z)
+
+  def /(that: Vec3Int): BoundingBox = BoundingBox(topLeft / that, width / that.x, height / that.y, depth / that.z)
 
   def toSql: List[Int] =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)

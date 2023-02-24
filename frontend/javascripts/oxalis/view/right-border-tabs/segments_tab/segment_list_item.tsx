@@ -560,7 +560,7 @@ function getRefreshButton(
       />
     );
   } else {
-    return isPrecomputed ? null : (
+    return (
       <Tooltip title="Refresh Mesh">
         <ReloadOutlined
           key="refresh-button"

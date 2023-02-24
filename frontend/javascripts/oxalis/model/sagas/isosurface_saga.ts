@@ -15,10 +15,11 @@ import {
   getVisibleSegmentationLayer,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
-import type {
+import {
   LoadAdHocMeshAction,
   LoadPrecomputedMeshAction,
   AdHocIsosurfaceInfo,
+  loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
@@ -90,7 +91,7 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
  * Ad Hoc Meshes
  *
  */
-const isosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
+const adhocIsosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
   // @ts-ignore
   return window.__marchingCubeSizeInMag1 != null
@@ -108,8 +109,8 @@ export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
 }
 
 function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
-  isosurfacesMapByLayer[layerName] = isosurfacesMapByLayer[layerName] || new Map();
-  const isosurfacesMap = isosurfacesMapByLayer[layerName];
+  adhocIsosurfacesMapByLayer[layerName] = adhocIsosurfacesMapByLayer[layerName] || new Map();
+  const isosurfacesMap = adhocIsosurfacesMapByLayer[layerName];
   const maybeMap = isosurfacesMap.get(segmentId);
 
   if (maybeMap == null) {
@@ -124,11 +125,11 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
 }
 
 function removeMapForSegment(layerName: string, segmentId: number): void {
-  if (isosurfacesMapByLayer[layerName] == null) {
+  if (adhocIsosurfacesMapByLayer[layerName] == null) {
     return;
   }
 
-  isosurfacesMapByLayer[layerName].delete(segmentId);
+  adhocIsosurfacesMapByLayer[layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -442,9 +443,9 @@ function* refreshIsosurfaces(): Saga<void> {
     return;
   }
 
-  isosurfacesMapByLayer[segmentationLayer.name] =
-    isosurfacesMapByLayer[segmentationLayer.name] || new Map();
-  const isosurfacesMapForLayer = isosurfacesMapByLayer[segmentationLayer.name];
+  adhocIsosurfacesMapByLayer[segmentationLayer.name] =
+    adhocIsosurfacesMapByLayer[segmentationLayer.name] || new Map();
+  const isosurfacesMapForLayer = adhocIsosurfacesMapByLayer[segmentationLayer.name];
 
   for (const [cellId, threeDMap] of Array.from(isosurfacesMapForLayer.entries())) {
     if (!currentlyModifiedCells.has(cellId)) {
@@ -457,9 +458,26 @@ function* refreshIsosurfaces(): Saga<void> {
 
 function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   const { cellId, layerName } = action;
-  const threeDMap = isosurfacesMapByLayer[action.layerName].get(cellId);
-  if (threeDMap == null) return;
-  yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+
+  const isosurfaceInfo = yield* select(
+    (state) => state.localSegmentationData[layerName].isosurfaces[cellId],
+  );
+
+  if (isosurfaceInfo.isPrecomputed) {
+    yield* put(removeIsosurfaceAction(layerName, isosurfaceInfo.segmentId));
+    yield* put(
+      loadPrecomputedMeshAction(
+        isosurfaceInfo.segmentId,
+        isosurfaceInfo.seedPosition,
+        isosurfaceInfo.meshFileName,
+        layerName,
+      ),
+    );
+  } else {
+    const threeDMap = adhocIsosurfacesMapByLayer[action.layerName].get(cellId);
+    if (threeDMap == null) return;
+    yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+  }
 }
 
 function* _refreshIsosurfaceWithMap(

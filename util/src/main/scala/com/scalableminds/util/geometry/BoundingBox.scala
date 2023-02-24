@@ -25,9 +25,9 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
     if (newTopLeft.x < newBottomRight.x && newTopLeft.y < newBottomRight.y && newTopLeft.z < newBottomRight.z) {
       Some(
         BoundingBox(newTopLeft,
-          newBottomRight.x - newTopLeft.x,
-          newBottomRight.y - newTopLeft.y,
-          newBottomRight.z - newTopLeft.z))
+                    newBottomRight.x - newTopLeft.x,
+                    newBottomRight.y - newTopLeft.y,
+                    newBottomRight.z - newTopLeft.z))
     } else None
   }
 

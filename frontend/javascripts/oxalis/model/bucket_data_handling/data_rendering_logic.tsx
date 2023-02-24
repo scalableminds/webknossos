@@ -276,7 +276,7 @@ export function computeDataTexturesSetup<
   getByteCountForLayer: (arg0: Layer) => number,
   hasSegmentation: boolean,
   requiredBucketCapacity: number,
-): any {
+) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     getByteCountForLayer,

@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import constants from "oxalis/constants";
-import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
 import resolutions from "test/fixtures/resolutions";
 import test, { ExecutionContext } from "ava";
 import { parser } from "@shaderfrog/glsl-parser";

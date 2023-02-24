@@ -1,4 +1,3 @@
-import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
 import dayjs from "dayjs";
@@ -986,24 +985,12 @@ export function convertToHybridTracing(
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
-  const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
-    extractHeaders: true,
-  });
-
-  // Using headers to determine the name and type of the file.
-  const contentDispositionHeader = headers["content-disposition"];
-  const filenameStartingPart = 'filename="';
-  const filenameStartingPosition =
-    contentDispositionHeader.indexOf(filenameStartingPart) + filenameStartingPart.length;
-  const filenameEndPosition = contentDispositionHeader.indexOf('"', filenameStartingPosition + 1);
-  const filename = contentDispositionHeader.substring(
-    filenameStartingPosition,
-    filenameEndPosition,
-  );
-  const blob = new Blob([buffer], {
-    type: headers["content-type"],
-  });
-  saveAs(blob, filename);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 export async function downloadAnnotation(

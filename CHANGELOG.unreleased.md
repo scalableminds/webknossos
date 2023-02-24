@@ -36,6 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the layouting in the connectome tab. [#6864](https://github.com/scalableminds/webknossos/pull/6864)
 - Fixed that the quick-select and floodfill tool didn't update the segment list. [#6867](https://github.com/scalableminds/webknossos/pull/6867)
 - Fixed deprecation warnings for antd' <Menu> component in Navbar. [#6860](https://github.com/scalableminds/webknossos/pull/6860)
+- Fixed that trying to reload a precomputed mesh via context menu could crash webKnossos. [#6875](https://github.com/scalableminds/webknossos/pull/6875)
 
 ### Removed
 - Removed the old Datasets tab in favor of the Dataset Folders tab. [#6834](https://github.com/scalableminds/webknossos/pull/6834)

@@ -7,8 +7,7 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS } from "oxalis/constants";
-import { Matrix4x4 } from "mjs";
+import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS, Vector4 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
@@ -37,7 +36,10 @@ type APIDataLayerBase = {
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
-  readonly transformMatrix?: Matrix4x4;
+  readonly coordinateTransformations?: Array<{
+    type: "affine";
+    matrix: [Vector4, Vector4, Vector4, Vector4];
+  }>;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";

@@ -14,6 +14,7 @@ import {
   getResolutionByMax,
   getResolutionInfo,
   getResolutions,
+  getTransformsForLayer,
   invertAndTranspose,
   SmallerOrHigherInfo,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -200,7 +201,7 @@ function getMaximumZoomForAllResolutionsFromStore(
   const { viewMode } = state.temporaryConfiguration;
 
   const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = invertAndTranspose(layer.transformMatrix || Identity4x4);
+  const layerMatrix = invertAndTranspose(getTransformsForLayer(layer));
 
   let fn = perLayerFnCache.get(layerName);
   if (fn == null) {

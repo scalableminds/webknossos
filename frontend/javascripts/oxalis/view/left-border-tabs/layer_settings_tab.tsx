@@ -54,6 +54,7 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
+  getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -776,8 +777,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (foundPosition && foundResolution) {
       const layer = getLayerByName(dataset, layerName, true);
-      if (layer.transformMatrix) {
-        const matrix = M4x4.transpose(layer.transformMatrix);
+      const transformMatrix = getTransformsForLayerOrNull(layer);
+      if (transformMatrix) {
+        const matrix = M4x4.transpose(transformMatrix);
         // Transform the found position according to the matrix.
         V3.mul4x4(matrix, foundPosition, foundPosition);
       }

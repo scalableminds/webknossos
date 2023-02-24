@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { Identity4x4 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4, Matrix4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -16,6 +15,7 @@ import {
   getColorLayers,
   getSegmentationLayers,
   invertAndTranspose,
+  getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -197,8 +197,7 @@ export default class LayerRenderingManager {
     }
 
     const resolutions = getResolutions(dataset);
-
-    const layerMatrix = invertAndTranspose(layer.transformMatrix || Identity4x4);
+    const layerMatrix = invertAndTranspose(getTransformsForLayer(layer));
 
     const matrix = M4x4.scale1(
       state.flycam.zoomStep,

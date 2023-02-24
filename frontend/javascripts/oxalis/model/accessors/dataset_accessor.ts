@@ -3,6 +3,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
   APIAllowedMode,
+  APIDataLayer,
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
@@ -17,7 +18,7 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import type { Vector3, ViewMode } from "oxalis/constants";
+import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, map3 } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
@@ -25,6 +26,7 @@ import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { M4x4, Matrix4x4 } from "libs/mjs";
+import { Identity4x4 } from "./flycam_accessor";
 
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
@@ -917,6 +919,44 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
     state.temporaryConfiguration.activeMappingByLayer,
     layer ? layer.name : null,
   );
+}
+
+function _getTransformsForLayerOrNull(layer: APIDataLayer): Matrix4x4 | null {
+  if (!layer.coordinateTransformations) {
+    return null;
+  }
+  if (layer.coordinateTransformations.length > 1) {
+    console.error(
+      "Data layer has defined multiple coordinate transforms. This is currently not supported and ignored",
+    );
+    return null;
+  }
+  if (layer.coordinateTransformations[0].type !== "affine") {
+    console.error(
+      "Data layer has defined a coordinate transform that is not affine. This is currently not supported and ignored",
+    );
+    return null;
+  }
+  const nestedMatrix = layer.coordinateTransformations[0].matrix;
+  return nestedToFlatMatrix(nestedMatrix);
+}
+
+export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);
+export function getTransformsForLayer(layer: APIDataLayer): Matrix4x4 {
+  return getTransformsForLayerOrNull(layer) || Identity4x4;
+}
+
+export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
+  return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
+}
+
+export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector4, Vector4] {
+  return [
+    matrix.slice(0, 4) as Vector4,
+    matrix.slice(4, 8) as Vector4,
+    matrix.slice(8, 12) as Vector4,
+    matrix.slice(12, 16) as Vector4,
+  ];
 }
 
 // Transposition is often needed so that the matrix has the right format

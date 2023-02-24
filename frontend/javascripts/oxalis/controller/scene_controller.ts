@@ -12,6 +12,7 @@ import {
   getDataLayers,
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
+  getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getActiveMagIndicesForLayers } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
@@ -618,7 +619,7 @@ class SceneController {
           isHighlighted: false,
         });
         bbCube.getMeshes().forEach((mesh) => {
-          const { transformMatrix } = layer;
+          const transformMatrix = getTransformsForLayerOrNull(layer);
           if (transformMatrix) {
             const matrix = new THREE.Matrix4();
             // @ts-ignore

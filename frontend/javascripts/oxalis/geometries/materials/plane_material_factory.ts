@@ -32,6 +32,7 @@ import {
   getVisibleSegmentationLayer,
   getLayerByName,
   invertAndTranspose,
+  getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -230,10 +231,10 @@ class PlaneMaterialFactory {
       const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
 
       this.uniforms[`${layerName}_transform`] = {
-        value: invertAndTranspose(layer.transformMatrix || Identity4x4),
+        value: invertAndTranspose(getTransformsForLayer(layer)),
       };
       this.uniforms[`${layerName}_has_transform`] = {
-        value: !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4),
+        value: !_.isEqual(getTransformsForLayer(layer), Identity4x4),
       };
     }
 
@@ -509,9 +510,9 @@ class PlaneMaterialFactory {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
             this.uniforms[`${name}_transform`].value = invertAndTranspose(
-              layer.transformMatrix || Identity4x4,
+              getTransformsForLayer(layer),
             );
-            const hasTransform = !_.isEqual(layer.transformMatrix || Identity4x4, Identity4x4);
+            const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };

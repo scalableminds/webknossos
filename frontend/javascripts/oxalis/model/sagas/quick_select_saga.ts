@@ -56,6 +56,7 @@ import {
   getEnabledColorLayers,
   getLayerBoundingBox,
   getResolutionInfo,
+  getTransformsForLayer,
 } from "../accessors/dataset_accessor";
 import Dimensions from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
@@ -152,7 +153,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     getSegmentationLayerForTracing(state, volumeTracing),
   );
 
-  if (!_.isEqual(colorLayer.transformMatrix, volumeLayer.transformMatrix)) {
+  if (!_.isEqual(getTransformsForLayer(colorLayer), getTransformsForLayer(volumeLayer))) {
     Toast.warning(
       "Quick select is currently not supported if the color and volume layer use different transforms.",
     );

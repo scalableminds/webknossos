@@ -1,5 +1,6 @@
 package com.scalableminds.util.geometry
 
+import com.scalableminds.util.tools.Math.ceilDiv
 import net.liftweb.common.Full
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
@@ -55,7 +56,8 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def *(that: Vec3Int): BoundingBox =
     BoundingBox(topLeft * that, width * that.x, height * that.y, depth * that.z)
 
-  def /(that: Vec3Int): BoundingBox = BoundingBox(topLeft / that, width / that.x, height / that.y, depth / that.z)
+  def /(that: Vec3Int): BoundingBox =
+    BoundingBox(topLeft / that, ceilDiv(width, that.x), ceilDiv(height, that.y), ceilDiv(depth, that.z))
 
   def toSql: List[Int] =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)

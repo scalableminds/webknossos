@@ -41,8 +41,6 @@ import { CuckooTableVec5 } from "./cuckoo_table_vec5";
 
 const NOT_YET_COMMITTED_VALUE = 2 ** 21 - 1;
 
-export const channelCountForLookupBuffer = 2;
-
 function getSomeValue<T>(set: Set<T>): T {
   const { value } = set.values().next();
 

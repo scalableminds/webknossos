@@ -10,6 +10,7 @@ import features from "features";
 import {
   doWithToken,
   downloadAnnotation,
+  downloadWithFilename,
   getAuthToken,
   startExportTiffJob,
 } from "admin/admin_rest_api";
@@ -41,7 +42,6 @@ import {
 import { formatBytes, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-import { saveAs } from "file-saver";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
@@ -290,7 +290,7 @@ function _DownloadModalView({
     async onSuccess(job) {
       if (job.resultLink != null) {
         const token = await doWithToken(async (t) => t);
-        saveAs(`${job.resultLink}?token=${token}`);
+        downloadWithFilename(`${job.resultLink}?token=${token}`);
       }
     },
     onFailure() {

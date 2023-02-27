@@ -137,6 +137,9 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
       },
     },
   },
+  dsA_2: {
+    interpolation: true,
+  },
 };
 
 async function withRetry(

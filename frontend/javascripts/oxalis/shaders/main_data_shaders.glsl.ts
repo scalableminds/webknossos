@@ -198,37 +198,41 @@ void main() {
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
-      color_value =
-        getMaybeFilteredColorOrFallback(
-          <%= formatNumberAsGLSLFloat(layerIndex) %>,
-          <%= name %>_data_texture_width,
-          <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
-          transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz),
-          false,
-          fallbackGray,
-          !<%= name %>_has_transform
-        ).xyz;
 
-      <% if (packingDegreeLookup[name] === 2.0) { %>
-        // Workaround for 16-bit color layers
-        color_value = vec3(color_value.g * 256.0 + color_value.r);
-      <% } %>
-      // Keep the color in bounds of min and max
-      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
-      // Scale the color value according to the histogram settings.
-      // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
-      // via mixing.
-      float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
-      color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
+      vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
+      if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
+        color_value =
+          getMaybeFilteredColorOrFallback(
+            <%= formatNumberAsGLSLFloat(layerIndex) %>,
+            <%= name %>_data_texture_width,
+            <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
+            transformedCoordUVW,
+            false,
+            fallbackGray,
+            !<%= name %>_has_transform
+          ).xyz;
 
-      color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
+        <% if (packingDegreeLookup[name] === 2.0) { %>
+          // Workaround for 16-bit color layers
+          color_value = vec3(color_value.g * 256.0 + color_value.r);
+        <% } %>
+        // Keep the color in bounds of min and max
+        color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+        // Scale the color value according to the histogram settings.
+        // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
+        // via mixing.
+        float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
+        color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 
-      // Maybe invert the color using the inverting_factor
-      color_value = abs(color_value - <%= name %>_is_inverted);
-      // Catch the case where max == min would causes a NaN value and use black as a fallback color.
-      color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-      // Multiply with color and alpha for <%= name %>
-      data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+        color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
+
+        // Maybe invert the color using the inverting_factor
+        color_value = abs(color_value - <%= name %>_is_inverted);
+        // Catch the case where max == min would causes a NaN value and use black as a fallback color.
+        color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
+        // Multiply with color and alpha for <%= name %>
+        data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+      }
     }
   <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);

@@ -271,12 +271,18 @@ export const getSegmentationId: ShaderModule = {
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
-      vec4[2] volume_color =
+      vec4[2] volume_color;
+      vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
+      if (isOutsideOfBoundingBox(transformedCoordUVW)) {
+        return volume_color;
+      }
+
+      volume_color =
         getSegmentIdOrFallback(
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,
-          transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz),
+          transformedCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
           !<%= segmentationName %>_has_transform
         );

@@ -72,6 +72,21 @@ test.beforeEach(async (t) => {
     ],
     dumpio: true,
   });
+
+  const caps = {
+    browser: "chrome",
+    browser_version: "latest",
+    os: "os x",
+    os_version: "mojave",
+    "browserstack.username": process.env.BROWSERSTACK_USERNAME,
+    "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
+  };
+  t.context.browser = await puppeteer.connect({
+    browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
+      JSON.stringify(caps),
+    )}`,
+  });
+
   console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
   global.Headers = Headers;
   global.fetch = fetch;

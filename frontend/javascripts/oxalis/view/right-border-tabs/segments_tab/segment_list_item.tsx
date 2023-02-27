@@ -304,7 +304,7 @@ function _MeshInfoItem(props: {
             marginLeft: 6,
           }}
         >
-          {getRefreshButton(segment, isPrecomputed, isLoading, props.visibleSegmentationLayer)}
+          {getRefreshButton(segment, isLoading, props.visibleSegmentationLayer)}
           {downloadButton}
           {deleteButton}
         </div>
@@ -542,7 +542,6 @@ const SegmentListItem = React.memo<Props>(_SegmentListItem);
 
 function getRefreshButton(
   segment: Segment,
-  isPrecomputed: boolean,
   isLoading: boolean,
   visibleSegmentationLayer: APISegmentationLayer | null | undefined,
 ) {
@@ -560,7 +559,7 @@ function getRefreshButton(
       />
     );
   } else {
-    return isPrecomputed ? null : (
+    return (
       <Tooltip title="Refresh Mesh">
         <ReloadOutlined
           key="refresh-button"

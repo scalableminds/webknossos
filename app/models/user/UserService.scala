@@ -157,6 +157,7 @@ class UserService @Inject()(conf: WkConf,
         isDatasetManager = false,
         isDeactivated = !autoActivate,
         lastTaskTypeId = None,
+        isOrganizationOwner = false,
         isUnlisted = isUnlisted,
         created = Instant.now
       )

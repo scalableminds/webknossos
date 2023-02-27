@@ -369,9 +369,9 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.export.tiff.invalidBoundingBox"
       parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), true) ?~> "job.export.tiff.invalidMag"
-      scaledBoundingBox = parsedBoundingBox / parsedMag
-      _ <- bool2Fox(scaledBoundingBox.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
-      _ <- bool2Fox(scaledBoundingBox.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
+      boundingBoxInMag = parsedBoundingBox / parsedMag
+      _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
+      _ <- bool2Fox(boundingBoxInMag.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
     } yield ()
 
 }

@@ -92,6 +92,17 @@ class FossilDBClient(collection: String,
         }
     }
 
+  def listVersions(key: String): Fox[Seq[Long]] =
+    try {
+      val before = System.currentTimeMillis()
+      val reply = blockingStub.listVersions(ListVersionsRequest(collection, key))
+      val after = System.currentTimeMillis()
+      logger.info(s"list versions took ${after - before} ms, received ${reply.versions}")
+      Fox.successful(reply.versions)
+    } catch {
+      case e: Exception => Fox.failure("list versions failed: " + e.getMessage)
+    }
+
   def getVersion(key: String,
                  version: Option[Long] = None,
                  mayBeEmpty: Option[Boolean],

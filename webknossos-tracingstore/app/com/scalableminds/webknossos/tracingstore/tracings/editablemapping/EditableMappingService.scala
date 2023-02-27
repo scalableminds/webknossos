@@ -110,6 +110,8 @@ class EditableMappingService @Inject()(
                                                  mayBeEmpty = Some(true),
                                                  emptyFallback = Some(0L))
 
+  def listVersions(mappingId: String): Fox[Seq[Long]] = tracingDataStore.editableMappings.listVersions(mappingId)
+
   def infoJson(tracingId: String, editableMapping: EditableMapping, editableMappingId: String): Fox[JsObject] =
     for {
       version <- newestMaterializableVersion(editableMappingId)

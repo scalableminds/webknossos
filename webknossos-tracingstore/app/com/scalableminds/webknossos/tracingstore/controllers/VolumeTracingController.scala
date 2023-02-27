@@ -384,6 +384,12 @@ class VolumeTracingController @Inject()(
       }
   }
 
+  def listVersions(mappingId: String): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      versions <- editableMappingService.listVersions(mappingId)
+    } yield Ok(Json.obj("versions" -> versions))
+  }
+
   // TODO remove
   def resetMapping(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     for {

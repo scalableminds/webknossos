@@ -190,7 +190,19 @@ export const getColorForCoords: ShaderModule = {
       vec3 offsetInBucket;
       uint renderedMagIdx;
 
-      if (!supportsPrecomputedBucketAddress) {
+      bool beSafe = false;
+      {
+        renderedMagIdx = outputMagIdx[globalLayerIndex];
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        offsetInBucket = mod(coords, bucketWidth);
+        if (offsetInBucket.y < 0.01 || offsetInBucket.x < 0.01) {
+          beSafe = true;
+        }
+      }
+
+
+      if (beSafe || !supportsPrecomputedBucketAddress) {
         for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
           renderedMagIdx = activeMagIdx + i;
           vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
@@ -199,7 +211,7 @@ export const getColorForCoords: ShaderModule = {
           bucketAddress = lookUpBucket(
             globalLayerIndex,
             uvec4(uvec3(absoluteBucketPosition), renderedMagIdx),
-            supportsPrecomputedBucketAddress
+            (supportsPrecomputedBucketAddress && !beSafe)
           );
 
           if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {

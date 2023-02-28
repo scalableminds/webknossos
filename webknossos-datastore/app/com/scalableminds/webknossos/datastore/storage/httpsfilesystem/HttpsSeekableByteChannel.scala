@@ -6,7 +6,6 @@ import java.nio.channels.SeekableByteChannel
 import java.nio.file.OpenOption
 import java.util
 
-// Does not work with Java 8, works with Java 11
 import sttp.client3._
 import sttp.model.Uri
 

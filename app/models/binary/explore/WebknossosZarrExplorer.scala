@@ -20,9 +20,9 @@ class WebknossosZarrExplorer extends RemoteLayerExplorer {
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: ZarrSegmentationLayer =>
           for {
-            zarrLayers <- ngffExplorer.explore(remotePath.resolve(l.name), credentialId)
+            zarrLayersFromNgff <- ngffExplorer.explore(remotePath.resolve(l.name), credentialId)
           } yield
-            zarrLayers.map(
+            zarrLayersFromNgff.map(
               zarrLayer =>
                 (ZarrSegmentationLayer(zarrLayer._1.name,
                                        l.boundingBox,
@@ -32,9 +32,9 @@ class WebknossosZarrExplorer extends RemoteLayerExplorer {
                  zarrLayer._2))
         case l: ZarrDataLayer =>
           for {
-            zarrLayers <- ngffExplorer.explore(remotePath.resolve(l.name), credentialId)
+            zarrLayersFromNgff <- ngffExplorer.explore(remotePath.resolve(l.name), credentialId)
           } yield
-            zarrLayers.map(
+            zarrLayersFromNgff.map(
               zarrLayer =>
                 (ZarrDataLayer(zarrLayer._1.name,
                                Category.color,

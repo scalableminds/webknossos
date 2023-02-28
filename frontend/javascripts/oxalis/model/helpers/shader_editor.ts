@@ -94,4 +94,6 @@ window._setupShaderReporting = () => {
   };
 };
 
-window._setupShaderReporting();
+if (process.env.NODE_ENV !== "production") {
+  window._setupShaderReporting();
+}

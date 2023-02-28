@@ -394,8 +394,8 @@ class PlaneController extends React.PureComponent<Props> {
         f: createDelayAwareMoveHandler(1),
         d: createDelayAwareMoveHandler(-1),
         // Zoom in/out
-        i: () => MoveHandlers.zoom(1, false),
-        o: () => MoveHandlers.zoom(-1, false),
+        i: () => MoveHandlers.zoom(0.1, false),
+        o: () => MoveHandlers.zoom(-0.1, false),
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
         ...loopedKeyboardControls,

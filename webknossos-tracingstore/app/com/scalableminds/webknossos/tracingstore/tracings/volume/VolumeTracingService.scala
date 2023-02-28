@@ -131,7 +131,11 @@ class VolumeTracingService @Inject()(
     for {
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
       bucket = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
-      _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
+      _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing),
+                      bucket,
+                      action.data,
+                      updateGroupVersion,
+                      toCache = false)
     } yield volumeTracing
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
@@ -419,9 +423,9 @@ class VolumeTracingService @Inject()(
       } else None
     } yield bucketPosOpt
 
-  def merge(tracings: Seq[VolumeTracing]): VolumeTracing =
+  def merge(tracings: Seq[VolumeTracing], mergedVolumeStats: MergedVolumeStats): VolumeTracing =
     tracings
-      .reduceLeft(mergeTwo)
+      .reduceLeft(mergeTwo) // TODO: pass mergedVolumeStats, and index to look up label maps
       .copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
@@ -464,8 +468,8 @@ class VolumeTracingService @Inject()(
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[VolumeTracing],
                       newId: String,
-                      newTracing: VolumeTracing,
-                      toCache: Boolean): Fox[Unit] = {
+                      newVersion: Long,
+                      toCache: Boolean): Fox[MergedVolumeStats] = {
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
     val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
@@ -483,7 +487,7 @@ class VolumeTracingService @Inject()(
 
     // If none of the tracings contained any volume data. Do not save buckets, do not touch resolution list
     if (resolutionSets.isEmpty)
-      Fox.successful(())
+      Fox.successful(MergedVolumeStats.empty)
     else {
       val resolutionsIntersection: Set[Vec3Int] = resolutionSets.headOption.map { head =>
         resolutionSets.foldLeft(head) { (acc, element) =>
@@ -504,15 +508,13 @@ class VolumeTracingService @Inject()(
           val bucketStream = bucketStreamFromSelector(selector, tracing)
           mergedVolume.addFromBucketStream(sourceVolumeIndex, bucketStream, Some(resolutionsIntersection))
       }
-      val destinationDataLayer = volumeTracingLayer(newId, newTracing)
       for {
 
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
-          saveBucket(destinationDataLayer, bucketPosition, bucketBytes, newTracing.version, toCache)
+          saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache)
         }
-        _ <- updateResolutionList(newId, newTracing, mergedVolume.presentResolutions)
-      } yield ()
+      } yield mergedVolume.stats
     }
   }
 

@@ -72,7 +72,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
             tracingOpt match {
-              case Some(tracing) => tracingService.save(tracing, None, 0, toCache = false).map(Some(_))
+              case Some(tracing) => tracingService.save(tracing, None, 0).map(Some(_))
               case _             => Fox.successful(None)
             }
           })
@@ -236,15 +236,18 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
-            tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
+            tracingOpts <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages(
+              "tracing.notFound")
+            tracings = tracingOpts.flatten
             newId = tracingService.generateTracingId
-            mergedTracing = tracingService.merge(tracings.flatten)
+            mergedVolumeStats <- tracingService.mergeVolumeData(request.body.flatten,
+                                                                tracings,
+                                                                newId,
+                                                                newVersion = 0L,
+                                                                toCache = !persist)
+            // TODO: pass resolution list, largest segment id, label maps for remapping segment list
+            mergedTracing = tracingService.merge(tracings, mergedVolumeStats)
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
-            _ <- tracingService.mergeVolumeData(request.body.flatten,
-                                                tracings.flatten,
-                                                newId,
-                                                mergedTracing,
-                                                toCache = !persist)
           } yield {
             Ok(Json.toJson(newId))
           }

@@ -332,14 +332,13 @@ void main() {
   vUv = uv;
   modelCoord = vec4(position, 1.0);
   savedModelMatrix = modelMatrix;
-  mat4 modelInv = inverseMatrix(modelMatrix);
   worldCoord = modelMatrix * vec4(position, 1.0);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
-  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(vec3(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0.), 1.)).xyz);
-  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4(vec3( PLANE_WIDTH/2., -PLANE_WIDTH/2., 0.), 1.)).xyz);
+  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0., 1.)).xyz);
+  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4( PLANE_WIDTH/2., -PLANE_WIDTH/2., 0., 1.)).xyz);
 
   // The following code ensures that the vertices are aligned with the bucket borders
   // of the currently rendered magnification.
@@ -393,8 +392,10 @@ void main() {
   }
 
   worldCoord = vec4(transDim(transWorldCoord), 1.);
-  vec3 posRec = (modelInv * worldCoord).xyz;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(posRec, 1.0);
+  new_worldCoordUVW = getWorldCoordUVW();
+  debugVal = getWorldCoordUVW();
+
+  gl_Position = projectionMatrix * viewMatrix * worldCoord;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 

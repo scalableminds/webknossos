@@ -133,7 +133,9 @@ precision highp float;
 ${SHARED_UNIFORM_DECLARATIONS}
 
 flat in vec2 index;
-flat in vec3 flatVertexPos;
+in vec3 new_worldCoordUVW;
+in vec3 debugVal;
+flat in vec3 flatDebugVal;
 flat in uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
@@ -159,10 +161,29 @@ ${compileShader(
 )}
 
 void main() {
-  vec3 worldCoordUVW = getWorldCoordUVW();
+  // vec3 worldCoordUVW = getWorldCoordUVW();
+  vec3 worldCoordUVW = new_worldCoordUVW;
+
+
+  vec3 original_worldCoord = getWorldCoordUVW();
+
+  if (false) {
+    if (abs(debugVal.y - original_worldCoord.y) == 0.0 ) {
+      gl_FragColor = vec4(1.0);
+      return;
+    } else {
+      gl_FragColor = vec4(vec3(0.0), 1.);
+      return;
+    }
+  }
+
+
+
+
+
 
   // Debugging code. Comment in when you want to render the tessellation of the rendered plane.
-  // if (floor(flatVertexPos.x) == floor(worldCoordUVW.x) && floor(flatVertexPos.y) == floor(worldCoordUVW.y)) {
+  // if (floor(flatDebugVal.x) == floor(worldCoordUVW.x) && floor(flatDebugVal.y) == floor(worldCoordUVW.y)) {
   //   gl_FragColor = vec4(1., 0., 1., 1.);
   //   return;
   // }
@@ -301,7 +322,9 @@ out vec4 modelCoord;
 out vec2 vUv;
 out mat4 savedModelMatrix;
 flat out vec2 index;
-flat out vec3 flatVertexPos;
+out vec3 new_worldCoordUVW;
+out vec3 debugVal;
+flat out vec3 flatDebugVal;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
@@ -406,7 +429,7 @@ void main() {
   worldCoordUVW.x -= 1.;
   worldCoordUVW.y += 1.;
 
-  flatVertexPos = worldCoordUVW;
+  flatDebugVal = worldCoordUVW;
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
   <% _.each(layerNamesWithSegmentation, function(name, layerIndex) { %>
@@ -427,10 +450,14 @@ void main() {
         false
       );
 
+      flatDebugVal = absoluteBucketPosition;
+      // debugVal = worldCoordUVW;
+
       if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
         outputMagIdx[globalLayerIndex] = renderedMagIdx;
         break;
       }
+      // return;
     }
   }
   <% }) %>

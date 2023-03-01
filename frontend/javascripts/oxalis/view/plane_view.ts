@@ -150,7 +150,7 @@ class PlaneView {
   ): RaycastIntersection | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
-    const { isosurfacesRootGroup } = SceneController;
+    const { isosurfacesLODRootGroup } = SceneController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
@@ -172,7 +172,7 @@ class PlaneView {
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
-    const intersectableObjects = isosurfacesRootGroup.children;
+    const intersectableObjects = isosurfacesLODRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(intersectableObjects, true);

@@ -1,7 +1,6 @@
-import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -59,14 +58,18 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
-  VoxelyticsWorkflowInfo,
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
   ShortLink,
+  VoxelyticsWorkflowListing,
+  APIPricingPlanStatus,
+  VoxelyticsLogLine,
+  APIUserCompact,
+  APIDatasetCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import { ControlModeEnum } from "oxalis/constants";
+import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   PartialDatasetConfiguration,
@@ -140,11 +143,14 @@ export function sendFailedRequestAnalyticsEvent(
 export async function loginUser(formValues: {
   email: string;
   password: string;
-}): Promise<Record<string, any>> {
+}): Promise<[APIUser, APIOrganization]> {
   await Request.sendJSONReceiveJSON("/api/auth/login", {
     data: formValues,
   });
-  return getActiveUser();
+  const activeUser = await getActiveUser();
+  const organization = await getOrganization(activeUser.organization);
+
+  return [activeUser, organization];
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {
@@ -520,10 +526,7 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: moment()
-        .endOf("day")
-        .add(initialExpirationPeriodInDays, "days")
-        .valueOf(),
+      expirationDateTime: dayjs().endOf("day").add(initialExpirationPeriodInDays, "days").valueOf(),
     },
   });
 }
@@ -659,7 +662,8 @@ export function updateAnnotationLayer(
 
 type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
-  name: string;
+  name: string | null | undefined;
+  autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
@@ -789,6 +793,7 @@ export function getEmptySandboxAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
+  autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
   mappingName?: string | null | undefined,
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
@@ -808,8 +813,9 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },
@@ -822,8 +828,9 @@ export function createExplorational(
       },
       {
         typ: "Volume",
-        name: fallbackLayerName || "Volume",
+        name: fallbackLayerName,
         fallbackLayerName,
+        autoFallbackLayer,
         mappingName,
         resolutionRestrictions,
       },
@@ -846,11 +853,23 @@ export async function getTracingsForAnnotation(
 
   if (skeletonLayers.length > 1) {
     throw new Error(
-      "Having more than one skeleton layer is currently not supported by webKnossos.",
+      "Having more than one skeleton layer is currently not supported by WEBKNOSSOS.",
     );
   }
 
   return fullAnnotationLayers;
+}
+
+export async function acquireAnnotationMutex(
+  annotationId: string,
+): Promise<{ canEdit: boolean; blockedByUser: APIUserCompact | undefined | null }> {
+  const { canEdit, blockedByUser } = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/acquireMutex`,
+    {
+      method: "POST",
+    },
+  );
+  return { canEdit, blockedByUser };
 }
 
 function extractVersion(
@@ -965,6 +984,15 @@ export function convertToHybridTracing(
   });
 }
 
+export async function downloadWithFilename(downloadUrl: string) {
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -985,24 +1013,7 @@ export async function downloadAnnotation(
   const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersand}${skipVolumeDataString}`;
-  const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
-    extractHeaders: true,
-  });
-
-  // Using headers to determine the name and type of the file.
-  const contentDispositionHeader = headers["content-disposition"];
-  const filenameStartingPart = 'filename="';
-  const filenameStartingPosition =
-    contentDispositionHeader.indexOf(filenameStartingPart) + filenameStartingPart.length;
-  const filenameEndPosition = contentDispositionHeader.indexOf('"', filenameStartingPosition + 1);
-  const filename = contentDispositionHeader.substring(
-    filenameStartingPosition,
-    filenameEndPosition,
-  );
-  const blob = new Blob([buffer], {
-    type: headers["content-type"],
-  });
-  saveAs(blob, filename);
+  await downloadWithFilename(downloadUrl);
 }
 
 // When the annotation is open, please use the corresponding method
@@ -1027,7 +1038,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
-): Promise<Array<APIMaybeUnimportedDataset>> {
+): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
     params.append("isUnreported", String(isUnreported));
@@ -1044,6 +1055,8 @@ export async function getDatasets(
   if (includeSubfolders != null) {
     params.append("includeSubfolders", includeSubfolders ? "true" : "false");
   }
+
+  params.append("compact", "true");
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
@@ -1079,6 +1092,29 @@ export async function getJobs(): Promise<APIJob[]> {
       // Newest jobs should be first
       .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
   );
+}
+
+export async function getJob(jobId: string): Promise<APIJob> {
+  const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
+  return {
+    id: job.id,
+    type: job.command,
+    datasetName: job.commandArgs.dataset_name,
+    organizationName: job.commandArgs.organization_name,
+    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
+    annotationLayerName: job.commandArgs.annotation_layer_name,
+    boundingBox: job.commandArgs.bbox,
+    exportFileName: job.commandArgs.export_file_name,
+    tracingId: job.commandArgs.volume_tracing_id,
+    annotationId: job.commandArgs.annotation_id,
+    annotationType: job.commandArgs.annotation_type,
+    mergeSegments: job.commandArgs.merge_segments,
+    state: adaptJobState(job.command, job.state, job.manualState),
+    manualState: job.manualState,
+    result: job.returnValue,
+    resultLink: job.resultLink,
+    createdAt: job.created,
+  };
 }
 
 function adaptJobState(
@@ -1136,26 +1172,26 @@ export async function startExportTiffJob(
   organizationName: string,
   bbox: Vector6,
   layerName: string | null | undefined,
+  mag: string | null | undefined,
   annotationId: string | null | undefined,
-  annotationType: APIAnnotationType | null | undefined,
   annotationLayerName: string | null | undefined,
-  mappingName: string | null | undefined,
-  mappingType: string | null | undefined,
-  hideUnmappedIds: boolean | null | undefined,
+  asOmeTiff: boolean,
 ): Promise<APIJob> {
-  const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
-  const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
-  const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
-  const annotationLayerNameSuffix =
-    annotationLayerName != null ? `&annotationLayerName=${annotationLayerName}` : "";
-  const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
-  const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
-  const hideUnmappedIdsSuffix =
-    hideUnmappedIds != null ? `&hideUnmappedIds=${hideUnmappedIds.toString()}` : "";
+  const params = new URLSearchParams({ bbox: bbox.join(","), asOmeTiff: asOmeTiff.toString() });
+  if (layerName != null) {
+    params.append("layerName", layerName);
+  }
+  if (mag != null) {
+    params.append("mag", mag);
+  }
+  if (annotationId != null) {
+    params.append("annotationId", annotationId);
+  }
+  if (annotationLayerName != null) {
+    params.append("annotationLayerName", annotationLayerName);
+  }
   return Request.receiveJSON(
-    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
-      ",",
-    )}${layerNameSuffix}${annotationIdSuffix}${annotationTypeSuffix}${annotationLayerNameSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?${params}`,
     {
       method: "POST",
     },
@@ -1346,24 +1382,24 @@ export function getDataset(
   );
 }
 
-export function updateDataset(
+export type DatasetUpdater = {
+  description?: string | null;
+  displayName?: string | null;
+  sortingKey?: number;
+  isPublic?: boolean;
+  tags?: string[];
+  folderId?: string;
+};
+
+export function updateDatasetPartial(
   datasetId: APIDatasetId,
-  dataset: APIMaybeUnimportedDataset,
-  folderId?: string,
-  skipResolutions?: boolean,
+  updater: DatasetUpdater,
 ): Promise<APIDataset> {
-  folderId = folderId || dataset.folderId;
-
-  const params = new URLSearchParams();
-  if (skipResolutions) {
-    params.append("skipResolutions", "true");
-  }
-
   return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}?${params}`,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/updatePartial`,
     {
       method: "PATCH",
-      data: { ...dataset, folderId },
+      data: updater,
     },
   );
 }
@@ -1459,6 +1495,7 @@ type ReserveUploadInformation = {
   name: string;
   totalFileCount: number;
   initialTeams: Array<string>;
+  folderId: string | null;
 };
 
 export function reserveDatasetUpload(
@@ -1522,8 +1559,8 @@ export async function exploreRemoteDataset(
     data: credentials
       ? remoteUris.map((uri) => ({
           remoteUri: uri.trim(),
-          user: credentials.username,
-          password: credentials.pass,
+          credentialIdentifier: credentials.username,
+          credentialSecret: credentials.pass,
         }))
       : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
   });
@@ -1538,13 +1575,15 @@ export async function storeRemoteDataset(
   datasetName: string,
   organizationName: string,
   datasource: string,
-): Promise<Response> {
+): Promise<void> {
   return doWithToken((token) =>
-    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: datasource,
-    }),
+    Request.sendJSONReceiveJSON(
+      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`,
+      {
+        method: "PUT",
+        data: datasource,
+      },
+    ),
   );
 }
 
@@ -1755,12 +1794,12 @@ export function makeMappingEditable(
   );
 }
 
-export function getEditableMapping(
+export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
   );
 }
 
@@ -1839,8 +1878,8 @@ export function updateUserConfiguration(
 // ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  day: moment$Moment,
+
+  day: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const month = day.format("M");
   const year = day.format("YYYY");
@@ -1854,10 +1893,8 @@ export async function getTimeTrackingForUserByMonth(
 
 export async function getTimeTrackingForUser(
   userId: string,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  startDate: moment$Moment,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-  endDate: moment$Moment,
+  startDate: dayjs.Dayjs,
+  endDate: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const timeTrackingData = await Request.receiveJSON(
     `/api/time/user/${userId}?startDate=${startDate.unix() * 1000}&endDate=${
@@ -1888,7 +1925,7 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 
 // ### Organizations
 export async function getDefaultOrganization(): Promise<APIOrganization | null> {
-  // Only returns an organization if the webKnossos instance only has one organization
+  // Only returns an organization if the WEBKNOSSOS instance only has one organization
   return Request.receiveJSON("/api/organizations/default");
 }
 
@@ -1928,8 +1965,14 @@ export function sendInvitesForOrganization(
   });
 }
 
-export function getOrganization(organizationName: string): Promise<APIOrganization> {
-  return Request.receiveJSON(`/api/organizations/${organizationName}`);
+export async function getOrganization(organizationName: string): Promise<APIOrganization> {
+  const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
+  return {
+    ...organization,
+    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {
@@ -1980,6 +2023,34 @@ export async function isWorkflowAccessibleBySwitching(
   workflowHash: string,
 ): Promise<APIOrganization | null> {
   return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
+}
+
+export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestUpgrade?requestedPlan=${requestedPlan}`, {
+    method: "POST",
+  });
+}
+
+export async function sendExtendPricingPlanEmail(): Promise<void> {
+  return Request.receiveJSON("/api/pricing/requestExtension", {
+    method: "POST",
+  });
+}
+
+export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestUsers?requestedUsers=${requestedUsers}`, {
+    method: "POST",
+  });
+}
+
+export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
+    method: "POST",
+  });
+}
+
+export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
+  return Request.receiveJSON("/api/pricing/status");
 }
 
 // ### BuildInfo webknossos
@@ -2343,7 +2414,7 @@ export function getShortLink(key: string): Promise<ShortLink> {
 }
 
 // ### Voxelytics
-export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowInfo>> {
+export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
   return Request.receiveJSON("/api/voxelytics/workflows");
 }
 
@@ -2361,37 +2432,53 @@ export function getVoxelyticsWorkflow(
 export function getVoxelyticsLogs(
   runId: string,
   taskName: string | null,
-  minLevel: string,
-): Promise<Array<{}>> {
-  const params = new URLSearchParams({ runId, minLevel });
+  minLevel: LOG_LEVELS,
+  startTime: Date,
+  endTime: Date,
+  limit: number | null = null,
+): Promise<Array<VoxelyticsLogLine>> {
+  // Data is fetched with the limit from the end backward, i.e. the latest data is fetched first.
+  // The data is still ordered chronologically, i.e. ascending timestamps.
+  const params = new URLSearchParams({
+    runId,
+    minLevel,
+    startTimestamp: startTime.getTime().toString(),
+    endTimestamp: endTime.getTime().toString(),
+  });
   if (taskName != null) {
     params.append("taskName", taskName);
+  }
+  if (limit != null) {
+    params.append("limit", limit.toString());
   }
   return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }
 
 export function getVoxelyticsChunkStatistics(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
 ): Promise<Array<VoxelyticsChunkStatistics>> {
-  return Request.receiveJSON(
-    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${new URLSearchParams({
-      runId,
-      taskName,
-    })}`,
-  );
+  const params = new URLSearchParams({
+    taskName,
+  });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${params}`);
 }
 export function getVoxelyticsArtifactChecksums(
   workflowHash: string,
-  runId: string,
+  runId: string | null,
   taskName: string,
   artifactName?: string,
 ): Promise<Array<Record<string, string | number>>> {
   const params = new URLSearchParams({
-    runId,
     taskName,
   });
+  if (runId != null) {
+    params.append("runId", runId);
+  }
   if (artifactName != null) {
     params.append("artifactName", artifactName);
   }
@@ -2402,9 +2489,15 @@ export function getVoxelyticsArtifactChecksums(
 
 // ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
-  return Request.receiveJSON(`/api/helpEmail?message=${encodeURIComponent(message)}`, {
-    method: "POST",
-  });
+  return Request.receiveJSON(
+    `/api/helpEmail?${new URLSearchParams({
+      message,
+      currentUrl: window.location.href,
+    })}`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function requestSingleSignOnLogin() {

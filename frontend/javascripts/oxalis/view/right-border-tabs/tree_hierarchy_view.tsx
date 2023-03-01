@@ -50,7 +50,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
@@ -189,8 +189,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = (evt: React.MouseEvent<any>) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'EventTa... Remove this comment to see the full error message
-    const treeId = parseInt(evt.target.dataset.id, 10);
+    const treeId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
 
     if (evt.ctrlKey || evt.metaKey) {
       this.props.onSelectTree(treeId);
@@ -206,8 +205,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectGroup = (evt: React.MouseEvent<any>) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'EventTa... Remove this comment to see the full error message
-    const groupId = parseInt(evt.target.dataset.id, 10);
+    const groupId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;
 
     if (numberOfSelectedTrees > 0) {
@@ -480,8 +478,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
-          visible={this.state.activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-          onVisibleChange={(isVisible) => this.handleGroupDropdownMenuVisibility(id, isVisible)}
+          open={this.state.activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+          onOpenChange={(isVisible) => this.handleGroupDropdownMenuVisibility(id, isVisible)}
           trigger={["contextMenu"]}
         >
           <span>
@@ -589,8 +587,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
             autoDestroy
             placement="bottom"
-            visible={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-            onVisibleChange={(isVisible) =>
+            open={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+            onOpenChange={(isVisible) =>
               this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
             }
             trigger={["contextMenu"]}

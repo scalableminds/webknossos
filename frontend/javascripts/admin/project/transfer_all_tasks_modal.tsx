@@ -77,7 +77,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
       }
 
       this.props.onComplete();
-    } catch (e) {
+    } catch (_e) {
       Toast.error(messages["project.unsuccessful_active_tasks_transfer"]);
     }
   };
@@ -129,7 +129,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
 
     if (!project) {
       return (
-        <Modal title="Error" visible onOk={this.props.onCancel} onCancel={this.props.onCancel}>
+        <Modal title="Error" open onOk={this.props.onCancel} onCancel={this.props.onCancel}>
           <p>{messages["project.none_selected"]}</p>
         </Modal>
       );
@@ -138,7 +138,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
       return (
         <Modal
           title={title}
-          visible
+          open
           onCancel={this.props.onCancel}
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: (string | Element)[]; title: str... Remove this comment to see the full error message
           pagination="false"

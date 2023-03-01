@@ -3,7 +3,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import type { APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
@@ -15,10 +15,11 @@ import {
   getVisibleSegmentationLayer,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
-import type {
+import {
   LoadAdHocMeshAction,
   LoadPrecomputedMeshAction,
   AdHocIsosurfaceInfo,
+  loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
@@ -54,13 +55,17 @@ import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import ThreeDMap from "libs/ThreeDMap";
 import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getEditableMappingForVolumeTracingId,
+  getTracingForSegmentationLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import { getDracoLoader } from "libs/draco";
@@ -86,7 +91,7 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
  * Ad Hoc Meshes
  *
  */
-const isosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
+const adhocIsosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
   // @ts-ignore
   return window.__marchingCubeSizeInMag1 != null
@@ -104,8 +109,8 @@ export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
 }
 
 function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
-  isosurfacesMapByLayer[layerName] = isosurfacesMapByLayer[layerName] || new Map();
-  const isosurfacesMap = isosurfacesMapByLayer[layerName];
+  adhocIsosurfacesMapByLayer[layerName] = adhocIsosurfacesMapByLayer[layerName] || new Map();
+  const isosurfacesMap = adhocIsosurfacesMapByLayer[layerName];
   const maybeMap = isosurfacesMap.get(segmentId);
 
   if (maybeMap == null) {
@@ -120,11 +125,11 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
 }
 
 function removeMapForSegment(layerName: string, segmentId: number): void {
-  if (isosurfacesMapByLayer[layerName] == null) {
+  if (adhocIsosurfacesMapByLayer[layerName] == null) {
     return;
   }
 
-  isosurfacesMapByLayer[layerName].delete(segmentId);
+  adhocIsosurfacesMapByLayer[layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -191,6 +196,7 @@ function* loadAdHocIsosurface(
   }
 
   const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
+
   yield* call(
     loadIsosurfaceForSegmentId,
     cellId,
@@ -437,9 +443,9 @@ function* refreshIsosurfaces(): Saga<void> {
     return;
   }
 
-  isosurfacesMapByLayer[segmentationLayer.name] =
-    isosurfacesMapByLayer[segmentationLayer.name] || new Map();
-  const isosurfacesMapForLayer = isosurfacesMapByLayer[segmentationLayer.name];
+  adhocIsosurfacesMapByLayer[segmentationLayer.name] =
+    adhocIsosurfacesMapByLayer[segmentationLayer.name] || new Map();
+  const isosurfacesMapForLayer = adhocIsosurfacesMapByLayer[segmentationLayer.name];
 
   for (const [cellId, threeDMap] of Array.from(isosurfacesMapForLayer.entries())) {
     if (!currentlyModifiedCells.has(cellId)) {
@@ -452,9 +458,26 @@ function* refreshIsosurfaces(): Saga<void> {
 
 function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   const { cellId, layerName } = action;
-  const threeDMap = isosurfacesMapByLayer[action.layerName].get(cellId);
-  if (threeDMap == null) return;
-  yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+
+  const isosurfaceInfo = yield* select(
+    (state) => state.localSegmentationData[layerName].isosurfaces[cellId],
+  );
+
+  if (isosurfaceInfo.isPrecomputed) {
+    yield* put(removeIsosurfaceAction(layerName, isosurfaceInfo.segmentId));
+    yield* put(
+      loadPrecomputedMeshAction(
+        isosurfaceInfo.segmentId,
+        isosurfaceInfo.seedPosition,
+        isosurfaceInfo.meshFileName,
+        layerName,
+      ),
+    );
+  } else {
+    const threeDMap = adhocIsosurfacesMapByLayer[action.layerName].get(cellId);
+    if (threeDMap == null) return;
+    yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+  }
 }
 
 function* _refreshIsosurfaceWithMap(
@@ -590,7 +613,7 @@ function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
   meshFileName: string,
-  segmentationLayer: APIDataLayer,
+  segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
@@ -617,6 +640,33 @@ function* loadPrecomputedMeshForSegmentId(
 
   const version = meshFile.formatVersion;
   try {
+    const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
+
+    const editableMapping = yield* select((state) =>
+      getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+    );
+    const tracing = yield* select((state) =>
+      getTracingForSegmentationLayer(state, segmentationLayer),
+    );
+    const mappingName =
+      // isosurfaceExtraInfo.mappingName contains the currently active mapping
+      // (can be the id of an editable mapping). However, we always need to
+      // use the mapping name of the on-disk mapping.
+      editableMapping != null ? editableMapping.baseMappingName : isosurfaceExtraInfo.mappingName;
+
+    if (version < 3) {
+      console.warn(
+        "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
+      );
+    }
+
+    // mappingName only exists for versions >= 3
+    if (meshFile.mappingName != null && meshFile.mappingName !== mappingName) {
+      throw Error(
+        `Trying to use a mesh file that was computed for mapping ${meshFile.mappingName} for a requested mapping of ${mappingName}.`,
+      );
+    }
+
     if (version >= 3) {
       const segmentInfo = yield* call(
         meshV3.getMeshfileChunksForSegment,
@@ -625,6 +675,12 @@ function* loadPrecomputedMeshForSegmentId(
         getBaseSegmentationName(segmentationLayer),
         meshFileName,
         id,
+        // The back-end should only receive a non-null mapping name,
+        // if it should perform extra (reverse) look ups to compute a mesh
+        // with a specific mapping from a mesh file that was computed
+        // without a mapping.
+        meshFile.mappingName == null ? mappingName : null,
+        editableMapping != null && tracing ? tracing.tracingId : null,
       );
       scale = [
         segmentInfo.transform[0][0],

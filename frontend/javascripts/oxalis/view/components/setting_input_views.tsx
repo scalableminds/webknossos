@@ -95,6 +95,8 @@ type LogSliderSettingProps = {
   min: number;
   roundTo: number;
   disabled?: boolean;
+  spans: Vector3;
+  precision?: number;
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -104,6 +106,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   static defaultProps = {
     disabled: false,
     roundTo: 3,
+    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
   };
 
   onChangeInput = (value: number | null) => {
@@ -153,10 +156,10 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={SETTING_LEFT_SPAN}>
+        <Col span={this.props.spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_MIDDLE_SPAN}>
+        <Col span={this.props.spans[1]}>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
@@ -166,7 +169,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             disabled={disabled}
           />
         </Col>
-        <Col span={SETTING_VALUE_SPAN}>
+        <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
             bordered={false}
@@ -176,7 +179,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
               width: "100%",
             }}
             step={value / 10}
-            precision={2}
+            precision={this.props.precision ?? 2}
             value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
             onChange={this.onChangeInput}
             disabled={disabled}
@@ -404,8 +407,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     });
   };
 
-  handleChange = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
@@ -497,8 +499,8 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   placeholder="Bounding Box Name"
                   size="small"
                   value={name}
-                  onChange={(evt: React.SyntheticEvent) => {
-                    this.setState({ name: (evt.target as HTMLInputElement).value });
+                  onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+                    this.setState({ name: evt.target.value });
                   }}
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
@@ -588,8 +590,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
     disabled: false,
   };
 
-  onColorChange = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   };
 

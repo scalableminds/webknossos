@@ -44,11 +44,13 @@ import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
 import { makeComponentLazy } from "libs/react_helpers";
 import { AsyncButton } from "components/async_clickables";
+import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => void;
   annotationType: APIAnnotationType;
   annotationId: string;
@@ -168,7 +170,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 }
 
 function _ShareModalView(props: Props) {
-  const { isVisible, onOk, annotationType, annotationId } = props;
+  const { isOpen, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -333,7 +335,7 @@ function _ShareModalView(props: Props) {
   return (
     <Modal
       title="Share this annotation"
-      visible={isVisible}
+      open={isOpen}
       width={800}
       onOk={onOk}
       onCancel={onOk}
@@ -349,7 +351,7 @@ function _ShareModalView(props: Props) {
           Sharing Link
         </Col>
         <Col span={18}>
-          <CopyableSharingLink isVisible={isVisible} longUrl={longUrl} />
+          <CopyableSharingLink isVisible={isOpen} longUrl={longUrl} />
           <Hint
             style={{
               margin: "4px 9px 12px 4px",
@@ -428,75 +430,77 @@ function _ShareModalView(props: Props) {
         <ShareAltOutlined />
         Team Sharing
       </Divider>
-      <Row>
-        <Col
-          span={6}
-          style={{
-            lineHeight: "22px",
-          }}
-        >
-          For which teams should this annotation be listed?
-        </Col>
-        <Col span={18}>
-          <TeamSelectionComponent
-            mode="multiple"
-            allowNonEditableTeams
-            value={sharedTeams}
-            onChange={handleSharedTeamsChange}
-            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
-          />
-          <Hint
+      <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
+        <Row>
+          <Col
+            span={6}
             style={{
-              margin: "6px 12px",
+              lineHeight: "22px",
             }}
           >
-            Choose the teams to share your annotation with. Members of these teams can see this
-            annotation in their Annotations tab.
-          </Hint>
-        </Col>
-      </Row>
+            For which teams should this annotation be listed?
+          </Col>
+          <Col span={18}>
+            <TeamSelectionComponent
+              mode="multiple"
+              allowNonEditableTeams
+              value={sharedTeams}
+              onChange={handleSharedTeamsChange}
+              disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
+            />
+            <Hint
+              style={{
+                margin: "6px 12px",
+              }}
+            >
+              Choose the teams to share your annotation with. Members of these teams can see this
+              annotation in their Annotations tab.
+            </Hint>
+          </Col>
+        </Row>
 
-      <Row>
-        <Col
-          span={6}
-          style={{
-            lineHeight: "22px",
-          }}
-        >
-          Are other users allowed to edit this annotation?
-        </Col>
-        <Col span={18}>
-          <RadioGroup
-            onChange={handleOthersMayEditCheckboxChange}
-            value={newOthersMayEdit}
-            disabled={isChangingInProgress}
+        <Row>
+          <Col
+            span={6}
+            style={{
+              lineHeight: "22px",
+            }}
           >
-            <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
-              No, keep it read-only
-            </Radio>
-            <Hint
-              style={{
-                marginLeft: 24,
-              }}
+            Are other users allowed to edit this annotation?
+          </Col>
+          <Col span={18}>
+            <RadioGroup
+              onChange={handleOthersMayEditCheckboxChange}
+              value={newOthersMayEdit}
+              disabled={isChangingInProgress}
             >
-              Only you can edit the content of this annotation.
-            </Hint>
+              <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
+                No, keep it read-only
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                Only you can edit the content of this annotation.
+              </Hint>
 
-            <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
-              Yes, allow editing
-            </Radio>
-            <Hint
-              style={{
-                marginLeft: 24,
-              }}
-            >
-              All registered users that can view this annotation can edit it. Note that you should
-              coordinate the collaboration, because parallel changes to this annotation will result
-              in a conflict.
-            </Hint>
-          </RadioGroup>
-        </Col>
-      </Row>
+              <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
+                Yes, allow editing
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                All registered users that can view this annotation can edit it. Note that you should
+                coordinate the collaboration, because parallel changes to this annotation will
+                result in a conflict.
+              </Hint>
+            </RadioGroup>
+          </Col>
+        </Row>
+      </PricingEnforcedBlur>
     </Modal>
   );
 }

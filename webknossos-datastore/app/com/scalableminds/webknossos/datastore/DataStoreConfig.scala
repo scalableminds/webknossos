@@ -24,6 +24,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object WatchFileSystem {
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
+      val initialDelay: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.initialDelay")
     }
     object Cache {
       object DataCube {
@@ -50,6 +51,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     }
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
+    }
+    object ReportUsedStorage {
+      val enabled: Boolean = get[Boolean]("datastore.reportUsedStorage.enabled")
     }
     val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface, Redis, AgglomerateSkeleton)
   }

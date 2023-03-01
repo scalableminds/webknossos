@@ -22,7 +22,7 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -55,8 +55,15 @@ class UserService @Inject()(conf: WkConf,
 
   def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] =
     multiUser._lastLoggedInIdentity match {
-      case Some(userId) => userDAO.findOne(userId)
-      case None         => userDAO.findFirstByMultiUser(multiUser._id)
+      case Some(userId) =>
+        for {
+          maybeLastLoggedInIdentity <- userDAO.findOne(userId).futureBox
+          identity <- maybeLastLoggedInIdentity match {
+            case Full(user) if !user.isDeactivated => Fox.successful(user)
+            case _                                 => userDAO.findFirstByMultiUser(multiUser._id)
+          }
+        } yield identity
+      case None => userDAO.findFirstByMultiUser(multiUser._id)
     }
 
   def findOneByEmailAndOrganization(email: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
@@ -65,9 +72,9 @@ class UserService @Inject()(conf: WkConf,
       user <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUser._id)
     } yield user
 
-  def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: ObjectId): Fox[Unit] =
     for {
-      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId).futureBox
+      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
@@ -83,7 +90,8 @@ class UserService @Inject()(conf: WkConf,
              lastName: String,
              isActive: Boolean,
              passwordInfo: PasswordInfo,
-             isAdmin: Boolean = false): Fox[User] = {
+             isAdmin: Boolean,
+             isOrganizationOwner: Boolean): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -108,6 +116,7 @@ class UserService @Inject()(conf: WkConf,
         Json.obj(),
         LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
+        isOrganizationOwner,
         isDatasetManager = false,
         isDeactivated = !isActive,
         isUnlisted = false,
@@ -133,11 +142,11 @@ class UserService @Inject()(conf: WkConf,
                        organizationId: ObjectId,
                        autoActivate: Boolean,
                        isAdmin: Boolean = false,
-                       isUnlisted: Boolean = false)(implicit ctx: DBAccessContext): Fox[User] =
+                       isUnlisted: Boolean = false): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
+      organizationTeamMembership = TeamMembership(organizationTeamId, isTeamManager = false)
       loginInfo = LoginInfo(CredentialsProvider.ID, newUserId.id)
       user = originalUser.copy(
         _id = newUserId,
@@ -148,11 +157,12 @@ class UserService @Inject()(conf: WkConf,
         isDatasetManager = false,
         isDeactivated = !autoActivate,
         lastTaskTypeId = None,
+        isOrganizationOwner = false,
         isUnlisted = isUnlisted,
         created = Instant.now
       )
       _ <- userDAO.insertOne(user)
-      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
+      _ <- userDAO.insertTeamMembership(user._id, organizationTeamMembership)(GlobalAccessContext)
       _ = logger.info(
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user
@@ -320,6 +330,7 @@ class UserService @Inject()(conf: WkConf,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName,
         "isAdmin" -> user.isAdmin,
+        "isOrganizationOwner" -> user.isOrganizationOwner,
         "isDatasetManager" -> user.isDatasetManager,
         "isActive" -> !user.isDeactivated,
         "teams" -> teamMembershipsJs,

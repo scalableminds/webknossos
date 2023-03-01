@@ -47,7 +47,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val unreportedStatus = "No longer available on datastore."
+  private val unreportedStatus = dataSetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
   private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
 
@@ -61,7 +61,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
+  def createPreliminaryDataset(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
     val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), notYetUploadedStatus)
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }
@@ -225,14 +225,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def dataSourceFor(dataSet: DataSet,
-                    organization: Option[Organization] = None,
-                    skipResolutions: Boolean = false): Fox[InboxDataSource] =
+  def dataSourceFor(dataSet: DataSet, organization: Option[Organization] = None): Fox[InboxDataSource] =
     (for {
       organization <- Fox.fillOption(organization) {
         organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
-      dataLayers <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id, skipResolutions)
+      dataLayers <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id)
       dataSourceId = DataSourceId(dataSet.name, organization.name)
     } yield {
       if (dataSet.isUsable)
@@ -243,7 +241,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataSet.status, dataSet.scale))
     }).flatten
 
-  def logoUrlFor(dataSet: DataSet, organization: Option[Organization]): Fox[String] =
+  private def logoUrlFor(dataSet: DataSet, organization: Option[Organization]): Fox[String] =
     dataSet.logoUrl match {
       case Some(url) => Fox.successful(url)
       case None =>
@@ -256,7 +254,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WKRemoteDataStoreClient] =
     for {
       dataStore <- dataStoreFor(dataSet)
-    } yield new WKRemoteDataStoreClient(dataStore, dataSet, rpc)
+    } yield new WKRemoteDataStoreClient(dataStore, rpc)
 
   def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Instant] =
     userOpt match {
@@ -312,9 +310,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
-                   organization: Option[Organization],
-                   dataStore: Option[DataStore],
-                   skipResolutions: Boolean = false,
+                   organization: Option[Organization] = None,
+                   dataStore: Option[DataStore] = None,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
@@ -332,7 +329,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
-      dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
+      dataSource <- dataSourceFor(dataSet, Some(organization)) ?~> "dataset.list.fetchDataSourceFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
       jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {

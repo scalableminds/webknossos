@@ -1,7 +1,7 @@
 package oxalis.security
 
 import com.mohiva.play.silhouette.api._
-import com.mohiva.play.silhouette.api.crypto.{Base64AuthenticatorEncoder, Signer}
+import com.mohiva.play.silhouette.api.crypto.Base64AuthenticatorEncoder
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
@@ -11,7 +11,6 @@ import play.api.mvc._
 import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Try}
 
 /*
  * Combining BearerTokenAuthenticator and TokenAuthenticator from Silhouette
@@ -24,11 +23,6 @@ case class CombinedAuthenticator(actualAuthenticator: StorableAuthenticator) ext
 
   override def loginInfo: LoginInfo = actualAuthenticator.loginInfo
   override def isValid: Boolean = actualAuthenticator.isValid
-}
-
-class IdentityCookieSigner extends Signer {
-  override def sign(data: String): String = data
-  override def extract(message: String): Try[String] = Success(message)
 }
 
 case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,

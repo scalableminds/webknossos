@@ -24,9 +24,9 @@ import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icon
 import _ from "lodash";
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type {
-  TaskCreationResponse,
-  TaskCreationResponseContainer,
+import {
+  type TaskCreationResponse,
+  type TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
 import { normFile, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
@@ -343,6 +343,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       const validFormValues = _.omitBy(defaultValues, _.isNull);
 
       // The task type is not needed for the form and leads to antd errors if it contains null values
+      // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }
@@ -454,7 +455,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   required: true,
                 },
                 {
-                  validator: async (rule, value) => {
+                  validator: async (_rule, value) => {
                     const newestForm = this.formRef.current;
 
                     if (!newestForm || value === "") {

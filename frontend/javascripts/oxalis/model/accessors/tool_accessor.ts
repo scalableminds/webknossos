@@ -9,6 +9,12 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
+import { APIOrganization, APIUser } from "types/api_flow_types";
+import {
+  getFeatureNotAvailableInPlanMessage,
+  isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
+} from "admin/organization/pricing_plan_utils";
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
@@ -106,7 +112,14 @@ function _getDisabledInfoFromArgs(
   isZoomStepTooHighForFilling: boolean,
   hasAgglomerateMappings: boolean,
   genericDisabledExplanation: string,
+  activeOrganization: APIOrganization | null,
+  activeUser: APIUser | null | undefined,
 ) {
+  const isProofReadingToolAllowed = isFeatureAllowedByPricingPlan(
+    activeOrganization,
+    PricingPlanEnum.Power,
+  );
+
   return {
     [AnnotationToolEnum.MOVE]: {
       isDisabled: false,
@@ -149,10 +162,16 @@ function _getDisabledInfoFromArgs(
       explanation: zoomInToUseToolMessage,
     },
     [AnnotationToolEnum.PROOFREAD]: {
-      isDisabled: !hasSkeleton || !hasAgglomerateMappings,
-      explanation: !hasSkeleton
-        ? disabledSkeletonExplanation
-        : disabledAgglomerateMappingsExplanation,
+      isDisabled: !hasSkeleton || !hasAgglomerateMappings || !isProofReadingToolAllowed,
+      explanation: isProofReadingToolAllowed
+        ? !hasSkeleton
+          ? disabledSkeletonExplanation
+          : disabledAgglomerateMappingsExplanation
+        : getFeatureNotAvailableInPlanMessage(
+            PricingPlanEnum.Power,
+            activeOrganization,
+            activeUser,
+          ),
     },
   };
 }
@@ -213,6 +232,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
   const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
   const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
   const hasAgglomerateMappings = (visibleSegmentationLayer.agglomerates?.length ?? 0) > 0;
+
   return getDisabledInfoFromArgs(
     hasSkeleton,
     isZoomStepTooHighForBrushing,
@@ -220,8 +240,11 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     isZoomStepTooHighForFilling,
     hasAgglomerateMappings,
     genericDisabledExplanation,
+    state.activeOrganization,
+    state.activeUser,
   );
 }
+
 export function adaptActiveToolToShortcuts(
   activeTool: AnnotationTool,
   isShiftPressed: boolean,

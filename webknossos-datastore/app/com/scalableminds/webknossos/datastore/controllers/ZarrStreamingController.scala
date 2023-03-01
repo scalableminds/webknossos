@@ -117,7 +117,7 @@ class ZarrStreamingController @Inject()(
           d.category,
           d.boundingBox,
           d.elementClass,
-          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None)),
+          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
         )
       case s: WKWSegmentationLayer =>
@@ -125,7 +125,7 @@ class ZarrStreamingController @Inject()(
           s.name,
           s.boundingBox,
           s.elementClass,
-          s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None)),
+          s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
@@ -136,7 +136,7 @@ class ZarrStreamingController @Inject()(
           z.category,
           z.boundingBox,
           z.elementClass,
-          z.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None)),
+          z.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1)
         )
       case zs: ZarrSegmentationLayer =>
@@ -144,7 +144,7 @@ class ZarrStreamingController @Inject()(
           zs.name,
           zs.boundingBox,
           zs.elementClass,
-          zs.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None)),
+          zs.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           mappings = zs.mappings,
           largestSegmentId = zs.largestSegmentId,
           numChannels = Some(if (zs.elementClass == ElementClass.uint24) 3 else 1)

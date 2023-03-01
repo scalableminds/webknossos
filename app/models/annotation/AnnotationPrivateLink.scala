@@ -3,15 +3,15 @@ package models.annotation
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{AnnotationPrivatelinks, _}
+import com.scalableminds.webknossos.schema.Tables._
 import oxalis.security.RandomIDGenerator
-
-import javax.inject.Inject
 import play.api.libs.json.{JsValue, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.ObjectId
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AnnotationPrivateLink(_id: ObjectId,
@@ -43,7 +43,7 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
   def generateToken: String = RandomIDGenerator.generateBlocking(12)
 }
 
-class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AnnotationPrivateLink, AnnotationPrivatelinksRow, AnnotationPrivatelinks](sqlClient) {
   protected val collection = AnnotationPrivatelinks
 
@@ -62,29 +62,28 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
       )
     )
 
-  override protected def readAccessQ(requestingUserId: ObjectId): String =
-    s"""(_annotation in (select _id from webknossos.annotations_ where _user = '${requestingUserId.id}'))"""
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"""(_annotation in (select _id from webknossos.annotations_ where _user = $requestingUserId))"""
 
   def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.annotation_privateLinks(_id, _annotation, accessToken, expirationDateTime, isDeleted)
-                         values(${aPL._id.id}, ${aPL._annotation.id}, ${aPL.accessToken}, ${aPL.expirationDateTime}, ${aPL.isDeleted})""")
+        q"""insert into webknossos.annotation_privateLinks(_id, _annotation, accessToken, expirationDateTime, isDeleted)
+                         values(${aPL._id}, ${aPL._annotation}, ${aPL.accessToken}, ${aPL.expirationDateTime}, ${aPL.isDeleted})""".asUpdate)
     } yield ()
 
   def updateOne(id: ObjectId, annotationId: ObjectId, expirationDateTime: Option[Instant])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.annotation_privateLinks set _annotation = $annotationId,
-                            expirationDateTime = $expirationDateTime where _id = $id""")
+      _ <- run(q"""update webknossos.annotation_privateLinks set _annotation = $annotationId,
+                            expirationDateTime = $expirationDateTime where _id = $id""".asUpdate)
     } yield ()
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"""select #$columns from #$existingCollectionName where #$accessQuery""".as[AnnotationPrivatelinksRow])
+      r <- run(q"""select $columns from $existingCollectionName where $accessQuery""".as[AnnotationPrivatelinksRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -92,7 +91,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"""select #$columns from #$existingCollectionName where _annotation=${annotationId.id} and #$accessQuery"""
+        q"""select $columns from $existingCollectionName where _annotation = $annotationId and $accessQuery"""
           .as[AnnotationPrivatelinksRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -100,8 +99,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
   def findOneByAccessToken(accessToken: String): Fox[AnnotationPrivateLink] =
     for {
       r <- run(
-        sql"select #$columns from #$existingCollectionName where accessToken = $accessToken"
-          .as[AnnotationPrivatelinksRow])
+        q"select $columns from $existingCollectionName where accessToken = $accessToken".as[AnnotationPrivatelinksRow])
       parsed <- parseFirst(r, accessToken)
     } yield parsed
 }

@@ -88,7 +88,7 @@ type CommentTabState = {
   isSortedAscending: boolean;
   sortBy: SortByEnumType;
   collapsedTreeIds: Record<number, boolean>;
-  isMarkdownModalVisible: boolean;
+  isMarkdownModalOpen: boolean;
 };
 const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "updateTree",
@@ -142,7 +142,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     isSortedAscending: true,
     sortBy: SortByEnum.NAME,
     collapsedTreeIds: {},
-    isMarkdownModalVisible: false,
+    isMarkdownModalOpen: false,
   };
 
   componentDidMount() {
@@ -241,7 +241,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     this.nextComment(false);
   };
 
-  handleChangeInput = (evt: React.SyntheticEvent, insertLineBreaks: boolean = false) => {
+  handleChangeInput = (
+    evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    insertLineBreaks: boolean = false,
+  ) => {
     // @ts-ignore
     const commentText = evt.target.value;
 
@@ -311,7 +314,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
   setMarkdownModalVisibility = (visible: boolean) => {
     this.setState({
-      isMarkdownModalVisible: visible,
+      isMarkdownModalOpen: visible,
     });
   };
 
@@ -328,7 +331,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
         <MarkdownModal
           key={comment.nodeId}
           source={comment.content}
-          visible={this.state.isMarkdownModalVisible}
+          isOpen={this.state.isMarkdownModalOpen}
           onChange={this.handleChangeInput}
           onOk={onOk}
           label="Comment"
@@ -420,7 +423,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       >
         <DomVisibilityObserver targetId={commentTabId}>
           {(isVisibleInDom) => {
-            if (!isVisibleInDom && !this.state.isMarkdownModalVisible) {
+            if (!isVisibleInDom && !this.state.isMarkdownModalOpen) {
               return null;
             }
 
@@ -456,8 +459,12 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                         ? undefined
                         : messages["tracing.read_only_mode_notification"]
                     }
-                    onChange={(evt) => this.handleChangeInput(evt, true)}
-                    onPressEnter={(evt) => (evt.target as HTMLElement).blur()}
+                    onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
+                      this.handleChangeInput(evt, true)
+                    }
+                    onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
+                      (evt.target as HTMLElement).blur()
+                    }
                     placeholder="Add comment"
                     style={{
                       width: "50%",

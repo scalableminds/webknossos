@@ -22,18 +22,21 @@ type Props = {
   dataset: APIDataset;
   task: Task | null | undefined;
 };
-const positionIconStyle = {
+const positionIconStyle: React.CSSProperties = {
   transform: "rotate(-45deg)",
 };
-const warningColors = {
+const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",
   borderColor: "rgb(241, 122, 39)",
 };
-const iconErrorStyle = { ...warningColors };
-const positionInputDefaultStyle = {
+const iconErrorStyle: React.CSSProperties = { ...warningColors };
+const positionInputDefaultStyle: React.CSSProperties = {
   textAlign: "center",
 };
-const positionInputErrorStyle = { ...positionInputDefaultStyle, ...warningColors };
+const positionInputErrorStyle: React.CSSProperties = {
+  ...positionInputDefaultStyle,
+  ...warningColors,
+};
 
 class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {
@@ -129,10 +132,8 @@ class DatasetPositionView extends PureComponent<Props> {
           </Tooltip>
           <Vector3Input
             value={position}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(position: Vector3) => void' is not assignab... Remove this comment to see the full error message
             onChange={this.handleChangePosition}
             autoSize
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ textAlign: string; }' is not assignable to... Remove this comment to see the full error message
             style={positionInputStyle}
             allowDecimals
           />
@@ -159,7 +160,6 @@ class DatasetPositionView extends PureComponent<Props> {
             </Tooltip>
             <Vector3Input
               value={rotation}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(rotation: Vector3) => void' is not assignab... Remove this comment to see the full error message
               onChange={this.handleChangeRotation}
               style={{
                 textAlign: "center",

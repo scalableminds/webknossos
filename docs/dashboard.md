@@ -1,6 +1,6 @@
 # Dashboard
 
-The Dashboard is your entry point to webKnossos.
+The Dashboard is your entry point to WEBKNOSSOS.
 You can manage your datasets, create annotations, resume existing annotations and retrieve tasks distributed to you.
 
 ## Datasets
@@ -31,7 +31,7 @@ Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 ![Tasks can be distributed to users. Task can include rich instructions.](./images/dashboard_tasks.jpeg)
 
 ## Annotations
-This screen lists all your annotations (skeleton, volume or both) that you started on a dataset (outside of tasks) and annotations that were shared with you. Annotations are either created by starting new annotations from the "Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer (see [NML files](./data_formats.md#nml) for skeleton annotations).
+This screen lists all your annotations (skeleton, volume or both) that you started on a dataset (outside of tasks) and annotations that were shared with you. Annotations are either created by starting new annotations from the "Datasets" tab, from the WEBKNOSSOS data viewer, or by uploading an existing annotation from your computer (see [NML files](./data_formats.md#nml) for skeleton annotations).
 
 Annotations can be resumed, archived (like delete, but reversible), and downloaded for offline analysis. 
 You can also add custom tags to annotations to organize and group them. Click on one or multiple of your tags if you want to filter a particular group of annotations. 
@@ -48,7 +48,7 @@ You can view the linked annotations (read-only) or copy them to your account for
 
 ## Featured Publications
 
-This screen lists a number of featured public community datasets and their respective publications hosted by the webKnossos team. Feel free to explore these datasets or to build upon them.
+This screen lists a number of featured public community datasets and their respective publications hosted by the WEBKNOSSOS team. Feel free to explore these datasets or to build upon them.
 
 [Contact us](mailto:hello@webknossos.org) if you would like your data and publication to be featured here as well.
 

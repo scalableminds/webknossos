@@ -1,9 +1,9 @@
 package models.binary.explore
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemCredentials
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
@@ -19,14 +19,15 @@ case class MagWithAttributes(mag: MagLocator,
 
 trait RemoteLayerExplorer extends FoxImplicits {
 
-  def explore(remotePath: Path, credentials: Option[FileSystemCredentials]): Fox[List[(DataLayer, Vec3Double)]]
+  def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]]
 
   def name: String
 
   protected def parseJsonFromPath[T: Reads](path: Path): Fox[T] =
     for {
-      fileAsString <- tryo(new String(Files.readAllBytes(path), StandardCharsets.UTF_8)).toFox ?~> "Failed to read remote file"
-      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString) ?~> "Failed to parse or validate json against data schema"
+      fileBytes <- tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "dataSet.explore.failed.readFile"
+      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "dataSet.explore.failed.readFile"
+      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
     } yield parsed
 
   protected def looksLikeSegmentationLayer(layerName: String, elementClass: ElementClass.Value): Boolean =

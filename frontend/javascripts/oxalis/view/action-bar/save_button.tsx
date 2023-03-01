@@ -5,7 +5,7 @@ import Store from "oxalis/store";
 import type { OxalisState, IsBusyInfo } from "oxalis/store";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import window from "libs/window";
 import { Tooltip } from "antd";
 import {
@@ -145,7 +145,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         </Tooltip>
         {showUnsavedWarning ? (
           <Tooltip
-            visible
+            open
             title={`There are unsaved changes which are older than ${Math.ceil(
               UNSAVED_WARNING_THRESHOLD / 1000 / 60,
             )} minutes. Please ensure that your Internet connection works and wait until this warning disappears.`}

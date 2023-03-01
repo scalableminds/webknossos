@@ -52,7 +52,7 @@ ALTER TABLE webknossos.invites ALTER COLUMN _id SET DEFAULT '';
 ALTER TABLE webknossos.annotation_privateLinks ALTER COLUMN _id SET DEFAULT '';
 ALTER TABLE webknossos.shortLinks ALTER COLUMN _id SET DEFAULT '';
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 90;
+UPDATE webknossos.releaseInformation SET schemaVersion = 89;
 
 COMMIT;
 

@@ -12,7 +12,7 @@ import type { OxalisState } from "oxalis/store";
 import type { TDViewDisplayMode } from "oxalis/constants";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import { SwitchChangeEventHandler } from "antd/lib/switch";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;

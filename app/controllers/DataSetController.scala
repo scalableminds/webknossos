@@ -3,7 +3,6 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataLayerLike, GenericDataSource}
@@ -27,6 +26,21 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import com.scalableminds.util.tools.TristateOptionJsonHelper
+
+case class DatasetUpdateParameters(
+    description: Option[Option[String]] = Some(None),
+    displayName: Option[Option[String]] = Some(None),
+    sortingKey: Option[Instant],
+    isPublic: Option[Boolean],
+    tags: Option[List[String]],
+    folderId: Option[ObjectId]
+)
+
+object DatasetUpdateParameters extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
+    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
 
 @Api
 class DataSetController @Inject()(userService: UserService,
@@ -99,6 +113,7 @@ class DataSetController @Inject()(userService: UserService,
               .clientFor(dataSet)(GlobalAccessContext)
               .flatMap(
                 _.requestDataLayerThumbnail(organizationName,
+                                            dataSet,
                                             dataLayerName,
                                             width,
                                             height,
@@ -136,7 +151,7 @@ class DataSetController @Inject()(userService: UserService,
       val reportMutable = ListBuffer[String]()
       for {
         dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
-          .exploreRemoteDatasource(request.body, reportMutable)
+          .exploreRemoteDatasource(request.body, request.identity, reportMutable)
           .futureBox
         dataSourceOpt = dataSourceBox match {
           case Full(dataSource) if dataSource.dataLayers.nonEmpty =>
@@ -166,10 +181,6 @@ class DataSetController @Inject()(userService: UserService,
         value =
           "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets")
       isUnreported: Option[Boolean],
-      @ApiParam(
-        value =
-          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit")
-      isEditable: Option[Boolean],
       @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
                 example = "sample_organization")
       organizationName: Option[String],
@@ -186,45 +197,46 @@ class DataSetController @Inject()(userService: UserService,
       @ApiParam(value = "Optional filtering: List only datasets with names matching this search query")
       searchQuery: Option[String],
       @ApiParam(value = "Optional limit, return only the first n matching datasets.")
-      limit: Option[Int]
+      limit: Option[Int],
+      @ApiParam(value = "Change output format to return only a compact list with essential information on the datasets")
+      compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    UsingFilters(
-      Filter(isActive, (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
-      Filter(isUnreported, (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
-      Filter(isEditable,
-             (value: Boolean, el: DataSet) =>
-               for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield
-                 isEditable && value || !isEditable && !value),
-      Filter(
-        organizationName,
-        (value: String, el: DataSet) =>
-          for { organization <- organizationDAO.findOneByName(value)(GlobalAccessContext) ?~> "organization.notFound" } yield
-            el._organization == organization._id
-      ),
-      Filter(
-        onlyMyOrganization,
-        (value: Boolean, el: DataSet) =>
-          for { organizationId <- request.identity.map(_._organization) ?~> "organization.notFound" } yield
-            !value || el._organization == organizationId
-      ),
-      Filter(
-        uploaderId,
-        (value: String, el: DataSet) =>
-          for { uploaderIdValidated <- ObjectId.fromString(value) } yield el._uploader.contains(uploaderIdValidated)
-      )
-    ) { filter =>
-      for {
-        folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-        dataSets <- dataSetDAO
-          .findAllWithSearch(folderIdValidated, searchQuery, recursive.getOrElse(false)) ?~> "dataSet.list.failed"
-        filtered <- filter.applyOn(dataSets)
-        limited = limit.map(l => filtered.take(l)).getOrElse(filtered)
-        js <- listGrouped(limited, request.identity) ?~> "dataSet.list.failed"
-        _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-      } yield {
-        addRemoteOriginHeaders(Ok(Json.toJson(js)))
+    for {
+      folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
+      uploaderIdValidated <- Fox.runOptional(uploaderId)(ObjectId.fromString)
+      organizationIdOpt <- if (onlyMyOrganization.getOrElse(false))
+        Fox.successful(request.identity.map(_._organization))
+      else
+        Fox.runOptional(organizationName)(orgaName => organizationDAO.findIdByName(orgaName)(GlobalAccessContext))
+      js <- if (compact.getOrElse(false)) {
+        for {
+          datasetInfos <- dataSetDAO.findAllCompactWithSearch(
+            isActive,
+            isUnreported,
+            organizationIdOpt,
+            folderIdValidated,
+            uploaderIdValidated,
+            searchQuery,
+            request.identity.map(_._id),
+            recursive.getOrElse(false),
+            limit
+          )
+        } yield Json.toJson(datasetInfos)
+      } else {
+        for {
+          dataSets <- dataSetDAO.findAllWithSearch(isActive,
+                                                   isUnreported,
+                                                   organizationIdOpt,
+                                                   folderIdValidated,
+                                                   uploaderIdValidated,
+                                                   searchQuery,
+                                                   recursive.getOrElse(false),
+                                                   limit) ?~> "dataSet.list.failed"
+          js <- listGrouped(dataSets, request.identity) ?~> "dataSet.list.failed"
+        } yield Json.toJson(js)
       }
-    }
+      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
+    } yield addRemoteOriginHeaders(Ok(js))
   }
 
   private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(
@@ -247,7 +259,6 @@ class DataSetController @Inject()(userService: UserService,
                   requestingUser,
                   Some(organization),
                   Some(dataStore),
-                  skipResolutions = true,
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
               }
             } yield resultByDataStore
@@ -320,11 +331,47 @@ class DataSetController @Inject()(userService: UserService,
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
         _ <- dataSetService
           .clientFor(dataSet)(GlobalAccessContext)
-          .flatMap(_.findPositionWithData(organizationName, datalayer.name).flatMap(posWithData =>
+          .flatMap(_.findPositionWithData(organizationName, dataSet, datalayer.name).flatMap(posWithData =>
             bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
-      } yield {
-        Ok("Ok")
-      }
+      } yield Ok("Ok")
+    }
+
+  @ApiOperation(
+    value =
+      """Update information for a dataset.
+Expects:
+ - As JSON object body with all optional keys (missing keys will not be updated, keys set to null will be set to null):
+  - description (string, nullable)
+  - displayName (string, nullable)
+  - sortingKey (timestamp)
+  - isPublic (boolean)
+  - tags (list of string)
+  - folderId (string)
+ - As GET parameters:
+  - organizationName (string): url-safe name of the organization owning the dataset
+  - dataSetName (string): name of the dataset
+""",
+    nickname = "datasetUpdatePartial"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "datasetPartialUpdateInformation",
+                           required = true,
+                           dataTypeClass = classOf[JsObject],
+                           paramType = "body")))
+  def updatePartial(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+                              example = "sample_organization") organizationName: String,
+                    @ApiParam(value = "The name of the dataset") dataSetName: String): Action[DatasetUpdateParameters] =
+    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+      for {
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
+          dataSetName) ~> NOT_FOUND
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- dataSetDAO.updatePartial(dataSet._id, request.body)
+        updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
+        _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
+        js <- dataSetService.publicWrites(updated, Some(request.identity))
+      } yield Ok(js)
     }
 
   @ApiOperation(
@@ -351,9 +398,7 @@ Expects:
                            paramType = "body")))
   def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                        example = "sample_organization") organizationName: String,
-             @ApiParam(value = "The name of the dataset") dataSetName: String,
-             @ApiParam(value = "If true, the resolutions of the dataset layers in the returned json are skipped")
-             skipResolutions: Option[Boolean]): Action[JsValue] =
+             @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags, folderId) =>
@@ -370,13 +415,7 @@ Expects:
             _ <- dataSetDAO.updateTags(dataSet._id, tags)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-            organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
-            dataStore <- dataSetService.dataStoreFor(updated)
-            js <- dataSetService.publicWrites(updated,
-                                              Some(request.identity),
-                                              Some(organization),
-                                              Some(dataStore),
-                                              skipResolutions.getOrElse(false))
+            js <- dataSetService.publicWrites(updated, Some(request.identity))
           } yield Ok(Json.toJson(js))
       }
     }

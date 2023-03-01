@@ -92,7 +92,7 @@ import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -1129,6 +1129,12 @@ const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 function* watchForSaveConflicts() {
   function* checkForNewVersion() {
     const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
+    const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+    const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+    if (!allowUpdate && othersMayEdit) {
+      // The user does not have the annotation's mutex and therefore no repeated version check is needed.
+      return;
+    }
 
     const maybeSkeletonTracing = yield* select((state) => state.tracing.skeleton);
     const volumeTracings = yield* select((state) => state.tracing.volumes);

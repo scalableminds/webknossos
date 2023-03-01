@@ -1,46 +1,27 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { ContextRouter } from "react-router-dom";
-import { Redirect, Route, Router, Switch } from "react-router-dom";
-import { Layout, Alert } from "antd";
-import { connect } from "react-redux";
-import React, { lazy, Suspense } from "react";
-import { createBrowserHistory } from "history";
-import _ from "lodash";
-import AcceptInviteView from "admin/auth/accept_invite_view";
-import { TracingTypeEnum, APICompoundTypeEnum, APIUser } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
-import { Imprint, Privacy } from "components/legal";
-import type { OxalisState } from "oxalis/store";
 import {
+  createExplorational,
   getAnnotationInformation,
   getOrganizationForDataset,
-  createExplorational,
   getShortLink,
 } from "admin/admin_rest_api";
-import AdaptViewportMetatag from "components/adapt_viewport_metatag";
-import AsyncRedirect from "components/redirect";
+import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
-import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
-import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
-import DisableGenericDnd from "components/disable_generic_dnd";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
-import JobListView from "admin/job/job_list_view";
 import LoginView from "admin/auth/login_view";
-import Navbar from "navbar";
+import RegistrationView from "admin/auth/registration_view";
+import StartResetPasswordView from "admin/auth/start_reset_password_view";
+import DatasetAddView from "admin/dataset/dataset_add_view";
+import JobListView from "admin/job/job_list_view";
 import Onboarding from "admin/onboarding";
-import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import OrganizationEditView from "admin/organization/organization_edit_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
-import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import PublicationDetailView from "dashboard/publication_details_view";
-import RegistrationView from "admin/auth/registration_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
-import SecuredRoute from "components/secured_route";
-import StartResetPasswordView from "admin/auth/start_reset_password_view";
+import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
 import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
@@ -49,14 +30,44 @@ import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
-import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
-import * as Utils from "libs/utils";
+import { Alert, Layout } from "antd";
+import AdaptViewportMetatag from "components/adapt_viewport_metatag";
+import DisableGenericDnd from "components/disable_generic_dnd";
+import { Imprint, Privacy } from "components/legal";
+import AsyncRedirect from "components/redirect";
+import SecuredRoute from "components/secured_route";
+import { CheckTermsOfServices } from "components/terms_of_services_check";
+import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import PublicationDetailView from "dashboard/publication_details_view";
 import features from "features";
-import window from "libs/window";
-import { trackAction } from "oxalis/model/helpers/analytics";
+import { createBrowserHistory } from "history";
+import * as Utils from "libs/utils";
 import { coalesce } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import Navbar from "navbar";
+import { ControlModeEnum } from "oxalis/constants";
+import { trackAction } from "oxalis/model/helpers/analytics";
+import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
+import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
+import React, { lazy, Suspense } from "react";
+import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
+import type { ContextRouter, RouteProps } from "react-router-dom";
+import { Redirect, Route, Router, Switch } from "react-router-dom";
+import {
+  APICompoundTypeEnum,
+  APIResolutionRestrictions,
+  APIUser,
+  TracingTypeEnum,
+} from "types/api_flow_types";
+
+import ErrorBoundary from "components/error_boundary";
+import { Store } from "oxalis/singletons";
+
 const { Content } = Layout;
 
 function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
@@ -76,6 +87,7 @@ const AsyncWorkflowListView = loadable(() => import("admin/voxelytics/workflow_l
 type StateProps = {
   activeUser: APIUser | null | undefined;
   hasOrganizations: boolean;
+  pricingPlan: PricingPlanEnum;
 };
 type Props = StateProps;
 const browserHistory = createBrowserHistory();
@@ -116,6 +128,27 @@ function PageNotFoundView() {
     </div>
   );
 }
+
+type GetComponentProps<T> = T extends React.ComponentType<infer P> | React.Component<infer P>
+  ? P
+  : never;
+
+const RouteWithErrorBoundary: React.FC<RouteProps> = (props) => {
+  return (
+    <ErrorBoundary key={props.location?.pathname}>
+      <Route {...props} />
+    </ErrorBoundary>
+  );
+};
+
+const SecuredRouteWithErrorBoundary: React.FC<GetComponentProps<typeof SecuredRoute>> = (props) => {
+  return (
+    // @ts-expect-error Accessing props.location works as intended.
+    <ErrorBoundary key={props.location?.pathname}>
+      <SecuredRoute {...props} />
+    </ErrorBoundary>
+  );
+};
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
@@ -168,7 +201,7 @@ class ReactRouter extends React.Component<Props> {
     try {
       const annotationInformation = await getAnnotationInformation(match.params.id || "");
       return annotationInformation.visibility === "Public";
-    } catch (ex) {
+    } catch (_ex) {
       // Annotation could not be found
     }
 
@@ -182,11 +215,12 @@ class ReactRouter extends React.Component<Props> {
         <Layout>
           <DisableGenericDnd />
           <AdaptViewportMetatag isAuthenticated={isAuthenticated} />
+          <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
           <Content>
             <Switch>
-              <Route
+              <RouteWithErrorBoundary
                 exact
                 path="/"
                 render={() => {
@@ -201,7 +235,7 @@ class ReactRouter extends React.Component<Props> {
                   return <Redirect to="/auth/login" />;
                 }}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
@@ -219,10 +253,10 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
 
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/datasets/:folderIdWithName"
-                render={({ match }: ContextRouter) => {
+                render={() => {
                   const initialTabKey = "datasets";
                   return (
                     <DashboardView
@@ -234,21 +268,23 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
 
-              <Route
-                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-                isAuthenticated={isAuthenticated}
+              <RouteWithErrorBoundary
                 path="/dashboard"
                 render={() => {
-                  if (isAuthenticated) {
+                  // Imperatively access store state to avoid race condition when logging in.
+                  // The `isAuthenticated` prop could be outdated for a short time frame which
+                  // would lead to an unnecessary browser refresh.
+                  const { activeUser } = Store.getState();
+                  if (activeUser) {
                     return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
                   }
 
-                  // Hard navigate
+                  // Hard navigate so that webknossos.org is shown for the demo instance.
                   window.location.href = "/";
                   return null;
                 }}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
                 render={({ match }: ContextRouter) => (
@@ -259,54 +295,60 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/users"
                 component={UserListView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/statistics"
                 component={StatisticView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
+                requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
+                requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/openTasks"
                 component={OpenTasksReportView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskListView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/create"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskCreateView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -315,22 +357,25 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <ProjectListView initialSearchValue={location.hash.slice(1)} />}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={() => <ProjectCreateView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -339,9 +384,10 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <ProjectCreateView projectId={match.params.projectId} />
                 )}
@@ -370,12 +416,12 @@ class ReactRouter extends React.Component<Props> {
                 render={this.tracingView}
                 serverAuthenticationCallback={this.serverAuthenticationCallback}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
                 render={() => <DatasetAddView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/import"
                 render={({ match }: ContextRouter) => (
@@ -392,7 +438,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
@@ -407,7 +453,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
                 render={(
@@ -415,21 +461,24 @@ class ReactRouter extends React.Component<Props> {
                 ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/create"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskTypeCreateView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/edit"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/tasks"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -438,68 +487,67 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/projects"
+                requiredPricingPlan={PricingPlanEnum.Team}
                 render={({ match }: ContextRouter) => (
                   <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
                 render={({ match }: ContextRouter) => (
                   <ScriptCreateView scriptId={match.params.scriptId} />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts"
                 component={ScriptListView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/jobs"
                 render={() => <JobListView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/organizations/:organizationName/edit"
-                render={({ match }) => (
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'organizationName' does not exist on type... Remove this comment to see the full error message
-                  <OrganizationEditView organizationName={match.params.organizationName || ""} />
-                )}
+                path="/organizations/:organizationName"
+                render={() => <OrganizationEditView />}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/help/keyboardshortcuts"
                 render={() => (
                   <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
                 )}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
+                requiredPricingPlan={PricingPlanEnum.Power}
                 render={() => <TimeLineView />}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
                 component={AuthTokenView}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/changePassword"
                 component={ChangePasswordView}
               />
-              <Route path="/login" render={() => <Redirect to="/auth/login" />} />
+              <RouteWithErrorBoundary path="/login" render={() => <Redirect to="/auth/login" />} />
 
-              <Route
+              <RouteWithErrorBoundary
                 path="/invite/:token"
                 render={({ match }: ContextRouter) => (
                   <AcceptInviteView
@@ -509,20 +557,32 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
 
-              <Route path="/signup" render={() => <Redirect to="/auth/signup" />} />
-              <Route path="/register" render={() => <Redirect to="/auth/signup" />} />
-              <Route path="/auth/register" render={() => <Redirect to="/auth/signup" />} />
-              <Route
+              <RouteWithErrorBoundary
+                path="/signup"
+                render={() => <Redirect to="/auth/signup" />}
+              />
+              <RouteWithErrorBoundary
+                path="/register"
+                render={() => <Redirect to="/auth/signup" />}
+              />
+              <RouteWithErrorBoundary
+                path="/auth/register"
+                render={() => <Redirect to="/auth/signup" />}
+              />
+              <RouteWithErrorBoundary
                 path="/auth/login"
                 render={() => (isAuthenticated ? <Redirect to="/" /> : <LoginView />)}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/auth/signup"
                 render={() => (isAuthenticated ? <Redirect to="/" /> : <RegistrationView />)}
               />
 
-              <Route path="/auth/resetPassword" component={StartResetPasswordView} />
-              <Route
+              <RouteWithErrorBoundary
+                path="/auth/resetPassword"
+                component={StartResetPasswordView}
+              />
+              <RouteWithErrorBoundary
                 path="/auth/finishResetPassword"
                 render={({ location }: ContextRouter) => {
                   const params = Utils.getUrlParamsObjectFromString(location.search);
@@ -533,7 +593,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationName/:datasetName/view"
                 render={this.tracingViewMode}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
                   <AsyncRedirect
@@ -545,11 +605,11 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/datasets/:organizationName/:datasetName/sandbox/:type"
                 render={this.tracingSandbox}
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
@@ -561,7 +621,7 @@ class ReactRouter extends React.Component<Props> {
                         !match.params.dataSetName ||
                         !match.params.type
                       ) {
-                        // Typehint for flow
+                        // Typehint for TS
                         throw new Error("Invalid URL");
                       }
 
@@ -572,24 +632,20 @@ class ReactRouter extends React.Component<Props> {
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
-                      const { fallbackLayerName } = getParams;
-                      const resolutionRestrictions = {};
+                      const { autoFallbackLayer, fallbackLayerName } = getParams;
+                      const resolutionRestrictions: APIResolutionRestrictions = {};
 
                       if (getParams.minRes !== undefined) {
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         resolutionRestrictions.min = parseInt(getParams.minRes);
 
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.min)) {
                           throw new Error("Invalid minRes parameter");
                         }
                       }
 
                       if (getParams.maxRes !== undefined) {
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         resolutionRestrictions.max = parseInt(getParams.maxRes);
 
-                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.max)) {
                           throw new Error("Invalid maxRes parameter");
                         }
@@ -598,6 +654,7 @@ class ReactRouter extends React.Component<Props> {
                       const annotation = await createExplorational(
                         dataset,
                         type,
+                        !!autoFallbackLayer,
                         fallbackLayerName,
                         null,
                         resolutionRestrictions,
@@ -616,27 +673,27 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationName/:datasetName"
                 render={this.tracingViewMode}
               />
-              <Route
+              <RouteWithErrorBoundary
                 path="/publications/:id"
                 render={({ match }: ContextRouter) => (
                   <PublicationDetailView publicationId={match.params.id || ""} />
                 )}
               />
               <Redirect from="/publication/:id" to="/publications/:id" />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
                 component={AsyncWorkflowListView}
                 exact
               />
-              <SecuredRoute
+              <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/workflows/:workflowName"
                 component={AsyncWorkflowView}
               />
-              <Route path="/imprint" component={Imprint} />
-              <Route path="/privacy" component={Privacy} />
-              <Route
+              <RouteWithErrorBoundary path="/imprint" component={Imprint} />
+              <RouteWithErrorBoundary path="/privacy" component={Privacy} />
+              <RouteWithErrorBoundary
                 path="/links/:key"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
@@ -648,8 +705,10 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
-              <Route component={PageNotFoundView} />
+              {!features().isDemoInstance && (
+                <RouteWithErrorBoundary path="/onboarding" component={Onboarding} />
+              )}
+              <RouteWithErrorBoundary component={PageNotFoundView} />
             </Switch>
           </Content>
         </Layout>
@@ -660,6 +719,9 @@ class ReactRouter extends React.Component<Props> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
+  pricingPlan: state.activeOrganization
+    ? state.activeOrganization.pricingPlan
+    : PricingPlanEnum.Basic,
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 

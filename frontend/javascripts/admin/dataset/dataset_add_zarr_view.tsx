@@ -1,9 +1,26 @@
-import { Form, Input, Button, Col, Radio, Row, Collapse, FormInstance, Modal, Divider } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  Col,
+  Radio,
+  Row,
+  Collapse,
+  FormInstance,
+  Modal,
+  Divider,
+  List,
+} from "antd";
 import { connect } from "react-redux";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
+import {
+  exploreRemoteDataset,
+  isDatasetNameValid,
+  storeRemoteDataset,
+  updateDatasetPartial,
+} from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer } from "admin/dataset/dataset_components";
@@ -18,13 +35,20 @@ import DatasetSettingsDataTab, {
   // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
-import { Hideable } from "dashboard/dataset/helper_components";
+import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
+import FolderSelection from "dashboard/folders/folder_selection";
+import {
+  GoogleAuthFormItem,
+  parseCredentials,
+  type FileList,
+} from "./dataset_add_neuroglancer_view";
+import { UploadChangeParam, UploadFile } from "antd/lib/upload";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
 type OwnProps = {
-  onAdded: (arg0: string, arg1: string) => Promise<void>;
+  onAdded: (arg0: string, arg1: string, arg2: boolean) => Promise<void>;
   datastores: Array<APIDataStore>;
 };
 type StateProps = {
@@ -84,8 +108,15 @@ function DatasetAddZarrView(props: Props) {
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
+  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const targetFolderId = params.get("to");
+    setTargetFolderId(targetFolderId);
+  }, []);
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -119,21 +150,24 @@ function DatasetAddZarrView(props: Props) {
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
-        const response = await storeRemoteDataset(
+        await storeRemoteDataset(
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
           datasourceConfigStr,
         );
-        if (response.status !== 200) {
-          const errorJSONString = JSON.stringify(await response.json());
-          throw new Error(`${response.status} ${response.statusText} ${errorJSONString}`);
-        }
       } catch (e) {
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      onAdded(activeUser.organization, configJSON.id.name);
+      if (targetFolderId) {
+        const datasetId = {
+          owningOrganization: activeUser.organization,
+          name: configJSON.id.name,
+        };
+        await updateDatasetPartial(datasetId, { folderId: targetFolderId });
+      }
+      onAdded(activeUser.organization, configJSON.id.name, true);
     }
   }
 
@@ -141,12 +175,12 @@ function DatasetAddZarrView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
-      <CardContainer title="Add Remote Zarr / N5 Dataset">
+      <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
         <Form form={form} layout="vertical">
           <Modal
             title="Add Layer"
             width={800}
-            visible={showAddLayerModal}
+            open={showAddLayerModal}
             footer={null}
             onCancel={() => setShowAddLayerModal(false)}
           >
@@ -166,6 +200,33 @@ function DatasetAddZarrView(props: Props) {
             />
           )}
           <Hideable hidden={hideDatasetUI}>
+            <List
+              header={
+                <div
+                  style={{
+                    fontWeight: "bold",
+                  }}
+                >
+                  General
+                </div>
+              }
+            >
+              <List.Item>
+                <FormItemWithInfo
+                  name="targetFolder"
+                  label="Target Folder"
+                  info="The folder into which the dataset will be uploaded. The dataset can be moved later after upload, too. When not selecting a folder, the dataset will be placed into the root folder."
+                >
+                  <FolderSelection
+                    width="50%"
+                    folderId={targetFolderId}
+                    onChange={setTargetFolderId}
+                    disableNotEditableFolders
+                  />
+                </FormItemWithInfo>{" "}
+              </List.Item>
+            </List>
+
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
@@ -196,7 +257,10 @@ function DatasetAddZarrView(props: Props) {
                       size="large"
                       type="default"
                       style={{ width: "100%" }}
-                      onClick={() => setDatasourceConfigStr("")}
+                      onClick={() => {
+                        setDatasourceConfigStr("");
+                        form.resetFields();
+                      }}
                     >
                       Reset
                     </Button>
@@ -246,17 +310,26 @@ function AddZarrLayer({
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
-  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https">("https");
+  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
+  const [fileList, setFileList] = useState<FileList>([]);
+
+  const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
+    // Restrict the upload list to the latest file
+    const newFileList = info.fileList.slice(-1);
+    setFileList(newFileList);
+  };
 
   function validateUrls(userInput: string) {
-    if (
-      (userInput.indexOf("https://") === 0 && userInput.indexOf("s3://") !== 0) ||
-      (userInput.indexOf("https://") !== 0 && userInput.indexOf("s3://") === 0)
-    ) {
-      setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https" : "s3");
-      setShowCredentialsFields(userInput.indexOf("s3://") === 0);
+    if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
+      setSelectedProtocol("https");
+    } else if (userInput.startsWith("s3://")) {
+      setSelectedProtocol("s3");
+    } else if (userInput.startsWith("gs://")) {
+      setSelectedProtocol("gs");
     } else {
-      throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
+      throw new Error(
+        "Dataset URL must employ one of the following protocols: https://, http://, s3:// or gs://",
+      );
     }
   }
 
@@ -270,13 +343,28 @@ function AddZarrLayer({
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
 
-    const { dataSource: newDataSource, report } =
-      !usernameOrAccessKey || !passwordOrSecretKey
-        ? await exploreRemoteDataset([datasourceUrl])
-        : await exploreRemoteDataset([datasourceUrl], {
+    const { dataSource: newDataSource, report } = await (async () => {
+      if (showCredentialsFields) {
+        if (selectedProtocol === "gs") {
+          const credentials =
+            fileList.length > 0 ? await parseCredentials(fileList[0]?.originFileObj) : null;
+          if (credentials) {
+            return exploreRemoteDataset([datasourceUrl], {
+              username: "",
+              pass: JSON.stringify(credentials),
+            });
+          } else {
+            // Fall through to exploreRemoteDataset without parameters
+          }
+        } else if (usernameOrAccessKey && passwordOrSecretKey) {
+          return exploreRemoteDataset([datasourceUrl], {
             username: usernameOrAccessKey,
             pass: passwordOrSecretKey,
           });
+        }
+      }
+      return exploreRemoteDataset([datasourceUrl]);
+    })();
     setExploreLog(report);
     if (!newDataSource) {
       Toast.error(
@@ -292,7 +380,7 @@ function AddZarrLayer({
     let existingDatasource;
     try {
       existingDatasource = JSON.parse(datasourceConfigStr);
-    } catch (e) {
+    } catch (_e) {
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
       );
@@ -314,14 +402,15 @@ function AddZarrLayer({
 
   return (
     <>
-      Please enter a URL that points to the Zarr or N5 data you would like to import. If necessary,
-      specify the credentials for the dataset. For datasets with multiple layers, e.g. raw
-      microscopy and segmentattion data, please add them separately with the ”Add Layer” button
-      below. Once you have approved of the resulting datasource you can import it.
+      Please enter a URL that points to the Zarr, Neuroglancer Precomputed or N5 data you would like
+      to import. If necessary, specify the credentials for the dataset. For datasets with multiple
+      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add
+      Layer” button below. Once you have approved of the resulting datasource you can import it.
       <FormItem
-        style={{ marginTop: 16 }}
+        style={{ marginTop: 16, marginBottom: 16 }}
         name="url"
         label="Dataset URL"
+        tooltip="Supported protocols are HTTPS, Amazon S3 and Google Cloud Storage"
         hasFeedback
         rules={[
           {
@@ -356,34 +445,38 @@ function AddZarrLayer({
         </RadioGroup>
       </FormItem>
       {showCredentialsFields ? (
-        <Row gutter={8}>
-          <Col span={12}>
-            <FormItem
-              label={selectedProtocol === "https" ? "Username" : "Access Key ID"}
-              hasFeedback
-              rules={[{ required: true }]}
-              validateFirst
-            >
-              <Input
-                value={usernameOrAccessKey}
-                onChange={(e) => setUsernameOrAccessKey(e.target.value)}
-              />
-            </FormItem>
-          </Col>
-          <Col span={12}>
-            <FormItem
-              label={selectedProtocol === "https" ? "Password" : "Secret Access Key"}
-              hasFeedback
-              rules={[{ required: true }]}
-              validateFirst
-            >
-              <Password
-                value={passwordOrSecretKey}
-                onChange={(e) => setPasswordOrSecretKey(e.target.value)}
-              />
-            </FormItem>
-          </Col>
-        </Row>
+        selectedProtocol === "gs" ? (
+          <GoogleAuthFormItem fileList={fileList} handleChange={handleChange} />
+        ) : (
+          <Row gutter={8}>
+            <Col span={12}>
+              <FormItem
+                label={selectedProtocol === "https" ? "Username" : "Access Key ID"}
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Input
+                  value={usernameOrAccessKey}
+                  onChange={(e) => setUsernameOrAccessKey(e.target.value)}
+                />
+              </FormItem>
+            </Col>
+            <Col span={12}>
+              <FormItem
+                label={selectedProtocol === "https" ? "Password" : "Secret Access Key"}
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Password
+                  value={passwordOrSecretKey}
+                  onChange={(e) => setPasswordOrSecretKey(e.target.value)}
+                />
+              </FormItem>
+            </Col>
+          </Row>
+        )
       ) : null}
       {exploreLog ? (
         <Row gutter={8}>

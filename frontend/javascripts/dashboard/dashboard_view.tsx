@@ -3,28 +3,30 @@ import { withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import React, { PureComponent, useContext } from "react";
+import React, { PureComponent } from "react";
 import _ from "lodash";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { WhatsNextHeader } from "admin/welcome_ui";
-import type { APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getUser, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import {
+  getPricingPlanStatus,
+  getUser,
+  updateNovelUserExperienceInfos,
+} from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
-import DatasetView from "dashboard/dataset_view";
-import DatasetCacheProvider, {
-  DatasetCacheContext,
-} from "dashboard/dataset/dataset_cache_provider";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
-import { DatasetFolderView } from "./dataset_folder_view";
+import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
+import { DatasetFolderView } from "./dataset_folder_view";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 type OwnProps = {
   userId: string | null | undefined;
@@ -33,6 +35,7 @@ type OwnProps = {
 };
 type StateProps = {
   activeUser: APIUser;
+  activeOrganization: APIOrganization;
 };
 type DispatchProps = {
   updateActiveUser: (arg0: APIUser) => void;
@@ -44,11 +47,13 @@ type PropsWithRouter = Props & {
 type State = {
   activeTabKey: string;
   user: APIUser | null | undefined;
+  organization: APIOrganization | null;
+  pricingPlanStatus: APIPricingPlanStatus | null;
 };
+
 export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
-  datasetsLegacy: "datasetsLegacy",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
 };
@@ -90,14 +95,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       (initialTabKey && initialTabKey in validTabKeys && initialTabKey) ||
       (lastUsedTabKey && lastUsedTabKey in validTabKeys && lastUsedTabKey) ||
       defaultTabKey;
+
     this.state = {
       activeTabKey,
       user: null,
+      organization: null,
+      pricingPlanStatus: null,
     };
   }
 
   componentDidMount() {
-    this.fetchUser();
+    this.fetchData();
   }
 
   componentDidUpdate(prevProps: PropsWithRouter) {
@@ -108,11 +116,15 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     }
   }
 
-  async fetchUser(): Promise<void> {
+  async fetchData(): Promise<void> {
     const user =
       this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
+
+    const pricingPlanStatus = await getPricingPlanStatus();
+
     this.setState({
       user,
+      pricingPlanStatus,
     });
   }
 
@@ -131,7 +143,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     return {
       publications: features().isDemoInstance,
       datasets: !isAdminView,
-      datasetsLegacy: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
     };
@@ -152,23 +163,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
               ),
             }
           : null,
-        validTabKeys.datasets
-          ? {
-              label: "Datasets",
-              key: "datasetsLegacy",
-              children: (
-                <RenderingTabContext.Provider value="datasetsLegacy">
-                  <DatasetViewWithLegacyContext user={user} />
-                </RenderingTabContext.Provider>
-              ),
-            }
-          : null,
         {
-          label: (
-            <span>
-              Datasets <sup>Beta</sup>
-            </span>
-          ),
+          label: <span>Datasets</span>,
           key: "datasets",
           children: (
             <RenderingTabContext.Provider value="datasets">
@@ -257,46 +253,50 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         User: {user.firstName} {user.lastName}
       </h3>
     ) : null;
+
     const whatsNextBanner =
       !this.props.isAdminView &&
       !activeUser.novelUserExperienceInfos.hasSeenDashboardWelcomeBanner ? (
         <WhatsNextHeader activeUser={activeUser} onDismiss={this.onDismissWelcomeBanner} />
       ) : null;
+    this.state.pricingPlanStatus?.isAlmostExceeded;
+
+    const pricingPlanWarnings =
+      this.props.activeOrganization &&
+      this.state.pricingPlanStatus?.isAlmostExceeded &&
+      !this.state.pricingPlanStatus.isExceeded ? (
+        <PlanAboutToExceedAlert organization={this.props.activeOrganization} />
+      ) : null;
+    const pricingPlanErrors =
+      this.props.activeOrganization && this.state.pricingPlanStatus?.isExceeded ? (
+        <PlanExceededAlert organization={this.props.activeOrganization} />
+      ) : null;
+
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         {whatsNextBanner}
         <div className="container propagate-flex-height" style={{ minHeight: "66vh" }}>
+          {pricingPlanWarnings}
+          {pricingPlanErrors}
           {userHeader}
-          <DatasetCacheProvider>
-            <ActiveTabContext.Provider value={this.state.activeTabKey}>
-              <Tabs
-                activeKey={this.state.activeTabKey}
-                onChange={onTabChange}
-                items={this.getTabs(user)}
-                tabBarExtraContent={<TabBarExtraContent />}
-              />
-            </ActiveTabContext.Provider>
-          </DatasetCacheProvider>
+
+          <ActiveTabContext.Provider value={this.state.activeTabKey}>
+            <Tabs
+              activeKey={this.state.activeTabKey}
+              onChange={onTabChange}
+              items={this.getTabs(user)}
+              tabBarExtraContent={<TabBarExtraContent />}
+            />
+          </ActiveTabContext.Provider>
         </div>
       </NmlUploadZoneContainer>
     );
   }
 }
-function DatasetViewWithLegacyContext({ user }: { user: APIUser }) {
-  const datasetCacheContext = useContext(DatasetCacheContext);
-  return (
-    <DatasetView
-      user={user}
-      hideDetailsColumns={false}
-      context={datasetCacheContext}
-      selectedDatasets={[]}
-      onSelectDataset={() => {}}
-    />
-  );
-}
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
+  activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

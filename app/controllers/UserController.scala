@@ -6,6 +6,7 @@ import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
+import models.organization.OrganizationService
 import models.team._
 import models.user._
 import models.user.time._
@@ -16,6 +17,7 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc._
 import utils.ObjectId
+
 import javax.inject.Inject
 import models.user.Theme.Theme
 
@@ -25,6 +27,7 @@ import scala.concurrent.ExecutionContext
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
+                               organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
                                timeSpanService: TimeSpanService,
                                teamMembershipService: TeamMembershipService,
@@ -314,8 +317,15 @@ class UserController @Inject()(userService: UserService,
   private def checkNoSelfDeactivate(user: User, isActive: Boolean)(issuingUser: User): Boolean =
     issuingUser._id != user._id || isActive || user.isDeactivated
 
-  private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean, issuingUser: User): Fox[Unit] =
-    if (!isActive && !issuingUser.isDeactivated) {
+  private def checkNoActivateBeyondLimit(user: User, isActive: Boolean): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(user.isDeactivated && isActive)(
+        organizationService
+          .assertUsersCanBeAdded(user._organization)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
+    } yield ()
+
+  private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean): Fox[Unit] =
+    if (!isActive && !user.isDeactivated) {
       for {
         activeTasks: List[ObjectId] <- annotationDAO.findActiveTaskIdsForUser(user._id)
         _ <- bool2Fox(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks.mkString(";")}"
@@ -338,9 +348,15 @@ class UserController @Inject()(userService: UserService,
         adminCount <- userDAO.countAdminsForOrganization(user._organization)
         _ <- bool2Fox(adminCount > 1) ?~> "user.lastAdmin"
       } yield ()
-    } else {
-      Fox.successful(())
-    }
+    } else Fox.successful(())
+
+  private def preventZeroOwners(user: User, isActive: Boolean) =
+    if (user.isOrganizationOwner && !user.isDeactivated && !isActive) {
+      for {
+        ownerCount <- userDAO.countOwnersForOrganization(user._organization)
+        _ <- bool2Fox(ownerCount > 1) ?~> "user.lastOwner"
+      } yield ()
+    } else Fox.successful(())
 
   @ApiOperation(hidden = true, value = "")
   def update(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
@@ -373,9 +389,11 @@ class UserController @Inject()(userService: UserService,
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
-          _ <- checkNoDeactivateWithRemainingTask(user, isActive, issuingUser)
+          _ <- checkNoDeactivateWithRemainingTask(user, isActive)
+          _ <- checkNoActivateBeyondLimit(user, isActive)
           _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
+          _ <- preventZeroOwners(user, isActive)
           teams <- Fox.combined(assignedMemberships.map(t =>
             teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)

@@ -1,28 +1,18 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import java.net.URI
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.storage.FileSystemService
 import play.api.libs.json.{Json, OFormat}
-
-case class FileSystemCredentials(user: String, password: Option[String])
-
-object FileSystemCredentials {
-  implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
-}
-
-case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String]) {
-  lazy val remotePath: String = uri.getPath
-  lazy val credentials: Option[FileSystemCredentials] = user.map(u => FileSystemCredentials(u, password))
-}
 
 trait ZarrLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr
 
-  lazy val bucketProvider = new ZarrBucketProvider(this)
+  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) =
+    new ZarrBucketProvider(this, fileSystemServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

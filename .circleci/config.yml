@@ -48,11 +48,11 @@ jobs:
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-
       - run:
-          name: Assert unique evolution numbers
-          command: tools/postgres/assert_unique_evolution_numbers.sh
-      - run:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+      - run:
+          name: Assert unique evolution numbers
+          command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
       - restore_cache:
           name: Restore webpack cache
           keys:
@@ -63,7 +63,7 @@ jobs:
           command: |
             docker-compose up -d postgres
             sleep 3
-            docker-compose run compile tools/postgres/diff_schema.js tools/postgres/schema.sql "conf/evolutions/*.sql"
+            docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
       - run:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
@@ -129,6 +129,10 @@ jobs:
           name: Lint frontend code (rome and eslint) and check formatting
           command: |
             .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
+      - run:
+          name: Check for cyclic dependencies in front-end
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn check-cyclic-dependencies
       - run:
           name: Run frontend tests
           command: |
@@ -289,6 +293,8 @@ workflows:
   circleci_build:
     jobs:
       - build_test_deploy:
+          context:
+            - DockerHub
           filters:
             tags:
               only: /.*/

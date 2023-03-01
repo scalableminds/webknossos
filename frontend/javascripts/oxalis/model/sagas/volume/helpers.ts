@@ -24,7 +24,7 @@ import sampleVoxelMapToResolution, {
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
 import Dimensions, { DimensionMap } from "oxalis/model/dimensions";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { VolumeTracing } from "oxalis/store";

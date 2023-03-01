@@ -128,8 +128,8 @@ export default class AdvancedSearchPopover<
           trigger="click"
           placement="left"
           overlayClassName="search-input-popover"
-          visible={isVisible}
-          onVisibleChange={(newVisibility) =>
+          open={isVisible}
+          onOpenChange={(newVisibility) =>
             newVisibility ? this.openSearchPopover() : this.closeSearchPopover()
           }
           content={

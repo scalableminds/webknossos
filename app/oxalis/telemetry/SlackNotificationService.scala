@@ -10,7 +10,7 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
 
   private lazy val slackClient = new SlackClient(rpc,
                                                  config.SlackNotifications.uri,
-                                                 name = s"webKnossos at ${config.Http.uri}",
+                                                 name = s"WEBKNOSSOS at ${config.Http.uri}",
                                                  config.SlackNotifications.verboseLoggingEnabled)
 
   def warnWithException(title: String, ex: Throwable, msg: String): Unit =
@@ -47,5 +47,11 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
     slackClient.info(
       title = "Task creation with base",
       msg = s"$numberOfTasks tasks with BaseAnnotation for TaskTypes ${taskType.mkString(", ")} have been created"
+    )
+
+  def noticeSlowRequest(msg: String): Unit =
+    slackClient.info(
+      title = "Slow request",
+      msg = msg
     )
 }

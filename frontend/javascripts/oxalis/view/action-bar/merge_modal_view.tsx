@@ -19,7 +19,7 @@ import type { OxalisState, MutableTreeMap, TreeGroup } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { makeComponentLazy } from "libs/react_helpers";
 type ProjectInfo = {
@@ -27,7 +27,7 @@ type ProjectInfo = {
   label: string;
 };
 type OwnProps = {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => void;
 };
 type StateProps = {
@@ -135,9 +135,8 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
   };
 
-  handleChangeMergeExplorativeAnnotation = (event: React.SyntheticEvent) => {
+  handleChangeMergeExplorativeAnnotation = (event: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       selectedExplorativeAnnotation: event.target.value,
     });
   };
@@ -232,7 +231,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     return (
       <Modal
         title="Merge"
-        visible={this.props.isVisible}
+        open={this.props.isOpen}
         onCancel={this.props.onOk}
         className="merge-modal"
         width={800}

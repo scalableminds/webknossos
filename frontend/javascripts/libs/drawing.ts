@@ -154,7 +154,7 @@ class Drawing {
         bufX1[y] = x;
       });
     } else {
-      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+      this.drawLine2d(x1, y1, x2, y2, (_x: number, y: number) => {
         bufX0[y] = minX;
         bufX1[y] = maxX;
       });
@@ -277,9 +277,11 @@ class Drawing {
     paint: (arg0: number, arg1: number) => void,
   ) {
     const squaredRadius = radius ** 2;
+    const scaledRadiusX = Math.ceil(radius * scaleX);
+    const scaledRadiusY = Math.ceil(radius * scaleY);
 
-    for (let posX = x - radius; posX < x + radius; posX++) {
-      for (let posY = y - radius; posY < y + radius; posY++) {
+    for (let posX = x - scaledRadiusX; posX < x + scaledRadiusX; posX++) {
+      for (let posY = y - scaledRadiusY; posY < y + scaledRadiusY; posY++) {
         if (((posX - x) / scaleX) ** 2 + ((posY - y) / scaleY) ** 2 < squaredRadius) {
           paint(posX, posY);
         }

@@ -3,14 +3,21 @@ package models.binary.explore
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
+import com.scalableminds.webknossos.datastore.storage.{FileSystemsHolder, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
+import models.binary.credential.CredentialService
+import models.user.User
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
@@ -20,20 +27,28 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-case class ExploreRemoteDatasetParameters(remoteUri: String, user: Option[String], password: Option[String])
+case class ExploreRemoteDatasetParameters(remoteUri: String,
+                                          credentialIdentifier: Option[String],
+                                          credentialSecret: Option[String])
 
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
+class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) extends FoxImplicits with LazyLogging {
 
   def exploreRemoteDatasource(
       urisWithCredentials: List[ExploreRemoteDatasetParameters],
+      requestIdentity: WkEnv#I,
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
     for {
-      exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(parameters =>
-        exploreRemoteLayersForUri(parameters.remoteUri, parameters.user, parameters.password, reportMutable))
+      exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(
+        parameters =>
+          exploreRemoteLayersForUri(parameters.remoteUri,
+                                    parameters.credentialIdentifier,
+                                    parameters.credentialSecret,
+                                    reportMutable,
+                                    requestIdentity))
       layersWithVoxelSizes = exploredLayersNested.flatten
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
       rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes) ?~> "Could not extract common voxel size from layers"
@@ -121,6 +136,12 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
           case l: N5SegmentationLayer =>
             l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
                    boundingBox = l.boundingBox * magFactors)
+          case l: PrecomputedDataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: PrecomputedSegmentationLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
           case _ => throw new Exception("Encountered unsupported layer format during explore remote")
         }
       })
@@ -129,18 +150,32 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
 
   private def exploreRemoteLayersForUri(
       layerUri: String,
-      user: Option[String],
-      password: Option[String],
-      reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+      credentialIdentifier: Option[String],
+      credentialSecret: Option[String],
+      reportMutable: ListBuffer[String],
+      requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
-      remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
-      fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
-      remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
+      uri <- tryo(new URI(normalizeUri(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      credentialOpt = credentialService.createCredentialOpt(uri,
+                                                            credentialIdentifier,
+                                                            credentialSecret,
+                                                            requestingUser._id,
+                                                            requestingUser._organization)
+      remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
+      credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "remoteFileSystem.credential.insert.failed"
+      fileSystem <- FileSystemsHolder.getOrCreate(remoteSource) ?~> "remoteFileSystem.setup.failed"
+      remotePath <- tryo(fileSystem.getPath(FileSystemsHolder.pathFromUri(remoteSource.uri))) ?~> "remoteFileSystem.getPath.failed"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
-        remoteSource.credentials,
+        credentialId.map(_.toString),
         reportMutable,
-        List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer, new N5MultiscalesExplorer))
+        List(new ZarrArrayExplorer,
+             new NgffExplorer,
+             new WebknossosZarrExplorer,
+             new N5ArrayExplorer,
+             new N5MultiscalesExplorer,
+             new PrecomputedExplorer)
+      )
     } yield layersWithVoxelSizes
 
   private def normalizeUri(uri: String): String =
@@ -153,23 +188,23 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
 
   private def exploreRemoteLayersForRemotePath(
       remotePath: Path,
-      credentials: Option[FileSystemCredentials],
+      credentialId: Option[String],
       reportMutable: ListBuffer[String],
       explorers: List[RemoteLayerExplorer])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     explorers match {
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>
         reportMutable += s"\nTrying to explore $remotePath as ${currentExplorer.name}..."
-        currentExplorer.explore(remotePath, credentials).futureBox.flatMap {
+        currentExplorer.explore(remotePath, credentialId).futureBox.flatMap {
           case Full(layersWithVoxelSizes) =>
             reportMutable += s"Found ${layersWithVoxelSizes.length} ${currentExplorer.name} layers at $remotePath."
             Fox.successful(layersWithVoxelSizes)
           case f: Failure =>
             reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: ${formatFailureForReport(f)}"
-            exploreRemoteLayersForRemotePath(remotePath, credentials, reportMutable, remainingExplorers)
+            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
           case Empty =>
             reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: Empty"
-            exploreRemoteLayersForRemotePath(remotePath, credentials, reportMutable, remainingExplorers)
+            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
         }
     }
 

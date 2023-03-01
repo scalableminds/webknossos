@@ -60,13 +60,13 @@ import {
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
+  getSegmentColorAsRGBA,
   getVolumeDescriptors,
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
-  getDatasetResolutionInfo,
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
@@ -87,7 +87,10 @@ import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinati
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setActiveCellAction,
+  updateSegmentAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
@@ -123,7 +126,7 @@ import Constants, {
 } from "oxalis/constants";
 import DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import Request from "libs/request";
 import type {
   MappingType,
@@ -311,7 +314,7 @@ class TracingApi {
       const tree =
         treeId != null
           ? skeletonTracing.trees[treeId]
-          : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+          : findTreeByNodeId(skeletonTracing.trees, nodeId);
       assertExists(tree, `Couldn't find node ${nodeId}.`);
       Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
     } else {
@@ -1549,10 +1552,12 @@ class DataApi {
     topLeft: Vector3,
     bottomRight: Vector3,
     token: string,
+    resolution?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getDatasetResolutionInfo(dataset);
-    const resolution = resolutionInfo.getLowestResolution();
+    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
+    resolution = resolution || resolutionInfo.getLowestResolution();
+
     const magString = resolution.join("-");
     return (
       `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
@@ -1591,6 +1596,7 @@ class DataApi {
     layerName: string,
     topLeft: Vector3,
     bottomRight: Vector3,
+    resolution?: Vector3,
   ): Promise<ArrayBuffer> {
     return doWithToken((token) => {
       const downloadUrl = this._getDownloadUrlForRawDataCuboid(
@@ -1598,6 +1604,7 @@ class DataApi {
         topLeft,
         bottomRight,
         token,
+        resolution,
       );
       return Request.receiveArraybuffer(downloadUrl);
     });
@@ -1934,6 +1941,47 @@ class DataApi {
       Store.dispatch(removeIsosurfaceAction(effectiveLayerName, Number(segmentId)));
     }
   }
+
+  /**
+   * Get the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
+   * the currently visible segmentation layer will be used.
+   *
+   * @example
+   * api.data.getSegmentColor(3);
+   */
+  getSegmentColor(segmentId: number, layerName?: string): Vector3 {
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
+      Store.getState(),
+      layerName,
+    ).name;
+
+    const [r, g, b] = getSegmentColorAsRGBA(Store.getState(), segmentId, effectiveLayerName);
+    return [r, g, b];
+  }
+
+  /**
+   * Set the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
+   * the currently visible segmentation layer will be used.
+   *
+   * @example
+   * api.data.setSegmentColor(3, [0, 1, 1]);
+   */
+  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string) {
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
+      Store.getState(),
+      layerName,
+    ).name;
+
+    Store.dispatch(
+      updateSegmentAction(
+        segmentId,
+        {
+          color: rgbColor,
+        },
+        effectiveLayerName,
+      ),
+    );
+  }
 }
 /**
  * All user configuration related API methods.
@@ -2120,7 +2168,7 @@ class UtilsApi {
   }
 }
 
-type ApiInterface = {
+export type ApiInterface = {
   tracing: TracingApi;
   data: DataApi;
   user: UserApi;

@@ -32,13 +32,7 @@ export class CuckooTable {
       getRenderer(),
       THREE.RGBAIntegerFormat,
     );
-    // This is needed so that the initialization of the texture
-    // can be done with an Image-like object ({ width, height, data })
-    // which is needed for integer textures, since createImageData results
-    // cannot be used for the combination THREE.UnsignedIntType + THREE.RGBAIntegerFormat.
-    // See the definition of texImage2D here: https://registry.khronos.org/webgl/specs/latest/2.0/
-    // Note that there are two overloads of texImage2D.
-    this._texture.isDataTexture = true;
+
     // The internal format has to be set manually, since ThreeJS does not
     // derive this value by itself.
     // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
@@ -73,7 +67,6 @@ export class CuckooTable {
       getRenderer(),
       THREE.RGBAIntegerFormat,
     );
-    cachedNullTexture.isDataTexture = true;
     cachedNullTexture.internalFormat = "RGBA32UI";
 
     return cachedNullTexture;

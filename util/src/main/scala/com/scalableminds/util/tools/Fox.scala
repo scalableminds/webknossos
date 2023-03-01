@@ -207,15 +207,15 @@ object Fox extends FoxImplicits {
     } yield ()
 
   def chainFunctions[T](functions: List[T => Fox[T]])(implicit ec: ExecutionContext): T => Fox[T] = {
-    def runNext(remainingFunctions: List[T => Fox[T]], previousRestult: T): Fox[T] =
+    def runNext(remainingFunctions: List[T => Fox[T]], previousResult: T): Fox[T] =
       remainingFunctions match {
         case head :: tail =>
           for {
-            currentResult <- head(previousRestult)
+            currentResult <- head(previousResult)
             nextResult <- runNext(tail, currentResult)
           } yield nextResult
         case Nil =>
-          Fox.successful(previousRestult)
+          Fox.successful(previousResult)
       }
     t =>
       runNext(functions, t)

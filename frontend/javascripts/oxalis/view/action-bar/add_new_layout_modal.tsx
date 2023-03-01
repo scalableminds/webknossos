@@ -1,8 +1,9 @@
 import { Input, Modal } from "antd";
 import * as React from "react";
+
 type Props = {
   addLayout: (arg0: string) => void;
-  visible: boolean;
+  isOpen: boolean;
   onCancel: () => void;
 };
 type State = {
@@ -25,7 +26,7 @@ class AddNewLayoutModal extends React.PureComponent<Props, State> {
     return (
       <Modal
         title="Add a new layout"
-        visible={this.props.visible}
+        open={this.props.isOpen}
         onOk={this.onConfirm}
         onCancel={this.props.onCancel}
       >

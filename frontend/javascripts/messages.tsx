@@ -1,10 +1,10 @@
 import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
-import type {
-  DatasetConfiguration,
-  UserConfiguration,
-  DatasetLayerConfiguration,
+import {
+  type DatasetConfiguration,
+  type UserConfiguration,
+  type DatasetLayerConfiguration,
 } from "oxalis/store";
 
 export type RecommendedConfiguration = Partial<
@@ -100,16 +100,16 @@ export default {
     "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
-    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
+    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this WEBKNOSSOS instance",
   ),
   "datastore.version.too_old": _.template(
-    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
+    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
   "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
 
 A reload is necessary to return to a valid state.`,
   "react.rendering_error":
-    "Unfortunately, webKnossos encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
+    "Unfortunately, WEBKNOSSOS encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",
@@ -209,7 +209,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
-    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of WEBKNOSSOS to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "tracing.merger_mode_node_outside_segment":
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_isosurface_available_to_download":
@@ -259,6 +259,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
     "If you reopen your old annotation, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
+  "annotation.acquiringMutexFailed": _.template(
+    "This annotation is currently being edited by <%- userName %>. To avoid conflicts, you can only view it. If you want to edit it, please ask <%- userName %> to finish their work first.",
+  ),
+  "annotation.acquiringMutexFailed.noUser":
+    "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
+  "annotation.acquiringMutexSucceeded":
+    "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -290,7 +297,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
-    "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json was not found. The values below are guessed by WEBKNOSSOS. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.import_complete":
     "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
@@ -304,7 +311,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.required.url": "Please provide a URL to a dataset.",
-  "dataset.import.required.initialTeam": "Please select at least one team you manage.",
+  "dataset.import.required.folder": "Please define a target folder for this dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
@@ -331,9 +338,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
   "annotation.download": "The following annotation data is available for download immediately.",
   "annotation.export":
-    "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",
+    "Export this annotation as TIFF image(s). This may take a few moments depending on the size of your configured export.",
   "annotation.export_no_worker":
-    "This webKnossos instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
+    "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
   "annotation.python_do_not_share":
     "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",
@@ -375,6 +382,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
   "auth.error_no_user": "No active user is logged in.",
+  "auth.error_no_organization": "No active organziation can be loaded.",
   "auth.invalid_organization_name":
     "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":
@@ -410,7 +418,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You selected more than one user. To change the organization permissions of users you need to select them individually.",
   "users.change_permissions_title": "Do you really want to change the permissions of this user?",
   "users.revoke_all_permissions": _.template(
-    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular webKnossos member, access to datasets will be determined by the user's team memberships.",
+    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular WEBKNOSSOS member, access to datasets will be determined by the user's team memberships.",
   ),
   "users.set_dataset_manager": _.template(
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
@@ -433,4 +441,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
+  "organization.plan.upgrage_request_sent":
+    "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
+  "organization.plan.feature_not_available": (
+    requiredPlan: string,
+    organizationOwnerName: string,
+  ) =>
+    `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
+  "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
+    `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
 };

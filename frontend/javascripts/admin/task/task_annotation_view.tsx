@@ -40,7 +40,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 type State = {
-  isTransferModalVisible: boolean;
+  isTransferModalOpen: boolean;
   annotations: Array<APIAnnotation>;
   currentAnnotation: APIAnnotation | null | undefined;
 };
@@ -48,7 +48,7 @@ type State = {
 class TaskAnnotationView extends React.PureComponent<Props, State> {
   state: State = {
     currentAnnotation: null,
-    isTransferModalVisible: false,
+    isTransferModalOpen: false,
     annotations: [],
   };
 
@@ -94,7 +94,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
 
   updateAnnotationState = (updatedAnnotation: APIAnnotation) => {
     this.setState((prevState) => ({
-      isTransferModalVisible: false,
+      isTransferModalOpen: false,
       annotations: prevState.annotations.map((a) =>
         a.id === updatedAnnotation.id ? updatedAnnotation : a,
       ),
@@ -131,7 +131,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           onClick={() =>
             this.setState({
               currentAnnotation: annotation,
-              isTransferModalVisible: true,
+              isTransferModalOpen: true,
             })
           }
         >
@@ -219,11 +219,11 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         </table>
         {this.state.currentAnnotation?.owner ? (
           <TransferTaskModal
-            visible={this.state.isTransferModalVisible}
+            isOpen={this.state.isTransferModalOpen}
             annotationId={this.state.currentAnnotation.id}
             onCancel={() =>
               this.setState({
-                isTransferModalVisible: false,
+                isTransferModalOpen: false,
               })
             }
             onChange={this.updateAnnotationState}

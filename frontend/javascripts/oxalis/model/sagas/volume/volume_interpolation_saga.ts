@@ -4,7 +4,6 @@ import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import ndarray, { NdArray } from "ndarray";
-import api from "oxalis/api/internal_api";
 import {
   ContourModeEnum,
   InterpolationModeEnum,
@@ -13,7 +12,8 @@ import {
   TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
-import Model from "oxalis/model";
+import { Model, api } from "oxalis/singletons";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -52,7 +52,7 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
 
 export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
-export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
+function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
   const onlyExtrude = state.userConfiguration.interpolationMode === InterpolationModeEnum.EXTRUDE;
   const volumeTracing = getActiveSegmentationTracing(state);
@@ -145,6 +145,8 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     onlyExtrude,
   };
 }
+
+export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInfo);
 
 const isEqual = cwise({
   args: ["array", "scalar"],

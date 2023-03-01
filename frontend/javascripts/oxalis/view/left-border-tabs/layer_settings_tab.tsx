@@ -79,7 +79,7 @@ import type { Vector3, ControlMode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type {
   VolumeTracing,
   DatasetConfiguration,
@@ -93,7 +93,7 @@ import type {
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import { layerViewConfigurations, layerViewConfigurationTooltips, settings } from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
@@ -162,11 +162,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   ) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
-      : "If you are having trouble finding your data, webKnossos can try to find a position which contains data.";
+      : "If you are having trouble finding your data, WEBKNOSSOS can try to find a position which contains data.";
 
     if (!isColorLayer && maybeVolumeTracing && maybeVolumeTracing.fallbackLayer) {
       tooltipText =
-        "webKnossos will try to find data in your volume tracing first and in the fallback layer afterwards.";
+        "WEBKNOSSOS will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
 
     return (
@@ -1058,12 +1058,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <Button
-                onClick={this.showAddVolumeLayerModal}
-                style={{
-                  width: 235,
-                }}
-              >
+              <Button onClick={this.showAddVolumeLayerModal}>
                 <PlusOutlined />
                 Add Volume Annotation Layer
               </Button>

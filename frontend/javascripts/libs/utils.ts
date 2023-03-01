@@ -137,7 +137,7 @@ export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
     } else {
       return Maybe.Nothing();
     }
-  } catch (exception) {
+  } catch (_exception) {
     return Maybe.Nothing();
   }
 }
@@ -145,7 +145,7 @@ export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
 export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<T | null | undefined> {
   try {
     return await promise;
-  } catch (exception) {
+  } catch (_exception) {
     return null;
   }
 }
@@ -221,8 +221,8 @@ export function hexToRgb(hex: string): Vector3 {
 /**
  * Converts an HSL color value to RGB. Conversion formula
  * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
- * Assumes h, s, and l are contained in the set [0, 1] and
- * returns r, g, and b in the set [0, 255].
+ * Assumes h, s, l, and a are contained in the set [0, 1] and
+ * returns r, g, b, and a in the set [0, 1].
  *
  * Taken from:
  * https://stackoverflow.com/a/9493060
@@ -253,7 +253,7 @@ export function hslaToRgba(hsla: Vector4): Vector4 {
     b = hue2rgb(p, q, h - 1 / 3);
   }
 
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), Math.round(a * 255)];
+  return [r, g, b, a];
 }
 
 export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
@@ -297,6 +297,10 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
     bb.max[1] - bb.min[1],
     bb.max[2] - bb.min[2],
   ];
+}
+
+export function computeShapeFromBoundingBox(bb: BoundingBoxType): Vector3 {
+  return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
@@ -418,24 +422,22 @@ export function concatVector3(a: Vector3, b: Vector3): Vector6 {
 }
 
 export function numberArrayToVector3(array: Array<number>): Vector3 {
-  const output = [0, 0, 0];
+  const output: Vector3 = [0, 0, 0];
 
   for (let i = 0; i < Math.min(3, array.length); i++) {
     output[i] = array[i];
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return output;
 }
 
 export function numberArrayToVector6(array: Array<number>): Vector6 {
-  const output = [0, 0, 0, 0, 0, 0];
+  const output: Vector6 = [0, 0, 0, 0, 0, 0];
 
   for (let i = 0; i < Math.min(6, array.length); i++) {
     output[i] = array[i];
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector6... Remove this comment to see the full error message
   return output;
 }
 
@@ -740,7 +742,7 @@ const areEventListenerOptionsSupported = _.once(() => {
     window.addEventListener("test", options, options);
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("test", options, options);
-  } catch (err) {
+  } catch (_err) {
     passiveSupported = false;
   }
 
@@ -1000,7 +1002,7 @@ export function convertBufferToImage(
 export function getIsInIframe() {
   try {
     return window.self !== window.top;
-  } catch (e) {
+  } catch (_e) {
     return true;
   }
 }
@@ -1073,8 +1075,11 @@ export function diffObjects(
   return changes(object, base);
 }
 
-export function coalesce<T>(obj: { [key: string]: T }, field: T): T | null {
-  if (obj && typeof obj === "object" && (field in obj || field in Object.values(obj))) {
+export function coalesce<T extends string | number | symbol>(
+  obj: { [key: string]: T },
+  field: T,
+): T | null {
+  if (obj && typeof obj === "object" && (field in obj || Object.values(obj).includes(field))) {
     return field;
   }
   return null;
@@ -1102,4 +1107,8 @@ export function conjugate(
     return optThirdForm;
   }
   return `${verbStr}s`;
+}
+
+export function truncateStringToLength(str: string, length: number): string {
+  return str.length > length ? `${str.substring(0, length)}...` : str;
 }

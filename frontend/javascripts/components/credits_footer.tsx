@@ -7,7 +7,7 @@ const creditsFooter = () => (
   <Footer id="credits">
     <div>
       <div className="container">
-        <h3>webKnossos Credits</h3>
+        <h3>WEBKNOSSOS Credits</h3>
         <p>
           Developed by <a href="https://scalableminds.com">scalable minds</a> and{" "}
           <a href="https://www.brain.mpg.de/connectomics">
@@ -38,16 +38,16 @@ const creditsFooter = () => (
           </a>
         </p>
         <p>
-          webKnossos has been published in: Boergens Berning Bocklisch Bräunlein Drawitsch
+          WEBKNOSSOS has been published in: Boergens Berning Bocklisch Bräunlein Drawitsch
           Frohnhofen Herold Otto Rzepka Werkmeister Werner Wiese Wissler & Helmstaedter, webKnossos:
           efficient online 3D data annotation for connectomics.{" "}
           <a href="https://dx.doi.org/10.1038/nmeth.4331">Nat. Meth. (2017) 14, 691–694</a>.
         </p>
         <p>
-          The webKnossos frontend was inspired by <a href="https://knossos.app">Knossos</a>.
+          The WEBKNOSSOS frontend was inspired by <a href="https://knossos.app">Knossos</a>.
         </p>
         <p>
-          More information about the webKnossos publication and full credits at{" "}
+          More information about the WEBKNOSSOS publication and full credits at{" "}
           <a href="https://publication.webknossos.org">publication.webknossos.org</a>.
         </p>
         <p>

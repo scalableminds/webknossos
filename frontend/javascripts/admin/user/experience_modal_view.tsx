@@ -26,7 +26,7 @@ type TableEntry = {
 type Props = {
   onChange: (arg0: Array<APIUser>) => void;
   onCancel: () => void;
-  visible: boolean;
+  isOpen: boolean;
   selectedUsers: Array<APIUser>;
   initialDomainToEdit: string | null | undefined;
 };
@@ -230,7 +230,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   render() {
     const selectedUsersCount = this.props.selectedUsers.length;
 
-    if (!this.props.visible && selectedUsersCount === 0) {
+    if (!this.props.isOpen && selectedUsersCount === 0) {
       return null;
     }
 
@@ -244,7 +244,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             ? `Change Experiences of ${selectedUsersCount} Users`
             : `Change Experiences for ${this.props.selectedUsers[0].firstName} ${this.props.selectedUsers[0].lastName}`
         }
-        visible={this.props.visible}
+        open={this.props.isOpen}
         onCancel={this.props.onCancel}
         width={multipleUsers ? 800 : 600}
         maskClosable={false}

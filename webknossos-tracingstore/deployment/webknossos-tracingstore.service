@@ -1,5 +1,5 @@
 [Unit]
-Description=webKnossos tracingstore
+Description=WEBKNOSSOS tracingstore
 Requires=docker.service
 After=docker.service
 

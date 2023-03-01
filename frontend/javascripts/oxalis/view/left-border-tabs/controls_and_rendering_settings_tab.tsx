@@ -3,7 +3,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import {
   LogSliderSetting,
   NumberSliderSetting,
@@ -23,10 +23,11 @@ import messages, { settingsTooltips, settings as settingsLabels } from "messages
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ViewMode } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 const { Panel } = Collapse;
 type ControlsAndRenderingSettingsTabProps = {
+  activeUser: APIUser | null | undefined;
   userConfiguration: UserConfiguration;
   zoomStep: number;
   validZoomRange: [number, number];
@@ -183,7 +184,10 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
     this.onChangeDataset.renderMissingDataBlack(value);
     const { layers } = this.props.datasetConfiguration;
     const reloadAllLayersPromises = Object.keys(layers).map(async (layerName) => {
-      await clearCache(this.props.dataset, layerName);
+      if (this.props.activeUser) {
+        // Only registered users may clear the server's cache
+        await clearCache(this.props.dataset, layerName);
+      }
       await api.data.reloadBuckets(layerName);
     });
     await Promise.all(reloadAllLayersPromises);
@@ -321,6 +325,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
 }
 
 const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
   userConfiguration: state.userConfiguration,
   zoomStep: state.flycam.zoomStep,
   validZoomRange: getValidZoomRangeForUser(state),

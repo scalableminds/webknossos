@@ -56,7 +56,6 @@ type SetShowSkeletonsAction = ReturnType<typeof setShowSkeletonsAction>;
 type SetMergerModeEnabledAction = ReturnType<typeof setMergerModeEnabledAction>;
 type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
-export type RemoveAgglomerateSkeletonAction = ReturnType<typeof removeAgglomerateSkeletonAction>;
 type NoAction = ReturnType<typeof noAction>;
 
 export type SkeletonTracingAction =
@@ -102,8 +101,7 @@ export type SkeletonTracingAction =
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
-  | LoadAgglomerateSkeletonAction
-  | RemoveAgglomerateSkeletonAction;
+  | LoadAgglomerateSkeletonAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -524,18 +522,6 @@ export const loadAgglomerateSkeletonAction = (
 ) =>
   ({
     type: "LOAD_AGGLOMERATE_SKELETON",
-    layerName,
-    mappingName,
-    agglomerateId,
-  } as const);
-
-export const removeAgglomerateSkeletonAction = (
-  layerName: string,
-  mappingName: string,
-  agglomerateId: number,
-) =>
-  ({
-    type: "REMOVE_AGGLOMERATE_SKELETON",
     layerName,
     mappingName,
     agglomerateId,

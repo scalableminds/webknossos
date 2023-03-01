@@ -1,6 +1,6 @@
 import React from "react";
 import type { APIJob, APIDataLayer } from "types/api_flow_types";
-import { Modal, Select, Button, Form, Input } from "antd";
+import { Modal, Select, Button, Form, Input, Slider } from "antd";
 import {
   startNucleiInferralJob,
   startNeuronInferralJob,
@@ -13,6 +13,7 @@ import {
   getColorLayers,
   getSegmentationLayers,
   getDataLayers,
+  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getReadableNameByVolumeTracingId,
@@ -22,9 +23,10 @@ import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_ac
 import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
 import { Unicode, type Vector3 } from "oxalis/constants";
-import Model from "oxalis/model";
-import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
+import { Model } from "oxalis/singletons";
+import { clamp, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { V3 } from "libs/mjs";
 
 const { ThinSpace } = Unicode;
 const enum JobNames {
@@ -92,7 +94,7 @@ export function LayerSelection({
   style?: React.CSSProperties;
   // onChange and value should not be renamed, because these are the
   // default property names for controlled antd FormItems.
-  onChange?: React.Dispatch<React.SetStateAction<string | null>>;
+  onChange?: (a: string) => void;
   value?: string | null;
 }): JSX.Element {
   const onSelect = onChange ? (layerName: string) => onChange(layerName) : undefined;
@@ -156,7 +158,8 @@ function LayerSelectionFormItem({
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
-  onChangeSelectedBoundingBox: (bBoxId: number) => void;
+  onChangeSelectedBoundingBox: (bBoxId: number | null) => void;
+  value: number | null;
 };
 
 function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
@@ -185,17 +188,18 @@ export function BoundingBoxSelection({
   userBoundingBoxes,
   setSelectedBoundingBoxId,
   style,
+  value,
 }: {
   userBoundingBoxes: UserBoundingBox[];
-  setSelectedBoundingBoxId?: (boundingBoxId: number) => void;
+  setSelectedBoundingBoxId?: (boundingBoxId: number | null) => void;
   style?: React.CSSProperties;
+  value: number | null;
 }): JSX.Element {
   const onSelect = setSelectedBoundingBoxId
     ? (boundingBoxId: number) => setSelectedBoundingBoxId(boundingBoxId)
     : undefined;
   return (
     <Select
-      showSearch
       placeholder="Select a bounding box"
       optionFilterProp="children"
       filterOption={(input, option) =>
@@ -205,6 +209,7 @@ export function BoundingBoxSelection({
       disabled={userBoundingBoxes.length < 1}
       onSelect={onSelect}
       style={style}
+      value={value}
     >
       {userBoundingBoxes.map((userBB) => (
         <Select.Option key={userBB.id} value={userBB.id}>
@@ -219,6 +224,7 @@ function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
   onChangeSelectedBoundingBox,
+  value,
 }: BoundingBoxSelectionProps): JSX.Element {
   return (
     <div style={isBoundingBoxConfigurable ? {} : { display: "none" }}>
@@ -242,9 +248,40 @@ function BoundingBoxSelectionFormItem({
         <BoundingBoxSelection
           userBoundingBoxes={userBoundingBoxes}
           setSelectedBoundingBoxId={onChangeSelectedBoundingBox}
+          value={value}
         />
       </Form.Item>
     </div>
+  );
+}
+
+export function MagSlider({
+  resolutionInfo,
+  value,
+  onChange,
+}: {
+  resolutionInfo: ResolutionInfo;
+  value: Vector3;
+  onChange: (v: Vector3) => void;
+}) {
+  // Use `getResolutionsWithIndices` because returns a sorted list
+  const allMags = resolutionInfo.getResolutionsWithIndices();
+
+  return (
+    <Slider
+      tooltip={{
+        formatter: () => value.join("-"),
+      }}
+      min={0}
+      max={allMags.length - 1}
+      step={1}
+      value={clamp(
+        0,
+        allMags.findIndex(([, v]) => V3.equals(v, value)),
+        allMags.length - 1,
+      )}
+      onChange={(value) => onChange(allMags[value][1])}
+    />
   );
 }
 
@@ -426,9 +463,8 @@ function StartingJobModal(props: StartingJobModalProps) {
         <BoundingBoxSelectionFormItem
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
           userBoundingBoxes={userBoundingBoxes}
-          onChangeSelectedBoundingBox={(bBoxId: number) =>
-            form.setFieldsValue({ boundingBoxId: bBoxId })
-          }
+          onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
+          value={form.getFieldValue("boundingBoxId")}
         />
         <div style={{ textAlign: "center" }}>
           <Button type="primary" size="large" htmlType="submit">
@@ -626,7 +662,7 @@ export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
       description={
         <p>
           For this annotation some floodfill operations have not run to completion, because they
-          covered a too large volume. webKnossos can finish these operations via a long-running job.
+          covered a too large volume. WEBKNOSSOS can finish these operations via a long-running job.
           This job will copy the current dataset, apply the changes of the current volume annotation
           into the volume layer and use the existing bounding boxes as seeds to continue the
           remaining floodfill operations (i.e., &quot;globalize&quot; them).

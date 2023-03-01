@@ -2,18 +2,22 @@ import type { ComponentType } from "react";
 import React from "react";
 import { Modal } from "antd";
 import type { APIDataLayer } from "types/api_flow_types";
-import type { ActiveMappingInfo } from "oxalis/store";
+import type { ActiveMappingInfo, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import { MappingStatusEnum } from "oxalis/constants";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { waitForCondition } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { useSelector } from "react-redux";
+import { getEditableMappingForVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 
 const { confirm } = Modal;
 
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
-  return segmentationLayer.fallbackLayer || segmentationLayer.name;
+  return (
+    ("fallbackLayer" in segmentationLayer ? segmentationLayer.fallbackLayer : null) ||
+    segmentationLayer.name
+  );
 }
 
 type MappingActivationConfirmationProps<R> = R & {
@@ -38,6 +42,10 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
       ...rest
     } = props;
 
+    const editableMapping = useSelector((state: OxalisState) =>
+      getEditableMappingForVolumeTracingId(state, layerName),
+    );
+
     const isMappingEnabled = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
     const enabledMappingName = isMappingEnabled ? mappingInfo.mappingName : null;
 
@@ -48,15 +56,23 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     }
 
+    const actionStr = editableMapping == null ? "will" : "cannot";
     const mappingString =
       mappingName != null
-        ? `for the mapping "${mappingName}" which is not active. The mapping will be activated`
-        : "without a mapping but a mapping is active. The mapping will be deactivated";
+        ? `for the mapping "${mappingName}" which is not active. The mapping ${actionStr} be activated`
+        : `without a mapping but a mapping is active. The mapping ${actionStr} be deactivated`;
+    const recommendationStr =
+      editableMapping == null
+        ? ""
+        : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mapping instead.";
 
     const confirmMappingActivation = () => {
       confirm({
-        title: `The currently active ${descriptor} was computed ${mappingString} when clicking OK.`,
+        title: `The currently active ${descriptor} was computed ${mappingString} when clicking OK. ${recommendationStr}`,
         async onOk() {
+          if (editableMapping != null) {
+            return;
+          }
           if (mappingName != null) {
             Store.dispatch(setMappingAction(layerName, mappingName, "HDF5"));
             await waitForCondition(

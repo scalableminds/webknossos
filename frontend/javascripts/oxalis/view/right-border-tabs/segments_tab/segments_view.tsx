@@ -1,7 +1,7 @@
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
 import type { Dispatch } from "redux";
 import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -19,6 +19,7 @@ import {
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
+  hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
@@ -38,7 +39,7 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import type {
   ActiveMappingInfo,
@@ -51,6 +52,11 @@ import type {
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import features from "features";
+import {
+  getFeatureNotAvailableInPlanMessage,
+  isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
+} from "admin/organization/pricing_plan_utils";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -295,7 +301,7 @@ class SegmentsView extends React.Component<Props, State> {
       }
     } else {
       // Check whether there is an active mesh job (e.g., the user
-      // started the job earlier and reopened webKnossos in the meantime).
+      // started the job earlier and reopened WEBKNOSSOS in the meantime).
       const pendingJobs = meshJobsForDataset.filter(
         (job) => job.state === "STARTED" || job.state === "PENDING",
       );
@@ -313,8 +319,21 @@ class SegmentsView extends React.Component<Props, State> {
     let title = "";
     let disabled = true;
 
+    const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+    const activeUser = useSelector((state: OxalisState) => state.activeUser);
+    if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
+      return {
+        disabled: true,
+        title: getFeatureNotAvailableInPlanMessage(
+          PricingPlanEnum.Team,
+          activeOrganization,
+          activeUser,
+        ),
+      };
+    }
+
     if (!features().jobsEnabled) {
-      title = "Computation jobs are not enabled for this webKnossos instance.";
+      title = "Computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
     } else if (!this.props.dataset.jobsEnabled) {
@@ -386,7 +405,13 @@ class SegmentsView extends React.Component<Props, State> {
     );
 
     if (this.props.visibleSegmentationLayer != null) {
+      const isEditableMapping = hasEditableMapping(
+        Store.getState(),
+        this.props.visibleSegmentationLayer.name,
+      );
+
       const maybeMappingName =
+        !isEditableMapping &&
         mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
         mappingInfo.mappingType === "HDF5" &&
         mappingInfo.mappingName != null
@@ -484,7 +509,7 @@ class SegmentsView extends React.Component<Props, State> {
       >
         <h3>Precompute Meshes</h3>
         <p>
-          Mesh visualizations can be very helpful when exploring segmentations. webKnossos can
+          Mesh visualizations can be very helpful when exploring segmentations. WEBKNOSSOS can
           precompute all meshes for a segmentation layer. Once the precomputation has finished,
           individual meshes can be loaded very quickly. As an alternative, you can use the ad-hoc
           mesh functionality which is a bit slower but does not require pre-computation.
@@ -556,6 +581,7 @@ class SegmentsView extends React.Component<Props, State> {
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
+            dropdownMatchSelectWidth={false}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map((meshFile: APIMeshFile) => (

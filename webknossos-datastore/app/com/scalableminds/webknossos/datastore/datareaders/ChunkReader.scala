@@ -27,8 +27,8 @@ class ChunkReader(val header: DatasetHeader, val store: FileSystemStore, val typ
   lazy val chunkSize: Int = header.chunkSize.toList.product
 
   @throws[IOException]
-  def read(path: String): Future[MultiArray] =
-    typedChunkReader.read(readBytes(path))
+  def read(path: String, chunkShape: Array[Int]): Future[MultiArray] =
+    typedChunkReader.read(readBytes(path), chunkShape)
 
   protected def readBytes(path: String): Option[Array[Byte]] =
     Using.Manager { use =>
@@ -44,28 +44,32 @@ class ChunkReader(val header: DatasetHeader, val store: FileSystemStore, val typ
 abstract class TypedChunkReader {
   val header: DatasetHeader
 
-  var chunkShape: Array[Int] = header.chunkShapeOrdered
   def ma2DataType: MADataType
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray]
+  def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray]
 
-  def createFilled(dataType: MADataType): MultiArray =
+  def createFilled(dataType: MADataType, chunkShape: Array[Int]): MultiArray =
     MultiArrayUtils.createFilledArray(dataType, chunkShape, header.fillValueNumber)
+
+  // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
+  // associated with the array needs to be adjusted for non-isotropic chunk sizes.
+  def chunkSizeOrdered(chunkSize: Array[Int]): Array[Int] =
+    if (header.order == ArrayOrder.F) chunkSize.reverse else chunkSize
 }
 
 class ByteChunkReader(val header: DatasetHeader) extends TypedChunkReader {
   val ma2DataType: MADataType = MADataType.BYTE
 
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
+  def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray] =
     Future.successful(bytes.map { result =>
-      MultiArray.factory(ma2DataType, chunkShape, result)
-    }.getOrElse(createFilled(ma2DataType)))
+      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), result)
+    }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape))))
 }
 
 class DoubleChunkReader(val header: DatasetHeader) extends TypedChunkReader {
 
   val ma2DataType: MADataType = MADataType.DOUBLE
 
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
+  def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
       bytes.map { result =>
         val typedStorage = new Array[Double](chunkShape.product)
@@ -73,8 +77,8 @@ class DoubleChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -82,7 +86,7 @@ class ShortChunkReader(val header: DatasetHeader) extends TypedChunkReader with 
 
   val ma2DataType: MADataType = MADataType.SHORT
 
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
+  def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
       bytes.map { result =>
         val typedStorage = new Array[Short](chunkShape.product)
@@ -90,8 +94,8 @@ class ShortChunkReader(val header: DatasetHeader) extends TypedChunkReader with 
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -99,7 +103,7 @@ class IntChunkReader(val header: DatasetHeader) extends TypedChunkReader {
 
   val ma2DataType: MADataType = MADataType.INT
 
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
+  def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
       bytes.map { result =>
         val typedStorage = new Array[Int](chunkShape.product)
@@ -107,8 +111,8 @@ class IntChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -116,7 +120,7 @@ class LongChunkReader(val header: DatasetHeader) extends TypedChunkReader {
 
   val ma2DataType: MADataType = MADataType.LONG
 
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
+  def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
       bytes.map { result =>
         val typedStorage = new Array[Long](chunkShape.product)
@@ -124,8 +128,8 @@ class LongChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }
 
@@ -133,7 +137,7 @@ class FloatChunkReader(val header: DatasetHeader) extends TypedChunkReader {
 
   val ma2DataType: MADataType = MADataType.FLOAT
 
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
+  def read(bytes: Option[Array[Byte]], chunkShape: Array[Int]): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
       bytes.map { result =>
         val typedStorage = new Array[Float](chunkShape.product)
@@ -141,7 +145,7 @@ class FloatChunkReader(val header: DatasetHeader) extends TypedChunkReader {
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
+        MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      }.getOrElse(createFilled(ma2DataType, chunkSizeOrdered(chunkShape)))
     }.get)
 }

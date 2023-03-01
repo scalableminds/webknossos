@@ -1,6 +1,6 @@
 import memoizeOne from "memoize-one";
 import _ from "lodash";
-import type { OxalisState } from "oxalis/store";
+import { type Flycam, OxalisState } from "oxalis/store";
 import type {
   OrthoViewExtents,
   Rect,
@@ -18,10 +18,7 @@ import constants, {
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import {
-  getPosition,
-  getPlaneExtentInVoxelFromStore,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
@@ -202,4 +199,22 @@ export function isPlaneMode(state: OxalisState): boolean {
   const viewMode = getViewMode(state);
   return constants.MODES_PLANE.includes(viewMode);
 }
+
+export function getPlaneScalingFactor(
+  state: OxalisState,
+  flycam: Flycam,
+  planeID: OrthoView,
+): [number, number] {
+  const [width, height] = getPlaneExtentInVoxelFromStore(state, flycam.zoomStep, planeID);
+  return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
+}
+export function getPlaneExtentInVoxelFromStore(
+  state: OxalisState,
+  zoomStep: number,
+  planeID: OrthoView,
+): [number, number] {
+  const { width, height } = getInputCatcherRect(state, planeID);
+  return [width * zoomStep, height * zoomStep];
+}
+
 export default {};

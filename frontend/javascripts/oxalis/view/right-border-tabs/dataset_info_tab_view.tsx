@@ -168,6 +168,24 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   );
 }
 
+export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
+  return (
+    <Tooltip title="Dataset voxel size" placement="left">
+      <tr>
+        <td
+          style={{
+            paddingRight: 4,
+            verticalAlign: "top",
+          }}
+        >
+          <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
+        </td>
+        <td>{formatScale(dataset.dataSource.scale)}</td>
+      </tr>
+    </Tooltip>
+  );
+}
+
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     showJobsDetailsModal: null,
@@ -233,7 +251,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
-  getOrganisationLogo(isDatasetViewMode: boolean) {
+  getOrganizationLogo(isDatasetViewMode: boolean) {
     if (!this.props.dataset.logoUrl) {
       return null;
     }
@@ -441,7 +459,11 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     } else {
       // Or display the editable explorative tracing name
       annotationTypeLabel = (
-        <span>
+        <span
+          style={{
+            display: "inline-flex",
+          }}
+        >
           Annotation:
           <EditableTextLabel
             value={tracingName}
@@ -459,7 +481,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       descriptionEditField = (
         <span
           style={{
-            verticalAlign: "top",
+            display: "inline-flex",
           }}
         >
           Description:
@@ -608,23 +630,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <tbody>
-              <Tooltip title="Dataset voxel size" placement="left">
-                <tr>
-                  <td
-                    style={{
-                      paddingRight: 4,
-                      verticalAlign: "top",
-                    }}
-                  >
-                    <img
-                      className="info-tab-icon"
-                      src="/assets/images/icon-voxelsize.svg"
-                      alt="Voxel size"
-                    />
-                  </td>
-                  <td>{formatScale(this.props.dataset.dataSource.scale)}</td>
-                </tr>
-              </Tooltip>
+              <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
               {resolutionInfo}
 
@@ -640,7 +646,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
-        {this.getOrganisationLogo(isDatasetViewMode)}
+        {this.getOrganizationLogo(isDatasetViewMode)}
       </div>
     );
   }

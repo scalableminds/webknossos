@@ -35,7 +35,6 @@ import {
   deleteBranchPointAction,
   setTreeNameAction,
   addTreesAndGroupsAction,
-  deleteTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   generateTreeName,
@@ -67,7 +66,7 @@ import Store from "oxalis/store";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
@@ -214,7 +213,6 @@ export function* watchAgglomerateLoading(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
-  yield* takeEvery("REMOVE_AGGLOMERATE_SKELETON", removeAgglomerateSkeletonWithId);
 }
 export function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
@@ -345,7 +343,7 @@ export function* loadAgglomerateSkeletonWithId(
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
   const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
-  const maybeTree = findTreeByName(trees, treeName).getOrElse(null);
+  const maybeTree = findTreeByName(trees, treeName);
 
   if (maybeTree != null) {
     console.warn(
@@ -425,16 +423,6 @@ function* loadConnectomeAgglomerateSkeletonWithId(
   }
 }
 
-function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
-  const { mappingName, agglomerateId } = action;
-  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
-  // @ts-expect-error ts-migrate(2552) FIXME: Cannot find name '_all'. Did you mean 'all'?
-  yield _all(findTreeByName(trees, treeName).map((tree) => put(deleteTreeAction(tree.treeId))));
-}
-
 function* removeConnectomeAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<void> {
@@ -445,11 +433,10 @@ function* removeConnectomeAgglomerateSkeletonWithId(
   );
   if (skeleton == null) return;
   const { trees } = skeleton;
-  yield* all(
-    findTreeByName(trees, treeName).map((tree) =>
-      put(deleteConnectomeTreesAction([tree.treeId], layerName)),
-    ),
-  );
+  const tree = findTreeByName(trees, treeName);
+  if (tree) {
+    yield* put(deleteConnectomeTreesAction([tree.treeId], layerName));
+  }
 }
 
 export function* watchSkeletonTracingAsync(): Saga<void> {

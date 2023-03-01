@@ -11,12 +11,12 @@ import { useZarrLinkMenu } from "./private_links_view";
 const sharingActiveNode = false;
 
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => any;
 };
 
 function _ShareViewDatasetModalView(props: Props) {
-  const { isVisible, onOk } = props;
+  const { isOpen, onOk } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
   const longUrl = getUrl(sharingToken, !dataset.isPublic);
@@ -26,7 +26,7 @@ function _ShareViewDatasetModalView(props: Props) {
   return (
     <Modal
       title="Share this Dataset"
-      visible={isVisible}
+      open={isOpen}
       width={800}
       okText="Ok"
       onOk={onOk}
@@ -42,7 +42,7 @@ function _ShareViewDatasetModalView(props: Props) {
           Sharing Link
         </Col>
         <Col span={18}>
-          <CopyableSharingLink isVisible={isVisible} longUrl={longUrl} />
+          <CopyableSharingLink isVisible={isOpen} longUrl={longUrl} />
 
           <div
             style={{

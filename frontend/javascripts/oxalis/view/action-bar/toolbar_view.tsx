@@ -20,7 +20,7 @@ import {
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
-  getSegmentColorAsHSL,
+  getSegmentColorAsHSLA,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -28,7 +28,7 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
@@ -48,8 +48,8 @@ import {
   InterpolationModeEnum,
   InterpolationMode,
 } from "oxalis/constants";
-import Model from "oxalis/model";
-import Store, { OxalisState, VolumeTracing } from "oxalis/store";
+import { Model } from "oxalis/singletons";
+import Store, { OxalisState } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
@@ -391,31 +391,35 @@ function AdditionalSkeletonModesButtons() {
   );
 }
 
-const mapId = (volumeTracing: VolumeTracing | null | undefined, id: number) => {
-  if (!volumeTracing) {
+const mapId = (volumeTracingId: string | null | undefined, id: number) => {
+  if (!volumeTracingId) {
     return null;
   }
-  const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+  const { cube } = Model.getSegmentationTracingLayer(volumeTracingId);
   return cube.mapId(id);
 };
 
 function CreateCellButton() {
-  const volumeTracing = useSelector((state: OxalisState) => getActiveSegmentationTracing(state));
-  const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
+  const volumeTracingId = useSelector(
+    (state: OxalisState) => getActiveSegmentationTracing(state)?.tracingId,
+  );
+  const unmappedActiveCellId = useSelector(
+    (state: OxalisState) => getActiveSegmentationTracing(state)?.activeCellId || 0,
+  );
   const { mappingStatus } = useSelector((state: OxalisState) =>
-    getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
+    getMappingInfoForVolumeTracing(state, volumeTracingId),
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
 
   const activeCellId = isMappingEnabled
-    ? mapId(volumeTracing, unmappedActiveCellId)
+    ? mapId(volumeTracingId, unmappedActiveCellId)
     : unmappedActiveCellId;
 
   const activeCellColor = useSelector((state: OxalisState) => {
     if (!activeCellId) {
       return null;
     }
-    return hslaToCSS(getSegmentColorAsHSL(state, activeCellId));
+    return hslaToCSS(getSegmentColorAsHSLA(state, activeCellId));
   });
 
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
@@ -538,9 +542,8 @@ function ChangeBrushSizeButton() {
               roundTo={0}
               min={userSettings.brushSize.minimum}
               max={maximumBrushSize}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              step={5}
-              spans={[0, 14, 10]}
+              precision={0}
+              spans={[0, 16, 8]}
               value={brushSize}
               onChange={handleUpdateBrushSize}
             />
@@ -590,6 +593,7 @@ export default function ToolbarView() {
   const maybeResolutionWithZoomStep = useSelector(
     getRenderableResolutionForActiveSegmentationTracing,
   );
+
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const hasResolutionWithHigherDimension = (labeledResolution || []).some((val) => val > 1);
@@ -603,12 +607,14 @@ export default function ToolbarView() {
       />
     </Tooltip>
   ) : null;
+
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   // Ensure that no volume-tool is selected when being in merger mode.
   // Even though, the volume toolbar is disabled, the user can still cycle through
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
+
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
       setLastForcefulDisabledTool(activeTool);
@@ -626,6 +632,7 @@ export default function ToolbarView() {
       setLastForcefulDisabledTool(null);
     }
   }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
+
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");
@@ -649,6 +656,7 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.TRACE ||
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
+
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
@@ -970,17 +978,19 @@ function ToolSpecificSettings({
 }
 
 function QuickSelectSettingsPopover() {
-  const [isOpen, setIsOpen] = useState(false);
-  const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.isQuickSelectActive,
+  const dispatch = useDispatch();
+  const { isQuickSelectActive, areQuickSelectSettingsOpen } = useSelector(
+    (state: OxalisState) => state.uiInformation,
   );
   return (
     <Popover
       trigger="click"
       placement="bottom"
-      open={isOpen}
-      content={<QuickSelectControls setIsOpen={setIsOpen} />}
-      onOpenChange={(open: boolean) => setIsOpen(open)}
+      open={areQuickSelectSettingsOpen}
+      content={<QuickSelectControls />}
+      onOpenChange={(open: boolean) => {
+        dispatch(showQuickSelectSettingsAction(open));
+      }}
     >
       <ButtonComponent
         title="Configure Quick Select"

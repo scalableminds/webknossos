@@ -1,13 +1,6 @@
 import { Input, InputProps, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
-import TextArea, { TextAreaProps } from "antd/lib/input/TextArea";
-
-export type InputComponentProps = InputProps &
-  TextAreaProps & {
-    title?: React.ReactNode;
-    isTextArea?: boolean;
-  };
 
 type InputComponentState = {
   isFocused: boolean;
@@ -23,16 +16,12 @@ type InputComponentState = {
  * @class
  */
 
-class InputComponent extends React.PureComponent<InputComponentProps, InputComponentState> {
-  static defaultProps: InputComponentProps = {
+class InputComponent extends React.PureComponent<InputProps, InputComponentState> {
+  static defaultProps: InputProps = {
     onChange: _.noop,
-    onFocus: _.noop,
-    onBlur: _.noop,
-    onPressEnter: undefined,
     placeholder: "",
     value: "",
     style: {},
-    isTextArea: false,
   };
 
   state = {
@@ -40,7 +29,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
     currentValue: this.props.value,
   };
 
-  componentDidUpdate(prevProps: InputComponentProps) {
+  componentDidUpdate(prevProps: InputProps) {
     if (!this.state.isFocused && prevProps.value !== this.props.value) {
       this.setState({
         currentValue: this.props.value,
@@ -48,36 +37,33 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
     }
   }
 
-  handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({
       currentValue: e.target.value,
     });
 
     if (this.props.onChange) {
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       this.props.onChange(e);
     }
   };
 
-  handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     this.setState({
       isFocused: true,
     });
 
     if (this.props.onFocus) {
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       this.props.onFocus(e);
     }
   };
 
-  handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     this.setState(
       {
         isFocused: false,
       },
       () => {
         if (this.props.onBlur) {
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           this.props.onBlur(e);
         }
       },
@@ -95,20 +81,19 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
   };
 
   render() {
-    const { isTextArea, onPressEnter, title, style, ...inputProps } = this.props;
-    const InputComponentType: typeof TextArea | typeof Input = isTextArea ? TextArea : Input;
+    const { title, style, ...inputProps } = this.props;
     const input = (
-      <InputComponentType
+      <Input
         {...inputProps}
         style={title == null ? style : undefined}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
-        onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
         onKeyDown={this.blurOnEscape}
       />
     );
+
     // The input needs to be wrapped in a span in order for the tooltip to work. See https://github.com/react-component/tooltip/issues/18#issuecomment-140078802.
     return title != null ? (
       <Tooltip title={title} style={style}>

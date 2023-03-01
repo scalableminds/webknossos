@@ -37,21 +37,20 @@ object JsonHelper extends BoxImplicits with LazyLogging {
       buffer = Source.fromFile(path.toFile)
       Full(Json.parse(buffer.getLines.mkString))
     } catch {
-      case e: java.io.EOFException =>
-        logger.error(
+      case _: java.io.EOFException =>
+        logger.warn(
           s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
         Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
       case _: AccessDeniedException | _: FileNotFoundException =>
-        logger.error(
+        logger.warn(
           s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
       case e: com.fasterxml.jackson.databind.JsonMappingException =>
-        logger.warn(s"Exception in JsonHelper while trying to extract json from file. Path: $path. Json Mapping issue.")
-        Failure(s"Json mapping issue in '${rootPath.relativize(path).toString}'. Cause: ${e.getCause}")
+        logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
+        Failure(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
       case e: Exception =>
-        logger.error(
-          s"Exception in JsonHelper while trying to extract json from file. Path: $path. Cause: ${e.getCause}")
-        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Cause: ${e.getCause}")
+        logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
+        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
     } finally {
       if (buffer != null) buffer.close()
     }
@@ -103,7 +102,8 @@ object JsonHelper extends BoxImplicits with LazyLogging {
   }
 
   def parseAndValidateJson[T: Reads](s: String): Box[T] =
-    tryo(Json.parse(s)).flatMap(parsed => validateJsValue[T](parsed))
+    tryo(Json.parse(s))
+      .flatMap(parsed => validateJsValue[T](parsed)) ~> "Failed to parse or validate json against data schema"
 
   def validateJsValue[T: Reads](o: JsValue): Box[T] =
     o.validate[T] match {

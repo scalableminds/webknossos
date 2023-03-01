@@ -9,12 +9,12 @@ import type { OxalisState } from "oxalis/store";
 import { CopyableCodeSnippet, MoreInfoHint } from "./download_modal_view";
 const { Paragraph, Text } = Typography;
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onClose: () => void;
 };
 
 function _PythonClientModalView(props: Props): JSX.Element {
-  const { isVisible, onClose } = props;
+  const { isOpen, onClose } = props;
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
@@ -68,15 +68,17 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contex
 `;
 
   const alertTokenIsPrivate = () => {
-    Toast.warning(
-      "The clipboard contains private data. Do not share this information with anyone you do not trust!",
-    );
+    if (authToken) {
+      Toast.warning(
+        "The clipboard contains private data. Do not share this information with anyone you do not trust!",
+      );
+    }
   };
 
   return (
     <Modal
       title="Python Client"
-      visible={isVisible}
+      open={isOpen}
       width={800}
       footer={null}
       onCancel={onClose}
@@ -90,7 +92,7 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contex
         >
           The following code snippets are suggestions to get you started quickly with the{" "}
           <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
-            webKnossos Python API
+            WEBKNOSSOS Python API
           </a>
           . To download and use this dataset in your Python project, simply copy and paste the code
           snippets to your script.

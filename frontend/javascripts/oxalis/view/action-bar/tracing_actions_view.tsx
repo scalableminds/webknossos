@@ -25,7 +25,7 @@ import {
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
-import type { APIAnnotationType, APIUser } from "types/api_flow_types";
+import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
 import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
@@ -54,12 +54,12 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
@@ -76,7 +76,6 @@ const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeo
 
 type OwnProps = {
   layoutMenu: React.ReactNode;
-  hasVolumeFallback: boolean;
 };
 type StateProps = {
   annotationType: APIAnnotationType;
@@ -88,6 +87,8 @@ type StateProps = {
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
+  annotationOwner: APIUserBase | null | undefined;
+  othersMayEdit: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -123,6 +124,7 @@ export function LayoutMenu(props: LayoutMenuProps) {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
+    // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
     setCurrentLayout,
     ...others
   } = props;
@@ -337,7 +339,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     // volume tracings
     const fallbackLayer =
       sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
-    const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
+    const newAnnotation = await createExplorational(dataset, tracingType, false, fallbackLayer);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
     await api.tracing.restart(null, newAnnotation.id, ControlModeEnum.TRACE, undefined, true);
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
@@ -449,13 +451,21 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       hasTracing,
       restrictions,
       task,
-      hasVolumeFallback,
       annotationType,
       annotationId,
       activeUser,
       layoutMenu,
       busyBlockingInfo,
+      othersMayEdit,
+      annotationOwner,
     } = this.props;
+    const copyAnnotationText =
+      !restrictions.allowUpdate &&
+      activeUser != null &&
+      annotationOwner?.id === activeUser.id &&
+      othersMayEdit
+        ? "Duplicate"
+        : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const saveButton = restrictions.allowUpdate
       ? [
@@ -502,7 +512,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 key="copy-sandbox-button"
                 icon={<FileAddOutlined />}
                 onClick={this.handleCopySandboxToAccount}
-                title="Copy To My Account"
+                title={copyAnnotationText}
               >
                 <span className="hide-on-small-screen">Copy To My Account</span>
               </AsyncButtonWithAuthentication>,
@@ -526,9 +536,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             key="copy-button"
             icon={<FileAddOutlined />}
             onClick={this.handleCopyToAccount}
-            title="Copy To My Account"
+            title={copyAnnotationText}
           >
-            <span className="hide-on-small-screen">Copy To My Account</span>
+            <span className="hide-on-small-screen">{copyAnnotationText}</span>
           </AsyncButtonWithAuthentication>,
         ];
     const finishAndNextTaskButton =
@@ -573,11 +583,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       modals.push(
         <DownloadModalView
           key="download-modal"
-          isVisible={this.props.isDownloadModalOpen}
+          isOpen={this.props.isDownloadModalOpen}
           onClose={this.handleDownloadClose}
-          annotationType={annotationType}
-          annotationId={annotationId}
-          hasVolumeFallback={hasVolumeFallback}
         />,
       );
     }
@@ -601,7 +608,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <ShareModalView
         key="share-modal"
-        isVisible={this.props.isShareModalOpen}
+        isOpen={this.props.isShareModalOpen}
         onOk={this.handleShareClose}
         annotationType={annotationType}
         annotationId={annotationId}
@@ -610,7 +617,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <PrivateLinksModal
         key="private-links-modal"
-        isVisible={this.state.isZarrPrivateLinksModalOpen}
+        isOpen={this.state.isZarrPrivateLinksModalOpen}
         onOk={() => this.setState({ isZarrPrivateLinksModalOpen: false })}
         annotationId={annotationId}
       />,
@@ -633,7 +640,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <UserScriptsModalView
         key="user-scripts-modal"
-        isVisible={this.state.isUserScriptsModalOpen}
+        isOpen={this.state.isUserScriptsModalOpen}
         onOK={this.handleUserScriptsClose}
       />,
     );
@@ -648,7 +655,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       modals.push(
         <MergeModalView
           key="merge-modal"
-          isVisible={this.state.isMergeModalOpen}
+          isOpen={this.state.isMergeModalOpen}
           onOk={this.handleMergeClose}
         />,
       );
@@ -700,12 +707,14 @@ function mapStateToProps(state: OxalisState): StateProps {
     annotationType: state.tracing.annotationType,
     annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
+    annotationOwner: state.tracing.owner,
     task: state.task,
     activeUser: state.activeUser,
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
+    othersMayEdit: state.tracing.othersMayEdit,
   };
 }
 

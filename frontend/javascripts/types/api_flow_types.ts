@@ -7,8 +7,8 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
-import { PricingPlan } from "admin/organization/organization_edit_view";
+import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS } from "oxalis/constants";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
@@ -143,6 +143,43 @@ export type APIDataset = APIDatasetBase & {
   readonly dataSource: APIDataSource;
   readonly isActive: true;
 };
+
+// Should be a strict subset of APIMaybeUnimportedDataset which makes
+// typing easier in some places.
+export type APIDatasetCompactWithoutStatus = Pick<
+  APIMaybeUnimportedDataset,
+  | "owningOrganization"
+  | "name"
+  | "folderId"
+  | "isActive"
+  | "displayName"
+  | "created"
+  | "isEditable"
+  | "lastUsedByUser"
+  | "tags"
+  | "isUnreported"
+>;
+export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+  id?: string;
+  status: MutableAPIDataSourceBase["status"];
+};
+
+export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+  return {
+    owningOrganization: dataset.owningOrganization,
+    name: dataset.name,
+    folderId: dataset.folderId,
+    isActive: dataset.isActive,
+    displayName: dataset.displayName,
+    created: dataset.created,
+    isEditable: dataset.isEditable,
+    lastUsedByUser: dataset.lastUsedByUser,
+    status: dataset.dataSource.status,
+    tags: dataset.tags,
+    isUnreported: dataset.isUnreported,
+  };
+}
+
 type APIUnimportedDataset = APIDatasetBase & {
   readonly dataSource: APIUnimportedDatasource;
   readonly isActive: false;
@@ -181,6 +218,7 @@ export type NovelUserExperienceInfoType = {
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
+  readonly isOrganizationOwner: boolean;
   readonly created: number;
   readonly experiences: ExperienceMap;
   readonly isSuperUser: boolean;
@@ -510,10 +548,21 @@ export type APIOrganization = {
   readonly name: string;
   readonly additionalInformation: string;
   readonly displayName: string;
-  readonly pricingPlan: PricingPlan;
+  readonly pricingPlan: PricingPlanEnum;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
+  readonly paidUntil: number;
+  readonly includedUsers: number;
+  readonly includedStorageBytes: number;
+  readonly usedStorageBytes: number;
+  readonly ownerName?: string;
 };
+export type APIPricingPlanStatus = {
+  readonly pricingPlan: PricingPlanEnum;
+  readonly isExceeded: boolean;
+  readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
+};
+
 export type APIBuildInfo = {
   webknossos: {
     name: string;
@@ -589,7 +638,7 @@ export type APIJob = {
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
-  readonly state: string;
+  readonly state: APIJobState;
   readonly manualState: string;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
@@ -775,7 +824,7 @@ export type VoxelyticsArtifactConfig = {
 export type VoxelyticsRunInfo = (
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: number;
+      beginTime: Date;
       endTime: null;
     }
   | {
@@ -784,8 +833,8 @@ export type VoxelyticsRunInfo = (
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: number;
-      endTime: number;
+      beginTime: Date;
+      endTime: Date;
     }
 ) & {
   id: string;
@@ -793,7 +842,6 @@ export type VoxelyticsRunInfo = (
   username: string;
   hostname: string;
   voxelyticsVersion: string;
-  tasks: Array<VoxelyticsTaskInfo>;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
@@ -808,14 +856,7 @@ export type VoxelyticsWorkflowDag = {
   nodes: Array<VoxelyticsWorkflowDagNode>;
 };
 
-export type VoxelyticsTaskInfo = {
-  runId: string;
-  runName: string;
-  taskName: string;
-  currentExecutionId: string | null;
-  chunksTotal: number;
-  chunksFinished: number;
-} & (
+type StatePartial =
   | {
       state: VoxelyticsRunState.PENDING | VoxelyticsRunState.SKIPPED;
       beginTime: null;
@@ -823,7 +864,7 @@ export type VoxelyticsTaskInfo = {
     }
   | {
       state: VoxelyticsRunState.RUNNING;
-      beginTime: number;
+      beginTime: Date;
       endTime: null;
     }
   | {
@@ -832,10 +873,21 @@ export type VoxelyticsTaskInfo = {
         | VoxelyticsRunState.FAILED
         | VoxelyticsRunState.CANCELLED
         | VoxelyticsRunState.STALE;
-      beginTime: number;
-      endTime: number;
-    }
-);
+      beginTime: Date;
+      endTime: Date;
+    };
+export type VoxelyticsTaskInfo = {
+  taskName: string;
+  currentExecutionId: string | null;
+  chunkCounts: ChunkOrTaskCounts;
+  runs: Array<
+    {
+      runId: string;
+      currentExecutionId: string | null;
+      chunkCounts: ChunkOrTaskCounts;
+    } & StatePartial
+  >;
+} & StatePartial;
 
 export type VoxelyticsWorkflowReport = {
   config: {
@@ -855,7 +907,8 @@ export type VoxelyticsWorkflowReport = {
   };
   dag: VoxelyticsWorkflowDag;
   artifacts: Record<string, Record<string, VoxelyticsArtifactConfig>>;
-  run: VoxelyticsRunInfo;
+  runs: Array<VoxelyticsRunInfo>;
+  tasks: Array<VoxelyticsTaskInfo>;
   workflow: {
     name: string;
     hash: string;
@@ -863,13 +916,38 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowInfo = {
+export type VoxelyticsWorkflowListingRun = (
+  | {
+      state: VoxelyticsRunState.RUNNING;
+      beginTime: Date;
+      endTime: null;
+    }
+  | {
+      state:
+        | VoxelyticsRunState.COMPLETE
+        | VoxelyticsRunState.FAILED
+        | VoxelyticsRunState.CANCELLED
+        | VoxelyticsRunState.STALE;
+      beginTime: Date;
+      endTime: Date;
+    }
+) & {
+  id: string;
+  name: string;
+  username: string;
+  hostname: string;
+  voxelyticsVersion: string;
+  taskCounts: ChunkOrTaskCounts;
+};
+
+export type VoxelyticsWorkflowListing = {
   name: string;
   hash: string;
   beginTime: number;
   endTime: number | null;
   state: VoxelyticsRunState;
-  runs: Array<VoxelyticsRunInfo>;
+  taskCounts: ChunkOrTaskCounts;
+  runs: Array<VoxelyticsWorkflowListingRun>;
 };
 
 type Statistics = {
@@ -879,16 +957,47 @@ type Statistics = {
   sum?: number;
 };
 
+type ChunkOrTaskCounts = {
+  total: number;
+  failed: number;
+  skipped: number;
+  complete: number;
+  cancelled: number;
+};
+
 export type VoxelyticsChunkStatistics = {
   executionId: string;
-  countTotal: number;
-  countFinished: number;
+  chunkCounts: ChunkOrTaskCounts;
   beginTime: number | null;
   endTime: number | null;
+  wallTime: number | null;
   memory: Statistics | null;
   cpuUser: Statistics | null;
   cpuSystem: Statistics | null;
   duration: Statistics | null;
+};
+
+export type VoxelyticsLogLine = {
+  func_name: string;
+  host: string;
+  level: LOG_LEVELS;
+  line: number;
+  logger_name: string;
+  message: string;
+  path: string;
+  pgid: number;
+  pid: number;
+  process_name: string;
+  program: string;
+  thread_name: string;
+  timestamp: number;
+  user: string;
+  vx_run_name: string;
+  vx_task_name: string;
+  vx_version: string;
+  vx_workflow_hash: string;
+  wk_org: string;
+  wk_url: string;
 };
 
 // Backend type
@@ -906,6 +1015,9 @@ export type FolderItem = {
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
+  // Can be set so that the antd tree component can disable
+  // individual folder items.
+  disabled?: boolean;
 };
 
 export type Folder = {

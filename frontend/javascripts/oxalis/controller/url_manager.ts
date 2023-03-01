@@ -342,12 +342,12 @@ export function updateTypeAndId(
   if (maybeCompoundType == null) {
     return baseUrl.replace(
       /^(.*\/annotations)\/([^/?]*)(\/?.*)$/,
-      (all, base, id, rest) => `${base}/${annotationId}${rest}`,
+      (_all, base, _id, rest) => `${base}/${annotationId}${rest}`,
     );
   } else {
     return baseUrl.replace(
       /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
-      (all, base, type, id, rest) => `${base}/${maybeCompoundType}/${annotationId}${rest}`,
+      (_all, base, _type, _id, rest) => `${base}/${maybeCompoundType}/${annotationId}${rest}`,
     );
   }
 }

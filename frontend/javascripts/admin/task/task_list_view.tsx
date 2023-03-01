@@ -1,5 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Card, Alert } from "antd";
@@ -46,7 +45,7 @@ type State = {
   users: APIUser[];
   searchQuery: string;
   selectedUserIdForAssignment: string | null;
-  isAnonymousTaskLinkModalVisible: boolean;
+  isAnonymousTaskLinkModalOpen: boolean;
 };
 const typeHint: Array<APITask> = [];
 const persistence = new Persistence<Pick<State, "searchQuery">>(
@@ -63,7 +62,7 @@ class TaskListView extends React.PureComponent<Props, State> {
     users: [],
     searchQuery: "",
     selectedUserIdForAssignment: null,
-    isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
+    isAnonymousTaskLinkModalOpen: Utils.hasUrlParam("showAnonymousLinks"),
   };
 
   componentDidMount() {
@@ -100,9 +99,8 @@ class TaskListView extends React.PureComponent<Props, State> {
     }
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -200,7 +198,7 @@ class TaskListView extends React.PureComponent<Props, State> {
   getAnonymousTaskLinkModal() {
     const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
 
-    if (!this.state.isAnonymousTaskLinkModalVisible) {
+    if (!this.state.isAnonymousTaskLinkModalOpen) {
       return null;
     }
 
@@ -211,18 +209,18 @@ class TaskListView extends React.PureComponent<Props, State> {
     return (
       <Modal
         title={`Anonymous Task Links for Task ${anonymousTaskId}`}
-        visible={this.state.isAnonymousTaskLinkModalVisible}
+        open={this.state.isAnonymousTaskLinkModalOpen}
         onOk={() => {
           navigator.clipboard
             .writeText(tasksString)
             .then(() => Toast.success("Links copied to clipboard"));
           this.setState({
-            isAnonymousTaskLinkModalVisible: false,
+            isAnonymousTaskLinkModalOpen: false,
           });
         }}
         onCancel={() =>
           this.setState({
-            isAnonymousTaskLinkModalVisible: false,
+            isAnonymousTaskLinkModalOpen: false,
           })
         }
       >
@@ -245,7 +243,7 @@ class TaskListView extends React.PureComponent<Props, State> {
           by clicking on the <strong>Add Task</strong> button.
         </p>
         <p>
-          To learn more about the task system in webKnossos,{" "}
+          To learn more about the task system in WEBKNOSSOS,{" "}
           <a
             href="https://docs.webknossos.org/webknossos/tasks.html"
             rel="noopener noreferrer"
@@ -276,7 +274,6 @@ class TaskListView extends React.PureComponent<Props, State> {
             style={{
               width: 200,
             }}
-            onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
             value={searchQuery}
           />

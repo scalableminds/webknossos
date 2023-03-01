@@ -33,7 +33,7 @@ type State = {
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rule' implicitly has an 'any' type.
-function isValidMagnification(rule, value) {
+function isValidMagnification(_rule, value) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
     return Promise.resolve();
   } else {

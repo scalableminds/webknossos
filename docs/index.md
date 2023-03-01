@@ -1,13 +1,13 @@
-# Welcome to webKnossos
+# Welcome to WEBKNOSSOS
 
-webKnossos is an [open-source tool](https://github.com/scalableminds/webknossos) for [exploring](./tracing_ui.md) large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as [collaboratively](./sharing.md) generating annotations.
+WEBKNOSSOS is an [open-source tool](https://github.com/scalableminds/webknossos) for [exploring](./tracing_ui.md) large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as [collaboratively](./sharing.md) generating annotations.
 The web-based tool is powered by a specialized data-delivery backend that stores [large datasets](./datasets.md) efficiently on disk and serves many concurrent users.
-webKnossos has a GPU-accelerated viewer that includes tools for creating and sharing skeleton and volume annotations.
+WEBKNOSSOS has a GPU-accelerated viewer that includes tools for creating and sharing skeleton and volume annotations.
 Powerful [user](./users.md) and [task](./tasks.md) management features automatically distribute tasks to human annotators.
 There are a lot of productivity improvements to make the human part as efficient as possible.
-webKnossos is also a platform for [showcasing datasets](https://webknossos.org) alongside a paper publication.
+WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) alongside a paper publication.
 
-![Video: webKnossos: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI)
+![Video: WEBKNOSSOS: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI)
 
 ## Getting Started
 Sign up for a free account on [https://webknossos.org/](https://webknossos.org/) and either upload one of your own datasets, or work with a large selection of published community datasets. 
@@ -42,10 +42,10 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 ![Showcasing Datasets](./images/dashboard_featured_publications.jpeg)
 
 # Built for Science
-webKnossos is built for scientists with support by scientists. Our goal is to make image analysis and data exploration accessible and easy to use. 
+WEBKNOSSOS is built for scientists with support by scientists. Our goal is to make image analysis and data exploration accessible and easy to use. 
 While originally designed for the annotation of electron microscopy of neural circuits, we have seen great projects using it to analyze MRI/CT scans, fluorescences microscopy images, and synchrotron datasets.
 
-webKnossos' impact on data annotation in neuroscience and Connectomics has been published in Nature Methods, 2017 and many other [publications](./publications.md):
+WEBKNOSSOS' impact on data annotation in neuroscience and Connectomics has been published in Nature Methods, 2017 and many other [publications](./publications.md):
 
 > Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
 webKnossos: efficient online 3D data annotation for connectomics.
@@ -54,7 +54,7 @@ webKnossos: efficient online 3D data annotation for connectomics.
 
 ## Credits and Help
 
-webKnossos is developed by [scalable minds](https://scalableminds.com) in collaboration with the [Max Planck Institute for Brain Research](https://brain.mpg.de/connectomics).
+WEBKNOSSOS is developed by [scalable minds](https://scalableminds.com) in collaboration with the [Max Planck Institute for Brain Research](https://brain.mpg.de/connectomics).
 
-If you need help with webKnossos, feel free to contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the community forum](https://forum.image.sc/tag/webknossos). 
+If you need help with WEBKNOSSOS, feel free to contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the community forum](https://forum.image.sc/tag/webknossos). 
 scalable minds also offers [commercial support, managed hosting, and image analysis services](https://webknossos.org/pricing).

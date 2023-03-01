@@ -14,6 +14,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def *(that: Int): Vec3Int =
     Vec3Int(x * that, y * that, z * that)
 
+  def /(that: Vec3Int): Vec3Int =
+    Vec3Int(x / that.x, y / that.y, z / that.z)
+
   def scale(s: Float): Vec3Int =
     Vec3Int((x * s).toInt, (y * s).toInt, (z * s).toInt)
 
@@ -95,6 +98,12 @@ object Vec3Int {
   def fromList(l: List[Int]): Option[Vec3Int] =
     if (l.length >= 3)
       Some(Vec3Int(l.head, l(1), l(2)))
+    else
+      None
+
+  def fromArray(a: Array[Int]): Option[Vec3Int] =
+    if (a.length >= 3)
+      Some(Vec3Int(a(0), a(1), a(2)))
     else
       None
 

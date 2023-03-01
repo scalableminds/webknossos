@@ -6,7 +6,7 @@ GET           /buildinfo                                                        
 GET           /features                                                                 controllers.Application.features
 GET           /health                                                                   controllers.Application.health
 POST          /analytics/:eventType                                                     controllers.Application.trackAnalyticsEvent(eventType)
-POST          /helpEmail                                                                controllers.Application.helpEmail(message: String)
+POST          /helpEmail                                                                controllers.Application.helpEmail(message: String, currentUrl: String)
 POST          /triggers/initialData                                                     controllers.InitialDataController.triggerInsert
 GET           /maintenance                                                              controllers.MaintenanceController.info
 POST          /maintenance                                                              controllers.MaintenanceController.initMaintenance
@@ -69,12 +69,13 @@ GET           /teams/:id/progressOverview                                       
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational              controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                     controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int])
+GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
 POST          /datasets/exploreRemote                                                   controllers.DataSetController.exploreRemoteDataset
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                           controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
-PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String, skipResolutions: Option[Boolean])
+PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String)
+PATCH         /datasets/:organizationName/:dataSetName/updatePartial                    controllers.DataSetController.updatePartial(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/accessList                       controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
 DELETE        /datasets/:organizationName/:dataSetName/sharingToken                     controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
@@ -102,6 +103,7 @@ POST          /datastores/:name/reserveUpload                                   
 POST          /datastores/:name/reportDatasetUpload                                     controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteDataset                                           controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                                     controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
+GET           /datastores/:name/findCredential                                          controllers.WKRemoteDataStoreController.findCredential(name: String, key: String, credentialId: String)
 POST          /datastores/:name/validateUserAccess                                      controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                               controllers.DataStoreController.create
 DELETE        /datastores/:name                                                         controllers.DataStoreController.delete(name: String)
@@ -114,7 +116,7 @@ POST          /tracingstores/:name/validateUserAccess                           
 PUT           /tracingstores/:name                                                      controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource                                           controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataSourceId                                         controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
-GET           /tracingstores/:name/dataStoreURI/:dataSetName                            controllers.WKRemoteTracingStoreController.dataStoreURIForDataSet(name: String, key: String, organizationName: Option[String], dataSetName: String)
+GET           /tracingstores/:name/dataStoreUri/:dataSetName                            controllers.WKRemoteTracingStoreController.dataStoreUriForDataSet(name: String, key: String, organizationName: Option[String], dataSetName: String)
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                                       controllers.UserTokenController.generateTokenForDataStore
@@ -139,6 +141,7 @@ PATCH         /annotations/:id/deleteAnnotationLayer                            
 DELETE        /annotations/:id                                                          controllers.AnnotationController.cancelWithoutType(id: String)
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                               controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                 controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
+POST          /annotations/:id/acquireMutex                                             controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
 
 GET           /annotations/:typ/:id/info                                                controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                          controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
@@ -230,6 +233,14 @@ GET           /organizations/:organizationName                                  
 PATCH         /organizations/:organizationName                                          controllers.OrganizationController.update(organizationName: String)
 DELETE        /organizations/:organizationName                                          controllers.OrganizationController.delete(organizationName: String)
 GET           /operatorData                                                             controllers.OrganizationController.getOperatorData
+POST          /pricing/requestExtension                                                 controllers.OrganizationController.sendExtendPricingPlanEmail
+POST          /pricing/requestUpgrade                                                   controllers.OrganizationController.sendUpgradePricingPlanEmail(requestedPlan: String)
+POST          /pricing/requestUsers                                                     controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
+POST          /pricing/requestStorage                                                   controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
+GET           /pricing/status                                                           controllers.OrganizationController.pricingStatus
+GET           /termsOfService                                                           controllers.OrganizationController.getTermsOfService
+POST          /termsOfService/accept                                                    controllers.OrganizationController.acceptTermsOfService(version: Int)
+GET           /termsOfService/acceptanceNeeded                                          controllers.OrganizationController.termsOfServiceAcceptanceNeeded
 
 # Timelogging
 GET           /time/allusers/:year/:month                                               controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
@@ -242,7 +253,7 @@ GET           /jobs                                                             
 GET           /jobs/status                                                              controllers.JobsController.status
 POST          /jobs/run/convertToWkw/:organizationName/:dataSetName                     controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String)
 POST          /jobs/run/computeMeshFile/:organizationName/:dataSetName                  controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
-POST          /jobs/run/exportTiff/:organizationName/:dataSetName                       controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], annotationLayerName: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
+POST          /jobs/run/exportTiff/:organizationName/:dataSetName                       controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[String], asOmeTiff: Boolean)
 POST          /jobs/run/inferNuclei/:organizationName/:dataSetName                      controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: String, newDatasetName: String)
 POST          /jobs/run/inferNeurons/:organizationName/:dataSetName                     controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/globalizeFloodfills/:organizationName/:dataSetName              controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, volumeLayerName: Option[String])
@@ -260,12 +271,17 @@ GET           /publications/:id                                                 
 POST          /shortLinks                                                               controllers.ShortLinkController.create
 GET           /shortLinks/byKey/:key                                                    controllers.ShortLinkController.getByKey(key: String)
 
+# Credentials
+POST          /credentials/httpBasicAuth                                                controllers.CredentialController.createHttpBasicAuthCredential
+POST          /credentials/s3AccessKey                                                  controllers.CredentialController.createS3AccessKeyCredential
+POST          /credentials/googleServiceAccount                                         controllers.CredentialController.createGoogleServiceAccountCredential
+
 # Voxelytics
 POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow
-GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows(workflowHash: Option[String])
+GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows
 GET           /voxelytics/workflows/:workflowHash                                       controllers.VoxelyticsController.getWorkflow(workflowHash: String, runId: Option[String])
 POST          /voxelytics/workflows/:workflowHash/events                                controllers.VoxelyticsController.storeWorkflowEvents(workflowHash: String, runName: String)
-GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: String, taskName: String)
-GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: String, taskName: String, artifactName: Option[String])
+GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: Option[String], taskName: String)
+GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: Option[String], taskName: String, artifactName: Option[String])
 POST          /voxelytics/logs                                                          controllers.VoxelyticsController.appendLogs
-GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String])
+GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String], startTimestamp:Long, endTimestamp: Long, limit: Option[Int])

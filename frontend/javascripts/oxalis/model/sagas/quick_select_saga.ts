@@ -27,9 +27,10 @@ import {
   FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
   registerLabelPointAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import ndarray from "ndarray";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
@@ -45,7 +46,12 @@ import { APIDataLayer } from "types/api_flow_types";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import { EnterAction, EscapeAction, setIsQuickSelectActiveAction } from "../actions/ui_actions";
+import {
+  EnterAction,
+  EscapeAction,
+  setIsQuickSelectActiveAction,
+  showQuickSelectSettingsAction,
+} from "../actions/ui_actions";
 import {
   getEnabledColorLayers,
   getLayerBoundingBox,
@@ -85,6 +91,8 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
     `The quick select tool will use the data of layer ${layerName}. If you want to use another layer, please hide the other non-segmentation layers.`,
   );
 });
+
+let wasPreviewModeToastAlreadyShown = false;
 
 function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
   const activeViewport = yield* select(
@@ -250,11 +258,19 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   }
 
   // Start an iterative feedback loop when preview mode is active.
-  yield* call(
-    [Toast, Toast.info],
-    "The quick select tool is currently in preview mode. Use the settings in the toolbar to refine the selection or confirm/cancel the selection (e.g., with Enter/Escape).",
-    { key: TOAST_KEY, sticky: true },
-  );
+
+  if (!wasPreviewModeToastAlreadyShown) {
+    // Explain how the preview mode works only once. The opened settings panel
+    // should be a good indicator for later usages that the preview mode is active.
+    wasPreviewModeToastAlreadyShown = true;
+    yield* call(
+      [Toast, Toast.info],
+      "The quick select tool is currently in preview mode. Use the settings in the toolbar to refine the selection or confirm/cancel the selection (e.g., with Enter/Escape).",
+      { key: TOAST_KEY, sticky: true },
+    );
+  }
+  yield* put(showQuickSelectSettingsAction(true));
+
   while (true) {
     const { finetuneAction, cancel, escape, enter, confirm } = (yield* race({
       finetuneAction: take("FINE_TUNE_QUICK_SELECT"),
@@ -313,6 +329,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
         labeledZoomStep,
       );
       yield* call([Toast, Toast.close], TOAST_KEY);
+      yield* put(showQuickSelectSettingsAction(true));
       return;
     }
   }
@@ -488,6 +505,15 @@ function* finalizeQuickSelect(
   );
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
+  yield* put(
+    updateSegmentAction(
+      volumeTracing.activeCellId,
+      {
+        somePosition: boundingBoxMag1.getCenter(),
+      },
+      volumeTracing.tracingId,
+    ),
+  );
 }
 
 function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {

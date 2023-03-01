@@ -1,10 +1,10 @@
-# webKnossos REST API
+# WEBKNOSSOS REST API
 
-The following HTTP requests may be used to interact with the backend of webKnossos. Please keep the server load in mind and avoid sending excessive amounts of requests or huge individual ones.
+The following HTTP requests may be used to interact with the backend of WEBKNOSSOS. Please keep the server load in mind and avoid sending excessive amounts of requests or huge individual ones.
 
 ## Authentication
 
-All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly above “logout”.
+All API routes expect the HTTP header `X-Auth-Token` to be set to your personal WEBKNOSSOS token. You can find this token in the WEBKNOSSOS menu, directly above “logout”.
 
 ## Versioning
 
@@ -15,6 +15,8 @@ The API is subject to frequent changes. However, older versions will be supporte
 New versions will be documented here, detailing the changes. Note, however, that some changes are not considered to be breaking the API and will not lead to new versions. Such changes include new optional parameters as well as new fields in the responses. The same goes for error message wording.
 
 ### Current api version is `v5`
+
+* Changed in all versions: `GET /datasets` no longer respects the isEditable parameter.
 
 * New in v5:
   - The annotation json no longer contains `skeletonTracingId` and `volumeTracingId`, but instead a list of `annotationLayers`, each containing `tracingId: String, typ: AnnotationLayerType, name: Option[String]`.
@@ -32,7 +34,7 @@ New versions will be documented here, detailing the changes. Note, however, that
 ### `GET /buildinfo`
 
 #### Returns
-JSON object containing information about the version of webKnossos
+JSON object containing information about the version of WEBKNOSSOS
 
 
 ---
@@ -185,9 +187,6 @@ List all teams that you can manage
 List all datasets for which you have read access
 
 #### Expects
- - Optional GET parameter `isEditable=[BOOLEAN]`
-   - If true: list only datasets you can edit
-   - If false: list only datasets you cannot edit
  - Optional GET parameter `isActive=[BOOLEAN]`
    - If true: list only datasets that are active (=imported)
    - If false: list only datasets that are inactive (=non-imported)
@@ -196,10 +195,12 @@ List all datasets for which you have read access
 #### Returns
  - JSON list of objects containing dataset information
 
-#### Note
+#### Notes
 
-The list of resolutions for each data layer is always empty in this list, for performance reasons.
-To get the actual resolutions, please use `GET /datasets/:organizationName/:dataSetName` (see below).
+ - The list of resolutions for each data layer is always empty in this list, for performance reasons. To get the actual resolutions, please use `GET /datasets/:organizationName/:dataSetName` (see below).
+ - This route used to accept an optional filter parameter isEditable. This is no longer supported. This change affects all api versions.
+
+
 
 ---
 ### `GET /datasets/:organizationName/:dataSetName`

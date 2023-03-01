@@ -7,48 +7,29 @@ import java.nio.file.spi.FileSystemProvider
 import java.nio.file._
 import java.util
 import java.util.concurrent.ConcurrentHashMap
-
-import com.google.common.collect.ImmutableMap
+import com.scalableminds.webknossos.datastore.storage.HttpBasicAuthCredential
 import com.typesafe.scalalogging.LazyLogging
 
-class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
-  protected val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]
+object HttpsFileSystemProvider {
+  val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]
 
-  override def getScheme: String = "https"
-
-  override def newFileSystem(uri: URI, env: util.Map[String, _]): FileSystem = {
-    if (uri.getUserInfo != null && uri.getUserInfo.nonEmpty) {
-      throw new Exception("Username was supplied in uri, should be in env instead.")
-    }
-    val basicAuthCredentials = HttpsBasicAuthCredentials.fromEnvMap(env)
-    val key = fileSystemKey(uri, basicAuthCredentials)
-    if (fileSystems.containsKey(key)) {
-      throw new FileSystemAlreadyExistsException("File system " + key + " already exists")
-    }
-
-    val fileSystem = new HttpsFileSystem(provider = this, uri = uri, basicAuthCredentials = basicAuthCredentials)
-
-    fileSystems.put(fileSystem.getKey, fileSystem)
-
-    fileSystem
-  }
-
-  def fileSystemKey(uri: URI, basicAuthCredentials: Option[HttpsBasicAuthCredentials]): String = {
+  def fileSystemKey(uri: URI, basicAuthCredentials: Option[HttpBasicAuthCredential]): String = {
     val uriWithUser = basicAuthCredentials.map { c =>
-      new URI(uri.getScheme, c.user, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
+      new URI(uri.getScheme, c.username, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
     }.getOrElse(uri)
     uriWithUser.toString
   }
+}
 
-  override def getFileSystem(uri: URI): FileSystem = {
-    val key = fileSystemKey(uri, None)
-    if (fileSystems.containsKey(key)) {
-      fileSystems.get(key)
-    } else this.newFileSystem(uri, ImmutableMap.builder[String, Any].build())
-  }
+class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
 
-  override def getPath(uri: URI): Path =
-    getFileSystem(uri).getPath(uri.getPath)
+  override def getScheme: String = "https" // Note that it will also handle http if called with one
+
+  override def newFileSystem(uri: URI, env: util.Map[String, _]): FileSystem = ???
+
+  override def getFileSystem(uri: URI): FileSystem = ???
+
+  override def getPath(uri: URI): Path = ???
 
   override def newByteChannel(path: Path,
                               openOptions: util.Set[_ <: OpenOption],

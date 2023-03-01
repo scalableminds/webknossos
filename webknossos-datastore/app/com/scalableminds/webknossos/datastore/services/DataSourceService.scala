@@ -33,8 +33,10 @@ class DataSourceService @Inject()(
     with LazyLogging
     with FoxImplicits {
 
-  override protected lazy val enabled: Boolean = config.Datastore.WatchFileSystem.enabled
-  protected lazy val tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
+  override protected def enabled: Boolean = config.Datastore.WatchFileSystem.enabled
+  override protected def tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
+
+  override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
   val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 
@@ -179,7 +181,7 @@ class DataSourceService @Inject()(
       "<empty>"
     }
     val outputForLogfile =
-      f"Contents of $propertiesFileName were changed by webKnossos at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
+      f"Contents of $propertiesFileName were changed by WEBKNOSSOS at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
     val logfilePath = dataSourcePath.resolve(logFileName)
     try {
       val fileWriter = new FileWriter(logfilePath.toString, true)

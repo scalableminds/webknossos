@@ -68,7 +68,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("maxTextureImageUnits", maxTextureImageUnits);
   }
 
@@ -106,7 +106,7 @@ function guardAgainstMesaLimit(maxSamplers: number, gl: any) {
 export function validateMinimumRequirements(specs: GpuSpecs): void {
   if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
     const msg =
-      "Your GPU is not able to render datasets in webKnossos. The graphic card should support at least a texture size of 4096 and 8 textures.";
+      "Your GPU is not able to render datasets in WEBKNOSSOS. The graphic card should support at least a texture size of 4096 and 8 textures.";
     Toast.error(msg, {
       sticky: true,
     });
@@ -291,7 +291,7 @@ export function computeDataTexturesSetup<
     hasSegmentation,
   );
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("maximumLayerCountToRender", maximumLayerCountToRender);
   }
 

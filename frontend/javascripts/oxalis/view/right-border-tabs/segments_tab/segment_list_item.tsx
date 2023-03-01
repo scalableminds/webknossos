@@ -7,7 +7,7 @@ import {
 } from "@ant-design/icons";
 import { List, Tooltip, Dropdown, Menu, MenuItemProps } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import Checkbox from "antd/lib/checkbox/Checkbox";
+import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
@@ -25,7 +25,7 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
-import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
@@ -255,8 +255,7 @@ function _MeshInfoItem(props: {
     <Tooltip title="Change visibility">
       <Checkbox
         checked={isVisible}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
-        onChange={(event: React.SyntheticEvent) => {
+        onChange={(event: CheckboxChangeEvent) => {
           if (!props.visibleSegmentationLayer) {
             return;
           }
@@ -264,7 +263,6 @@ function _MeshInfoItem(props: {
           onChangeMeshVisibility(
             props.visibleSegmentationLayer.name,
             segment.id,
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
             event.target.checked,
           );
         }}
@@ -306,7 +304,7 @@ function _MeshInfoItem(props: {
             marginLeft: 6,
           }}
         >
-          {getRefreshButton(segment, isPrecomputed, isLoading, props.visibleSegmentationLayer)}
+          {getRefreshButton(segment, isLoading, props.visibleSegmentationLayer)}
           {downloadButton}
           {deleteButton}
         </div>
@@ -345,7 +343,7 @@ function _SegmentListItem({
   const mappedId = mapId(segment.id);
 
   const segmentColorHSLA = useSelector(
-    (state: OxalisState) => getSegmentColorAsHSL(state, mappedId),
+    (state: OxalisState) => getSegmentColorAsHSLA(state, mappedId),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
 
@@ -465,57 +463,59 @@ function _SegmentListItem({
         // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
         autoDestroy
         placement="bottom"
-        visible={activeDropdownSegmentId === segment.id}
-        onVisibleChange={(isVisible) => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
+        open={activeDropdownSegmentId === segment.id}
+        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
-          <EditableTextLabel
-            value={segment.name || `Segment ${segment.id}`}
-            label="Segment Name"
-            onClick={() => onSelectSegment(segment)}
-            onChange={(name) => {
-              if (visibleSegmentationLayer != null) {
-                updateSegment(
-                  segment.id,
-                  {
-                    name,
-                  },
-                  visibleSegmentationLayer.name,
-                );
-              }
-            }}
-            margin="0 5px"
-            disableEditing={!allowUpdate}
-          />
-          <Tooltip title="Open context menu (also available via right-click)">
-            <EllipsisOutlined
-              onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
+          <div style={{ display: "inline-flex", alignItems: "center" }}>
+            <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+            <EditableTextLabel
+              value={segment.name || `Segment ${segment.id}`}
+              label="Segment Name"
+              onClick={() => onSelectSegment(segment)}
+              onChange={(name) => {
+                if (visibleSegmentationLayer != null) {
+                  updateSegment(
+                    segment.id,
+                    {
+                      name,
+                    },
+                    visibleSegmentationLayer.name,
+                  );
+                }
+              }}
+              margin="0 5px"
+              disableEditing={!allowUpdate}
             />
-          </Tooltip>
-          {/* Show Default Segment Name if another one is already defined*/}
-          {getSegmentIdDetails()}
-          {segment.id === centeredSegmentId ? (
-            <Tooltip title="This segment is currently centered in the data viewports.">
-              <i
-                className="fas fa-crosshairs deemphasized-segment-name"
-                style={{
-                  marginLeft: 4,
-                }}
+            <Tooltip title="Open context menu (also available via right-click)">
+              <EllipsisOutlined
+                onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
               />
             </Tooltip>
-          ) : null}
-          {segment.id === activeCellId ? (
-            <Tooltip title="The currently active segment id belongs to this segment.">
-              <i
-                className="fas fa-paint-brush deemphasized-segment-name"
-                style={{
-                  marginLeft: 4,
-                }}
-              />
-            </Tooltip>
-          ) : null}
+            {/* Show Default Segment Name if another one is already defined*/}
+            {getSegmentIdDetails()}
+            {segment.id === centeredSegmentId ? (
+              <Tooltip title="This segment is currently centered in the data viewports.">
+                <i
+                  className="fas fa-crosshairs deemphasized-segment-name"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+            {segment.id === activeCellId ? (
+              <Tooltip title="The currently active segment id belongs to this segment.">
+                <i
+                  className="fas fa-paint-brush deemphasized-segment-name"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+          </div>
         </Tooltip>
       </Dropdown>
 
@@ -542,7 +542,6 @@ const SegmentListItem = React.memo<Props>(_SegmentListItem);
 
 function getRefreshButton(
   segment: Segment,
-  isPrecomputed: boolean,
   isLoading: boolean,
   visibleSegmentationLayer: APISegmentationLayer | null | undefined,
 ) {
@@ -560,7 +559,7 @@ function getRefreshButton(
       />
     );
   } else {
-    return isPrecomputed ? null : (
+    return (
       <Tooltip title="Refresh Mesh">
         <ReloadOutlined
           key="refresh-button"

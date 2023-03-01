@@ -1,14 +1,13 @@
 package oxalis.mail
 
-import java.net.URL
-
-import javax.inject.Inject
 import models.organization.Organization
 import models.user.User
 import play.api.i18n.Messages
 import utils.WkConf
 import views._
 
+import java.net.URL
+import javax.inject.Inject
 import scala.util.Try
 
 class DefaultMails @Inject()(conf: WkConf) {
@@ -25,7 +24,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultSender,
       subject =
-        s"webKnossos | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
+        s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
       bodyHtml = html.mail.notifyAdminNewUser(name, brainDBResult, uri, autoActivate).body,
       recipients = List(organization.newUserMailingList)
     )
@@ -37,7 +36,7 @@ class DefaultMails @Inject()(conf: WkConf) {
                     organization: Organization): Mail =
     Mail(
       from = defaultSender,
-      subject = s"webKnossos | Time limit reached. ${user.abreviatedName} in $projectName",
+      subject = s"WEBKNOSSOS | Time limit reached. ${user.abreviatedName} in $projectName",
       bodyHtml = html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri).body,
       recipients = List(organization.overTimeMailingList)
     )
@@ -46,27 +45,27 @@ class DefaultMails @Inject()(conf: WkConf) {
       implicit messages: Messages): Mail =
     Mail(
       from = defaultSender,
-      subject = "Welcome to webKnossos",
+      subject = "Welcome to WEBKNOSSOS",
       bodyHtml = html.mail.newUser(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
       recipients = List(receiver)
     )
 
   def activatedMail(name: String, receiver: String): Mail =
     Mail(from = defaultSender,
-         subject = "webKnossos | Account activated",
+         subject = "WEBKNOSSOS | Account activated",
          bodyHtml = html.mail.validateUser(name, uri).body,
          recipients = List(receiver))
 
   def changePasswordMail(name: String, receiver: String): Mail =
     Mail(from = defaultSender,
-         subject = "webKnossos | Password changed",
+         subject = "WEBKNOSSOS | Password changed",
          bodyHtml = html.mail.passwordChanged(name, uri).body,
          recipients = List(receiver))
 
   def resetPasswordMail(name: String, receiver: String, token: String): Mail =
     Mail(
       from = defaultSender,
-      subject = "webKnossos | Password Reset",
+      subject = "WEBKNOSSOS | Password Reset",
       bodyHtml = html.mail.resetPassword(name, uri, token).body,
       recipients = List(receiver)
     )
@@ -74,7 +73,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def newOrganizationMail(organizationDisplayName: String, creatorEmail: String, domain: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"webKnossos | New Organization created on $domain",
+      subject = s"WEBKNOSSOS | New Organization created on $domain",
       bodyHtml = html.mail.notifyAdminNewOrganization(organizationDisplayName, creatorEmail, domain).body,
       recipients = List(newOrganizationMailingList)
     )
@@ -87,17 +86,73 @@ class DefaultMails @Inject()(conf: WkConf) {
     val host = Try { new URL(uri) }.toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
-      subject = s"$senderName invited you to join their webKnossos organization at $host",
+      subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
       bodyHtml = html.mail.invite(senderName, organizationDisplayName, inviteTokenValue, uri, autoVerify).body,
       recipients = List(receiver)
     )
   }
 
-  def helpMail(user: User, userEmail: String, organizationDisplayName: String, message: String): Mail =
+  def helpMail(user: User,
+               userEmail: String,
+               organizationDisplayName: String,
+               message: String,
+               currentUrl: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Help requested // Feedback provided",
-      bodyHtml = html.mail.help(user.name, organizationDisplayName, message).body,
+      bodyHtml = html.mail.help(user.name, organizationDisplayName, message, currentUrl).body,
       recipients = List("hello@webknossos.org", userEmail)
     )
+
+  def extendPricingPlanMail(user: User, userEmail: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "WEBKNOSSOS Plan Extension Request",
+      bodyHtml = html.mail.extendPricingPlan(user.name).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanToTeamMail(user: User, userEmail: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "WEBKNOSSOS Plan Upgrade Request",
+      bodyHtml = html.mail.upgradePricingPlanToTeam(user.name).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanToPowerMail(user: User, userEmail: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "WEBKNOSSOS Plan Upgrade Request",
+      bodyHtml = html.mail.upgradePricingPlanToPower(user.name).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to upgrade WEBKNOSSOS users",
+      bodyHtml = html.mail.upgradePricingPlanUsers(user.name, requestedUsers).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanStorageMail(user: User, userEmail: String, requestedStorage: Int): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to upgrade WEBKNOSSOS storage",
+      bodyHtml = html.mail.upgradePricingPlanStorage(user.name, requestedStorage).body,
+      recipients = List(userEmail)
+    )
+
+  def upgradePricingPlanRequestMail(user: User,
+                                    userEmail: String,
+                                    organizationDisplayName: String,
+                                    messageBody: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to upgrade WEBKNOSSOS plan",
+      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, organizationDisplayName, messageBody).body,
+      recipients = List("hello@webknossos.org")
+    )
+
 }

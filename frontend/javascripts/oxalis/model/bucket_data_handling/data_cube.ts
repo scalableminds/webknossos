@@ -31,7 +31,7 @@ import constants, { MappingStatusEnum } from "oxalis/constants";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
-    "webKnossos needed to allocate an unusually large amount of image data. It is advised to save your work and reload the page.";
+    "WEBKNOSSOS needed to allocate an unusually large amount of image data. It is advised to save your work and reload the page.";
   ErrorHandling.notify(new Error(msg));
   Toast.warning(msg, {
     sticky: true,

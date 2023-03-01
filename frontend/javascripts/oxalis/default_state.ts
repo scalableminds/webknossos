@@ -159,6 +159,7 @@ const defaultState: OxalisState = {
     owner: null,
     contributors: [],
     othersMayEdit: false,
+    blockedByUser: null,
     annotationLayers: [],
   },
   save: {
@@ -214,6 +215,7 @@ const defaultState: OxalisState = {
     },
   },
   activeUser: null,
+  activeOrganization: null,
   uiInformation: {
     activeTool: "MOVE",
     showDropzoneModal: false,
@@ -234,6 +236,7 @@ const defaultState: OxalisState = {
       isBusy: false,
     },
     isQuickSelectActive: false,
+    areQuickSelectSettingsOpen: false,
   },
   localSegmentationData: {},
 };

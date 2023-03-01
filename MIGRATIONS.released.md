@@ -1,9 +1,53 @@
 # Migration Guide (Released)
-All migrations of webKnossos are documented in this file.
+All migrations of WEBKNOSOSS are documented in this file.
 See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an official release.
 
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
+
+## [23.03.0](https://github.com/scalableminds/webknossos/releases/tag/23.03.0) - 2023-02-28
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.1...23.03.0)
+
+- WEBKNOSSOS now requires Node.js not only for development and building, but also for execution. The prebuilt Docker images already contain this dependency. If you're using these, nothing needs to be changed. [#6803](https://github.com/scalableminds/webknossos/pull/6803)
+- Requires Voxelytics worker version 23.02.xx for long-running jobs. [#6838](https://github.com/scalableminds/webknossos/pull/6838)
+
+### Postgres Evolutions:
+
+- [099-rename-credential-types.sql](conf/evolutions/099-rename-credential-types.sql)
+- [100-annotation-mutexes.sql](conf/evolutions/100-annotation-mutexes.sql)
+
+
+## [23.02.1](https://github.com/scalableminds/webknossos/releases/tag/23.02.1) - 2023-02-07
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.0...23.02.1)
+
+### Postgres Evolutions:
+None.
+
+## [23.02.0](https://github.com/scalableminds/webknossos/releases/tag/23.02.0) - 2023-02-01
+[Commits](https://github.com/scalableminds/webknossos/compare/23.01.0...23.02.0)
+
+- WEBKNOSSOS requires Loki instead of Elasticsearch for Voxelytics logging now. Please update the `application.conf`: Remove `voxelytics.elasticsearch.index`, rename `voxelytics.elasticsearch` to `voxelytics.loki`, and update `voxelytics.loki.uri`. [#6770](https://github.com/scalableminds/webknossos/pull/6770)
+
+### Postgres Evolutions:
+
+- [094-pricing-plans.sql](conf/evolutions/094-pricing-plans.sql)
+- [095-constraint-naming.sql](conf/evolutions/095-constraint-naming.sql)
+- [096-storage.sql](conf/evolutions/096-storage.sql)
+- [097-credentials.sql](conf/evolutions/097-credentials.sql)
+- [098-voxelytics-states.sql](conf/evolutions/098-voxelytics-states.sql)
+
+
+## [23.01.0](https://github.com/scalableminds/webknossos/releases/tag/23.01.0) - 2023-01-03
+[Commits](https://github.com/scalableminds/webknossos/compare/22.12.0...23.01.0)
+
+- Bulk task creation now needs the taskTypeId, the task type summary will no longer be accepted. If you have scripts generating CSVs for bulk task creation, they should not output task type summaries. [#6640](https://github.com/scalableminds/webknossos/pull/6640)
+
+### Postgres Evolutions:
+
+- [091-folders.sql](conf/evolutions/091-folders.sql)
+- [092-oidc.sql](conf/evolutions/092-oidc.sql)
+- [093-terms-of-service.sql](conf/evolutions/093-terms-of-service.sql)
+
 
 ## [22.12.0](https://github.com/scalableminds/webknossos/releases/tag/22.12.0) - 2022-11-24
 [Commits](https://github.com/scalableminds/webknossos/compare/22.11.2...22.12.0)

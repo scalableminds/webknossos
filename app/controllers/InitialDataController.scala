@@ -67,13 +67,18 @@ Samplecountry
 """
   private val organizationTeamId = ObjectId.generate
   private val defaultOrganization =
-    Organization(ObjectId.generate,
-                 "sample_organization",
-                 additionalInformation,
-                 "/assets/images/oxalis.svg",
-                 "Sample Organization",
-                 PricingPlan.Custom,
-                 ObjectId.generate)
+    Organization(
+      ObjectId.generate,
+      "sample_organization",
+      additionalInformation,
+      "/assets/images/logo.svg",
+      "Sample Organization",
+      PricingPlan.Custom,
+      None,
+      None,
+      None,
+      ObjectId.generate
+    )
   private val organizationTeam =
     Team(organizationTeamId, defaultOrganization._id, "Default", isOrganizationTeam = true)
   private val userId = ObjectId.generate
@@ -96,6 +101,7 @@ Samplecountry
     Json.obj(),
     userService.createLoginInfo(userId),
     isAdmin = true,
+    isOrganizationOwner = true,
     isDatasetManager = true,
     isUnlisted = false,
     isDeactivated = false,
@@ -117,6 +123,7 @@ Samplecountry
     Json.obj(),
     userService.createLoginInfo(userId2),
     isAdmin = false,
+    isOrganizationOwner = false,
     isDatasetManager = false,
     isUnlisted = false,
     isDeactivated = false,
@@ -125,7 +132,7 @@ Samplecountry
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
     Some(Instant.now),
-    Some("https://static.webknossos.org/images/oxalis.svg"),
+    Some("https://static.webknossos.org/images/icon-only.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(
       "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")

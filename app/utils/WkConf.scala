@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration._
 
@@ -39,6 +40,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
     }
 
+    object Annotation {
+      object Mutex {
+        val expiryTime: FiniteDuration = get[FiniteDuration]("webKnossos.annotation.mutex.expiryTime")
+      }
+    }
+
     object Cache {
       object User {
         val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.cache.user.timeout")
@@ -61,8 +68,21 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val children = List(User)
     }
 
+    object FetchUsedStorage {
+      val rescanInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.rescanInterval")
+      val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.tickerInterval")
+      val scansPerTick: Int = get[Int]("webKnossos.fetchUsedStorage.scansPerTick")
+    }
+
+    object TermsOfService {
+      val enabled: Boolean = get[Boolean]("webKnossos.termsOfService.enabled")
+      val url: String = get[String]("webKnossos.termsOfService.url")
+      val acceptanceDeadline: Instant = get[Instant]("webKnossos.termsOfService.acceptanceDeadline")
+      val version: Int = get[Int]("webKnossos.termsOfService.version")
+    }
+
     val operatorData: String = get[String]("webKnossos.operatorData")
-    val children = List(User, Tasks, Cache, SampleOrganization)
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
   }
 
   object SingleSignOn {
@@ -189,18 +209,25 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Slick {
     val checkSchemaOnStartup: Boolean = get[Boolean]("slick.checkSchemaOnStartup")
+
+    object Db {
+      val url: String = get[String]("slick.db.url")
+      val user: String = get[String]("slick.db.user")
+      val password: String = get[String]("slick.db.password")
+    }
+
+    val children = List(Db)
   }
 
   object Voxelytics {
     val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
-    object Elasticsearch {
-      val uri: String = get[String]("voxelytics.elasticsearch.uri")
-      val index: String = get[String]("voxelytics.elasticsearch.index")
-      val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.elasticsearch.startupTimeout")
+    object Loki {
+      val uri: String = get[String]("voxelytics.loki.uri")
+      val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.loki.startupTimeout")
     }
 
-    val children = List(Elasticsearch)
+    val children = List(Loki)
   }
 
   val children =

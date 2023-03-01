@@ -14,7 +14,7 @@ import {
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
@@ -30,18 +30,17 @@ import type {
 } from "types/api_flow_types";
 import { Unicode, Vector3 } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
-  updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
   sendAnalyticsEvent,
+  updateDatasetPartial,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -56,6 +55,7 @@ import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
+import { defaultContext } from "@tanstack/react-query";
 
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
@@ -99,7 +99,6 @@ type State = {
   savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined;
   inferredDataSource: APIDataSource | null | undefined;
   differenceBetweenDataSources: Record<string, any>;
-  hasNoAllowedTeams: boolean;
   dataSourceSettingsStatus: DataSourceSettingsStatus;
 };
 export type FormData = {
@@ -167,6 +166,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   formRef = React.createRef<FormInstance>();
   unblock: UnregisterCallback | null | undefined;
   blockTimeoutId: number | null | undefined;
+  static contextType = defaultContext;
+  declare context: React.ContextType<typeof defaultContext>;
 
   state: State = {
     hasUnsavedChanges: false,
@@ -179,7 +180,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     savedDataSourceOnServer: null,
     inferredDataSource: null,
     differenceBetweenDataSources: {},
-    hasNoAllowedTeams: false,
     dataSourceSettingsStatus: {
       appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
       isJSONFormatValid: IsJSONFormatValidEnum.Yes,
@@ -334,7 +334,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],
-          sortingKey: moment(dataset.sortingKey),
+          sortingKey: dayjs(dataset.sortingKey),
         },
       });
       // This call cannot be combined with the previous setFieldsValue,
@@ -357,7 +357,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       this.setState({
         datasetDefaultConfiguration,
         dataset,
-        hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
       handleGenericError(error as Error);
@@ -440,9 +439,9 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       message = (
         <div>
           The current datasource-properties.json on the server seems to be in an invalid JSON format
-          (or is missing completely). The settings below are suggested by webKnossos and should be
+          (or is missing completely). The settings below are suggested by WEBKNOSSOS and should be
           adjusted. <br />
-          Be aware that webKnossos cannot guess properties like the voxel size or the largest
+          Be aware that WEBKNOSSOS cannot guess properties like the voxel size or the largest
           segment id. You must set them yourself.
         </div>
       );
@@ -463,7 +462,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           >
             Here
           </LinkButton>{" "}
-          are suggested settings from webKnossos. But be aware that properties like the voxel size
+          are suggested settings from WEBKNOSSOS. But be aware that properties like the voxel size
           or the largest segment id cannot be detected correctly. <br />
           If you want to apply those settings, click{" "}
           <LinkButton onClick={applySuggestedSettings}>here</LinkButton>.
@@ -487,7 +486,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
-          webKnossos detected additional information not yet present in the dataset’s{" "}
+          WEBKNOSSOS detected additional information not yet present in the dataset’s{" "}
           <em>datasource-properties.json</em> file:
           <div
             style={{
@@ -613,7 +612,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         const dataSource = JSON.parse(form.getFieldValue("dataSourceJson"));
         const didNotEditDatasource = !this.didDatasourceChange(dataSource);
         return didNotEditDatasource;
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     }
@@ -669,7 +668,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     }
 
     const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
-    await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });
+    await updateDatasetPartial(this.props.datasetId, datasetChangeValues);
 
     if (datasetDefaultConfiguration != null) {
       await updateDatasetDefaultConfiguration(
@@ -696,7 +695,18 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     this.setState({
       hasUnsavedChanges: false,
     });
-    datasetCache.clear();
+
+    if (dataset) {
+      // Update new cache
+      const queryClient = this.context;
+      if (queryClient) {
+        queryClient.invalidateQueries({
+          queryKey: ["datasetsByFolder", dataset.folderId],
+        });
+        queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+      }
+    }
+
     trackAction(`Dataset ${verb}`);
     this.props.onComplete();
   };
@@ -771,10 +781,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     );
   }
 
-  onValuesChange = (changedValues: FormData, allValues: FormData) => {
-    const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
+  onValuesChange = (_changedValues: FormData, _allValues: FormData) => {
     this.setState({
-      hasNoAllowedTeams,
       hasUnsavedChanges: true,
     });
   };
@@ -814,17 +822,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         />
       </Tooltip>
     );
-    const { hasNoAllowedTeams } = this.state;
-    const hasNoAllowedTeamsWarning = hasNoAllowedTeams ? (
-      <Tooltip title="Please double-check some fields here.">
-        <ExclamationCircleOutlined
-          style={{
-            marginLeft: 4,
-            color: "var(--ant-warning)",
-          }}
-        />
-      </Tooltip>
-    ) : null;
+
     return (
       <Form
         ref={this.formRef}
@@ -893,12 +891,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                 </TabPane>
 
                 <TabPane
-                  tab={
-                    <span>
-                      Sharing & Permissions{" "}
-                      {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
-                    </span>
-                  }
+                  tab={<span>Sharing & Permissions {formErrors.general ? errorIcon : null}</span>}
                   key="sharing"
                   forceRender
                 >
@@ -907,7 +900,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                       form={form}
                       datasetId={this.props.datasetId}
                       dataset={this.state.dataset}
-                      hasNoAllowedTeams={hasNoAllowedTeams}
                     />
                   </Hideable>
                 </TabPane>
@@ -931,9 +923,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                 {isUserAdmin && features().allowDeleteDatasets ? (
                   <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
                     <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
-                      <DatasetCacheProvider>
-                        <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
-                      </DatasetCacheProvider>
+                      <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
                     </Hideable>
                   </TabPane>
                 ) : null}

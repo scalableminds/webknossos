@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import _ from "lodash";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 
 // This component allows cross origin communication, for example, between a host page
 // and an embedded webKnossos iframe.

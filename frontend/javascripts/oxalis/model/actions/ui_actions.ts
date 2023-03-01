@@ -18,6 +18,7 @@ type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientMod
 export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetIsQuickSelectActiveAction = ReturnType<typeof setIsQuickSelectActiveAction>;
+type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -36,7 +37,8 @@ export type UiAction =
   | SetBusyBlockingInfoAction
   | EnterAction
   | EscapeAction
-  | SetIsQuickSelectActiveAction;
+  | SetIsQuickSelectActiveAction
+  | ShowQuickSelectSettingsAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -123,4 +125,10 @@ export const setIsQuickSelectActiveAction = (isActive: boolean) =>
   ({
     type: "SET_IS_QUICK_SELECT_ACTIVE",
     isActive,
+  } as const);
+
+export const showQuickSelectSettingsAction = (isOpen: boolean) =>
+  ({
+    type: "SET_ARE_QUICK_SELECT_SETTINGS_OPEN",
+    isOpen,
   } as const);

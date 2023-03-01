@@ -4,8 +4,9 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { V2 } from "libs/mjs";
 import type { Vector2, OrthoView } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getPlaneExtentInVoxelFromStore } from "oxalis/model/accessors/flycam_accessor";
+import { getPlaneExtentInVoxelFromStore } from "oxalis/model/accessors/view_mode_accessor";
 import Dimensions from "oxalis/model/dimensions";
+
 export function* getHalfViewportExtents(activeViewport: OrthoView): Saga<Vector2> {
   const zoom = yield* select((state) => state.flycam.zoomStep);
   const baseVoxelFactors = yield* select((state) =>

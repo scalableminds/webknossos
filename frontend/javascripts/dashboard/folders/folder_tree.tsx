@@ -15,6 +15,8 @@ import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 const { DirectoryTree } = Tree;
 
@@ -141,19 +143,26 @@ export function FolderTreeSidebar({
     [context],
   );
 
+  const createMenu = () => (
+    <Menu
+      items={[{ key: "disabled", disabled: true, label: "Please right-click an existing folder." }]}
+    />
+  );
+
   return (
-    <div>
+    <div
+      style={{ display: "flex", flexDirection: "column", height: "100%" }}
+      className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
+    >
       <div
         ref={drop}
-        className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
         style={{
-          minHeight: 400,
           marginRight: 4,
           borderRadius: 2,
           paddingLeft: 6,
           paddingRight: 6,
           paddingTop: 2,
-          maxWidth: "20vw",
+          flex: 0,
         }}
       >
         {!isLoading && treeData.length === 0 ? (
@@ -176,6 +185,21 @@ export function FolderTreeSidebar({
           expandedKeys={expandedKeys}
         />
       </div>
+      <Dropdown
+        overlay={createMenu}
+        placement="bottom"
+        // The overlay is generated lazily. By default, this would make the overlay
+        // re-render on each parent's render() after it was shown for the first time.
+        // The reason for this is that it's not destroyed after closing.
+        // Therefore, autoDestroy is passed.
+        // destroyPopupOnHide should also be an option according to the docs, but
+        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+        autoDestroy
+        trigger={["contextMenu"]}
+      >
+        <div style={{ flex: 1 }} />
+      </Dropdown>
     </div>
   );
 }
@@ -187,14 +211,6 @@ function generateTitle(
 ) {
   const { key: id, title, isEditable } = folder;
 
-  function createFolder(): void {
-    const folderName = prompt("Please input a name for the new folder", "New folder");
-    if (!folderName) {
-      // The user hit escape/cancel
-      return;
-    }
-    context.queries.createFolderMutation.mutateAsync([id, folderName]);
-  }
   function deleteFolder(): void {
     context.queries.deleteFolderMutation.mutateAsync(id);
   }
@@ -203,33 +219,41 @@ function generateTitle(
     setFolderIdForEditModal(id);
   }
 
-  const createMenu = () => (
-    <Menu>
-      <Menu.Item
-        key="create"
-        data-group-id={id}
-        onClick={createFolder}
-        disabled={!folder.isEditable}
-      >
-        <PlusOutlined />
-        New Folder
-      </Menu.Item>
-      <Menu.Item key="edit" data-group-id={id} onClick={editFolder} disabled={!folder.isEditable}>
-        <EditOutlined />
-        Edit Folder
-      </Menu.Item>
+  const createMenu = () => {
+    const menuItems = [
+      {
+        key: "create",
+        disabled: !folder.isEditable,
+        onClick: () => context.showCreateFolderPrompt(id),
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <PlusOutlined />
+            New Folder
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "edit",
+        disabled: !folder.isEditable,
+        onClick: editFolder,
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <EditOutlined />
+            Edit Folder
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "delete",
+        onClick: deleteFolder,
+        disabled: !folder.isEditable,
+        icon: <DeleteOutlined />,
+        label: <span>Delete Folder</span>,
+      },
+    ];
 
-      <Menu.Item
-        key="delete"
-        data-group-id={id}
-        onClick={deleteFolder}
-        disabled={!folder.isEditable}
-      >
-        <DeleteOutlined />
-        Delete Folder
-      </Menu.Item>
-    </Menu>
-  );
+    return <Menu items={menuItems} />;
+  };
 
   return (
     <Dropdown
@@ -285,7 +309,7 @@ function FolderItemAsDropTarget(props: {
         let successCounter = 0;
         Promise.all(
           selectedDatasets.map((ds) =>
-            context.queries.updateDatasetMutation.mutateAsync([ds, folderId]).then(() => {
+            context.queries.updateDatasetMutation.mutateAsync([ds, { folderId }]).then(() => {
               successCounter++;
               modal.update({
                 content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
@@ -312,7 +336,7 @@ function FolderItemAsDropTarget(props: {
         const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
 
         if (dataset) {
-          context.queries.updateDatasetMutation.mutateAsync([dataset, folderId]);
+          context.queries.updateDatasetMutation.mutateAsync([dataset, { folderId }]);
         } else {
           Toast.error("Could not move dataset. Please try again.");
         }

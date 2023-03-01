@@ -2,6 +2,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import { getResolutionFactors, getAbsoluteCoords } from "oxalis/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
+import { transDim } from "./utils.glsl";
 
 export const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
@@ -92,6 +93,7 @@ export const getColorForCoords: ShaderModule = {
     getAbsoluteCoords,
     getResolutionFactors,
     hashCombine,
+    transDim,
   ],
   code: `
     float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
@@ -196,7 +198,9 @@ export const getColorForCoords: ShaderModule = {
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
-        if (offsetInBucket.y < 0.01 || offsetInBucket.x < 0.01) {
+        vec3 offsetInBucketUVW = transDim(offsetInBucket);
+        if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
+            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.) {
           beSafe = true;
         }
       }

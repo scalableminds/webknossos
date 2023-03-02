@@ -398,6 +398,6 @@ test.serial(
     );
   },
 );
-test.afterEach(async (t) => {
+test.afterEach.always(async (t) => {
   await t.context.browser.close();
 });

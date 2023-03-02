@@ -1,11 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.webknossos.datastore.datareaders.{
-  ChunkReader,
-  DatasetHeader,
-  FileSystemStore,
-  ChunkTyper
-}
+import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader, FileSystemStore, ChunkTyper}
 import com.typesafe.scalalogging.LazyLogging
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}

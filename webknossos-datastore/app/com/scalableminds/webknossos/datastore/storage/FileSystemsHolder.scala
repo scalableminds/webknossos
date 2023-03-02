@@ -5,6 +5,13 @@ import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.{CloudStorageConfiguration, CloudStorageFileSystem}
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.remotefilesystem.{
+  GoogleCloudRemoteFileSystem,
+  HttpsRemoteFileSystem,
+  RemoteFileSystem,
+  RemotePath,
+  S3RemoteFileSystem
+}
 import com.scalableminds.webknossos.datastore.s3fs.{S3FileSystem, S3FileSystemProvider}
 import com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsFileSystem
 import com.typesafe.scalalogging.LazyLogging
@@ -25,11 +32,18 @@ object FileSystemsHolder extends LazyLogging {
   private val fileSystemsCache: AlfuFoxCache[RemoteSourceDescriptor, FileSystem] =
     AlfuFoxCache(maxEntries = 100)
 
+  private val remotePathCache: AlfuFoxCache[RemoteSourceDescriptor, RemotePath] =
+    AlfuFoxCache(maxEntries = 100)
+
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 
   def getOrCreate(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[FileSystem] =
     fileSystemsCache.getOrLoad(remoteSource, create)
+
+  def getOrCreateRemote(remoteSourceDescriptor: RemoteSourceDescriptor)(
+      implicit ec: ExecutionContext): Fox[RemotePath] =
+    remotePathCache.getOrLoad(remoteSourceDescriptor, createRemote)
 
   def create(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[FileSystem] = {
     val scheme = remoteSource.uri.getScheme
@@ -40,6 +54,28 @@ object FileSystemsHolder extends LazyLogging {
         getAmazonS3FileSystem(remoteSource)
       } else if (scheme == schemeHttps || scheme == schemeHttp) {
         getHttpsFileSystem(remoteSource)
+      } else {
+        throw new Exception(s"Unknown file system scheme $scheme")
+      }
+      logger.info(s"Successfully created file system for ${remoteSource.uri.toString}")
+      Fox.successful(fs)
+    } catch {
+      case e: Exception =>
+        val msg = s"get file system errored for ${remoteSource.uri.toString}:"
+        logger.error(msg, e)
+        Fox.failure(msg, Full(e))
+    }
+  }
+
+  def createRemote(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[RemotePath] = {
+    val scheme = remoteSource.uri.getScheme
+    try {
+      val fs: RemotePath = if (scheme == schemeGS) {
+        GoogleCloudRemoteFileSystem.create(remoteSource)
+      } else if (scheme == schemeS3) {
+        S3RemoteFileSystem.create(remoteSource)
+      } else if (scheme == schemeHttps || scheme == schemeHttp) {
+        HttpsRemoteFileSystem.create(remoteSource)
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")
       }

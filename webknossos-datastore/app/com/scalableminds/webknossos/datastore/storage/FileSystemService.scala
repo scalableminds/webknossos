@@ -18,8 +18,7 @@ class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCl
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).futureBox
       remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)
-      fileSystem <- FileSystemsHolder.getOrCreate(remoteSource) ?~> "remoteFileSystem.setup.failed"
-      remotePath <- tryo(fileSystem.getPath(FileSystemsHolder.pathFromUri(remoteSource.uri)))
+      remotePath <- FileSystemsHolder.getOrCreateRemote(remoteSource) ?~> "remoteFileSystem.setup.failed"
     } yield remotePath
 
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[FileSystemCredential] =

@@ -245,7 +245,6 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                                                 newId,
                                                                 newVersion = 0L,
                                                                 toCache = !persist)
-            // TODO: pass resolution list, largest segment id, label maps for remapping segment list
             mergedTracing = tracingService.merge(tracings, mergedVolumeStats)
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
           } yield {

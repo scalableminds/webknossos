@@ -131,11 +131,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
       bucket = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
-      _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing),
-                      bucket,
-                      action.data,
-                      updateGroupVersion,
-                      toCache = false)
+      _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
     } yield volumeTracing
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
@@ -313,10 +309,10 @@ class VolumeTracingService @Inject()(
         .withBoundingBox(dataSetBoundingBox.get)
     } else tracing
 
-  def duplicateData(sourceId: String,
-                    sourceTracing: VolumeTracing,
-                    destinationId: String,
-                    destinationTracing: VolumeTracing): Fox[Unit] =
+  private def duplicateData(sourceId: String,
+                            sourceTracing: VolumeTracing,
+                            destinationId: String,
+                            destinationTracing: VolumeTracing): Fox[Unit] =
     for {
       isTemporaryTracing <- isTemporaryTracing(sourceId)
       sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
@@ -423,22 +419,41 @@ class VolumeTracingService @Inject()(
       } else None
     } yield bucketPosOpt
 
-  def merge(tracings: Seq[VolumeTracing], mergedVolumeStats: MergedVolumeStats): VolumeTracing =
-    tracings
-      .reduceLeft(mergeTwo) // TODO: pass mergedVolumeStats, and index to look up label maps
+  def merge(tracings: Seq[VolumeTracing], mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
+    def mergeTwoWithStats(tracingAWithIndex: (VolumeTracing, Int),
+                          tracingBWithIndex: (VolumeTracing, Int)): (VolumeTracing, Int) =
+      (mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats),
+       tracingAWithIndex._2)
+
+    tracings.zipWithIndex
+      .reduceLeft(mergeTwoWithStats)
+      ._1
       .copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
       )
+  }
 
-  private def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
+  private def mergeTwo(tracingA: VolumeTracing,
+                       tracingB: VolumeTracing,
+                       indexB: Int,
+                       mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                      tracingB.userBoundingBox,
                                                      tracingA.userBoundingBoxes,
                                                      tracingB.userBoundingBoxes)
-
+    val tracingBSegments =
+      if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
+      else {
+        val labelMap = mergedVolumeStats.labelMaps(indexB)
+        tracingB.segments.map { segment =>
+          segment.copy(
+            segmentId = labelMap.getOrElse(segment.segmentId, segment.segmentId)
+          )
+        }
+      }
     tracingA.copy(
       largestSegmentId = largestSegmentId,
       boundingBox = mergedBoundingBox.getOrElse(
@@ -447,7 +462,8 @@ class VolumeTracingService @Inject()(
           0,
           0,
           0)), // should never be empty for volumes
-      userBoundingBoxes = userBoundingBoxes
+      userBoundingBoxes = userBoundingBoxes,
+      segments = tracingA.segments.toList ::: tracingBSegments.toList
     )
   }
 

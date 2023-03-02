@@ -4,15 +4,16 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   ChunkReader,
   DatasetHeader,
   FileSystemStore,
-  TypedChunkReader
+  ChunkTyper
 }
+import com.typesafe.scalalogging.LazyLogging
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.util.Using
 
 object N5ChunkReader {
   def create(store: FileSystemStore, header: DatasetHeader): ChunkReader =
-    new N5ChunkReader(header, store, ChunkReader.createTypedChunkReader(header))
+    new N5ChunkReader(header, store, ChunkReader.createChunkTyper(header))
 }
 
 // N5 allows for a 'varmode' which means that the number of elements in the chunk can deviate from the set chunk size.
@@ -20,19 +21,20 @@ object N5ChunkReader {
 // Here, we provide only provide one implementation to handle the `varmode`:
 // N5ChunkReader, always fills the chunk to the bytes necessary
 
-class N5ChunkReader(header: DatasetHeader, store: FileSystemStore, typedChunkReader: TypedChunkReader)
-    extends ChunkReader(header, store, typedChunkReader) {
+class N5ChunkReader(header: DatasetHeader, store: FileSystemStore, typedChunkReader: ChunkTyper)
+    extends ChunkReader(header, store, typedChunkReader)
+    with LazyLogging {
 
   val dataExtractor: N5DataExtractor = new N5DataExtractor
 
-  override protected def readBytes(path: String): Option[Array[Byte]] =
+  override protected def readChunkBytesAndShape(path: String): Option[(Array[Byte], Option[Array[Int]])] =
     Using.Manager { use =>
-      def processBytes(bytes: Array[Byte]): Array[Byte] = {
+      def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
         val is = use(new ByteArrayInputStream(bytes))
         val os = use(new ByteArrayOutputStream())
         header.compressorImpl.uncompress(is, os)
         val output = os.toByteArray
-        val paddedBlock = output ++ Array.fill(header.bytesPerChunk - output.length) {
+        val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
           header.fillValueNumber.byteValue()
         }
         paddedBlock
@@ -41,9 +43,7 @@ class N5ChunkReader(header: DatasetHeader, store: FileSystemStore, typedChunkRea
       for {
         bytes <- store.readBytes(path)
         (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
-        _ = assert(chunkSize == blockHeader.blockSize.product, "Chunk has to have same size as described in metadata")
-        unpackedData <- data
-        paddedChunk = processBytes(unpackedData)
-      } yield paddedChunk
+        paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
+      } yield (paddedChunkBytes, Some(blockHeader.blockSize))
     }.get
 }

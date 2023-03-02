@@ -46,7 +46,9 @@ Once the data is uploaded (and potentially converted), you can further configure
 WEBKNOSSOS supports loading and remotely streaming [Zarr](https://zarr.dev), [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) and [N5](https://github.com/saalfeldlab/n5) datasets from a remote source, e.g. Cloud storage (S3) or HTTP server. 
 WEBKNOSSOS supports loading Zarr datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
 
-WEBKNOSSOS can load several remote sources and assemble them into a WEBKNOSSOS dataset with several layers, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer.
+WEBKNOSSOS can load several remote sources and assemble them into a WEBKNOSSOS dataset with several layers, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer. 
+If you create the remote Zarr dataset with the [WEBKNOSSOS Python library](https://docs.webknossos.org/api/webknossos/dataset/dataset.html), all layers will be automatically detected. 
+With other converters, you may need to add the layers separately.
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Remote Dataset* tab
@@ -58,14 +60,15 @@ WEBKNOSSOS can load several remote sources and assemble them into a WEBKNOSSOS d
   Consider setting the dataset `name` property and double-check all other properties for correctness.
 6. Click `Import` to finish
 
-WEBKNOSSOS will NOT download/copy any data from these third-party data providers. 
-Rather, any data viewed in WEBKNOSSOS will be streamed read-only and directly from the remote source. 
+WEBKNOSSOS will NOT download or copy datasets in full from these third-party data providers. 
+Rather, any data viewed in WEBKNOSSOS will be streamed read-only from the remote source. 
+These remote datasets will not count against your storage quota on WEBKNOSSOS. 
 Any other WEBKNOSSOS feature, e.g., annotations, and access rights, will be stored in WEBKNOSSOS and do not affect these services. 
 
-Note that data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+Note that data streaming may incur costs and count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
-Hint: If you happen to have any Zarr dataset locally that you would like to view in WEBKNOSSOS, consider running an HTTP server locally to serve the dataset. Then WEBKNOSSOS can easily stream the data.
-Alternatively, convert the dataset to wkw using [webknossos-libs](https://github.com/scalableminds/webknossos-libs/).
+Hint: If you happen to have any Zarr dataset locally that you would like to view in WEBKNOSSOS, consider running an HTTP server locally to serve the dataset. 
+Then WEBKNOSSOS can easily stream the data.
 
 ### Working with Neuroglancer and BossDB datasets on webknossos.org
 webknossos.org supports loading and remotely streaming datasets in the [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) stored in the Google Cloud or datasets served from [BossDB](https://bossdb.org).
@@ -135,7 +138,7 @@ Any dataset uploaded through the web interface at [webknossos.org](https://webkn
 For manual conversion, we provide the following software tools and libraries:
 
 - The [WEBKNOSSOS Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
-- For other file formats, the [Python WEBKNOSSOS library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
+- For other file formats, the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
 See the page on [software tooling](./tooling.md) for more.
 

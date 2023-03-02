@@ -92,7 +92,11 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[VolumeTracing]] = request.body
-          val mergedTracing = tracingService.merge(tracings.flatten, MergedVolumeStats.empty)
+          val mergedTracing =
+            tracingService
+              .merge(tracings.flatten, MergedVolumeStats.empty)
+              // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
+              .copy(segments = List.empty)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
             Ok(Json.toJson(newId))
           }

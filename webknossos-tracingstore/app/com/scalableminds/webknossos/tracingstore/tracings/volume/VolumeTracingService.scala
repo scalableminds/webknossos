@@ -170,9 +170,9 @@ class VolumeTracingService @Inject()(
         val resolutionSet = resolutionSetFromZipfile(dataZip)
         if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
       }
-      // if none of the tracings contained any volume data do not save buckets, use full resolution list
+      // if none of the tracings contained any volume data do not save buckets, use full resolution list, as alraedy initialized on wk-side
       if (resolutionSets.isEmpty)
-        getRequiredMags(tracing, tracingId).map(_.toSet)
+        Fox.successful(tracing.resolutions.map(vec3IntFromProto).toSet)
       else {
         val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
           resolutionSets.forall(_ == head)

@@ -1,4 +1,4 @@
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 
 export function mayEditAnnotationProperties(state: OxalisState) {
   const { owner, restrictions } = state.tracing;

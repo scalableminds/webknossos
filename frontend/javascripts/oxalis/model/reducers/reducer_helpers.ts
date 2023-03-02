@@ -121,6 +121,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     contributors,
     othersMayEdit,
     annotationLayers,
+    blockedByUser: null,
   };
 }
 export function getNextTool(state: OxalisState): AnnotationTool | null {

@@ -259,6 +259,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
     "If you reopen your old annotation, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
+  "annotation.acquiringMutexFailed": _.template(
+    "This annotation is currently being edited by <%- userName %>. To avoid conflicts, you can only view it. If you want to edit it, please ask <%- userName %> to finish their work first.",
+  ),
+  "annotation.acquiringMutexFailed.noUser":
+    "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
+  "annotation.acquiringMutexSucceeded":
+    "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -331,9 +338,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
   "annotation.download": "The following annotation data is available for download immediately.",
   "annotation.export":
-    "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",
+    "Export this annotation as TIFF image(s). This may take a few moments depending on the size of your configured export.",
   "annotation.export_no_worker":
-    "This WEBKNOSSOS instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
+    "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
   "annotation.python_do_not_share":
     "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",

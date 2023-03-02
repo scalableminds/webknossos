@@ -25,7 +25,7 @@ import {
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
-import type { APIAnnotationType, APIUser } from "types/api_flow_types";
+import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
 import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
@@ -76,7 +76,6 @@ const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeo
 
 type OwnProps = {
   layoutMenu: React.ReactNode;
-  hasVolumeFallback: boolean;
 };
 type StateProps = {
   annotationType: APIAnnotationType;
@@ -88,6 +87,8 @@ type StateProps = {
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
+  annotationOwner: APIUserBase | null | undefined;
+  othersMayEdit: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -450,13 +451,21 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       hasTracing,
       restrictions,
       task,
-      hasVolumeFallback,
       annotationType,
       annotationId,
       activeUser,
       layoutMenu,
       busyBlockingInfo,
+      othersMayEdit,
+      annotationOwner,
     } = this.props;
+    const copyAnnotationText =
+      !restrictions.allowUpdate &&
+      activeUser != null &&
+      annotationOwner?.id === activeUser.id &&
+      othersMayEdit
+        ? "Duplicate"
+        : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const saveButton = restrictions.allowUpdate
       ? [
@@ -503,7 +512,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 key="copy-sandbox-button"
                 icon={<FileAddOutlined />}
                 onClick={this.handleCopySandboxToAccount}
-                title="Copy To My Account"
+                title={copyAnnotationText}
               >
                 <span className="hide-on-small-screen">Copy To My Account</span>
               </AsyncButtonWithAuthentication>,
@@ -527,9 +536,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             key="copy-button"
             icon={<FileAddOutlined />}
             onClick={this.handleCopyToAccount}
-            title="Copy To My Account"
+            title={copyAnnotationText}
           >
-            <span className="hide-on-small-screen">Copy To My Account</span>
+            <span className="hide-on-small-screen">{copyAnnotationText}</span>
           </AsyncButtonWithAuthentication>,
         ];
     const finishAndNextTaskButton =
@@ -576,9 +585,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           key="download-modal"
           isOpen={this.props.isDownloadModalOpen}
           onClose={this.handleDownloadClose}
-          annotationType={annotationType}
-          annotationId={annotationId}
-          hasVolumeFallback={hasVolumeFallback}
         />,
       );
     }
@@ -701,12 +707,14 @@ function mapStateToProps(state: OxalisState): StateProps {
     annotationType: state.tracing.annotationType,
     annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
+    annotationOwner: state.tracing.owner,
     task: state.task,
     activeUser: state.activeUser,
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
+    othersMayEdit: state.tracing.othersMayEdit,
   };
 }
 

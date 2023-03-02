@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed a bug where N5 datasets reading with end-chunks that have a chunk size differing from the metadata-supplied chunk size would fail for some areas. [#6890](https://github.com/scalableminds/webknossos/pull/6890)
 
 ### Removed
 

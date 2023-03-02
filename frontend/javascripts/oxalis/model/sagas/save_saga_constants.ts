@@ -8,8 +8,8 @@ export const MAX_SAVE_RETRY_WAITING_TIME = 300000; // 5m
 export const UNDO_HISTORY_SIZE = 20;
 // Other sagas which simply use the redux-saga's default `retry`,
 // need a more simplistic configuration.
-export const SETTINGS_RETRY_DELAY = 15 * 1000;
-export const SETTINGS_MAX_RETRY_COUNT = 20; // 20 * 15s == 5m
+export const SETTINGS_RETRY_DELAY = 3 * 1000;
+export const SETTINGS_MAX_RETRY_COUNT = 1; // 20 * 15s == 5m
 
 export const maximumActionCountPerBatch = 5000;
 export const maximumActionCountPerSave = 15000;

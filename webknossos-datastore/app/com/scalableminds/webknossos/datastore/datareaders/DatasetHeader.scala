@@ -26,18 +26,15 @@ trait DatasetHeader {
 
   lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 
-  lazy val bytesPerChunk: Int = chunkSize.toList.product * bytesPerElementFor(resolvedDataType)
+  lazy val bytesPerElement: Int = bytesPerElementFor(resolvedDataType)
+
+  lazy val bytesPerChunk: Int = chunkSize.toList.product * bytesPerElement
 
   lazy val fillValueNumber: Number =
     fill_value match {
       case Right(n) => n
       case Left(_)  => 0 // parsing fill value from string not currently supported
     }
-
-  lazy val chunkShapeOrdered: Array[Int] =
-    if (order == ArrayOrder.C) {
-      chunkSize
-    } else chunkSize.reverse
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
     if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank)

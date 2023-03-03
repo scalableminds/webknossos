@@ -357,6 +357,7 @@ void main() {
   worldCoord = modelMatrix * vec4(position, 1.0);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  float originalZ = gl_Position.z;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
   vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0., 1.)).xyz);
@@ -418,6 +419,7 @@ void main() {
   debugVal = getWorldCoordUVW();
 
   gl_Position = projectionMatrix * viewMatrix * worldCoord;
+  gl_Position.z = originalZ;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 

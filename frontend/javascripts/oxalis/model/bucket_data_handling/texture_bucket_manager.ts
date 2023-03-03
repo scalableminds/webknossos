@@ -4,7 +4,6 @@ import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handl
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import {
   getBucketCapacity,
-  getLookupBufferSize,
   getPackingDegree,
   getChannelCount,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
@@ -92,7 +91,6 @@ export default class TextureBucketManager {
   dataTextureCount: number;
   maximumCapacity: number;
   packingDegree: number;
-  lookUpBufferWidth: number;
   elementClass: ElementClass;
 
   constructor(
@@ -107,7 +105,6 @@ export default class TextureBucketManager {
     this.elementClass = elementClass;
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
     const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
-    this.lookUpBufferWidth = getLookupBufferSize(initializedGpuFactor);
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(_.range(this.maximumCapacity));

@@ -1,12 +1,8 @@
 import "test/mocks/lz4";
-import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import constants from "oxalis/constants";
 import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
 import resolutions from "test/fixtures/resolutions";
 import test, { ExecutionContext } from "ava";
 import { parser } from "@shaderfrog/glsl-parser";
-
-const DEFAULT_LOOK_UP_TEXTURE_WIDTH = getLookupBufferSize(constants.DEFAULT_GPU_MEMORY_FACTOR);
 
 test.beforeEach((t: ExecutionContext<any>) => {
   t.context.originalWarn = console.warn;
@@ -34,7 +30,6 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   /*
@@ -61,7 +56,6 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -81,7 +75,6 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   parser.parse(code);
@@ -101,7 +94,6 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -121,7 +113,6 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -140,7 +131,6 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);

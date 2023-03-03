@@ -20,6 +20,7 @@ import compileShader from "./shader_module_system";
 import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+
 type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
@@ -29,8 +30,8 @@ type Params = {
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
-  lookupTextureWidth: number;
 };
+
 export function formatNumberAsGLSLFloat(aNumber: number): string {
   if (aNumber % 1 > 0) {
     // If it is already a floating point number, we can use toString
@@ -122,7 +123,6 @@ const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
-const float l_texture_width = <%= l_texture_width %>;
 `;
 
 export default function getMainFragmentShader(params: Params) {
@@ -301,7 +301,6 @@ void main() {
     ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
-    l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: (vector3: Vector3) =>
@@ -468,7 +467,6 @@ void main() {
     ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
-    l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: (vector3: Vector3) =>

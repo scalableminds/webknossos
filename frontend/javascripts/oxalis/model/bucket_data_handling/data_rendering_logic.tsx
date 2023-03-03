@@ -309,19 +309,3 @@ export function getGpuFactorsWithLabels() {
     ["1", "Low"],
   ];
 }
-export function getLookupBufferSize(gpuMultiplier: number): number {
-  switch (gpuMultiplier) {
-    case 1:
-    case 3:
-      return 256;
-
-    case 6:
-      return 512;
-
-    case 12:
-      return 1024;
-
-    default:
-      return 512;
-  }
-}

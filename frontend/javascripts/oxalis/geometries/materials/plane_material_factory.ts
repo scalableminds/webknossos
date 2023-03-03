@@ -15,10 +15,7 @@ import {
   getActiveSegmentationTracing,
   getActiveSegmentPosition,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getLookupBufferSize,
-  getPackingDegree,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
   getDataLayers,
@@ -863,7 +860,6 @@ class PlaneMaterialFactory {
     const packingDegreeLookup = getPackingDegreeLookup();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
-    const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
     const code = getMainFragmentShader({
       globalLayerCount,
       colorLayerNames,
@@ -874,7 +870,6 @@ class PlaneMaterialFactory {
       resolutionsCount: getResolutions(dataset).length,
       datasetScale,
       isOrthogonal: this.isOrthogonal,
-      lookupTextureWidth,
     });
     return [
       code,
@@ -883,15 +878,13 @@ class PlaneMaterialFactory {
   }
 
   getVertexShader(): string {
-    const { initializedGpuFactor, maximumLayerCountToRender } =
-      Store.getState().temporaryConfiguration.gpuSetup;
+    const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
     const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
     const packingDegreeLookup = getPackingDegreeLookup();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
-    const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
 
     return getMainVertexShader({
       globalLayerCount,
@@ -903,7 +896,6 @@ class PlaneMaterialFactory {
       resolutionsCount: getResolutions(dataset).length,
       datasetScale,
       isOrthogonal: this.isOrthogonal,
-      lookupTextureWidth,
     });
   }
 }

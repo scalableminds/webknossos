@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input, MenuItemProps } from "antd";
+import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import React, { createContext, MouseEvent, useContext, useEffect } from "react";
 import type {
@@ -95,7 +95,6 @@ import {
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-const { SubMenu } = Menu;
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -154,19 +153,19 @@ type Props = OwnProps & StateProps & DispatchProps;
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
   clickedNodeId: number;
-  infoRows: Array<React.ReactNode>;
+  infoRows: ItemType[];
 };
 
 type NoNodeContextMenuProps = Props & {
   viewport: OrthoView;
   segmentIdAtPosition: number;
   activeTool: AnnotationTool;
-  infoRows: Array<React.ReactNode>;
+  infoRows: ItemType[];
 };
 
-const MenuLabel: React.FunctionComponent = ({children}) => <span>{children}</span>;
-const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
-  { children: React.ReactNode},
+const MenuLabel: React.FunctionComponent = ({ children }) => <span>{children}</span>;
+export const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
+  { children: React.ReactNode },
   typeof MenuLabel
 >(MenuLabel);
 
@@ -429,7 +428,7 @@ function NodeContextMenuOptions({
   volumeTracing,
   infoRows,
   allowUpdate,
-}: NodeContextMenuOptionsProps): JSX.Element {
+}: NodeContextMenuOptionsProps): ItemType[] {
   const isProofreadingActive = useSelector(
     (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
   );
@@ -445,18 +444,7 @@ function NodeContextMenuOptions({
   const clickedTree = findTreeByNodeId(trees, clickedNodeId);
 
   if (clickedTree == null) {
-    return (
-      <Menu
-        onClick={hideContextMenu}
-        style={{
-          borderRadius: 6,
-        }}
-        mode="vertical"
-        items={[
-          { key: "disabled-error", disabled: true, label: "Error: Could not find clicked node" },
-        ]}
-      />
-    );
+    return [{ key: "disabled-error", disabled: true, label: "Error: Could not find clicked node" }];
   }
 
   const areInSameTree = activeTreeId === clickedTree.treeId;
@@ -470,6 +458,17 @@ function NodeContextMenuOptions({
       (edge) => edge.source === clickedNodeId || edge.target === clickedNodeId,
     );
   }
+
+  const maybeMeshItems = getMaybeMeshItems(
+    maybeClickedMeshId,
+    maybeMeshIntersectionPosition,
+    visibleSegmentationLayer,
+    datasetScale,
+    removeMesh,
+    hideMesh,
+    setPosition,
+    refreshMesh,
+  );
 
   const menuItems: ItemType[] = [
     {
@@ -558,16 +557,7 @@ function NodeContextMenuOptions({
               },
         ]
       : []),
-    ...getMaybeMeshItems(
-      maybeClickedMeshId,
-      maybeMeshIntersectionPosition,
-      visibleSegmentationLayer,
-      datasetScale,
-      removeMesh,
-      hideMesh,
-      setPosition,
-      refreshMesh,
-    ),
+    ...(maybeMeshItems ? maybeMeshItems : []),
     isTheSameNode
       ? null
       : {
@@ -590,16 +580,7 @@ function NodeContextMenuOptions({
     ...infoRows,
   ];
 
-  return (
-    <Menu
-      onClick={hideContextMenu}
-      style={{
-        borderRadius: 6,
-      }}
-      mode="vertical"
-      items={menuItems}
-    />
-  );
+  return menuItems;
 }
 
 function getBoundingBoxMenuOptions({
@@ -614,41 +595,40 @@ function getBoundingBoxMenuOptions({
   hideBoundingBox,
   deleteBoundingBox,
   allowUpdate,
-}: NoNodeContextMenuProps) {
+}: NoNodeContextMenuProps): ItemType[] {
   if (globalPosition == null) return [];
 
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
-  const newBoundingBoxMenuItem: MenuItemType = (
-    {
-      key:"add-new-bounding-box",
-      onClick: () => {
-        addNewBoundingBox(globalPosition);
-      },
-    label: <>
-      Create new Bounding Box
-      {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}</>
-    }
-  );
-  const hideBoundingBoxMenuItem: MenuItemType | null =
-    clickedBoundingBoxId != null ? (
-      {
-        key: "hide-bounding-box",
-        onClick: () => {
-          hideBoundingBox(clickedBoundingBoxId);
-        },
-      label: 
-        "Hide Bounding Box"
-      }
-    ) : null;
+  const newBoundingBoxMenuItem: ItemType = {
+    key: "add-new-bounding-box",
+    onClick: () => {
+      addNewBoundingBox(globalPosition);
+    },
+    label: (
+      <>
+        Create new Bounding Box
+        {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
+      </>
+    ),
+  };
+
   if (!allowUpdate && clickedBoundingBoxId != null) {
+    const hideBoundingBoxMenuItem: MenuItemType = {
+      key: "hide-bounding-box",
+      onClick: () => {
+        hideBoundingBox(clickedBoundingBoxId);
+      },
+      label: "Hide Bounding Box",
+    };
     return [hideBoundingBoxMenuItem];
   }
+
   if (!allowUpdate) {
     return [];
   }
 
   if (clickedBoundingBoxId == null) {
-    return [newBoundingBoxMenuItem];
+    return [];
   }
 
   const hoveredBBox = userBoundingBoxes.find((bbox) => bbox.id === clickedBoundingBoxId);
@@ -667,89 +647,94 @@ function getBoundingBoxMenuOptions({
   };
 
   const upscaledBBoxColor = hoveredBBox.color.map((colorPart) => colorPart * 255) as any as Vector3;
+
   return [
     newBoundingBoxMenuItem,
-    <Menu.Item key="change-bounding-box-name">
-      <Popover
-        title="Set Bounding Box Name"
-        content={
-          <Input
-            defaultValue={hoveredBBox.name}
-            placeholder="Bounding Box Name"
-            size="small"
-            onPressEnter={(evt) => {
-              setBBoxName(evt);
-              hideContextMenu();
-            }}
-            onBlur={setBBoxName}
+    {
+      key: "change-bounding-box-name",
+      label: (
+        <Popover
+          title="Set Bounding Box Name"
+          content={
+            <Input
+              defaultValue={hoveredBBox.name}
+              placeholder="Bounding Box Name"
+              size="small"
+              onPressEnter={(evt) => {
+                setBBoxName(evt);
+                hideContextMenu();
+              }}
+              onBlur={setBBoxName}
+              onClick={preventContextMenuFromClosing}
+            />
+          }
+          trigger="click"
+        >
+          <span
             onClick={preventContextMenuFromClosing}
-          />
-        }
-        trigger="click"
-      >
+            style={{
+              width: "100%",
+              display: "inline-block",
+            }}
+          >
+            Change Bounding Box Name
+          </span>
+        </Popover>
+      ),
+    },
+    {
+      key: "change-bounding-box-color",
+      label: (
         <span
           onClick={preventContextMenuFromClosing}
           style={{
             width: "100%",
             display: "inline-block",
+            position: "relative",
           }}
         >
-          Change Bounding Box Name
+          Change Bounding Box Color
+          <input
+            type="color"
+            style={{
+              display: "inline-block",
+              border: "none",
+              cursor: "pointer",
+              width: "100%",
+              height: "100%",
+              position: "absolute",
+              left: 0,
+              top: 0,
+              opacity: 0,
+            }}
+            onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+              let color = hexToRgb(evt.target.value);
+              color = color.map((colorPart) => colorPart / 255) as any as Vector3;
+              setBoundingBoxColor(clickedBoundingBoxId, color);
+            }}
+            value={rgbToHex(upscaledBBoxColor)}
+          />
         </span>
-      </Popover>
-    </Menu.Item>,
-    <Menu.Item key="change-bounding-box-color">
-      <span
-        onClick={preventContextMenuFromClosing}
-        style={{
-          width: "100%",
-          display: "inline-block",
-          position: "relative",
-        }}
-      >
-        Change Bounding Box Color
-        <input
-          type="color"
-          style={{
-            display: "inline-block",
-            border: "none",
-            cursor: "pointer",
-            width: "100%",
-            height: "100%",
-            position: "absolute",
-            left: 0,
-            top: 0,
-            opacity: 0,
-          }}
-          onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
-            let color = hexToRgb(evt.target.value);
-            color = color.map((colorPart) => colorPart / 255) as any as Vector3;
-            setBoundingBoxColor(clickedBoundingBoxId, color);
-          }}
-          value={rgbToHex(upscaledBBoxColor)}
-        />
-      </span>
-    </Menu.Item>,
-    <Menu.Item
-      key="hide-bounding-box"
-      onClick={() => {
+      ),
+    },
+    {
+      key: "hide-bounding-box",
+      onClick: () => {
         hideBoundingBox(clickedBoundingBoxId);
-      }}
-    >
-      Hide Bounding Box
-    </Menu.Item>,
-    <Menu.Item
-      key="delete-bounding-box"
-      onClick={() => {
+      },
+      label: "Hide Bounding Box",
+    },
+    {
+      key: "delete-bounding-box",
+      onClick: () => {
         deleteBoundingBox(clickedBoundingBoxId);
-      }}
-    >
-      Delete Bounding Box
-    </Menu.Item>,
+      },
+      label: "Delete Bounding Box",
+    },
   ];
 }
 
-function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
+function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
   const {
     skeletonTracing,
     volumeTracing,
@@ -903,21 +888,23 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
       className: "node-context-menu-item",
       key: "load-synapses",
       disabled: !isConnectomeMappingEnabled.value,
-      label: <MenuItemWithMappingActivationConfirmation
-        onClick={() => loadSynapsesOfAgglomerateAtPosition(globalPosition)}
-        mappingName={connectomeFileMappingName}
-        descriptor="connectome file"
-        layerName={segmentationLayerName}
-        mappingInfo={mappingInfo}
-      >
-        {isConnectomeMappingEnabled.value ? (
-          "Import Agglomerate and Synapses"
-        ) : (
-          <Tooltip title={isConnectomeMappingEnabled.reason}>
-            Import Agglomerate and Synapses
-          </Tooltip>
-        )}
-      </MenuItemWithMappingActivationConfirmation>
+      label: (
+        <MenuItemWithMappingActivationConfirmation
+          onClick={() => loadSynapsesOfAgglomerateAtPosition(globalPosition)}
+          mappingName={connectomeFileMappingName}
+          descriptor="connectome file"
+          layerName={segmentationLayerName}
+          mappingInfo={mappingInfo}
+        >
+          {isConnectomeMappingEnabled.value ? (
+            "Import Agglomerate and Synapses"
+          ) : (
+            <Tooltip title={isConnectomeMappingEnabled.reason}>
+              Import Agglomerate and Synapses
+            </Tooltip>
+          )}
+        </MenuItemWithMappingActivationConfirmation>
+      ),
     };
     // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
     skeletonActions.push(loadSynapsesItem);
@@ -927,15 +914,17 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
-    label: <MenuItemWithMappingActivationConfirmation
-      onClick={loadPrecomputedMesh}
-      mappingName={meshFileMappingName}
-      descriptor="mesh file"
-      layerName={segmentationLayerName}
-      mappingInfo={mappingInfo}
-    >
-      Load Mesh (precomputed)
-    </MenuItemWithMappingActivationConfirmation>
+    label: (
+      <MenuItemWithMappingActivationConfirmation
+        onClick={loadPrecomputedMesh}
+        mappingName={meshFileMappingName}
+        descriptor="mesh file"
+        layerName={segmentationLayerName}
+        mappingInfo={mappingInfo}
+      >
+        Load Mesh (precomputed)
+      </MenuItemWithMappingActivationConfirmation>
+    ),
   };
   const computeMeshAdHocItem = {
     key: "compute-mesh-adhc",
@@ -993,32 +982,25 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   );
 
   if (isSkeletonToolActive) {
-    allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
+    allActions = [...skeletonActions, ...nonSkeletonActions, ...boundingBoxActions];
   } else if (isBoundingBoxToolActive) {
-    allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
+    allActions = [...boundingBoxActions, ...nonSkeletonActions, ...skeletonActions];
   } else {
-    allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
+    allActions = [...nonSkeletonActions, ...skeletonActions, ...boundingBoxActions];
   }
   if (maybeMeshRelatedItems) {
     allActions = allActions.concat(maybeMeshRelatedItems);
   }
 
-  const empty = {
+  const empty: ItemType = {
     key: "empty",
     label: <Empty description="No actions available" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
   };
 
-  return (
-    <Menu
-      onClick={hideContextMenu}
-      style={{
-        borderRadius: 6,
-      }}
-      mode="vertical"
-    >
-      {allActions.length + infoRows.length > 0 ? [...allActions, ...infoRows] : [empty]}
-    </Menu>
-  );
+  const menuItems =
+    allActions.length + infoRows.length > 0 ? [...allActions, ...infoRows] : [empty];
+
+  return menuItems;
 }
 
 export function GenericContextMenuContainer(props: {
@@ -1132,145 +1114,150 @@ function ContextMenuInner(propsWithInputRef: Props) {
     globalPosition,
     maybeViewport,
   } = props;
-  let overlay = <div />;
 
-  if (contextMenuPosition != null && maybeViewport != null) {
-    const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-    const activeNodeId = skeletonTracing?.activeNodeId;
+  if (contextMenuPosition == null || maybeViewport == null) {
+    return <></>;
+  }
 
-    let nodeContextMenuTree: Tree | null = null;
-    let nodeContextMenuNode: MutableNode | null = null;
+  const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
+  const activeNodeId = skeletonTracing?.activeNodeId;
 
-    if (skeletonTracing != null && maybeClickedNodeId != null) {
-      getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
-        nodeContextMenuNode = node;
-        nodeContextMenuTree = tree;
-      });
-    }
+  let nodeContextMenuTree: Tree | null = null;
+  let nodeContextMenuNode: MutableNode | null = null;
 
-    const positionToMeasureDistanceTo =
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
-      nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
-    const activeNode =
-      activeNodeId != null && skeletonTracing != null
-        ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
-        : null;
-    const distanceToSelection =
-      activeNode != null && positionToMeasureDistanceTo != null
-        ? [
-            formatNumberToLength(
-              V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
-            ),
-            formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
-          ]
-        : null;
-    const nodePositionAsString =
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
-      nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
-    const segmentIdAtPosition =
-      globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-    const infoRows = [];
+  if (skeletonTracing != null && maybeClickedNodeId != null) {
+    getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
+      nodeContextMenuNode = node;
+      nodeContextMenuTree = tree;
+    });
+  }
 
-    if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
-      infoRows.push(
-        getInfoMenuItem(
-          "nodeInfo",
-          `Node with Id ${maybeClickedNodeId} in Tree ${nodeContextMenuTree.treeId}`,
-        ),
-      );
-    }
+  const positionToMeasureDistanceTo =
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
+    nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
+  const activeNode =
+    activeNodeId != null && skeletonTracing != null
+      ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
+      : null;
+  const distanceToSelection =
+    activeNode != null && positionToMeasureDistanceTo != null
+      ? [
+          formatNumberToLength(
+            V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+          ),
+          formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
+        ]
+      : null;
+  const nodePositionAsString =
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
+    nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
+  const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
+  const infoRows = [];
 
-    if (nodeContextMenuNode != null) {
-      infoRows.push(
-        getInfoMenuItem(
-          "positionInfo",
-          <>
-            Position: {nodePositionAsString}
-            {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-          </>,
-        ),
-      );
-    } else if (globalPosition != null) {
-      const positionAsString = positionToString(globalPosition);
-      infoRows.push(
-        getInfoMenuItem(
-          "positionInfo",
-          <>
-            Position: {positionAsString}
-            {copyIconWithTooltip(positionAsString, "Copy position")}
-          </>,
-        ),
-      );
-    }
+  if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
+    infoRows.push(
+      getInfoMenuItem(
+        "nodeInfo",
+        `Node with Id ${maybeClickedNodeId} in Tree ${nodeContextMenuTree.treeId}`,
+      ),
+    );
+  }
 
-    if (distanceToSelection != null) {
-      infoRows.push(
-        getInfoMenuItem(
-          "distanceInfo",
-          <>
-            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
-            this {maybeClickedNodeId != null ? "Node" : "Position"}
-            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-          </>,
-        ),
-      );
-    }
+  if (nodeContextMenuNode != null) {
+    infoRows.push(
+      getInfoMenuItem(
+        "positionInfo",
+        <>
+          Position: {nodePositionAsString}
+          {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
+        </>,
+      ),
+    );
+  } else if (globalPosition != null) {
+    const positionAsString = positionToString(globalPosition);
+    infoRows.push(
+      getInfoMenuItem(
+        "positionInfo",
+        <>
+          Position: {positionAsString}
+          {copyIconWithTooltip(positionAsString, "Copy position")}
+        </>,
+      ),
+    );
+  }
 
-    // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
-    // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
-    // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
-    // Thus the segment id is always unambiguous / clearly defined.
-    if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
-      const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
+  if (distanceToSelection != null) {
+    infoRows.push(
+      getInfoMenuItem(
+        "distanceInfo",
+        <>
+          <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
+          {maybeClickedNodeId != null ? "Node" : "Position"}
+          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+        </>,
+      ),
+    );
+  }
+
+  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
+  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+  // Thus the segment id is always unambiguous / clearly defined.
+  if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
+    const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
+    infoRows.push(
+      getInfoMenuItem(
+        "copy-cell",
+        <>
+          <div className="cell-context-icon" />
+          Segment ID: {`${segmentId}`} {copyIconWithTooltip(segmentId, "Copy Segment ID")}
+        </>,
+      ),
+    );
+  }
+  if (segments != null && maybeClickedMeshId != null) {
+    const segmentName = segments.get(maybeClickedMeshId)?.name;
+    if (segmentName != null) {
+      const maxSegmentNameLength = 18;
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",
           <>
-            <div className="cell-context-icon" />
-            Segment ID: {`${segmentId}`} {copyIconWithTooltip(segmentId, "Copy Segment ID")}
+            <Tooltip title="Segment Name">
+              <i className="fas fa-tag" />{" "}
+            </Tooltip>
+            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
+              {truncateStringToLength(segmentName, maxSegmentNameLength)}
+            </Tooltip>
           </>,
         ),
       );
     }
-    if (segments != null && maybeClickedMeshId != null) {
-      const segmentName = segments.get(maybeClickedMeshId)?.name;
-      if (segmentName != null) {
-        const maxSegmentNameLength = 18;
-        infoRows.push(
-          getInfoMenuItem(
-            "copy-cell",
-            <>
-              <Tooltip title="Segment Name">
-                <i className="fas fa-tag" />{" "}
-              </Tooltip>
-              <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
-                {truncateStringToLength(segmentName, maxSegmentNameLength)}
-              </Tooltip>
-            </>,
-          ),
-        );
-      }
-    }
+  }
 
-    if (infoRows.length > 0) {
-      infoRows.unshift(
-        {
-          key: "divider",
-          type: "divider",
-          className: "hide-if-first hide-if-last",
-          style: {
-            margin: "4px 0px",
-          }
-        },
-      );
-    }
+  if (infoRows.length > 0) {
+    infoRows.unshift({
+      key: "divider",
+      type: "divider",
+      className: "hide-if-first hide-if-last",
+      style: {
+        margin: "4px 0px",
+      },
+    });
+  }
 
-    // It's important to not use <NodeContextMenuOptions ...>
-    // or <NoNodeContextMenuOptions ... />
-    // for the following two expressions, since this breaks
-    // antd's internal population of the correct class names
-    // for the menu.
-    menu =
+  // It's important to not use <NodeContextMenuOptions ...>
+  // or <NoNodeContextMenuOptions ... />
+  // for the following two expressions, since this breaks
+  // antd's internal population of the correct class names
+  // for the menu.
+  const menu: MenuProps = {
+    onClick: hideContextMenu,
+    style: {
+      borderRadius: 6,
+    },
+    mode: "vertical",
+    items:
       maybeClickedNodeId != null
         ? NodeContextMenuOptions({
             clickedNodeId: maybeClickedNodeId,
@@ -1283,8 +1270,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
             infoRows,
             viewport: maybeViewport,
             ...props,
-          });
-  }
+          }),
+  };
+
   if (inputRef == null || inputRef.current == null) return null;
   const refContent = inputRef.current;
 

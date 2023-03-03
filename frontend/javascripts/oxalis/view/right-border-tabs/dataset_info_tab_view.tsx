@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Tooltip, Button, Dropdown, Menu, MenuProps } from "antd";
+import { Tooltip, Button, Dropdown } from "antd";
 import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message

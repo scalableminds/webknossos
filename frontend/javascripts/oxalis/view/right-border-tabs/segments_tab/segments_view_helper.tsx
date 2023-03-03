@@ -25,7 +25,8 @@ type MappingActivationConfirmationProps<R> = R & {
   descriptor: string;
   layerName: string | null | undefined;
   mappingInfo: ActiveMappingInfo;
-  onClick: (...args: Array<any>) => any;
+  onClick: Function;
+  disabled?: boolean;
 };
 export function withMappingActivationConfirmation<P, C extends ComponentType<P>>(
   WrappedComponent: C,

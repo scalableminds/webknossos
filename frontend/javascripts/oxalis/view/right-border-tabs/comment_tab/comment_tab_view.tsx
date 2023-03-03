@@ -1,6 +1,6 @@
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
-import { Input, Menu, Dropdown, Tooltip } from "antd";
+import { Input, Dropdown, Tooltip } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,

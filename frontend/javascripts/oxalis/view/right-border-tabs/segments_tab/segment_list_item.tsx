@@ -5,7 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, Menu, MenuItemProps, MenuProps } from "antd";
+import { List, Tooltip, Dropdown, MenuProps } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -22,7 +22,6 @@ import {
   refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
@@ -30,8 +29,8 @@ import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import MenuItem from "antd/lib/menu/MenuItem";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import { MenuItemWithMappingActivationConfirmation } from "oxalis/view/context_menu";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -47,11 +46,6 @@ function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vect
   );
 }
 
-const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
-  MenuItemProps,
-  typeof Menu.Item
->(Menu.Item);
-
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFile | null | undefined,
@@ -61,44 +55,46 @@ const getLoadPrecomputedMeshMenuItem = (
   mappingInfo: ActiveMappingInfo,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
-  return (
-    <MenuItemWithMappingActivationConfirmation
-      key="loadPrecomputedMesh"
-      onClick={() => {
-        if (!currentMeshFile) {
-          return;
-        }
-        if (!segment.somePosition) {
-          Toast.info(
-            <React.Fragment>
-              Cannot load a mesh for this segment, because its position is unknown.
-            </React.Fragment>,
+  return {
+    key: "loadPrecomputedMesh",
+    label: (
+      <MenuItemWithMappingActivationConfirmation
+        onClick={() => {
+          if (!currentMeshFile) {
+            return;
+          }
+          if (!segment.somePosition) {
+            Toast.info(
+              <React.Fragment>
+                Cannot load a mesh for this segment, because its position is unknown.
+              </React.Fragment>,
+            );
+            andCloseContextMenu();
+            return;
+          }
+          andCloseContextMenu(
+            loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
           );
-          andCloseContextMenu();
-          return;
-        }
-        andCloseContextMenu(
-          loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
-        );
-      }}
-      disabled={!currentMeshFile}
-      mappingName={mappingName}
-      descriptor="mesh file"
-      layerName={layerName}
-      mappingInfo={mappingInfo}
-    >
-      <Tooltip
-        key="tooltip"
-        title={
-          currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
-            : "There is no mesh file."
-        }
+        }}
+        disabled={!currentMeshFile}
+        mappingName={mappingName}
+        descriptor="mesh file"
+        layerName={layerName}
+        mappingInfo={mappingInfo}
       >
-        Load Mesh (precomputed)
-      </Tooltip>
-    </MenuItemWithMappingActivationConfirmation>
-  );
+        <Tooltip
+          key="tooltip"
+          title={
+            currentMeshFile != null
+              ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
+              : "There is no mesh file."
+          }
+        >
+          Load Mesh (precomputed)
+        </Tooltip>
+      </MenuItemWithMappingActivationConfirmation>
+    ),
+  };
 };
 
 const getComputeMeshAdHocMenuItem = (

@@ -1,5 +1,5 @@
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, Menu, MenuProps, Modal, notification } from "antd";
+import { Checkbox, Dropdown, MenuProps, Modal, notification } from "antd";
 import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";

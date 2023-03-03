@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Dropdown, Menu, MenuProps } from "antd";
+import { Dropdown, MenuProps } from "antd";
 import {
   ShareAltOutlined,
   DownOutlined,

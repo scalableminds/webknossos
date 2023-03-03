@@ -7,7 +7,7 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Menu, Modal, MenuProps } from "antd";
+import { Dropdown, Modal, MenuProps } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";

@@ -1,4 +1,14 @@
-import { Button, Radio, Tooltip, Menu, Dropdown, Col, Row, Switch, RadioChangeEvent, MenuProps } from "antd";
+import {
+  Button,
+  Radio,
+  Tooltip,
+  Dropdown,
+  Col,
+  Row,
+  Switch,
+  RadioChangeEvent,
+  MenuProps,
+} from "antd";
 import {
   StopOutlined,
   BorderInnerOutlined,
@@ -27,7 +37,6 @@ function TDViewControls({
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
 }: Props) {
-
   const settingsMenu: MenuProps = {
     style: {
       width: 260,

@@ -326,16 +326,16 @@ function getMaybeMinCutItem(
 
   return {
     key: "min-cut",
-    title: "Perform Min-Cut (Experimental)",
+    label: "Perform Min-Cut (Experimental)",
     // For some reason, antd doesn't pass the ant-dropdown class to the
     // sub menu itself which makes the label of the item group too big.
     // Passing the CSS class here fixes it (font-size is 14px instead of
     // 16px then).
-    // popupClassName="ant-dropdown"
+    popupClassName: "ant-dropdown",
     children: [
       {
         key: "choose-bbox-group",
-        title: "Choose a bounding box for the min-cut operation:",
+        label: "Choose a bounding box for the min-cut operation:",
         type: "group", // double check if the group is assigned to right item
         children: [
           {
@@ -410,7 +410,6 @@ function NodeContextMenuOptions({
   maybeMeshIntersectionPosition,
   visibleSegmentationLayer,
   datasetScale,
-  hideContextMenu,
   deleteEdge,
   mergeTrees,
   minCutAgglomerate,
@@ -750,7 +749,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
     currentMeshFile,
     currentConnectomeFile,
     createTree,
-    hideContextMenu,
     setActiveCell,
     removeMesh,
     hideMesh,

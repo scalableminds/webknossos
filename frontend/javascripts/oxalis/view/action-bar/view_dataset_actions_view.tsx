@@ -16,10 +16,10 @@ import {
 } from "oxalis/model/actions/ui_actions";
 import Store, { OxalisState } from "oxalis/store";
 import PythonClientModalView from "./python_client_modal_view";
-import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 
 type Props = {
-  layoutMenu: React.ReactNode;
+  layoutMenu: SubMenuType;
 };
 export const screenshotMenuItem: MenuItemType = {
   key: "screenshot-button",
@@ -60,7 +60,7 @@ export default function ViewDatasetActionsView(props: Props) {
         icon: <DownloadOutlined />,
         label: "Download",
       },
-      // {props.layoutMenu}
+      props.layoutMenu,
     ],
   };
 

@@ -171,6 +171,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
         reportMutable,
         List(new ZarrArrayExplorer,
              new NgffExplorer,
+             new WebknossosZarrExplorer,
              new N5ArrayExplorer,
              new N5MultiscalesExplorer,
              new PrecomputedExplorer)

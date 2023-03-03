@@ -29,6 +29,13 @@ const fetchCategorizedDatastores = async (): Promise<{
   };
 };
 
+enum DatasetAddViewTabs {
+  UPLOAD = "upload",
+  REMOTE = "remote",
+  NEUROGLANCER = "neuroglancer",
+  BOSSDB = "bossdb",
+}
+
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch(
     fetchCategorizedDatastores,
@@ -115,11 +122,18 @@ function DatasetAddView({ history }: RouteComponentProps) {
     );
   };
 
+  const defaultActiveTabFromHash = location.hash.substring(1);
+  const defaultActiveKey = Object.values(DatasetAddViewTabs).includes(
+    defaultActiveTabFromHash as DatasetAddViewTabs,
+  )
+    ? (defaultActiveTabFromHash as DatasetAddViewTabs)
+    : DatasetAddViewTabs.UPLOAD;
+
   return (
     <React.Fragment>
       <Layout>
         <Content>
-          <Tabs defaultActiveKey="1" className="container">
+          <Tabs defaultActiveKey={defaultActiveKey} className="container">
             <TabPane
               tab={
                 <span>
@@ -127,7 +141,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                   Upload Dataset
                 </span>
               }
-              key="1"
+              key={DatasetAddViewTabs.UPLOAD}
             >
               <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
             </TabPane>
@@ -138,7 +152,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                   Add Remote Dataset
                 </span>
               }
-              key="2"
+              key={DatasetAddViewTabs.REMOTE}
             >
               <DatasetAddZarrView
                 datastores={datastores.own}
@@ -154,7 +168,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                     Add Remote Neuroglancer Dataset
                   </span>
                 }
-                key="3"
+                key={DatasetAddViewTabs.NEUROGLANCER}
               >
                 <DatasetAddNeuroglancerView
                   datastores={datastores.wkConnect}
@@ -171,7 +185,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                     Add Remote BossDB Dataset
                   </span>
                 }
-                key="4"
+                key={DatasetAddViewTabs.BOSSDB}
               >
                 <DatasetAddBossView
                   datastores={datastores.wkConnect}

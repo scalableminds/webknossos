@@ -305,7 +305,8 @@ export function getGpuFactorsWithLabels() {
   return [
     ["12", "Very High"],
     ["6", "High"],
-    ["3", "Medium"],
-    ["1", "Low"],
+    ["4", "Medium"],
+    ["2", "Low"],
+    ["1", "Very Low"],
   ];
 }

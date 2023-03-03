@@ -217,7 +217,10 @@ function getMaximumZoomForAllResolutionsFromStore(
     state.dataset.dataSource.scale,
     getResolutions(state.dataset),
     getViewportRects(state),
-    state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
+    Math.min(
+      state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
+      constants.GPU_FACTOR_MULTIPLIER * state.userConfiguration.gpuMemoryFactor,
+    ),
     layerMatrix,
     // Theoretically, the following parameter should be state.flycam.currentMatrix.
     // However, that matrix changes on each move which means that the raanges would need

@@ -171,7 +171,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   };
 
   onChangeGpuFactor = (gpuFactor: number) => {
-    Toast.warning("Please reload the page to allow the changes to take effect.");
+    Toast.warning("Please reload the page to allow the changes to take full effect.", {
+      sticky: true,
+    });
     this.onChangeUser.gpuMemoryFactor(gpuFactor);
   };
 

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.datavault.FileSystemVaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
@@ -46,11 +47,12 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
   protected def localPathFrom(readInstruction: DataReadInstruction, relativeMagPath: String)(
       implicit ec: ExecutionContext): Fox[Path] = {
-    val magPath = readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.team)
-      .resolve(readInstruction.dataSource.id.name)
-      .resolve(readInstruction.dataLayer.name)
-      .resolve(relativeMagPath)
+    val magPath = FileSystemVaultPath.fromPath(
+      readInstruction.baseDir
+        .resolve(readInstruction.dataSource.id.team)
+        .resolve(readInstruction.dataSource.id.name)
+        .resolve(readInstruction.dataLayer.name)
+        .resolve(relativeMagPath))
     if (magPath.toFile.exists()) {
       Fox.successful(magPath)
     } else Fox.empty

@@ -75,4 +75,6 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
       }
       case None => None
     }
+
+  override def toString: String = uri.toString
 }

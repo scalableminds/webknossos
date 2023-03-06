@@ -25,22 +25,12 @@ const VIEW_MODE_TO_ICON = {
   [constants.MODE_PLANE_TRACING]: <i className="fas fa-th-large without-icon-margin" />,
   [constants.MODE_ARBITRARY]: <i className="fas fa-globe without-icon-margin" />,
   [constants.MODE_ARBITRARY_PLANE]: (
-    <i className="fas fa-square-full without-icon-margin" style={{ transform: "rotate(-45deg)" }} />
+    <i
+      className="fas fa-square-full without-icon-margin"
+      style={{ transform: "scale(0.8, 1) rotate(-45deg)" }}
+    />
   ),
 };
-
-const MENU_ITEMS: MenuProps["items"] = [
-  {
-    key: "1",
-    type: "group",
-    label: "Select View Mode",
-    children: ViewModeValues.map((viewMode) => ({
-      label: Utils.capitalize(viewMode),
-      key: viewMode,
-      icon: <span style={{ marginRight: 8 }}>{VIEW_MODE_TO_ICON[viewMode]}</span>,
-    })),
-  },
-];
 
 class ViewModesView extends PureComponent<Props, {}> {
   handleChange = (mode: ViewMode) => {
@@ -77,6 +67,20 @@ class ViewModesView extends PureComponent<Props, {}> {
         this.handleChange(args.key as ViewMode);
       }
     };
+
+    const MENU_ITEMS: MenuProps["items"] = [
+      {
+        key: "1",
+        type: "group",
+        label: "Select View Mode",
+        children: ViewModeValues.map((mode) => ({
+          label: Utils.capitalize(mode),
+          key: mode,
+          disabled: this.isDisabled(mode),
+          icon: <span style={{ marginRight: 8 }}>{VIEW_MODE_TO_ICON[mode]}</span>,
+        })),
+      },
+    ];
 
     const menuProps = {
       items: MENU_ITEMS,

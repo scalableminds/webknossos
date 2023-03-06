@@ -49,8 +49,6 @@ import {
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
-const { Group: InputGroup } = Input;
-
 type Props = {
   user: APIUser;
   context: DatasetCollectionContextValue;
@@ -181,22 +179,20 @@ function DatasetView(props: Props) {
     </Radio>
   );
 
-  const filterMenu = (
-    <Menu
-      onClick={() => {}}
-      items={[
-        { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
-        {
-          label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
-          key: "available",
-        },
-        {
-          label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
-          key: "missing",
-        },
-      ]}
-    />
-  );
+  const filterMenu = {
+    items: [
+      { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
+      {
+        label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
+        key: "available",
+      },
+      {
+        label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
+        key: "missing",
+      },
+    ],
+  };
+
   const searchBox = (
     <Input
       prefix={<SearchOutlined />}
@@ -214,16 +210,17 @@ function DatasetView(props: Props) {
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <InputGroup compact>
+    <Input.Group compact style={{ display: "flex" }}>
       {searchBox}
-      <Dropdown overlay={filterMenu} trigger={["click"]}>
+
+      <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
           <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
             <SettingOutlined />
           </Badge>
         </Button>
       </Dropdown>
-    </InputGroup>
+    </Input.Group>
   ) : (
     searchBox
   );
@@ -430,7 +427,6 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       }}
     >
       {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map((job) => {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
         return (
           <Row key={job.id} gutter={16}>

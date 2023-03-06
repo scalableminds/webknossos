@@ -339,9 +339,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
   "annotation.download": "The following annotation data is available for download immediately.",
   "annotation.export":
-    "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",
+    "Export this annotation as TIFF image(s). This may take a few moments depending on the size of your configured export.",
   "annotation.export_no_worker":
-    "This WEBKNOSSOS instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
+    "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
   "annotation.python_do_not_share":
     "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",

@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayer
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeTracingDefaults, VolumeTracingDownsampling}
 import com.typesafe.scalalogging.LazyLogging
 import io.swagger.annotations._
 
@@ -280,7 +280,9 @@ Expects:
       fallbackLayer = fallbackLayerOpt.map(_.name),
       largestSegmentId =
         annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
-                                                               fallbackLayerOpt.map(_.largestSegmentId))
+                                                               fallbackLayerOpt.map(_.largestSegmentId)),
+      resolutions =
+        VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto)
     )
   }
 

@@ -17,7 +17,8 @@ case class EditableMapping(
       baseMappingName = baseMappingName,
 //      segmentToAgglomerate = segmentToAgglomerate.map(tuple => SegmentToAgglomeratePair(tuple._1, tuple._2)).toSeq,
 //      agglomerateToGraph = agglomerateToGraph.map(tuple => AgglomerateToGraphPair(tuple._1, tuple._2)).toSeq,
-      createdTimestamp = createdTimestamp
+      createdTimestamp = createdTimestamp,
+      largestAgglomerateId = largestAgglomerateId
     )
 }
 
@@ -30,7 +31,8 @@ object EditableMapping {
         editableMappignProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId).toMap,
       agglomerateToGraph =
         editableMappignProto.agglomerateToGraph.map(pair => pair.agglomerateId -> pair.agglomerateGraph).toMap, */
-      createdTimestamp = editableMappignProto.createdTimestamp
+      createdTimestamp = editableMappignProto.createdTimestamp,
+      largestAgglomerateId = editableMappignProto.largestAgglomerateId
     )
 
 }

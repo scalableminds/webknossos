@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
@@ -233,7 +233,7 @@ class EditableMappingService @Inject()(
         case Full(mapping) =>
           remainingUpdates match {
             case List() => Fox.successful(mapping)
-            case head :: tail => // TODO count versions
+            case head :: tail => // TODO: count versions
               updateIter(applyOneUpdate(mapping, editableMappingId, 0L, head, remoteFallbackLayer, userToken), tail)
           }
         case _ => mappingFox
@@ -406,18 +406,36 @@ class EditableMappingService @Inject()(
     )
   }
 
-  private def agglomerateGraphForId(mappingId: String, agglomerateId: Long, version: Long): Fox[AgglomerateGraph] = ???
-  // TODO distinguish between failure and empty using Fox.empty
+  private def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =
+    s"$mappingId/$agglomerateId"
+
+  private def agglomerateGraphForId(mappingId: String, agglomerateId: Long, version: Long): Fox[AgglomerateGraph] =
+    // TODO: distinguish between failure and empty using Fox.empty
+    for {
+      keyValuePair: VersionedKeyValuePair[AgglomerateGraph] <- tracingDataStore.editableMappingsAgglomerateGraphs.get(
+        agglomerateGraphKey(mappingId, agglomerateId),
+        Some(version),
+        mayBeEmpty = true)(fromProtoBytes[AgglomerateGraph])
+    } yield keyValuePair.value
 
   private def agglomerateGraphForIdWithFallback(mapping: EditableMapping,
+                                                editableMappingId: String,
+                                                previousVersion: Long,
                                                 agglomerateId: Long,
                                                 remoteFallbackLayer: RemoteFallbackLayer,
                                                 userToken: Option[String]): Fox[AgglomerateGraph] =
-    if (mapping.agglomerateToGraph.contains(agglomerateId)) {
-      Fox.successful(mapping.agglomerateToGraph(agglomerateId))
-    } else {
-      remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer, mapping.baseMappingName, agglomerateId, userToken)
-    }
+    for {
+      agglomerateGraphBox <- agglomerateGraphForId(editableMappingId, agglomerateId, previousVersion).futureBox
+      agglomerateGraph <- agglomerateGraphBox match {
+        case Full(agglomerateGraph) => Fox.successful(agglomerateGraph)
+        case Empty =>
+          remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer,
+                                                    mapping.baseMappingName,
+                                                    agglomerateId,
+                                                    userToken)
+        case f: Failure => f.toFox
+      }
+    } yield agglomerateGraph
 
   private def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
                                       pos: Vec3Int,

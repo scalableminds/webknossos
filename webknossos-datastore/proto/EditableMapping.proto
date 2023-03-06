@@ -6,5 +6,6 @@ import "geometry.proto";
 
 message EditableMappingProto {
   required string baseMappingName = 1;
-  required int64 createdTimestamp = 4;
+  required int64 createdTimestamp = 2;
+  required int64 largestAgglomerateId = 3;
 }

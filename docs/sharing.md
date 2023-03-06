@@ -106,6 +106,7 @@ To change the visibility of an annotation, follow these steps:
 Additionally, you can control whether other users, who can see your annotation, may also edit your annotation.
 Use this setting to enable collaborative work within your annotation.
 However, note that you should coordinate the collaboration because parallel changes to an annotation are not supported.
+To avoid possible conflicts in such cases the annotation will be locked to a single user at a time. In case the annotation is locked by someone else WEBKNOSSOS will tell you the name of the person currently editing so you can coordinate with this person.
 
 ### Link Sharing
 Annotations can be shared via a link. People, who obtain the link, must have access to the annotation according to the permissions above to view the annotation.

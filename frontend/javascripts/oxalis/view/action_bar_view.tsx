@@ -43,7 +43,6 @@ type StateProps = {
   dataset: APIDataset;
   activeUser: APIUser | null | undefined;
   controlMode: ControlMode;
-  hasVolumeFallback: boolean;
   hasSkeleton: boolean;
   showVersionRestore: boolean;
   isReadOnly: boolean;
@@ -110,6 +109,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const annotation = await createExplorational(
       dataset,
       "hybrid",
+      false,
       fallbackLayerName,
       maybeMappingName,
     );
@@ -138,7 +138,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
-      hasVolumeFallback,
       is2d,
       isReadOnly,
       showVersionRestore,
@@ -169,7 +168,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
           ) : (
-            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
+            <TracingActionsView layoutMenu={layoutMenu} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
@@ -196,7 +195,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasVolumeFallback: state.tracing.volumes.some((volume) => volume.fallbackLayer != null),
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),

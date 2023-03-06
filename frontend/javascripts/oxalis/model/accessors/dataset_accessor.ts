@@ -98,6 +98,10 @@ export class ResolutionInfo {
     return this.resolutionMap.has(powerOfTwo);
   }
 
+  hasResolution(resolution: Vector3): boolean {
+    return this.resolutionMap.has(Math.max(...resolution));
+  }
+
   getResolutionByIndex(index: number): Vector3 | null | undefined {
     const powerOfTwo = this.indexToPowerOf2(index);
     return this.getResolutionByPowerOf2(powerOfTwo);
@@ -213,6 +217,11 @@ export class ResolutionInfo {
     }
 
     return bestIndexWithDistance[0];
+  }
+
+  getClosestExistingResolution(resolution: Vector3): Vector3 {
+    const index = Math.log2(Math.max(...resolution));
+    return this.getResolutionByIndex(this.getClosestExistingIndex(index)) as Vector3;
   }
 
   hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {

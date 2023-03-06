@@ -154,34 +154,12 @@ label.ant-checkbox-wrapper {
   border-bottom: none;
 }
 
-.sub-menu-without-padding .ant-menu-submenu-title {
-  padding: 0;
-}
-
-.ant-menu-submenu.vertical-center-flex-fix {
-  .ant-menu-submenu-title {
-    display: flex;
-  }
-  display: flex;
-}
-
-.collapsed-nav-header {
+.collapsed-nav-header .ant-menu:not(.right-navbar) {
+  
   .ant-menu-item,
   .ant-menu-submenu-title,
   li.ant-menu-submenu {
     padding: 0 4px !important;
-  }
-
-  .sub-menu-without-padding.ant-menu-submenu {
-    padding: 0 !important;
-  }
-
-  .sub-menu-without-padding {
-    .ant-menu-item,
-    .ant-menu-submenu-title,
-    li.ant-menu-submenu {
-      padding: 0 !important;
-    }
   }
 
   .anticon {
@@ -247,8 +225,8 @@ label.ant-checkbox-wrapper {
   }
 }
 
-.ant-tree-title {
-  // Make the tree element full-width (subtract the width of the
+.ant-tree-directory .ant-tree-title {
+  // Make the directory tree element full-width (subtract the width of the
   // directory icon)
   width: calc(100% - 24px);
   display: flex;

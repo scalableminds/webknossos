@@ -1,15 +1,13 @@
 package com.scalableminds.webknossos.datastore.storage.httpsfilesystem
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
-
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
-import java.nio.charset.StandardCharsets
 import java.nio.file.OpenOption
 import java.util
-import scalaj.http.{Http, HttpResponse}
+
+import sttp.client3._
+import sttp.model.Uri
 
 import scala.concurrent.duration.DurationInt
 
@@ -21,46 +19,85 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
   private val connectionTimeout = 5 seconds
   private val readTimeout = 1 minute
 
-  private val responseBox: Box[HttpResponse[Array[Byte]]] = tryo(
-    path.getBasicAuthCredential.map { credential =>
-      Http(uri.toString)
-        .timeout(connTimeoutMs = connectionTimeout.toMillis.toInt, readTimeoutMs = readTimeout.toMillis.toInt)
-        .auth(credential.user, credential.password)
-        .asBytes
-    }.getOrElse(Http(uri.toString)
-      .timeout(connTimeoutMs = connectionTimeout.toMillis.toInt, readTimeoutMs = readTimeout.toMillis.toInt)
-      .asBytes)
-  )
-
   private var _isOpen: Boolean = true
 
-  override def read(byteBuffer: ByteBuffer): Int =
-    responseBox match {
-      case Full(response) =>
-        val bytes = response.body
+  private lazy val backend = HttpClientSyncBackend(options = SttpBackendOptions.connectionTimeout(connectionTimeout))
+  private val rangeRequestsActive = openOptions.contains(ByteChannelOptions.RANGE)
 
-        if (!response.isSuccess) {
-          val bodyString = new String(bytes, StandardCharsets.UTF_8)
-          throw new Exception(s"Https read failed for uri $uri: ${response.statusLine} – ${bodyString.take(1000)}")
-        }
+  private lazy val authenticatedRequest = path.getBasicAuthCredential.map { credential =>
+    basicRequest.auth.basic(credential.username, credential.password)
+  }.getOrElse(
+      basicRequest
+    )
+    .readTimeout(readTimeout)
 
-        val lengthToCopy = bytes.length - position
-        byteBuffer.put(bytes.drop(_position.toInt))
-        _position += lengthToCopy
-        lengthToCopy.toInt
-      case f: Failure =>
-        throw new Exception(s"Https read failed for uri $uri: $f")
-      case Empty =>
-        throw new Exception(s"Https read failed for uri $uri: Empty")
+  private lazy val headRequest: Request[Either[String, String], Any] =
+    authenticatedRequest.head(Uri(uri))
+
+  private def getHeaderInformation = {
+    val response: Identity[Response[Either[String, String]]] = backend.send(headRequest)
+    val acceptsPartialRequests = response.headers.find(_.is("Accept-Ranges")).exists(_.value == "bytes")
+    val dataSize = response.headers.find(_.is("Content-Length")).map(_.value.toInt).getOrElse(0)
+    (acceptsPartialRequests, dataSize)
+  }
+
+  private lazy val headerInfos = getHeaderInformation
+  private lazy val acceptsPartialRequests: Boolean = headerInfos._1
+
+  private def getDataRequest: Request[Either[String, Array[Byte]], Any] =
+    authenticatedRequest.get(Uri(uri)).response(asByteArray)
+
+  private def getRangeRequest(bufferSize: Int): Request[Either[String, Array[Byte]], Any] =
+    getDataRequest
+      .header("Range", s"bytes=${_position}-${(bufferSize + _position).min(size()) - 1}")
+      .response(asByteArray)
+
+  private def getResponse: Identity[Response[Either[String, Array[Byte]]]] = {
+    val request: Request[Either[String, Array[Byte]], Any] = getDataRequest
+    backend.send(request)
+  }
+
+  private def getResponseForRangeRequest(size: Int) = {
+    val request = getRangeRequest(size)
+    backend.send(request)
+  }
+
+  private lazy val fullResponse: Identity[Response[Either[String, Array[Byte]]]] = getResponse
+
+  override def read(byteBuffer: ByteBuffer): Int = {
+    val response =
+      if (rangeRequestsActive && acceptsPartialRequests) getResponseForRangeRequest(byteBuffer.limit())
+      else fullResponse
+    if (!response.isSuccess) {
+      throw new Exception(s"Https read failed for uri $uri: Response was not successful ${response.statusText}")
     }
+    response.body match {
+      case Left(e) => throw new Exception(s"Https read failed for uri $uri: $e: Response empty")
+      case Right(bytes) =>
+        val availableBytes = size() - position
+        val bytesToCopy = availableBytes.min(byteBuffer.limit)
+        byteBuffer.put(bytes.slice(_position.toInt, (_position + bytesToCopy).toInt))
+        _position += bytesToCopy
+        bytesToCopy.toInt
+    }
+
+  }
 
   override def write(byteBuffer: ByteBuffer): Int = ???
 
   override def position(): Long = _position
 
-  override def position(l: Long): SeekableByteChannel = ???
+  override def position(l: Long): SeekableByteChannel = {
+    this._position = l
+    this
+  }
 
-  override def size(): Long = responseBox.toOption.map(_.body.length.toLong).getOrElse(0L)
+  override def size(): Long =
+    if (rangeRequestsActive) {
+      headerInfos._2
+    } else {
+      fullResponse.body.getOrElse(Array()).length
+    }
 
   override def truncate(l: Long): SeekableByteChannel = ???
 

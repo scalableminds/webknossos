@@ -221,8 +221,8 @@ export function hexToRgb(hex: string): Vector3 {
 /**
  * Converts an HSL color value to RGB. Conversion formula
  * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
- * Assumes h, s, and l are contained in the set [0, 1] and
- * returns r, g, and b in the set [0, 255].
+ * Assumes h, s, l, and a are contained in the set [0, 1] and
+ * returns r, g, b, and a in the set [0, 1].
  *
  * Taken from:
  * https://stackoverflow.com/a/9493060
@@ -253,7 +253,7 @@ export function hslaToRgba(hsla: Vector4): Vector4 {
     b = hue2rgb(p, q, h - 1 / 3);
   }
 
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), Math.round(a * 255)];
+  return [r, g, b, a];
 }
 
 export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
@@ -297,6 +297,10 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
     bb.max[1] - bb.min[1],
     bb.max[2] - bb.min[2],
   ];
+}
+
+export function computeShapeFromBoundingBox(bb: BoundingBoxType): Vector3 {
+  return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {

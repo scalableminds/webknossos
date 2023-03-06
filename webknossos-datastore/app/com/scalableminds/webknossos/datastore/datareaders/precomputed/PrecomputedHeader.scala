@@ -62,10 +62,10 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   lazy val voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
-    chunkIndex.zipWithIndex.map(indices => {
-      val (cIndex, dim) = indices
-      val beginOffset = voxelOffset(dim) + cIndex * precomputedScale.primaryChunkSize(dim)
-      val endOffset = voxelOffset(dim) + ((cIndex + 1) * precomputedScale.primaryChunkSize(dim))
+    chunkIndex.zipWithIndex.map(chunkIndexWithDim => {
+      val (chunkIndexAtDim, dim) = chunkIndexWithDim
+      val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkSize(dim)
+      val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkSize(dim))
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })

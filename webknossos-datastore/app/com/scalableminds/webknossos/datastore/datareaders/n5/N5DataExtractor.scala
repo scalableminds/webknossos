@@ -3,14 +3,14 @@ package com.scalableminds.webknossos.datastore.datareaders.n5
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, InputStream}
 
 class N5DataExtractor {
-  def readBytesAndHeader(data: Array[Byte]): (N5BlockHeader, Option[Array[Byte]]) = {
+  def readBytesAndHeader(data: Array[Byte]): (N5BlockHeader, Array[Byte]) = {
     val in = new ByteArrayInputStream(data)
     val dis = new DataInputStream(in)
 
     val header = extractHeader(dis)
     val buffer = extractData(in)
 
-    (header, Some(buffer))
+    (header, buffer)
   }
 
   private def extractData(in: InputStream): Array[Byte] = {

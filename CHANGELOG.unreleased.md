@@ -14,8 +14,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for remote Zarr datasets with a `datasource-properties.json` as created by the WEBKNOSSOS Python library. [#6879](https://github.com/scalableminds/webknossos/pull/6879)
 
 ### Changed
+- Upgraded antd UI library to v4.24.8 [#6865](https://github.com/scalableminds/webknossos/pull/6865)
 
 ### Fixed
+- Fixed a bug where N5 datasets reading with end-chunks that have a chunk size differing from the metadata-supplied chunk size would fail for some areas. [#6890](https://github.com/scalableminds/webknossos/pull/6890)
 - Fixed a bug where merging multiple volume annotations would result in inconsistent segment lists. [#6882](https://github.com/scalableminds/webknossos/pull/6882)
 - Fixed a bug where uploading multiple annotations with volume layers at once would fail. [#6882](https://github.com/scalableminds/webknossos/pull/6882)
 

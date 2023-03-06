@@ -2053,6 +2053,8 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
   return Request.receiveJSON("/api/pricing/status");
 }
 
+export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
+
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
   return Request.receiveJSON("/api/buildinfo", {

@@ -1,5 +1,5 @@
 import type { Action } from "oxalis/model/actions/actions";
-import { MappingStatusEnum } from "oxalis/constants";
+import constants, { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
 import { clamp } from "libs/utils";
 import {
@@ -170,7 +170,16 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const newState = {
         ...state,
         datasetConfiguration: { ...state.datasetConfiguration, ...action.initialDatasetSettings },
-        userConfiguration: { ...state.userConfiguration, ...action.initialUserSettings },
+        userConfiguration: {
+          ...state.userConfiguration,
+          ...action.initialUserSettings,
+          gpuMemoryFactor:
+            // The value 3 used to be the former default, but was changed
+            // to 4 in #6748.
+            action.initialUserSettings.gpuMemoryFactor === 3
+              ? constants.DEFAULT_GPU_MEMORY_FACTOR
+              : action.initialUserSettings.gpuMemoryFactor,
+        },
       };
       return ensureOnlyOneVisibleSegmentationLayer(newState);
     }

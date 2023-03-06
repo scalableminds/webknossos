@@ -186,7 +186,7 @@ export async function initialize(
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
-    const { gpuMemoryFactor } = initialUserSettings;
+    const { gpuMemoryFactor } = Store.getState().userConfiguration;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (serverTracings.length > 0)
       Store.dispatch(setZoomStepAction(getSomeServerTracing(serverTracings).zoomLevel));

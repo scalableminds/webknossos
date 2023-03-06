@@ -179,7 +179,8 @@ export function calculateTextureSizeAndCountForLayer(
   const packingDegree = getPackingDegree(byteCount, elementClass);
 
   // Try to half the texture size as long as it does not require more
-  // data textures
+  // data textures. This ensures that we maximize the number of simultaneously
+  // renderable layers.
   while (
     getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
     getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity)

@@ -392,7 +392,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       items: [
         {
           key: "create",
-          // data-group-id: {id},
           onClick: () => this.createGroup(id),
           disabled: isEditingDisabled,
           icon: <PlusOutlined />,
@@ -400,7 +399,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         },
         {
           key: "delete",
-          // data-group-id={id},
           disabled: isEditingDisabled,
           onClick: () => this.deleteGroup(id),
           icon: <DeleteOutlined />,
@@ -409,7 +407,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         hasSubgroup
           ? {
               key: "collapseSubgroups",
-              // data-group-id={id},
               disabled: !hasExpandedSubgroup,
               onClick: () => this.setExpansionOfAllSubgroupsTo(id, false),
               icon: <ShrinkOutlined />,
@@ -419,7 +416,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         hasSubgroup
           ? {
               key: "expandSubgroups",
-              // data-group-id={id},
               disabled: !hasCollapsedSubgroup,
               onClick: () => this.setExpansionOfAllSubgroupsTo(id, true),
               icon: <ShrinkOutlined />,

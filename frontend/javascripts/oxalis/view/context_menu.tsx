@@ -94,7 +94,12 @@ import {
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import {
+  ItemType,
+  MenuItemGroupType,
+  MenuItemType,
+  SubMenuType,
+} from "antd/lib/menu/hooks/useItems";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1081,7 +1086,10 @@ function ContextMenuContainer(props: Props) {
   );
 }
 
-function getInfoMenuItem(key: MenuItemType["key"], label: MenuItemType["label"]): MenuItemType {
+function getInfoMenuItem(
+  key: MenuItemType["key"],
+  label: MenuItemType["label"],
+): MenuItemGroupType {
   /*
    * This component can be used within an antd Menu, even though
    * the docs dictate to always use a <Menu.Item /> or <Menu.Divider />.
@@ -1092,10 +1100,7 @@ function getInfoMenuItem(key: MenuItemType["key"], label: MenuItemType["label"])
    * warning.
    */
 
-  const infoMenuStyle: React.CSSProperties = {
-    pointerEvents: "none",
-  };
-  return { key, label, style: infoMenuStyle };
+  return { key, label, type: "group" };
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
@@ -1166,7 +1171,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "positionInfo",
         <>
-          Position: {nodePositionAsString}
+          <i className="fas fa-map-marker-alt" /> Position: {nodePositionAsString}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
         </>,
       ),
@@ -1177,7 +1182,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "positionInfo",
         <>
-          Position: {positionAsString}
+          <i className="fa-solid fa-location-dot" /> Position: {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
         </>,
       ),

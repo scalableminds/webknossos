@@ -546,13 +546,12 @@ function LoggedInAvatar({
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
       triggerSubMenuAction="click"
+      className="right-navbar"
       items={[
         {
           key: "loggedMenu",
           label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
-          style: {
-            padding: 0,
-          },
+          style: { padding: 0 },
           children: [
             {
               key: "userName",

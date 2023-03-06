@@ -59,8 +59,9 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       return cachedNullTexture;
     }
     cachedNullTexture = createUpdatableTexture(
-      0,
-      0,
+      // Use 1x1 texture to avoid WebGL warnings.
+      1,
+      1,
       TEXTURE_CHANNEL_COUNT,
       THREE.UnsignedIntType,
       getRenderer(),

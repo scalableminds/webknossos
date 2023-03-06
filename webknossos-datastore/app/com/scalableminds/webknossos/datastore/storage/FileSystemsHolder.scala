@@ -8,7 +8,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.remotefilesystem.{
   GoogleCloudRemoteFileSystem,
   HttpsRemoteFileSystem,
-  RemoteFileSystem,
   RemotePath,
   S3RemoteFileSystem
 }

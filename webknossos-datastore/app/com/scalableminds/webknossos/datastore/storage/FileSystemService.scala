@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebKnossosClient
-import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
 import java.nio.file.Path

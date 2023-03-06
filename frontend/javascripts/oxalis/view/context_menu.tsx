@@ -627,7 +627,7 @@ function getBoundingBoxMenuOptions({
   }
 
   if (clickedBoundingBoxId == null) {
-    return [];
+    return [newBoundingBoxMenuItem];
   }
 
   const hoveredBBox = userBoundingBoxes.find((bbox) => bbox.id === clickedBoundingBoxId);

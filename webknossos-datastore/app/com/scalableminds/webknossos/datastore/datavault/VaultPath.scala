@@ -1,6 +1,10 @@
 package com.scalableminds.webknossos.datastore.datavault
 
-import com.scalableminds.webknossos.datastore.storage.{FileSystemCredential, HttpBasicAuthCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  FileSystemCredential,
+  HttpBasicAuthCredential,
+  LegacyFileSystemCredential
+}
 
 import java.net.URI
 import java.nio.file.{FileSystem, LinkOption, Path, Paths, WatchEvent, WatchKey, WatchService}
@@ -69,8 +73,9 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
     fileSystemCredentialOpt match {
       case Some(c) => {
         c match {
-          case h: HttpBasicAuthCredential => Some(h)
-          case _                          => None
+          case h: HttpBasicAuthCredential    => Some(h)
+          case l: LegacyFileSystemCredential => Some(l.toBasicAuth)
+          case _                             => None
         }
       }
       case None => None

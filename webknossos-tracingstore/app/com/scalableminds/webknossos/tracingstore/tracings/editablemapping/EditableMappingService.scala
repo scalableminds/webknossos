@@ -4,7 +4,8 @@ import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateEdge, AgglomerateGraph, EditableMappingProto}
+import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
+import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
@@ -115,9 +116,8 @@ class EditableMappingService @Inject()(
     val newId = generateId
     val newEditableMapping = EditableMapping(
       baseMappingName = baseMappingName,
-      segmentToAgglomerate = Map(),
-      agglomerateToGraph = Map(),
-      createdTimestamp = System.currentTimeMillis()
+      createdTimestamp = System.currentTimeMillis(),
+      largestAgglomerateId = 0L
     )
     for {
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(newEditableMapping.toProto))
@@ -142,6 +142,7 @@ class EditableMappingService @Inject()(
       editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
       newId = generateId
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping.toProto))
+      // TODO: duplicate agglomerateToGraph, segmentToAgglomerate
     } yield newId
 
   def updateActionLog(editableMappingId: String): Fox[JsValue] = {
@@ -232,8 +233,8 @@ class EditableMappingService @Inject()(
         case Full(mapping) =>
           remainingUpdates match {
             case List() => Fox.successful(mapping)
-            case head :: tail =>
-              updateIter(applyOneUpdate(mapping, head, remoteFallbackLayer, userToken), tail)
+            case head :: tail => // TODO count versions
+              updateIter(applyOneUpdate(mapping, editableMappingId, 0L, head, remoteFallbackLayer, userToken), tail)
           }
         case _ => mappingFox
       }
@@ -245,36 +246,53 @@ class EditableMappingService @Inject()(
   }
 
   private def applyOneUpdate(mapping: EditableMapping,
+                             editableMappingId: String,
+                             newVersion: Long,
                              update: EditableMappingUpdateAction,
                              remoteFallbackLayer: RemoteFallbackLayer,
                              userToken: Option[String]): Fox[EditableMapping] =
     update match {
       case splitAction: SplitAgglomerateUpdateAction =>
-        applySplitAction(mapping, splitAction, remoteFallbackLayer, userToken)
+        applySplitAction(mapping, editableMappingId, newVersion, splitAction, remoteFallbackLayer, userToken)
       case mergeAction: MergeAgglomerateUpdateAction =>
-        applyMergeAction(mapping, mergeAction, remoteFallbackLayer, userToken)
+        applyMergeAction(mapping, editableMappingId, newVersion, mergeAction, remoteFallbackLayer, userToken)
     }
 
   private def applySplitAction(mapping: EditableMapping,
+                               editableMappingId: String,
+                               newVersion: Long,
                                update: SplitAgglomerateUpdateAction,
                                remoteFallbackLayer: RemoteFallbackLayer,
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
-      agglomerateGraph <- agglomerateGraphForId(mapping, update.agglomerateId, remoteFallbackLayer, userToken)
+      agglomerateGraph <- agglomerateGraphForIdWithFallback(mapping,
+                                                            update.agglomerateId,
+                                                            remoteFallbackLayer,
+                                                            userToken)
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
       largestExistingAgglomerateId <- largestAgglomerateId(mapping, remoteFallbackLayer, userToken)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
       splitSegmentToAgglomerate = graph2.segments.map(_ -> agglomerateId2).toMap
+      _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, splitSegmentToAgglomerate)
+      _ <- updateAgglomerateGraph(editableMappingId, newVersion, update.agglomerateId, graph1)
+      _ <- updateAgglomerateGraph(editableMappingId, newVersion, agglomerateId2, graph2)
     } yield
       EditableMapping(
         mapping.baseMappingName,
-        segmentToAgglomerate = mapping.segmentToAgglomerate ++ splitSegmentToAgglomerate,
-        agglomerateToGraph = mapping.agglomerateToGraph ++ Map(update.agglomerateId -> graph1,
-                                                               agglomerateId2 -> graph2),
-        createdTimestamp = mapping.createdTimestamp
+        createdTimestamp = mapping.createdTimestamp,
+        largestAgglomerateId = agglomerateId2
       )
+
+  private def updateSegmentToAgglomerate(mappingId: String,
+                                         newVersion: Long,
+                                         segmentToAgglomerate: Map[Long, Long]): Fox[Unit] = ???
+
+  private def updateAgglomerateGraph(mappingId: String,
+                                     newVersion: Long,
+                                     agglomerateId: Long,
+                                     graph: AgglomerateGraph): Fox[Unit] = ???
 
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,
@@ -341,32 +359,38 @@ class EditableMappingService @Inject()(
       largestBaseAgglomerateId <- remoteDatastoreClient.getLargestAgglomerateId(remoteFallbackLayer,
                                                                                 mapping.baseMappingName,
                                                                                 userToken)
-      keySet = mapping.agglomerateToGraph.keySet
-    } yield math.max(if (keySet.isEmpty) 0L else keySet.max, largestBaseAgglomerateId)
+    } yield math.max(mapping.largestAgglomerateId, largestBaseAgglomerateId)
 
   private def applyMergeAction(mapping: EditableMapping,
+                               editableMappingId: String,
+                               newVersion: Long,
                                update: MergeAgglomerateUpdateAction,
                                remoteFallbackLayer: RemoteFallbackLayer,
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
-      agglomerateGraph1 <- agglomerateGraphForId(mapping, update.agglomerateId1, remoteFallbackLayer, userToken)
-      agglomerateGraph2 <- agglomerateGraphForId(mapping, update.agglomerateId2, remoteFallbackLayer, userToken)
+      agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping,
+                                                             update.agglomerateId1,
+                                                             remoteFallbackLayer,
+                                                             userToken)
+      agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping,
+                                                             update.agglomerateId2,
+                                                             remoteFallbackLayer,
+                                                             userToken)
       mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"
       mergedSegmentToAgglomerate: Map[Long, Long] = agglomerateGraph2.segments
         .map(s => s -> update.agglomerateId1)
         .toMap
-    } yield
-      EditableMapping(
-        baseMappingName = mapping.baseMappingName,
-        segmentToAgglomerate = mapping.segmentToAgglomerate ++ mergedSegmentToAgglomerate,
-        agglomerateToGraph = mapping.agglomerateToGraph ++ Map(
-          update.agglomerateId1 -> mergedGraph,
-          update.agglomerateId2 -> AgglomerateGraph(List.empty, List.empty, List.empty, List.empty)),
-        createdTimestamp = mapping.createdTimestamp
-      )
+
+      _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, mergedSegmentToAgglomerate)
+      _ <- updateAgglomerateGraph(editableMappingId, newVersion, update.agglomerateId1, mergedGraph)
+      _ <- updateAgglomerateGraph(editableMappingId,
+                                  newVersion,
+                                  update.agglomerateId2,
+                                  AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
+    } yield mapping
 
   private def mergeGraph(agglomerateGraph1: AgglomerateGraph,
                          agglomerateGraph2: AgglomerateGraph,
@@ -382,10 +406,13 @@ class EditableMappingService @Inject()(
     )
   }
 
-  private def agglomerateGraphForId(mapping: EditableMapping,
-                                    agglomerateId: Long,
-                                    remoteFallbackLayer: RemoteFallbackLayer,
-                                    userToken: Option[String]): Fox[AgglomerateGraph] =
+  private def agglomerateGraphForId(mappingId: String, agglomerateId: Long, version: Long): Fox[AgglomerateGraph] = ???
+  // TODO distinguish between failure and empty using Fox.empty
+
+  private def agglomerateGraphForIdWithFallback(mapping: EditableMapping,
+                                                agglomerateId: Long,
+                                                remoteFallbackLayer: RemoteFallbackLayer,
+                                                userToken: Option[String]): Fox[AgglomerateGraph] =
     if (mapping.agglomerateToGraph.contains(agglomerateId)) {
       Fox.successful(mapping.agglomerateToGraph(agglomerateId))
     } else {
@@ -590,7 +617,10 @@ class EditableMappingService @Inject()(
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
       mapping <- get(parameters.editableMappingId, remoteFallbackLayer, userToken)
-      agglomerateGraph <- agglomerateGraphForId(mapping, parameters.agglomerateId, remoteFallbackLayer, userToken)
+      agglomerateGraph <- agglomerateGraphForIdWithFallback(mapping,
+                                                            parameters.agglomerateId,
+                                                            remoteFallbackLayer,
+                                                            userToken)
       edgesToCut <- minCut(agglomerateGraph, segmentId1, segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions

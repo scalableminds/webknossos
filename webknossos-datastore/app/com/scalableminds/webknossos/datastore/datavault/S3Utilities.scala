@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.remotefilesystem
+package com.scalableminds.webknossos.datastore.datavault
 
 import com.amazonaws.auth.{
   AWSCredentialsProvider,

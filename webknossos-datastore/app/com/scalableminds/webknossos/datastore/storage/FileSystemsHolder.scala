@@ -5,11 +5,11 @@ import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.{CloudStorageConfiguration, CloudStorageFileSystem}
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.remotefilesystem.{
-  GoogleCloudRemoteFileSystem,
-  HttpsRemoteFileSystem,
-  RemotePath,
-  S3RemoteFileSystem
+import com.scalableminds.webknossos.datastore.datavault.{
+  GoogleCloudDataVault,
+  HttpsDataVault,
+  VaultPath,
+  S3DataVault
 }
 import com.scalableminds.webknossos.datastore.s3fs.{S3FileSystem, S3FileSystemProvider}
 import com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsFileSystem
@@ -31,7 +31,7 @@ object FileSystemsHolder extends LazyLogging {
   private val fileSystemsCache: AlfuFoxCache[RemoteSourceDescriptor, FileSystem] =
     AlfuFoxCache(maxEntries = 100)
 
-  private val remotePathCache: AlfuFoxCache[RemoteSourceDescriptor, RemotePath] =
+  private val remotePathCache: AlfuFoxCache[RemoteSourceDescriptor, VaultPath] =
     AlfuFoxCache(maxEntries = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
@@ -41,7 +41,7 @@ object FileSystemsHolder extends LazyLogging {
     fileSystemsCache.getOrLoad(remoteSource, create)
 
   def getOrCreateRemote(remoteSourceDescriptor: RemoteSourceDescriptor)(
-      implicit ec: ExecutionContext): Fox[RemotePath] =
+      implicit ec: ExecutionContext): Fox[VaultPath] =
     remotePathCache.getOrLoad(remoteSourceDescriptor, createRemote)
 
   def create(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[FileSystem] = {
@@ -66,15 +66,15 @@ object FileSystemsHolder extends LazyLogging {
     }
   }
 
-  def createRemote(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[RemotePath] = {
+  def createRemote(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] = {
     val scheme = remoteSource.uri.getScheme
     try {
-      val fs: RemotePath = if (scheme == schemeGS) {
-        GoogleCloudRemoteFileSystem.create(remoteSource)
+      val fs: VaultPath = if (scheme == schemeGS) {
+        GoogleCloudDataVault.create(remoteSource)
       } else if (scheme == schemeS3) {
-        S3RemoteFileSystem.create(remoteSource)
+        S3DataVault.create(remoteSource)
       } else if (scheme == schemeHttps || scheme == schemeHttp) {
-        HttpsRemoteFileSystem.create(remoteSource)
+        HttpsDataVault.create(remoteSource)
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")
       }

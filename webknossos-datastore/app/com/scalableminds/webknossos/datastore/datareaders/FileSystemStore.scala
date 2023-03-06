@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.webknossos.datastore.remotefilesystem.RemotePath
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.storage.httpsfilesystem.ByteChannelOptions
 import net.liftweb.common.{EmptyBox, Full}
 import net.liftweb.util.Helpers.tryo
@@ -12,7 +12,7 @@ import java.nio.file.{Files, OpenOption, Path}
 class FileSystemStore(val internalRoot: Path) {
   def readBytes(key: String): Option[Array[Byte]] =
     internalRoot match {
-      case path: RemotePath => tryo(path.get(key)).toOption.map(ZipIO.tryGunzip)
+      case path: VaultPath => tryo(path.get(key)).toOption.map(ZipIO.tryGunzip)
       case _ =>
         val path = internalRoot.resolve(key)
         tryo(Files.readAllBytes(path)).toOption.map(ZipIO.tryGunzip)

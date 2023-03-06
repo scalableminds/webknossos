@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.remotefilesystem
+package com.scalableminds.webknossos.datastore.datavault
 
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.{BlobId, Storage, StorageOptions}
@@ -8,8 +8,8 @@ import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.ByteBuffer
 
-class GoogleCloudRemoteFileSystem(uri: URI, credential: Option[GoogleServiceAccountCredential])
-    extends RemoteFileSystem {
+class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential])
+    extends DataVault {
 
   lazy val storageOptions: StorageOptions = credential match {
     case Some(credential: GoogleServiceAccountCredential) =>
@@ -26,7 +26,7 @@ class GoogleCloudRemoteFileSystem(uri: URI, credential: Option[GoogleServiceAcco
   private lazy val bucket: String = uri.getHost
   private lazy val blobPrefix: String = uri.getPath.tail
 
-  override def get(key: String, path: RemotePath, range: Option[Range]): Array[Byte] = {
+  override def get(key: String, path: VaultPath, range: Option[Range]): Array[Byte] = {
     val objName = if (key.nonEmpty) {
       new URI(blobPrefix).resolve(path.getFileName.toString).resolve(key).toString
     } else {
@@ -50,11 +50,11 @@ class GoogleCloudRemoteFileSystem(uri: URI, credential: Option[GoogleServiceAcco
   }
 }
 
-object GoogleCloudRemoteFileSystem {
+object GoogleCloudDataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor) = {
     val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential])
-    new RemotePath(remoteSourceDescriptor.uri,
-                   new GoogleCloudRemoteFileSystem(remoteSourceDescriptor.uri, credential),
+    new VaultPath(remoteSourceDescriptor.uri,
+                   new GoogleCloudDataVault(remoteSourceDescriptor.uri, credential),
                    credential)
   }
 }

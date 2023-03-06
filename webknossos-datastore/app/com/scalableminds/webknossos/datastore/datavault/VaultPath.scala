@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.remotefilesystem
+package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.webknossos.datastore.storage.{FileSystemCredential, HttpBasicAuthCredential}
 
@@ -6,15 +6,14 @@ import java.net.URI
 import java.nio.file.{FileSystem, LinkOption, Path, Paths, WatchEvent, WatchKey, WatchService}
 
 /*
-RemotePath is implements Path so that a drop in replacement is possible while continuing to use Paths for local storage.
+VaultPath implements Path so that a drop in replacement is possible while continuing to use Paths for local storage.
 This class does not implement all relevant methods and it might be a good idea to remove the inheritance on Path in the
 future.
  */
 
-class RemotePath(uri: URI, remoteFileSystem: RemoteFileSystem, fileSystemCredentialOpt: Option[FileSystemCredential])
-    extends Path {
+class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[FileSystemCredential]) extends Path {
 
-  def get(key: String, range: Option[Range] = None) = remoteFileSystem.get(key, this, range)
+  def get(key: String, range: Option[Range] = None) = dataVault.get(key, this, range)
 
   override def getFileSystem: FileSystem = ???
 
@@ -29,7 +28,7 @@ class RemotePath(uri: URI, remoteFileSystem: RemoteFileSystem, fileSystemCredent
     val newUri =
       if (uri.getPath.endsWith("/")) uri.resolve("..")
       else uri.resolve(".")
-    new RemotePath(newUri, remoteFileSystem, fileSystemCredentialOpt)
+    new VaultPath(newUri, dataVault, fileSystemCredentialOpt)
   }
 
   override def getNameCount: Int = ???
@@ -49,7 +48,7 @@ class RemotePath(uri: URI, remoteFileSystem: RemoteFileSystem, fileSystemCredent
   override def resolve(other: Path): Path = this / other.toString
 
   def /(key: String): Path =
-    new RemotePath(uri.resolve(key), remoteFileSystem, fileSystemCredentialOpt)
+    new VaultPath(uri.resolve(key), dataVault, fileSystemCredentialOpt)
 
   override def relativize(other: Path): Path = ???
 

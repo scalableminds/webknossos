@@ -1,8 +1,8 @@
-package com.scalableminds.webknossos.datastore.remotefilesystem
+package com.scalableminds.webknossos.datastore.datavault
 
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.GetObjectRequest
-import com.scalableminds.webknossos.datastore.remotefilesystem.S3Utilities.{
+import com.scalableminds.webknossos.datastore.datavault.S3Utilities.{
   ACCESS_KEY,
   SECRET_KEY,
   getAmazonS3Client,
@@ -16,7 +16,7 @@ import java.io.InputStream
 import java.net.URI
 import java.util.Properties
 
-class S3RemoteFileSystem(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends RemoteFileSystem {
+class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
 
   lazy val accessKey: Option[String] = s3AccessKeyCredential.map(_.accessKeyId)
   lazy val secretKey: Option[String] = s3AccessKeyCredential.map(_.secretAccessKey)
@@ -44,7 +44,7 @@ class S3RemoteFileSystem(s3AccessKeyCredential: Option[S3AccessKeyCredential], u
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def get(key: String, path: RemotePath, range: Option[Range]): Array[Byte] = {
+  override def get(key: String, path: VaultPath, range: Option[Range]): Array[Byte] = {
     val baseKey = getBaseKey(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
@@ -61,11 +61,11 @@ class S3RemoteFileSystem(s3AccessKeyCredential: Option[S3AccessKeyCredential], u
   }
 }
 
-object S3RemoteFileSystem {
+object S3DataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor) = {
     val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[S3AccessKeyCredential])
-    new RemotePath(remoteSourceDescriptor.uri,
-                   new S3RemoteFileSystem(credential, remoteSourceDescriptor.uri),
+    new VaultPath(remoteSourceDescriptor.uri,
+                   new S3DataVault(credential, remoteSourceDescriptor.uri),
                    credential)
   }
 }

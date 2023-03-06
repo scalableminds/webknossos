@@ -5,7 +5,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.remotefilesystem.RemotePath
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
 
@@ -27,7 +27,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
   protected def parseJsonFromPath[T: Reads](path: Path): Fox[T] =
     for {
       fileBytes <- path match {
-        case path: RemotePath => tryo(ZipIO.tryGunzip(path.get(""))) ?~> "dataSet.explore.failed.readFile"
+        case path: VaultPath => tryo(ZipIO.tryGunzip(path.get(""))) ?~> "dataSet.explore.failed.readFile"
         case _                => tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "dataSet.explore.failed.readFile"
       }
       fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "dataSet.explore.failed.readFile"

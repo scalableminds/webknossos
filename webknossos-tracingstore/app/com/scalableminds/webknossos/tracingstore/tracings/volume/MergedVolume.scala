@@ -1,17 +1,26 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.File
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import net.liftweb.common.Box
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+
+case class MergedVolumeStats(
+    largestSegmentId: Long,
+    sortedResolutionList: Option[List[Vec3IntProto]], // None means do not touch the resolution list
+    labelMaps: List[Map[Long, Long]])
+
+object MergedVolumeStats {
+  def empty: MergedVolumeStats = MergedVolumeStats(0L, None, List.empty)
+}
 
 class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0)
     extends DataConverter
@@ -51,7 +60,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     addLabelSet(labelSet)
   }
 
-  def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
+  private def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
 
   private def prepareLabelMaps(): Unit =
     if (labelSets.isEmpty || (labelSets.length == 1 && initialLargestSegmentId == 0) || labelMaps.nonEmpty) {
@@ -130,5 +139,21 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     mergedVolume.map {
       case (bucketPosition: BucketPosition, _) => bucketPosition.mag
     }.toSet
+
+  def stats: MergedVolumeStats =
+    MergedVolumeStats(
+      largestSegmentId.toLong,
+      Some(presentResolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
+      labelMapsToLongMaps
+    )
+
+  private def labelMapsToLongMaps =
+    labelMaps.toList.map { unsignedIntegerMap =>
+      val longMap = new mutable.HashMap[Long, Long]()
+      unsignedIntegerMap.foreach { keyValueTuple =>
+        longMap += ((keyValueTuple._1.toLong, keyValueTuple._2.toLong))
+      }
+      longMap.toMap
+    }
 
 }

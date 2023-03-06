@@ -14,8 +14,6 @@ future.
 class RemotePath(uri: URI, remoteFileSystem: RemoteFileSystem, fileSystemCredentialOpt: Option[FileSystemCredential])
     extends Path {
 
-  private var pathElements: Seq[String] = Seq()
-
   def get(key: String, range: Option[Range] = None) = remoteFileSystem.get(key, this, range)
 
   override def getFileSystem: FileSystem = ???
@@ -25,22 +23,14 @@ class RemotePath(uri: URI, remoteFileSystem: RemoteFileSystem, fileSystemCredent
   override def getRoot: Path = ???
 
   override def getFileName: Path =
-    if (pathElements.nonEmpty) {
-      Paths.get(pathElements.last)
-    } else {
-      Paths.get(uri.toString.split("/").last)
-    }
+    Paths.get(uri.toString.split("/").last)
 
-  override def getParent: Path =
-    if (pathElements.nonEmpty) {
-      pathElements = pathElements.init
-      this
-    } else {
-      val newUri =
-        if (uri.getPath.endsWith("/")) uri.resolve("..")
-        else uri.resolve(".")
-      new RemotePath(newUri, remoteFileSystem, fileSystemCredentialOpt)
-    }
+  override def getParent: Path = {
+    val newUri =
+      if (uri.getPath.endsWith("/")) uri.resolve("..")
+      else uri.resolve(".")
+    new RemotePath(newUri, remoteFileSystem, fileSystemCredentialOpt)
+  }
 
   override def getNameCount: Int = ???
 
@@ -54,21 +44,17 @@ class RemotePath(uri: URI, remoteFileSystem: RemoteFileSystem, fileSystemCredent
 
   override def normalize(): Path = ???
 
+  override def resolve(other: String): Path = this / other
+
   override def resolve(other: Path): Path = this / other.toString
 
-  def /(key: String): Path = {
-    pathElements = key match {
-      case ".." => pathElements.init
-      case "."  => pathElements
-      case _    => pathElements :+ key
-    }
-    this
-  }
+  def /(key: String): Path =
+    new RemotePath(uri.resolve(key), remoteFileSystem, fileSystemCredentialOpt)
 
   override def relativize(other: Path): Path = ???
 
   override def toUri: URI =
-    pathElements.foldLeft(uri)((u, s) => u.resolve(s))
+    uri
 
   override def toAbsolutePath: Path = ???
 

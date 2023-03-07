@@ -1,20 +1,37 @@
 package com.scalableminds.webknossos.datastore.datavault
 
-import com.scalableminds.webknossos.datastore.storage.{HttpBasicAuthCredential, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.{
+  FileSystemCredential,
+  HttpBasicAuthCredential,
+  LegacyFileSystemCredential,
+  RemoteSourceDescriptor
+}
 
 import java.net.URI
 import scala.concurrent.duration.DurationInt
 import sttp.client3._
 import sttp.model.Uri
 
-class HttpsDataVault(credential: Option[HttpBasicAuthCredential]) extends DataVault {
+class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault {
 
   private val connectionTimeout = 5 seconds
   private val readTimeout = 1 minute
   private lazy val backend = HttpClientSyncBackend(options = SttpBackendOptions.connectionTimeout(connectionTimeout))
 
+  def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
+    credential match {
+      case Some(c) => {
+        c match {
+          case h: HttpBasicAuthCredential    => Some(h)
+          case l: LegacyFileSystemCredential => Some(l.toBasicAuth)
+          case _                             => None
+        }
+      }
+      case None => None
+    }
+
   private def authenticatedRequest() =
-    credential.map { credential =>
+    getBasicAuthCredential.map { credential =>
       basicRequest.auth.basic(credential.username, credential.password)
     }.getOrElse(
         basicRequest
@@ -81,7 +98,7 @@ class HttpsDataVault(credential: Option[HttpBasicAuthCredential]) extends DataVa
 
 object HttpsDataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor) = {
-    val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[HttpBasicAuthCredential])
+    val credential = remoteSourceDescriptor.credential
     new VaultPath(remoteSourceDescriptor.uri, new HttpsDataVault(credential), credential)
   }
 }

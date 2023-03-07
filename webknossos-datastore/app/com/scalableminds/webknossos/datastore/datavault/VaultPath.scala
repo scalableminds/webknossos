@@ -1,11 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.webknossos.datastore.storage.{
-  FileSystemCredential,
-  HttpBasicAuthCredential,
-  LegacyFileSystemCredential
-}
+import com.scalableminds.webknossos.datastore.storage.FileSystemCredential
 import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
@@ -22,7 +18,7 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
   def get(key: String, range: Option[Range] = None): Array[Byte] = dataVault.get(key, this, range)
 
   def tryGet(key: String, range: Option[Range] = None): Option[Array[Byte]] =
-    tryo(get(key)).toOption.map(ZipIO.tryGunzip)
+    tryo(get(key, range)).toOption.map(ZipIO.tryGunzip)
 
   override def getFileSystem: FileSystem = ???
 
@@ -73,18 +69,6 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
   override def register(watcher: WatchService,
                         events: Array[WatchEvent.Kind[_]],
                         modifiers: WatchEvent.Modifier*): WatchKey = ???
-
-  def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
-    fileSystemCredentialOpt match {
-      case Some(c) => {
-        c match {
-          case h: HttpBasicAuthCredential    => Some(h)
-          case l: LegacyFileSystemCredential => Some(l.toBasicAuth)
-          case _                             => None
-        }
-      }
-      case None => None
-    }
 
   override def toString: String = uri.toString
 

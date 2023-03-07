@@ -56,7 +56,7 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
 
   override def resolve(other: Path): Path = this / other.toString
 
-  def /(key: String): Path =
+  def /(key: String): VaultPath =
     new VaultPath(uri.resolve(key), dataVault, fileSystemCredentialOpt)
 
   override def relativize(other: Path): Path = ???

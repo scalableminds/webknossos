@@ -23,13 +23,12 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   private lazy val storage: Storage = storageOptions.getService
 
   private lazy val bucket: String = uri.getHost
-  private lazy val blobPrefix: String = uri.getPath.tail
 
   override def get(key: String, path: VaultPath, range: Option[Range]): Array[Byte] = {
     val objName = if (key.nonEmpty) {
-      new URI(blobPrefix).resolve(path.getFileName.toString).resolve(key).toString
+      path.resolve(key).toUri.getPath.tail
     } else {
-      new URI(blobPrefix).resolve(path.getFileName.toString).toString
+      path.toUri.getPath.tail
     }
     val blobId = BlobId.of(bucket, objName)
     range match {

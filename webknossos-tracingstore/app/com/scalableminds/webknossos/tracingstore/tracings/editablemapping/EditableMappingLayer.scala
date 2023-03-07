@@ -42,6 +42,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
       relevantMapping <- layer.editableMappingService.generateCombinedMappingSubset(segmentIds,
                                                                                     editableMapping,
+                                                                                    editableMappingId,
                                                                                     remoteFallbackLayer,
                                                                                     layer.token)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,

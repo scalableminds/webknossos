@@ -266,6 +266,8 @@ class EditableMappingService @Inject()(
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
       agglomerateGraph <- agglomerateGraphForIdWithFallback(mapping,
+                                                            editableMappingId,
+                                                            Some(newVersion - 1L),
                                                             update.agglomerateId,
                                                             remoteFallbackLayer,
                                                             userToken)
@@ -371,10 +373,14 @@ class EditableMappingService @Inject()(
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping,
+                                                             editableMappingId,
+                                                             Some(newVersion - 1),
                                                              update.agglomerateId1,
                                                              remoteFallbackLayer,
                                                              userToken)
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping,
+                                                             editableMappingId,
+                                                             Some(newVersion - 1),
                                                              update.agglomerateId2,
                                                              remoteFallbackLayer,
                                                              userToken)
@@ -383,7 +389,6 @@ class EditableMappingService @Inject()(
       mergedSegmentToAgglomerate: Map[Long, Long] = agglomerateGraph2.segments
         .map(s => s -> update.agglomerateId1)
         .toMap
-
       _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, mergedSegmentToAgglomerate)
       _ <- updateAgglomerateGraph(editableMappingId, newVersion, update.agglomerateId1, mergedGraph)
       _ <- updateAgglomerateGraph(editableMappingId,
@@ -409,23 +414,25 @@ class EditableMappingService @Inject()(
   private def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =
     s"$mappingId/$agglomerateId"
 
-  private def agglomerateGraphForId(mappingId: String, agglomerateId: Long, version: Long): Fox[AgglomerateGraph] =
-    // TODO: distinguish between failure and empty using Fox.empty
+  private def agglomerateGraphForId(mappingId: String,
+                                    agglomerateId: Long,
+                                    version: Option[Long] = None): Fox[AgglomerateGraph] =
     for {
+      _ <- Fox.successful(())
       keyValuePair: VersionedKeyValuePair[AgglomerateGraph] <- tracingDataStore.editableMappingsAgglomerateGraphs.get(
         agglomerateGraphKey(mappingId, agglomerateId),
-        Some(version),
-        mayBeEmpty = true)(fromProtoBytes[AgglomerateGraph])
+        version,
+        mayBeEmpty = Some(true))(fromProtoBytes[AgglomerateGraph])
     } yield keyValuePair.value
 
   private def agglomerateGraphForIdWithFallback(mapping: EditableMapping,
                                                 editableMappingId: String,
-                                                previousVersion: Long,
+                                                version: Option[Long],
                                                 agglomerateId: Long,
                                                 remoteFallbackLayer: RemoteFallbackLayer,
                                                 userToken: Option[String]): Fox[AgglomerateGraph] =
     for {
-      agglomerateGraphBox <- agglomerateGraphForId(editableMappingId, agglomerateId, previousVersion).futureBox
+      agglomerateGraphBox <- agglomerateGraphForId(editableMappingId, agglomerateId, version).futureBox
       agglomerateGraph <- agglomerateGraphBox match {
         case Full(agglomerateGraph) => Fox.successful(agglomerateGraph)
         case Empty =>
@@ -479,21 +486,23 @@ class EditableMappingService @Inject()(
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
+  private def getSegmentToAgglomerateForSegments(segmentIds: Set[Long],
+                                                 editableMappingId: String): Fox[Map[Long, Long]] = ???
+
   def generateCombinedMappingSubset(segmentIds: Set[Long],
                                     editableMapping: EditableMapping,
+                                    editableMappingId: String,
                                     remoteFallbackLayer: RemoteFallbackLayer,
-                                    userToken: Option[String]): Fox[Map[Long, Long]] = {
-    val segmentIdsInEditableMapping: Set[Long] = segmentIds.intersect(editableMapping.segmentToAgglomerate.keySet)
-    val segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
-    val editableMappingSubset =
-      segmentIdsInEditableMapping.map(segmentId => segmentId -> editableMapping.segmentToAgglomerate(segmentId)).toMap
+                                    userToken: Option[String]): Fox[Map[Long, Long]] =
     for {
+      editableMappingSubset <- getSegmentToAgglomerateForSegments(segmentIds, editableMappingId)
+      segmentIdsInEditableMapping: Set[Long] = editableMappingSubset.keySet
+      segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
       baseMappingSubset <- getBaseSegmentToAgglomeate(editableMapping.baseMappingName,
                                                       segmentIdsInBaseMapping,
                                                       remoteFallbackLayer,
                                                       userToken)
     } yield editableMappingSubset ++ baseMappingSubset
-  }
 
   def getAgglomerateSkeletonWithFallback(editableMappingId: String,
                                          remoteFallbackLayer: RemoteFallbackLayer,
@@ -501,50 +510,53 @@ class EditableMappingService @Inject()(
                                          userToken: Option[String]): Fox[Array[Byte]] =
     for {
       editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
-      agglomerateIdIsPresent = editableMapping.agglomerateToGraph.contains(agglomerateId)
-      skeletonBytes <- if (agglomerateIdIsPresent)
-        getAgglomerateSkeleton(editableMappingId, editableMapping, remoteFallbackLayer, agglomerateId)
-      else
-        remoteDatastoreClient.getAgglomerateSkeleton(userToken,
-                                                     remoteFallbackLayer,
-                                                     editableMapping.baseMappingName,
-                                                     agglomerateId)
+      agglomerateGraphBox <- agglomerateGraphForId(editableMappingId, agglomerateId).futureBox
+      skeletonBytes <- agglomerateGraphBox match {
+        case Full(agglomerateGraph) =>
+          Fox.successful(
+            agglomerateGraphToSkeleton(editableMappingId, agglomerateGraph, remoteFallbackLayer, agglomerateId))
+        case Empty =>
+          remoteDatastoreClient.getAgglomerateSkeleton(userToken,
+                                                       remoteFallbackLayer,
+                                                       editableMapping.baseMappingName,
+                                                       agglomerateId)
+        case f: Failure => f.toFox
+      }
     } yield skeletonBytes
 
-  private def getAgglomerateSkeleton(editableMappingId: String,
-                                     editableMapping: EditableMapping,
-                                     remoteFallbackLayer: RemoteFallbackLayer,
-                                     agglomerateId: Long): Fox[Array[Byte]] =
-    for {
-      graph <- editableMapping.agglomerateToGraph.get(agglomerateId)
-      nodeIdStartAtOneOffset = 1
-      nodes = graph.positions.zipWithIndex.map {
-        case (pos, idx) =>
-          NodeDefaults.createInstance.copy(
-            id = idx + nodeIdStartAtOneOffset,
-            position = pos
-          )
-      }
-      segmentIdToNodeIdMinusOne: Map[Long, Int] = graph.segments.zipWithIndex.toMap
-      skeletonEdges = graph.edges.map { e =>
-        Edge(source = segmentIdToNodeIdMinusOne(e.source) + nodeIdStartAtOneOffset,
-             target = segmentIdToNodeIdMinusOne(e.target) + nodeIdStartAtOneOffset)
-      }
+  private def agglomerateGraphToSkeleton(editableMappingId: String,
+                                         graph: AgglomerateGraph,
+                                         remoteFallbackLayer: RemoteFallbackLayer,
+                                         agglomerateId: Long): Array[Byte] = {
+    val nodeIdStartAtOneOffset = 1
+    val nodes = graph.positions.zipWithIndex.map {
+      case (pos, idx) =>
+        NodeDefaults.createInstance.copy(
+          id = idx + nodeIdStartAtOneOffset,
+          position = pos
+        )
+    }
+    val segmentIdToNodeIdMinusOne: Map[Long, Int] = graph.segments.zipWithIndex.toMap
+    val skeletonEdges = graph.edges.map { e =>
+      Edge(source = segmentIdToNodeIdMinusOne(e.source) + nodeIdStartAtOneOffset,
+           target = segmentIdToNodeIdMinusOne(e.target) + nodeIdStartAtOneOffset)
+    }
 
-      trees = Seq(
-        Tree(
-          treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
-          createdTimestamp = System.currentTimeMillis(),
-          nodes = nodes,
-          edges = skeletonEdges,
-          name = s"agglomerate $agglomerateId ($editableMappingId)"
-        ))
+    val trees = Seq(
+      Tree(
+        treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
+        createdTimestamp = System.currentTimeMillis(),
+        nodes = nodes,
+        edges = skeletonEdges,
+        name = s"agglomerate $agglomerateId ($editableMappingId)"
+      ))
 
-      skeleton = SkeletonTracingDefaults.createInstance.copy(
-        dataSetName = remoteFallbackLayer.dataSetName,
-        trees = trees
-      )
-    } yield skeleton.toByteArray
+    val skeleton = SkeletonTracingDefaults.createInstance.copy(
+      dataSetName = remoteFallbackLayer.dataSetName,
+      trees = trees
+    )
+    skeleton.toByteArray
+  }
 
   private def getBaseSegmentToAgglomeate(mappingName: String,
                                          segmentIds: Set[Long],
@@ -585,7 +597,7 @@ class EditableMappingService @Inject()(
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield unsignedIntArray
 
-  def longsToBytes(longs: Array[Long], elementClass: ElementClass): Fox[Array[Byte]] =
+  private def longsToBytes(longs: Array[Long], elementClass: ElementClass): Fox[Array[Byte]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray: Array[UnsignedInteger] = longs.map(UnsignedInteger.fromLongWithElementClass(_, elementClass))
@@ -636,6 +648,8 @@ class EditableMappingService @Inject()(
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
       mapping <- get(parameters.editableMappingId, remoteFallbackLayer, userToken)
       agglomerateGraph <- agglomerateGraphForIdWithFallback(mapping,
+                                                            parameters.editableMappingId,
+                                                            None,
                                                             parameters.agglomerateId,
                                                             remoteFallbackLayer,
                                                             userToken)

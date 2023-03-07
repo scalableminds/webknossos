@@ -28,7 +28,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
     for {
       fileBytes <- path match {
         case path: VaultPath => tryo(ZipIO.tryGunzip(path.get(""))) ?~> "dataSet.explore.failed.readFile"
-        case _                => tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "dataSet.explore.failed.readFile"
+        case _               => tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "dataSet.explore.failed.readFile"
       }
       fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "dataSet.explore.failed.readFile"
       parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)

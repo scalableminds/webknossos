@@ -1,13 +1,8 @@
 package backend
 
-import akka.actor.ProviderSelection.Remote
-import com.google.cloud.storage.StorageOptions
-import com.google.cloud.storage.contrib.nio.{CloudStorageConfiguration, CloudStorageFileSystem}
-import com.scalableminds.webknossos.datastore.storage.httpsfilesystem.{HttpsFileSystem, HttpsPath}
 import org.scalatestplus.play.PlaySpec
 
 import java.net.URI
-import com.scalableminds.webknossos.datastore.datareaders.FileSystemStore
 import com.scalableminds.webknossos.datastore.datavault.{GoogleCloudDataVault, HttpsDataVault}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
 

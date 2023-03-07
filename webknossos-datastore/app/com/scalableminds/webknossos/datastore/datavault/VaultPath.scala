@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.datastore.storage.{
   FileSystemCredential,
   HttpBasicAuthCredential,
   LegacyFileSystemCredential
 }
+import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
 import java.nio.file.{FileSystem, LinkOption, Path, Paths, WatchEvent, WatchKey, WatchService}
@@ -17,7 +19,10 @@ future.
 
 class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[FileSystemCredential]) extends Path {
 
-  def get(key: String, range: Option[Range] = None) = dataVault.get(key, this, range)
+  def get(key: String, range: Option[Range] = None): Array[Byte] = dataVault.get(key, this, range)
+
+  def tryGet(key: String, range: Option[Range] = None): Option[Array[Byte]] =
+    tryo(get(key)).toOption.map(ZipIO.tryGunzip)
 
   override def getFileSystem: FileSystem = ???
 
@@ -82,4 +87,6 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
     }
 
   override def toString: String = uri.toString
+
+  def getName: String = s"VaultPath: ${this.toString} for ${dataVault.getClass.getSimpleName}"
 }

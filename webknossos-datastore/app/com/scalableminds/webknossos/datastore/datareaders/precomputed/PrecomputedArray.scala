@@ -1,26 +1,20 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  ChunkReader,
-  DatasetArray,
-  DatasetPath,
-  FileSystemStore
-}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetPath}
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
-  def open(magPath: Path, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
+  def open(magPath: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
 
-    val store = new FileSystemStore(magPath.getParent)
+    val basePath = magPath.getParent.asInstanceOf[VaultPath]
     val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
-    val headerBytes = store.readBytes(headerPath)
+    val headerBytes = basePath.tryGet(headerPath)
     if (headerBytes.isEmpty)
       throw new IOException(
         "'" + PrecomputedHeader.FILENAME_INFO + "' expected but is not readable or missing in store.")
@@ -46,7 +40,7 @@ object PrecomputedArray extends LazyLogging {
     }
     val datasetPath = new DatasetPath(key.toString)
     new PrecomputedArray(datasetPath,
-                         store,
+                         basePath,
                          scaleHeader,
                          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
                          channelIndex)
@@ -54,15 +48,15 @@ object PrecomputedArray extends LazyLogging {
 }
 
 class PrecomputedArray(relativePath: DatasetPath,
-                       store: FileSystemStore,
+                       vaultPath: VaultPath,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int])
-    extends DatasetArray(relativePath, store, header, axisOrder, channelIndex)
+    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex)
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =
-    PrecomputedChunkReader.create(store, header)
+    PrecomputedChunkReader.create(vaultPath, header)
 
   lazy val voxelOffset: Array[Int] = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {

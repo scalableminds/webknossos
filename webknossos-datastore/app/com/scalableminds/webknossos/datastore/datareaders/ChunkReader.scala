@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{Array => MultiArray, DataType => MADataType}
 
@@ -9,8 +10,8 @@ import scala.concurrent.Future
 import scala.util.Using
 
 object ChunkReader {
-  def create(store: FileSystemStore, header: DatasetHeader): ChunkReader =
-    new ChunkReader(header, store, createChunkTyper(header))
+  def create(vaultPath: VaultPath, header: DatasetHeader): ChunkReader =
+    new ChunkReader(header, vaultPath, createChunkTyper(header))
 
   def createChunkTyper(header: DatasetHeader): ChunkTyper =
     header.resolvedDataType match {
@@ -23,7 +24,7 @@ object ChunkReader {
     }
 }
 
-class ChunkReader(val header: DatasetHeader, val store: FileSystemStore, val chunkTyper: ChunkTyper) {
+class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunkTyper: ChunkTyper) {
   lazy val chunkSize: Int = header.chunkSize.toList.product
 
   @throws[IOException]
@@ -36,7 +37,7 @@ class ChunkReader(val header: DatasetHeader, val store: FileSystemStore, val chu
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
   protected def readChunkBytesAndShape(path: String): Option[(Array[Byte], Option[Array[Int]])] =
     Using.Manager { use =>
-      store.readBytes(path).map { bytes =>
+      vaultPath.tryGet(path).map { bytes =>
         val is = use(new ByteArrayInputStream(bytes))
         val os = use(new ByteArrayOutputStream())
         header.compressorImpl.uncompress(is, os)

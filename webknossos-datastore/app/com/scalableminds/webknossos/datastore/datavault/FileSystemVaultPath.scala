@@ -3,11 +3,12 @@ package com.scalableminds.webknossos.datastore.datavault
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.file.{FileSystem, Files, LinkOption, Path, WatchEvent, WatchKey, WatchService}
+import scala.collection.immutable.NumericRange
 
 class FileSystemVaultPath(basePath: Path)
     extends VaultPath(uri = new URI(""), dataVault = NullDataVault.create, fileSystemCredentialOpt = None) {
 
-  override def get(key: String, range: Option[Range] = None): Array[Byte] = {
+  override def get(key: String, range: Option[NumericRange[Long]] = None): Array[Byte] = {
     val path = basePath.resolve(key)
     range match {
       case Some(r) =>

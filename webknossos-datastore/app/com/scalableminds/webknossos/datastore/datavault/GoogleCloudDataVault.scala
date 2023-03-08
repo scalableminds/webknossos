@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCrede
 import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.ByteBuffer
+import scala.collection.immutable.NumericRange
 
 class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential]) extends DataVault {
 
@@ -24,7 +25,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 
   private lazy val bucket: String = uri.getHost
 
-  override def get(key: String, path: VaultPath, range: Option[Range]): Array[Byte] = {
+  override def get(key: String, path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
     val objName = if (key.nonEmpty) {
       path.resolve(key).toUri.getPath.tail
     } else {

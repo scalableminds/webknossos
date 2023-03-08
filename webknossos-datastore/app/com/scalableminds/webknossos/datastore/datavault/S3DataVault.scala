@@ -15,6 +15,7 @@ import org.apache.commons.io.IOUtils
 import java.io.InputStream
 import java.net.URI
 import java.util.Properties
+import scala.collection.immutable.NumericRange
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
 
@@ -39,12 +40,12 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     getAmazonS3Client(props)
   }
 
-  private def getRangeRequest(bucketName: String, key: String, range: Range): GetObjectRequest =
+  private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
     new GetObjectRequest(bucketName, key).withRange(range.start, range.end)
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def get(key: String, path: VaultPath, range: Option[Range]): Array[Byte] = {
+  override def get(key: String, path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
     val baseKey = getBaseKey(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")

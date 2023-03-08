@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.{FileSystemsHolder, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.{DataVaultsHolder, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.credential.CredentialService
 import models.user.User
@@ -163,7 +163,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
                                                             requestingUser._organization)
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "remoteFileSystem.credential.insert.failed"
-      remotePath <- FileSystemsHolder.getOrCreate(remoteSource) ?~> "remoteFileSystem.setup.failed"
+      remotePath <- DataVaultsHolder.getOrCreate(remoteSource) ?~> "remoteFileSystem.setup.failed"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
         credentialId.map(_.toString),

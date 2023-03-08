@@ -3,7 +3,7 @@ package models.binary.credential
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   FileSystemCredential,
-  FileSystemsHolder,
+  DataVaultsHolder,
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
   S3AccessKeyCredential
@@ -24,7 +24,7 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                           userId: ObjectId,
                           organizationId: ObjectId): Option[FileSystemCredential] =
     uri.getScheme match {
-      case FileSystemsHolder.schemeHttps | FileSystemsHolder.schemeHttp =>
+      case DataVaultsHolder.schemeHttps | DataVaultsHolder.schemeHttp =>
         credentialIdentifier.map(
           username =>
             HttpBasicAuthCredential(uri.toString,
@@ -32,13 +32,13 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                                     credentialSecret.getOrElse(""),
                                     userId.toString,
                                     organizationId.toString))
-      case FileSystemsHolder.schemeS3 =>
+      case DataVaultsHolder.schemeS3 =>
         (credentialIdentifier, credentialSecret) match {
           case (Some(keyId), Some(secretKey)) =>
             Some(S3AccessKeyCredential(uri.toString, keyId, secretKey, userId.toString, organizationId.toString))
           case _ => None
         }
-      case FileSystemsHolder.schemeGS =>
+      case DataVaultsHolder.schemeGS =>
         for {
           secret <- credentialSecret
           secretJson <- tryo(Json.parse(secret)).toOption

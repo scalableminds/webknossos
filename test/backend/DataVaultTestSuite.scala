@@ -6,11 +6,13 @@ import java.net.URI
 import com.scalableminds.webknossos.datastore.datavault.{GoogleCloudDataVault, HttpsDataVault}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
 
+import scala.collection.immutable.NumericRange
+
 class DataVaultTestSuite extends PlaySpec {
 
   "Data vault" when {
     "using Range requests" when {
-      val range = 0 to 1023
+      val range: NumericRange[Long] = Range.Long(0, 1024, 1)
       val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584" // when accessed via range request, the response body is 1024 bytes long, otherwise 124.8 KB
 
       "with HTTP Vault" should {

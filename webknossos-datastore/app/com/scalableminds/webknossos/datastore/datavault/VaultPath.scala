@@ -6,6 +6,7 @@ import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
 import java.nio.file.{FileSystem, LinkOption, Path, Paths, WatchEvent, WatchKey, WatchService}
+import scala.collection.immutable.NumericRange
 
 /*
 VaultPath implements Path so that a drop in replacement is possible while continuing to use Paths for local storage.
@@ -15,9 +16,9 @@ future.
 
 class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[FileSystemCredential]) extends Path {
 
-  def get(key: String, range: Option[Range] = None): Array[Byte] = dataVault.get(key, this, range)
+  def get(key: String, range: Option[NumericRange[Long]] = None): Array[Byte] = dataVault.get(key, this, range)
 
-  def tryGet(key: String, range: Option[Range] = None): Option[Array[Byte]] =
+  def tryGet(key: String, range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
     tryo(get(key, range)).toOption.map(ZipIO.tryGunzip)
 
   override def getFileSystem: FileSystem = ???

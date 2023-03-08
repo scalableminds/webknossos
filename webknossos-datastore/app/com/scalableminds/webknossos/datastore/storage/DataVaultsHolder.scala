@@ -8,7 +8,7 @@ import net.liftweb.common.Full
 
 import scala.concurrent.ExecutionContext
 
-object FileSystemsHolder extends LazyLogging {
+object DataVaultsHolder extends LazyLogging {
 
   val schemeS3: String = "s3"
   val schemeHttps: String = "https"

@@ -3,8 +3,10 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
+import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
@@ -77,6 +79,8 @@ class EditableMappingService @Inject()(
     with FallbackDataHelper
     with FoxImplicits
     with ProtoGeometryImplicits {
+
+  private val defaultSegmentToAgglomerateChunkSize = 256 * 1024 // 256 KiB chunks
 
   private def generateId: String = UUID.randomUUID.toString
 
@@ -225,19 +229,23 @@ class EditableMappingService @Inject()(
       agglomerateId2 = largestExistingAgglomerateId + 1L
       (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
       splitSegmentToAgglomerate = graph2.segments.map(_ -> agglomerateId2).toMap
-      _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, splitSegmentToAgglomerate)
+      _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, graph2.segments, agglomerateId2)
       _ <- updateAgglomerateGraph(editableMappingId, newVersion, update.agglomerateId, graph1)
       _ <- updateAgglomerateGraph(editableMappingId, newVersion, agglomerateId2, graph2)
     } yield editableMappingInfo.withLargestAgglomerateId(agglomerateId2)
 
   private def updateSegmentToAgglomerate(mappingId: String,
                                          newVersion: Long,
-                                         segmentToAgglomerate: Map[Long, Long]): Fox[Unit] = ???
+                                         segmentIdsToUpdate: Seq[Long],
+                                         agglomerateId: Long): Fox[Unit] = ???
 
   private def updateAgglomerateGraph(mappingId: String,
                                      newVersion: Long,
                                      agglomerateId: Long,
-                                     graph: AgglomerateGraph): Fox[Unit] = ???
+                                     graph: AgglomerateGraph): Fox[Unit] =
+    tracingDataStore.editableMappingsAgglomerateGraphs.put(agglomerateGraphKey(mappingId, agglomerateId),
+                                                           newVersion,
+                                                           graph)
 
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,
@@ -329,10 +337,7 @@ class EditableMappingService @Inject()(
                                                              userToken)
       mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"
-      mergedSegmentToAgglomerate: Map[Long, Long] = agglomerateGraph2.segments
-        .map(s => s -> update.agglomerateId1)
-        .toMap
-      _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, mergedSegmentToAgglomerate)
+      _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, agglomerateGraph2.segments, update.agglomerateId1)
       _ <- updateAgglomerateGraph(editableMappingId, newVersion, update.agglomerateId1, mergedGraph)
       _ <- updateAgglomerateGraph(editableMappingId,
                                   newVersion,
@@ -357,11 +362,13 @@ class EditableMappingService @Inject()(
   private def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =
     s"$mappingId/$agglomerateId"
 
+  private def segmentToAgglomerateKey(mappingId: String, chunkId: Long): String =
+    s"$mappingId/$chunkId"
+
   def agglomerateGraphForId(mappingId: String,
                             agglomerateId: Long,
                             version: Option[Long] = None): Fox[AgglomerateGraph] =
     for {
-      _ <- Fox.successful(())
       keyValuePair: VersionedKeyValuePair[AgglomerateGraph] <- tracingDataStore.editableMappingsAgglomerateGraphs.get(
         agglomerateGraphKey(mappingId, agglomerateId),
         version,
@@ -411,7 +418,34 @@ class EditableMappingService @Inject()(
     } yield data
 
   private def getSegmentToAgglomerateForSegments(segmentIds: Set[Long],
-                                                 editableMappingId: String): Fox[Map[Long, Long]] = ???
+                                                 editableMappingId: String): Fox[Map[Long, Long]] = {
+    val chunkIds = segmentIds.map(_ / defaultSegmentToAgglomerateChunkSize)
+    for { // TODO: optimization: fossil-multiget
+      maps <- Fox.serialCombined(chunkIds.toList)(chunkId => getSegmentToAgglomerateChunk(editableMappingId, chunkId))
+    } yield Map.empty
+  }
+
+  private def getSegmentToAgglomerateChunk(editableMappingId: String, chunkId: Long): Fox[Map[Long, Long]] =
+    for {
+      chunkBox: Box[SegmentToAgglomerateProto] <- getSegmentToAgglomerateChunkProto(editableMappingId, chunkId).futureBox
+      segmentToAgglomerate <- chunkBox match {
+        case Full(chunk) => Fox.successful(mapFromProto(chunk))
+        case Empty       => Fox.successful(Map.empty[Long, Long])
+        case f: Failure  => f.toFox
+      }
+    } yield segmentToAgglomerate
+
+  private def mapFromProto(segmentToAgglomerateProto: SegmentToAgglomerateProto): Map[Long, Long] =
+    segmentToAgglomerateProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId).toMap
+
+  def getSegmentToAgglomerateChunkProto(editableMappingId: String,
+                                        agglomerateId: Long,
+                                        version: Option[Long] = None): Fox[SegmentToAgglomerateProto] =
+    for {
+      keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
+        .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
+          fromProtoBytes[SegmentToAgglomerateProto])
+    } yield keyValuePair.value
 
   def generateCombinedMappingSubset(segmentIds: Set[Long],
                                     editableMapping: EditableMappingProto,

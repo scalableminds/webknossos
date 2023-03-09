@@ -2,6 +2,8 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
+import com.scalableminds.webknossos.datastore.LongList.LongList
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
   InboxDataSourceLike,
@@ -14,13 +16,13 @@ import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
-import java.io.File
 
+import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Api(tags = Array("datastore"))
@@ -381,12 +383,12 @@ Expects:
       dataSetName: String,
       dataLayerName: String,
       mappingName: String
-  ): Action[List[Long]] = Action.async(validateJson[List[Long]]) { implicit request =>
+  ): Action[LongList] = Action.async(validateProto[LongList]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateIds: List[Long] <- agglomerateService
+        agglomerateIds: Seq[Long] <- agglomerateService
           .agglomerateIdsForSegmentIds(
             AgglomerateFileKey(
               organizationName,
@@ -394,10 +396,10 @@ Expects:
               dataLayerName,
               mappingName
             ),
-            request.body
+            request.body.items
           )
           .toFox
-      } yield Ok(Json.toJson(agglomerateIds))
+      } yield Ok(LongList(agglomerateIds).toByteArray)
     }
   }
 

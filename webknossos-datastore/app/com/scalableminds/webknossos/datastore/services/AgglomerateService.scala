@@ -249,7 +249,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
   }
 
-  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: List[Long]): Box[List[Long]] = {
+  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long]): Box[Seq[Long]] = {
     val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
 
     tryo {

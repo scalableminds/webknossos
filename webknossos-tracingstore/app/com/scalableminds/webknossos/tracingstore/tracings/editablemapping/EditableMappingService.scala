@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
@@ -123,13 +122,9 @@ class EditableMappingService @Inject()(
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
 
-  def duplicate(editableMappingIdOpt: Option[String],
-                tracing: VolumeTracing,
-                tracingId: String,
-                userToken: Option[String]): Fox[String] =
+  def duplicate(editableMappingIdOpt: Option[String], tracing: VolumeTracing, tracingId: String): Fox[String] =
     for {
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
-      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
       editableMapping <- getInfo(editableMappingId)
       newId = generateId
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping))
@@ -421,7 +416,7 @@ class EditableMappingService @Inject()(
                                                  editableMappingId: String): Fox[Map[Long, Long]] = {
     val chunkIds = segmentIds.map(_ / defaultSegmentToAgglomerateChunkSize)
     for { // TODO: optimization: fossil-multiget
-      maps: List[Vector[(Long, Long)]] <- Fox.serialCombined(chunkIds.toList)(chunkId =>
+      maps: List[Seq[(Long, Long)]] <- Fox.serialCombined(chunkIds.toList)(chunkId =>
         getSegmentToAgglomerateChunk(editableMappingId, chunkId, segmentIds))
     } yield maps.flatten.toMap
   }

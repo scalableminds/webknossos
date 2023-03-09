@@ -120,10 +120,7 @@ class SceneController {
   // Each group can hold multiple meshes.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isosurfacesRootGroup' has no initializer... Remove this comment to see the full error message
   isosurfacesLODRootGroup: CustomLOD;
-  isosurfacesGroupsPerSegmentationId: Record<
-    number,
-    { meshGroup: THREE.Group; lod: number | null | undefined }
-  > = {};
+  isosurfacesGroupsPerSegmentationId: Record<number, Record<number, THREE.Group>> = {};
   current3DSceneLoD: number = 0;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -241,8 +238,11 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): THREE.Group {
-    return this.isosurfacesGroupsPerSegmentationId[cellId].meshGroup;
+  getIsosurfaceGeometryInBestLOD(cellId: number): THREE.Group {
+    const bestLod = Math.min(
+      ...Object.keys(this.isosurfacesGroupsPerSegmentationId[cellId]).map(parseInt),
+    );
+    return this.isosurfacesGroupsPerSegmentationId[cellId][bestLod];
   }
 
   getColorObjectForSegment(cellId: number) {
@@ -315,11 +315,14 @@ class SceneController {
     segmentationId: number,
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
-    lod?: number,
+    lod: number = 0,
   ): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
+      this.isosurfacesGroupsPerSegmentationId[segmentationId] = {};
+    }
+    if (this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] == null) {
       const newGroup = new THREE.Group();
-      this.isosurfacesGroupsPerSegmentationId[segmentationId] = { meshGroup: newGroup, lod };
+      this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] = newGroup;
       if (lod == null) {
         this.isosurfacesLODRootGroup.addNoLODSupportedMesh(newGroup);
       } else {
@@ -338,22 +341,22 @@ class SceneController {
       mesh.translateZ(offset[2]);
     }
 
-    this.isosurfacesGroupsPerSegmentationId[segmentationId].meshGroup.add(mesh);
+    this.isosurfacesGroupsPerSegmentationId[segmentationId][lod].add(mesh);
   }
 
   removeIsosurfaceById(segmentationId: number): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       return;
     }
-
-    const { meshGroup, lod } = this.isosurfacesGroupsPerSegmentationId[segmentationId];
-    if (lod) {
-      this.isosurfacesLODRootGroup.removeLODMesh(meshGroup, lod);
-    } else {
-      this.isosurfacesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
-    }
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Group'.
-    this.isosurfacesGroupsPerSegmentationId[segmentationId] = null;
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[segmentationId], (meshGroup, lod) => {
+      const lodNumber = parseInt(lod);
+      if (lodNumber !== 0) {
+        this.isosurfacesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+      } else {
+        this.isosurfacesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+      }
+    });
+    delete this.isosurfacesGroupsPerSegmentationId[segmentationId];
   }
 
   addLights(): void {
@@ -397,18 +400,21 @@ class SceneController {
   }
 
   setIsosurfaceVisibility(id: number, visibility: boolean): void {
-    this.isosurfacesGroupsPerSegmentationId[id].meshGroup.visible = visibility;
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup, lod) => {
+      meshGroup.visible = visibility;
+    });
   }
 
   setIsosurfaceColor(id: number): void {
     const color = this.getColorObjectForSegment(id);
-    const { meshGroup } = this.isosurfacesGroupsPerSegmentationId[id];
-    if (meshGroup) {
-      for (const child of meshGroup.children) {
-        // @ts-ignore
-        child.material.color = color;
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup, lod) => {
+      if (meshGroup) {
+        for (const child of meshGroup.children) {
+          // @ts-ignore
+          child.material.color = color;
+        }
       }
-    }
+    });
   }
 
   updateMeshPostion(id: string, position: Vector3): void {

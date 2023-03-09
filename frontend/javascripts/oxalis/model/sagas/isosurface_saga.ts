@@ -717,6 +717,7 @@ function* loadPrecomputedMeshForSegmentId(
   const currentLod = sceneController.current3DSceneLoD;
   // TODO: handle case with V0 meshes.
   // Start loading the mesh from the current lod and then load the other lods.
+  // todo: lod count should be dynamic and not static
   const loadingOrder = version >= 3 ? [currentLod, ..._.without([1, 2, 3], currentLod)] : [0];
 
   const loadChunksTasks = _.compact(
@@ -736,7 +737,6 @@ function* loadPrecomputedMeshForSegmentId(
         const tasks = sortedAvailableChunks.map(
           (chunk) =>
             function* loadChunk(): Saga<void> {
-              debugger;
               if ("position" in chunk) {
                 // V3
                 const dracoData = yield* call(
@@ -748,7 +748,6 @@ function* loadPrecomputedMeshForSegmentId(
                   chunk.byteOffset,
                   chunk.byteSize,
                 );
-                debugger;
                 const loader = getDracoLoader();
 
                 const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
@@ -821,7 +820,7 @@ function* loadPrecomputedMeshForSegmentId(
  */
 function* downloadIsosurfaceCellById(cellName: string, cellId: number): Saga<void> {
   const sceneController = getSceneController();
-  const geometry = sceneController.getIsosurfaceGeometry(cellId);
+  const geometry = sceneController.getIsosurfaceGeometryInBestLOD(cellId);
 
   if (geometry == null) {
     const errorMessage = messages["tracing.not_isosurface_available_to_download"];

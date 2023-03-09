@@ -234,7 +234,9 @@ class SceneController {
 
   getIsosurfaceGeometryInBestLOD(cellId: number): THREE.Group {
     const bestLod = Math.min(
-      ...Object.keys(this.isosurfacesGroupsPerSegmentationId[cellId]).map(parseInt),
+      ...Object.keys(this.isosurfacesGroupsPerSegmentationId[cellId]).map((lodVal) =>
+        parseInt(lodVal),
+      ),
     );
     return this.isosurfacesGroupsPerSegmentationId[cellId][bestLod];
   }
@@ -253,7 +255,7 @@ class SceneController {
     meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
 
-    let mesh = new THREE.Mesh(geometry, meshMaterial);
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
 
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -317,7 +319,7 @@ class SceneController {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] == null) {
       const newGroup = new THREE.Group();
       this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] = newGroup;
-      if (lod == NO_LOD_MESH_INDEX) {
+      if (lod === NO_LOD_MESH_INDEX) {
         this.isosurfacesLODRootGroup.addNoLODSupportedMesh(newGroup);
       } else {
         this.isosurfacesLODRootGroup.addLODMesh(newGroup, lod);
@@ -344,7 +346,7 @@ class SceneController {
     }
     _.forEach(this.isosurfacesGroupsPerSegmentationId[segmentationId], (meshGroup, lod) => {
       const lodNumber = parseInt(lod);
-      if (lodNumber !== 0) {
+      if (lodNumber !== NO_LOD_MESH_INDEX) {
         this.isosurfacesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
       } else {
         this.isosurfacesLODRootGroup.removeNoLODSupportedMesh(meshGroup);

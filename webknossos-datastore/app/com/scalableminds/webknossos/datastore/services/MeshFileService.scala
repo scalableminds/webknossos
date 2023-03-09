@@ -68,7 +68,7 @@ case class NeuroglancerSegmentManifest(chunkShape: Vec3Float,
                                        vertexOffsets: Array[Vec3Float],
                                        numChunksPerLod: Array[Int],
                                        chunkPositions: List[List[Vec3Int]],
-                                       chunkByteOffsets: List[List[Int]])
+                                       chunkByteSizes: List[List[Long]])
 
 object NeuroglancerSegmentManifest {
   def fromBytes(manifestBytes: Array[Byte]): NeuroglancerSegmentManifest = {
@@ -99,7 +99,7 @@ object NeuroglancerSegmentManifest {
     }
 
     val chunkPositionsList = new ListBuffer[List[Vec3Int]]
-    val chunkSizes = new ListBuffer[List[Int]]
+    val chunkSizes = new ListBuffer[List[Long]]
     for (lod <- 0 until numLods) {
       val currentChunkPositions = (ListBuffer[Int](), ListBuffer[Int](), ListBuffer[Int]())
       for (row <- 0 until 3; _ <- 0 until numChunksPerLod(lod)) {
@@ -112,9 +112,9 @@ object NeuroglancerSegmentManifest {
 
       chunkPositionsList.append(currentChunkPositions.zipped.map(Vec3Int(_, _, _)).toList)
 
-      val currentChunkSizes = ListBuffer[Int]()
+      val currentChunkSizes = ListBuffer[Long]()
       for (_ <- 0 until numChunksPerLod(lod)) {
-        currentChunkSizes.append(dis.readInt)
+        currentChunkSizes.append(dis.readInt.toLong) // Converting to long for convenient + safe summing later
       }
       chunkSizes.append(currentChunkSizes.toList)
     }
@@ -283,25 +283,24 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private def enrichSegmentInfo(segmentInfo: NeuroglancerSegmentManifest,
                                 lodScaleMultiplier: Double,
                                 neuroglancerOffsetStart: Long): MeshSegmentInfo = {
-    val bytesPerLod = segmentInfo.chunkByteOffsets.map(_.sum)
+    val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
     val totalMeshSize = bytesPerLod.sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
-    val chunkByteOffsetsInLod
-      : Seq[List[Int]] = segmentInfo.chunkByteOffsets.map(_.scanLeft(0)(_ + _)) // This builds a cumulative sum
+    val chunkByteOffsetsInLod = segmentInfo.chunkByteSizes.map(_.scanLeft(0L)(_ + _)) // builds cumulative sum
 
-    def getChunkByteOffset(lod: Int, currentChunk: Int): Int =
+    def getChunkByteOffset(lod: Int, currentChunk: Int): Long =
       // get past the finer lods first, then take offset in selected lod
       bytesPerLod.take(lod).sum + chunkByteOffsetsInLod(lod)(currentChunk)
 
     def computeGlobalPositionAndOffset(lod: Int, currentChunk: Int): MeshChunk = {
       val globalPosition = segmentInfo.gridOrigin + segmentInfo
         .chunkPositions(lod)(currentChunk)
-        .toVec3Float * segmentInfo.chunkShape * segmentInfo.lodScales(lod) * lodScaleMultiplier
+        .toVec3Float * segmentInfo.chunkShape * Math.pow(2, lod) * segmentInfo.lodScales(lod) * lodScaleMultiplier
 
       MeshChunk(
         position = globalPosition, // This position is in Voxel Space
         byteOffset = meshByteStartOffset + getChunkByteOffset(lod, currentChunk),
-        byteSize = segmentInfo.chunkByteOffsets(lod)(currentChunk),
+        byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt, // size must be int32 to fit in java array
       )
     }
 

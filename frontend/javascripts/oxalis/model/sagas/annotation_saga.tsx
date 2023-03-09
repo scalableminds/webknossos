@@ -20,7 +20,6 @@ import {
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   takeLatest,
-  select,
   take,
   retry,
   delay,
@@ -31,6 +30,7 @@ import {
   cancel,
   cancelled,
 } from "typed-redux-saga";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
@@ -40,14 +40,17 @@ import constants, { MappingStatusEnum } from "oxalis/constants";
 import messages from "messages";
 import { APIUserCompact } from "types/api_flow_types";
 import { Button } from "antd";
+import ErrorHandling from "libs/error_handling";
+import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
-export function* pushAnnotationUpdateAsync() {
-  const tracing = yield* select((state) => state.tracing);
 
-  if (!tracing.restrictions.allowUpdate) {
+export function* pushAnnotationUpdateAsync(action: Action) {
+  const tracing = yield* select((state) => state.tracing);
+  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
+  if (!mayEdit) {
     return;
   }
 
@@ -66,14 +69,30 @@ export function* pushAnnotationUpdateAsync() {
     description: tracing.description,
     viewConfiguration,
   };
-  yield* retry(
-    SETTINGS_MAX_RETRY_COUNT,
-    SETTINGS_RETRY_DELAY,
-    editAnnotation,
-    tracing.annotationId,
-    tracing.annotationType,
-    editObject,
-  );
+  try {
+    yield* retry(
+      SETTINGS_MAX_RETRY_COUNT,
+      SETTINGS_RETRY_DELAY,
+      editAnnotation,
+      tracing.annotationId,
+      tracing.annotationType,
+      editObject,
+    );
+  } catch (error) {
+    // If the annotation cannot be saved repeatedly (retries will continue for 5 minutes),
+    // we will only notify the user if the name, visibility or description could not be changed.
+    // Otherwise, we won't notify the user and won't let the sagas crash as the actual skeleton/volume
+    // tracings are handled separately.
+    console.error(error);
+    ErrorHandling.notify(error as Error);
+    if (
+      ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY", "SET_ANNOTATION_DESCRIPTION"].includes(
+        action.type,
+      )
+    ) {
+      Toast.error("Could not update annotation property. Please try again.");
+    }
+  }
 }
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {

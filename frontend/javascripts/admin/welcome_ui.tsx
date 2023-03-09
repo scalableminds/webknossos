@@ -89,7 +89,13 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               title="Open a Demo Dataset"
               description="Have a look at a public dataset to experience WEBKNOSSOS in action."
               href={getDemoDatasetUrl()}
-              icon={<PlayCircleOutlined className="action-icon" />}
+              icon={
+                <img
+                  src="/assets/images/icon-open-demo.svg"
+                  alt="An envelop full of published datasets"
+                  className="action-icon"
+                />
+              }
             />
 
             {isUserAdminOrDatasetManager(activeUser) ? (
@@ -97,21 +103,39 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 title="Import Your Own Data"
                 description="Directly upload your data as a zip file."
                 to="/datasets/upload"
-                icon={<CloudUploadOutlined className="action-icon" />}
+                icon={
+                  <img
+                    src="/assets/images/icon-import-own-data.svg"
+                    alt="A box being filled with your datasets"
+                    className="action-icon"
+                  />
+                }
               />
             ) : null}
 
             <WhatsNextAction
               title="Learn How To Create Annotations"
               description="Watch a short video to see how data can be annotated with WEBKNOSSOS."
-              icon={<PlusCircleOutlined className="action-icon" />}
+              icon={
+                <img
+                  src="/assets/images/icon-annotate.svg"
+                  alt="A person annotating with WEBKNOSSOS"
+                  className="action-icon"
+                />
+              }
               href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
             />
             {isUserAdminOrTeamManager(activeUser) ? (
               <WhatsNextAction
                 title="Invite Your Colleagues"
                 description="Send email invites to your colleagues and ask them to join your organization."
-                icon={<MailOutlined className="action-icon" />}
+                icon={
+                  <img
+                    src="/assets/images/icon-invite-colleagues.svg"
+                    alt="A person inviting their colleague to join"
+                    className="action-icon"
+                  />
+                }
                 onClick={() => {
                   renderIndependently((destroy) => (
                     <InviteUsersModal

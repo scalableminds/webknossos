@@ -394,6 +394,7 @@ class AuthenticationController @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim).futureBox.flatMap {
           case Full(user) =>
             for {
+              - <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} reset their password."))
               _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(
                 GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
@@ -420,6 +421,7 @@ class AuthenticationController @Inject()(
                   Future.successful(NotFound(Messages("error.noUser")))
                 case Some(user) =>
                   for {
+                    - <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
                     _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
                     _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
                     userEmail <- userService.emailFor(user)

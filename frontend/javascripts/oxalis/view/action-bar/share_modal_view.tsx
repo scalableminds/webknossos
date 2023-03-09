@@ -46,6 +46,7 @@ import { makeComponentLazy } from "libs/react_helpers";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
@@ -181,11 +182,10 @@ function _ShareModalView(props: Props) {
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
-  const { owner, othersMayEdit, restrictions } = tracing;
+  const { othersMayEdit } = tracing;
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
 
-  const hasUpdatePermissions =
-    restrictions.allowUpdate && restrictions.allowSave && activeUser && owner?.id === activeUser.id;
+  const hasUpdatePermissions = useSelector(mayEditAnnotationProperties);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {

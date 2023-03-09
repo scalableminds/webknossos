@@ -75,6 +75,7 @@ import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { getTDViewportLOD } from "../accessors/view_mode_accessor";
 
+export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
@@ -618,7 +619,6 @@ function* loadPrecomputedMeshForSegmentId(
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
-  const NO_LOD_INDEX = -1;
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
@@ -700,7 +700,7 @@ function* loadPrecomputedMeshForSegmentId(
       // Load the chunks closest to the current LOD first.
       loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
     } else {
-      availableChunksMap[NO_LOD_INDEX] = yield* call(
+      availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
         meshV0.getMeshfileChunksForSegment,
         dataset.dataStore.url,
         dataset,
@@ -708,7 +708,7 @@ function* loadPrecomputedMeshForSegmentId(
         meshFileName,
         id,
       );
-      loadingOrder = [NO_LOD_INDEX];
+      loadingOrder = [NO_LOD_MESH_INDEX];
     }
   } catch (exception) {
     console.warn("Mesh chunk couldn't be loaded due to", exception);

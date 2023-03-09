@@ -38,6 +38,7 @@ import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_acce
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { getTDViewportLOD } from "oxalis/model/accessors/view_mode_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
+import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/isosurface_saga";
 
 const CUBE_COLOR = 0x999999;
 
@@ -316,7 +317,7 @@ class SceneController {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] == null) {
       const newGroup = new THREE.Group();
       this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] = newGroup;
-      if (lod == null) {
+      if (lod == NO_LOD_MESH_INDEX) {
         this.isosurfacesLODRootGroup.addNoLODSupportedMesh(newGroup);
       } else {
         this.isosurfacesLODRootGroup.addLODMesh(newGroup, lod);

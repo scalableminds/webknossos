@@ -421,26 +421,32 @@ class EditableMappingService @Inject()(
                                                  editableMappingId: String): Fox[Map[Long, Long]] = {
     val chunkIds = segmentIds.map(_ / defaultSegmentToAgglomerateChunkSize)
     for { // TODO: optimization: fossil-multiget
-      maps <- Fox.serialCombined(chunkIds.toList)(chunkId => getSegmentToAgglomerateChunk(editableMappingId, chunkId))
-    } yield Map.empty
+      maps: List[Vector[(Long, Long)]] <- Fox.serialCombined(chunkIds.toList)(chunkId =>
+        getSegmentToAgglomerateChunk(editableMappingId, chunkId, segmentIds))
+    } yield maps.flatten.toMap
   }
 
-  private def getSegmentToAgglomerateChunk(editableMappingId: String, chunkId: Long): Fox[Map[Long, Long]] =
+  private def getSegmentToAgglomerateChunk(editableMappingId: String,
+                                           chunkId: Long,
+                                           segmentIds: Set[Long]): Fox[Seq[(Long, Long)]] =
     for {
       chunkBox: Box[SegmentToAgglomerateProto] <- getSegmentToAgglomerateChunkProto(editableMappingId, chunkId).futureBox
       segmentToAgglomerate <- chunkBox match {
-        case Full(chunk) => Fox.successful(mapFromProto(chunk))
-        case Empty       => Fox.successful(Map.empty[Long, Long])
+        case Full(chunk) => Fox.successful(filterSegmentToAgglomerateChunk(chunk, segmentIds))
+        case Empty       => Fox.successful(Seq.empty[(Long, Long)])
         case f: Failure  => f.toFox
       }
     } yield segmentToAgglomerate
 
-  private def mapFromProto(segmentToAgglomerateProto: SegmentToAgglomerateProto): Map[Long, Long] =
-    segmentToAgglomerateProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId).toMap
+  private def filterSegmentToAgglomerateChunk(segmentToAgglomerateProto: SegmentToAgglomerateProto,
+                                              segmentIds: Set[Long]): Seq[(Long, Long)] =
+    segmentToAgglomerateProto.segmentToAgglomerate
+      .filter(pair => segmentIds.contains(pair.segmentId))
+      .map(pair => pair.segmentId -> pair.agglomerateId)
 
-  def getSegmentToAgglomerateChunkProto(editableMappingId: String,
-                                        agglomerateId: Long,
-                                        version: Option[Long] = None): Fox[SegmentToAgglomerateProto] =
+  private def getSegmentToAgglomerateChunkProto(editableMappingId: String,
+                                                agglomerateId: Long,
+                                                version: Option[Long] = None): Fox[SegmentToAgglomerateProto] =
     for {
       keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
         .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(

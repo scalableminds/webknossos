@@ -41,6 +41,12 @@ export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rec
   }
 }
 
+export function getTDViewportLOD(state: OxalisState): number {
+  const scale = getTDViewZoom(state);
+  const visibleIndex = scale < 0.7 ? 0 : scale < 3 ? 1 : 2;
+  return visibleIndex;
+}
+
 const _getViewportExtents = memoizeOne((rects) => {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rect' implicitly has an 'any' type.
   const getExtent = (rect) => [rect.width, rect.height];

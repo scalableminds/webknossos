@@ -36,51 +36,49 @@ import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import { mergeVertices } from "libs/BufferGeometryUtils";
-import { getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
+import { getTDViewportLOD } from "oxalis/model/accessors/view_mode_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
 
 const CUBE_COLOR = 0x999999;
 
 class CustomLOD extends THREE.LOD {
-  update3DSceneLoD: (arg0: number) => void;
-  constructor(update3DSceneLoD: (arg0: number) => void) {
+  noLODGroup: THREE.Group;
+  lodLevelCount: number;
+  constructor() {
     super();
-    this.update3DSceneLoD = update3DSceneLoD;
-    this.addLevel(new THREE.Group(), 0);
-    this.addLevel(new THREE.Group(), 1);
-    this.addLevel(new THREE.Group(), 2);
-    this.addLevel(new THREE.Group(), 3);
+    this.lodLevelCount = 0;
+    this.noLODGroup = new THREE.Group();
+    this.add(this.noLODGroup);
   }
 
   update(_camera: any) {
     const levels = this.levels;
 
-    const scale = getTDViewZoom(Store.getState());
-    const visibleIndex = scale < 0.7 ? 1 : scale < 3 ? 2 : 3;
-    this.update3DSceneLoD(visibleIndex);
-
+    const visibleIndex = getTDViewportLOD(Store.getState());
     // Keep level 0 always visible as this includes all meshes that do not have different LODs.
-    for (let i = 1; i < this.levels.length; i++) {
+    for (let i = 0; i < this.levels.length; i++) {
       levels[i].object.visible = i === visibleIndex;
     }
   }
 
   addNoLODSupportedMesh(meshGroup: THREE.Group) {
-    console.log("added no lod mesh");
-    this.levels[0].object.add(meshGroup);
+    this.noLODGroup.add(meshGroup);
   }
 
   addLODMesh(meshGroup: THREE.Group, level: number) {
-    console.log("added lod mesh with level", level);
+    while (this.lodLevelCount <= level) {
+      this.addLevel(new THREE.Object3D(), this.lodLevelCount);
+      this.lodLevelCount++;
+    }
     this.levels[level].object.add(meshGroup);
+  }
+
+  removeNoLODSupportedMesh(meshGroup: THREE.Group) {
+    this.noLODGroup.remove(meshGroup);
   }
 
   removeLODMesh(meshGroup: THREE.Group, level: number) {
     this.levels[level].object.remove(meshGroup);
-  }
-
-  removeNoLODSupportedMesh(meshGroup: THREE.Group) {
-    this.levels[0].object.remove(meshGroup);
   }
 }
 
@@ -121,7 +119,6 @@ class SceneController {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isosurfacesRootGroup' has no initializer... Remove this comment to see the full error message
   isosurfacesLODRootGroup: CustomLOD;
   isosurfacesGroupsPerSegmentationId: Record<number, Record<number, THREE.Group>> = {};
-  current3DSceneLoD: number = 0;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -138,10 +135,6 @@ class SceneController {
     this.planeShift = [0, 0, 0];
   }
 
-  update3DSceneLoD = (lod: number) => {
-    this.current3DSceneLoD = lod;
-  };
-
   initialize() {
     this.renderer = getRenderer();
     this.createMeshes();
@@ -154,7 +147,7 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
-    this.isosurfacesLODRootGroup = new CustomLOD(this.update3DSceneLoD);
+    this.isosurfacesLODRootGroup = new CustomLOD();
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest resolution will not be distorted
@@ -400,14 +393,14 @@ class SceneController {
   }
 
   setIsosurfaceVisibility(id: number, visibility: boolean): void {
-    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup, lod) => {
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup) => {
       meshGroup.visible = visibility;
     });
   }
 
   setIsosurfaceColor(id: number): void {
     const color = this.getColorObjectForSegment(id);
-    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup, lod) => {
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup) => {
       if (meshGroup) {
         for (const child of meshGroup.children) {
           // @ts-ignore

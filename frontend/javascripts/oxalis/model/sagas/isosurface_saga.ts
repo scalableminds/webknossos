@@ -73,6 +73,7 @@ import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
+import { getTDViewportLOD } from "../accessors/view_mode_accessor";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -617,13 +618,16 @@ function* loadPrecomputedMeshForSegmentId(
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
+  const NO_LOD_INDEX = -1;
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
+  const currentLODIndex = yield* select(getTDViewportLOD);
 
-  let availableChunksMap: ChunksMap | null = null;
+  let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
+  let loadingOrder: number[] = [];
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -689,22 +693,22 @@ function* loadPrecomputedMeshForSegmentId(
         segmentInfo.transform[1][1],
         segmentInfo.transform[2][2],
       ];
-      availableChunksMap = {
-        1: segmentInfo.chunks.lods[0]?.chunks,
-        2: segmentInfo.chunks.lods[1]?.chunks,
-        3: segmentInfo.chunks.lods[2]?.chunks,
-      };
+      segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
+        availableChunksMap[lodIndex] = chunks?.chunks;
+        loadingOrder.push(lodIndex);
+      });
+      // Load the chunks closest to the current LOD first.
+      loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
     } else {
-      availableChunksMap = {
-        0: yield* call(
-          meshV0.getMeshfileChunksForSegment,
-          dataset.dataStore.url,
-          dataset,
-          getBaseSegmentationName(segmentationLayer),
-          meshFileName,
-          id,
-        ),
-      };
+      availableChunksMap[NO_LOD_INDEX] = yield* call(
+        meshV0.getMeshfileChunksForSegment,
+        dataset.dataStore.url,
+        dataset,
+        getBaseSegmentationName(segmentationLayer),
+        meshFileName,
+        id,
+      );
+      loadingOrder = [NO_LOD_INDEX];
     }
   } catch (exception) {
     console.warn("Mesh chunk couldn't be loaded due to", exception);
@@ -714,11 +718,6 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
   const sceneController = yield* call(getSceneController);
-  const currentLod = sceneController.current3DSceneLoD;
-  // TODO: handle case with V0 meshes.
-  // Start loading the mesh from the current lod and then load the other lods.
-  // todo: lod count should be dynamic and not static
-  const loadingOrder = version >= 3 ? [currentLod, ..._.without([1, 2, 3], currentLod)] : [0];
 
   const loadChunksTasks = _.compact(
     _.flatten(
@@ -801,10 +800,7 @@ function* loadPrecomputedMeshForSegmentId(
   );
 
   try {
-    for (const task of loadChunksTasks) {
-      yield* call(task);
-    }
-    //yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
     console.error(exception);
     Toast.warning("Some mesh objects could not be loaded.");

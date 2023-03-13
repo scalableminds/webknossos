@@ -1,6 +1,4 @@
-import {
-  CloseOutlined,
-} from "@ant-design/icons";
+import { CloseOutlined } from "@ant-design/icons";
 import { Button, Tooltip } from "antd";
 import * as React from "react";
 import { Link } from "react-router-dom";

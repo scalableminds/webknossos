@@ -1,9 +1,5 @@
 import {
   CloseOutlined,
-  CloudUploadOutlined,
-  MailOutlined,
-  PlayCircleOutlined,
-  PlusCircleOutlined,
 } from "@ant-design/icons";
 import { Button, Tooltip } from "antd";
 import * as React from "react";
@@ -89,13 +85,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               title="Open a Demo Dataset"
               description="Have a look at a public dataset to experience WEBKNOSSOS in action."
               href={getDemoDatasetUrl()}
-              icon={
-                <img
-                  src="/assets/images/icon-open-demo.svg"
-                  alt="An envelop full of published datasets"
-                  className="action-icon"
-                />
-              }
+              icon={<i className="icon-open-demo" />}
             />
 
             {isUserAdminOrDatasetManager(activeUser) ? (
@@ -103,39 +93,21 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 title="Import Your Own Data"
                 description="Directly upload your data as a zip file."
                 to="/datasets/upload"
-                icon={
-                  <img
-                    src="/assets/images/icon-import-own-data.svg"
-                    alt="A box being filled with your datasets"
-                    className="action-icon"
-                  />
-                }
+                icon={<i className="icon-import-own-data" />}
               />
             ) : null}
 
             <WhatsNextAction
               title="Learn How To Create Annotations"
               description="Watch a short video to see how data can be annotated with WEBKNOSSOS."
-              icon={
-                <img
-                  src="/assets/images/icon-annotate.svg"
-                  alt="A person annotating with WEBKNOSSOS"
-                  className="action-icon"
-                />
-              }
+              icon={<i className="icon-annotate" />}
               href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
             />
             {isUserAdminOrTeamManager(activeUser) ? (
               <WhatsNextAction
                 title="Invite Your Colleagues"
                 description="Send email invites to your colleagues and ask them to join your organization."
-                icon={
-                  <img
-                    src="/assets/images/icon-invite-colleagues.svg"
-                    alt="A person inviting their colleague to join"
-                    className="action-icon"
-                  />
-                }
+                icon={<i className="icon-invite-colleagues" />}
                 onClick={() => {
                   renderIndependently((destroy) => (
                     <InviteUsersModal

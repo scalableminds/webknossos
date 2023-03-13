@@ -29,7 +29,10 @@
 
 .welcome-header-wrapper {
   background: @background-blue-neurons;
-
+  
+  button {
+    color: white
+  }
 }
 .welcome-header-content {
   padding: 40px 0px 40px;
@@ -98,11 +101,6 @@
           margin: 0;
         }
 
-        .action-icon {
-          font-size: 32px;
-          margin: 8px;
-        }
-
         background: white;
         border-radius: 3px;
         border: white 2px solid;
@@ -111,9 +109,8 @@
       a:hover {
         background: @primary-color;
 
-        .chevron,
-        .action-icon {
-          color: @text-color-dark;
+        i {
+            filter: brightness(100);
         }
 
         h2 {
@@ -126,25 +123,25 @@
       }
 
     .icon-open-demo {
-        background-image: url(/assets/images/icon-open-demo.svg)
+        background-image: url(/assets/images/icon-open-demo.svg); 
       };
       .icon-import-own-data {
-        background-image: url(/assets/images/icon-import-own-data.svg)
+        background-image: url(/assets/images/icon-import-own-data.svg); 
+        background-size: 94px;
       };        
       .icon-annotate {
-        background-image: url(/assets/images/icon-annotate.svg)
+        background-image: url(/assets/images/icon-annotate.svg); 
       };        
       .icon-invite-colleagues {
-        background-image: url(/assets/images/icon-invite-colleagues.svg)
+        background-image: url(/assets/images/icon-invite-colleagues.svg); 
       };
                         
-      img.action-icon {
-        // max-width: 48px;
-        // min-width: 48px;
-        // min-height: 48px;
-        // max-height: 48px;
-        height: 64px;
-        width: 100%;
+      i {
+        background-repeat: no-repeat;
+        background-size: 100px;
+        background-position: center;
+        height: 100%;
+        width: 64px;
       }
     }
   }

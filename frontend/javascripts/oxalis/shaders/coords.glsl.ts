@@ -29,10 +29,6 @@ export const getWorldCoordUVW: ShaderModule = {
   requirements: [getW, isFlightMode],
   code: `
     vec3 getWorldCoordUVW() {
-      <% if (isFragment) { %>
-        return new_worldCoordUVW;
-      <% } %>
-
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
 
       if (isFlightMode()) {

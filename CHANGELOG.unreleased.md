@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added support for remote Zarr datasets with a `datasource-properties.json` as created by the WEBKNOSSOS Python library. [#6879](https://github.com/scalableminds/webknossos/pull/6879)
+- Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
 
 ### Changed
 - Upgraded antd UI library to v4.24.8 [#6865](https://github.com/scalableminds/webknossos/pull/6865)

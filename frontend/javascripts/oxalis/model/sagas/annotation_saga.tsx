@@ -7,6 +7,7 @@ import {
   setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
+import { sleep } from "libs/utils";
 import type { EditableAnnotation } from "admin/admin_rest_api";
 import {
   editAnnotation,
@@ -249,6 +250,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
     while (shallTryAcquireMutex) {
       if (isInitialRequest) {
         yield* put(setAnnotationAllowUpdateAction(false));
+        yield* call(sleep, 5000);
       }
       try {
         const { canEdit, blockedByUser } = yield* retry(

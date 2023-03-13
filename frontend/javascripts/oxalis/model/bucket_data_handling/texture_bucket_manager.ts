@@ -104,7 +104,6 @@ export default class TextureBucketManager {
     this.packingDegree = getPackingDegree(bytes, elementClass);
     this.elementClass = elementClass;
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
-    const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(_.range(this.maximumCapacity));

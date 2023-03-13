@@ -24,6 +24,7 @@ type Props = {
 };
 const positionIconStyle: React.CSSProperties = {
   transform: "rotate(-45deg)",
+  marginRight: 0,
 };
 const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",

@@ -5,9 +5,12 @@ import { select as _select, take as _take } from "typed-redux-saga";
 import type { Channel } from "redux-saga";
 import { ActionPattern } from "redux-saga/effects";
 
-export function* select<T>(fn: (state: OxalisState) => T) {
-  const res: T = yield _select(fn);
-  return res;
+// Ensures that the type of state is known. Otherwise,
+// a statement such as
+//   const tracing = yield* select((state) => state.tracing);
+// would result in tracing being any.
+export function select<T>(fn: (state: OxalisState) => T) {
+  return _select(fn);
 }
 
 export function* take(

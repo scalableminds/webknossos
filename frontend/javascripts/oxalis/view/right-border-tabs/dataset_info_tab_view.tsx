@@ -27,6 +27,7 @@ import {
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayUserEditDataset } from "libs/utils";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -40,6 +41,7 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   activeResolutionInfo: ReturnType<typeof getActiveResolutionInfo>;
   isDatasetViewMode: boolean;
+  mayEditAnnotation: boolean;
 };
 type DispatchProps = {
   setAnnotationName: (arg0: string) => void;
@@ -453,7 +455,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           {annotationType} : {this.props.task.id}
         </span>
       );
-    } else if (!this.props.tracing.restrictions.allowUpdate) {
+    } else if (!this.props.mayEditAnnotation) {
       // For readonly tracings display the non-editable explorative tracing name
       annotationTypeLabel = <span>Annotation: {tracingName}</span>;
     } else {
@@ -477,7 +479,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const tracingDescription = this.props.tracing.description || "[no description]";
     let descriptionEditField;
 
-    if (this.props.tracing.restrictions.allowUpdate) {
+    if (this.props.mayEditAnnotation) {
       descriptionEditField = (
         <span
           style={{
@@ -666,6 +668,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   activeResolutionInfo: getActiveResolutionInfo(state),
+  mayEditAnnotation: mayEditAnnotationProperties(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

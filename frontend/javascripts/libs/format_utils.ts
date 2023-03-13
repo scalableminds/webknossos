@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import updateLocale from "dayjs/plugin/updateLocale";
 import relativeTime from "dayjs/plugin/relativeTime";
+import localizedFormat from "dayjs/plugin/localizedFormat";
 import calendar from "dayjs/plugin/calendar";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
@@ -22,6 +23,7 @@ dayjs.extend(utc);
 dayjs.extend(calendar);
 dayjs.extend(weekday);
 dayjs.extend(localeData);
+dayjs.extend(localizedFormat);
 dayjs.updateLocale("en", {
   weekStart: 1,
   calendar: {

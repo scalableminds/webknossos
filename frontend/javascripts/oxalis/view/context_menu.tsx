@@ -1161,6 +1161,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     infoRows.push(
       getInfoMenuItem(
         "nodeInfo",
+        // @ts-expect-error FIXME: Property 'treeId' does not exist on type 'never'... Remove this comment to see the full error message
         `Node with Id ${maybeClickedNodeId} in Tree ${nodeContextMenuTree.treeId}`,
       ),
     );

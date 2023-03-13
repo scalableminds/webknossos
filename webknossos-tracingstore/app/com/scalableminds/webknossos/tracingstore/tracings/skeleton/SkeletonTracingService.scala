@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
@@ -158,7 +159,7 @@ class SkeletonTracingService @Inject()(
     save(finalTracing, None, finalTracing.version)
   }
 
-  def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing =
+  def merge(tracings: Seq[SkeletonTracing], mergedVolumeStats: MergedVolumeStats): SkeletonTracing =
     tracings
       .reduceLeft(mergeTwo)
       .copy(
@@ -196,8 +197,8 @@ class SkeletonTracingService @Inject()(
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[SkeletonTracing],
                       newId: String,
-                      newTracing: SkeletonTracing,
-                      toCache: Boolean): Fox[Unit] = Fox.successful(())
+                      newVersion: Long,
+                      toCache: Boolean): Fox[MergedVolumeStats] = Fox.successful(MergedVolumeStats.empty)
 
   def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =

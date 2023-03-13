@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -38,7 +39,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[SkeletonTracing]] = request.body
-          val mergedTracing = tracingService.merge(tracings.flatten)
+          val mergedTracing = tracingService.merge(tracings.flatten, MergedVolumeStats.empty)
           val processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
           for {
             newId <- tracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)

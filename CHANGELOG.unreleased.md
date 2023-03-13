@@ -15,9 +15,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Upgraded antd UI library to v4.24.8 [#6865](https://github.com/scalableminds/webknossos/pull/6865)
+- The view mode dropdown was slimmed down by using icons to make the toolbar more space efficient. [#6900](https://github.com/scalableminds/webknossos/pull/6900)
 
 ### Fixed
 - Fixed a bug where N5 datasets reading with end-chunks that have a chunk size differing from the metadata-supplied chunk size would fail for some areas. [#6890](https://github.com/scalableminds/webknossos/pull/6890)
+- Fixed potential crash when trying to edit certain annotation properties of a shared annotation. [#6892](https://github.com/scalableminds/webknossos/pull/6892)
+- Fixed a bug where merging multiple volume annotations would result in inconsistent segment lists. [#6882](https://github.com/scalableminds/webknossos/pull/6882)
+- Fixed a bug where uploading multiple annotations with volume layers at once would fail. [#6882](https://github.com/scalableminds/webknossos/pull/6882)
+- Fixed a bug where dates were formatted incorrectly in Voxelytics reports. [#6908](https://github.com/scalableminds/webknossos/pull/6908)
 - Fix antd deprecation warning for Dropdown menus. [#6898](https://github.com/scalableminds/webknossos/pull/6898)
 
 ### Removed

@@ -170,9 +170,9 @@ class VolumeTracingService @Inject()(
         val resolutionSet = resolutionSetFromZipfile(dataZip)
         if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
       }
-      // if none of the tracings contained any volume data do not save buckets, use full resolution list
+      // if none of the tracings contained any volume data do not save buckets, use full resolution list, as already initialized on wk-side
       if (resolutionSets.isEmpty)
-        getRequiredMags(tracing, tracingId).map(_.toSet)
+        Fox.successful(tracing.resolutions.map(vec3IntFromProto).toSet)
       else {
         val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
           resolutionSets.forall(_ == head)
@@ -309,10 +309,10 @@ class VolumeTracingService @Inject()(
         .withBoundingBox(dataSetBoundingBox.get)
     } else tracing
 
-  def duplicateData(sourceId: String,
-                    sourceTracing: VolumeTracing,
-                    destinationId: String,
-                    destinationTracing: VolumeTracing): Fox[Unit] =
+  private def duplicateData(sourceId: String,
+                            sourceTracing: VolumeTracing,
+                            destinationId: String,
+                            destinationTracing: VolumeTracing): Fox[Unit] =
     for {
       isTemporaryTracing <- isTemporaryTracing(sourceId)
       sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
@@ -419,22 +419,41 @@ class VolumeTracingService @Inject()(
       } else None
     } yield bucketPosOpt
 
-  def merge(tracings: Seq[VolumeTracing]): VolumeTracing =
-    tracings
-      .reduceLeft(mergeTwo)
+  def merge(tracings: Seq[VolumeTracing], mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
+    def mergeTwoWithStats(tracingAWithIndex: (VolumeTracing, Int),
+                          tracingBWithIndex: (VolumeTracing, Int)): (VolumeTracing, Int) =
+      (mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats),
+       tracingAWithIndex._2)
+
+    tracings.zipWithIndex
+      .reduceLeft(mergeTwoWithStats)
+      ._1
       .copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
       )
+  }
 
-  private def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
+  private def mergeTwo(tracingA: VolumeTracing,
+                       tracingB: VolumeTracing,
+                       indexB: Int,
+                       mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                      tracingB.userBoundingBox,
                                                      tracingA.userBoundingBoxes,
                                                      tracingB.userBoundingBoxes)
-
+    val tracingBSegments =
+      if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
+      else {
+        val labelMap = mergedVolumeStats.labelMaps(indexB)
+        tracingB.segments.map { segment =>
+          segment.copy(
+            segmentId = labelMap.getOrElse(segment.segmentId, segment.segmentId)
+          )
+        }
+      }
     tracingA.copy(
       largestSegmentId = largestSegmentId,
       boundingBox = mergedBoundingBox.getOrElse(
@@ -443,7 +462,8 @@ class VolumeTracingService @Inject()(
           0,
           0,
           0)), // should never be empty for volumes
-      userBoundingBoxes = userBoundingBoxes
+      userBoundingBoxes = userBoundingBoxes,
+      segments = tracingA.segments.toList ::: tracingBSegments.toList
     )
   }
 
@@ -464,8 +484,8 @@ class VolumeTracingService @Inject()(
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[VolumeTracing],
                       newId: String,
-                      newTracing: VolumeTracing,
-                      toCache: Boolean): Fox[Unit] = {
+                      newVersion: Long,
+                      toCache: Boolean): Fox[MergedVolumeStats] = {
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
     val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
@@ -483,7 +503,7 @@ class VolumeTracingService @Inject()(
 
     // If none of the tracings contained any volume data. Do not save buckets, do not touch resolution list
     if (resolutionSets.isEmpty)
-      Fox.successful(())
+      Fox.successful(MergedVolumeStats.empty)
     else {
       val resolutionsIntersection: Set[Vec3Int] = resolutionSets.headOption.map { head =>
         resolutionSets.foldLeft(head) { (acc, element) =>
@@ -504,15 +524,13 @@ class VolumeTracingService @Inject()(
           val bucketStream = bucketStreamFromSelector(selector, tracing)
           mergedVolume.addFromBucketStream(sourceVolumeIndex, bucketStream, Some(resolutionsIntersection))
       }
-      val destinationDataLayer = volumeTracingLayer(newId, newTracing)
       for {
 
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
-          saveBucket(destinationDataLayer, bucketPosition, bucketBytes, newTracing.version, toCache)
+          saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache)
         }
-        _ <- updateResolutionList(newId, newTracing, mergedVolume.presentResolutions)
-      } yield ()
+      } yield mergedVolume.stats
     }
   }
 

@@ -192,6 +192,8 @@ export const getColorForCoords: ShaderModule = {
       vec3 offsetInBucket;
       uint renderedMagIdx;
 
+      // To avoid rare rendering artifacts, don't use the precomputed
+      // bucket address when being at the border of buckets.
       bool beSafe = false;
       {
         renderedMagIdx = outputMagIdx[globalLayerIndex];

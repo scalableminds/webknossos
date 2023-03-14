@@ -14,31 +14,16 @@ import org.apache.commons.io.IOUtils
 
 import java.io.InputStream
 import java.net.URI
-import java.util.Properties
 import scala.collection.immutable.NumericRange
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
-
-  lazy val accessKey: Option[String] = s3AccessKeyCredential.map(_.accessKeyId)
-  lazy val secretKey: Option[String] = s3AccessKeyCredential.map(_.secretAccessKey)
-
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
   }
 
-  val client: AmazonS3 = {
-    val props = new Properties
-    accessKey match {
-      case Some(value) => props.put(S3DataVault.ACCESS_KEY, value)
-      case _           => {}
-    }
-    secretKey match {
-      case Some(value) => props.put(S3DataVault.SECRET_KEY, value)
-      case _           => {}
-    }
-    S3DataVault.getAmazonS3Client(props)
-  }
+  val client: AmazonS3 =
+    S3DataVault.getAmazonS3Client(s3AccessKeyCredential)
 
   private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
     new GetObjectRequest(bucketName, key).withRange(range.start, range.end)
@@ -67,9 +52,6 @@ object S3DataVault {
     val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[S3AccessKeyCredential])
     new VaultPath(remoteSourceDescriptor.uri, new S3DataVault(credential, remoteSourceDescriptor.uri), credential)
   }
-
-  private val ACCESS_KEY = "s3fs_access_key"
-  private val SECRET_KEY = "s3fs_secret_key"
 
   private def hostBucketFromUri(uri: URI): Option[String] = {
     val host = uri.getHost
@@ -111,18 +93,19 @@ object S3DataVault {
       None
     }
 
-  private def getAWSCredentials(props: Properties) =
-    new BasicAWSCredentials(props.getProperty(ACCESS_KEY), props.getProperty(SECRET_KEY))
+  private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AWSCredentialsProvider =
+    credentialOpt match {
+      case Some(s3AccessKeyCredential: S3AccessKeyCredential) =>
+        new AWSStaticCredentialsProvider(
+          new BasicAWSCredentials(s3AccessKeyCredential.accessKeyId, s3AccessKeyCredential.secretAccessKey))
+      case None =>
+        new AnonymousAWSCredentialsProvider
 
-  private def getCredentialsProvider(props: Properties): AWSCredentialsProvider = {
-    if (props.getProperty(ACCESS_KEY) == null && props.getProperty(SECRET_KEY) == null)
-      return new AnonymousAWSCredentialsProvider
-    new AWSStaticCredentialsProvider(getAWSCredentials(props))
-  }
+    }
 
-  private def getAmazonS3Client(props: Properties): AmazonS3 =
+  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential]): AmazonS3 =
     AmazonS3ClientBuilder.standard
-      .withCredentials(getCredentialsProvider(props))
+      .withCredentials(getCredentialsProvider(credentialOpt))
       .withRegion(Regions.DEFAULT_REGION)
       .withForceGlobalBucketAccessEnabled(true)
       .build

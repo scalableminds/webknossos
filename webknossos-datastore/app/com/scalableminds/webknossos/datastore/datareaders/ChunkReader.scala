@@ -37,7 +37,7 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
   protected def readChunkBytesAndShape(path: String): Option[(Array[Byte], Option[Array[Int]])] =
     Using.Manager { use =>
-      vaultPath.tryGet(path).map { bytes =>
+      vaultPath.readBytes(path).map { bytes =>
         val is = use(new ByteArrayInputStream(bytes))
         val os = use(new ByteArrayOutputStream())
         header.compressorImpl.uncompress(is, os)

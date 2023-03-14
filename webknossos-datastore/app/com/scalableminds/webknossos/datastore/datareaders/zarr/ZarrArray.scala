@@ -18,7 +18,7 @@ object ZarrArray extends LazyLogging {
   def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): ZarrArray = {
     val rootPath = new DatasetPath("")
     val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
-    val headerBytes = path.tryGet(headerPath.storeKey)
+    val headerBytes = path.readBytes(headerPath.storeKey)
     if (headerBytes.isEmpty)
       throw new IOException(
         "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")

@@ -14,7 +14,7 @@ object PrecomputedArray extends LazyLogging {
 
     val basePath = magPath.getParent.asInstanceOf[VaultPath]
     val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
-    val headerBytes = basePath.tryGet(headerPath)
+    val headerBytes = basePath.readBytes(headerPath)
     if (headerBytes.isEmpty)
       throw new IOException(
         "'" + PrecomputedHeader.FILENAME_INFO + "' expected but is not readable or missing in store.")

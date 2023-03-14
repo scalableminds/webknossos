@@ -8,7 +8,7 @@ import scala.collection.immutable.NumericRange
 class FileSystemVaultPath(basePath: Path)
     extends VaultPath(uri = new URI(""), dataVault = NullDataVault.create, fileSystemCredentialOpt = None) {
 
-  override def get(key: String, range: Option[NumericRange[Long]] = None): Array[Byte] = {
+  override def readBytesGet(key: String, range: Option[NumericRange[Long]]): Array[Byte] = {
     val path = basePath.resolve(key)
     range match {
       case Some(r) =>

@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where uploading multiple annotations with volume layers at once would fail. [#6882](https://github.com/scalableminds/webknossos/pull/6882)
 - Fixed a bug where dates were formatted incorrectly in Voxelytics reports. [#6908](https://github.com/scalableminds/webknossos/pull/6908)
 - Fixed a rare bug which could cause an incorrectly initialized annotation so that changes were not saved in the current session. [#6914](https://github.com/scalableminds/webknossos/pull/6914)
+- Fixed an issue with text hints not being visible on the logout page for dark mode users. [#6916](https://github.com/scalableminds/webknossos/pull/6916)
 
 ### Removed
 

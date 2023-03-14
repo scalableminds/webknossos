@@ -69,6 +69,7 @@ type StateProps = {
   blockedByUser: APIUserCompact | null | undefined;
 };
 type Props = OwnProps & StateProps;
+
 export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
@@ -131,6 +132,45 @@ function useOlvyUnreadReleasesCount(activeUser: APIUser) {
     [isInitialized, lastViewedTimestampWithFallback],
   );
   return unreadCount;
+}
+
+export function setUITheme(theme: APIUserTheme) {
+  let newTheme = theme;
+
+  if (newTheme === "auto") {
+    newTheme =
+      // @ts-ignore
+      window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
+      // @ts-ignore
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+  }
+
+  const styleEl = document.getElementById("primary-stylesheet") as HTMLLinkElement;
+  const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
+  const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
+
+  if (oldTheme !== newTheme) {
+    const newStyleEl = styleEl.cloneNode();
+    const parentEl = styleEl.parentNode;
+
+    if (parentEl != null) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'href' does not exist on type 'Node'.
+      newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
+      newStyleEl.addEventListener(
+        "load",
+        () => {
+          parentEl.removeChild(styleEl);
+        },
+        {
+          once: true,
+        },
+      );
+      parentEl.insertBefore(newStyleEl, styleEl);
+      Store.dispatch(setThemeAction(newTheme));
+    }
+  }
 }
 
 function UserInitials({
@@ -493,42 +533,7 @@ function LoggedInAvatar({
   };
 
   const setSelectedTheme = async (theme: APIUserTheme) => {
-    let newTheme = theme;
-
-    if (newTheme === "auto") {
-      newTheme =
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-    }
-
-    const styleEl = document.getElementById("primary-stylesheet") as HTMLLinkElement;
-    const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
-    const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
-
-    if (oldTheme !== newTheme) {
-      const newStyleEl = styleEl.cloneNode();
-      const parentEl = styleEl.parentNode;
-
-      if (parentEl != null) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'href' does not exist on type 'Node'.
-        newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
-        newStyleEl.addEventListener(
-          "load",
-          () => {
-            parentEl.removeChild(styleEl);
-          },
-          {
-            once: true,
-          },
-        );
-        parentEl.insertBefore(newStyleEl, styleEl);
-        Store.dispatch(setThemeAction(newTheme));
-      }
-    }
+    setUITheme(theme);
 
     if (selectedTheme !== theme) {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
@@ -714,6 +719,7 @@ function Navbar({
     event.preventDefault();
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
+    setUITheme("light");
     // Hard navigation
     location.href = "/";
   };

@@ -45,6 +45,8 @@ class FileSystemVaultPath(basePath: Path) extends VaultPath(uri = new URI(""), d
 
   override def resolve(other: Path): Path = new FileSystemVaultPath(basePath.resolve(other))
 
+  override def /(key: String): VaultPath = new FileSystemVaultPath(basePath.resolve(key))
+
   override def relativize(other: Path): Path = new FileSystemVaultPath(basePath.relativize(other))
 
   override def toUri: URI = basePath.toUri

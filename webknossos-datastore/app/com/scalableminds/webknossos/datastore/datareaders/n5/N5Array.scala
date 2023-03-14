@@ -19,7 +19,7 @@ object N5Array extends LazyLogging {
   def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): N5Array = {
     val rootPath = new DatasetPath("")
     val headerPath = rootPath.resolve(N5Header.FILENAME_ATTRIBUTES_JSON)
-    val headerBytes = path.readBytes(headerPath.storeKey)
+    val headerBytes = (path / headerPath.storeKey).readBytes()
     if (headerBytes.isEmpty)
       throw new IOException(
         "'" + N5Header.FILENAME_ATTRIBUTES_JSON + "' expected but is not readable or missing in store.")

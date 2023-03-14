@@ -19,7 +19,8 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("http://storage.googleapis.com/")
           val vaultPath = HttpsDataVault.create(RemoteSourceDescriptor(uri, None))
-          val bytes = vaultPath.get(s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey", Some(range))
+          val bytes =
+            (vaultPath / s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes(Some(range)).get
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -30,7 +31,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None))
-          val bytes = vaultPath.get(s"fafb_v14_orig/$dataKey", Some(range))
+          val bytes = (vaultPath / s"fafb_v14_orig/$dataKey").readBytes(Some(range)).get
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -45,7 +46,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("http://storage.googleapis.com/")
           val vaultPath = HttpsDataVault.create(RemoteSourceDescriptor(uri, None))
-          val bytes = vaultPath.get(s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
+          val bytes = (vaultPath / s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes().get
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -56,7 +57,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None))
-          val bytes = vaultPath.get(s"fafb_v14_orig/$dataKey")
+          val bytes = (vaultPath / s"fafb_v14_orig/$dataKey").readBytes().get
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))

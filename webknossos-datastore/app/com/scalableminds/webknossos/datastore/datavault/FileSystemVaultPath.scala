@@ -7,11 +7,10 @@ import scala.collection.immutable.NumericRange
 
 class FileSystemVaultPath(basePath: Path) extends VaultPath(uri = new URI(""), dataVault = FileSystemDataVault.create) {
 
-  override def readBytesGet(key: String, range: Option[NumericRange[Long]]): Array[Byte] = {
-    val path = basePath.resolve(key)
+  override def readBytesGet(range: Option[NumericRange[Long]]): Array[Byte] =
     range match {
       case Some(r) =>
-        val channel = Files.newByteChannel(path)
+        val channel = Files.newByteChannel(basePath)
         val buf = ByteBuffer.allocateDirect(r.length)
         channel.position(r.start)
         channel.read(buf)
@@ -19,9 +18,8 @@ class FileSystemVaultPath(basePath: Path) extends VaultPath(uri = new URI(""), d
         val arr = new Array[Byte](r.length)
         buf.get(arr)
         arr
-      case None => Files.readAllBytes(path)
+      case None => Files.readAllBytes(basePath)
     }
-  }
 
   override def getFileSystem: FileSystem = basePath.getFileSystem
 

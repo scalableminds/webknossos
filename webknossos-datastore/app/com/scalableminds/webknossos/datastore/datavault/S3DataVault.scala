@@ -30,12 +30,12 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def readBytes(key: String, path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
     val baseKey = S3DataVault.getBaseKey(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
     }
-    val objectKey = Seq(baseKey, key).mkString("/")
+    val objectKey = Seq(baseKey, path.getFileName).mkString("/")
     val getObjectRequest = range match {
       case Some(r) => getRangeRequest(bucketName, objectKey, r)
       case None    => getRequest(bucketName, objectKey)

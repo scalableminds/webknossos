@@ -15,11 +15,11 @@ future.
 
 class VaultPath(uri: URI, dataVault: DataVault) extends Path {
 
-  protected def readBytesGet(key: String, range: Option[NumericRange[Long]]): Array[Byte] =
-    dataVault.readBytes(key, this, range)
+  protected def readBytesGet(range: Option[NumericRange[Long]]): Array[Byte] =
+    dataVault.readBytes(this, range)
 
-  def readBytes(key: String, range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
-    tryo(readBytesGet(key, range)).toOption.map(ZipIO.tryGunzip)
+  def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
+    tryo(readBytesGet(range)).toOption.map(ZipIO.tryGunzip)
 
   override def getFileSystem: FileSystem = ???
 

@@ -25,12 +25,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 
   private lazy val bucket: String = uri.getHost
 
-  override def readBytes(key: String, path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
-    val objName = if (key.nonEmpty) {
-      path.resolve(key).toUri.getPath.tail
-    } else {
-      path.toUri.getPath.tail
-    }
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
+    val objName = path.toUri.getPath.tail
     val blobId = BlobId.of(bucket, objName)
     range match {
       case Some(r) => {

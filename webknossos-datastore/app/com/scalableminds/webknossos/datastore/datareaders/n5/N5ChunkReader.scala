@@ -37,7 +37,7 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
       }
 
       for {
-        bytes <- vaultPath.readBytes(path)
+        bytes <- (vaultPath / path).readBytes()
         (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
         paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
       } yield (paddedChunkBytes, Some(blockHeader.blockSize))

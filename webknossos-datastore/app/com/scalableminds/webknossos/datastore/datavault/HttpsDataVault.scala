@@ -72,8 +72,8 @@ class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault
 
   private def fullResponse(uri: URI): Identity[Response[Either[String, Array[Byte]]]] = getResponse(uri)
 
-  override def readBytes(key: String, path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
-    val uri = path.toUri.resolve(key)
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
+    val uri = path.toUri
     val response = range match {
       case Some(r) => {
         val headerInfos = getHeaderInformation(uri)

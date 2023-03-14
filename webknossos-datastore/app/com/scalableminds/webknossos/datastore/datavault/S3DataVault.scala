@@ -31,11 +31,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
   override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
-    val baseKey = S3DataVault.getBaseKey(path.toUri) match {
+    val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
     }
-    val objectKey = Seq(baseKey, path.getFileName).mkString("/")
     val getObjectRequest = range match {
       case Some(r) => getRangeRequest(bucketName, objectKey, r)
       case None    => getRequest(bucketName, objectKey)
@@ -82,7 +81,7 @@ object S3DataVault {
     With uri given to explore the dataset, get a string that will be used as a prefix for all further
     keys that are requested
    */
-  def getBaseKey(uri: URI): Option[String] =
+  def getObjectKeyFromUri(uri: URI): Option[String] =
     if (isVirtualHostedStyle(uri)) {
       Some(uri.getPath)
     } else if (isPathStyle(uri)) {

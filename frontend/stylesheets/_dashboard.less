@@ -28,41 +28,47 @@
 }
 
 .welcome-header-wrapper {
-  background-color: @component-background;
-  background-image: linear-gradient(0deg, @body-background 0%, @blue-1 70%);
+  background: @background-blue-neurons;
+  
+  button {
+    color: white
+  }
 }
 .welcome-header-content {
-  padding: 20px 0px 20px;
-
+  padding: 40px 0px 40px;
+  
   .text-and-button-container {
     max-width: 1000px;
     margin: auto;
     
     h1 {
-      color: @text-color;
-      margin-left: 56px;
+      color: white;
       font-weight: 200;
       font-size: 64px;
       line-height: 150%;
       margin-bottom: 0;
+      text-align: center;
     }
-
+    
     .subtitle {
-      margin: 0 20px 0px 60px;
+      color: white;
       font-weight: 300;
-      font-size: 20px;
+      font-size: 18px;
       line-height: 150%;
-      color: @text-color-secondary;
+      max-width: 70%;
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .whats-next-actions-grid {
       display: flex;
       flex-wrap: wrap;
-      justify-content: left;
+      justify-content: center;
       padding-inline-start: 0;
 
       a {
-        color: rgb(107, 114, 128);
+        color: @black;
         flex: 0 1 400px; /*  No stretching: */
         margin: 20px;
         margin-left: 0;
@@ -84,34 +90,27 @@
         h2 {
           font-size: 16px;
           line-height: 18px;
-          color: @text-color;
-          margin-bottom: 4px;
+          color: @black;
+          margin-bottom: 8px;
         }
 
         p {
           font-size: 14px;
           line-height: 18px;
-          color: @text-color-secondary;
+          color: @black;
           margin: 0;
         }
 
-        .chevron,
-        .action-icon {
-          font-size: 32px;
-          margin: 8px;
-        }
-
-        background: @component-background;
-        box-shadow: @box-shadow-base;
+        background: white;
         border-radius: 3px;
+        border: white 2px solid;
       }
 
       a:hover {
         background: @primary-color;
 
-        .chevron,
-        .action-icon {
-          color: @text-color-dark;
+        i {
+            filter: brightness(100);
         }
 
         h2 {
@@ -121,6 +120,28 @@
         p {
           color: @text-color-secondary-dark;
         }
+      }
+
+    .icon-open-demo {
+        background-image: url(/assets/images/icon-open-demo.svg); 
+      };
+      .icon-import-own-data {
+        background-image: url(/assets/images/icon-import-own-data.svg); 
+        background-size: 94px;
+      };        
+      .icon-annotate {
+        background-image: url(/assets/images/icon-annotate.svg); 
+      };        
+      .icon-invite-colleagues {
+        background-image: url(/assets/images/icon-invite-colleagues.svg); 
+      };
+                        
+      i {
+        background-repeat: no-repeat;
+        background-size: 100px;
+        background-position: center;
+        height: 100%;
+        width: 64px;
       }
     }
   }

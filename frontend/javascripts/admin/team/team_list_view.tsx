@@ -26,6 +26,47 @@ type State = {
   isTeamCreationModalVisible: boolean;
 };
 
+export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
+  //used by user list page
+  const tags = [
+    ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
+    ...(user.isAdmin
+      ? [["Admin - Access to all Teams", "red"]]
+      : [
+          ...(user.isDatasetManager ? [["Dataset Manager - Edit all Datasets", "geekblue"]] : []),
+          ...user.teams.map((team) => {
+            const roleName = team.isTeamManager ? "Team Manager" : "Member";
+            return [`${team.name}: ${roleName}`, stringToColor(roleName)];
+          }),
+        ]),
+  ];
+
+  return tags.map(([text, color]) => (
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      {text}
+    </Tag>
+  ));
+}
+
+function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
+  // used by teams list page
+  // does not include dataset managers and team names
+  const tags = user.isAdmin
+    ? [["Admin - Access to all Teams", "red"]]
+    : user.teams
+        .filter((team) => team.id === highlightedTeam.id)
+        .map((team) => {
+          const roleName = team.isTeamManager ? "Team Manager" : "Member";
+          return [`${roleName}`, stringToColor(roleName)];
+        });
+
+  return tags.map(([text, color]) => (
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      {text}
+    </Tag>
+  ));
+}
+
 const persistence = new Persistence<Pick<State, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
@@ -118,23 +159,6 @@ class TeamListView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
-    const tags = user.isAdmin
-      ? [["Admin - Access to all Teams", "red"]]
-      : user.teams
-          .filter((team) => team.id === highlightedTeam.id)
-          .map((team) => {
-            const roleName = team.isTeamManager ? "Team Manager" : "Member";
-            return [`${roleName}`, stringToColor(roleName)];
-          });
-
-    return tags.map(([text, color]) => (
-      <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
-        {text}
-      </Tag>
-    ));
-  }
-
   renderUsersForTeam(team: APITeam) {
     const teamMembers = this.state.users.filter(
       (user) =>
@@ -148,7 +172,7 @@ class TeamListView extends React.PureComponent<Props, State> {
         {teamMembers.map((teamMember) => (
           <li>
             {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
-            {this.renderTeamRolesForUser(teamMember, team)}
+            {renderTeamRolesForUser(teamMember, team)}
           </li>
         ))}
       </ul>

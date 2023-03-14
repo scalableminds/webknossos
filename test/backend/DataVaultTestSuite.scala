@@ -3,7 +3,7 @@ package backend
 import org.scalatestplus.play.PlaySpec
 
 import java.net.URI
-import com.scalableminds.webknossos.datastore.datavault.{GoogleCloudDataVault, HttpsDataVault}
+import com.scalableminds.webknossos.datastore.datavault.{GoogleCloudDataVault, HttpsDataVault, VaultPath}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
 
 import scala.collection.immutable.NumericRange
@@ -18,7 +18,7 @@ class DataVaultTestSuite extends PlaySpec {
       "with HTTP Vault" should {
         "return correct response" in {
           val uri = new URI("http://storage.googleapis.com/")
-          val vaultPath = HttpsDataVault.create(RemoteSourceDescriptor(uri, None))
+          val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
           val bytes =
             (vaultPath / s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes(Some(range)).get
 
@@ -30,7 +30,7 @@ class DataVaultTestSuite extends PlaySpec {
       "with Google Cloud Storage Vault" should {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-          val vaultPath = GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None))
+          val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
           val bytes = (vaultPath / s"fafb_v14_orig/$dataKey").readBytes(Some(range)).get
 
           assert(bytes.length == range.length)
@@ -45,7 +45,7 @@ class DataVaultTestSuite extends PlaySpec {
       "with HTTP Vault" should {
         "return correct response" in {
           val uri = new URI("http://storage.googleapis.com/")
-          val vaultPath = HttpsDataVault.create(RemoteSourceDescriptor(uri, None))
+          val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
           val bytes = (vaultPath / s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes().get
 
           assert(bytes.length == dataLength)
@@ -56,7 +56,7 @@ class DataVaultTestSuite extends PlaySpec {
       "with Google Cloud Storage Vault" should {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-          val vaultPath = GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None))
+          val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
           val bytes = (vaultPath / s"fafb_v14_orig/$dataKey").readBytes().get
 
           assert(bytes.length == dataLength)

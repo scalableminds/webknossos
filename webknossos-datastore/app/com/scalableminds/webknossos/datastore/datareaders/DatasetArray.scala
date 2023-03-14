@@ -89,14 +89,25 @@ class DatasetArray(relativePath: DatasetPath,
     }
   }
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
-    val chunkFilename = getChunkFilename(chunkIndex)
-    val chunkFilePath = relativePath.resolve(chunkFilename)
-    val storeKey = chunkFilePath.storeKey
-    val chunkShape = header.chunkSizeAtIndex(chunkIndex)
+  protected def getHashForChunk(ints: Array[Int]) = ???
 
-    chunkContentsCache.getOrLoad(storeKey, key => chunkReader.read(key, chunkShape))
-  }
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] =
+    if (header.isSharded) {
+      //    shard index is cached for each shard
+      //    chunk -> get hash (morton code)
+      //    look for offset+length in index at hash
+      //    make range request for offset -> get chunk
+      val hash = getHashForChunk(chunkIndex)
+
+      ???
+    } else {
+      val chunkFilename = getChunkFilename(chunkIndex)
+      val chunkFilePath = relativePath.resolve(chunkFilename)
+      val storeKey = chunkFilePath.storeKey
+      val chunkShape = header.chunkSizeAtIndex(chunkIndex)
+
+      chunkContentsCache.getOrLoad(storeKey, key => chunkReader.read(key, chunkShape))
+    }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)

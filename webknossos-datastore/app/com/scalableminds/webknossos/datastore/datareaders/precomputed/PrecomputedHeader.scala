@@ -69,9 +69,17 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })
+
+  override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }
 
-case class ShardingSpecification(`@type`: String)
+case class ShardingSpecification(`@type`: String,
+                                 preshift_bits: Int,
+                                 hash: String,
+                                 minishard_bits: Int,
+                                 shard_bits: Int,
+                                 minishard_index_encoding: String = "raw",
+                                 data_encoding: String = "raw")
 
 object ShardingSpecification extends JsonImplicits {
   implicit object ShardingSpecificationFormat extends Format[ShardingSpecification] {

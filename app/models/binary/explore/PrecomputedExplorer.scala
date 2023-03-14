@@ -30,7 +30,6 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
     for {
       name <- guessNameFromPath(remotePath)
       firstScale <- precomputedHeader.scales.headOption.toFox
-      _ <- bool2Fox(firstScale.sharding.isEmpty) ?~> "Failed to read dataset: sharding not supported"
       boundingBox <- BoundingBox.fromSizeArray(firstScale.size).toFox
       elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> "Unknown data type"
       smallestResolution = firstScale.resolution

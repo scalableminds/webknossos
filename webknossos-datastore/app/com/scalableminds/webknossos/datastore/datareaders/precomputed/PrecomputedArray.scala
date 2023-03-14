@@ -69,4 +69,6 @@ class PrecomputedArray(relativePath: DatasetPath,
       .mkString(header.dimension_separator.toString)
   }
 
+  override protected def getHashForChunk(ints: Array[Int]): Nothing = ???
+
 }

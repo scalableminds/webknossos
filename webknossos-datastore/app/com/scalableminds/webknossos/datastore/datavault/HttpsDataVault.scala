@@ -21,15 +21,12 @@ class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault
   private lazy val backend = HttpClientSyncBackend(options = SttpBackendOptions.connectionTimeout(connectionTimeout))
 
   def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
-    credential match {
-      case Some(c) => {
+    credential.flatMap { c =>
         c match {
           case h: HttpBasicAuthCredential    => Some(h)
           case l: LegacyFileSystemCredential => Some(l.toBasicAuth)
           case _                             => None
         }
-      }
-      case None => None
     }
 
   private def authenticatedRequest() =

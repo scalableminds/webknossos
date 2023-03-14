@@ -1,0 +1,29 @@
+@(name: String, jobTitle: String, jobDescription: String, jobLink: String)
+
+@emailBaseTemplate() {
+<p>Hi @{name},</p>
+
+<p>We wanted to let you know that WEBKNOSSOS has finished your background job. 
+<p>@{jobDescription}</p>
+
+<div style="text-align: center;">
+  <a href="@{jobLink}" style="
+      color: #fff;
+      padding: 4px 15px;
+      height: 32px;
+      background: #5660ff;
+      border: 1px solid #808cff;
+      text-align: center;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 2.1;
+      text-decoration: none;
+      border-radius: 4px;
+      display: inline-block;
+    ">
+    Click here to open
+  </a>
+</div>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

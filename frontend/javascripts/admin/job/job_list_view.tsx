@@ -3,7 +3,7 @@ import _ from "lodash";
 import { PropTypes } from "@scalableminds/prop-types";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { Link } from "react-router-dom";
-import { Table, Spin, Input, Tooltip } from "antd";
+import { Table, Spin, Input, Tooltip, Typography } from "antd";
 import {
   CheckCircleTwoTone,
   ClockCircleTwoTone,
@@ -14,6 +14,7 @@ import {
   LoadingOutlined,
   QuestionCircleTwoTone,
   ToolTwoTone,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
 import type { APIJob } from "types/api_flow_types";
@@ -307,13 +308,26 @@ class JobListView extends React.PureComponent<Props, State> {
           />
         </div>
         <h3>Jobs</h3>
+        <Typography.Paragraph type="secondary">
+          Some actions such as dataset conversions or export as Tiff files require some time for
+          processing in the background.
+          <a
+            href="https://docs.webknossos.org/webknossos/jobs.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Tooltip title="Read more in the documentation">
+              <InfoCircleOutlined style={{ marginLeft: 10 }} />
+            </Tooltip>
+          </a><br/>
+          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track progress.
+        </Typography.Paragraph>
         <div
           className="clearfix"
           style={{
             margin: "20px 0px",
           }}
         />
-
         <Spin spinning={this.state.isLoading} size="large">
           <Table
             dataSource={Utils.filterWithSearchQueryAND(

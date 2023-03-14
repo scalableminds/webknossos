@@ -155,4 +155,16 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List("hello@webknossos.org")
     )
 
+  def jobSuccessfulMail(user: User,
+                        userEmail: String,
+                        jobTitle: String,
+                        jobDescription: String,
+                        jobLink: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"${jobTitle} is ready",
+      bodyHtml = html.mail.jobSuccessful(user.name, jobTitle, jobDescription, jobLink).body,
+      recipients = List(userEmail)
+    )
+
 }

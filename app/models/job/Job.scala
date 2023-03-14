@@ -1,5 +1,6 @@
 package models.job
 
+import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Formatter
@@ -11,8 +12,9 @@ import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.binary.{DataSetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.organization.OrganizationDAO
-import models.user.{MultiUserDAO, User, UserDAO}
+import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import oxalis.telemetry.SlackNotificationService
+import oxalis.mail.{DefaultMails, Send}
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
@@ -251,6 +253,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 }
 
 class JobService @Inject()(wkConf: WkConf,
+                           actorSystem: ActorSystem,
                            userDAO: UserDAO,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
@@ -258,11 +261,16 @@ class JobService @Inject()(wkConf: WkConf,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
                            dataSetDAO: DataSetDAO,
+                           defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
+                           userService: UserService,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Formatter {
+
+  private lazy val Mailer =
+    actorSystem.actorSelection("/user/mailActor")
 
   def trackStatusChange(jobBeforeChange: Job, jobAfterChange: Job): Unit =
     if (!jobBeforeChange.isEnded) {
@@ -288,22 +296,42 @@ class JobService @Inject()(wkConf: WkConf,
     ()
   }
 
+  private def sendEmailNotification(user: User, job: Job, resultLink: String): Unit = {
+    val (title, message) = job.command match {
+      case "convert_to_wkw"                => ("Dataset Upload", "Your dataset has been sucessfully uploaded and converted.")
+      case "export_tiff"                   => ("Tiff Export", "Your dataset has been exported as Tiff and is ready for download.")
+      case "infer_nuclei"                  => ("Nuclei Segmentation", "A nuclei segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
+      case "infer_neurons"                 => ("Neuron Segmentation", "A neuron segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
+      case "materialize_volume_annotation" => ("Volume Annotation Merged", "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard.")
+      case _                               => ("None", "None")
+    }
+
+    for {
+      // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification
+      _ <- bool2Fox(title != "None")
+      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      _ = Mailer ! Send(defaultMails.jobSuccessfulMail(user, userEmail, title, message, resultLink))
+    } yield ()
+  }
+
   private def trackNewlySuccessful(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
+      resultLink = jobAfterChange.resultLink(organization.name, dataStore.publicUrl)
+      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLink
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLinkSlack
         .getOrElse("")}"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
         msg
       )
+      _ = sendEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
     } yield ()
     ()
   }

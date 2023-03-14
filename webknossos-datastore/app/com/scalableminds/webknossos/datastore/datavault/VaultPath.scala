@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.webknossos.datastore.storage.FileSystemCredential
 import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
@@ -14,7 +13,7 @@ This class does not implement all relevant methods and it might be a good idea t
 future.
  */
 
-class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[FileSystemCredential]) extends Path {
+class VaultPath(uri: URI, dataVault: DataVault) extends Path {
 
   protected def readBytesGet(key: String, range: Option[NumericRange[Long]]): Array[Byte] =
     dataVault.readBytes(key, this, range)
@@ -35,7 +34,7 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
     val newUri =
       if (uri.getPath.endsWith("/")) uri.resolve("..")
       else uri.resolve(".")
-    new VaultPath(newUri, dataVault, fileSystemCredentialOpt)
+    new VaultPath(newUri, dataVault)
   }
 
   override def getNameCount: Int = ???
@@ -55,7 +54,7 @@ class VaultPath(uri: URI, dataVault: DataVault, fileSystemCredentialOpt: Option[
   override def resolve(other: Path): Path = this / other.toString
 
   def /(key: String): VaultPath =
-    new VaultPath(uri.resolve(key), dataVault, fileSystemCredentialOpt)
+    new VaultPath(uri.resolve(key), dataVault)
 
   override def relativize(other: Path): Path = ???
 

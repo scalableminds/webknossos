@@ -5,8 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.file.{FileSystem, Files, LinkOption, Path, WatchEvent, WatchKey, WatchService}
 import scala.collection.immutable.NumericRange
 
-class FileSystemVaultPath(basePath: Path)
-    extends VaultPath(uri = new URI(""), dataVault = NullDataVault.create, fileSystemCredentialOpt = None) {
+class FileSystemVaultPath(basePath: Path) extends VaultPath(uri = new URI(""), dataVault = FileSystemDataVault.create) {
 
   override def readBytesGet(key: String, range: Option[NumericRange[Long]]): Array[Byte] = {
     val path = basePath.resolve(key)

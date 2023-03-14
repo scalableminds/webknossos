@@ -22,11 +22,11 @@ class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault
 
   def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
     credential.flatMap { c =>
-        c match {
-          case h: HttpBasicAuthCredential    => Some(h)
-          case l: LegacyFileSystemCredential => Some(l.toBasicAuth)
-          case _                             => None
-        }
+      c match {
+        case h: HttpBasicAuthCredential    => Some(h)
+        case l: LegacyFileSystemCredential => Some(l.toBasicAuth)
+        case _                             => None
+      }
     }
 
   private def authenticatedRequest() =
@@ -98,6 +98,6 @@ class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault
 object HttpsDataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor) = {
     val credential = remoteSourceDescriptor.credential
-    new VaultPath(remoteSourceDescriptor.uri, new HttpsDataVault(credential), credential)
+    new VaultPath(remoteSourceDescriptor.uri, new HttpsDataVault(credential))
   }
 }

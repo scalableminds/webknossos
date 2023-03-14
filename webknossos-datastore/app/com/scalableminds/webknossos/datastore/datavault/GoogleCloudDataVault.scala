@@ -53,8 +53,6 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 object GoogleCloudDataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor): VaultPath = {
     val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential])
-    new VaultPath(remoteSourceDescriptor.uri,
-                  new GoogleCloudDataVault(remoteSourceDescriptor.uri, credential),
-                  credential)
+    new VaultPath(remoteSourceDescriptor.uri, new GoogleCloudDataVault(remoteSourceDescriptor.uri, credential))
   }
 }

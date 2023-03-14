@@ -163,7 +163,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
                                                             requestingUser._organization)
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "remoteFileSystem.credential.insert.failed"
-      remotePath <- DataVaultsHolder.getOrCreate(remoteSource) ?~> "remoteFileSystem.setup.failed"
+      remotePath <- DataVaultsHolder.getVaultPath(remoteSource) ?~> "remoteFileSystem.setup.failed"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
         credentialId.map(_.toString),

@@ -2,7 +2,13 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.datavault.{GoogleCloudDataVault, HttpsDataVault, VaultPath, S3DataVault}
+import com.scalableminds.webknossos.datastore.datavault.{
+  DataVault,
+  GoogleCloudDataVault,
+  HttpsDataVault,
+  S3DataVault,
+  VaultPath
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 
@@ -15,19 +21,21 @@ object DataVaultsHolder extends LazyLogging {
   val schemeHttp: String = "http"
   val schemeGS: String = "gs"
 
-  private val vaultCache: AlfuFoxCache[RemoteSourceDescriptor, VaultPath] =
+  private val vaultCache: AlfuFoxCache[RemoteSourceDescriptor, DataVault] =
     AlfuFoxCache(maxEntries = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 
-  def getOrCreate(remoteSourceDescriptor: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] =
-    vaultCache.getOrLoad(remoteSourceDescriptor, create)
+  def getVaultPath(remoteSourceDescriptor: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] =
+    for {
+      vault <- vaultCache.getOrLoad(remoteSourceDescriptor, create)
+    } yield new VaultPath(remoteSourceDescriptor.uri, vault)
 
-  private def create(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] = {
+  private def create(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[DataVault] = {
     val scheme = remoteSource.uri.getScheme
     try {
-      val fs: VaultPath = if (scheme == schemeGS) {
+      val fs: DataVault = if (scheme == schemeGS) {
         GoogleCloudDataVault.create(remoteSource)
       } else if (scheme == schemeS3) {
         S3DataVault.create(remoteSource)

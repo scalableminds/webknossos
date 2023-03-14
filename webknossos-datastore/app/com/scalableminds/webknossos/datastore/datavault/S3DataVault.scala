@@ -47,9 +47,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 }
 
 object S3DataVault {
-  def create(remoteSourceDescriptor: RemoteSourceDescriptor): VaultPath = {
+  def create(remoteSourceDescriptor: RemoteSourceDescriptor): S3DataVault = {
     val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[S3AccessKeyCredential])
-    new VaultPath(remoteSourceDescriptor.uri, new S3DataVault(credential, remoteSourceDescriptor.uri))
+    new S3DataVault(credential, remoteSourceDescriptor.uri)
   }
 
   private def hostBucketFromUri(uri: URI): Option[String] = {

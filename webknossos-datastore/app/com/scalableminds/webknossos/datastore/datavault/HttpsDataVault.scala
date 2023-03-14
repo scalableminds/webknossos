@@ -96,8 +96,6 @@ class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault
 }
 
 object HttpsDataVault {
-  def create(remoteSourceDescriptor: RemoteSourceDescriptor) = {
-    val credential = remoteSourceDescriptor.credential
-    new VaultPath(remoteSourceDescriptor.uri, new HttpsDataVault(credential))
-  }
+  def create(remoteSourceDescriptor: RemoteSourceDescriptor): HttpsDataVault =
+    new HttpsDataVault(remoteSourceDescriptor.credential)
 }

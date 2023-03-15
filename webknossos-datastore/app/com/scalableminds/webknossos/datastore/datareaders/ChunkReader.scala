@@ -33,6 +33,9 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
     chunkTyper.wrapAndType(chunkBytesAndShape.map(_._1), chunkBytesAndShape.flatMap(_._2).getOrElse(chunkShape))
   }
 
+  def parseChunk(bytes: Array[Byte], chunkShape: Array[Int]): Future[MultiArray] =
+    chunkTyper.wrapAndType(Some(bytes), chunkShape)
+
   // Returns bytes (optional, None may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
   protected def readChunkBytesAndShape(path: String): Option[(Array[Byte], Option[Array[Int]])] =

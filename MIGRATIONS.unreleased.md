@@ -6,7 +6,6 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.03.0...HEAD)
-- WEBKNOSSOS now requires at least Java 11 (up from Java 8). [#6869](https://github.com/scalableminds/webknossos/pull/6869)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...HEAD)
 
 ### Postgres Evolutions:

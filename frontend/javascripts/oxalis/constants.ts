@@ -320,6 +320,7 @@ const Constants = {
     _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
+  SCALEBAR_HEIGHT: 22,
 };
 export default Constants;
 

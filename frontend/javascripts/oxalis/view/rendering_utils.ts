@@ -13,6 +13,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { convertBufferToImage } from "libs/utils";
 import html2canvas from "html2canvas";
+import Constants from "oxalis/constants";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
@@ -96,6 +97,7 @@ export async function downloadScreenshot() {
   const baseName = `${datasetName}__${x}_${y}_${z}`;
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
+  const logo = await getSCreenshotLogoImage();
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
@@ -106,6 +108,26 @@ export async function downloadScreenshot() {
     const buffer = renderToTexture(planeId, null, null, false, clearColor);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
+    const scalebar = inputCatcherElement?.querySelector(".scalebar") as HTMLElement;
+    let drawImageIntoCanvasCallback = null;
+    if (scalebar) {
+      drawImageIntoCanvasCallback = (ctx: CanvasRenderingContext2D) => {
+        const scalebarDistanceToRightBorder =
+          scalebar.offsetParent != null
+            ? scalebar.offsetParent.clientWidth - scalebar.offsetLeft - scalebar.clientWidth
+            : 0;
+        const scalebarDistanceToTopBorder = scalebar.offsetTop;
+        const logoHeight = constants.SCALEBAR_HEIGHT;
+        const logoWidth = (logoHeight / logo.height) * logo.width;
+        ctx.drawImage(
+          logo,
+          scalebarDistanceToRightBorder,
+          scalebarDistanceToTopBorder,
+          logoWidth,
+          logoHeight,
+        );
+      };
+    }
     const canvas =
       inputCatcherElement != null
         ? await html2canvas(inputCatcherElement as HTMLElement, {
@@ -119,10 +141,28 @@ export async function downloadScreenshot() {
         : null;
 
     // eslint-disable-next-line no-await-in-loop
-    const blob = await convertBufferToImage(buffer, width, height, true, canvas);
+    const blob = await convertBufferToImage(
+      buffer,
+      width,
+      height,
+      true,
+      canvas,
+      drawImageIntoCanvasCallback,
+    );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
       saveAs(blob, `${baseName}__${planeDescriptor}.png`);
     }
   }
+  logo.remove();
+}
+
+function getSCreenshotLogoImage(): Promise<HTMLImageElement> {
+  const logo = document.createElement("img");
+  logo.style.height = Constants.SCALEBAR_HEIGHT + "px";
+  logo.style.width = "auto";
+  logo.src = "/assets/images/logo-screenshot.svg";
+  return new Promise((resolve) => {
+    logo.onload = () => resolve(logo);
+  });
 }

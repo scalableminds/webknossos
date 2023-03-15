@@ -964,22 +964,15 @@ export function chunkIntoTimeWindows<T>(
   );
 }
 
-function getLogoImage(): Promise<HTMLImageElement> {
-  const logo = document.createElement("img");
-  logo.src = "/assets/images/logo.svg";
-  return new Promise((resolve) => {
-    logo.onload = () => resolve(logo);
-  });
-}
-
 export function convertBufferToImage(
   buffer: Uint8Array,
   width: number,
   height: number,
   flipHorizontally: boolean = false,
   canvasToMerge: HTMLCanvasElement | null | undefined,
+  drawImageIntoCanvasCallback: ((ctx: CanvasRenderingContext2D) => void) | null | undefined,
 ): Promise<Blob | null> {
-  return new Promise(async (resolve) => {
+  return new Promise((resolve) => {
     width = Math.round(width);
     height = Math.round(height);
     const canvas = document.createElement("canvas");
@@ -1003,16 +996,11 @@ export function convertBufferToImage(
       ctx.drawImage(canvasToMerge, 0, 0);
     }
 
-    const img = await getLogoImage();
-    debugger;
-    const paddingOffset = 10;
-    const logoHeight = clamp(20, 0.03 * height, 300);
-    // The intrinsic aspect ratio of the log is 150∶31.
-    const logoWidth = (logoHeight / 31) * 150;
-    ctx.drawImage(img, paddingOffset, height - paddingOffset - logoHeight, logoWidth, logoHeight);
+    if (drawImageIntoCanvasCallback) {
+      drawImageIntoCanvasCallback(ctx);
+    }
     canvas.toBlob((blob: Blob | null) => {
       canvas.remove();
-      img.remove();
       resolve(blob);
     });
   });

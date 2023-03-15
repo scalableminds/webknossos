@@ -81,7 +81,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
             : `calc(${scaleBarWidthFactor * 100}% - ${Math.round(
                 ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
               )}% + ${2 * padding}px)`,
-          height: 14,
+          height: constants.SCALEBAR_HEIGHT - padding * 2,
           background: "rgba(0, 0, 0, .3)",
           color: "white",
           textAlign: "center",
@@ -90,6 +90,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
           boxSizing: "content-box",
           padding,
         }}
+        className="scalebar"
       >
         <div
           style={{

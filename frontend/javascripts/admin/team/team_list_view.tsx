@@ -1,27 +1,72 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Modal, Alert } from "antd";
+import { Table, Spin, Button, Input, Modal, Alert, Tag } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import type { APITeam } from "types/api_flow_types";
-import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import { getEditableTeams, deleteTeam, getEditableUsers } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import LinkButton from "components/link_button";
 import CreateTeamModal from "admin/team/create_team_modal_view";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { stringToColor } from "libs/format_utils";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APITeam[] = [];
+
 type Props = {};
 type State = {
   isLoading: boolean;
-  teams: Array<APITeam>;
+  teams: APITeam[];
+  users: APIUser[];
   searchQuery: string;
   isTeamCreationModalVisible: boolean;
 };
+
+export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
+  //used by user list page
+  const tags = [
+    ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
+    ...(user.isAdmin
+      ? [["Admin - Access to all Teams", "red"]]
+      : [
+          ...(user.isDatasetManager ? [["Dataset Manager - Edit all Datasets", "geekblue"]] : []),
+          ...user.teams.map((team) => {
+            const roleName = team.isTeamManager ? "Team Manager" : "Member";
+            return [`${team.name}: ${roleName}`, stringToColor(roleName)];
+          }),
+        ]),
+  ];
+
+  return tags.map(([text, color]) => (
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      {text}
+    </Tag>
+  ));
+}
+
+function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
+  // used by teams list page
+  // does not include dataset managers and team names
+  const tags = user.isAdmin
+    ? [["Admin - Access to all Teams", "red"]]
+    : user.teams
+        .filter((team) => team.id === highlightedTeam.id)
+        .map((team) => {
+          const roleName = team.isTeamManager ? "Team Manager" : "Member";
+          return [`${roleName}`, stringToColor(roleName)];
+        });
+
+  return tags.map(([text, color]) => (
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      {text}
+    </Tag>
+  ));
+}
+
 const persistence = new Persistence<Pick<State, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
@@ -33,6 +78,7 @@ class TeamListView extends React.PureComponent<Props, State> {
   state: State = {
     isLoading: true,
     teams: [],
+    users: [],
     searchQuery: "",
     isTeamCreationModalVisible: false,
   };
@@ -48,10 +94,11 @@ class TeamListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    const teams = await getEditableTeams();
+    const [teams, users] = await Promise.all([getEditableTeams(), getEditableUsers()]);
     this.setState({
       isLoading: false,
       teams,
+      users,
     });
   }
 
@@ -112,6 +159,26 @@ class TeamListView extends React.PureComponent<Props, State> {
     );
   }
 
+  renderUsersForTeam(team: APITeam) {
+    const teamMembers = this.state.users.filter(
+      (user) =>
+        user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) || user.isAdmin,
+    );
+
+    if (teamMembers.length === 0) return messages["team.no_members"];
+
+    return (
+      <ul>
+        {teamMembers.map((teamMember) => (
+          <li>
+            {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
+            {renderTeamRolesForUser(teamMember, team)}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   render() {
     const marginRight = {
       marginRight: 20,
@@ -164,6 +231,10 @@ class TeamListView extends React.PureComponent<Props, State> {
               rowKey="id"
               pagination={{
                 defaultPageSize: 50,
+              }}
+              expandable={{
+                expandedRowRender: (team) => this.renderUsersForTeam(team),
+                rowExpandable: (_team) => true,
               }}
               style={{
                 marginTop: 30,

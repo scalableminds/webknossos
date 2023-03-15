@@ -94,6 +94,7 @@ const getMaybeFilteredColor: ShaderModule = {
           color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
         <% } %>
       } else {
+        // todo: find out whether out of layer bounds or not
         color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
       }
       return color;
@@ -114,10 +115,10 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
     ) {
       vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering);
 
-      if (color.a < 0.0) {
-        // Render gray for not-yet-existing data
-        color = fallbackColor;
-      }
+      // if alpha === 0 -> No data
+      color = mix(color, fallbackColor, float(color.a < 0.0));
+      vec4 usedFallbackColor = mix(vec4(0.0), vec4(1.0), float(color.a < 0.0));
+      return color;
 
       return color;
     }

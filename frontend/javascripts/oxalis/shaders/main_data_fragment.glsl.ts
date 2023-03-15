@@ -92,6 +92,7 @@ uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
+uniform int blendMode;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
@@ -145,7 +146,7 @@ void main() {
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
     return;
   }
-  vec3 data_color = vec3(0.0);
+  vec3 data_color = vec4(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     vec4 <%= segmentationName%>_id_low = vec4(0.);
@@ -190,13 +191,20 @@ void main() {
       color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 
       color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
-
+      
       // Maybe invert the color using the inverting_factor
       color_value = abs(color_value - <%= name %>_is_inverted);
       // Catch the case where max == min would causes a NaN value and use black as a fallback color.
       color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
+      // additive blendmode == 1
+      color_value = color_value * <%= name %>_alpha * <%= name %>_color;
+      vec3 additive_color = data_color + color_value;
+      // cover blendmode == 0
+      // TODO: gimp calls this blend mode "merge" -> rename
+      float is_already_covered = data_color.a != 0.0;
+      vec3 cover_color = mix(color_value, data_color, is_already_covered);
       // Multiply with color and alpha for <%= name %>
-      data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+      data_color = mix(cover_color, additive_color, float(<%= name %>_blendMode == 1));
     }
   <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);

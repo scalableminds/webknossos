@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import type { OrthoView, Vector3 } from "oxalis/constants";
+import { BLEND_MODES, OrthoView, Vector3 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -213,6 +213,7 @@ class PlaneMaterialFactory {
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
+      blendMode: { value: 1 },
     };
 
     for (const dataLayer of Model.getAllLayers()) {
@@ -451,6 +452,19 @@ class PlaneMaterialFactory {
           const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
           this.uniforms.bboxMin.value.set(...lowerBoundary);
           this.uniforms.bboxMax.value.set(...upperBoundary);
+        },
+        true,
+      ),
+    );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.blendMode,
+        (blendMode) => {
+          if (blendMode === BLEND_MODES.ADDITIVE) {
+            this.uniforms.blendMode.value = 1;
+          } else {
+            this.uniforms.blendMode.value = 0;
+          }
         },
         true,
       ),

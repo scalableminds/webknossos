@@ -348,3 +348,8 @@ export enum LOG_LEVELS {
   ERROR = "ERROR",
   CRITICAL = "CRITICAL",
 }
+
+export enum BLEND_MODES {
+  ADDITIVE = "ADDITIVE",
+  COVER = "COVER",
+}

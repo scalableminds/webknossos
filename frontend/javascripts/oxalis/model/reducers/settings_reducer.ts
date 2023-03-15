@@ -278,6 +278,11 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       return updateActiveMapping(state, { mappingName }, layerName);
     }
 
+    case "SET_BLEND_MODE": {
+      const { blendMode } = action;
+      return updateTemporaryConfig(state, { blendMode });
+    }
+
     default: // pass;
   }
 

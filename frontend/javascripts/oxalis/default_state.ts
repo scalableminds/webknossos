@@ -8,6 +8,7 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
+  BLEND_MODES,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 const defaultViewportRect = {
@@ -105,6 +106,7 @@ const defaultState: OxalisState = {
     preferredQualityForMeshPrecomputation: 2,
     preferredQualityForMeshAdHocComputation: 2,
     lastVisibleSegmentationLayerName: null,
+    blendMode: BLEND_MODES.COVER,
   },
   task: null,
   dataset: {

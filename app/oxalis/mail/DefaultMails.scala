@@ -155,16 +155,27 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List("hello@webknossos.org")
     )
 
-  def jobSuccessfulMail(user: User,
-                        userEmail: String,
-                        jobTitle: String,
-                        jobDescription: String,
-                        jobDataset: String,
-                        jobLink: String): Mail =
+  def jobSuccessfulGenericMail(user: User,
+                               userEmail: String,
+                               jobTitle: String,
+                               jobDescription: String,
+                               datasetName: String,
+                               jobLink: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"${jobTitle} is ready",
-      bodyHtml = html.mail.jobSuccessful(user.name, jobTitle, jobDescription, jobDataset, jobLink).body,
+      bodyHtml = html.mail.jobSuccessfulGeneric(user.name, jobTitle, jobDescription, datasetName, jobLink).body,
+      recipients = List(userEmail)
+    )
+
+    def jobSuccessfulUploadConvertMail(user: User,
+                               userEmail: String,
+                               datasetName: String,
+                               jobLink: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"Your dataset is ready",
+      bodyHtml = html.mail.jobSuccessfulUploadConvert(user.name, datasetName, jobLink).body,
       recipients = List(userEmail)
     )
 

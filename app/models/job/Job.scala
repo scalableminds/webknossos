@@ -297,30 +297,63 @@ class JobService @Inject()(wkConf: WkConf,
     ()
   }
 
-  private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit = {
-    val (title, message) = job.command match {
-      case "convert_to_wkw" => ("Dataset Upload", "Your dataset has been sucessfully uploaded and converted.")
-      case "export_tiff"    => ("Tiff Export", "Your dataset has been exported as Tiff and is ready for download.")
-      case "infer_nuclei" =>
-        ("Nuclei Segmentation",
-         "A nuclei segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
-      case "infer_neurons" =>
-        ("Neuron Segmentation",
-         "A neuron segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
-      case "materialize_volume_annotation" =>
-        ("Volume Annotation Merged",
-         "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard.")
-      case _ => ("None", "None")
-    }
-
+  private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
-      // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification
-      _ <- bool2Fox(title != "None") ?~> "job.emailNotifactionsDisabled"
       userEmail <- userService.emailFor(user)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
-      _ = Mailer ! Send(defaultMails.jobSuccessfulMail(user, userEmail, title, message, datasetName, resultLink))
+      emailTemplate <- (job.command match {
+        case "convert_to_wkw" =>
+          Some(
+            defaultMails.jobSuccessfulGenericMail(user,
+                                                  userEmail,
+                                                  "Dataset Upload",
+                                                  "Your dataset has been sucessfully uploaded and converted.",
+                                                  datasetName,
+                                                  resultLink))
+        case "export_tiff" =>
+          Some(
+            defaultMails.jobSuccessfulGenericMail(user,
+                                                  userEmail,
+                                                  "Tiff Export",
+                                                  "Your dataset has been exported as Tiff and is ready for download.",
+                                                  datasetName,
+                                                  resultLink))
+        case "infer_nuclei" =>
+          Some(
+            defaultMails.jobSuccessfulGenericMail(
+              user,
+              userEmail,
+              "Nuclei Segmentation",
+              "A nuclei segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.",
+              datasetName,
+              resultLink
+            ))
+        case "infer_neurons" =>
+          Some(
+            defaultMails.jobSuccessfulGenericMail(
+              user,
+              userEmail,
+              "Neuron Segmentation",
+              "A neuron segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.",
+              datasetName,
+              resultLink
+            ))
+        case "materialize_volume_annotation" =>
+          Some(
+            defaultMails.jobSuccessfulGenericMail(
+              user,
+              userEmail,
+              "Volume Annotation Merged",
+              "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard.",
+              datasetName,
+              resultLink
+            ))
+        case _ => None
+      }) ?~> "job.emailNotifactionsDisabled"
+      // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification
+      // emailTemplate <- emailTemplateOpt ?~> "job.emailNotifactionsDisabled"
+      _ = Mailer ! Send(emailTemplate)
     } yield ()
-  }
 
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {

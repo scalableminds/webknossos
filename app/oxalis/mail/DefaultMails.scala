@@ -157,40 +157,49 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   def jobSuccessfulGenericMail(user: User,
                                userEmail: String,
-                               jobTitle: String,
-                               jobDescription: String,
                                datasetName: String,
-                               jobLink: String): Mail =
+                               jobLink: String,
+                               jobTitle: String,
+                               jobDescription: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"${jobTitle} is ready",
-      bodyHtml = html.mail.jobSuccessfulGeneric(user.name, jobTitle, jobDescription, datasetName, jobLink).body,
+      bodyHtml = html.mail.jobSuccessfulGeneric(user.name, datasetName, jobLink, jobTitle, jobDescription).body,
       recipients = List(userEmail)
     )
 
-    def jobSuccessfulUploadConvertMail(user: User,
-                               userEmail: String,
-                               datasetName: String,
-                               jobLink: String): Mail =
+  def jobSuccessfulUploadConvertMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your dataset is ready",
+      subject = "Your dataset is ready",
       bodyHtml = html.mail.jobSuccessfulUploadConvert(user.name, datasetName, jobLink).body,
       recipients = List(userEmail)
     )
 
-  def jobFailedGenericMail(user: User, userEmail: String, jobTitle: String, datasetName: String): Mail =
+  def jobSuccessfulSegmentationMail(user: User,
+                                    userEmail: String,
+                                    datasetName: String,
+                                    jobLink: String,
+                                    jobTitle: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Oops. Your WEBKNOSSOS job failed",
-      bodyHtml = html.mail.jobFailedGeneric(user.name, jobTitle, datasetName).body,
+      subject = s"Your ${jobTitle} is ready",
+      bodyHtml = html.mail.jobSuccessfulSegmentation(user.name, datasetName, jobLink, jobTitle).body,
+      recipients = List(userEmail)
+    )
+
+  def jobFailedGenericMail(user: User, userEmail: String, datasetName: String, jobTitle: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Oops. Your WEBKNOSSOS job failed",
+      bodyHtml = html.mail.jobFailedGeneric(user.name, datasetName, jobTitle).body,
       recipients = List(userEmail)
     )
 
   def jobFailedUploadConvertMail(user: User, userEmail: String, datasetName: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Oops. Your dataset upload & conversion failed",
+      subject = "Oops. Your dataset upload & conversion failed",
       bodyHtml = html.mail.jobFailedUploadConvert(user.name, datasetName).body,
       recipients = List(userEmail)
     )

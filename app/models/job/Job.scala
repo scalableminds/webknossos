@@ -301,57 +301,32 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       userEmail <- userService.emailFor(user)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
+      genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(user, userEmail, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
         case "convert_to_wkw" =>
-          Some(
-            defaultMails.jobSuccessfulGenericMail(user,
-                                                  userEmail,
-                                                  "Dataset Upload",
-                                                  "Your dataset has been sucessfully uploaded and converted.",
-                                                  datasetName,
-                                                  resultLink))
+          Some(defaultMails.jobSuccessfulUploadConvertMail(user, userEmail, datasetName, resultLink))
         case "export_tiff" =>
           Some(
-            defaultMails.jobSuccessfulGenericMail(user,
-                                                  userEmail,
-                                                  "Tiff Export",
-                                                  "Your dataset has been exported as Tiff and is ready for download.",
-                                                  datasetName,
-                                                  resultLink))
+            genericEmailTemplate(
+              "Tiff Export",
+              "Your dataset has been exported as Tiff and is ready for download."
+            ))
         case "infer_nuclei" =>
           Some(
-            defaultMails.jobSuccessfulGenericMail(
-              user,
-              userEmail,
-              "Nuclei Segmentation",
-              "A nuclei segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.",
-              datasetName,
-              resultLink
-            ))
+            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Nuclei Segmentation"))
         case "infer_neurons" =>
           Some(
-            defaultMails.jobSuccessfulGenericMail(
-              user,
-              userEmail,
-              "Neuron Segmentation",
-              "A neuron segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.",
-              datasetName,
-              resultLink
+            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Neuron Segmentation",
             ))
         case "materialize_volume_annotation" =>
           Some(
-            defaultMails.jobSuccessfulGenericMail(
-              user,
-              userEmail,
+            genericEmailTemplate(
               "Volume Annotation Merged",
-              "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard.",
-              datasetName,
-              resultLink
+              "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
             ))
         case _ => None
       }) ?~> "job.emailNotifactionsDisabled"
       // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification
-      // emailTemplate <- emailTemplateOpt ?~> "job.emailNotifactionsDisabled"
       _ = Mailer ! Send(emailTemplate)
     } yield ()
 
@@ -361,7 +336,7 @@ class JobService @Inject()(wkConf: WkConf,
       datasetName = job.datasetName.getOrElse("")
       emailTemplate = job.command match {
         case "convert_to_wkw" => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
-        case _                => defaultMails.jobFailedGenericMail(user, userEmail, job.command, datasetName)
+        case _                => defaultMails.jobFailedGenericMail(user, userEmail, datasetName, job.command)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()

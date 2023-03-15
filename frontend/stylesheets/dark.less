@@ -37,6 +37,12 @@ a:hover {
   }
 }
 
+.ant-input-affix-wrapper {
+  // <FormInput>s have a transparent baclground color and rely on a dark background shining through which is not always the case
+  // TODO: This is likely fixed by Antd v5 and can be removed
+  background-color: @black;
+}
+
 // Change the bright versions to dark, too
 .icon-sidebar-hide-left-bright {
   background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);

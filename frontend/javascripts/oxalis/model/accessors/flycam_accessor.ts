@@ -152,7 +152,7 @@ export function _getMaximumZoomForAllResolutions(
   let currentResolutionIndex = 0;
   const maxZoomValueThresholds = [];
 
-  if (typeof maximumCapacity != "number" || isNaN(maximumCapacity)) {
+  if (typeof maximumCapacity !== "number" || isNaN(maximumCapacity)) {
     // If maximumCapacity is NaN for some reason, the following loop will
     // never terminate (causing webKnossos to hang).
     throw new Error("Internal error: Invalid maximum capacity provided.");

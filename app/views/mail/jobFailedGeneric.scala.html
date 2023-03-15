@@ -1,0 +1,15 @@
+@(name: String, jobTitle: String, datasetName: String)
+
+@emailBaseTemplate() {
+<p>Hi @{name},</p>
+
+<p>
+  oops, something unexpectedly went wrong when working on your WEBKNOSSOS @{jobTitle} job for @{datasetName}.
+  This should not have happend and we are sorry about the inconvenience. Our engineers will investigate and fix the problem as soon as possible. 
+</p>
+<p>
+Feel free to contact us via email for assistance or please try again later.
+</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

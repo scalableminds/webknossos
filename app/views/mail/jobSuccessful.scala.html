@@ -1,9 +1,9 @@
-@(name: String, jobTitle: String, jobDescription: String, jobLink: String)
+@(name: String, jobTitle: String, jobDescription: String, datasetName: String, jobLink: String)
 
 @emailBaseTemplate() {
 <p>Hi @{name},</p>
 
-<p>We wanted to let you know that WEBKNOSSOS has finished your background job. 
+<p>We wanted to let you know that WEBKNOSSOS has finished your background job for the dataset @{datasetName}. 
 <p>@{jobDescription}</p>
 
 <div style="text-align: center;">

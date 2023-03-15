@@ -159,11 +159,28 @@ class DefaultMails @Inject()(conf: WkConf) {
                         userEmail: String,
                         jobTitle: String,
                         jobDescription: String,
+                        jobDataset: String,
                         jobLink: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"${jobTitle} is ready",
-      bodyHtml = html.mail.jobSuccessful(user.name, jobTitle, jobDescription, jobLink).body,
+      bodyHtml = html.mail.jobSuccessful(user.name, jobTitle, jobDescription, jobDataset, jobLink).body,
+      recipients = List(userEmail)
+    )
+
+  def jobFailedGenericMail(user: User, userEmail: String, jobTitle: String, datasetName: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"Oops. Your WEBKNOSSOS job failed",
+      bodyHtml = html.mail.jobFailedGeneric(user.name, jobTitle, datasetName).body,
+      recipients = List(userEmail)
+    )
+
+  def jobFailedUploadConvertMail(user: User, userEmail: String, datasetName: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"Oops. Your dataset upload & conversion failed",
+      bodyHtml = html.mail.jobFailedUploadConvert(user.name, datasetName).body,
       recipients = List(userEmail)
     )
 

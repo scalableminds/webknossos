@@ -292,27 +292,46 @@ class JobService @Inject()(wkConf: WkConf,
         s"Failed job$superUserLabel",
         msg
       )
+      _ = sendFailedEmailNotification(user, jobAfterChange)
     } yield ()
     ()
   }
 
-  private def sendEmailNotification(user: User, job: Job, resultLink: String): Unit = {
+  private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit = {
     val (title, message) = job.command match {
-      case "convert_to_wkw"                => ("Dataset Upload", "Your dataset has been sucessfully uploaded and converted.")
-      case "export_tiff"                   => ("Tiff Export", "Your dataset has been exported as Tiff and is ready for download.")
-      case "infer_nuclei"                  => ("Nuclei Segmentation", "A nuclei segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
-      case "infer_neurons"                 => ("Neuron Segmentation", "A neuron segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
-      case "materialize_volume_annotation" => ("Volume Annotation Merged", "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard.")
-      case _                               => ("None", "None")
+      case "convert_to_wkw" => ("Dataset Upload", "Your dataset has been sucessfully uploaded and converted.")
+      case "export_tiff"    => ("Tiff Export", "Your dataset has been exported as Tiff and is ready for download.")
+      case "infer_nuclei" =>
+        ("Nuclei Segmentation",
+         "A nuclei segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
+      case "infer_neurons" =>
+        ("Neuron Segmentation",
+         "A neuron segmentation of your dataset is ready. The result is available as a new dataset in your dashboard.")
+      case "materialize_volume_annotation" =>
+        ("Volume Annotation Merged",
+         "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard.")
+      case _ => ("None", "None")
     }
 
     for {
       // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification
-      _ <- bool2Fox(title != "None")
+      _ <- bool2Fox(title != "None") ?~> "job.emailNotifactionsDisabled"
       userEmail <- userService.emailFor(user)(GlobalAccessContext)
-      _ = Mailer ! Send(defaultMails.jobSuccessfulMail(user, userEmail, title, message, resultLink))
+      datasetName = job.datasetName.getOrElse("")
+      _ = Mailer ! Send(defaultMails.jobSuccessfulMail(user, userEmail, title, message, datasetName, resultLink))
     } yield ()
   }
+
+  private def sendFailedEmailNotification(user: User, job: Job): Unit =
+    for {
+      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      datasetName = job.datasetName.getOrElse("")
+      emailTemplate = job.command match {
+        case "convert_to_wkw" => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
+        case _                => defaultMails.jobFailedGenericMail(user, userEmail, job.command, datasetName)
+      }
+      _ = Mailer ! Send(emailTemplate)
+    } yield ()
 
   private def trackNewlySuccessful(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
@@ -331,7 +350,7 @@ class JobService @Inject()(wkConf: WkConf,
         s"Successful job$superUserLabel",
         msg
       )
-      _ = sendEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
+      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
     } yield ()
     ()
   }

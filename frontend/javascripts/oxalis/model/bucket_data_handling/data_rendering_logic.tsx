@@ -169,6 +169,7 @@ function getDataTextureCount(
   );
 }
 
+// Only exported for testing
 export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   byteCount: number,

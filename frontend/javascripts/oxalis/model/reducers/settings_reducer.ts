@@ -178,7 +178,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
             // to 4 in #6748.
             action.initialUserSettings.gpuMemoryFactor === 3
               ? constants.DEFAULT_GPU_MEMORY_FACTOR
-              : action.initialUserSettings.gpuMemoryFactor,
+              : action.initialUserSettings.gpuMemoryFactor ||
+                state.userConfiguration.gpuMemoryFactor,
         },
       };
       return ensureOnlyOneVisibleSegmentationLayer(newState);

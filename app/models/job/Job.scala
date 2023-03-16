@@ -324,6 +324,18 @@ class JobService @Inject()(wkConf: WkConf,
               "Volume Annotation Merged",
               "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
             ))
+        case "globalize_floodfills" =>
+          Some(
+            genericEmailTemplate(
+              "Globalize Flood Fill",
+              "The flood fill operations has been extended to the whole dataset. The result is available as a new dataset in your dashboard."
+            ))
+        case "compute_mesh_file" =>
+          Some(
+            genericEmailTemplate(
+              "Mesh Generation",
+              "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
+            ))
         case _ => None
       }) ?~> "job.emailNotifactionsDisabled"
       // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification

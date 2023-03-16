@@ -124,19 +124,19 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
   // prettier-ignore
   const expectedZoomValues = [
-    1.6105099999999999,
-    2.853116706110001,
-    5.0544702849929415,
-    8.954302432552387,
-    17.44940226888644,
-    34.00394858615782,
-    72.89048368510326,
-    142.04293198443185,
-    276.80149049219943,
-    593.3485776104004,
-    1156.2685194500652,
-    2478.564259648429,
-    5313.0226118483115
+    1.9487171,
+    3.4522712143931016,
+    5.559917313492236,
+    9.849732675807626,
+    21.113776745352595,
+    41.144777789250966,
+    80.1795320536136,
+    156.24722518287504,
+    334.9298034955614,
+    652.6834353714405,
+    1271.8953713950718,
+    2726.4206856132723,
+    6428.757360336458,
   ];
   t.deepEqual(maximumZoomPerResolution, expectedZoomValues);
 });

@@ -50,7 +50,7 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
     // The following logic might not always make sense when having layers
     // that are transformed each. Todo: Rethink / adapt the logic once
-    // problems occur.
+    // problems occur. Tracked in #6926.
     const finestMagIdx = _.min(values(activeMagIndices)) || 0;
     const wDim = Dimensions.getIndices(activeViewport)[2];
     const wStep = getResolutions(Store.getState().dataset)[finestMagIdx][wDim];

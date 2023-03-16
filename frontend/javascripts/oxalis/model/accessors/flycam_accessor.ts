@@ -388,6 +388,7 @@ export function getValidTaskZoomRange(
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
+  // Tracked in #6926.
   const firstColorLayerNameMaybe = _.first(getColorLayers(state.dataset))?.name;
 
   if (!respectRestriction || !firstColorLayerNameMaybe) {
@@ -420,6 +421,7 @@ export function isMagRestrictionViolated(state: OxalisState): boolean {
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
+  // Tracked in #6926.
   const firstColorLayerName = _.first(getColorLayers(state.dataset))?.name;
   if (!firstColorLayerName) {
     return false;

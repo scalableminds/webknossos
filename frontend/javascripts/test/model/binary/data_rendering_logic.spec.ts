@@ -66,7 +66,7 @@ test("calculateTextureSizeAndCountForLayer: color data + minSpecs", (t) => {
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
-  t.is(textureCount, 3);
+  t.is(textureCount, 4);
 });
 
 test("calculateTextureSizeAndCountForLayer: color data + midSpecs", (t) => {

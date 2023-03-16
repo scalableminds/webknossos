@@ -617,14 +617,16 @@ export type APIFeatureToggles = {
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
-export type APIJobType =
-  | "convert_to_wkw"
-  | "export_tiff"
-  | "compute_mesh_file"
-  | "find_largest_segment_id"
-  | "infer_nuclei"
-  | "infer_neurons"
-  | "materialize_volume_annotation";
+export enum APIJobType {
+  "CONVERT_TO_WKW" = "convert_to_wkw",
+  "EXPORT_TIFF" = "export_tiff",
+  "COMPUTE_MESH_FILE" = "compute_mesh_file",
+  "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
+  "INFER_NUCLEI" = "infer_nuclei",
+  "INFER_NEURONS" = "infer_neurons",
+  "MATERIALIZE_VOLUME_ANNOTATION" = "materialize_volume_annotation",
+}
+
 export type APIJob = {
   readonly id: string;
   readonly datasetName: string | null | undefined;

@@ -17,7 +17,7 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
-import type { APIJob } from "types/api_flow_types";
+import { APIJob, APIJobType } from "types/api_flow_types";
 import { getJobs, doWithToken, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
@@ -127,9 +127,9 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderDescription = (__: any, job: APIJob) => {
-    if (job.type === "convert_to_wkw" && job.datasetName) {
+    if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
+    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationName && job.datasetName) {
       const labelToAnnotationOrDataset =
         job.annotationId != null ? (
           <Link to={`/annotations/${job.annotationId}`}>
@@ -147,7 +147,11 @@ class JobListView extends React.PureComponent<Props, State> {
           {job.boundingBox})
         </span>
       );
-    } else if (job.type === "compute_mesh_file" && job.organizationName && job.datasetName) {
+    } else if (
+      job.type === APIJobType.COMPUTE_MESH_FILE &&
+      job.organizationName &&
+      job.datasetName
+    ) {
       return (
         <span>
           Mesh file computation for{" "}
@@ -157,7 +161,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "find_largest_segment_id" &&
+      job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
       job.organizationName &&
       job.datasetName &&
       job.layerName
@@ -171,7 +175,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "infer_nuclei" &&
+      job.type === APIJobType.INFER_NUCLEI &&
       job.organizationName &&
       job.datasetName &&
       job.layerName
@@ -185,7 +189,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "infer_neurons" &&
+      job.type === APIJobType.INFER_NEURONS &&
       job.organizationName &&
       job.datasetName &&
       job.layerName
@@ -199,7 +203,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "materialize_volume_annotation" &&
+      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION &&
       job.organizationName &&
       job.datasetName
     ) {
@@ -240,7 +244,7 @@ class JobListView extends React.PureComponent<Props, State> {
           Cancel
         </AsyncLink>
       );
-    } else if (job.type === "convert_to_wkw") {
+    } else if (job.type === APIJobType.CONVERT_TO_WKW) {
       return (
         <span>
           {job.resultLink && (
@@ -251,7 +255,7 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
-    } else if (job.type === "export_tiff") {
+    } else if (job.type === APIJobType.EXPORT_TIFF) {
       return (
         <span>
           {job.resultLink && (
@@ -265,9 +269,10 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "find_largest_segment_id") {
       return <span>{job.result}</span>;
     } else if (
-      job.type === "infer_nuclei" ||
-      job.type === "infer_neurons" ||
-      job.type === "materialize_volume_annotation"
+      job.type === APIJobType.INFER_NUCLEI ||
+      job.type === APIJobType.INFER_NEURONS ||
+      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
+      job.type === APIJobType.COMPUTE_MESH_FILE
     ) {
       return (
         <span>
@@ -319,8 +324,10 @@ class JobListView extends React.PureComponent<Props, State> {
             <Tooltip title="Read more in the documentation">
               <InfoCircleOutlined style={{ marginLeft: 10 }} />
             </Tooltip>
-          </a><br/>
-          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track progress.
+          </a>
+          <br />
+          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
+          progress.
         </Typography.Paragraph>
         <div
           className="clearfix"

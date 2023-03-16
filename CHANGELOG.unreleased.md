@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
+- Added email notifications for WK worker jobs. [#6918](https://github.com/scalableminds/webknossos/pull/6918)
 
 ### Changed
 - Updated the styling of the "welcome" screen for new users to be in line with the new branding. [#6904](https://github.com/scalableminds/webknossos/pull/6904)

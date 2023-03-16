@@ -71,7 +71,7 @@ case class Job(
           }
         case "export_tiff" =>
           Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
-        case "infer_nuclei" | "infer_neurons" | "materialize_volume_annotation" =>
+        case "infer_nuclei" | "infer_neurons" | "materialize_volume_annotation" | "compute_mesh_file" =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }
@@ -79,13 +79,21 @@ case class Job(
       }
     }
 
+  def resultLinkPublic(organizationName: String,
+                       dataStorePublicUrl: String,
+                       webKnossosPublicUrl: String): Option[String] =
+    for {
+      resultLink <- resultLink(organizationName, dataStorePublicUrl)
+      resultLinkPublic = if (resultLink.startsWith("/")) s"$webKnossosPublicUrl$resultLink"
+      else s"$resultLink"
+    } yield resultLinkPublic
+
   def resultLinkSlackFormatted(organizationName: String,
                                dataStorePublicUrl: String,
                                webKnossosPublicUrl: String): Option[String] =
     for {
-      resultLink <- resultLink(organizationName, dataStorePublicUrl)
-      resultLinkFormatted = if (resultLink.startsWith("/")) s" <$webKnossosPublicUrl$resultLink|Result>"
-      else s" <$resultLink|Result>"
+      resultLink <- resultLinkPublic(organizationName, dataStorePublicUrl, webKnossosPublicUrl)
+      resultLinkFormatted = s" <$resultLink|Result>"
     } yield resultLinkFormatted
 }
 
@@ -297,6 +305,28 @@ class JobService @Inject()(wkConf: WkConf,
     ()
   }
 
+  private def trackNewlySuccessful(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
+    for {
+      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
+      resultLink = jobAfterChange.resultLinkPublic(organization.name, dataStore.publicUrl, wkConf.Http.uri)
+      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
+      durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLinkSlack
+        .getOrElse("")}"
+      _ = logger.info(msg)
+      _ = slackNotificationService.success(
+        s"Successful job$superUserLabel",
+        msg
+      )
+      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
+    } yield ()
+    ()
+  }
+
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
       userEmail <- userService.emailFor(user)(GlobalAccessContext)
@@ -352,28 +382,6 @@ class JobService @Inject()(wkConf: WkConf,
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
-
-  private def trackNewlySuccessful(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
-    for {
-      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLink(organization.name, dataStore.publicUrl)
-      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLinkSlack
-        .getOrElse("")}"
-      _ = logger.info(msg)
-      _ = slackNotificationService.success(
-        s"Successful job$superUserLabel",
-        msg
-      )
-      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
-    } yield ()
-    ()
-  }
 
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == "convert_to_wkw") {

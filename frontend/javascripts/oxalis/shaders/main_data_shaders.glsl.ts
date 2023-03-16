@@ -326,6 +326,9 @@ void main() {
   worldCoord = modelMatrix * vec4(position, 1.0);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  // Remember the original z position, since it can subtly diverge in the
+  // following calculations due to floating point inaccuracies. This can
+  // result in artifacts, such as the crosshair disappearing.
   float originalZ = gl_Position.z;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
@@ -345,7 +348,7 @@ void main() {
   // This is regardless of the scale of the plane (the scale is reflected in the modelMatrix).
   // The calculation transforms x
   //   - to the interval [-1, +1] and then
-  //   - to [0, 1] (via (... + 1) * 2) and then
+  //   - to [0, 1] (via (... + 1) / 2) and then
   //   - to [0, PLANE_SUBDIVISION]
   // Rounding is only done to fight potential numerical inaccuracies. In theory, the result should be
   // integer without the rounding.

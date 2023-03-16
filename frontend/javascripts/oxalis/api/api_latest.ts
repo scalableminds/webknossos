@@ -1960,8 +1960,8 @@ class DataApi {
    *   new Float32Array([
    *     0.03901274364025348, -0.08498337289603758, 0.00782446404039791, 555.7948181512004,
    *     0.18572293729076042, -0.029232702290255888, 0.059312326666574045, 135.9381974119121,
-   *     0.0348291535208472, 0.005388247300907645, -0.06501029448614315, 561.0668326314798, 0.0, 0.0,
-   *     0.0, 1.0,
+   *     0.0348291535208472, 0.005388247300907645, -0.06501029448614315, 561.0668326314798,
+   *     0.0, 0.0, 0.0, 1.0,
    *   ]),
    * );
    */
@@ -1970,8 +1970,13 @@ class DataApi {
   }
 
   /*
-   * _Experimental_ API for creating transformation matrices based on an array of TransformerSpecs.
+   * _Experimental_ API for creating transformation matrices based on an array of TransformerSpec's.
    * Can be used in combination with _setLayerTransforms.
+   *
+   * A TransformerSpec can be one of the following
+   *  - { type: "scale"; args: [[scaleX, scaleY, scaleZ], [anchorX, anchorY, anchorZ]] }
+   *  - { type: "rotate"; args: [thetaInRadAlongZAxis, [anchorX, anchorY, anchorZ]] }
+   *  - { type: "translate"; args: [offsetX, offsetY, offsetZ] };
    *
    * @example
    * api.data._setLayerTransforms(

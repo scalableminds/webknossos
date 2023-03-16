@@ -509,6 +509,7 @@ class SceneController {
         } else {
           this.planes[planeId].setVisible(false);
         }
+        this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = false;
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -518,6 +519,7 @@ class SceneController {
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
           this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
         );
+        this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
       }
     }
   };

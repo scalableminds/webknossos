@@ -127,6 +127,9 @@ class PlaneMaterialFactory {
       sphericalCapRadius: {
         value: 140,
       },
+      is3DViewBeingRendered: {
+        value: true,
+      },
       globalPosition: {
         value: new THREE.Vector3(0, 0, 0),
       },

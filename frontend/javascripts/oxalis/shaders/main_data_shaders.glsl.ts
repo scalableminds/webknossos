@@ -298,6 +298,7 @@ flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
 
+uniform bool is3DViewBeingRendered;
 uniform int representativeLayerIdxForMag;
 
 ${SHARED_UNIFORM_DECLARATIONS}
@@ -389,7 +390,9 @@ void main() {
   worldCoord = vec4(transDim(transWorldCoord), 1.);
 
   gl_Position = projectionMatrix * viewMatrix * worldCoord;
-  gl_Position.z = originalZ;
+  if (!is3DViewBeingRendered) {
+    gl_Position.z = originalZ;
+  }
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 

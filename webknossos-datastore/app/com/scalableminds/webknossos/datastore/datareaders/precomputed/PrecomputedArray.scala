@@ -8,6 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 import java.io.IOException
+import java.nio.ByteOrder
 //import ucar.ma2.{Array => MultiArray, DataType => MADataType}
 
 import java.nio.ByteBuffer
@@ -94,7 +95,7 @@ class PrecomputedArray(relativePath: DatasetPath,
           0
         } else {
           var minishardMask = 1L
-          for (_ <- 0 to shardingSpec.minishard_bits) {
+          for (_ <- 0 until shardingSpec.minishard_bits - 1) {
             minishardMask <<= 1
             minishardMask |= 1
           }
@@ -134,7 +135,7 @@ class PrecomputedArray(relativePath: DatasetPath,
     index
       .grouped(16)
       .map((bytes: Array[Byte]) => {
-        (BigInt(bytes.take(8)).toLong, BigInt(bytes.slice(8, 16)).toLong)
+        (BigInt(bytes.take(8).reverse).toLong, BigInt(bytes.slice(8, 16).reverse).toLong) // bytes reversed because they are stored little endian
       })
       .toSeq
 
@@ -149,11 +150,12 @@ class PrecomputedArray(relativePath: DatasetPath,
       case None => (0, 0)
     }
 
-  private def getPathForShard(shardPath: VaultPath, shardNumber: Long): VaultPath = {
+  private def getPathForShard(shardNumber: Long): VaultPath = {
     val shardString = String
-      .format(s"%1$$${header.precomputedScale.sharding.map(_.shard_bits).getOrElse(0L) / 4}s", shardNumber.toHexString)
+      .format(s"%1$$${(header.precomputedScale.sharding.map(_.shard_bits.toFloat).getOrElse(0f) / 4).ceil.toInt}s",
+              shardNumber.toHexString)
       .replace(' ', '0')
-    shardPath / s"$shardString.shard"
+    vaultPath / s"${relativePath.storeKey}/" / s"$shardString.shard"
   }
 
   private def getMinishardIndexRange(minishardNumber: Int,
@@ -166,25 +168,26 @@ class PrecomputedArray(relativePath: DatasetPath,
   private def parseMinishardIndex(bytes: Array[Byte]): Seq[(Long, Long, Long)] = {
     // Because readBytes already decodes gzip, we don't need to decompress here
     val n = bytes.length / 24
-    //val ma = MultiArray.factory(MADataType.LONG, Array(3,n), bytes)
     val buf = ByteBuffer.allocate(bytes.length)
     buf.put(bytes)
     val longArray = new Array[Long](n * 3)
+    buf.position(0)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
     buf.asLongBuffer().get(longArray)
     // longArray is row major / C-order
     val chunkIds = new Array[Long](n)
     chunkIds(0) = longArray(0)
-    for (i <- 1 to n) {
+    for (i <- 1 until n) {
       chunkIds(i) = longArray(i) + chunkIds(i - 1)
     }
     val chunkSizes = longArray.slice(2 * n, 3 * n)
     val chunkStartOffsets = new Array[Long](n)
     chunkStartOffsets(0) = longArray(n)
-    for (i <- 1 to n) {
+    for (i <- 1 until n) {
       val startOffsetIndex = i + n
       chunkStartOffsets(i) = chunkStartOffsets(i - 1) + longArray(startOffsetIndex) + chunkSizes(i - 1)
     }
-    (chunkIds, chunkStartOffsets, chunkStartOffsets).zipped.map((a, b, c) => (a, b, c))
+    (chunkIds, chunkStartOffsets, chunkSizes).zipped.map((a, b, c) => (a, b, c))
   }
 
   private def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(implicit ec: ExecutionContext) =
@@ -212,7 +215,7 @@ class PrecomputedArray(relativePath: DatasetPath,
   override def readShardedChunk(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[Array[Byte]] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = getMinishardInfo(chunkIdentifier)
-    val shardPath = getPathForShard(vaultPath, minishardInfo._1)
+    val shardPath = getPathForShard(minishardInfo._1)
     for {
       minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt)
         .toFutureOrThrowException("Could not get minishard index")

@@ -69,8 +69,7 @@ module.exports = function (env = {}) {
             {
               loader: "worker-loader",
               options: {
-                // This property crashes webpack for some reason:
-                // filename: "[name].[contenthash].worker.ts",
+                filename: "[name].[contenthash].worker.ts",
               },
             },
           ],

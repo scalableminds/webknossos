@@ -28,6 +28,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
@@ -80,6 +81,7 @@ class EditableMappingService @Inject()(
     extends KeyValueStoreImplicits
     with FallbackDataHelper
     with FoxImplicits
+    with LazyLogging
     with ProtoGeometryImplicits {
 
   private val defaultSegmentToAgglomerateChunkSize = 256 * 1024 // 256 KiB chunks
@@ -176,7 +178,8 @@ class EditableMappingService @Inject()(
                            userToken: Option[String]): Fox[Unit] = {
 
     def updateIter(mappingFox: Fox[EditableMappingProto],
-                   remainingUpdates: List[EditableMappingUpdateAction]): Fox[EditableMappingProto] =
+                   remainingUpdates: List[EditableMappingUpdateAction]): Fox[EditableMappingProto] = {
+      logger.info(s"Applying ${remainingUpdates.length} updates...")
       mappingFox.futureBox.flatMap {
         case Empty => Fox.empty
         case Full(mapping) =>
@@ -188,6 +191,7 @@ class EditableMappingService @Inject()(
           }
         case _ => mappingFox
       }
+    }
 
     for {
       updatedInfo <- updateIter(Some(existingEditabeMappingInfo), updates)
@@ -215,6 +219,7 @@ class EditableMappingService @Inject()(
                                remoteFallbackLayer: RemoteFallbackLayer,
                                userToken: Option[String]): Fox[EditableMappingProto] =
     for {
+      _ <- Fox.successful(logger.info("APPLY SPLIT"))
       agglomerateGraph <- agglomerateGraphForIdWithFallback(editableMappingInfo,
                                                             editableMappingId,
                                                             Some(newVersion - 1L),
@@ -249,6 +254,7 @@ class EditableMappingService @Inject()(
                                               chunkId: Long,
                                               segmentIdsToUpdate: Seq[Long]): Fox[Unit] =
     for {
+      _ <- Fox.successful(logger.info(s"UPDATE segment to agglomerate chunk, chunk id $chunkId"))
       existingChunk: Seq[(Long, Long)] <- getSegmentToAgglomerateChunk(editableMappingId,
                                                                        chunkId,
                                                                        Set.empty,
@@ -259,7 +265,7 @@ class EditableMappingService @Inject()(
         SegmentAgglomeratePair(segmentAgglomerateTuple._1, segmentAgglomerateTuple._2)
       })
       _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(
-        segmentToAgglomerateKey(editableMappingId, agglomerateId),
+        segmentToAgglomerateKey(editableMappingId, chunkId),
         newVersion,
         proto.toByteArray)
     } yield ()
@@ -267,10 +273,12 @@ class EditableMappingService @Inject()(
   private def updateAgglomerateGraph(mappingId: String,
                                      newVersion: Long,
                                      agglomerateId: Long,
-                                     graph: AgglomerateGraph): Fox[Unit] =
+                                     graph: AgglomerateGraph): Fox[Unit] = {
+    logger.info(s"update agglomerate graph $agglomerateId with ${graph.edges.length} edges")
     tracingDataStore.editableMappingsAgglomerateToGraph.put(agglomerateGraphKey(mappingId, agglomerateId),
-                                                           newVersion,
-                                                           graph)
+                                                            newVersion,
+                                                            graph)
+  }
 
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,

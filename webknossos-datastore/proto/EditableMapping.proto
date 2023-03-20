@@ -2,8 +2,6 @@ syntax = "proto2";
 
 package com.scalableminds.webknossos.datastore;
 
-import "geometry.proto";
-
 message EditableMappingProto {
   required string baseMappingName = 1;
   required int64 createdTimestamp = 2;

@@ -170,17 +170,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const newState = {
         ...state,
         datasetConfiguration: { ...state.datasetConfiguration, ...action.initialDatasetSettings },
-        userConfiguration: {
-          ...state.userConfiguration,
-          ...action.initialUserSettings,
-          gpuMemoryFactor:
-            // The value 3 used to be the former default, but was changed
-            // to 4 in #6748.
-            action.initialUserSettings.gpuMemoryFactor === 3
-              ? constants.DEFAULT_GPU_MEMORY_FACTOR
-              : action.initialUserSettings.gpuMemoryFactor ||
-                state.userConfiguration.gpuMemoryFactor,
-        },
+        userConfiguration: { ...state.userConfiguration, ...action.initialUserSettings },
       };
       return ensureOnlyOneVisibleSegmentationLayer(newState);
     }

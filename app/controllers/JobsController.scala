@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.Fox
 import models.binary.DataSetDAO
 import models.job._
 import models.organization.OrganizationDAO
+import models.binary.DataStoreDAO
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
@@ -26,7 +27,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                wkconf: WkConf,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                slackNotificationService: SlackNotificationService,
-                               organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+                               organizationDAO: OrganizationDAO,
+                               dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
     extends Controller {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -322,5 +324,18 @@ class JobsController @Inject()(jobDAO: JobDAO,
         } yield Ok(js)
       }
     }
+  
+  def export(jobId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request => 
+      for {
+        userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo)
+        job <- jobDAO.findOne(ObjectId(jobId))
+        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext)
+        dataStore <- dataStoreDAO.findOneByName(job._dataStore)(GlobalAccessContext)
+        resultLink <- job.resultLink(organization.name, dataStore.publicUrl)
+        uri <- s"${resultLink}/?token=${userAuthToken.id}"
+      } yield Redirect(resultLink, Map(("token", userAuthToken.id)))
+  
+  } 
 
 }

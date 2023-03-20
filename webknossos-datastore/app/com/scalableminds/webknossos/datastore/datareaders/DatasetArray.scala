@@ -26,7 +26,7 @@ class DatasetArray(relativePath: DatasetPath,
     ChunkReader.create(vaultPath, header)
 
   // cache currently limited to 1 GB per array
-  private lazy val chunkContentsCache: Cache[String, MultiArray] = {
+  private lazy val chunkContentsCache: Cache[Array[Int], MultiArray] = {
     val maxSizeBytes = 1000L * 1000 * 1000
     val maxEntries = maxSizeBytes / header.bytesPerChunk
     AlfuCache(maxEntries.toInt)
@@ -88,10 +88,12 @@ class DatasetArray(relativePath: DatasetPath,
       } yield targetBuffer
     }
   }
-
   protected def readShardedChunk(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[Array[Byte]] = ???
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
+    chunkContentsCache.getOrLoad(chunkIndex, index => readSourceChunkData(index))
+
+  private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
     if (header.isSharded) {
       for {
         chunkData: Array[Byte] <- readShardedChunk(chunkIndex)
@@ -104,7 +106,7 @@ class DatasetArray(relativePath: DatasetPath,
       val storeKey = chunkFilePath.storeKey
       val chunkShape = header.chunkSizeAtIndex(chunkIndex)
 
-      chunkContentsCache.getOrLoad(storeKey, key => chunkReader.read(key, chunkShape))
+      chunkReader.read(storeKey, chunkShape)
     }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =

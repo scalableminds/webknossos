@@ -85,8 +85,8 @@ class PrecomputedArray(relativePath: DatasetPath,
   private val minishardIndexCache: AlfuFoxCache[(VaultPath, Int), Seq[(Long, Long, Long)]] =
     AlfuFoxCache(maxEntries = 100)
 
-  private def getHashForChunk(index: Array[Int]): Long =
-    CompressedMortonCode.encode(index, header.gridSize)
+  private def getHashForChunk(chunkIndex: Array[Int]): Long =
+    CompressedMortonCode.encode(chunkIndex, header.gridSize)
 
   private lazy val minishardMask = {
     header.precomputedScale.sharding match {

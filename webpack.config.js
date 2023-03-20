@@ -69,7 +69,7 @@ module.exports = function (env = {}) {
             {
               loader: "worker-loader",
               options: {
-                filename: "[name].[contenthash].worker.ts",
+                filename: "[name].[contenthash].worker.js",
               },
             },
           ],

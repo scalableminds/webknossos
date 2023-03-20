@@ -13,7 +13,7 @@ object TracingMode extends ExtendedEnumeration {
 
 case class AnnotationSettings(
     allowedModes: List[TracingMode.Value],
-    preferredMode: Option[String] = None,
+    preferredMode: Option[TracingMode.Value] = None,
     branchPointsAllowed: Boolean = true,
     somaClickingAllowed: Boolean = true,
     volumeInterpolationAllowed: Boolean = true,

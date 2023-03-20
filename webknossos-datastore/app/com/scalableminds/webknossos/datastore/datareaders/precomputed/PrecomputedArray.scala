@@ -151,11 +151,14 @@ class PrecomputedArray(relativePath: DatasetPath,
     }
 
   private def getPathForShard(shardNumber: Long): VaultPath = {
-    val shardString = String
-      .format(s"%1$$${(header.precomputedScale.sharding.map(_.shard_bits.toFloat).getOrElse(0f) / 4).ceil.toInt}s",
-              shardNumber.toHexString)
-      .replace(' ', '0')
-    vaultPath / s"${relativePath.storeKey}/" / s"$shardString.shard"
+    val shardBits = header.precomputedScale.sharding.map(_.shard_bits.toFloat).getOrElse(0f)
+    if (shardBits == 0) {
+      vaultPath / s"${relativePath.storeKey}/" / "0.shard"
+    } else {
+      val shardString = String.format(s"%1$$${(shardBits / 4).ceil.toInt}s", shardNumber.toHexString).replace(' ', '0')
+      vaultPath / s"${relativePath.storeKey}/" / s"$shardString.shard"
+    }
+
   }
 
   private def getMinishardIndexRange(minishardNumber: Int,

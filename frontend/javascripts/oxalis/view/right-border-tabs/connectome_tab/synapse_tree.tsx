@@ -217,8 +217,9 @@ class SynapseTree extends React.Component<Props, State> {
         title = node.title;
       } else {
         title = (
-          <Dropdown // Lazily create the dropdown menu and destroy it again, afterwards
+          <Dropdown
             menu={this.createSegmentDropdownMenu(data.id)}
+            // AutoDestroy is used to remove the menu from DOM and keep up the performance.
             autoDestroy
             placement="bottom"
             open={this.state.activeSegmentDropdownKey === key}

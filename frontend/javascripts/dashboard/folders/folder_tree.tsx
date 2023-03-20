@@ -188,10 +188,7 @@ export function FolderTreeSidebar({
       <Dropdown
         menu={createMenu()}
         placement="bottom"
-        // The overlay is generated lazily. By default, this would make the overlay
-        // re-render on each parent's render() after it was shown for the first time.
-        // The reason for this is that it's not destroyed after closing.
-        // Therefore, autoDestroy is passed.
+        // AutoDestroy is used to remove the menu from DOM and keep up the performance.
         // destroyPopupOnHide should also be an option according to the docs, but
         // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
         // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
@@ -259,10 +256,7 @@ function generateTitle(
     <Dropdown
       menu={createMenu()}
       placement="bottom"
-      // The overlay is generated lazily. By default, this would make the overlay
-      // re-render on each parent's render() after it was shown for the first time.
-      // The reason for this is that it's not destroyed after closing.
-      // Therefore, autoDestroy is passed.
+      // AutoDestroy is used to remove the menu from DOM and keep up the performance.
       // destroyPopupOnHide should also be an option according to the docs, but
       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message

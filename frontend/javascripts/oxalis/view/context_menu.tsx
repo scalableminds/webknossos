@@ -1091,13 +1091,9 @@ function getInfoMenuItem(
   label: MenuItemType["label"],
 ): MenuItemGroupType {
   /*
-   * This component can be used within an antd Menu, even though
-   * the docs dictate to always use a <Menu.Item /> or <Menu.Divider />.
-   * However, we want non-clickable info rows with a special styling here.
-   * Note that we must not pass along all props here, since antd will pass
-   * an eventKey prop to this component. Delegating this to <div /> will
-   * produce a "React does not recognize the `eventKey` prop on a DOM element"
-   * warning.
+   * This component is a work-around. We want antd menu entries that can not be selected
+   * or otherwise interacted with. An "empty" menu group will only display the group header
+   * which gives us the desired behavior.
    */
 
   return { key, label, type: "group" };
@@ -1250,11 +1246,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
     });
   }
 
-  // It's important to not use <NodeContextMenuOptions ...>
-  // or <NoNodeContextMenuOptions ... />
-  // for the following two expressions, since this breaks
-  // antd's internal population of the correct class names
-  // for the menu.
   const menu: MenuProps = {
     onClick: hideContextMenu,
     style: {

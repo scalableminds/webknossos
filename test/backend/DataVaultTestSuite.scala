@@ -94,6 +94,11 @@ class DataVaultTestSuite extends PlaySpec {
         "resolve relative to host with starting slash in parameter" in {
           assert((somePath / "/x").toString == "protocol://host/x")
         }
+
+        "resolving path respects trailing slash" in {
+          assert((somePath / "x/").toString == "protocol://host/a/b/x/")
+          assert((somePath / "x").toString == "protocol://host/a/b/x")
+        }
       }
       "Uri has trailing slash" should {
         val trailingSlashUri = new URI("protocol://host/a/b/")

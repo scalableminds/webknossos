@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
@@ -51,7 +51,6 @@ type StateProps = {
     arg2: MappingType,
     optionalProperties?: OptionalMappingProperties,
   ) => void;
-  activeViewport: OrthoView;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
@@ -287,7 +286,6 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     mappingName: activeMappingInfo.mappingName,
     mappingType: activeMappingInfo.mappingType,
     mappingColors: activeMappingInfo.mappingColors,
-    activeViewport: state.viewModeData.plane.activeViewport,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,

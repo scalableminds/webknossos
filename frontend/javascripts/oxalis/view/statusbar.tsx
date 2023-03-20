@@ -10,7 +10,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { useKeyPress } from "libs/react_hooks";
-import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
@@ -33,6 +33,8 @@ import { OxalisState } from "oxalis/store";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
+import _ from "lodash";
+
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -354,7 +356,12 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const activeResolution = useSelector((state: OxalisState) => getCurrentResolution(state));
+  const {
+    representativeResolution,
+    activeMagIndicesOfEnabledLayers,
+    isActiveResolutionGlobal,
+    resolutions,
+  } = useSelector((state: OxalisState) => getActiveResolutionInfo(state));
 
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
@@ -439,14 +446,32 @@ function Infos() {
           />
         </span>
       ) : null}
-      <span className="info-element">
-        <img
-          src="/assets/images/icon-statusbar-downsampling.svg"
-          className="resolution-status-bar-icon"
-          alt="Resolution"
-        />{" "}
-        {activeResolution.join("-")}{" "}
-      </span>
+      {representativeResolution && (
+        <span className="info-element">
+          <img
+            src="/assets/images/icon-statusbar-downsampling.svg"
+            className="resolution-status-bar-icon"
+            alt="Resolution"
+          />{" "}
+          <Tooltip
+            title={
+              <>
+                Rendered magnification per layer:
+                <ul>
+                  {Object.entries(activeMagIndicesOfEnabledLayers).map(([layerName, magIndex]) => (
+                    <li key={layerName}>
+                      {layerName}: {resolutions[magIndex].join("-")}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            }
+          >
+            {representativeResolution.join("-")}
+            {isActiveResolutionGlobal ? "" : "*"}{" "}
+          </Tooltip>
+        </span>
+      )}
     </React.Fragment>
   );
 }

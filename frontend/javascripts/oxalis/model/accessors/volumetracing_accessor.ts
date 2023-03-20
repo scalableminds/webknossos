@@ -28,8 +28,11 @@ import {
   getVisibleSegmentationLayer,
   getDataLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import {
+  getFlooredPosition,
+  getActiveMagIndexForLayer,
+} from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { V3 } from "libs/mjs";
 import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
@@ -177,12 +180,18 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     return false;
   }
 
+  const activeSegmentation = getActiveSegmentationTracing(state);
+  if (!activeSegmentation) {
+    return true;
+  }
+
   const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
   const lowestExistingResolutionIndex = volumeResolutions.getClosestExistingIndex(0);
   // The current resolution is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
-    getRequestLogZoomStep(state) > threshold + lowestExistingResolutionIndex;
+    getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
+    threshold + lowestExistingResolutionIndex;
   return isZoomStepTooHigh;
 }
 
@@ -198,13 +207,6 @@ export function getMaximumBrushSize(state: OxalisState) {
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
   return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;
-}
-
-export function isSegmentationMissingForZoomstep(
-  state: OxalisState,
-  maxZoomStepForSegmentation: number,
-): boolean {
-  return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
 }
 
 export function getRequestedOrVisibleSegmentationLayer(
@@ -261,9 +263,11 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
   return getTracingForSegmentationLayer(state, visibleLayer);
 }
 
-export function getActiveSegmentationTracing(state: OxalisState): VolumeTracing | null | undefined {
+function _getActiveSegmentationTracing(state: OxalisState): VolumeTracing | null | undefined {
   return getRequestedOrDefaultSegmentationTracingLayer(state, null);
 }
+
+export const getActiveSegmentationTracing = memoizeOne(_getActiveSegmentationTracing);
 
 export function getActiveSegmentationTracingLayer(
   state: OxalisState,
@@ -369,9 +373,9 @@ function _getRenderableResolutionForSegmentationTracing(
   }
 
   const segmentationLayer = getSegmentationLayerForTracing(state, segmentationTracing);
-  const requestedZoomStep = getRequestLogZoomStep(state);
+
+  const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
   const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
@@ -399,7 +403,7 @@ function _getRenderableResolutionForSegmentationTracing(
   // zoomSteps can be rendered.
   for (
     let fallbackZoomStep = requestedZoomStep + 1;
-    fallbackZoomStep <= requestedZoomStep + maxZoomStepDiff;
+    fallbackZoomStep <= requestedZoomStep + MAX_ZOOM_STEP_DIFF;
     fallbackZoomStep++
   ) {
     if (resolutionInfo.hasIndex(fallbackZoomStep)) {

@@ -19,7 +19,8 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(100);
+
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(101);
 COMMIT TRANSACTION;
 
 
@@ -144,6 +145,13 @@ CREATE TABLE webknossos.dataSet_layers(
   PRIMARY KEY(_dataSet, name),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object')
+);
+
+CREATE TABLE webknossos.dataSet_layer_coordinateTransformations(
+  _dataSet CHAR(24) NOT NULL,
+  layerName VARCHAR(256) NOT NULL,
+  type VARCHAR(256) NOT NULL,
+  matrix JSONB
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(
@@ -725,7 +733,8 @@ ALTER TABLE webknossos.folder_paths
   ADD FOREIGN KEY (_descendant) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organizations
   ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-
+ALTER TABLE webknossos.dataSet_layer_coordinateTransformations
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runs

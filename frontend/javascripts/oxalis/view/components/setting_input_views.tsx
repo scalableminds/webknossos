@@ -232,6 +232,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
               />
             </div>
           </Tooltip>
+          {this.props.children}
         </Col>
       </Row>
     );

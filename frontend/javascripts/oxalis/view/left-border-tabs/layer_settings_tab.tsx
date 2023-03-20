@@ -33,7 +33,7 @@ import {
   SETTING_MIDDLE_SPAN,
   SETTING_VALUE_SPAN,
 } from "oxalis/view/components/setting_input_views";
-import { V3 } from "libs/mjs";
+import { M4x4, V3 } from "libs/mjs";
 import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
 import {
   enforceSkeletonTracing,
@@ -54,8 +54,12 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
+  getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getActiveMagIndicesForLayers,
+  getMaxZoomValueForResolution,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -117,7 +121,7 @@ type DatasetSettingsProps = {
   onChangeRadius: (value: number) => void;
   onChangeShowSkeletons: (arg0: boolean) => void;
   onSetPosition: (arg0: Vector3) => void;
-  onZoomToResolution: (arg0: Vector3) => number;
+  onZoomToResolution: (layerName: string, arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
   reloadHistogram: (layerName: string) => void;
   tracing: Tracing;
@@ -125,6 +129,7 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
+  activeMagIndicesForLayers: { [layerName: string]: number };
 };
 
 type State = {
@@ -397,7 +402,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       }
     };
     const hasHistogram = this.props.histogramData[layerName] != null;
-    const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolutions = resolutionInfo.getResolutionList();
     const volumeDescriptor =
       "tracingId" in layer && layer.tracingId != null
         ? getVolumeDescriptorById(tracing, layer.tracingId)
@@ -571,7 +577,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
           </div>
         </div>
-
         <div className="flex-container">
           <div className="flex-item">
             {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
@@ -770,7 +775,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       foundResolution = resolution;
     }
 
-    if (!foundPosition || !foundResolution) {
+    if (foundPosition && foundResolution) {
+      const layer = getLayerByName(dataset, layerName, true);
+      const transformMatrix = getTransformsForLayerOrNull(layer);
+      if (transformMatrix) {
+        const matrix = M4x4.transpose(transformMatrix);
+        // Transform the found position according to the matrix.
+        V3.mul4x4(matrix, foundPosition, foundPosition);
+      }
+    } else {
       const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
       const centerPosition = V3.add(lowerBoundary, upperBoundary).map(
         (el: number) => el / 2,
@@ -783,7 +796,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
 
     this.props.onSetPosition(foundPosition);
-    const zoomValue = this.props.onZoomToResolution(foundResolution);
+    const zoomValue = this.props.onZoomToResolution(layerName, foundResolution);
     Toast.success(
       `Jumping to position ${foundPosition.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
     );
@@ -1119,6 +1132,7 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  activeMagIndicesForLayers: getActiveMagIndicesForLayers(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
@@ -1154,8 +1168,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setShowSkeletonsAction(showSkeletons));
   },
 
-  onZoomToResolution(resolution: Vector3) {
-    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
+  onZoomToResolution(layerName: string, resolution: Vector3) {
+    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), layerName, resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },

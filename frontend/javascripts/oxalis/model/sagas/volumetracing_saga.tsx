@@ -28,7 +28,7 @@ import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/he
 import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
-  getRequestLogZoomStep,
+  getActiveMagIndexForLayer,
   getRotation,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -355,7 +355,9 @@ export function* floodFill(): Saga<void> {
     const seedPosition = Dimensions.roundCoordinate(positionFloat);
     const activeCellId = volumeTracing.activeCellId;
     const dimensionIndices = Dimensions.getIndices(planeId);
-    const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
+    const requestedZoomStep = yield* select((state) =>
+      getActiveMagIndexForLayer(state, segmentationLayer.name),
+    );
     const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
     const oldSegmentIdAtSeed = cube.getDataValue(seedPosition, null, labeledZoomStep);

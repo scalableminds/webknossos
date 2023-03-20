@@ -464,6 +464,21 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
   );
 }
 
+export const switchTo = async (org: APIOrganization) => {
+  Toast.info(`Switching to ${org.displayName || org.name}`);
+
+  // If the user is currently at the datasets tab, the active folder is encoded
+  // in the URI. Switching to another organization means that the folder id
+  // becomes invalid. That's why, we are removing any identifiers from the
+  // current datasets path before reloading the page (which is done in
+  // switchToOrganization).
+  if (window.location.pathname.startsWith("/dashboard/datasets/")) {
+    window.history.replaceState({}, "", "/dashboard/datasets/");
+  }
+
+  await switchToOrganization(org.name);
+};
+
 function LoggedInAvatar({
   activeUser,
   handleLogout,
@@ -476,21 +491,6 @@ function LoggedInAvatar({
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
-
-  const switchTo = async (org: APIOrganization) => {
-    Toast.info(`Switching to ${org.displayName || org.name}`);
-
-    // If the user is currently at the datasets tab, the active folder is encoded
-    // in the URI. Switching to another organization means that the folder id
-    // becomes invalid. That's why, we are removing any identifiers from the
-    // current datasets path before reloading the page (which is done in
-    // switchToOrganization).
-    if (window.location.pathname.startsWith("/dashboard/datasets/")) {
-      window.history.replaceState({}, "", "/dashboard/datasets/");
-    }
-
-    await switchToOrganization(org.name);
-  };
 
   const setSelectedTheme = async (theme: APIUserTheme) => {
     let newTheme = theme;

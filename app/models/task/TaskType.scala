@@ -81,6 +81,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       settingsAllowedModes <- Fox.combined(
         parseArrayLiteral(r.settingsAllowedmodes)
           .map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"
+      settingsPreferredMode = r.settingsPreferredmode.flatMap(TracingMode.fromString)
     } yield
       TaskType(
         ObjectId(r._Id),
@@ -89,7 +90,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.description,
         AnnotationSettings(
           settingsAllowedModes,
-          r.settingsPreferredmode,
+          settingsPreferredMode,
           r.settingsBranchpointsallowed,
           r.settingsSomaclickingallowed,
           r.settingsVolumeinterpolationallowed,

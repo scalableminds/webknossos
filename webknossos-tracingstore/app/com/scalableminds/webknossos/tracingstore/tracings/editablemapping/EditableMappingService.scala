@@ -5,7 +5,10 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
-import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
+import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
+  SegmentAgglomeratePair,
+  SegmentToAgglomerateProto
+}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
@@ -240,26 +243,32 @@ class EditableMappingService @Inject()(
       }
     } yield ()
 
-  private def updateSegmentToAgglomerateChunk(mappingId: String,
+  private def updateSegmentToAgglomerateChunk(editableMappingId: String,
                                               newVersion: Long,
                                               agglomerateId: Long,
                                               chunkId: Long,
                                               segmentIdsToUpdate: Seq[Long]): Fox[Unit] =
     for {
-      existingChunk: Seq[(Long, Long)] <- getSegmentToAgglomerateChunk(mappingId,
+      existingChunk: Seq[(Long, Long)] <- getSegmentToAgglomerateChunk(editableMappingId,
                                                                        chunkId,
                                                                        Set.empty,
                                                                        filterSelected = false)
       chunkMap = existingChunk.toMap
       mergedMap = chunkMap ++ segmentIdsToUpdate.map(_ -> agglomerateId).toMap
-      // TODO: save merged map
+      proto = SegmentToAgglomerateProto(mergedMap.toVector.map { segmentAgglomerateTuple =>
+        SegmentAgglomeratePair(segmentAgglomerateTuple._1, segmentAgglomerateTuple._2)
+      })
+      _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(
+        segmentToAgglomerateKey(editableMappingId, agglomerateId),
+        newVersion,
+        proto.toByteArray)
     } yield ()
 
   private def updateAgglomerateGraph(mappingId: String,
                                      newVersion: Long,
                                      agglomerateId: Long,
                                      graph: AgglomerateGraph): Fox[Unit] =
-    tracingDataStore.editableMappingsAgglomerateGraphs.put(agglomerateGraphKey(mappingId, agglomerateId),
+    tracingDataStore.editableMappingsAgglomerateToGraph.put(agglomerateGraphKey(mappingId, agglomerateId),
                                                            newVersion,
                                                            graph)
 
@@ -385,7 +394,7 @@ class EditableMappingService @Inject()(
                             agglomerateId: Long,
                             version: Option[Long] = None): Fox[AgglomerateGraph] =
     for {
-      keyValuePair: VersionedKeyValuePair[AgglomerateGraph] <- tracingDataStore.editableMappingsAgglomerateGraphs.get(
+      keyValuePair: VersionedKeyValuePair[AgglomerateGraph] <- tracingDataStore.editableMappingsAgglomerateToGraph.get(
         agglomerateGraphKey(mappingId, agglomerateId),
         version,
         mayBeEmpty = Some(true))(fromProtoBytes[AgglomerateGraph])

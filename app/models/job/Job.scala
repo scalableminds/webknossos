@@ -350,13 +350,13 @@ class JobService @Inject()(wkConf: WkConf,
           Some(
             genericEmailTemplate(
               "Volume Annotation Merged",
-              "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
+              "Your volume annotation has been successfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
             ))
         case JobCommand.GLOBALIZE_FLOODFILLS =>
           Some(
             genericEmailTemplate(
               "Globalize Flood Fill",
-              "The flood fill operations has been extended to the whole dataset. The result is available as a new dataset in your dashboard."
+              "The flood fill operations have been extended to the whole dataset. The result is available as a new dataset in your dashboard."
             ))
         case JobCommand.COMPUTE_MESH_FILE =>
           Some(

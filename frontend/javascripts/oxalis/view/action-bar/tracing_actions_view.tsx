@@ -232,7 +232,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
             title: "Save current layout",
             icon: <SaveOutlined />,
           },
-      { key: "dividier", type: "divider" },
+      { key: "divider", type: "divider" },
       {
         key: "available-layouts",
         type: "group",

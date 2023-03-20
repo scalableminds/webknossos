@@ -87,7 +87,7 @@ object S3DataVault {
     } else if (isPathStyle(uri)) {
       Some(uri.getPath.substring(1).split("/").tail.mkString("/"))
     } else if (isShortStyle(uri)) {
-      Some(uri.getPath)
+      Some(uri.getPath.tail)
     } else {
       None
     }

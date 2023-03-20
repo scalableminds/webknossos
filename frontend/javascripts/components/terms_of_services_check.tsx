@@ -101,7 +101,7 @@ function AcceptTermsOfServiceModal({
       open={isModalOpen}
       title="Terms of Services"
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
-      onCancel={closeModal}
+      onCancel={acceptanceInfo.acceptanceDeadlinePassed ? null : closeModal}
       width={850}
       maskClosable={false}
       footer={[

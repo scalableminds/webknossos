@@ -85,7 +85,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "convert_to_wkw"
+          command = JobCommand.CONVERT_TO_WKW
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -112,7 +112,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataSet.notFound",
           dataSetName) ~> NOT_FOUND
-        command = "compute_mesh_file"
+        command = JobCommand.COMPUTE_MESH_FILE
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
           "dataset_name" -> dataSetName,
@@ -139,7 +139,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "infer_nuclei"
+          command = JobCommand.INFER_NUCLEI
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -167,7 +167,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "infer_neurons"
+          command = JobCommand.INFER_NEURONS
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -203,7 +203,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "globalize_floodfills"
+          command = JobCommand.GLOBALIZE_FLOODFILLS
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -238,7 +238,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox, mag)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
-          command = "export_tiff"
+          command = JobCommand.EXPORT_TIFF
           exportFileName = if (asOmeTiff)
             s"${formatDateForFilename(new Date())}__${dataSetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
           else
@@ -281,7 +281,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             dataSetName) ~> NOT_FOUND
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
-          command = "materialize_volume_annotation"
+          command = JobCommand.MATERIALIZE_VOLUME_ANNOTATION
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -311,7 +311,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "find_largest_segment_id"
+          command = JobCommand.FIND_LARGEST_SEGMENT_ID
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,

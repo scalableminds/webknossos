@@ -11,6 +11,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.binary.{DataSetDAO, DataStoreDAO}
 import models.job.JobState.JobState
+import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import oxalis.telemetry.SlackNotificationService
@@ -30,7 +31,7 @@ case class Job(
     _id: ObjectId,
     _owner: ObjectId,
     _dataStore: String,
-    command: String,
+    command: JobCommand,
     commandArgs: JsObject = Json.obj(),
     state: JobState = JobState.PENDING,
     manualState: Option[JobState] = None,
@@ -65,13 +66,14 @@ case class Job(
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
-        case "convert_to_wkw" =>
+        case JobCommand.CONVERT_TO_WKW =>
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
-        case "export_tiff" =>
+        case JobCommand.EXPORT_TIFF =>
           Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
-        case "infer_nuclei" | "infer_neurons" | "materialize_volume_annotation" | "compute_mesh_file" =>
+        case JobCommand.INFER_NUCLEI | JobCommand.INFER_NEURONS | JobCommand.MATERIALIZE_VOLUME_ANNOTATION |
+            JobCommand.COMPUTE_MESH_FILE =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }
@@ -108,12 +110,13 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString)
       state <- JobState.fromString(r.state)
+      command <- JobCommand.fromString(r.command)
     } yield {
       Job(
         ObjectId(r._Id),
         ObjectId(r._Owner),
         r._Datastore.trim,
-        r.command,
+        command,
         Json.parse(r.commandargs).as[JsObject],
         state,
         manualStateOpt,
@@ -333,34 +336,34 @@ class JobService @Inject()(wkConf: WkConf,
       datasetName = job.datasetName.getOrElse("")
       genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(user, userEmail, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
-        case "convert_to_wkw" =>
+        case JobCommand.CONVERT_TO_WKW =>
           Some(defaultMails.jobSuccessfulUploadConvertMail(user, userEmail, datasetName, resultLink))
-        case "export_tiff" =>
+        case JobCommand.EXPORT_TIFF =>
           Some(
             genericEmailTemplate(
               "Tiff Export",
               "Your dataset has been exported as Tiff and is ready for download."
             ))
-        case "infer_nuclei" =>
+        case JobCommand.INFER_NUCLEI =>
           Some(
             defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Nuclei Segmentation"))
-        case "infer_neurons" =>
+        case JobCommand.INFER_NEURONS =>
           Some(
             defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Neuron Segmentation",
             ))
-        case "materialize_volume_annotation" =>
+        case JobCommand.MATERIALIZE_VOLUME_ANNOTATION =>
           Some(
             genericEmailTemplate(
               "Volume Annotation Merged",
               "Your volume annotation has been succesfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
             ))
-        case "globalize_floodfills" =>
+        case JobCommand.GLOBALIZE_FLOODFILLS =>
           Some(
             genericEmailTemplate(
               "Globalize Flood Fill",
               "The flood fill operations has been extended to the whole dataset. The result is available as a new dataset in your dashboard."
             ))
-        case "compute_mesh_file" =>
+        case JobCommand.COMPUTE_MESH_FILE =>
           Some(
             genericEmailTemplate(
               "Mesh Generation",
@@ -377,14 +380,14 @@ class JobService @Inject()(wkConf: WkConf,
       userEmail <- userService.emailFor(user)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       emailTemplate = job.command match {
-        case "convert_to_wkw" => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
-        case _                => defaultMails.jobFailedGenericMail(user, userEmail, datasetName, job.command)
+        case JobCommand.CONVERT_TO_WKW => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
+        case _                         => defaultMails.jobFailedGenericMail(user, userEmail, datasetName, job.command.toString)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
 
   def cleanUpIfFailed(job: Job): Fox[Unit] =
-    if (job.state == JobState.FAILURE && job.command == "convert_to_wkw") {
+    if (job.state == JobState.FAILURE && job.command == JobCommand.CONVERT_TO_WKW) {
       logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
       val commandArgs = job.commandArgs.value
       for {
@@ -424,7 +427,7 @@ class JobService @Inject()(wkConf: WkConf,
       "job_kwargs" -> job.commandArgs
     )
 
-  def submitJob(command: String, commandArgs: JsObject, owner: User, dataStoreName: String)(
+  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String)(
       implicit ctx: DBAccessContext): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"

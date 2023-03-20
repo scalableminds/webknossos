@@ -1,5 +1,5 @@
 import type { Action } from "oxalis/model/actions/actions";
-import constants, { MappingStatusEnum } from "oxalis/constants";
+import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
 import { clamp } from "libs/utils";
 import {

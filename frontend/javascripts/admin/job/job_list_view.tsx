@@ -18,7 +18,7 @@ import {
 } from "@ant-design/icons";
 import * as React from "react";
 import { APIJob, APIJobType } from "types/api_flow_types";
-import { getJobs, doWithToken, cancelJob } from "admin/admin_rest_api";
+import { getJobs, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import FormattedDate from "components/formatted_date";
@@ -67,7 +67,6 @@ type State = {
   isLoading: boolean;
   jobs: Array<APIJob>;
   searchQuery: string;
-  token: string;
 };
 const persistence = new Persistence<Pick<State, "searchQuery">>(
   {
@@ -82,7 +81,6 @@ class JobListView extends React.PureComponent<Props, State> {
     isLoading: true,
     jobs: [],
     searchQuery: "",
-    token: "",
   };
 
   componentDidMount() {
@@ -103,12 +101,10 @@ class JobListView extends React.PureComponent<Props, State> {
 
   async fetchData(): Promise<void> {
     const jobs = await getJobs();
-    const token = await doWithToken(async (t) => t);
     this.setState(
       {
         isLoading: false,
         jobs,
-        token,
       }, // refresh jobs according to the refresh interval
       () => {
         if (this.intervalID != null) {
@@ -259,7 +255,7 @@ class JobListView extends React.PureComponent<Props, State> {
       return (
         <span>
           {job.resultLink && (
-            <a href={`${job.resultLink}?token=${this.state.token}`} title="Download">
+            <a href={job.resultLink} title="Download">
               <DownOutlined />
               Download
             </a>

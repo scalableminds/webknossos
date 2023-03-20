@@ -62,7 +62,7 @@ case class Job(
 
   private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
 
-  def resultLink(organizationName: String, dataStorePublicUrl: String): Option[String] =
+  def resultLink(organizationName: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
@@ -71,7 +71,7 @@ case class Job(
             s"/datasets/$organizationName/$dsName/view"
           }
         case JobCommand.EXPORT_TIFF =>
-          Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
+          Some(s"/api/jobs/${this._id}/export")
         case JobCommand.INFER_NUCLEI | JobCommand.INFER_NEURONS | JobCommand.MATERIALIZE_VOLUME_ANNOTATION |
             JobCommand.COMPUTE_MESH_FILE =>
           returnValue.map { resultDatasetName =>
@@ -81,20 +81,16 @@ case class Job(
       }
     }
 
-  def resultLinkPublic(organizationName: String,
-                       dataStorePublicUrl: String,
-                       webKnossosPublicUrl: String): Option[String] =
+  def resultLinkPublic(organizationName: String, webKnossosPublicUrl: String): Option[String] =
     for {
-      resultLink <- resultLink(organizationName, dataStorePublicUrl)
+      resultLink <- resultLink(organizationName)
       resultLinkPublic = if (resultLink.startsWith("/")) s"$webKnossosPublicUrl$resultLink"
       else s"$resultLink"
     } yield resultLinkPublic
 
-  def resultLinkSlackFormatted(organizationName: String,
-                               dataStorePublicUrl: String,
-                               webKnossosPublicUrl: String): Option[String] =
+  def resultLinkSlackFormatted(organizationName: String, webKnossosPublicUrl: String): Option[String] =
     for {
-      resultLink <- resultLinkPublic(organizationName, dataStorePublicUrl, webKnossosPublicUrl)
+      resultLink <- resultLinkPublic(organizationName, webKnossosPublicUrl)
       resultLinkFormatted = s" <$resultLink|Result>"
     } yield resultLinkFormatted
 }
@@ -312,9 +308,8 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLinkPublic(organization.name, dataStore.publicUrl, wkConf.Http.uri)
-      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
+      resultLink = jobAfterChange.resultLinkPublic(organization.name, wkConf.Http.uri)
+      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
@@ -402,8 +397,7 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
-      resultLink = job.resultLink(organization.name, dataStore.publicUrl)
+      resultLink = job.resultLink(organization.name)
     } yield {
       Json.obj(
         "id" -> job._id.id,

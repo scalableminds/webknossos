@@ -324,18 +324,17 @@ class JobsController @Inject()(jobDAO: JobDAO,
         } yield Ok(js)
       }
     }
-  
+
   def export(jobId: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request => 
+    sil.SecuredAction.async { implicit request =>
       for {
-        userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo)
-        job <- jobDAO.findOne(ObjectId(jobId))
-        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext)
-        dataStore <- dataStoreDAO.findOneByName(job._dataStore)(GlobalAccessContext)
-        resultLink <- job.resultLink(organization.name, dataStore.publicUrl)
-        uri <- s"${resultLink}/?token=${userAuthToken.id}"
-      } yield Redirect(resultLink, Map(("token", userAuthToken.id)))
-  
-  } 
+        jobIdValidated <- ObjectId.fromString(jobId)
+        job <- jobDAO.findOne(jobIdValidated)
+        dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
+        userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
+          request.identity.loginInfo)
+        uri = s"${dataStore.publicUrl}/data/exports/${jobId}/download"
+      } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
+    }
 
 }

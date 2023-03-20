@@ -11,6 +11,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
   Category,
+  CoordinateTransformation,
+  CoordinateTransformationType,
   ElementClass,
   DataLayerLike => DataLayer
 }
@@ -592,17 +594,13 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
 
   def updateResolutions(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = q"delete from webknossos.dataSet_resolutions where _dataSet = $dataSetId".asUpdate
-    val insertQueries = dataLayersOpt match {
-      case Some(dataLayers: List[DataLayer]) =>
-        dataLayers.flatMap { layer =>
-          layer.resolutions.map { resolution: Vec3Int =>
-            {
-              q"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
-                  values($dataSetId, ${layer.name}, $resolution)""".asUpdate
-            }
-          }
+    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+      layer.resolutions.map { resolution: Vec3Int =>
+        {
+          q"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
+                values($dataSetId, ${layer.name}, $resolution)""".asUpdate
         }
-      case _ => List()
+      }
     }
     for {
       _ <- run(
@@ -615,8 +613,10 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
 
 }
 
-class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO: DataSetResolutionsDAO)(
-    implicit ec: ExecutionContext)
+class DataSetDataLayerDAO @Inject()(
+    sqlClient: SqlClient,
+    dataSetResolutionsDAO: DataSetResolutionsDAO,
+    datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
@@ -631,6 +631,9 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
         JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
         JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
+      coordinateTransformations <- datasetCoordinateTransformationsDAO.findCoordinateTransformationsForLayer(dataSetId,
+                                                                                                             row.name)
+      coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
     } yield {
       category match {
         case Category.segmentation =>
@@ -645,7 +648,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
               row.largestsegmentid,
               mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m)),
               defaultViewConfigurationOpt,
-              adminViewConfigurationOpt
+              adminViewConfigurationOpt,
+              coordinateTransformationsOpt
             ))
         case Category.color =>
           Fox.successful(
@@ -656,7 +660,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
               resolutions.sortBy(_.maxDim),
               elementClass,
               defaultViewConfigurationOpt,
-              adminViewConfigurationOpt
+              adminViewConfigurationOpt,
+              coordinateTransformationsOpt
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
       }
@@ -710,6 +715,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SqlClient, dataSetResolutionsDAO:
     for {
       _ <- run(DBIO.sequence(queries))
       _ <- dataSetResolutionsDAO.updateResolutions(dataSetId, source.toUsable.map(_.dataLayers))
+      _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(dataSetId,
+                                                                               source.toUsable.map(_.dataLayers))
     } yield ()
   }
 
@@ -745,4 +752,54 @@ class DataSetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
+}
+
+class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+  private def parseRow(row: DatasetLayerCoordinatetransformationsRow): Fox[CoordinateTransformation] =
+    for {
+      typeParsed <- CoordinateTransformationType.fromString(row.`type`).toFox
+      result <- typeParsed match {
+        case CoordinateTransformationType.affine => parseAffine(row.matrix)
+        case _                                   => Fox.failure(s"Unknown coordinate transformation type: ${row.`type`}")
+      }
+    } yield result
+
+  private def parseAffine(matrixRawOpt: Option[String]): Fox[CoordinateTransformation] =
+    for {
+      matrixString <- matrixRawOpt.toFox
+      matrix <- JsonHelper.parseAndValidateJson[List[List[Double]]](matrixString)
+    } yield CoordinateTransformation(CoordinateTransformationType.affine, Some(matrix))
+
+  def findCoordinateTransformationsForLayer(dataSetId: ObjectId,
+                                            layerName: String): Fox[List[CoordinateTransformation]] =
+    for {
+      rows <- run(
+        DatasetLayerCoordinatetransformations
+          .filter(r => r._Dataset === dataSetId.id && r.layername === layerName)
+          .result).map(_.toList)
+      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse transformations row"
+    } yield rowsParsed
+
+  def updateCoordinateTransformations(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+    val clearQuery =
+      q"DELETE FROM webknossos.dataSet_layer_coordinateTransformations WHERE _dataSet = $dataSetId".asUpdate
+    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+      layer.coordinateTransformations.getOrElse(List.empty).map { coordinateTransformation: CoordinateTransformation =>
+        {
+          q"""INSERT INTO webknossos.dataSet_layer_coordinateTransformations(_dataSet, layerName, type, matrix)
+              values($dataSetId, ${layer.name}, ${coordinateTransformation.`type`}, ${Json.toJson(
+            coordinateTransformation.matrix)})""".asUpdate
+        }
+      }
+    }
+    for {
+      _ <- run(
+        DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
+    } yield ()
+  }
+
 }

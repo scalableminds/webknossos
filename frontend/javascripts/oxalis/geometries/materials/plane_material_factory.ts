@@ -8,18 +8,14 @@ import {
   MappingStatusEnum,
   AnnotationToolEnum,
 } from "oxalis/constants";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveSegmentPosition,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getAddressSpaceDimensions,
-  getLookupBufferSize,
-  getPackingDegree,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
   getDataLayers,
@@ -31,11 +27,15 @@ import {
   getSegmentationLayerWithMappingSupport,
   getMappingInfoForSupportedLayer,
   getVisibleSegmentationLayer,
+  getLayerByName,
+  invertAndTranspose,
+  getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getRequestLogZoomStep,
+  getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
+  Identity4x4,
 } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Model } from "oxalis/singletons";
@@ -43,10 +43,11 @@ import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
-import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
+import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -94,10 +95,8 @@ class PlaneMaterialFactory {
   isOrthogonal: boolean;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'material' has no initializer and is not ... Remove this comment to see the full error message
   material: THREE.ShaderMaterial;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
-  uniforms: Uniforms;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'attributes' has no initializer and is no... Remove this comment to see the full error message
-  attributes: Record<string, any>;
+  uniforms: Uniforms = {};
+  attributes: Record<string, any> = {};
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
@@ -124,27 +123,24 @@ class PlaneMaterialFactory {
   }
 
   setupUniforms(): void {
-    const addressSpaceDimensions = getAddressSpaceDimensions(
-      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
-    );
     this.uniforms = {
       sphericalCapRadius: {
         value: 140,
       },
+      is3DViewBeingRendered: {
+        value: true,
+      },
       globalPosition: {
         value: new THREE.Vector3(0, 0, 0),
-      },
-      anchorPoint: {
-        value: new THREE.Vector3(0, 0, 0),
-      },
-      zoomStep: {
-        value: 1,
       },
       zoomValue: {
         value: 1,
       },
       useBilinearFiltering: {
         value: true,
+      },
+      viewportExtent: {
+        value: [0, 0],
       },
       isMappingEnabled: {
         value: false,
@@ -194,9 +190,7 @@ class PlaneMaterialFactory {
       renderBucketIndices: {
         value: false,
       },
-      addressSpaceDimensions: {
-        value: new THREE.Vector3(...addressSpaceDimensions),
-      },
+
       // The hovered segment id is always stored as a 64-bit (8 byte)
       // value which is why it is spread over two uniforms,
       // named as `-High` and `-Low`.
@@ -215,11 +209,13 @@ class PlaneMaterialFactory {
       },
     };
 
+    const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
+    this.uniforms.activeMagIndices = {
+      value: Object.values(activeMagIndices),
+    };
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
-      this.uniforms[`${layerName}_maxZoomStep`] = {
-        value: dataLayer.cube.resolutionInfo.getHighestResolutionIndex(),
-      };
+
       this.uniforms[`${layerName}_alpha`] = {
         value: 1,
       };
@@ -231,6 +227,14 @@ class PlaneMaterialFactory {
       // current mag.
       this.uniforms[`${layerName}_unrenderable`] = {
         value: 0,
+      };
+      const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
+
+      this.uniforms[`${layerName}_transform`] = {
+        value: invertAndTranspose(getTransformsForLayer(layer)),
+      };
+      this.uniforms[`${layerName}_has_transform`] = {
+        value: !_.isEqual(getTransformsForLayer(layer), Identity4x4),
       };
     }
 
@@ -255,10 +259,14 @@ class PlaneMaterialFactory {
   }
 
   attachTextures(): void {
+    let sharedLookUpTexture;
+    let sharedLookUpCuckooTable;
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
+      sharedLookUpTexture = lookUpTexture;
+      sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
       const layerName = sanitizeName(name);
       this.uniforms[`${layerName}_textures`] = {
         value: dataTextures,
@@ -266,10 +274,31 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
-      this.uniforms[`${layerName}_lookup_texture`] = {
-        value: lookUpTexture,
-      };
     }
+
+    if (!sharedLookUpCuckooTable) {
+      throw new Error("Empty layer list at unexpected point.");
+    }
+
+    this.uniforms.lookup_texture = {
+      value: sharedLookUpTexture,
+    };
+
+    this.unsubscribeSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
+      this.uniforms.lookup_seeds = {
+        value: seeds,
+      };
+    });
+    const {
+      CUCKOO_ENTRY_CAPACITY,
+      CUCKOO_ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_TEXEL,
+      CUCKOO_TWIDTH,
+    } = sharedLookUpCuckooTable.getUniformValues();
+    this.uniforms.LOOKUP_CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+    this.uniforms.LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+    this.uniforms.LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+    this.uniforms.LOOKUP_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
 
     this.attachSegmentationMappingTextures();
     this.attachSegmentationColorTexture();
@@ -294,9 +323,7 @@ class PlaneMaterialFactory {
   attachSegmentationColorTexture(): void {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (segmentationLayer == null) {
-      this.uniforms.seed0 = { value: 0 };
-      this.uniforms.seed1 = { value: 0 };
-      this.uniforms.seed2 = { value: 0 };
+      this.uniforms.custom_color_seeds = { value: [0, 0, 0] };
 
       this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: 0 };
       this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
@@ -312,11 +339,7 @@ class PlaneMaterialFactory {
       this.unsubscribeSeedsFn();
     }
     this.unsubscribeSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
-      seeds.forEach((seed, idx) => {
-        this.uniforms[`seed${idx}`] = {
-          value: seed,
-        };
-      });
+      this.uniforms.custom_color_seeds = { value: seeds };
     });
     const {
       CUCKOO_ENTRY_CAPACITY,
@@ -334,28 +357,30 @@ class PlaneMaterialFactory {
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
+    const [fragmentShader, additionalUniforms] = this.getFragmentShaderWithUniforms();
+    // The uniforms instance must not be changed (e.g., with
+    // {...this.uniforms, ...additionalUniforms}), as this would result in
+    // errors à la: Two textures of different types use the same sampler location.
+    for (const [name, value] of Object.entries(additionalUniforms)) {
+      this.uniforms[name] = value;
+    }
     this.material = new THREE.ShaderMaterial(
       _.extend(options, {
         uniforms: this.uniforms,
         vertexShader: this.getVertexShader(),
-        fragmentShader: this.getFragmentShader(),
+        fragmentShader,
       }),
     );
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
     this.material.extensions = {
       // Necessary for anti-aliasing via fwidth in shader
-      derivatives: true,
+      // derivatives: true,
     };
     shaderEditor.addMaterial(this.shaderId, this.material);
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
     this.material.setGlobalPosition = (x, y, z) => {
       this.uniforms.globalPosition.value.set(x, y, z);
-    };
-
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
-    this.material.setAnchorPoint = ([x, y, z]) => {
-      this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
@@ -366,13 +391,23 @@ class PlaneMaterialFactory {
     this.material.side = THREE.DoubleSide;
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getRequestLogZoomStep(storeState),
-        (zoomStep) => {
-          this.uniforms.zoomStep.value = zoomStep;
+        (storeState) => getActiveMagIndicesForLayers(storeState),
+        (activeMagIndices) => {
+          this.uniforms.activeMagIndices.value = Object.values(activeMagIndices);
         },
         true,
       ),
     );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getViewportExtents(storeState),
+        (extents) => {
+          this.uniforms.viewportExtent.value = extents[this.planeID];
+        },
+        true,
+      ),
+    );
+
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) =>
@@ -399,6 +434,17 @@ class PlaneMaterialFactory {
         true,
       ),
     );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getResolutions(storeState.dataset),
+        (resolutions) => {
+          this.uniforms.resolutions = { value: _.flatten(resolutions) };
+        },
+        true,
+      ),
+    );
+
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getZoomValue(storeState.flycam),
@@ -451,6 +497,44 @@ class PlaneMaterialFactory {
           const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
           this.uniforms.bboxMin.value.set(...lowerBoundary);
           this.uniforms.bboxMax.value.set(...upperBoundary);
+        },
+        true,
+      ),
+    );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.dataset.dataSource.dataLayers,
+        (layers) => {
+          let representativeLayerIdxForMag = null;
+          for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+            const layer = layers[layerIdx];
+            const name = sanitizeName(layer.name);
+            this.uniforms[`${name}_transform`].value = invertAndTranspose(
+              getTransformsForLayer(layer),
+            );
+            const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
+            this.uniforms[`${name}_has_transform`] = {
+              value: hasTransform,
+            };
+            if (representativeLayerIdxForMag == null && !hasTransform) {
+              representativeLayerIdxForMag = layerIdx;
+            }
+          }
+
+          // The vertex shader looks up the buckets for rendering so that the
+          // fragment shader doesn't need to do so. Currently, this only works
+          // for layers that don't have a transformation (otherwise, the differing
+          // grids wouldn't align with each other).
+          // To align the vertices with the buckets, the current magnification is
+          // needed. Since the current mag can differ from layer to layer, the shader
+          // needs to know which mag is safe to use.
+          // For this purpose, we define the representativeLayerIdxForMag which is
+          // essentially an index to *some* layer that doesn't have any transforms.
+          // If all layers have a transform, the representativeLayerIdxForMag
+          // isn't relevant which is why it can default to 0.
+          this.uniforms.representativeLayerIdxForMag = {
+            value: representativeLayerIdxForMag || 0,
+          };
         },
         true,
       ),
@@ -673,7 +757,10 @@ class PlaneMaterialFactory {
   }
 
   recomputeFragmentShader = _.throttle(() => {
-    const newShaderCode = this.getFragmentShader();
+    const [newShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
+    for (const [name, value] of Object.entries(additionalUniforms)) {
+      this.uniforms[name] = value;
+    }
 
     // Comparing to this.material.fragmentShader does not work. The code seems
     // to be modified by a third party.
@@ -688,7 +775,7 @@ class PlaneMaterialFactory {
     window.needsRerender = true;
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>] {
+  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {
     // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
     // all layers, we can simply return all layers here.
@@ -696,18 +783,20 @@ class PlaneMaterialFactory {
     // into account (a) which layers are activated and (b) which
     // layers were least-recently activated (but are now disabled).
     // The first array contains the color layer names and the second the segmentation layer names.
-    if (maximumLayerCountToRender <= 0) {
-      return [[], []];
-    }
-
+    // The third parameter returns the number of globally available layers (this is not always equal
+    // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
     );
+    const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
+    if (maximumLayerCountToRender <= 0) {
+      return [[], [], globalLayerCount];
+    }
 
-    if (maximumLayerCountToRender >= colorLayerNames.length + segmentationLayerNames.length) {
+    if (maximumLayerCountToRender >= globalLayerCount) {
       // We can simply render all available layers.
-      return [colorLayerNames, segmentationLayerNames];
+      return [colorLayerNames, segmentationLayerNames, globalLayerCount];
     }
 
     const state = Store.getState();
@@ -740,7 +829,7 @@ class PlaneMaterialFactory {
       ({ isSegmentationLayer }) => !isSegmentationLayer,
     ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
 
-    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames];
+    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames, globalLayerCount];
   }
 
   onDisableLayer = (layerName: string, isSegmentationLayer: boolean) => {
@@ -759,45 +848,57 @@ class PlaneMaterialFactory {
     );
   };
 
-  getFragmentShader(): string {
-    const { initializedGpuFactor, maximumLayerCountToRender } =
-      Store.getState().temporaryConfiguration.gpuSetup;
-    // Don't compile code for segmentation in arbitrary mode
-    const [colorLayerNames, segmentationLayerNames] =
+  getFragmentShaderWithUniforms(): [string, Uniforms] {
+    const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
+    const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
+
+    const availableLayerNames = colorLayerNames.concat(segmentationLayerNames);
+
+    const availableLayerIndexToGlobalLayerIndex = availableLayerNames.map((layerName) =>
+      getGlobalLayerIndexForLayerName(layerName, sanitizeName),
+    );
+
     const packingDegreeLookup = getPackingDegreeLookup();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
-    const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
-    return getMainFragmentShader({
+    const code = getMainFragmentShader({
+      globalLayerCount,
       colorLayerNames,
       segmentationLayerNames,
       packingDegreeLookup,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
-      resolutions: getResolutions(dataset),
+      resolutionsCount: getResolutions(dataset).length,
       datasetScale,
       isOrthogonal: this.isOrthogonal,
-      lookupTextureWidth,
     });
+    return [
+      code,
+      { availableLayerIndexToGlobalLayerIndex: { value: availableLayerIndexToGlobalLayerIndex } },
+    ];
   }
 
   getVertexShader(): string {
-    return `
-precision highp float;
+    const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
+    const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
+      this.getLayersToRender(maximumLayerCountToRender);
 
-varying vec4 worldCoord;
-varying vec4 modelCoord;
-varying vec2 vUv;
-varying mat4 savedModelMatrix;
+    const packingDegreeLookup = getPackingDegreeLookup();
+    const { dataset } = Store.getState();
+    const datasetScale = dataset.dataSource.scale;
 
-void main() {
-  vUv = uv;
-  modelCoord = vec4(position, 1.0);
-  savedModelMatrix = modelMatrix;
-  worldCoord = modelMatrix * vec4(position, 1.0);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}`;
+    return getMainVertexShader({
+      globalLayerCount,
+      colorLayerNames,
+      segmentationLayerNames,
+      packingDegreeLookup,
+      // Todo: this is not computed per layer. See #4018
+      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
+      resolutionsCount: getResolutions(dataset).length,
+      datasetScale,
+      isOrthogonal: this.isOrthogonal,
+    });
   }
 }
 

@@ -36,7 +36,8 @@ case class WKWDataLayer(
     wkwResolutions: List[WKWResolution],
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None
 ) extends WKWLayer
 
 object WKWDataLayer {
@@ -51,7 +52,8 @@ case class WKWSegmentationLayer(
     mappings: Option[Set[String]],
     largestSegmentId: Option[Long] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None
 ) extends SegmentationLayer
     with WKWLayer
 

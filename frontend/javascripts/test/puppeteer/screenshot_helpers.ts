@@ -1,8 +1,7 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pngj... Remove this comment to see the full error message
 import { PNG } from "pngjs";
 import fs from "fs";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pixe... Remove this comment to see the full error message
 import pixelmatch from "pixelmatch";
+
 export function isPixelEquivalent(changedPixels: number, width: number, height: number) {
   // There may be a difference of 0.1 %
   const allowedThreshold = 0.1 / 100;
@@ -10,7 +9,7 @@ export function isPixelEquivalent(changedPixels: number, width: number, height: 
   return changedPixels < allowedChangedPixel;
 }
 
-function openScreenshot(path: string, name: string): Promise<typeof PNG> {
+function openScreenshot(path: string, name: string): Promise<PNG | null> {
   return new Promise((resolve) => {
     fs.createReadStream(`${path}/${name}.png`)
       .on("error", (error) => {
@@ -23,13 +22,12 @@ function openScreenshot(path: string, name: string): Promise<typeof PNG> {
       })
       .pipe(new PNG())
       .on("parsed", function () {
-        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         resolve(this);
       });
   });
 }
 
-function saveScreenshot(png: typeof PNG, path: string, name: string): Promise<void> {
+function saveScreenshot(png: PNG, path: string, name: string): Promise<void> {
   return new Promise((resolve) => {
     png
       .pack()
@@ -38,7 +36,7 @@ function saveScreenshot(png: typeof PNG, path: string, name: string): Promise<vo
   });
 }
 
-export function bufferToPng(buffer: Buffer, width: number, height: number): Promise<typeof PNG> {
+export function bufferToPng(buffer: Buffer | string, width: number, height: number): Promise<PNG> {
   return new Promise((resolve) => {
     const png = new PNG({
       width,

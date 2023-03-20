@@ -184,10 +184,9 @@ class Cube {
       return;
     }
 
+    const position = getPosition(Store.getState().flycam);
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const position = getPosition(Store.getState().flycam);
-
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] < this.max[thirdDim]) {
         this.crossSections[planeId].visible =
           this.visible && planeId === id && this.showCrossSections;

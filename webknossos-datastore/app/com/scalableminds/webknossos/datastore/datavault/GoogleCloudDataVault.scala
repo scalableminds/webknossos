@@ -32,7 +32,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       case Some(r) => {
         val blobReader = storage.reader(blobId)
         blobReader.seek(r.start)
-        blobReader.limit(r.length)
+        blobReader.limit(r.end)
         val bb = ByteBuffer.allocateDirect(r.length)
         blobReader.read(bb)
         val arr = new Array[Byte](r.length)

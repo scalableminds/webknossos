@@ -357,6 +357,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This download does only include the volume data annotated in the tasks of this project. The fallback volume data is excluded.",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
+  "team.no_members": "This team has no members assigned yet.",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",
   "auth.registration_email_input": "Please input your E-mail!",
   "auth.registration_email_invalid": "The input is not valid E-mail!",

@@ -25,7 +25,10 @@ import type { ViewMode } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+
 const { Panel } = Collapse;
+
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;
   userConfiguration: UserConfiguration;
@@ -168,7 +171,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   };
 
   onChangeGpuFactor = (gpuFactor: number) => {
-    Toast.warning("Please reload the page to allow the changes to take effect.");
+    Toast.warning("Please reload the page to allow the changes to take full effect.", {
+      sticky: true,
+    });
     this.onChangeUser.gpuMemoryFactor(gpuFactor);
   };
 
@@ -299,15 +304,25 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             onChange={this.onChangeDataset.fourBit}
           />
           {Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
-            <SwitchSetting
-              label={
-                <Tooltip title={settingsTooltips.interpolation}>
-                  {settingsLabels.interpolation}
-                </Tooltip>
-              }
-              value={this.props.datasetConfiguration.interpolation}
-              onChange={this.onChangeDataset.interpolation}
-            />
+            <div>
+              <SwitchSetting
+                label={
+                  <Tooltip title={settingsTooltips.interpolation}>
+                    {settingsLabels.interpolation}
+                  </Tooltip>
+                }
+                value={this.props.datasetConfiguration.interpolation}
+                onChange={this.onChangeDataset.interpolation}
+              >
+                {this.props.datasetConfiguration.interpolation && (
+                  <Tooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
+                    <ExclamationCircleOutlined
+                      style={{ marginLeft: 8, color: "red", verticalAlign: "middle" }}
+                    />
+                  </Tooltip>
+                )}
+              </SwitchSetting>
+            </div>
           )}
           <SwitchSetting
             label={

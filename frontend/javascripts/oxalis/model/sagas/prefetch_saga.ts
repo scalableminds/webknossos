@@ -13,7 +13,7 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getPosition,
-  getRequestLogZoomStep,
+  getActiveMagIndexForLayer,
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -104,7 +104,7 @@ export function* prefetchForPlaneMode(
   previousProperties: Record<string, any>,
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
-  const zoomStep = yield* select((state) => getRequestLogZoomStep(state));
+  const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
@@ -169,7 +169,7 @@ export function* prefetchForArbitraryMode(
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
   const matrix = yield* select((state) => state.flycam.currentMatrix);
-  const zoomStep = yield* select((state) => getRequestLogZoomStep(state));
+  const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const tracingTypes = yield* select(getTracingTypes);
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const resolutions = yield* select((state) => getResolutions(state.dataset));

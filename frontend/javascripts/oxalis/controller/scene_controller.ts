@@ -5,10 +5,16 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import Maybe from "data.maybe";
-import type { MeshMetaData } from "types/api_flow_types";
+import type { APIDataLayer, MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
-import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getBoundaries,
+  getDataLayers,
+  getLayerBoundingBox,
+  getLayerNameToIsDisabled,
+  getTransformsForLayerOrNull,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getPosition, getActiveMagIndicesForLayers } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -39,6 +45,7 @@ import { mergeVertices } from "libs/BufferGeometryUtils";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
 
 const CUBE_COLOR = 0x999999;
+const LAYER_CUBE_COLOR = 0xffff99;
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -49,8 +56,9 @@ class SceneController {
   datasetBoundingBox: Cube;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxGroup' has no initializer... Remove this comment to see the full error message
   userBoundingBoxGroup: THREE.Group;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxes' has no initializer an... Remove this comment to see the full error message
-  userBoundingBoxes: Array<Cube>;
+  layerBoundingBoxGroup!: THREE.Group;
+  userBoundingBoxes!: Array<Cube>;
+  layerBoundingBoxes!: { [layerName: string]: Cube };
   annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
@@ -123,9 +131,17 @@ class SceneController {
     // These methods are attached to window, since we would run into circular import errors
     // otherwise.
     // @ts-ignore
-    window.addBucketMesh = (position: Vector3, zoomStep: number, optColor?: string) => {
-      const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
-      const bucketSize = [bucketExtent, bucketExtent, bucketExtent];
+    window.addBucketMesh = (
+      position: Vector3,
+      zoomStep: number,
+      resolution: Vector3,
+      optColor?: string,
+    ) => {
+      const bucketSize = [
+        constants.BUCKET_WIDTH * resolution[0],
+        constants.BUCKET_WIDTH * resolution[1],
+        constants.BUCKET_WIDTH * resolution[2],
+      ];
       const boxGeometry = new THREE.BoxGeometry(...bucketSize);
       const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
       const material = new THREE.LineBasicMaterial({
@@ -360,7 +376,9 @@ class SceneController {
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
+    this.layerBoundingBoxGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
+    this.rootNode.add(this.layerBoundingBoxGroup);
     this.annotationToolsGeometryGroup = new THREE.Group();
     this.rootNode.add(this.annotationToolsGeometryGroup);
     this.userBoundingBoxes = [];
@@ -450,13 +468,22 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
-    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = Store.getState().userConfiguration;
+    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
+      Store.getState().userConfiguration;
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
+    const layerNameToIsDisabled = getLayerNameToIsDisabled(Store.getState().datasetConfiguration);
+    Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
+      const bbCube = this.layerBoundingBoxes[layerName];
+      const visible =
+        id === OrthoViews.TDView && tdViewDisplayLayerBorders && !layerNameToIsDisabled[layerName];
+      bbCube.setVisibility(visible);
+      bbCube.updateForCam(id);
+    });
 
     this.taskBoundingBox?.updateForCam(id);
 
@@ -482,6 +509,7 @@ class SceneController {
         } else {
           this.planes[planeId].setVisible(false);
         }
+        this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = false;
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -491,6 +519,7 @@ class SceneController {
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
           this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
         );
+        this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
       }
     }
   };
@@ -499,22 +528,17 @@ class SceneController {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
-    // The anchor point refers to the top-left-front bucket of the bounding box
-    // which covers all three rendered planes. Relative to this anchor point,
-    // all buckets necessary for rendering are addressed. The anchorPoint is
-    // defined with bucket indices for the coordinate system of the current zoomStep.
-    let anchorPoint;
-    const zoomStep = getRequestLogZoomStep(Store.getState());
 
+    const magIndices = getActiveMagIndicesForLayers(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(globalPosition, zoomStep);
+      dataLayer.layerRenderingManager.updateDataTextures(
+        globalPosition,
+        magIndices[dataLayer.name],
+      );
     }
 
-    if (optArbitraryPlane) {
-      optArbitraryPlane.updateAnchorPoints(anchorPoint);
-    } else {
+    if (!optArbitraryPlane) {
       for (const currentPlane of _.values<Plane>(this.planes)) {
-        currentPlane.updateAnchorPoints(anchorPoint);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 
@@ -578,6 +602,40 @@ class SceneController {
     this.rootNode.remove(this.userBoundingBoxGroup);
     this.userBoundingBoxGroup = newUserBoundingBoxGroup;
     this.rootNode.add(this.userBoundingBoxGroup);
+  }
+
+  setLayerBoundingBoxes(layers: APIDataLayer[]): void {
+    const state = Store.getState();
+    const dataset = state.dataset;
+
+    const newLayerBoundingBoxGroup = new THREE.Group();
+    this.layerBoundingBoxes = Object.fromEntries(
+      layers.map((layer) => {
+        const boundingBox = getLayerBoundingBox(dataset, layer.name);
+        const { min, max } = boundingBox;
+        const bbCube = new Cube({
+          min,
+          max,
+          color: LAYER_CUBE_COLOR,
+          showCrossSections: false,
+          isHighlighted: false,
+        });
+        bbCube.getMeshes().forEach((mesh) => {
+          const transformMatrix = getTransformsForLayerOrNull(layer);
+          if (transformMatrix) {
+            const matrix = new THREE.Matrix4();
+            // @ts-ignore
+            matrix.set(...transformMatrix);
+            mesh.applyMatrix4(matrix);
+          }
+          newLayerBoundingBoxGroup.add(mesh);
+        });
+        return [layer.name, bbCube];
+      }),
+    );
+    this.rootNode.remove(this.layerBoundingBoxGroup);
+    this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
+    this.rootNode.add(this.layerBoundingBoxGroup);
   }
 
   highlightUserBoundingBox(bboxId: number | null | undefined): void {
@@ -652,6 +710,10 @@ class SceneController {
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).userBoundingBoxes,
       (bboxes) => this.setUserBoundingBoxes(bboxes),
+    );
+    listenToStoreProperty(
+      (storeState) => getDataLayers(storeState.dataset),
+      (layers) => this.setLayerBoundingBoxes(layers),
     );
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).boundingBox,

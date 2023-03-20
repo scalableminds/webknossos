@@ -186,7 +186,7 @@ export async function initialize(
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
-    const { gpuMemoryFactor } = initialUserSettings;
+    const { gpuMemoryFactor } = Store.getState().userConfiguration;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (serverTracings.length > 0)
       Store.dispatch(setZoomStepAction(getSomeServerTracing(serverTracings).zoomLevel));
@@ -444,7 +444,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   }
 
   const layers = dataset.dataSource.dataLayers;
-  const dataLayers = {};
+  const dataLayers: DataLayerCollection = {};
 
   for (const layer of layers) {
     const textureInformation = textureInformationPerLayer.get(layer);
@@ -453,7 +453,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       throw new Error("No texture information for layer?");
     }
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     dataLayers[layer.name] = new DataLayer(
       layer,
       textureInformation.textureSize,

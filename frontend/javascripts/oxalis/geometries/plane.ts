@@ -4,7 +4,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
-import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
   OrthoViewColors,
   OrthoViewCrosshairColors,
@@ -12,12 +12,21 @@ import constants, {
   OrthoViewValues,
 } from "oxalis/constants";
 
+// A subdivision of 80 means that there will be 80 segments per axis
+// and thus 81 vertices per axis (i.e., the vertex shader is executed 81**2).
+// In an extreme scenario, these vertices would have a distance to each other
+// of 32 voxels. Thus, each square (two triangles) would render one bucket.
+// 80**2 == 6400 buckets per plane are currently unrealistic and therefore
+// a valid upper bound.
+export const PLANE_SUBDIVISION = 80;
+
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: THREE.Mesh;
   planeID: OrthoView;
+  materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
   baseScaleVector: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
@@ -43,14 +52,13 @@ class Plane {
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(
+    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+    this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       true,
       OrthoViewValues.indexOf(this.planeID),
-    )
-      .setup()
-      .getMaterial();
+    );
+    const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     // create crosshair
     const crosshairGeometries = [];
@@ -123,21 +131,6 @@ class Plane {
       this.crosshair[i].material = this.getLineBasicMaterial(OrthoViewGrayCrosshairColor, 1);
     });
   };
-
-  updateAnchorPoints(
-    anchorPoint: Vector4 | null | undefined,
-    fallbackAnchorPoint?: Vector4 | null | undefined,
-  ): void {
-    if (anchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
-      this.plane.material.setAnchorPoint(anchorPoint);
-    }
-
-    if (fallbackAnchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setFallbackAnchorPoint' does not exist o... Remove this comment to see the full error message
-      this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
-    }
-  }
 
   setScale(xFactor: number, yFactor: number): void {
     if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {

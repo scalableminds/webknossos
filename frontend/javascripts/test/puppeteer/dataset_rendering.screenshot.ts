@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { TestInterface } from "ava";
 import anyTest from "ava";
@@ -71,6 +72,21 @@ test.beforeEach(async (t) => {
     ],
     dumpio: true,
   });
+
+  const caps = {
+    browser: "chrome",
+    browser_version: "latest",
+    os: "os x",
+    os_version: "mojave",
+    "browserstack.username": process.env.BROWSERSTACK_USERNAME,
+    "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
+  };
+  t.context.browser = await puppeteer.connect({
+    browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
+      JSON.stringify(caps),
+    )}`,
+  });
+
   console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
   global.Headers = Headers;
   global.fetch = fetch;
@@ -136,6 +152,9 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
       },
     },
   },
+  dsA_2: {
+    interpolation: true,
+  },
 };
 
 async function withRetry(
@@ -143,6 +162,7 @@ async function withRetry(
   testFn: () => Promise<boolean>,
   resolveFn: (arg0: boolean) => void,
 ) {
+  retryCount = 3;
   for (let i = 0; i < retryCount; i++) {
     // eslint-disable-next-line no-await-in-loop
     const condition = await testFn();
@@ -377,6 +397,6 @@ test.serial(
     );
   },
 );
-test.afterEach(async (t) => {
+test.afterEach.always(async (t) => {
   await t.context.browser.close();
 });

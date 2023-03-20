@@ -2,9 +2,7 @@
 import urljoin from "url-join";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'merg... Remove this comment to see the full error message
 import mergeImg from "merge-img";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pixe... Remove this comment to see the full error message
 import pixelmatch from "pixelmatch";
 import { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
@@ -196,9 +194,7 @@ async function waitForRenderingFinish(page: Page) {
       changedPixels = pixelmatch(
         // The buffers need to be converted to png before comparing them
         // as they might have different lengths, otherwise (probably due to different png encodings)
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | Buffer' is not assignab... Remove this comment to see the full error message
         (await bufferToPng(lastShot, width, height)).data,
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | Buffer' is not assignab... Remove this comment to see the full error message
         (await bufferToPng(currentShot, width, height)).data,
         null,
         width,
@@ -274,7 +270,6 @@ async function screenshotTracingView(page: Page): Promise<Screenshot> {
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);
   return new Promise((resolve) => {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_' implicitly has an 'any' type.
     img.getBuffer("image/png", (_, buffer) =>
       resolve({
         screenshot: buffer,

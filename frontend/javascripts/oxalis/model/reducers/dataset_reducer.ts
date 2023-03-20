@@ -1,7 +1,7 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import { flatToNestedMatrix, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import DiffableMap from "libs/diffable_map";
 import { MappingStatusEnum } from "oxalis/constants";
 
@@ -58,6 +58,36 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           return layer;
         }
       });
+      return updateKey2(state, "dataset", "dataSource", {
+        dataLayers: newLayers,
+      });
+    }
+
+    case "SET_LAYER_TRANSFORMS": {
+      const { layerName, transformMatrix } = action;
+      if (transformMatrix.some((el) => Number.isNaN(el))) {
+        console.error(
+          "Did not update layer transforms, because it contained NaN values.",
+          transformMatrix,
+        );
+        return state;
+      }
+      const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
+        if (layer.name === layerName) {
+          return {
+            ...layer,
+            coordinateTransformations: [
+              {
+                type: "affine" as const,
+                matrix: flatToNestedMatrix(transformMatrix),
+              },
+            ],
+          };
+        } else {
+          return layer;
+        }
+      });
+
       return updateKey2(state, "dataset", "dataSource", {
         dataLayers: newLayers,
       });

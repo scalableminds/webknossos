@@ -7,12 +7,11 @@ import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setAnnotationNameAction,
@@ -21,7 +20,7 @@ import {
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import features from "features";
 import type { OxalisState, Task, Tracing } from "oxalis/store";
-import Store from "oxalis/store";
+
 import {
   NucleiInferralModal,
   NeuronInferralModal,
@@ -41,7 +40,8 @@ type StateProps = {
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
-  activeResolution: Vector3;
+  activeResolutionInfo: ReturnType<typeof getActiveResolutionInfo>;
+  isDatasetViewMode: boolean;
   mayEditAnnotation: boolean;
 };
 type DispatchProps = {
@@ -217,8 +217,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
-  getKeyboardShortcuts(isDatasetViewMode: boolean) {
-    return isDatasetViewMode ? (
+  getKeyboardShortcuts() {
+    return this.props.isDatasetViewMode ? (
       <div
         style={{
           marginBottom: 25,
@@ -254,12 +254,12 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
-  getOrganizationLogo(isDatasetViewMode: boolean) {
+  getOrganizationLogo() {
     if (!this.props.dataset.logoUrl) {
       return null;
     }
 
-    return isDatasetViewMode ? (
+    return this.props.isDatasetViewMode ? (
       <img
         style={{
           maxHeight: 250,
@@ -371,7 +371,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   };
 
-  getDatasetName(isDatasetViewMode: boolean) {
+  getDatasetName() {
     const {
       name: datasetName,
       displayName,
@@ -393,7 +393,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </Tooltip>
       ) : null;
 
-    if (isDatasetViewMode) {
+    if (this.props.isDatasetViewMode) {
       return (
         <div>
           <p
@@ -441,8 +441,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  getTracingName(isDatasetViewMode: boolean) {
-    if (isDatasetViewMode) return null;
+  getTracingName() {
+    if (this.props.isDatasetViewMode) return null;
     let annotationTypeLabel;
     const { annotationType, name } = this.props.tracing;
     const tracingName = name || "[unnamed]";
@@ -569,17 +569,23 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { dataset, activeResolution, activeUser } = this.props;
-    const isDatasetViewMode =
-      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+    const { dataset, activeResolutionInfo, activeUser } = this.props;
+    const { activeMagIndicesOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
+      activeResolutionInfo;
     const resolutions = getResolutions(dataset);
     const resolutionInfo =
-      activeResolution != null ? (
+      representativeResolution != null ? (
         <Tooltip
           title={
             <div>
-              Currently rendered resolution {activeResolution.join("-")}.<br />
-              <br />
+              Rendered magnification per layer:
+              <ul>
+                {Object.entries(activeMagIndicesOfEnabledLayers).map(([layerName, magIndex]) => (
+                  <li key={layerName}>
+                    {layerName}: {resolutions[magIndex].join("-")}
+                  </li>
+                ))}
+              </ul>
               Available resolutions:
               <ul>
                 {resolutions.map((r) => (
@@ -611,7 +617,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                 verticalAlign: "top",
               }}
             >
-              {activeResolution.join("-")}
+              {representativeResolution.join("-")}
+              {isActiveResolutionGlobal ? "" : "*"}{" "}
             </td>
           </tr>
         </Tooltip>
@@ -619,8 +626,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     return (
       <div className="flex-overflow padded-tab-content">
         <div className="info-tab-block">
-          {this.getTracingName(isDatasetViewMode)}
-          {this.getDatasetName(isDatasetViewMode)}
+          {this.getTracingName()}
+          {this.getDatasetName()}
           {this.maybePrintOwnerAndContributors()}
         </div>
 
@@ -646,8 +653,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </div>
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
-        {this.getKeyboardShortcuts(isDatasetViewMode)}
-        {this.getOrganizationLogo(isDatasetViewMode)}
+        {this.getKeyboardShortcuts()}
+        {this.getOrganizationLogo()}
       </div>
     );
   }
@@ -658,7 +665,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
-  activeResolution: getCurrentResolution(state),
+  isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  activeResolutionInfo: getActiveResolutionInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });
 

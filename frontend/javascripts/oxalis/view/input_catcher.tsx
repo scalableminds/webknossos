@@ -1,3 +1,4 @@
+import _ from "lodash";
 import * as React from "react";
 import type { Rect, Viewport } from "oxalis/constants";
 import { ArbitraryViewport } from "oxalis/constants";
@@ -80,8 +81,16 @@ export function recalculateInputCatcherSizes() {
     viewportRects[viewportID] = rect;
   }
 
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
-  Store.dispatch(setInputCatcherRects(viewportRects));
+  // Clicking on a viewport will trigger a FlexLayout model change event if
+  // the click changes the focus from one tab to another.
+  // Since the mere click does not change the size of the input catchers,
+  // we want to avoid the following set action, as the corresponding reducer
+  // will re-calculate the zoom ranges for the available magnifications
+  // (which is expensive and unnecessary).
+  if (!_.isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
+    Store.dispatch(setInputCatcherRects(viewportRects));
+  }
 }
 
 const cursorForTool = {

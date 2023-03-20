@@ -38,6 +38,7 @@ declare module "mjs" {
         r?: Float32Array | number[] | null | undefined,
       ): Matrix4x4 {},
       scale1: function (s: number, m: Matrix4x4, r?: Float32Array | null | undefined): Matrix4x4 {},
+      mul: function (a: Matrix4x4, b: Matrix4x4, r?: Matrix4x4 | null | undefined): Matrix4x4 {},
       rotate: function (
         angle: number,
         axis: Vector3,
@@ -61,6 +62,7 @@ declare module "mjs" {
       lengthSquared: function (x: Vector3): number {},
       scale: function (x: Vector3, f: number, res?: Vector2): Vector3 {},
       normalize: function (x: Vector3): Vector3 {},
+      mul4x4: function (m: Matrix4x4, vec: Vector3, res?: Vector3): Vector3 {},
     },
   });
 }

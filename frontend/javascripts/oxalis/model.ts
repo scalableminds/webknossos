@@ -3,7 +3,7 @@ import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqu
 import type { Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerWithMappingSupport,
   getLayerByName,
@@ -167,7 +167,7 @@ export class OxalisModel {
     position: Vector3 | null | undefined,
   ): number {
     const state = Store.getState();
-    const zoomStep = getRequestLogZoomStep(state);
+    const zoomStep = getActiveMagIndexForLayer(state, layerName);
     if (position == null) return zoomStep;
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, which magnifications are loaded and other settings,
@@ -181,7 +181,7 @@ export class OxalisModel {
     position: Vector3,
   ): Promise<number> {
     const state = Store.getState();
-    const zoomStep = getRequestLogZoomStep(state);
+    const zoomStep = getActiveMagIndexForLayer(state, layerName);
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, the available magnifications and other settings,
     // the ultimately rendered zoom step has to be determined.

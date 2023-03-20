@@ -28,6 +28,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Plane Display Mode in 3D View",
   tdViewDisplayDatasetBorders: "Display Dataset Borders in 3D View",
+  tdViewDisplayLayerBorders: "Display Layer Borders in 3D View",
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   segmentationOpacity: "Segmentation Opacity",
@@ -56,7 +57,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   renderMissingDataBlack:
     "If disabled, missing data will be rendered by using downsampled magnifications.",
   gpuMemoryFactor:
-    "Controls which data magnification is displayed, depending on zoom value and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
+    "Controls which data magnification is displayed, depending on zoom value and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance. This setting also influences how much memory the graphics card will allocate.",
   useLegacyBindings:
     "When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.",
   dynamicSpaceDirection:
@@ -356,6 +357,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This download does only include the volume data annotated in the tasks of this project. The fallback volume data is excluded.",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
+  "team.no_members": "This team has no members assigned yet.",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",
   "auth.registration_email_input": "Please input your E-mail!",
   "auth.registration_email_invalid": "The input is not valid E-mail!",

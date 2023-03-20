@@ -66,14 +66,13 @@ case class Job(
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
-        case JobCommand.CONVERT_TO_WKW =>
+        case JobCommand.CONVERT_TO_WKW | JobCommand.COMPUTE_MESH_FILE =>
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
         case JobCommand.EXPORT_TIFF =>
           Some(s"/api/jobs/${this._id}/export")
-        case JobCommand.INFER_NUCLEI | JobCommand.INFER_NEURONS | JobCommand.MATERIALIZE_VOLUME_ANNOTATION |
-            JobCommand.COMPUTE_MESH_FILE =>
+        case JobCommand.INFER_NUCLEI | JobCommand.INFER_NEURONS | JobCommand.MATERIALIZE_VOLUME_ANNOTATION =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }

@@ -3,7 +3,7 @@ package backend
 import org.scalatestplus.play.PlaySpec
 
 import java.net.URI
-import com.scalableminds.webknossos.datastore.datavault.{GoogleCloudDataVault, HttpsDataVault, VaultPath}
+import com.scalableminds.webknossos.datastore.datavault.{DataVault, GoogleCloudDataVault, HttpsDataVault, VaultPath}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
 
 import scala.collection.immutable.NumericRange
@@ -20,7 +20,7 @@ class DataVaultTestSuite extends PlaySpec {
           val uri = new URI("http://storage.googleapis.com/")
           val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
           val bytes =
-            (vaultPath / s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes(Some(range)).get
+            (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes(Some(range)).get
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -31,7 +31,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / s"fafb_v14_orig/$dataKey").readBytes(Some(range)).get
+          val bytes = (vaultPath / dataKey).readBytes(Some(range)).get
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -46,7 +46,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("http://storage.googleapis.com/")
           val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / s"/neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes().get
+          val bytes = (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes().get
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -57,12 +57,57 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / s"fafb_v14_orig/$dataKey").readBytes().get
+          val bytes = (vaultPath / dataKey).readBytes().get
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
         }
       }
+    }
+
+    "using vault path" when {
+      class MockDataVault extends DataVault {
+        override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = ???
+      }
+
+      "Uri has no trailing slash" should {
+        val someUri = new URI("protocol://host/a/b")
+        val somePath = new VaultPath(someUri, new MockDataVault)
+
+        "resolve child" in {
+          val childPath = somePath / "c"
+          assert(childPath.toUri.toString == s"${someUri.toString}/c")
+        }
+
+        "get parent" in {
+          assert((somePath / "..").toString == "protocol://host/a/")
+        }
+
+        "get directory" in {
+          assert((somePath / ".").toString == s"${someUri.toString}/")
+        }
+
+        "handle sequential parameters" in {
+          assert((somePath / "c" / "d" / "e").toString == "protocol://host/a/b/c/d/e")
+        }
+      }
+      "Uri has trailing slash" should {
+        val trailingSlashUri = new URI("protocol://host/a/b/")
+        val trailingSlashPath = new VaultPath(trailingSlashUri, new MockDataVault)
+        "resolve child" in {
+          val childPath = trailingSlashPath / "c"
+          assert(childPath.toUri.toString == s"${trailingSlashUri.toString}c")
+        }
+
+        "get parent" in {
+          assert((trailingSlashPath / "..").toString == "protocol://host/a/")
+        }
+
+        "get directory" in {
+          assert((trailingSlashPath / ".").toString == s"${trailingSlashUri.toString}")
+        }
+      }
+
     }
   }
 }

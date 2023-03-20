@@ -19,7 +19,6 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
 
   override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(PrecomputedLayer, Vec3Double)]] =
     for {
-      _ <- Fox.bool2Fox(remotePath.toUri.toString.last == '/') ?~> "Remote dataset explore path must be a directory (indicated by trailing slash)"
       infoPath <- Fox.successful(remotePath.resolve(PrecomputedHeader.FILENAME_INFO))
       precomputedHeader <- parseJsonFromPath[PrecomputedHeader](infoPath) ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
       layerAndVoxelSize <- layerFromPrecomputedHeader(precomputedHeader, remotePath, credentialId)

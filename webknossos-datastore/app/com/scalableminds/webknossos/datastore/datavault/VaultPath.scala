@@ -54,7 +54,11 @@ class VaultPath(uri: URI, dataVault: DataVault) extends Path {
   override def resolve(other: Path): Path = this / other.toString
 
   def /(key: String): VaultPath =
-    new VaultPath(uri.resolve(key), dataVault)
+    if (uri.toString.endsWith("/")) {
+      new VaultPath(uri.resolve(key), dataVault)
+    } else {
+      new VaultPath(new URI(s"${uri.toString}/").resolve(key), dataVault)
+    }
 
   override def relativize(other: Path): Path = ???
 

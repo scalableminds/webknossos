@@ -223,7 +223,6 @@ class EditableMappingService @Inject()(
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo, remoteFallbackLayer, userToken)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
-      splitSegmentToAgglomerate = graph2.segments.map(_ -> agglomerateId2).toMap
       _ <- updateSegmentToAgglomerate(editableMappingId, newVersion, graph2.segments, agglomerateId2)
       _ <- updateAgglomerateGraph(editableMappingId, newVersion, update.agglomerateId, graph1)
       _ <- updateAgglomerateGraph(editableMappingId, newVersion, agglomerateId2, graph2)
@@ -232,7 +231,29 @@ class EditableMappingService @Inject()(
   private def updateSegmentToAgglomerate(mappingId: String,
                                          newVersion: Long,
                                          segmentIdsToUpdate: Seq[Long],
-                                         agglomerateId: Long): Fox[Unit] = ???
+                                         agglomerateId: Long): Fox[Unit] =
+    for {
+      chunkedSegmentIds: Map[Long, Seq[Long]] <- Fox.successful(
+        segmentIdsToUpdate.groupBy(_ / defaultSegmentToAgglomerateChunkSize))
+      _ <- Fox.serialCombined(chunkedSegmentIds.keys.toList) { chunkId =>
+        updateSegmentToAgglomerateChunk(mappingId, newVersion, agglomerateId, chunkId, chunkedSegmentIds(chunkId))
+      }
+    } yield ()
+
+  private def updateSegmentToAgglomerateChunk(mappingId: String,
+                                              newVersion: Long,
+                                              agglomerateId: Long,
+                                              chunkId: Long,
+                                              segmentIdsToUpdate: Seq[Long]): Fox[Unit] =
+    for {
+      existingChunk: Seq[(Long, Long)] <- getSegmentToAgglomerateChunk(mappingId,
+                                                                       chunkId,
+                                                                       Set.empty,
+                                                                       filterSelected = false)
+      chunkMap = existingChunk.toMap
+      mergedMap = chunkMap ++ segmentIdsToUpdate.map(_ -> agglomerateId).toMap
+      // TODO: save merged map
+    } yield ()
 
   private def updateAgglomerateGraph(mappingId: String,
                                      newVersion: Long,
@@ -417,27 +438,34 @@ class EditableMappingService @Inject()(
     val chunkIds = segmentIds.map(_ / defaultSegmentToAgglomerateChunkSize)
     for { // TODO: optimization: fossil-multiget
       maps: List[Seq[(Long, Long)]] <- Fox.serialCombined(chunkIds.toList)(chunkId =>
-        getSegmentToAgglomerateChunk(editableMappingId, chunkId, segmentIds))
+        getSegmentToAgglomerateChunk(editableMappingId, chunkId, segmentIds, filterSelected = true))
     } yield maps.flatten.toMap
   }
 
+  // TODO remove filterSelected logic, do filtering outside of here if needed
   private def getSegmentToAgglomerateChunk(editableMappingId: String,
                                            chunkId: Long,
-                                           segmentIds: Set[Long]): Fox[Seq[(Long, Long)]] =
+                                           segmentIds: Set[Long],
+                                           filterSelected: Boolean): Fox[Seq[(Long, Long)]] =
     for {
       chunkBox: Box[SegmentToAgglomerateProto] <- getSegmentToAgglomerateChunkProto(editableMappingId, chunkId).futureBox
       segmentToAgglomerate <- chunkBox match {
-        case Full(chunk) => Fox.successful(filterSegmentToAgglomerateChunk(chunk, segmentIds))
+        case Full(chunk) => Fox.successful(filterSegmentToAgglomerateChunk(chunk, segmentIds, filterSelected))
         case Empty       => Fox.successful(Seq.empty[(Long, Long)])
         case f: Failure  => f.toFox
       }
     } yield segmentToAgglomerate
 
   private def filterSegmentToAgglomerateChunk(segmentToAgglomerateProto: SegmentToAgglomerateProto,
-                                              segmentIds: Set[Long]): Seq[(Long, Long)] =
-    segmentToAgglomerateProto.segmentToAgglomerate
-      .filter(pair => segmentIds.contains(pair.segmentId))
-      .map(pair => pair.segmentId -> pair.agglomerateId)
+                                              segmentIds: Set[Long],
+                                              filterSelected: Boolean): Seq[(Long, Long)] =
+    if (filterSelected) {
+      segmentToAgglomerateProto.segmentToAgglomerate
+        .filter(pair => segmentIds.contains(pair.segmentId))
+        .map(pair => pair.segmentId -> pair.agglomerateId)
+    } else {
+      segmentToAgglomerateProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
+    }
 
   private def getSegmentToAgglomerateChunkProto(editableMappingId: String,
                                                 agglomerateId: Long,

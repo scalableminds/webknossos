@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
 import com.scalableminds.webknossos.datastore.LongList.LongList
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
@@ -69,7 +68,8 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
       for {
         _ <- dataSourceService.checkInbox(verbose = true)
-      } yield Ok
+        map: Map[String, Seq[String]] = Map(("hi", Seq("you")))
+      } yield Redirect("hi", map, 303)
     }
   }
 

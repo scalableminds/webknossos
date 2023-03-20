@@ -4,7 +4,7 @@ import {
   getTermsOfService,
   requiresTermsOfServiceAcceptance,
 } from "admin/api/terms_of_service";
-import { Modal, Spin } from "antd";
+import { Dropdown, MenuProps, Modal, Space, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { useFetch } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
@@ -13,6 +13,11 @@ import type { OxalisState } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { formatDateInLocalTimeZone } from "./formatted_date";
+import { switchTo } from "navbar";
+import { getUsersOrganizations } from "admin/admin_rest_api";
+import { DownOutlined } from "@ant-design/icons";
+import _ from "lodash";
+import { APIUser } from "types/api_flow_types";
 
 const SNOOZE_DURATION_IN_DAYS = 3;
 const LAST_TERMS_OF_SERVICE_WARNING_KEY = "lastTermsOfServiceWarning";
@@ -68,6 +73,7 @@ export function CheckTermsOfServices() {
         onAccept={onAccept}
         isModalOpen={isModalOpen}
         closeModal={closeModal}
+        activeUser={activeUser}
       />
     );
   } else {
@@ -76,9 +82,44 @@ export function CheckTermsOfServices() {
         acceptanceInfo={acceptanceInfo}
         isModalOpen={isModalOpen}
         closeModal={closeModal}
+        activeUser={activeUser}
       />
     );
   }
+}
+
+function OrganizationSwitchMenu({
+  activeUser,
+  style,
+}: {
+  activeUser: APIUser;
+  style?: React.CSSProperties;
+}) {
+  const { organization: organizationName } = activeUser;
+  const usersOrganizations = useFetch(getUsersOrganizations, [], []);
+  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
+  const isMultiMember = switchableOrganizations.length > 0;
+
+  if (!isMultiMember) {
+    return null;
+  }
+
+  const items: MenuProps["items"] = switchableOrganizations.map((org) => ({
+    key: org.name,
+    onClick: () => switchTo(org),
+    label: org.displayName || org.name,
+  }));
+
+  return (
+    <Dropdown menu={{ items }}>
+      <a onClick={(e) => e.preventDefault()}>
+        <Space style={style}>
+          Switch Organization
+          <DownOutlined />
+        </Space>
+      </a>
+    </Dropdown>
+  );
 }
 
 function AcceptTermsOfServiceModal({
@@ -86,11 +127,13 @@ function AcceptTermsOfServiceModal({
   acceptanceInfo,
   isModalOpen,
   closeModal,
+  activeUser,
 }: {
   onAccept: (version: number) => Promise<void>;
   acceptanceInfo: AcceptanceInfo;
   isModalOpen: boolean;
   closeModal: () => void;
+  activeUser: APIUser;
 }) {
   const terms = useFetch(getTermsOfService, null, []);
 
@@ -105,6 +148,7 @@ function AcceptTermsOfServiceModal({
       width={850}
       maskClosable={false}
       footer={[
+        <OrganizationSwitchMenu activeUser={activeUser} style={{ marginRight: 12 }} />,
         <AsyncButton
           type="primary"
           loading={terms?.url == null}
@@ -142,10 +186,12 @@ function TermsOfServiceAcceptanceMissingModal({
   acceptanceInfo,
   isModalOpen,
   closeModal,
+  activeUser,
 }: {
   acceptanceInfo: AcceptanceInfo;
   isModalOpen: boolean;
   closeModal: () => void;
+  activeUser: APIUser;
 }) {
   const deadlineExplanation = getDeadlineExplanation(acceptanceInfo);
   return (
@@ -153,7 +199,7 @@ function TermsOfServiceAcceptanceMissingModal({
       open={isModalOpen}
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={closeModal}
-      footer={null}
+      footer={[<OrganizationSwitchMenu activeUser={activeUser} />]}
       maskClosable={false}
     >
       Please ask the organization owner to accept the terms of services. {deadlineExplanation}

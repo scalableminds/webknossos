@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Upgraded antd UI library to v4.24.8 [#6865](https://github.com/scalableminds/webknossos/pull/6865)
 - The view mode dropdown was slimmed down by using icons to make the toolbar more space efficient. [#6900](https://github.com/scalableminds/webknossos/pull/6900)
 - Updated the styling of the "welcome" screen for new users to be in line with the new branding. [#6904](https://github.com/scalableminds/webknossos/pull/6904)
+- Improved Terms-of-Service modal (e.g., allow to switch organization even when modal was blocking the remaining usage of WEBKNOSSOS). [#6930](https://github.com/scalableminds/webknossos/pull/6930)
 
 ### Fixed
 - Fixed a bug where N5 datasets reading with end-chunks that have a chunk size differing from the metadata-supplied chunk size would fail for some areas. [#6890](https://github.com/scalableminds/webknossos/pull/6890)

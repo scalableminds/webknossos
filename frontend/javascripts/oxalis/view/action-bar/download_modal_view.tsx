@@ -435,6 +435,10 @@ with wk.webknossos_context(
     activeTabKey === "export" &&
     runningExportJobs.some(([key]) => key === exportKey(selectedLayerInfos, mag));
 
+  const isOkButtonDisabled =
+    activeTabKey === "export" &&
+    (!isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled);
+
   return (
     <Modal
       title="Download this annotation"
@@ -445,7 +449,7 @@ with wk.webknossos_context(
           <Button
             key="ok"
             type="primary"
-            disabled={!isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled}
+            disabled={isOkButtonDisabled}
             onClick={handleOk}
             loading={isCurrentlyRunningExportJob}
           >

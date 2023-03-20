@@ -77,11 +77,7 @@ object S3DataVault {
   private def isShortStyle(uri: URI): Boolean =
     !uri.getHost.contains(".")
 
-  /*
-    With uri given to explore the dataset, get a string that will be used as a prefix for all further
-    keys that are requested
-   */
-  def getObjectKeyFromUri(uri: URI): Option[String] =
+  private def getObjectKeyFromUri(uri: URI): Option[String] =
     if (isVirtualHostedStyle(uri)) {
       Some(uri.getPath)
     } else if (isPathStyle(uri)) {

@@ -1970,7 +1970,7 @@ class DataApi {
   }
 
   /*
-   * _Experimental_ API for creating transformation matrices based on an array of TransformerSpec's.
+   * _Experimental_ API for creating transformation matrices based on an array of TransformerSpecs.
    * Can be used in combination with _setLayerTransforms.
    *
    * A TransformerSpec can be one of the following

@@ -146,7 +146,7 @@ void main() {
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
     return;
   }
-  vec3 data_color = vec4(0.0);
+  vec3 data_color = vec3(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     vec4 <%= segmentationName%>_id_low = vec4(0.);
@@ -167,7 +167,7 @@ void main() {
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
-      color_value =
+      vec4 maybe_filtered_color_value =
         getMaybeFilteredColorOrFallback(
           <%= name %>_lookup_texture,
           <%= formatNumberAsGLSLFloat(layerIndex) %>,
@@ -176,7 +176,8 @@ void main() {
           worldCoordUVW,
           false,
           fallbackGray
-        ).xyz;
+        );
+      color_value = maybe_filtered_color_value.rgb;
 
       <% if (packingDegreeLookup[name] === 2.0) { %>
         // Workaround for 16-bit color layers
@@ -201,10 +202,10 @@ void main() {
       vec3 additive_color = data_color + color_value;
       // cover blendmode == 0
       // TODO: gimp calls this blend mode "merge" -> rename
-      float is_already_covered = data_color.a != 0.0;
-      vec3 cover_color = mix(color_value, data_color, is_already_covered);
+      float is_valid_color = float(maybe_filtered_color_value.a > 0.0);
+      vec3 cover_color = mix(data_color, color_value, is_valid_color);
       // Multiply with color and alpha for <%= name %>
-      data_color = mix(cover_color, additive_color, float(<%= name %>_blendMode == 1));
+      data_color = mix(cover_color, additive_color, float(blendMode == 1));
     }
   <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);

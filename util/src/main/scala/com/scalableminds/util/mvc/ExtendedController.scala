@@ -34,7 +34,7 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
       case Empty =>
         new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
     }
-    allowRemoteOriginIfSelected(result)
+    allowRemoteOriginIfSelected(addNoCacheHeader(result))
   }
 
   private def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
@@ -66,6 +66,9 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
     if (allowRemoteOrigin) {
       addRemoteOriginHeaders(result)
     } else result
+
+  private def addNoCacheHeader(result: Result): Result =
+    result.withHeaders("Cache-Control" -> "no-cache")
 
 }
 

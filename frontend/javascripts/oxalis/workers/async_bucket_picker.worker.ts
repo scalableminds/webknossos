@@ -1,12 +1,10 @@
 import PriorityQueue from "js-priority-queue";
-import type { Area } from "oxalis/model/accessors/flycam_accessor";
-import type { LoadingStrategy } from "oxalis/store";
+import type { LoadingStrategy, PlaneRects } from "oxalis/store";
 import { Matrix4x4 } from "libs/mjs";
-import type { OrthoViewMap, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { expose } from "./comlink_wrapper";
 
 type PriorityItem = {
@@ -48,18 +46,14 @@ function pick(
   matrix: Matrix4x4,
   logZoomStep: number,
   loadingStrategy: LoadingStrategy,
-  anchorPoint: Vector4,
-  areas: OrthoViewMap<Area>,
-  subBucketLocality: Vector3,
-  gpuFactor: number,
+  rects: PlaneRects,
 ): ArrayBuffer {
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
   });
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucketAddress' implicitly has an 'any' ... Remove this comment to see the full error message
-  const enqueueFunction = (bucketAddress, priority) => {
+  const enqueueFunction = (bucketAddress: Vector4, priority: number) => {
     bucketQueue.queue({
       bucketAddress,
       priority,
@@ -67,7 +61,16 @@ function pick(
   };
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(resolutions, position, enqueueFunction, matrix, logZoomStep);
+    determineBucketsForOblique(
+      viewMode,
+      loadingStrategy,
+      resolutions,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+    );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
       resolutions,
@@ -78,16 +81,15 @@ function pick(
       logZoomStep,
     );
   } else {
-    determineBucketsForOrthogonal(
-      resolutions,
-      enqueueFunction,
+    determineBucketsForOblique(
+      viewMode,
       loadingStrategy,
+      resolutions,
+      position,
+      enqueueFunction,
+      matrix,
       logZoomStep,
-      anchorPoint,
-      areas,
-      subBucketLocality,
-      null,
-      gpuFactor,
+      rects,
     );
   }
 

@@ -8,21 +8,23 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.03.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...HEAD)
 
 ### Added
-- Added support for remote Zarr datasets with a `datasource-properties.json` as created by the WEBKNOSSOS Python library. [#6879](https://github.com/scalableminds/webknossos/pull/6879)
+- Added support for datasets where layers are transformed individually (with an affine matrix). Transformations can be specified via datasource-properties.json or via JS API (will be ephemeral, then). [#6748](https://github.com/scalableminds/webknossos/pull/6748)
+- Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
 
 ### Changed
-- Upgraded antd UI library to v4.24.8 [#6865](https://github.com/scalableminds/webknossos/pull/6865)
-- The view mode dropdown was slimmed down by using icons to make the toolbar more space efficient. [#6900](https://github.com/scalableminds/webknossos/pull/6900)
+- Interpolation during rendering is now more performance intensive, since the rendering approach was changed. Therefore, interpolation is disabled by default. On the flip side, the rendered quality is often higher than it used to be. [#6748](https://github.com/scalableminds/webknossos/pull/6748)
+- Updated the styling of the "welcome" screen for new users to be in line with the new branding. [#6904](https://github.com/scalableminds/webknossos/pull/6904)
+- Improved Terms-of-Service modal (e.g., allow to switch organization even when modal was blocking the remaining usage of WEBKNOSSOS). [#6930](https://github.com/scalableminds/webknossos/pull/6930)
 
 ### Fixed
-- Fixed a bug where N5 datasets reading with end-chunks that have a chunk size differing from the metadata-supplied chunk size would fail for some areas. [#6890](https://github.com/scalableminds/webknossos/pull/6890)
-- Fixed potential crash when trying to edit certain annotation properties of a shared annotation. [#6892](https://github.com/scalableminds/webknossos/pull/6892)
-- Fixed a bug where merging multiple volume annotations would result in inconsistent segment lists. [#6882](https://github.com/scalableminds/webknossos/pull/6882)
-- Fixed a bug where uploading multiple annotations with volume layers at once would fail. [#6882](https://github.com/scalableminds/webknossos/pull/6882)
-- Fixed a bug where dates were formatted incorrectly in Voxelytics reports. [#6908](https://github.com/scalableminds/webknossos/pull/6908)
+- Fixed an issue with text hints not being visible on the logout page for dark mode users. [#6916](https://github.com/scalableminds/webknossos/pull/6916)
+- Fixed creating task types with a selected preferred mode. [#6928](https://github.com/scalableminds/webknossos/pull/6928)
+- Fixed support for rendering of negative floats. [#6895](https://github.com/scalableminds/webknossos/pull/6895)
+- Fixed caching issues with webworkers. [#6932](https://github.com/scalableminds/webknossos/pull/6932)
+- Fixed download button for annotations which was disabled in some cases. [#6931](https://github.com/scalableminds/webknossos/pull/6931)
 
 ### Removed
 

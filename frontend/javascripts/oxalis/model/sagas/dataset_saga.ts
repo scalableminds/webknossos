@@ -6,9 +6,16 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { sleep } from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getEnabledLayers } from "../accessors/dataset_accessor";
-import { getCurrentResolution } from "../accessors/flycam_accessor";
+import {
+  getEnabledLayers,
+  getResolutionInfo,
+  getTransformsForLayer,
+  invertAndTranspose,
+  isLayerVisible,
+} from "../accessors/dataset_accessor";
+import { getCurrentResolution, Identity4x4 } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
+import { V3 } from "libs/mjs";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -40,42 +47,91 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
 let userClosedWarning = false;
 export function* watchZ1Downsampling(): Saga<void> {
   function* maybeShowWarning(): Saga<void> {
+    if (userClosedWarning) {
+      return;
+    }
     // In combination with `takeLatest` sleeping here at the beginning of the saga
     // effectively debounces the saga to avoid that it is executed unnecessarily often.
     yield* call(sleep, 200);
-    const currentRes = yield* select((state) => getCurrentResolution(state));
+
+    const dataLayers = yield* select((state) => state.dataset.dataSource.dataLayers);
+
+    let showWarning = false;
     const currentZoomStep = yield* select((state) => state.flycam.zoomStep);
-    if (currentZoomStep < 1) {
-      // If the user has zoomed into the data,
-      // the rendering quality is expected to be relatively low.
-      // Don't show any warnings in that case.
-      return;
-    }
-    const minVoxelPerPixel = 0.1;
-    if (!userClosedWarning) {
-      // checking only the downsampled dimensions x and y
+    for (const dataLayer of dataLayers) {
+      if (currentZoomStep < 1) {
+        // If the user has zoomed into the data,
+        // the rendering quality is expected to be relatively low.
+        // Don't show any warnings in that case.
+        break;
+      }
+      const isVisible = yield* select((state) => {
+        return isLayerVisible(
+          state.dataset,
+          dataLayer.name,
+          state.datasetConfiguration,
+          state.temporaryConfiguration.viewMode,
+        );
+      });
+      if (!isVisible) {
+        continue;
+      }
+
+      let scaleX = 1;
+      let scaleY = 1;
+      const transformMatrix = getTransformsForLayer(dataLayer);
+      if (transformMatrix !== Identity4x4) {
+        const matrix = invertAndTranspose(transformMatrix);
+        // A scale greater than 1 "shrinks" the data (effectively improving
+        // the rendered quality as more voxels are used for rendering a region
+        // than before).
+        // See [1] for how the background on how to extract the scale from a matrix.
+        // [1] https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
+        scaleX = V3.length([matrix[0], matrix[4], matrix[8]]);
+        scaleY = V3.length([matrix[1], matrix[5], matrix[9]]);
+      }
+
+      const currentRes = yield* select((state) => getCurrentResolution(state, dataLayer.name));
+      if (currentRes == null) {
+        // The layer cannot be rendered. For example, because the user zoomed out and there
+        // is no appropriate mag for that layer.
+        break;
+      }
+      const resolutionInfo = getResolutionInfo(dataLayer.resolutions);
+      const bestExistingIndex = resolutionInfo.getClosestExistingIndex(0);
+      const currentIndex = resolutionInfo.getIndexByResolution(currentRes);
+      if (currentIndex <= bestExistingIndex) {
+        // There's no better mag to render the current layer in.
+        continue;
+      }
+
+      const minVoxelPerPixel = 0.1;
       const extents = yield* select((state) => getViewportExtents(state));
       const areas = [extents.PLANE_XY, extents.PLANE_YZ, extents.PLANE_XZ].map(
         ([width, height]) => width * height,
       );
       const areDataviewportsInvisible = sum(areas) === 0;
 
-      const showWarning =
-        (currentZoomStep / currentRes[0] < minVoxelPerPixel ||
-          currentZoomStep / currentRes[1] < minVoxelPerPixel) &&
+      // Check only the downsampled dimensions x and y
+      showWarning =
+        ((currentZoomStep / currentRes[0]) * scaleX < minVoxelPerPixel ||
+          (currentZoomStep / currentRes[1]) * scaleY < minVoxelPerPixel) &&
         !areDataviewportsInvisible;
 
       if (showWarning) {
-        Toast.warning(messages["dataset.z1_downsampling_hint"], {
-          sticky: true,
-          key: "DOWNSAMPLING_CAUSES_BAD_QUALITY",
-          onClose: () => {
-            userClosedWarning = true;
-          },
-        });
-      } else {
-        Toast.close("DOWNSAMPLING_CAUSES_BAD_QUALITY");
+        break;
       }
+    }
+    if (showWarning) {
+      Toast.warning(messages["dataset.z1_downsampling_hint"], {
+        sticky: true,
+        key: "DOWNSAMPLING_CAUSES_BAD_QUALITY",
+        onClose: () => {
+          userClosedWarning = true;
+        },
+      });
+    } else {
+      Toast.close("DOWNSAMPLING_CAUSES_BAD_QUALITY");
     }
   }
   yield* take("WK_READY");

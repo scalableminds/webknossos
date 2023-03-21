@@ -3,7 +3,6 @@ import _ from "lodash";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
-import type { Vector4 } from "oxalis/constants";
 import constants, { OrthoViews } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
@@ -45,13 +44,6 @@ class ArbitraryPlane {
     this.materialFactory.stopListening();
   }
 
-  updateAnchorPoints(anchorPoint: Vector4 | null | undefined): void {
-    if (anchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
-      this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
-    }
-  }
-
   setPosition = (x: number, y: number, z: number) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
     this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
@@ -69,8 +61,7 @@ class ArbitraryPlane {
     if (this.isDirty) {
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mesh' implicitly has an 'any' type.
-      const updateMesh = (mesh) => {
+      const updateMesh = (mesh: THREE.Mesh | null | undefined) => {
         if (!mesh) {
           return;
         }
@@ -108,8 +99,7 @@ class ArbitraryPlane {
   }
 
   createMeshes(): ArbitraryMeshes {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_plane' implicitly has an 'any' type.
-    const adaptPlane = (_plane) => {
+    const adaptPlane = (_plane: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>) => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;
       _plane.material.side = THREE.DoubleSide;

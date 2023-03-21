@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
@@ -15,14 +16,14 @@ import java.util
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatasetArray(relativePath: DatasetPath,
-                   store: FileSystemStore,
+                   vaultPath: VaultPath,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int])
     extends LazyLogging {
 
   protected val chunkReader: ChunkReader =
-    ChunkReader.create(store, header)
+    ChunkReader.create(vaultPath, header)
 
   // cache currently limited to 1 GB per array
   private lazy val chunkContentsCache: Cache[String, MultiArray] = {
@@ -126,7 +127,7 @@ class DatasetArray(relativePath: DatasetPath,
 
   override def toString: String =
     s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.datasetShape.mkString(
-      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
+      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.getName}}"
 
 }
 

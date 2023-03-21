@@ -65,7 +65,7 @@ export const layerViewConfiguration = {
 };
 export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = {
   fourBit: false,
-  interpolation: true,
+  interpolation: false,
   renderMissingDataBlack: false,
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,

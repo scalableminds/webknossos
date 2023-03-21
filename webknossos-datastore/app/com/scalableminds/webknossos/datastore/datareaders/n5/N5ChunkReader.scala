@@ -1,14 +1,15 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader, FileSystemStore, ChunkTyper}
+import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, ChunkTyper, DatasetHeader}
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.util.Using
 
 object N5ChunkReader {
-  def create(store: FileSystemStore, header: DatasetHeader): ChunkReader =
-    new N5ChunkReader(header, store, ChunkReader.createChunkTyper(header))
+  def create(vaultPath: VaultPath, header: DatasetHeader): ChunkReader =
+    new N5ChunkReader(header, vaultPath, ChunkReader.createChunkTyper(header))
 }
 
 // N5 allows for a 'varmode' which means that the number of elements in the chunk can deviate from the set chunk size.
@@ -16,8 +17,8 @@ object N5ChunkReader {
 // Here, we provide only provide one implementation to handle the `varmode`:
 // N5ChunkReader, always fills the chunk to the bytes necessary
 
-class N5ChunkReader(header: DatasetHeader, store: FileSystemStore, typedChunkReader: ChunkTyper)
-    extends ChunkReader(header, store, typedChunkReader)
+class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReader: ChunkTyper)
+    extends ChunkReader(header, vaultPath, typedChunkReader)
     with LazyLogging {
 
   val dataExtractor: N5DataExtractor = new N5DataExtractor
@@ -36,7 +37,7 @@ class N5ChunkReader(header: DatasetHeader, store: FileSystemStore, typedChunkRea
       }
 
       for {
-        bytes <- store.readBytes(path)
+        bytes <- (vaultPath / path).readBytes()
         (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
         paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
       } yield (paddedChunkBytes, Some(blockHeader.blockSize))

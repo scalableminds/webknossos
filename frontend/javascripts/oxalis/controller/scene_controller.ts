@@ -42,53 +42,12 @@ import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import { mergeVertices } from "libs/BufferGeometryUtils";
-import { getTDViewportLOD } from "oxalis/model/accessors/view_mode_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/isosurface_saga";
+import CustomLOD from "oxalis/controller/custom_lod";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
-
-class CustomLOD extends THREE.LOD {
-  noLODGroup: THREE.Group;
-  lodLevelCount: number;
-  constructor() {
-    super();
-    this.lodLevelCount = 0;
-    this.noLODGroup = new THREE.Group();
-    this.add(this.noLODGroup);
-  }
-
-  update(_camera: any) {
-    const levels = this.levels;
-
-    const visibleIndex = getTDViewportLOD(Store.getState());
-    // Keep level 0 always visible as this includes all meshes that do not have different LODs.
-    for (let i = 0; i < this.levels.length; i++) {
-      levels[i].object.visible = i === visibleIndex;
-    }
-  }
-
-  addNoLODSupportedMesh(meshGroup: THREE.Group) {
-    this.noLODGroup.add(meshGroup);
-  }
-
-  addLODMesh(meshGroup: THREE.Group, level: number) {
-    while (this.lodLevelCount <= level) {
-      this.addLevel(new THREE.Object3D(), this.lodLevelCount);
-      this.lodLevelCount++;
-    }
-    this.levels[level].object.add(meshGroup);
-  }
-
-  removeNoLODSupportedMesh(meshGroup: THREE.Group) {
-    this.noLODGroup.remove(meshGroup);
-  }
-
-  removeLODMesh(meshGroup: THREE.Group, level: number) {
-    this.levels[level].object.remove(meshGroup);
-  }
-}
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};

@@ -94,7 +94,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
     }
 
-    positionCreationIter((1 to iterationCount).toList, List[Vec3Int]()) :+ dataLayer.boundingBox.topLeft
+    val positions = positionCreationIter((1 to iterationCount).toList, List[Vec3Int]()) :+ dataLayer.boundingBox.topLeft
+    positions.map(_.alignWithGridFloor(Vec3Int.full(DataLayer.bucketLength))).distinct
   }
 
   private def checkAllPositionsForData(dataSource: DataSource,

@@ -26,7 +26,7 @@ class DatasetArray(relativePath: DatasetPath,
     ChunkReader.create(vaultPath, header)
 
   // cache currently limited to 1 GB per array
-  private lazy val chunkContentsCache: Cache[Array[Int], MultiArray] = {
+  private lazy val chunkContentsCache: Cache[String, MultiArray] = {
     val maxSizeBytes = 1000L * 1000 * 1000
     val maxEntries = maxSizeBytes / header.bytesPerChunk
     AlfuCache(maxEntries.toInt)
@@ -73,7 +73,7 @@ class DatasetArray(relativePath: DatasetPath,
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetInCOrder: MultiArray =
         MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
-      val wasCopiedFox = Fox.serialCombined(chunkIndices) { chunkIndex: Array[Int] =>
+      val copiedFuture = Future.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
           offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
@@ -82,16 +82,17 @@ class DatasetArray(relativePath: DatasetPath,
                                                                              flip = header.order != ArrayOrder.C)
           _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
         } yield ()
-      }
+      })
       for {
-        _ <- wasCopiedFox
+        _ <- copiedFuture
       } yield targetBuffer
     }
   }
+
   protected def readShardedChunk(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[Array[Byte]] = ???
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
-    chunkContentsCache.getOrLoad(chunkIndex, index => readSourceChunkData(index))
+    chunkContentsCache.getOrLoad(chunkIndex.mkString(","), key => readSourceChunkData(chunkIndex))
 
   private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
     if (header.isSharded) {
@@ -105,7 +106,6 @@ class DatasetArray(relativePath: DatasetPath,
       val chunkFilePath = relativePath.resolve(chunkFilename)
       val storeKey = chunkFilePath.storeKey
       val chunkShape = header.chunkSizeAtIndex(chunkIndex)
-
       chunkReader.read(storeKey, chunkShape)
     }
 

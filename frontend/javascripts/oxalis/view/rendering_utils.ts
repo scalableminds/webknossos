@@ -89,6 +89,15 @@ export function renderToTexture(
   renderer.setRenderTarget(null);
   return buffer;
 }
+
+function getScreenshotLogoImage(): Promise<HTMLImageElement> {
+  const logo = document.createElement("img");
+  logo.src = "/assets/images/logo-screenshot.svg";
+  return new Promise((resolve) => {
+    logo.onload = () => resolve(logo);
+  });
+}
+
 export async function downloadScreenshot() {
   const { dataset, flycam, temporaryConfiguration } = Store.getState();
   const { viewMode } = temporaryConfiguration;
@@ -97,7 +106,7 @@ export async function downloadScreenshot() {
   const baseName = `${datasetName}__${x}_${y}_${z}`;
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
-  const logo = await getSCreenshotLogoImage();
+  const logo = await getScreenshotLogoImage();
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
@@ -155,14 +164,4 @@ export async function downloadScreenshot() {
     }
   }
   logo.remove();
-}
-
-function getSCreenshotLogoImage(): Promise<HTMLImageElement> {
-  const logo = document.createElement("img");
-  logo.style.height = Constants.SCALEBAR_HEIGHT + "px";
-  logo.style.width = "auto";
-  logo.src = "/assets/images/logo-screenshot.svg";
-  return new Promise((resolve) => {
-    logo.onload = () => resolve(logo);
-  });
 }

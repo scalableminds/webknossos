@@ -331,6 +331,7 @@ export type UserConfiguration = {
   readonly sphericalCapRadius: number;
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
+  readonly tdViewDisplayLayerBorders: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -445,15 +446,16 @@ export type PartialCameraData = {
   readonly lookAt?: Vector3;
   readonly position?: Vector3;
 };
+export type PlaneRects = {
+  readonly PLANE_XY: Rect;
+  readonly PLANE_YZ: Rect;
+  readonly PLANE_XZ: Rect;
+  readonly TDView: Rect;
+};
 export type PlaneModeData = {
   readonly activeViewport: OrthoView;
   readonly tdCamera: CameraData;
-  readonly inputCatcherRects: {
-    readonly PLANE_XY: Rect;
-    readonly PLANE_YZ: Rect;
-    readonly PLANE_XZ: Rect;
-    readonly TDView: Rect;
-  };
+  readonly inputCatcherRects: PlaneRects;
 };
 type ArbitraryModeData = {
   readonly inputCatcherRect: Rect;

@@ -14,6 +14,7 @@ import {
   hasEditableMapping,
   isMappingActivationAllowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { setRotationReducer } from "./flycam_reducer";
 
 //
 // Update helpers
@@ -178,9 +179,16 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const { allowedModes } = state.tracing.restrictions;
 
       if (allowedModes.includes(action.viewMode)) {
-        return updateTemporaryConfig(state, {
+        const newState = updateTemporaryConfig(state, {
           viewMode: action.viewMode,
         });
+        if (action.viewMode !== "orthogonal") {
+          return newState;
+        }
+        // Restore rotation because it might have been changed by the user
+        // in flight/oblique mode. Since this affects the matrix (which is
+        // also used in orthogonal mode), the rotation needs to be reset.
+        return setRotationReducer(newState, [0, 0, 0]);
       } else {
         return state;
       }

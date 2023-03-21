@@ -27,6 +27,7 @@ function prepare {
     --format=cjs \
     --define:process.env.IS_TESTING=\"true\" \
     --target=node12 \
+    --log-level=error \
     --outdir="$testBundlePath" $($FIND frontend/javascripts \( -name "*.ts" -o -name "*.tsx" \))
 
   # Copy files which were not compiled by esbuild (e.g., snapshots).
@@ -67,6 +68,7 @@ then
   export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-debug" ]
 then
+  ensureUpToDateTests
   export NODE_PATH="$testBundlePath" && ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-changed" ]
 then

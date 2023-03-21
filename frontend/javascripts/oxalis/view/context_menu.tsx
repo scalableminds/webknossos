@@ -1,4 +1,4 @@
-import { CopyOutlined } from "@ant-design/icons";
+import { CopyOutlined, PushpinOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
@@ -167,12 +167,6 @@ type NoNodeContextMenuProps = Props & {
   activeTool: AnnotationTool;
   infoRows: ItemType[];
 };
-
-const MenuLabel: React.FunctionComponent = ({ children }) => <span>{children}</span>;
-export const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
-  { children: React.ReactNode },
-  typeof MenuLabel
->(MenuLabel);
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -363,7 +357,7 @@ function getMaybeMinCutItem(
   };
 }
 
-function getMaybeMeshItems(
+function getMeshItems(
   maybeClickedMeshId: number | null | undefined,
   maybeMeshIntersectionPosition: Vector3 | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
@@ -372,13 +366,13 @@ function getMaybeMeshItems(
   hideMesh: (segmentationLayerName: string, meshId: number) => void,
   setPosition: (position: Vector3) => void,
   refreshMesh: (segmentationLayerName: string, meshId: number) => void,
-): MenuItemType[] | null {
+): MenuItemType[] {
   if (
     maybeClickedMeshId == null ||
     maybeMeshIntersectionPosition == null ||
     visibleSegmentationLayer == null
   ) {
-    return null;
+    return [];
   }
 
   return [
@@ -463,7 +457,7 @@ function NodeContextMenuOptions({
     );
   }
 
-  const maybeMeshItems = getMaybeMeshItems(
+  const meshItems = getMeshItems(
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
@@ -561,7 +555,7 @@ function NodeContextMenuOptions({
               },
         ]
       : []),
-    ...(maybeMeshItems ? maybeMeshItems : []),
+    ...meshItems,
     isTheSameNode
       ? null
       : {
@@ -891,22 +885,17 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
       className: "node-context-menu-item",
       key: "load-synapses",
       disabled: !isConnectomeMappingEnabled.value,
-      label: (
-        <MenuItemWithMappingActivationConfirmation
-          onClick={() => loadSynapsesOfAgglomerateAtPosition(globalPosition)}
-          mappingName={connectomeFileMappingName}
-          descriptor="connectome file"
-          layerName={segmentationLayerName}
-          mappingInfo={mappingInfo}
-        >
-          {isConnectomeMappingEnabled.value ? (
-            "Import Agglomerate and Synapses"
-          ) : (
-            <Tooltip title={isConnectomeMappingEnabled.reason}>
-              Import Agglomerate and Synapses
-            </Tooltip>
-          )}
-        </MenuItemWithMappingActivationConfirmation>
+      onClick: withMappingActivationConfirmation(
+        () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
+        connectomeFileMappingName,
+        "connectome file",
+        segmentationLayerName,
+        mappingInfo,
+      ),
+      label: isConnectomeMappingEnabled.value ? (
+        "Import Agglomerate and Synapses"
+      ) : (
+        <Tooltip title={isConnectomeMappingEnabled.reason}>Import Agglomerate and Synapses</Tooltip>
       ),
     };
     // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
@@ -917,17 +906,14 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
-    label: (
-      <MenuItemWithMappingActivationConfirmation
-        onClick={loadPrecomputedMesh}
-        mappingName={meshFileMappingName}
-        descriptor="mesh file"
-        layerName={segmentationLayerName}
-        mappingInfo={mappingInfo}
-      >
-        Load Mesh (precomputed)
-      </MenuItemWithMappingActivationConfirmation>
+    onClick: withMappingActivationConfirmation(
+      loadPrecomputedMesh,
+      meshFileMappingName,
+      "mesh file",
+      segmentationLayerName,
+      mappingInfo,
     ),
+    label: "Load Mesh (precomputed)",
   };
   const computeMeshAdHocItem = {
     key: "compute-mesh-adhc",
@@ -973,7 +959,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
   let allActions: ItemType[] = [];
 
-  const maybeMeshRelatedItems = getMaybeMeshItems(
+  const meshRelatedItems = getMeshItems(
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
@@ -991,8 +977,8 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
   } else {
     allActions = [...nonSkeletonActions, ...skeletonActions, ...boundingBoxActions];
   }
-  if (maybeMeshRelatedItems) {
-    allActions = allActions.concat(maybeMeshRelatedItems);
+  if (meshRelatedItems) {
+    allActions = allActions.concat(meshRelatedItems);
   }
 
   const empty: ItemType = {
@@ -1168,7 +1154,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <i className="fas fa-map-marker-alt" /> Position: {nodePositionAsString}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position:{" "}
+          {nodePositionAsString}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
         </>,
       ),
@@ -1179,7 +1166,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <i className="fa-solid fa-location-dot" /> Position: {positionAsString}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position: {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
         </>,
       ),

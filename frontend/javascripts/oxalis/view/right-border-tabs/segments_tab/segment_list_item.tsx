@@ -30,7 +30,7 @@ import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
-import { MenuItemWithMappingActivationConfirmation } from "oxalis/view/context_menu";
+import { withMappingActivationConfirmation } from "./segments_view_helper";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -57,42 +57,41 @@ const getLoadPrecomputedMeshMenuItem = (
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   return {
     key: "loadPrecomputedMesh",
-    label: (
-      <MenuItemWithMappingActivationConfirmation
-        onClick={() => {
-          if (!currentMeshFile) {
-            return;
-          }
-          if (!segment.somePosition) {
-            Toast.info(
-              <React.Fragment>
-                Cannot load a mesh for this segment, because its position is unknown.
-              </React.Fragment>,
-            );
-            andCloseContextMenu();
-            return;
-          }
-          andCloseContextMenu(
-            loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
+    disabled: !currentMeshFile,
+    onClick: withMappingActivationConfirmation(
+      () => {
+        if (!currentMeshFile) {
+          return;
+        }
+        if (!segment.somePosition) {
+          Toast.info(
+            <React.Fragment>
+              Cannot load a mesh for this segment, because its position is unknown.
+            </React.Fragment>,
           );
-        }}
-        disabled={!currentMeshFile}
-        mappingName={mappingName}
-        descriptor="mesh file"
-        layerName={layerName}
-        mappingInfo={mappingInfo}
+          andCloseContextMenu();
+          return;
+        }
+        andCloseContextMenu(
+          loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
+        );
+      },
+      mappingName,
+      "mesh file",
+      layerName,
+      mappingInfo,
+    ),
+    label: (
+      <Tooltip
+        key="tooltip"
+        title={
+          currentMeshFile != null
+            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
+            : "There is no mesh file."
+        }
       >
-        <Tooltip
-          key="tooltip"
-          title={
-            currentMeshFile != null
-              ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
-              : "There is no mesh file."
-          }
-        >
-          Load Mesh (precomputed)
-        </Tooltip>
-      </MenuItemWithMappingActivationConfirmation>
+        Load Mesh (precomputed)
+      </Tooltip>
     ),
   };
 };

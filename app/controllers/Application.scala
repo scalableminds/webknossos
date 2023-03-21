@@ -45,13 +45,15 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
     } yield {
       addRemoteOriginHeaders(
-        Ok(Json.obj(
-          "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
-          "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
-          "schemaVersion" -> schemaVersion.toOption,
-          "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
-          "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
-        )))
+        addNoCacheHeaderFallback(
+          Ok(Json.obj(
+            "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
+            "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
+            "schemaVersion" -> schemaVersion.toOption,
+            "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
+            "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
+          )))
+      )
     }
   }
 
@@ -66,12 +68,13 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
 
   @ApiOperation(hidden = true, value = "")
   def features: Action[AnyContent] = sil.UserAwareAction {
-    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
+    addNoCacheHeaderFallback(
+      Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())))
   }
 
   @ApiOperation(value = "Health endpoint")
   def health: Action[AnyContent] = Action {
-    Ok("Ok")
+    addNoCacheHeaderFallback(Ok("Ok"))
   }
 
   @ApiOperation(hidden = true, value = "")

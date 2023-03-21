@@ -67,7 +67,7 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
       addRemoteOriginHeaders(result)
     } else result
 
-  private def addNoCacheHeaderFallback(result: Result): Result =
+  def addNoCacheHeaderFallback(result: Result): Result =
     if (result.header.headers.contains(CACHE_CONTROL)) {
       result
     } else result.withHeaders(CACHE_CONTROL -> "no-cache")

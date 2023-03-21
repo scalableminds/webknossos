@@ -23,6 +23,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed an issue with text hints not being visible on the logout page for dark mode users. [#6916](https://github.com/scalableminds/webknossos/pull/6916)
 - Fixed creating task types with a selected preferred mode. [#6928](https://github.com/scalableminds/webknossos/pull/6928)
 - Fixed support for rendering of negative floats. [#6895](https://github.com/scalableminds/webknossos/pull/6895)
+- Fixed caching issues with webworkers. [#6932](https://github.com/scalableminds/webknossos/pull/6932)
+- Fixed download button for annotations which was disabled in some cases. [#6931](https://github.com/scalableminds/webknossos/pull/6931)
 
 ### Removed
 

@@ -34,7 +34,7 @@ function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   ];
 }
 
-function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
+export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
   return M4x4.rotate(angle, axis, currentMatrix, []);
 }
 

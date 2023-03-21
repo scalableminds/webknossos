@@ -31,7 +31,6 @@ import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import LinkButton from "components/link_button";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import { stringToColor } from "libs/format_utils";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import Persistence from "libs/persistence";
@@ -43,6 +42,7 @@ import messages from "messages";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -543,28 +543,9 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="teams"
               key="teams_"
               width={250}
-              render={(_teams: APITeamMembership[], user: APIUser) => {
-                const tags = [
-                  ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
-                  ...(user.isAdmin
-                    ? [["Admin - Access to all Teams", "red"]]
-                    : [
-                        ...(user.isDatasetManager
-                          ? [["Dataset Manager - Edit all Datasets", "geekblue"]]
-                          : []),
-                        ...user.teams.map((team) => {
-                          const roleName = team.isTeamManager ? "Team Manager" : "Member";
-                          return [`${team.name}: ${roleName}`, stringToColor(roleName)];
-                        }),
-                      ]),
-                ];
-
-                return tags.map(([text, color]) => (
-                  <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
-                    {text}
-                  </Tag>
-                ));
-              }}
+              render={(_teams: APITeamMembership[], user: APIUser) =>
+                renderTeamRolesAndPermissionsForUser(user)
+              }
             />
             <Column
               title="Status"

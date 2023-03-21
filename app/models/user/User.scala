@@ -417,14 +417,18 @@ class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
   def findAllByLayerNameForUserAndDataset(layerNames: List[String],
                                           userId: ObjectId,
                                           dataSetId: ObjectId): Fox[Map[String, LayerViewConfiguration]] =
-    for {
-      rows <- run(q"""select layerName, viewConfiguration
+    if (layerNames.isEmpty) {
+      Fox.successful(Map.empty[String, LayerViewConfiguration])
+    } else {
+      for {
+        rows <- run(q"""select layerName, viewConfiguration
                       from webknossos.user_dataSetLayerConfigurations
                       where _dataset = $dataSetId
                       and _user = $userId
                       and layerName in ${SqlToken.tupleFromList(layerNames)}""".as[(String, String)])
-      parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
-    } yield parsed.toMap
+        parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
+      } yield parsed.toMap
+    }
 
   def updateDatasetConfigurationForUserAndDatasetAndLayer(
       userId: ObjectId,

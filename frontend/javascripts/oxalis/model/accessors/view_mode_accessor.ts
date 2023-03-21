@@ -9,6 +9,7 @@ import type {
   Point2,
   Vector3,
   ViewMode,
+  Vector2,
 } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
@@ -42,8 +43,7 @@ export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rec
 }
 
 const _getViewportExtents = memoizeOne((rects) => {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rect' implicitly has an 'any' type.
-  const getExtent = (rect) => [rect.width, rect.height];
+  const getExtent = (rect: Rect): Vector2 => [rect.width, rect.height];
 
   return {
     PLANE_XY: getExtent(rects.PLANE_XY),
@@ -58,7 +58,6 @@ export function getViewportRects(state: OxalisState) {
 }
 export function getViewportExtents(state: OxalisState): OrthoViewExtents {
   const rects = state.viewModeData.plane.inputCatcherRects;
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ PLANE_XY: any[]; PLANE_YZ: any[]; PLANE_XZ... Remove this comment to see the full error message
   return _getViewportExtents(rects);
 }
 export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewport): number {

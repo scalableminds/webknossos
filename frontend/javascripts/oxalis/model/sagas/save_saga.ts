@@ -1091,7 +1091,7 @@ export function* setupSavingForTracingType(
     const allowUpdate = yield* select(
       (state) => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
     );
-    if (!allowUpdate) return;
+    if (!allowUpdate) continue;
     const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
       | VolumeTracing
       | SkeletonTracing;

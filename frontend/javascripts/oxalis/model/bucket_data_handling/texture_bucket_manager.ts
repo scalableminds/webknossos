@@ -334,14 +334,4 @@ export default class TextureBucketManager {
       this.freeBucket(bucket);
     });
   }
-
-  _getBaseBucketAddresses(
-    bucket: DataBucket,
-    zoomStepDifference: number,
-    maxZoomStepDifference: number,
-  ): Array<Vector4> {
-    if (zoomStepDifference > maxZoomStepDifference) return [];
-    const resolutions = getResolutions(Store.getState().dataset);
-    return getBaseBucketsForFallbackBucket(bucket.zoomedAddress, zoomStepDifference, resolutions);
-  }
 }

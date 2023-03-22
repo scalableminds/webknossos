@@ -221,7 +221,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
     state.dataset.dataSource.scale,
-    getResolutions(state.dataset),
+    getResolutionInfo(layer.resolutions).getDenseResolutions(),
     getViewportRects(state),
     Math.min(
       state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,

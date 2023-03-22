@@ -31,6 +31,7 @@ import {
   invertAndTranspose,
   getTransformsForLayer,
   getResolutionInfoByLayer,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -49,6 +50,7 @@ import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import { V3 } from "libs/mjs";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -395,6 +397,43 @@ class PlaneMaterialFactory {
         (storeState) => getActiveMagIndicesForLayers(storeState),
         (activeMagIndices) => {
           this.uniforms.activeMagIndices.value = Object.values(activeMagIndices);
+
+          // The vertex shader looks up the buckets for rendering so that the
+          // fragment shader doesn't need to do so. Currently, this only works
+          // for layers that don't have a transformation (otherwise, the differing
+          // grids wouldn't align with each other).
+          // To align the vertices with the buckets, the current magnification is
+          // needed. Since the current mag can differ from layer to layer, the shader
+          // needs to know which mag is safe to use.
+          // For this purpose, we define the representativeMagForVertexAlignment which is
+          // an artificial mag (meaning, there's not necessarily a layer with that exact
+          // mag). It is derived from the layers that are not transformed by considering
+          // the minimum for each axis.
+          // If all layers have a transform, the representativeMagForVertexAlignment
+          // isn't relevant which is why it can default to [1, 1, 1].
+
+          let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
+          for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
+            const layer = getLayerByName(Store.getState().dataset, layerName);
+            const activeMag = getResolutionInfo(layer.resolutions).getDenseResolutions()[
+              activeMagIndex
+            ];
+            const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
+            if (!hasTransform) {
+              representativeMagForVertexAlignment = V3.min(
+                representativeMagForVertexAlignment,
+                activeMag,
+              );
+            }
+          }
+
+          if (Math.max(...representativeMagForVertexAlignment) == Infinity) {
+            representativeMagForVertexAlignment = [1, 1, 1];
+          }
+          console.log("representativeMagForVertexAlignment", representativeMagForVertexAlignment);
+          this.uniforms.representativeMagForVertexAlignment = {
+            value: representativeMagForVertexAlignment,
+          };
         },
         true,
       ),
@@ -523,7 +562,6 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.dataLayers,
         (layers) => {
-          let representativeLayerIdxForMag = null;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
@@ -534,25 +572,7 @@ class PlaneMaterialFactory {
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
-            if (representativeLayerIdxForMag == null && !hasTransform) {
-              representativeLayerIdxForMag = layerIdx;
-            }
           }
-
-          // The vertex shader looks up the buckets for rendering so that the
-          // fragment shader doesn't need to do so. Currently, this only works
-          // for layers that don't have a transformation (otherwise, the differing
-          // grids wouldn't align with each other).
-          // To align the vertices with the buckets, the current magnification is
-          // needed. Since the current mag can differ from layer to layer, the shader
-          // needs to know which mag is safe to use.
-          // For this purpose, we define the representativeLayerIdxForMag which is
-          // essentially an index to *some* layer that doesn't have any transforms.
-          // If all layers have a transform, the representativeLayerIdxForMag
-          // isn't relevant which is why it can default to 0.
-          this.uniforms.representativeLayerIdxForMag = {
-            value: representativeLayerIdxForMag || 0,
-          };
         },
         true,
       ),

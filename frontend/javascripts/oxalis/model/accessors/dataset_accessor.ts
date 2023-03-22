@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
@@ -280,6 +279,11 @@ function _getResolutionInfoByLayer(dataset: APIDataset): Record<string, Resoluti
 
 export const getResolutionInfoByLayer = _.memoize(_getResolutionInfoByLayer);
 
+// unused?
+export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: string) {
+  return getResolutionInfoByLayer(dataset)[layerName].getDenseResolutions();
+}
+
 // todo
 // Don't use memoizeOne here, since we want to cache the resolutions for all layers
 // (which are not that many).
@@ -361,20 +365,24 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
 // on the returned resolutions are. To avoid busting memoization caches (which rely on references),
 // we memoize _getResolutions, as well.
 export const getResolutions = memoizeOne(_getResolutions);
+
 export function deprecated_getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
   return getResolutionInfo(getResolutions(dataset));
 }
 
-function _getMaxZoomStep(maybeDataset: APIDataset | null | undefined): number {
+function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
-  const maxZoomstep = Maybe.fromNullable(maybeDataset)
-    .map((dataset) =>
-      Math.max(
-        minimumZoomStepCount,
-        Math.max(0, ...getResolutions(dataset).map((r) => Math.max(r[0], r[1], r[2]))),
-      ),
-    )
-    .getOrElse(2 ** (minimumZoomStepCount - 1));
+
+  if (!dataset) {
+    return 2 ** (minimumZoomStepCount - 1);
+  }
+
+  const maxZoomstep = Math.max(
+    minimumZoomStepCount,
+    // todo: compute for all layers
+    Math.max(0, ...getResolutions(dataset).map((r) => Math.max(r[0], r[1], r[2]))),
+  );
+
   return maxZoomstep;
 }
 
@@ -870,6 +878,7 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
+// used for valid task range
 function _keyResolutionsByMax(dataset: APIDataset): Record<number, Vector3> {
   const resolutions = getResolutions(dataset);
   return _.keyBy(resolutions, (res) => Math.max(...res));

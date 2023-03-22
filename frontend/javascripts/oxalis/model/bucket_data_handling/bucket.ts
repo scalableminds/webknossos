@@ -625,37 +625,6 @@ export class DataBucket {
     return this.cube.layerName;
   }
 
-  getFallbackBucket(): Bucket {
-    if (this._fallbackBucket != null) {
-      return this._fallbackBucket;
-    }
-
-    const zoomStep = this.zoomedAddress[3];
-    const fallbackZoomStep = zoomStep + 1;
-    const resolutions = getResolutions(Store.getState().dataset);
-
-    if (fallbackZoomStep >= resolutions.length) {
-      this._fallbackBucket = NULL_BUCKET;
-      return NULL_BUCKET;
-    }
-
-    const fallbackBucketAddress = zoomedAddressToAnotherZoomStep(
-      this.zoomedAddress,
-      resolutions,
-      fallbackZoomStep,
-    );
-    const fallbackBucket = this.cube.getOrCreateBucket(fallbackBucketAddress);
-    this._fallbackBucket = fallbackBucket;
-
-    if (fallbackBucket.type !== "null") {
-      fallbackBucket.once("bucketCollected", () => {
-        this._fallbackBucket = null;
-      });
-    }
-
-    return fallbackBucket;
-  }
-
   merge(fetchedData: BucketDataArray): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");

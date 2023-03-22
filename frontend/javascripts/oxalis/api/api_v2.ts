@@ -22,10 +22,7 @@ import {
   getActiveTree,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  deprecated_getDatasetResolutionInfo,
-  getLayerBoundaries,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";

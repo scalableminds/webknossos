@@ -300,7 +300,7 @@ flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
 
 uniform bool is3DViewBeingRendered;
-uniform uint representativeLayerIdxForMag;
+uniform vec3 representativeMagForVertexAlignment;
 
 ${SHARED_UNIFORM_DECLARATIONS}
 
@@ -358,10 +358,8 @@ void main() {
   // Invert vertical axis to make calculation more intuitive with top-left coordinates.
   index.y = PLANE_SUBDIVISION - index.y;
 
-  uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
   // d is the width/height of a bucket in the current resolution.
-  // todo: this needs to use the finest resolution of all current ones.
-  vec2 d = transDim(vec3(bucketWidth) * getResolution(activeMagIdx, representativeLayerIdxForMag)).xy;
+  vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 datasetScaleUVW = transDim(datasetScale);
   vec3 transWorldCoord = transDim(worldCoord.xyz);

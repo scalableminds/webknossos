@@ -30,6 +30,7 @@ import {
   getLayerByName,
   invertAndTranspose,
   getTransformsForLayer,
+  getResolutionInfoByLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -437,9 +438,26 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getResolutions(storeState.dataset),
-        (resolutions) => {
-          this.uniforms.resolutions = { value: _.flatten(resolutions) };
+        (storeState) => getResolutionInfoByLayer(storeState.dataset),
+        (resolutionInfosByLayer) => {
+          const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
+            resInfo.getDenseResolutions(),
+          );
+          const flatResolutions = _.flattenDeep(allDenseResolutions);
+          this.uniforms.allResolutions = {
+            value: flatResolutions,
+          };
+
+          let cumSum = 0;
+          const resolutionCountCumSum = [cumSum];
+          for (const denseResolutions of allDenseResolutions) {
+            cumSum += denseResolutions.length;
+            resolutionCountCumSum.push(cumSum);
+          }
+
+          this.uniforms.resolutionCountCumSum = {
+            value: resolutionCountCumSum,
+          };
         },
         true,
       ),
@@ -869,7 +887,7 @@ class PlaneMaterialFactory {
       packingDegreeLookup,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
-      resolutionsCount: getResolutions(dataset).length,
+      resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
     });
@@ -877,6 +895,16 @@ class PlaneMaterialFactory {
       code,
       { availableLayerIndexToGlobalLayerIndex: { value: availableLayerIndexToGlobalLayerIndex } },
     ];
+  }
+
+  // todo: move somewhere else?
+  getTotalResolutionCount(): number {
+    const storeState = Store.getState();
+    const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(
+      (resInfo) => resInfo.getDenseResolutions(),
+    );
+    const flatResolutions = _.flatten(allDenseResolutions);
+    return flatResolutions.length;
   }
 
   getVertexShader(): string {
@@ -895,7 +923,7 @@ class PlaneMaterialFactory {
       packingDegreeLookup,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
-      resolutionsCount: getResolutions(dataset).length,
+      resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
     });

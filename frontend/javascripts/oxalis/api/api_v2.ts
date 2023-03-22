@@ -23,7 +23,7 @@ import {
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
-  getDatasetResolutionInfo,
+  deprecated_getDatasetResolutionInfo,
   getLayerBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
@@ -633,24 +633,7 @@ class DataApi {
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const { dataset } = Store.getState();
-    const resolutionInfo = getDatasetResolutionInfo(dataset);
-    const resolution = resolutionInfo.getLowestResolution();
-    const magString = resolution.join("-");
-    return doWithToken((token) => {
-      const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
-        `token=${token}&` +
-        `x=${topLeft[0]}&` +
-        `y=${topLeft[1]}&` +
-        `z=${topLeft[2]}&` +
-        `width=${bottomRight[0] - topLeft[0]}&` +
-        `height=${bottomRight[1] - topLeft[1]}&` +
-        `depth=${bottomRight[2] - topLeft[2]}`;
-      window.open(downloadUrl);
-      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
-      return Promise.resolve();
-    });
+    throw new Error("Please use at least version 3 of the webknossos API.");
   }
 
   /**

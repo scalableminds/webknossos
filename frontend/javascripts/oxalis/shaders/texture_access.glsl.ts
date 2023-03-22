@@ -197,7 +197,7 @@ export const getColorForCoords: ShaderModule = {
       bool beSafe = false;
       {
         renderedMagIdx = outputMagIdx[globalLayerIndex];
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         vec3 offsetInBucketUVW = transDim(offsetInBucket);
@@ -211,7 +211,7 @@ export const getColorForCoords: ShaderModule = {
       if (beSafe || !supportsPrecomputedBucketAddress) {
         for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
           renderedMagIdx = activeMagIdx + i;
-          vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+          vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
           vec3 absoluteBucketPosition = div(coords, bucketWidth);
           offsetInBucket = mod(coords, bucketWidth);
           bucketAddress = lookUpBucket(
@@ -228,7 +228,7 @@ export const getColorForCoords: ShaderModule = {
         // Use mag that was precomputed in vertex shader. Also,
         // lookUpBucket() will use the precomputed address.
         renderedMagIdx = outputMagIdx[globalLayerIndex];
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
@@ -271,8 +271,8 @@ export const getColorForCoords: ShaderModule = {
          * with the resolution factor. A typical resolution factor is 2.
          */
 
-        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx);
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx));
+        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx, globalLayerIndex);
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx, globalLayerIndex));
         offsetInBucket = mod(coords, bucketWidth);
         vec3 worldBucketPosition = div(coords, bucketWidth);
 

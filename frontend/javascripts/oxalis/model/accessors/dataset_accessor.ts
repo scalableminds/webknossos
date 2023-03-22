@@ -268,6 +268,19 @@ function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
 }
 
+function _getResolutionInfoByLayer(dataset: APIDataset): Record<string, ResolutionInfo> {
+  const infos: Record<string, ResolutionInfo> = {};
+
+  for (const layer of dataset.dataSource.dataLayers) {
+    infos[layer.name] = getResolutionInfo(layer.resolutions);
+  }
+
+  return infos;
+}
+
+export const getResolutionInfoByLayer = _.memoize(_getResolutionInfoByLayer);
+
+// todo
 // Don't use memoizeOne here, since we want to cache the resolutions for all layers
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
@@ -299,6 +312,8 @@ export function getResolutionUnion(
 
   return _.chain(resolutionUnionDict).values().sortBy(maxValue).valueOf();
 }
+
+// todo
 export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
   // Each resolution entry can be characterized by it's greatest resolution dimension.
   // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
@@ -346,7 +361,7 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
 // on the returned resolutions are. To avoid busting memoization caches (which rely on references),
 // we memoize _getResolutions, as well.
 export const getResolutions = memoizeOne(_getResolutions);
-export function getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
+export function deprecated_getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
   return getResolutionInfo(getResolutions(dataset));
 }
 

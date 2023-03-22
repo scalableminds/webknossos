@@ -23,7 +23,6 @@ import {
   getBoundaries,
   getDataLayers,
   getDatasetCenter,
-  getResolutionUnion,
   hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
@@ -397,19 +396,7 @@ function initializeDataset(
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
 
-  ensureMatchingLayerResolutions(mutableDataset);
   Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
-}
-
-export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
-  try {
-    getResolutionUnion(dataset, true);
-  } catch (exception) {
-    console.warn(exception);
-    Toast.error(messages["dataset.resolution_mismatch"], {
-      sticky: true,
-    });
-  }
 }
 
 function initializeSettings(

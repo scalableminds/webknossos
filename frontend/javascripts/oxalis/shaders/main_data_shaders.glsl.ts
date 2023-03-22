@@ -48,7 +48,8 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 resolutions[<%= resolutionsCount %>];
+uniform vec3 allResolutions[<%= resolutionsCount %>];
+uniform uint resolutionCountCumSum[<%= globalLayerCount %>];
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
@@ -165,7 +166,7 @@ void main() {
     // first renderable layer.
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[0u];
     uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
-    vec3 absoluteCoords = getAbsoluteCoords(worldCoordUVW, activeMagIdx);
+    vec3 absoluteCoords = getAbsoluteCoords(worldCoordUVW, activeMagIdx, globalLayerIndex);
     vec3 bucketPosition = div(floor(absoluteCoords), bucketWidth);
     gl_FragColor = vec4(bucketPosition, activeMagIdx) / 255.;
     return;
@@ -299,7 +300,7 @@ flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
 
 uniform bool is3DViewBeingRendered;
-uniform int representativeLayerIdxForMag;
+uniform uint representativeLayerIdxForMag;
 
 ${SHARED_UNIFORM_DECLARATIONS}
 
@@ -359,7 +360,8 @@ void main() {
 
   uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
   // d is the width/height of a bucket in the current resolution.
-  vec2 d = transDim(vec3(bucketWidth) * getResolution(activeMagIdx)).xy;
+  // todo: this needs to use the finest resolution of all current ones.
+  vec2 d = transDim(vec3(bucketWidth) * getResolution(activeMagIdx, representativeLayerIdxForMag)).xy;
 
   vec3 datasetScaleUVW = transDim(datasetScale);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
@@ -415,7 +417,7 @@ void main() {
     outputMagIdx[globalLayerIndex] = 100u;
     for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
       renderedMagIdx = activeMagIdx + i;
-      vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
+      vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
       bucketAddress = lookUpBucket(
         globalLayerIndex,

@@ -13,6 +13,7 @@ function RegistrationViewNotDemo() {
   const history = useHistory();
   const [organization, setOrganization] = useState<APIOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     (async () => {
       setIsLoading(true);
@@ -25,6 +26,7 @@ function RegistrationViewNotDemo() {
       }
     })();
   }, []);
+
   let content = null;
 
   if (isLoading) {
@@ -80,7 +82,7 @@ function RegistrationViewNotDemo() {
   return (
     <Spin spinning={isLoading}>
       <Row justify="center" align="middle" className="login-view">
-        <Col className="login-content" style={{ width: 1000 }}>
+        <Col className="login-content drawing-signup" style={{ width: 1000 }}>
           <h3>Sign Up</h3>
           {content}
           <Link to="/auth/login">Already have an account? Login instead.</Link>

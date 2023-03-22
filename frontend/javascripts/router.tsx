@@ -114,19 +114,29 @@ browserHistory.listen((location) => {
 
 function PageNotFoundView() {
   return (
-    <div className="container background-organelles">
+    <div className="background-organelles" style={{ position: "relative" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%) translateY(-50%)",
+        }}
+      >
         <Result
           icon={<i className="drawing-404" />}
           status="warning"
           title={
             <span style={{ color: "white" }}>Sorry, the page you visited does not exist.</span>
           }
+          style={{ height: "100%" }}
           extra={[
             <Link to="/">
-              <Button type="secondary">Back to Dashboard</Button>
+              <Button>Back to Dashboard</Button>
             </Link>,
           ]}
         />
+      </div>
     </div>
   );
 }

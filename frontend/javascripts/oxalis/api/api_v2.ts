@@ -29,7 +29,7 @@ import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
 import type { Node, UserConfiguration, DatasetConfiguration, TreeMap, Mapping } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
-import window, { location } from "libs/window";
+import { location } from "libs/window";
 import * as Utils from "libs/utils";
 import {
   ControlModeEnum,
@@ -47,7 +47,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
-import { doWithToken, finishAnnotation, requestTask } from "admin/admin_rest_api";
+import { finishAnnotation, requestTask } from "admin/admin_rest_api";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 import type { ToastStyle } from "libs/toast";
@@ -629,7 +629,11 @@ class DataApi {
    * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
-  downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
+  downloadRawDataCuboid(
+    _layerName: string,
+    _topLeft: Vector3,
+    _bottomRight: Vector3,
+  ): Promise<void> {
     throw new Error("Please use at least version 3 of the webknossos API.");
   }
 

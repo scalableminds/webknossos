@@ -5,11 +5,7 @@ import type { ElementClass } from "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  bucketPositionToGlobalAddress,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";

@@ -19,7 +19,6 @@ import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_renderi
 import {
   getColorLayers,
   getDataLayers,
-  getResolutions,
   getByteCount,
   getElementClass,
   getBoundaries,
@@ -427,7 +426,7 @@ class PlaneMaterialFactory {
             }
           }
 
-          if (Math.max(...representativeMagForVertexAlignment) == Infinity) {
+          if (Math.max(...representativeMagForVertexAlignment) === Infinity) {
             representativeMagForVertexAlignment = [1, 1, 1];
           }
           console.log("representativeMagForVertexAlignment", representativeMagForVertexAlignment);

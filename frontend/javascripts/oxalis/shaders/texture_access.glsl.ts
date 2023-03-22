@@ -330,7 +330,10 @@ export const getColorForCoords: ShaderModule = {
       }
 
       if (packingDegree == 1.0) {
-        returnValue[1] = max(bucketColor, 0.0);
+        // Negative values in the alpha channel would result in this
+        // value being interpreted as missing. Therefore, we are clamping
+        // the alpha value.
+        returnValue[1] = vec4(bucketColor.xyz, max(bucketColor.a, 0.0));
         return returnValue;
       }
 
@@ -342,18 +345,18 @@ export const getColorForCoords: ShaderModule = {
         // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
         if (rgbaIndex == 0.0) {
           returnValue[1] = vec4(
-            max(bucketColor.r, 0.0),
-            max(bucketColor.g, 0.0),
-            max(bucketColor.r, 0.0),
-            max(bucketColor.g, 0.0)
+            bucketColor.r,
+            bucketColor.g,
+            bucketColor.r,
+            1.0
           );
           return returnValue;
         } else if (rgbaIndex == 1.0) {
           returnValue[1] = vec4(
-            max(bucketColor.b, 0.0),
-            max(bucketColor.a, 0.0),
-            max(bucketColor.b, 0.0),
-            max(bucketColor.a, 0.0)
+            bucketColor.b,
+            bucketColor.a,
+            bucketColor.b,
+            1.0
           );
           return returnValue;
         }
@@ -361,16 +364,16 @@ export const getColorForCoords: ShaderModule = {
 
       // The following code deals with packingDegree == 4.0
       if (rgbaIndex == 0.0) {
-        returnValue[1] = vec4(max(bucketColor.r, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.r), 1.0);
         return returnValue;
       } else if (rgbaIndex == 1.0) {
-        returnValue[1] = vec4(max(bucketColor.g, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.g), 1.0);
         return returnValue;
       } else if (rgbaIndex == 2.0) {
-        returnValue[1] = vec4(max(bucketColor.b, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.b), 1.0);
         return returnValue;
       } else if (rgbaIndex == 3.0) {
-        returnValue[1] = vec4(max(bucketColor.a, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.a), 1.0);
         return returnValue;
       }
 

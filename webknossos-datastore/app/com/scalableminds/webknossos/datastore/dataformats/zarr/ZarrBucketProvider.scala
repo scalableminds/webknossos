@@ -5,6 +5,7 @@ import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.FileSystemService
@@ -12,7 +13,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging with RateLimitedErrorLogging {
@@ -45,7 +45,7 @@ class ZarrBucketProvider(layer: ZarrLayer, val fileSystemServiceOpt: Option[File
         fileSystemServiceOpt match {
           case Some(fileSystemService: FileSystemService) =>
             for {
-              magPath: Path <- if (zarrMag.isRemote) {
+              magPath: VaultPath <- if (zarrMag.isRemote) {
                 fileSystemService.remotePathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(

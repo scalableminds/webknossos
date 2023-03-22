@@ -33,11 +33,13 @@ class Mappings {
     const renderer = getRenderer();
     this.mappingTexture = createUpdatableTexture(
       MAPPING_TEXTURE_WIDTH,
+      MAPPING_TEXTURE_WIDTH,
       4,
       THREE.UnsignedByteType,
       renderer,
     );
     this.mappingLookupTexture = createUpdatableTexture(
+      MAPPING_TEXTURE_WIDTH,
       MAPPING_TEXTURE_WIDTH,
       4,
       THREE.UnsignedByteType,

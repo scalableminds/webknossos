@@ -52,6 +52,7 @@ export default function DatasetSettingsViewConfigTab() {
       <Alert
         message="The following settings define the default configuration when viewing or creating an explorational annotation for this dataset. Use them to optimize the first appearance of your dataset."
         type="info"
+        style={{ marginBottom: 8 }}
         showIcon
       />
       <Row gutter={24}>

@@ -7,7 +7,13 @@ import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataLayer, ElementClass, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  CoordinateTransformation,
+  DataFormat,
+  DataLayer,
+  ElementClass,
+  SegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
 
@@ -62,6 +68,8 @@ case class EditableMappingLayer(name: String,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
   override def dataFormat: DataFormat.Value = DataFormat.wkw
+
+  override def coordinateTransformations: Option[List[CoordinateTransformation]] = None
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 

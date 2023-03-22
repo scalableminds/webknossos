@@ -15,7 +15,10 @@ import {
 import { Model, api } from "oxalis/singletons";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getFlooredPosition,
+  getActiveMagIndexForLayer,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -78,8 +81,8 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
 
-  const requestedZoomStep = getRequestLogZoomStep(state);
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+  const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);

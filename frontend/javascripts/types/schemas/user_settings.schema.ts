@@ -104,6 +104,9 @@ export const userSettings = {
   tdViewDisplayDatasetBorders: {
     type: "boolean",
   },
+  tdViewDisplayLayerBorders: {
+    type: "boolean",
+  },
   hideTreeRemovalWarning: {
     type: "boolean",
   },

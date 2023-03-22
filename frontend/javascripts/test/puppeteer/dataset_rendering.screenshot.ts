@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { TestInterface } from "ava";
 import anyTest from "ava";
@@ -18,6 +19,12 @@ import {
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
+}
+
+if (process.env.BROWSERSTACK_USERNAME == null || process.env.BROWSERSTACK_ACCESS_KEY == null) {
+  throw new Error(
+    "BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY must be defined as env variables.",
+  );
 }
 
 process.on("unhandledRejection", (err, promise) => {
@@ -71,6 +78,21 @@ test.beforeEach(async (t) => {
     ],
     dumpio: true,
   });
+
+  const caps = {
+    browser: "chrome",
+    browser_version: "latest",
+    os: "os x",
+    os_version: "mojave",
+    "browserstack.username": process.env.BROWSERSTACK_USERNAME,
+    "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
+  };
+  t.context.browser = await puppeteer.connect({
+    browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
+      JSON.stringify(caps),
+    )}`,
+  });
+
   console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
   global.Headers = Headers;
   global.fetch = fetch;
@@ -79,7 +101,8 @@ test.beforeEach(async (t) => {
   // @ts-expect-error ts-migrate(7017) FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
   global.FetchError = FetchError;
 });
-// These are the datasets that are available on our dev instance
+
+// These datasets are available on our dev instance (e.g., master.webknossos.xyz)
 const datasetNames = [
   "ROI2017_wkw",
   "2017-05-31_mSEM_aniso-test",
@@ -89,6 +112,7 @@ const datasetNames = [
   "float_test_dataset",
   "Multi-Channel-Test",
   "connectome_file_test_dataset",
+  "kiwi", // This dataset is rotated and translated.
 ];
 
 type DatasetName = string;
@@ -109,6 +133,7 @@ const viewOverrides: Record<string, string> = {
     '{"position":[63,67,118],"mode":"orthogonal","zoomStep":0.826,"stateByLayer":{"segmentation":{"meshInfo":{"meshFileName":"meshfile-with-name","meshes":[{"segmentId":4,"seedPosition":[64,75,118],"isPrecomputed":true,"meshFileName":"meshfile-with-name"},{"segmentId":12,"seedPosition":[107,125,118],"isPrecomputed":false,"mappingName":"agglomerate_view_70","mappingType":"HDF5"},{"segmentId":79,"seedPosition":[110,78,118],"isPrecomputed":false,"mappingName":null,"mappingType":null}]}}}}',
   connectome_file_test_dataset:
     '{"position":[102,109,60],"mode":"orthogonal","zoomStep":0.734,"stateByLayer":{"segmentation":{"connectomeInfo":{"connectomeName":"connectome","agglomerateIdsToImport":[1]}}}}',
+  kiwi: "1191,1112,21,0,8.746",
 };
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   ROI2017_wkw_fallback: {
@@ -136,6 +161,9 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
       },
     },
   },
+  dsA_2: {
+    interpolation: true,
+  },
 };
 
 async function withRetry(
@@ -143,6 +171,7 @@ async function withRetry(
   testFn: () => Promise<boolean>,
   resolveFn: (arg0: boolean) => void,
 ) {
+  retryCount = 3;
   for (let i = 0; i < retryCount; i++) {
     // eslint-disable-next-line no-await-in-loop
     const condition = await testFn();
@@ -377,6 +406,6 @@ test.serial(
     );
   },
 );
-test.afterEach(async (t) => {
+test.afterEach.always(async (t) => {
   await t.context.browser.close();
 });

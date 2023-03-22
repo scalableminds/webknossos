@@ -56,9 +56,10 @@ import {
   getEnabledColorLayers,
   getLayerBoundingBox,
   getResolutionInfo,
+  getTransformsForLayer,
 } from "../accessors/dataset_accessor";
 import Dimensions from "../dimensions";
-import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
@@ -152,7 +153,16 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     getSegmentationLayerForTracing(state, volumeTracing),
   );
 
-  const requestedZoomStep = yield* select((store) => getRequestLogZoomStep(store));
+  if (!_.isEqual(getTransformsForLayer(colorLayer), getTransformsForLayer(volumeLayer))) {
+    Toast.warning(
+      "Quick select is currently not supported if the color and volume layer use different transforms.",
+    );
+    return;
+  }
+
+  const requestedZoomStep = yield* select((store) =>
+    getActiveMagIndexForLayer(store, colorLayer.name),
+  );
   const resolutionInfo = getResolutionInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.

@@ -6,7 +6,7 @@ import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
-import { V3 } from "libs/mjs";
+import { M4x4, Matrix4x4, V3, Vector16 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import {
   addTreesAndGroupsAction,
@@ -76,7 +76,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
-  getRequestLogZoomStep,
+  getActiveMagIndexForLayer,
   getRotation,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -151,6 +151,12 @@ import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
+import { setLayerTransforms } from "oxalis/model/actions/dataset_actions";
+
+type TransformSpec =
+  | { type: "scale"; args: [Vector3, Vector3] }
+  | { type: "rotate"; args: [number, Vector3] }
+  | { type: "translate"; args: Vector3 };
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 export function assertExists<T>(value: any, message: string): asserts value is NonNullable<T> {
@@ -1403,7 +1409,7 @@ class DataApi {
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
     if (maybeResolutionIndex == null) {
-      maybeResolutionIndex = getRequestLogZoomStep(state);
+      maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
     }
     const zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
 
@@ -1942,6 +1948,87 @@ class DataApi {
     }
   }
 
+  /*
+   * _Experimental_ API for applying a transformation matrix to a given layer. Note
+   * that the transformation is only ephemeral for now. If you want to have persistent
+   * transformations, store these in the settings JSON of the dataset.
+   *
+   * @example
+   *
+   * api.data._setLayerTransforms(
+   *   "C555_DIAMOND_2f",
+   *   new Float32Array([
+   *     0.03901274364025348, -0.08498337289603758, 0.00782446404039791, 555.7948181512004,
+   *     0.18572293729076042, -0.029232702290255888, 0.059312326666574045, 135.9381974119121,
+   *     0.0348291535208472, 0.005388247300907645, -0.06501029448614315, 561.0668326314798,
+   *     0.0, 0.0, 0.0, 1.0,
+   *   ]),
+   * );
+   */
+  _setLayerTransforms(layerName: string, transforms: Matrix4x4) {
+    Store.dispatch(setLayerTransforms(layerName, Array.from(transforms) as Vector16));
+  }
+
+  /*
+   * _Experimental_ API for creating transformation matrices based on an array of TransformerSpecs.
+   * Can be used in combination with _setLayerTransforms.
+   *
+   * A TransformerSpec can be one of the following
+   *  - { type: "scale"; args: [[scaleX, scaleY, scaleZ], [anchorX, anchorY, anchorZ]] }
+   *  - { type: "rotate"; args: [thetaInRadAlongZAxis, [anchorX, anchorY, anchorZ]] }
+   *  - { type: "translate"; args: [offsetX, offsetY, offsetZ] };
+   *
+   * @example
+   * api.data._setLayerTransforms(
+   *  "color",
+   *   api.data._createTransformsFromSpecs([
+   *     {type: "rotate", args: [1, [3473, 3383, 1024]]},
+   *     {type: "translate", args: [0, 10, 0]}]
+   *   ),
+   * );
+   */
+  _createTransformsFromSpecs(specs: Array<TransformSpec>) {
+    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 =>
+      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+    const makeScale = (scale: Vector3, anchor: Vector3) =>
+      M4x4.mul(
+        M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),
+        makeTranslation(-anchor[0], -anchor[1], -anchor[2]),
+      );
+    const makeRotation = (thetaInRad: number, pos: Vector3) =>
+      M4x4.mul(
+        M4x4.mul(
+          makeTranslation(pos[0], pos[1], pos[2]),
+          // prettier-ignore
+          new Float32Array([
+            Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
+            -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
+            0, 0, 1, 0, 0, 0, 0, 1,
+          ]),
+        ),
+        makeTranslation(-pos[0], -pos[1], -pos[2]),
+      );
+
+    let matrix = makeTranslation(0, 0, 0);
+
+    for (const spec of specs) {
+      let argMatrix;
+
+      if (spec.type === "scale") {
+        argMatrix = makeScale(...spec.args);
+      } else if (spec.type === "rotate") {
+        argMatrix = makeRotation(...spec.args);
+      } else if (spec.type === "translate") {
+        argMatrix = makeTranslation(...spec.args);
+      } else {
+        throw new Error("Unknown transformation spec type");
+      }
+
+      matrix = M4x4.mul(argMatrix, matrix);
+    }
+    return M4x4.transpose(matrix);
+  }
+
   /**
    * Get the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
    * the currently visible segmentation layer will be used.
@@ -2016,6 +2103,7 @@ class UserApi {
     - scale
     - tdViewDisplayPlanes
     - tdViewDisplayDatasetBorders
+    - tdViewDisplayLayerBorders
     - newNodeNewTree
     - centerNewNode
     - highlightCommentedNodes

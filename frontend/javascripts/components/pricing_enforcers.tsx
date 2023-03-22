@@ -200,6 +200,7 @@ export function PageUnavailableForYourPlanView({
       <Result
         status="warning"
         title="Feature not available"
+        icon={<i className="drawing-paid-feature-not-available" />}
         subTitle={
           <p style={{ maxWidth: "500px", margin: "0 auto" }}>
             {getFeatureNotAvailableInPlanMessage(

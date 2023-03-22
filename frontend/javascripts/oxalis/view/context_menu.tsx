@@ -1,8 +1,8 @@
 import { CopyOutlined, PushpinOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps } from "antd";
-import { connect, useDispatch, useSelector } from "react-redux";
-import React, { createContext, MouseEvent, useContext, useEffect } from "react";
+import { connect } from "react-redux";
+import React, { createContext, MouseEvent, useContext } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -402,7 +402,7 @@ function getMeshItems(
   ];
 }
 
-function NodeContextMenuOptions({
+function getNodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
   maybeClickedMeshId,
@@ -427,9 +427,8 @@ function NodeContextMenuOptions({
   infoRows,
   allowUpdate,
 }: NodeContextMenuOptionsProps): ItemType[] {
-  const isProofreadingActive = useSelector(
-    (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
-  );
+  const state = Store.getState();
+  const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
 
   if (skeletonTracing == null) {
     throw new Error(
@@ -732,7 +731,7 @@ function getBoundingBoxMenuOptions({
   ];
 }
 
-function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
+function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
   const {
     skeletonTracing,
     volumeTracing,
@@ -757,17 +756,16 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
     infoRows,
     allowUpdate,
   } = props;
-  const dispatch = useDispatch();
-  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
-  const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
 
-  const isProofreadingActive = useSelector(
-    (state: OxalisState) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
-  );
+  const state = Store.getState();
+  const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
+  const isConnectomeMappingEnabled = hasConnectomeFile(state);
 
-  useEffect(() => {
-    dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
-  }, [visibleSegmentationLayer, dataset]);
+  const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+
+  // useEffect(() => {
+  Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
+  // }, [visibleSegmentationLayer, dataset]);
 
   const loadPrecomputedMesh = async () => {
     if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;
@@ -780,7 +778,9 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
       return;
     }
 
-    dispatch(loadPrecomputedMeshAction(segmentId, globalPosition, currentMeshFile.meshFileName));
+    Store.dispatch(
+      loadPrecomputedMeshAction(segmentId, globalPosition, currentMeshFile.meshFileName),
+    );
   };
 
   const computeMeshAdHoc = () => {
@@ -795,7 +795,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
       return;
     }
 
-    dispatch(loadAdHocMeshAction(segmentId, globalPosition));
+    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
@@ -1241,13 +1241,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     mode: "vertical",
     items:
       maybeClickedNodeId != null
-        ? NodeContextMenuOptions({
+        ? getNodeContextMenuOptions({
             clickedNodeId: maybeClickedNodeId,
             infoRows,
             viewport: maybeViewport,
             ...props,
           })
-        : NoNodeContextMenuOptions({
+        : getNoNodeContextMenuOptions({
             segmentIdAtPosition,
             infoRows,
             viewport: maybeViewport,

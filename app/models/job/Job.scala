@@ -66,13 +66,13 @@ case class Job(
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
-        case JobCommand.CONVERT_TO_WKW | JobCommand.COMPUTE_MESH_FILE =>
+        case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
-        case JobCommand.EXPORT_TIFF =>
+        case JobCommand.export_tiff =>
           Some(s"/api/jobs/${this._id}/export")
-        case JobCommand.INFER_NUCLEI | JobCommand.INFER_NEURONS | JobCommand.MATERIALIZE_VOLUME_ANNOTATION =>
+        case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }
@@ -330,34 +330,34 @@ class JobService @Inject()(wkConf: WkConf,
       datasetName = job.datasetName.getOrElse("")
       genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(user, userEmail, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
-        case JobCommand.CONVERT_TO_WKW =>
+        case JobCommand.convert_to_wkw =>
           Some(defaultMails.jobSuccessfulUploadConvertMail(user, userEmail, datasetName, resultLink))
-        case JobCommand.EXPORT_TIFF =>
+        case JobCommand.export_tiff =>
           Some(
             genericEmailTemplate(
               "Tiff Export",
               "Your dataset has been exported as Tiff and is ready for download."
             ))
-        case JobCommand.INFER_NUCLEI =>
+        case JobCommand.infer_nuclei =>
           Some(
             defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Nuclei Segmentation"))
-        case JobCommand.INFER_NEURONS =>
+        case JobCommand.infer_neurons =>
           Some(
             defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Neuron Segmentation",
             ))
-        case JobCommand.MATERIALIZE_VOLUME_ANNOTATION =>
+        case JobCommand.materialize_volume_annotation =>
           Some(
             genericEmailTemplate(
               "Volume Annotation Merged",
               "Your volume annotation has been successfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
             ))
-        case JobCommand.GLOBALIZE_FLOODFILLS =>
+        case JobCommand.globalize_floodfills =>
           Some(
             genericEmailTemplate(
               "Globalize Flood Fill",
               "The flood fill operations have been extended to the whole dataset. The result is available as a new dataset in your dashboard."
             ))
-        case JobCommand.COMPUTE_MESH_FILE =>
+        case JobCommand.compute_mesh_file =>
           Some(
             genericEmailTemplate(
               "Mesh Generation",
@@ -374,14 +374,14 @@ class JobService @Inject()(wkConf: WkConf,
       userEmail <- userService.emailFor(user)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       emailTemplate = job.command match {
-        case JobCommand.CONVERT_TO_WKW => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
+        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
         case _                         => defaultMails.jobFailedGenericMail(user, userEmail, datasetName, job.command.toString)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
 
   def cleanUpIfFailed(job: Job): Fox[Unit] =
-    if (job.state == JobState.FAILURE && job.command == JobCommand.CONVERT_TO_WKW) {
+    if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
       val commandArgs = job.commandArgs.value
       for {

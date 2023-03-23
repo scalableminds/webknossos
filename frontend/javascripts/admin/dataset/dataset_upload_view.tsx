@@ -32,7 +32,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-// @ts-expect-error ts-migrate(2306) FIXME: File ... Remove this comment to see the full error message
 import { BlobReader, ZipReader, Entry } from "@zip.js/zip.js";
 import {
   CardContainer,
@@ -509,6 +508,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           }
         } catch (e) {
           console.error(e);
+          ErrorHandling.notify(e as Error);
           Modal.error({
             content: messages["dataset.upload_invalid_zip"],
           });

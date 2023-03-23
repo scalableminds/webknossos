@@ -763,9 +763,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
 
-  // useEffect(() => {
   Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
-  // }, [visibleSegmentationLayer, dataset]);
 
   const loadPrecomputedMesh = async () => {
     if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;

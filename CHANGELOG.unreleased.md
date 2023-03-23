@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added support for datasets where layers are transformed individually (with an affine matrix). Transformations can be specified via datasource-properties.json or via JS API (will be ephemeral, then). [#6748](https://github.com/scalableminds/webknossos/pull/6748)
 - Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
+- Added email notifications for WK worker jobs. [#6918](https://github.com/scalableminds/webknossos/pull/6918)
 - Added more icons and small redesigns for various pages in line with the new branding. [#6938](https://github.com/scalableminds/webknossos/pull/6938)
 
 ### Changed

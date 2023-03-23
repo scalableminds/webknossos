@@ -11,6 +11,7 @@ import models.annotation.Annotation
 import models.binary.{DataSet, DataStore}
 import models.organization.Organization
 import models.user.{MultiUserDAO, User, UserDAO}
+import models.job.JobCommand.JobCommand
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
@@ -205,16 +206,16 @@ case class OpenDatasetEvent(user: User, dataSet: DataSet)(implicit ec: Execution
     }
 }
 
-case class RunJobEvent(user: User, command: String)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+case class RunJobEvent(user: User, command: JobCommand)(implicit ec: ExecutionContext) extends AnalyticsEvent {
   def eventType: String = "run_job"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("command" -> command))
+    Fox.successful(Json.obj("command" -> command.toString))
 }
 
-case class FailedJobEvent(user: User, command: String)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+case class FailedJobEvent(user: User, command: JobCommand)(implicit ec: ExecutionContext) extends AnalyticsEvent {
   def eventType: String = "failed_job"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("command" -> command))
+    Fox.successful(Json.obj("command" -> command.toString))
 }
 
 case class UploadDatasetEvent(user: User, dataSet: DataSet, dataStore: DataStore, dataSetSizeBytes: Long)(

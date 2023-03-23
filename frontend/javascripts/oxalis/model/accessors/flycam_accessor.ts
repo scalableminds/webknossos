@@ -406,7 +406,7 @@ export function getValidTaskZoomRange(
           getValidZoomRangeForResolution(
             state,
             firstColorLayerName,
-            getResolutionByMax(state.dataset, value),
+            getResolutionByMax(state.dataset, firstColorLayerName, value),
           )[idx]) || defaultRange[idx]
     );
   }

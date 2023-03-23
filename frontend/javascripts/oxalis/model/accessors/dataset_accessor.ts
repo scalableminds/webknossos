@@ -406,13 +406,12 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
 
   if (!dataset) {
-    return 2 ** (minimumZoomStepCount - 1);
+    return minimumZoomStepCount;
   }
 
   const maxZoomstep = Math.max(
     minimumZoomStepCount,
-    // todo: compute for all layers
-    Math.max(0, ...getResolutions(dataset).map((r) => Math.max(r[0], r[1], r[2]))),
+    _.max(_.flattenDeep(getResolutionUnionNew(dataset))) || minimumZoomStepCount,
   );
 
   return maxZoomstep;
@@ -911,14 +910,18 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
 }
 
 // used for valid task range
-function _keyResolutionsByMax(dataset: APIDataset): Record<number, Vector3> {
-  const resolutions = getResolutions(dataset);
+function _keyResolutionsByMax(dataset: APIDataset, layerName: string): Record<number, Vector3> {
+  const resolutions = getDenseResolutionsForLayerName(dataset, layerName);
   return _.keyBy(resolutions, (res) => Math.max(...res));
 }
 
 const keyResolutionsByMax = memoizeOne(_keyResolutionsByMax);
-export function getResolutionByMax(dataset: APIDataset, maxDim: number): Vector3 {
-  const keyedResolutionsByMax = keyResolutionsByMax(dataset);
+export function getResolutionByMax(
+  dataset: APIDataset,
+  layerName: string,
+  maxDim: number,
+): Vector3 {
+  const keyedResolutionsByMax = keyResolutionsByMax(dataset, layerName);
   return keyedResolutionsByMax[maxDim];
 }
 export function isLayerVisible(

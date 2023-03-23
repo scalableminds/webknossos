@@ -70,6 +70,7 @@ trait WKWDataFormatHelper {
     path match {
       case headerRx(_, resolutionStr) =>
         Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
+      case _ => None
     }
   }
 

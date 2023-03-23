@@ -54,8 +54,11 @@ trait VolumeBucketCompression extends LazyLogging {
     }
   }
 
-  def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
-    val bytesPerVoxel = ElementClass.bytesPerElement(dataLayer.elementClass)
+  def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int =
+    expectedUncompressedBucketSizeFor(dataLayer.elementClass)
+
+  def expectedUncompressedBucketSizeFor(elementClass: ElementClass.Value): Int = {
+    val bytesPerVoxel = ElementClass.bytesPerElement(elementClass)
     bytesPerVoxel * scala.math.pow(DataLayer.bucketLength, 3).intValue
   }
 }
@@ -162,9 +165,17 @@ trait VolumeTracingBucketHelper
                  bucket: BucketPosition,
                  data: Array[Byte],
                  version: Long,
-                 toCache: Boolean = false): Fox[Unit] = {
-    val key = buildBucketKey(dataLayer.name, bucket)
-    val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(dataLayer))
+                 toCache: Boolean = false): Fox[Unit] =
+    saveBucket(dataLayer.name, dataLayer.elementClass, bucket, data, version, toCache)
+
+  def saveBucket(tracingId: String,
+                 elementClass: ElementClass.Value,
+                 bucket: BucketPosition,
+                 data: Array[Byte],
+                 version: Long,
+                 toCache: Boolean): Fox[Unit] = {
+    val key = buildBucketKey(tracingId, bucket)
+    val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
     if (toCache) {
       // Note that this cache is for temporary volumes only (e.g. compound projects)
       // and cannot be used for download or versioning

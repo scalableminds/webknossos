@@ -42,8 +42,7 @@ export default function traverse(
   ];
   const intersectedBuckets: Vector3[] = [[X, Y, Z]];
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dim' implicitly has an 'any' type.
-  const behindLastBucket = (dim, pos) => {
+  const behindLastBucket = (dim: number, pos: number) => {
     if (step[dim] < 0) {
       return pos < lastBucket[dim];
     } else if (step[dim] > 0) {
@@ -151,7 +150,11 @@ export default function traverse(
     }
   }
 
-  throw new Error("Didn't reach target voxel?");
+  // In case this error is thrown, check that there weren't any NaN values
+  // passed. Since this should never happen, we don't check the values explicitly
+  // here (due to performance). During development this might happen by accident,
+  // though.
+  throw new Error("Didn't reach target voxel for an unknown reason.");
 }
 
 function initializeTMax(

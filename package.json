@@ -151,6 +151,7 @@
     "@types/pngjs": "^6.0.1",
     "@types/three": "^0.142.0",
     "@use-it/interval": "^1.0.0",
+    "@zip.js/zip.js": "^2.6.81",
     "ansi-to-react": "^6.1.6",
     "antd": "^4.24.8",
     "backbone-events-standalone": "^0.2.7",
@@ -229,8 +230,7 @@
     "typed-redux-saga": "^1.4.0",
     "url": "^0.11.0",
     "url-join": "^4.0.0",
-    "worker-loader": "^3.0.8",
-    "zip-js-webpack": "^1.0.0"
+    "worker-loader": "^3.0.8"
   },
   "resolutions": {
     "**/mini-store": "^1.1.0"

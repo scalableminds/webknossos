@@ -1,5 +1,5 @@
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
+import { Checkbox, Dropdown, MenuProps, Modal, notification } from "antd";
 import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -388,92 +388,84 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
     const isEditingDisabled = !this.props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
-    const createMenu = () => (
-      <Menu>
-        <Menu.Item
-          key="create"
-          data-group-id={id}
-          onClick={() => this.createGroup(id)}
-          disabled={isEditingDisabled}
-        >
-          <PlusOutlined />
-          Create new group
-        </Menu.Item>
-        <Menu.Item
-          key="delete"
-          data-group-id={id}
-          disabled={isEditingDisabled}
-          onClick={() => this.deleteGroup(id)}
-        >
-          <DeleteOutlined />
-          Delete group
-        </Menu.Item>
-        {hasSubgroup ? (
-          <Menu.Item
-            key="collapseSubgroups"
-            data-group-id={id}
-            disabled={!hasExpandedSubgroup}
-            onClick={() => this.setExpansionOfAllSubgroupsTo(id, false)}
-          >
-            <ShrinkOutlined />
-            Collapse all subgroups
-          </Menu.Item>
-        ) : null}
-        {hasSubgroup ? (
-          <Menu.Item
-            key="expandSubgroups"
-            data-group-id={id}
-            disabled={!hasCollapsedSubgroup}
-            onClick={() => this.setExpansionOfAllSubgroupsTo(id, true)}
-          >
-            <ShrinkOutlined />
-            Expand all subgroups
-          </Menu.Item>
-        ) : null}
-        <Menu.Item
-          key="hideTree"
-          onClick={() => {
+    const createMenu: MenuProps = {
+      items: [
+        {
+          key: "create",
+          onClick: () => this.createGroup(id),
+          disabled: isEditingDisabled,
+          icon: <PlusOutlined />,
+          label: "Create new group",
+        },
+        {
+          key: "delete",
+          disabled: isEditingDisabled,
+          onClick: () => this.deleteGroup(id),
+          icon: <DeleteOutlined />,
+          label: "Delete group",
+        },
+        hasSubgroup
+          ? {
+              key: "collapseSubgroups",
+              disabled: !hasExpandedSubgroup,
+              onClick: () => this.setExpansionOfAllSubgroupsTo(id, false),
+              icon: <ShrinkOutlined />,
+              label: "Collapse all subgroups",
+            }
+          : null,
+        hasSubgroup
+          ? {
+              key: "expandSubgroups",
+              disabled: !hasCollapsedSubgroup,
+              onClick: () => this.setExpansionOfAllSubgroupsTo(id, true),
+              icon: <ShrinkOutlined />,
+              label: "Expand all subgroups",
+            }
+          : null,
+        {
+          key: "hideTree",
+          onClick: () => {
             this.props.onSetActiveGroup(id);
             this.props.onToggleHideInactiveTrees();
-          }}
-          title="Hide/Show all other trees"
-        >
-          <i className="fas fa-eye" /> Hide/Show all other trees
-        </Menu.Item>
-        <Menu.Item
-          key="shuffleTreeGroupColors"
-          onClick={() => {
+          },
+          icon: <i className="fas fa-eye" />,
+          label: "Hide/Show all other trees",
+        },
+        {
+          key: "shuffleTreeGroupColors",
+          onClick: () => {
             if (id === MISSING_GROUP_ID) this.props.onShuffleAllTreeColors();
             else this.shuffleTreeGroupColors(id);
-          }}
-          title="Shuffle Tree Colors"
-        >
-          <i className="fas fa-adjust" /> Shuffle Tree Group Colors
-        </Menu.Item>
-        <Menu.Item key="setTreeGroupColor" disabled={isEditingDisabled}>
-          <ChangeColorMenuItemContent
-            title="Change Tree Group Color"
-            isDisabled={isEditingDisabled}
-            onSetColor={(color) => {
-              if (id === MISSING_GROUP_ID) this.setAllTreesColor(color);
-              else this.setTreeGroupColor(id, color);
-            }}
-            rgb={[0.5, 0.5, 0.5]}
-          />
-        </Menu.Item>
-      </Menu>
-    );
+          },
+          icon: <i className="fas fa-adjust" />,
+          label: "Shuffle Tree Group Colors",
+        },
+        {
+          key: "setTreeGroupColor",
+          disabled: isEditingDisabled,
+          label: (
+            <ChangeColorMenuItemContent
+              title="Change Tree Group Color"
+              isDisabled={isEditingDisabled}
+              onSetColor={(color) => {
+                if (id === MISSING_GROUP_ID) this.setAllTreesColor(color);
+                else this.setTreeGroupColor(id, color);
+              }}
+              rgb={[0.5, 0.5, 0.5]}
+            />
+          ),
+        },
+      ],
+    };
 
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<no name>";
     return (
       <div>
         <Dropdown
-          overlay={createMenu}
-          placement="bottom" // The overlay is generated lazily. By default, this would make the overlay
-          // re-render on each parent's render() after it was shown for the first time.
-          // The reason for this is that it's not destroyed after closing.
-          // Therefore, autoDestroy is passed.
+          menu={createMenu}
+          placement="bottom"
+          // AutoDestroy is used to remove the menu from DOM and keep up the performance.
           // destroyPopupOnHide should also be an option according to the docs, but
           // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
@@ -526,62 +518,66 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
 
-      const createMenu = () => (
-        <Menu>
-          <Menu.Item key="changeTreeColor" disabled={isEditingDisabled}>
-            <ChangeColorMenuItemContent
-              title="Change Tree Color"
-              isDisabled={isEditingDisabled}
-              onSetColor={(color) => {
-                this.props.onSetTreeColor(tree.treeId, color);
-              }}
-              rgb={tree.color}
-            />
-          </Menu.Item>
-          <Menu.Item
-            key="shuffleTreeColor"
-            onClick={() => this.props.onShuffleTreeColor(tree.treeId)}
-            title="Shuffle Tree Color"
-            disabled={isEditingDisabled}
-          >
-            <i className="fas fa-adjust" /> Shuffle Tree Color
-          </Menu.Item>
-          <Menu.Item
-            key="deleteTree"
-            onClick={() => this.props.onDeleteTree(tree.treeId)}
-            title="Delete Tree"
-            disabled={isEditingDisabled}
-          >
-            <i className="fas fa-trash" /> Delete Tree
-          </Menu.Item>
-          <Menu.Item
-            key="measureSkeleton"
-            onClick={() => this.handleMeasureSkeletonLength(tree.treeId, tree.name)}
-            title="Measure Skeleton Length"
-          >
-            <i className="fas fa-ruler" /> Measure Skeleton Length
-          </Menu.Item>
-          <Menu.Item
-            key="hideTree"
-            onClick={() => {
-              this.props.onSetActiveTree(tree.treeId);
-              this.props.onToggleHideInactiveTrees();
-              this.handleTreeDropdownMenuVisibility(tree.treeId, false);
-            }}
-            title="Hide/Show all other trees"
-          >
-            <i className="fas fa-eye" /> Hide/Show all other trees
-          </Menu.Item>
-        </Menu>
-      );
+      const createMenu = (): MenuProps => {
+        return {
+          items: [
+            {
+              key: "changeTreeColor",
+              disabled: isEditingDisabled,
+              label: (
+                <ChangeColorMenuItemContent
+                  title="Change Tree Color"
+                  isDisabled={isEditingDisabled}
+                  onSetColor={(color) => {
+                    this.props.onSetTreeColor(tree.treeId, color);
+                  }}
+                  rgb={tree.color}
+                />
+              ),
+            },
+            {
+              key: "shuffleTreeColor",
+              onClick: () => this.props.onShuffleTreeColor(tree.treeId),
+              title: "Shuffle Tree Color",
+              disabled: isEditingDisabled,
+              icon: <i className="fas fa-adjust" />,
+              label: "Shuffle Tree Color",
+            },
+            {
+              key: "deleteTree",
+              onClick: () => this.props.onDeleteTree(tree.treeId),
+              title: "Delete Tree",
+              disabled: isEditingDisabled,
+              icon: <i className="fas fa-trash" />,
+              label: "Delete Tree",
+            },
+            {
+              key: "measureSkeleton",
+              onClick: () => this.handleMeasureSkeletonLength(tree.treeId, tree.name),
+              title: "Measure Skeleton Length",
+              icon: <i className="fas fa-ruler" />,
+              label: "Measure Skeleton Length",
+            },
+            {
+              key: "hideTree",
+              onClick: () => {
+                this.props.onSetActiveTree(tree.treeId);
+                this.props.onToggleHideInactiveTrees();
+                this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
+              title: "Hide/Show all other trees",
+              icon: <i className="fas fa-eye" />,
+              label: "Hide/Show all other trees",
+            },
+          ],
+        };
+      };
 
       nodeProps.title = (
         <div className={styleClass}>
           <Dropdown
-            overlay={createMenu} // The overlay is generated lazily. By default, this would make the overlay
-            // re-render on each parent's render() after it was shown for the first time.
-            // The reason for this is that it's not destroyed after closing.
-            // Therefore, autoDestroy is passed.
+            menu={createMenu()} //
+            // AutoDestroy is used to remove the menu from DOM and keep up the performance.
             // destroyPopupOnHide should also be an option according to the docs, but
             // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message

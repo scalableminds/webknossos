@@ -26,7 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed support for rendering of negative floats. [#6895](https://github.com/scalableminds/webknossos/pull/6895)
 - Fixed caching issues with webworkers. [#6932](https://github.com/scalableminds/webknossos/pull/6932)
 - Fixed download button for annotations which was disabled in some cases. [#6931](https://github.com/scalableminds/webknossos/pull/6931)
-
+- Fixed antd deprecation warning for Dropdown menus. [#6898](https://github.com/scalableminds/webknossos/pull/6898)
 ### Removed
 
 ### Breaking Changes

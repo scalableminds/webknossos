@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for remote Zarr datasets with a `datasource-properties.json` as created by the WEBKNOSSOS Python library. [#6879](https://github.com/scalableminds/webknossos/pull/6879)
 
 ### Changed
+- Uploads are now blocked when the organization’s storage quota is exceeded. [#6893](https://github.com/scalableminds/webknossos/pull/6893)
 
 ### Fixed
 

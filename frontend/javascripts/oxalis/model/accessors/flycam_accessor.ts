@@ -2,18 +2,18 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import type { Matrix4x4 } from "libs/mjs";
+import { Matrix4x4, V3 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getColorLayers,
   getDataLayers,
+  getDenseResolutionsForLayerName,
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
   getResolutionByMax,
   getResolutionInfo,
-  getResolutions,
   getTransformsForLayer,
   invertAndTranspose,
   SmallerOrHigherInfo,
@@ -363,10 +363,10 @@ function getValidZoomRangeForResolution(
   targetResolution: Vector3,
 ): Vector2 {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layerName);
-  const resolutions = getResolutions(state.dataset);
+  const resolutions = getDenseResolutionsForLayerName(state.dataset, layerName);
 
   const targetResolutionIndex = _.findIndex(resolutions, (resolution) =>
-    _.isEqual(resolution, targetResolution),
+    V3.isEqual(resolution, targetResolution),
   );
 
   const max = maximumZoomSteps[targetResolutionIndex];
@@ -586,26 +586,28 @@ function _getActiveResolutionInfo(state: OxalisState) {
   const activeMagIndicesOfEnabledLayers = Object.fromEntries(
     enabledLayers.map((l) => [l.name, activeMagIndices[l.name]]),
   );
+  const activeMagOfEnabledLayers = Object.fromEntries(
+    enabledLayers.map((l) => [
+      l.name,
+      getResolutionInfo(l.resolutions).getDenseResolutions()[activeMagIndices[l.name]],
+    ]),
+  );
 
-  const isActiveResolutionGlobal =
-    _.uniq(Object.values(activeMagIndicesOfEnabledLayers)).length === 1;
-  const resolutions = getResolutions(state.dataset);
+  const isActiveResolutionGlobal = _.uniq(Object.values(activeMagOfEnabledLayers)).length === 1;
   let representativeResolution: Vector3 | undefined;
   if (isActiveResolutionGlobal) {
-    const someResolutionIndex = Object.values(activeMagIndicesOfEnabledLayers)[0];
-    representativeResolution = resolutions[someResolutionIndex];
+    representativeResolution = Object.values(activeMagOfEnabledLayers)[0];
   } else {
-    const bestMagIndex = _.min(Object.values(activeMagIndicesOfEnabledLayers));
-    if (bestMagIndex != null) {
-      representativeResolution = resolutions[bestMagIndex];
-    }
+    representativeResolution = _.minBy(Object.values(activeMagOfEnabledLayers), (mag) =>
+      Math.min(...mag),
+    );
   }
 
   return {
     representativeResolution,
     activeMagIndicesOfEnabledLayers,
+    activeMagOfEnabledLayers,
     isActiveResolutionGlobal,
-    resolutions,
   };
 }
 

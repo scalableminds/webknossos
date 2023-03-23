@@ -356,12 +356,8 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const {
-    representativeResolution,
-    activeMagIndicesOfEnabledLayers,
-    isActiveResolutionGlobal,
-    resolutions,
-  } = useSelector((state: OxalisState) => getActiveResolutionInfo(state));
+  const { representativeResolution, activeMagOfEnabledLayers, isActiveResolutionGlobal } =
+    useSelector((state: OxalisState) => getActiveResolutionInfo(state));
 
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
@@ -458,9 +454,9 @@ function Infos() {
               <>
                 Rendered magnification per layer:
                 <ul>
-                  {Object.entries(activeMagIndicesOfEnabledLayers).map(([layerName, magIndex]) => (
+                  {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => (
                     <li key={layerName}>
-                      {layerName}: {resolutions[magIndex].join("-")}
+                      {layerName}: {mag.join("-")}
                     </li>
                   ))}
                 </ul>

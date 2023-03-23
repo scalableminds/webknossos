@@ -53,8 +53,8 @@ import {
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
-  getResolutions,
   getTransformsForLayerOrNull,
+  getLargestResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -829,7 +829,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const volumeTargetResolutions =
       fallbackLayerInfo != null
         ? fallbackLayerInfo.resolutions
-        : getResolutions(this.props.dataset);
+        : // This is only a heuristic. At some point, user configuration
+          // might make sense here.
+          getLargestResolutions(this.props.dataset);
 
     const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
 

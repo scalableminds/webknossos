@@ -24,7 +24,7 @@ import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils"
 import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, Matrix4x4 } from "libs/mjs";
+import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { Identity4x4 } from "./flycam_accessor";
 
 export type ResolutionsMap = Map<number, Vector3>;
@@ -284,7 +284,7 @@ export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: 
   return getResolutionInfoByLayer(dataset)[layerName].getDenseResolutions();
 }
 
-// todo
+// todo: remove when getResolutions is not used anymore?
 // Don't use memoizeOne here, since we want to cache the resolutions for all layers
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
@@ -317,6 +317,34 @@ export function getResolutionUnion(
   return _.chain(resolutionUnionDict).values().sortBy(maxValue).valueOf();
 }
 
+// todo: rename
+export function getResolutionUnionNew(dataset: APIDataset): Array<Vector3[]> {
+  const resolutionUnionDict: { [key: number]: Vector3[] } = {};
+
+  for (const layer of dataset.dataSource.dataLayers) {
+    for (const resolution of layer.resolutions) {
+      const key = maxValue(resolution);
+
+      if (resolutionUnionDict[key] == null) {
+        resolutionUnionDict[key] = [resolution];
+      } else {
+        resolutionUnionDict[key].push(resolution);
+      }
+    }
+  }
+
+  for (const keyStr of Object.keys(resolutionUnionDict)) {
+    const key = Number(keyStr);
+    resolutionUnionDict[key] = _.uniqWith(resolutionUnionDict[key], V3.isEqual);
+  }
+
+  const keys = Object.keys(resolutionUnionDict)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((el) => Number(el));
+
+  return keys.map((key) => resolutionUnionDict[key]);
+}
+
 // todo
 export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
   // Each resolution entry can be characterized by it's greatest resolution dimension.
@@ -336,7 +364,7 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
 
   const maxResPower = 2 ** maxResolution;
   let lastResolution = [maxResPower, maxResPower, maxResPower];
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
+
   return _.range(maxResolution, -1, -1)
     .map((exp) => {
       const resPower = 2 ** exp;
@@ -345,16 +373,12 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
       // the dense resolutions wouldn't be monotonously increasing.
       const fallback = map3((i) => Math.min(lastResolution[i], resPower), [0, 1, 2]);
       lastResolution = resolutionsLookUp[resPower] || fallback;
-      return lastResolution;
+      return lastResolution as Vector3;
     })
     .reverse();
 }
 
 function _getResolutions(dataset: APIDataset): Vector3[] {
-  // Different layers can have different resolutions. At the moment,
-  // mismatching resolutions will result in undefined behavior (rather than
-  // causing a hard error). During the model initialization, an error message
-  // will be shown, though.
   // In the long term, getResolutions should not be used anymore.
   // Instead, all the code should use the ResolutionInfo class which represents
   // exactly which resolutions exist per layer.
@@ -368,6 +392,14 @@ export const getResolutions = memoizeOne(_getResolutions);
 
 export function deprecated_getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
   return getResolutionInfo(getResolutions(dataset));
+}
+
+export function getLargestResolutions(dataset: APIDataset): Vector3[] {
+  const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
+    convertToDenseResolution(layer.resolutions),
+  );
+
+  return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
 }
 
 function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {

@@ -95,14 +95,8 @@ function RegistrationViewNotDemo() {
 function RegistrationViewDemo() {
   const history = useHistory();
   return (
-    <Row
-      justify="center"
-      style={{
-        padding: 50,
-      }}
-      align="middle"
-    >
-      <Col span={8}>
+    <Row justify="center" align="middle" className="login-view">
+      <Col className="login-content drawing-signup" style={{ width: 1000 }}>
         <div>
           <h3>Sign Up</h3>
           <SpotlightRegistrationForm

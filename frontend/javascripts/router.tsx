@@ -31,7 +31,7 @@ import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
-import { Button, Layout, Result } from "antd";
+import { Button, Col, Layout, Result, Row } from "antd";
 import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
@@ -114,15 +114,8 @@ browserHistory.listen((location) => {
 
 function PageNotFoundView() {
   return (
-    <div className="background-organelles" style={{ position: "relative" }}>
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%) translateY(-50%)",
-        }}
-      >
+    <Row justify="center" align="middle" className="background-organelles">
+      <Col>
         <Result
           icon={<i className="drawing-404" />}
           status="warning"
@@ -136,8 +129,8 @@ function PageNotFoundView() {
             </Link>,
           ]}
         />
-      </div>
-    </div>
+      </Col>
+    </Row>
   );
 }
 

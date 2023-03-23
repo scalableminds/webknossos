@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Alert, ButtonProps, Button, Result, Popover } from "antd";
+import { Alert, ButtonProps, Button, Result, Popover, Col, Row } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -196,27 +196,29 @@ export function PageUnavailableForYourPlanView({
     ) : undefined;
 
   return (
-    <div className="container">
-      <Result
-        status="warning"
-        title="Feature not available"
-        icon={<i className="drawing-paid-feature-not-available" />}
-        subTitle={
-          <p style={{ maxWidth: "500px", margin: "0 auto" }}>
-            {getFeatureNotAvailableInPlanMessage(
-              requiredPricingPlan,
-              activeOrganization,
-              activeUser,
-            )}
-          </p>
-        }
-        extra={[
-          <Link to="/">
-            <Button type="primary">Return to Dashboard</Button>
-          </Link>,
-          linkToOrganizationSettings,
-        ]}
-      />
-    </div>
+    <Row justify="center" align="middle" className="full-viewport-height">
+      <Col>
+        <Result
+          status="warning"
+          title="Feature not available"
+          icon={<i className="drawing-paid-feature-not-available" />}
+          subTitle={
+            <p style={{ maxWidth: "500px", margin: "0 auto" }}>
+              {getFeatureNotAvailableInPlanMessage(
+                requiredPricingPlan,
+                activeOrganization,
+                activeUser,
+              )}
+            </p>
+          }
+          extra={[
+            <Link to="/">
+              <Button type="primary">Return to Dashboard</Button>
+            </Link>,
+            linkToOrganizationSettings,
+          ]}
+        />
+      </Col>
+    </Row>
   );
 }

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
-import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
+import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import LinkButton from "components/link_button";
 import RegistrationForm from "./registration_form";
 import LoginForm from "./login_form";
@@ -38,11 +38,11 @@ export default function AuthenticationModal({
     showLogin();
   };
 
-  // SpotlightRegistrationForm always creates a new organization. If an inviteToken
-  // exists, a normal RegistrationForm needs to be used.
+  // RegistrationFormWKOrg always creates a new organization. If an inviteToken
+  // exists, a normal RegistrationFormGeneric needs to be used.
   const registrationForm =
     inviteToken == null && features().isDemoInstance ? (
-      <SpotlightRegistrationForm onRegistered={onRegistered} />
+      <RegistrationFormWKOrg onRegistered={onRegistered} />
     ) : (
       <RegistrationForm onRegistered={onRegistered} inviteToken={inviteToken} />
     );

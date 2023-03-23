@@ -5,11 +5,11 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
-import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
+import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import RegistrationForm from "admin/auth/registration_form";
 import { APIOrganization } from "types/api_flow_types";
 
-function RegistrationViewNotDemo() {
+function RegistrationViewGeneric() {
   const history = useHistory();
   const [organization, setOrganization] = useState<APIOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,14 +92,14 @@ function RegistrationViewNotDemo() {
   );
 }
 
-function RegistrationViewDemo() {
+function RegistrationViewWkOrg() {
   const history = useHistory();
   return (
     <Row justify="center" align="middle" className="login-view">
       <Col className="login-content drawing-signup" style={{ width: 1000 }}>
         <div>
           <h3>Sign Up</h3>
-          <SpotlightRegistrationForm
+          <RegistrationFormWKOrg
             onRegistered={() => {
               history.push("/dashboard");
             }}
@@ -118,7 +118,7 @@ function RegistrationViewDemo() {
 }
 
 function RegistrationView() {
-  return features().isDemoInstance ? <RegistrationViewDemo /> : <RegistrationViewNotDemo />;
+  return features().isDemoInstance ? <RegistrationViewWkOrg /> : <RegistrationViewGeneric />;
 }
 
 export default RegistrationView;

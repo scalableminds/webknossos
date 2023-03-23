@@ -171,13 +171,14 @@ class EditableMappingService @Inject()(
     } yield ()
 
   private def applyUpdates(editableMappingId: String,
-                           newVersion: Long,
+                           version: Long,
                            updates: List[EditableMappingUpdateAction],
                            existingEditabeMappingInfo: EditableMappingProto,
                            remoteFallbackLayer: RemoteFallbackLayer,
                            userToken: Option[String]): Fox[Unit] = {
 
     def updateIter(mappingFox: Fox[EditableMappingProto],
+                   nextVersion: Long,
                    remainingUpdates: List[EditableMappingUpdateAction]): Fox[EditableMappingProto] = {
       logger.info(s"Applying ${remainingUpdates.length} updates...")
       mappingFox.futureBox.flatMap {
@@ -185,8 +186,9 @@ class EditableMappingService @Inject()(
         case Full(mapping) =>
           remainingUpdates match {
             case List() => Fox.successful(mapping)
-            case head :: tail => // TODO: count versions or assert only one update?
-              updateIter(applyOneUpdate(mapping, editableMappingId, newVersion, head, remoteFallbackLayer, userToken),
+            case head :: tail =>
+              updateIter(applyOneUpdate(mapping, editableMappingId, nextVersion, head, remoteFallbackLayer, userToken),
+                         nextVersion + 1L,
                          tail)
           }
         case _ => mappingFox
@@ -194,8 +196,8 @@ class EditableMappingService @Inject()(
     }
 
     for {
-      updatedInfo <- updateIter(Some(existingEditabeMappingInfo), updates)
-      _ <- tracingDataStore.editableMappings.put(editableMappingId, newVersion, updatedInfo)
+      updatedInfo <- updateIter(Some(existingEditabeMappingInfo), version, updates)
+      _ <- tracingDataStore.editableMappings.put(editableMappingId, version, updatedInfo)
     } yield ()
   }
 
@@ -255,10 +257,7 @@ class EditableMappingService @Inject()(
                                               segmentIdsToUpdate: Seq[Long]): Fox[Unit] =
     for {
       _ <- Fox.successful(logger.info(s"UPDATE segment to agglomerate chunk, chunk id $chunkId"))
-      existingChunk: Seq[(Long, Long)] <- getSegmentToAgglomerateChunk(editableMappingId,
-                                                                       chunkId,
-                                                                       Set.empty,
-                                                                       filterSelected = false)
+      existingChunk: Seq[(Long, Long)] <- getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId)
       chunkMap = existingChunk.toMap
       mergedMap = chunkMap ++ segmentIdsToUpdate.map(_ -> agglomerateId).toMap
       proto = SegmentToAgglomerateProto(mergedMap.toVector.map { segmentAgglomerateTuple =>
@@ -455,43 +454,39 @@ class EditableMappingService @Inject()(
     val chunkIds = segmentIds.map(_ / defaultSegmentToAgglomerateChunkSize)
     for { // TODO: optimization: fossil-multiget
       maps: List[Seq[(Long, Long)]] <- Fox.serialCombined(chunkIds.toList)(chunkId =>
-        getSegmentToAgglomerateChunk(editableMappingId, chunkId, segmentIds, filterSelected = true))
+        getSegmentToAgglomerateChunkFiltered(editableMappingId, chunkId, segmentIds))
     } yield maps.flatten.toMap
   }
 
-  // TODO remove filterSelected logic, do filtering outside of here if needed
-  private def getSegmentToAgglomerateChunk(editableMappingId: String,
-                                           chunkId: Long,
-                                           segmentIds: Set[Long],
-                                           filterSelected: Boolean): Fox[Seq[(Long, Long)]] =
+  private def getSegmentToAgglomerateChunkFiltered(editableMappingId: String,
+                                                   chunkId: Long,
+                                                   segmentIds: Set[Long]): Fox[Seq[(Long, Long)]] =
     for {
-      chunkBox: Box[SegmentToAgglomerateProto] <- getSegmentToAgglomerateChunkProto(editableMappingId, chunkId).futureBox
+      segmentToAgglomerateChunk <- getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId)
+      filtered = segmentToAgglomerateChunk.filter(pair => segmentIds.contains(pair._1))
+    } yield filtered
+
+  private def getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId: String,
+                                                            chunkId: Long): Fox[Seq[(Long, Long)]] =
+    for {
+      chunkBox: Box[Seq[(Long, Long)]] <- getSegmentToAgglomerateChunk(editableMappingId, chunkId).futureBox
       segmentToAgglomerate <- chunkBox match {
-        case Full(chunk) => Fox.successful(filterSegmentToAgglomerateChunk(chunk, segmentIds, filterSelected))
+        case Full(chunk) => Fox.successful(chunk)
         case Empty       => Fox.successful(Seq.empty[(Long, Long)])
         case f: Failure  => f.toFox
       }
     } yield segmentToAgglomerate
 
-  private def filterSegmentToAgglomerateChunk(segmentToAgglomerateProto: SegmentToAgglomerateProto,
-                                              segmentIds: Set[Long],
-                                              filterSelected: Boolean): Seq[(Long, Long)] =
-    if (filterSelected) {
-      segmentToAgglomerateProto.segmentToAgglomerate
-        .filter(pair => segmentIds.contains(pair.segmentId))
-        .map(pair => pair.segmentId -> pair.agglomerateId)
-    } else {
-      segmentToAgglomerateProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
-    }
-
-  private def getSegmentToAgglomerateChunkProto(editableMappingId: String,
-                                                agglomerateId: Long,
-                                                version: Option[Long] = None): Fox[SegmentToAgglomerateProto] =
+  private def getSegmentToAgglomerateChunk(editableMappingId: String,
+                                           agglomerateId: Long,
+                                           version: Option[Long] = None): Fox[Seq[(Long, Long)]] =
     for {
       keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
         .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
           fromProtoBytes[SegmentToAgglomerateProto])
-    } yield keyValuePair.value
+      valueProto = keyValuePair.value
+      asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
+    } yield asSequence
 
   def generateCombinedMappingSubset(segmentIds: Set[Long],
                                     editableMapping: EditableMappingProto,

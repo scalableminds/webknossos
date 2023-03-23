@@ -86,6 +86,7 @@ case class VolumeTracingLayer(
   override val defaultViewConfiguration: Option[LayerViewConfiguration] = None
   override val adminViewConfiguration: Option[LayerViewConfiguration] = None
   override val mappings: Option[Set[String]] = None
+  override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
 
   lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
 

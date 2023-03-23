@@ -5,6 +5,7 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
+  CoordinateTransformation,
   DataFormat,
   DataLayer,
   ElementClass,
@@ -37,6 +38,7 @@ case class PrecomputedDataLayer(
     mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends PrecomputedLayer
 
@@ -53,6 +55,7 @@ case class PrecomputedSegmentationLayer(
     mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends SegmentationLayer
     with PrecomputedLayer

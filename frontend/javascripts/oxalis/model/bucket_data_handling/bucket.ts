@@ -9,7 +9,6 @@ import {
   bucketPositionToGlobalAddress,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
@@ -19,6 +18,7 @@ import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
@@ -691,14 +691,24 @@ export class DataBucket {
       return;
     }
 
-    const zoomStep = getRequestLogZoomStep(Store.getState());
+    const colors = [
+      new THREE.Color(0, 0, 0),
+      new THREE.Color(255, 0, 0),
+      new THREE.Color(0, 255, 0),
+      new THREE.Color(0, 0, 255),
+      new THREE.Color(255, 0, 255),
+      new THREE.Color(255, 255, 0),
+    ];
+
+    const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
 
     if (this.zoomedAddress[3] === zoomStep) {
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
         this.zoomedAddress[3],
-        this.visualizationColor,
+        this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
+        colors[this.zoomedAddress[3]] || this.visualizationColor,
       );
     }
   }

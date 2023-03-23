@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added support for datasets where layers are transformed individually (with an affine matrix). Transformations can be specified via datasource-properties.json or via JS API (will be ephemeral, then). [#6748](https://github.com/scalableminds/webknossos/pull/6748)
 - Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
+- Added support for uploading zip64 files. [#6939](https://github.com/scalableminds/webknossos/pull/6939)
 
 ### Changed
 - Interpolation during rendering is now more performance intensive, since the rendering approach was changed. Therefore, interpolation is disabled by default. On the flip side, the rendered quality is often higher than it used to be. [#6748](https://github.com/scalableminds/webknossos/pull/6748)

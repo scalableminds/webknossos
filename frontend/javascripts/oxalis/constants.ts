@@ -301,7 +301,7 @@ const Constants = {
   // which will be multiplied with GPU_FACTOR_MULTIPLIER to calculate the
   // the actual amount of buckets.
   GPU_FACTOR_MULTIPLIER: 512,
-  DEFAULT_GPU_MEMORY_FACTOR: 3,
+  DEFAULT_GPU_MEMORY_FACTOR: 4,
   DEFAULT_LOOK_UP_TEXTURE_WIDTH: 256,
   MAX_ZOOM_STEP_DIFF_PREFETCH: 1,
   // prefetch only fallback buckets for currentZoomStep + 1

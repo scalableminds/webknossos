@@ -23,7 +23,7 @@ class ConfigurationController @Inject()(
 
   def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>
     val config = request.identity.map(_.userConfiguration).getOrElse(Json.obj())
-    Ok(Json.toJson(config))
+    addNoCacheHeaderFallback(Ok(Json.toJson(config)))
   }
 
   def update: Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>

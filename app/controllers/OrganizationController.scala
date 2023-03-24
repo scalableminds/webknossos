@@ -88,16 +88,17 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def getOperatorData: Action[AnyContent] = Action {
-    Ok(Json.toJson(conf.WebKnossos.operatorData))
+    addNoCacheHeaderFallback(Ok(Json.toJson(conf.WebKnossos.operatorData)))
   }
 
   def getTermsOfService: Action[AnyContent] = Action {
-    Ok(
-      Json.obj(
-        "version" -> conf.WebKnossos.TermsOfService.version,
-        "enabled" -> conf.WebKnossos.TermsOfService.enabled,
-        "url" -> conf.WebKnossos.TermsOfService.url
-      ))
+    addNoCacheHeaderFallback(
+      Ok(
+        Json.obj(
+          "version" -> conf.WebKnossos.TermsOfService.version,
+          "enabled" -> conf.WebKnossos.TermsOfService.enabled,
+          "url" -> conf.WebKnossos.TermsOfService.url
+        )))
   }
 
   def termsOfServiceAcceptanceNeeded: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

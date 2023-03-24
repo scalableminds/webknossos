@@ -1,4 +1,4 @@
-import { Dropdown, Menu, Modal } from "antd";
+import { Dropdown, MenuProps, Modal } from "antd";
 import {
   EyeOutlined,
   PlayCircleOutlined,
@@ -30,7 +30,6 @@ import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import messages from "messages";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-const { Item } = Menu;
 const { confirm } = Modal;
 type OwnProps = {
   task: APITask;
@@ -101,7 +100,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
     }));
   };
 
-  getDropdownMenu(annotation: APIAnnotation) {
+  getDropdownMenu(annotation: APIAnnotation): MenuProps {
     let doesAnnotationNotBelongToActiveUser = true;
 
     if (annotation.owner && this.props.activeUser) {
@@ -120,57 +119,64 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           Open
         </React.Fragment>
       );
-    return (
-      <Menu>
-        <Item key={`${annotation.id}-view`}>
-          <a href={`/annotations/Task/${annotation.id}`}>{label}</a>
-        </Item>
-
-        <Item
-          key={`${annotation.id}-transfer`}
-          onClick={() =>
+    return {
+      items: [
+        {
+          key: `${annotation.id}-view`,
+          label: <a href={`/annotations/Task/${annotation.id}`}>{label}</a>,
+        },
+        {
+          key: `${annotation.id}-transfer`,
+          onClick: () =>
             this.setState({
               currentAnnotation: annotation,
               isTransferModalOpen: true,
-            })
-          }
-        >
-          <TeamOutlined />
-          Transfer
-        </Item>
-        <Item key={`${annotation.id}-download`}>
-          <AsyncLink
-            href="#"
-            onClick={() => {
-              const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
-              return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
-            }}
-            icon={<DownloadOutlined />}
-          >
-            Download
-          </AsyncLink>
-        </Item>
-        <Item key={`${annotation.id}-reset`} onClick={() => this.resetAnnotation(annotation)}>
-          <RollbackOutlined />
-          Reset
-        </Item>
-        <Item key={`${annotation.id}-delete`} onClick={() => this.deleteAnnotation(annotation)}>
-          <DeleteOutlined />
-          Reset and Cancel
-        </Item>
-        {annotation.state === "Finished" ? (
-          <Item key={`${annotation.id}-reopen`} onClick={() => this.reOpenAnnotation(annotation)}>
-            <FolderOpenOutlined />
-            Reopen
-          </Item>
-        ) : (
-          <Item key={`${annotation.id}-finish`} onClick={() => this.finishAnnotation(annotation)}>
-            <CheckCircleOutlined />
-            Finish
-          </Item>
-        )}
-      </Menu>
-    );
+            }),
+          icon: <TeamOutlined />,
+          label: "Transfer",
+        },
+        {
+          key: `${annotation.id}-download`,
+          label: (
+            <AsyncLink
+              href="#"
+              onClick={() => {
+                const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
+                return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
+              }}
+              icon={<DownloadOutlined />}
+            >
+              Download
+            </AsyncLink>
+          ),
+        },
+        {
+          key: `${annotation.id}-reset`,
+          onClick: () => this.resetAnnotation(annotation),
+          icon: <RollbackOutlined />,
+          label: "Reset",
+        },
+        {
+          key: `${annotation.id}-delete`,
+          onClick: () => this.deleteAnnotation(annotation),
+          icon: <DeleteOutlined />,
+          label: "Reset and Cancel",
+        },
+        annotation.state === "Finished"
+          ? {
+              key: `${annotation.id}-reopen`,
+              onClick: () => this.reOpenAnnotation(annotation),
+              icon: <FolderOpenOutlined />,
+              label: "Reopen",
+            }
+          : {
+              key: `${annotation.id}-finish`,
+              onClick: () => this.finishAnnotation(annotation),
+              icon: <CheckCircleOutlined />,
+              label: "Finish",
+            },
+      ],
+    };
   }
 
   render() {
@@ -206,7 +212,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                     </span>
                   </td>
                   <td className="nowrap">
-                    <Dropdown overlay={this.getDropdownMenu(annotation)} trigger={["click"]}>
+                    <Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
                       <a className="ant-dropdown-link" href="#">
                         Actions <DownOutlined />
                       </a>

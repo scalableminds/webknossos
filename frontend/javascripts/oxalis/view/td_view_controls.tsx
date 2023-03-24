@@ -1,4 +1,14 @@
-import { Button, Radio, Tooltip, Menu, Dropdown, Col, Row, Switch, RadioChangeEvent } from "antd";
+import {
+  Button,
+  Radio,
+  Tooltip,
+  Dropdown,
+  Col,
+  Row,
+  Switch,
+  RadioChangeEvent,
+  MenuProps,
+} from "antd";
 import {
   StopOutlined,
   BorderInnerOutlined,
@@ -17,68 +27,94 @@ import { SwitchChangeEventHandler } from "antd/lib/switch";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
+  tdViewDisplayLayerBorders: boolean;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
+  onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
 };
 
 function TDViewControls({
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
+  tdViewDisplayLayerBorders,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
+  onChangeTdViewDisplayLayerBorders,
 }: Props) {
-  const settingsMenu = (
-    <Menu
-      style={{
-        width: 260,
-      }}
-    >
-      <Menu.Item key="tdViewDisplayPlanes">
-        <Row>
-          <Col span={14}>
-            <label className="setting-label">Plane Display Mode</label>
-          </Col>
-          <Col span={10}>
-            <Radio.Group
-              value={tdViewDisplayPlanes}
-              onChange={onChangeTdViewDisplayPlanes}
-              size="small"
-              className="without-icon-margin"
-            >
-              <Tooltip title="Hide Planes">
-                <Radio.Button value={TDViewDisplayModeEnum.NONE}>
-                  <StopOutlined />
-                </Radio.Button>
-              </Tooltip>
-              <Tooltip title="Show Wireframes Only">
-                <Radio.Button value={TDViewDisplayModeEnum.WIREFRAME}>
-                  <BorderInnerOutlined />
-                </Radio.Button>
-              </Tooltip>
-              <Tooltip title="Show Planes with Data">
-                <Radio.Button value={TDViewDisplayModeEnum.DATA}>
-                  <BorderOuterOutlined />
-                </Radio.Button>
-              </Tooltip>
-            </Radio.Group>
-          </Col>
-        </Row>
-      </Menu.Item>
-      <Menu.Item key="showDatasetBorder">
-        <Row>
-          <Col span={14}>
-            <label className="setting-label">Show Dataset Border</label>
-          </Col>
-          <Col span={10}>
-            <Switch
-              checked={tdViewDisplayDatasetBorders}
-              onChange={onChangeTdViewDisplayDatasetBorders}
-            />
-          </Col>
-        </Row>
-      </Menu.Item>
-    </Menu>
-  );
+  const settingsMenu: MenuProps = {
+    style: {
+      width: 260,
+    },
+    items: [
+      {
+        key: "tdViewDisplayPlanes",
+        label: (
+          <Row>
+            <Col span={14}>
+              <label className="setting-label">Plane Display Mode</label>
+            </Col>
+            <Col span={10}>
+              <Radio.Group
+                value={tdViewDisplayPlanes}
+                onChange={onChangeTdViewDisplayPlanes}
+                size="small"
+                className="without-icon-margin"
+              >
+                <Tooltip title="Hide Planes">
+                  <Radio.Button value={TDViewDisplayModeEnum.NONE}>
+                    <StopOutlined />
+                  </Radio.Button>
+                </Tooltip>
+                <Tooltip title="Show Wireframes Only">
+                  <Radio.Button value={TDViewDisplayModeEnum.WIREFRAME}>
+                    <BorderInnerOutlined />
+                  </Radio.Button>
+                </Tooltip>
+                <Tooltip title="Show Planes with Data">
+                  <Radio.Button value={TDViewDisplayModeEnum.DATA}>
+                    <BorderOuterOutlined />
+                  </Radio.Button>
+                </Tooltip>
+              </Radio.Group>
+            </Col>
+          </Row>
+        ),
+      },
+      {
+        key: "showDatasetBorder",
+        label: (
+          <Row>
+            <Col span={14}>
+              <label className="setting-label">Show Dataset Border</label>
+            </Col>
+            <Col span={10}>
+              <Switch
+                checked={tdViewDisplayDatasetBorders}
+                onChange={onChangeTdViewDisplayDatasetBorders}
+              />
+            </Col>
+          </Row>
+        ),
+      },
+      {
+        key: "showLayerBorders",
+        label: (
+          <Row>
+            <Col span={14}>
+              <label className="setting-label">Show Layer Borders</label>
+            </Col>
+            <Col span={10}>
+              <Switch
+                checked={tdViewDisplayLayerBorders}
+                onChange={onChangeTdViewDisplayLayerBorders}
+              />
+            </Col>
+          </Row>
+        ),
+      },
+    ],
+  };
+
   return (
     <div id="TDViewControls" className="antd-legacy-group">
       <Button size="small" onClick={() => api.tracing.rotate3DViewToDiagonal()}>
@@ -96,7 +132,7 @@ function TDViewControls({
         <span className="colored-dot" />
         XZ
       </Button>
-      <Dropdown overlay={settingsMenu} placement="bottomRight" trigger={["click"]}>
+      <Dropdown menu={settingsMenu} placement="bottomRight" trigger={["click"]}>
         <Button size="small">
           <SettingOutlined />
         </Button>
@@ -109,6 +145,7 @@ function mapStateToProps(state: OxalisState) {
   return {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
+    tdViewDisplayLayerBorders: state.userConfiguration.tdViewDisplayLayerBorders,
   };
 }
 
@@ -121,6 +158,10 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
     onChangeTdViewDisplayDatasetBorders(tdViewDisplayDatasetBorders: boolean) {
       dispatch(updateUserSettingAction("tdViewDisplayDatasetBorders", tdViewDisplayDatasetBorders));
+    },
+
+    onChangeTdViewDisplayLayerBorders(tdViewDisplayLayerBorders: boolean) {
+      dispatch(updateUserSettingAction("tdViewDisplayLayerBorders", tdViewDisplayLayerBorders));
     },
   };
 }

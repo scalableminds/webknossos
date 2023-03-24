@@ -6,7 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import play.api.http.Status._
-import play.api.http.{HttpEntity, Status, Writeable}
+import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.Results.BadRequest
@@ -17,7 +17,7 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHelpers {
+trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHelpers with HeaderNames {
 
   protected def defaultErrorCode: Int = BAD_REQUEST
 
@@ -34,7 +34,7 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
       case Empty =>
         new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
     }
-    allowRemoteOriginIfSelected(result)
+    allowRemoteOriginIfSelected(addNoCacheHeaderFallback(result))
   }
 
   private def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
@@ -67,6 +67,10 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
       addRemoteOriginHeaders(result)
     } else result
 
+  def addNoCacheHeaderFallback(result: Result): Result =
+    if (result.header.headers.contains(CACHE_CONTROL)) {
+      result
+    } else result.withHeaders(CACHE_CONTROL -> "no-cache")
 }
 
 trait RemoteOriginHelpers {

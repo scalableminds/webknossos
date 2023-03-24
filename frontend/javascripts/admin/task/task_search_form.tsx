@@ -1,4 +1,4 @@
-import { Form, Row, Dropdown, Menu, Col, Button, Input, Select } from "antd";
+import { Form, Row, Dropdown, Col, Button, Input, Select } from "antd";
 import { FormInstance } from "antd/lib/form";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
@@ -276,14 +276,16 @@ class TaskSearchForm extends React.Component<Props, State> {
             }}
           >
             <Dropdown
-              overlay={
-                <Menu onClick={() => this.handleSearchFormFinish(true)}>
-                  <Menu.Item key="1">
-                    <RetweetOutlined />
-                    Show random subset
-                  </Menu.Item>
-                </Menu>
-              }
+              menu={{
+                onClick: () => this.handleSearchFormFinish(true),
+                items: [
+                  {
+                    key: "1",
+                    icon: <RetweetOutlined />,
+                    label: "Show random subset",
+                  },
+                ],
+              }}
             >
               <Button
                 type="primary"

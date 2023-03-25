@@ -1,6 +1,6 @@
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
-import { Input, Menu, Dropdown, Tooltip } from "antd";
+import { Input, Dropdown, Tooltip } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -36,6 +36,7 @@ import Store from "oxalis/store";
 import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
+import { MenuProps } from "rc-menu";
 const InputGroup = Input.Group;
 const treeTypeHint = [] as Array<Tree>;
 const commentTypeHint = [] as Array<CommentType>;
@@ -347,20 +348,27 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return <i className={iconClass} />;
   }
 
-  renderSortDropdown() {
-    return (
-      <Menu selectedKeys={[this.state.sortBy]} onClick={this.handleChangeSorting}>
-        <Menu.Item key={SortByEnum.NAME}>by name</Menu.Item>
-        <Menu.Item key={SortByEnum.ID}>by creation time</Menu.Item>
-        <Menu.Item key={SortByEnum.NATURAL}>
-          by name (natural sort)
-          <Tooltip title={messages["tracing.natural_sorting"]} placement="bottomLeft">
-            {" "}
-            <InfoCircleOutlined />
-          </Tooltip>
-        </Menu.Item>
-      </Menu>
-    );
+  getSortDropdown(): MenuProps {
+    return {
+      selectedKeys: [this.state.sortBy],
+      onClick: this.handleChangeSorting,
+      items: [
+        { key: SortByEnum.NAME, label: "by name" },
+        { key: SortByEnum.ID, label: "by creation time" },
+        {
+          key: SortByEnum.NATURAL,
+          label: (
+            <>
+              by name (natural sort)
+              <Tooltip title={messages["tracing.natural_sorting"]} placement="bottomLeft">
+                {" "}
+                <InfoCircleOutlined />
+              </Tooltip>
+            </>
+          ),
+        },
+      ],
+    };
   }
 
   getData(): Array<Tree | CommentType> {
@@ -486,7 +494,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     onClick={() => this.nextComment()}
                     icon={<ArrowRightOutlined />}
                   />
-                  <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
+                  <Dropdown menu={this.getSortDropdown()} trigger={["click"]}>
                     <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
                       {this.renderSortIcon()}
                     </ButtonComponent>

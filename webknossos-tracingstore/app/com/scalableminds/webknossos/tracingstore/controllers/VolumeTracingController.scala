@@ -409,7 +409,7 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .agglomerateGraphForId(mappingName, agglomerateId)
+              .getAgglomerateGraphForId(mappingName, agglomerateId)
               .futureBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)

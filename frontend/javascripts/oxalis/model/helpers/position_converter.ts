@@ -1,6 +1,7 @@
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import { type ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { type ResolutionInfo } from "./resolution_info";
+
 export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,
   resolutions: Array<Vector3>,

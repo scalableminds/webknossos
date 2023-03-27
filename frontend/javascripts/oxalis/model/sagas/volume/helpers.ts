@@ -9,11 +9,7 @@ import Constants, {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import {
-  getBoundaries,
-  getResolutionInfo,
-  ResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -30,6 +26,7 @@ import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing
 import { VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {

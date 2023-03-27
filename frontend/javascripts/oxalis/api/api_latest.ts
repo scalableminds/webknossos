@@ -72,7 +72,6 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -152,6 +151,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransforms } from "oxalis/model/actions/dataset_actions";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }

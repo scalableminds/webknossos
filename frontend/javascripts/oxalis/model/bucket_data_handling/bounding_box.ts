@@ -1,9 +1,9 @@
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import type { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
+import type { ResolutionInfo } from "../helpers/resolution_info";
 
 class BoundingBox {
   boundingBox: BoundingBoxType | null | undefined;

@@ -16,7 +16,6 @@ import {
   getResolutionInfo,
   getTransformsForLayer,
   invertAndTranspose,
-  SmallerOrHigherInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
@@ -37,6 +36,7 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { SmallerOrHigherInfo } from "../helpers/resolution_info";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 

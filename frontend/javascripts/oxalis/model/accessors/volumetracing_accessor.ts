@@ -20,7 +20,6 @@ import type {
 import type { AnnotationTool, ContourMode, Vector3, Vector4 } from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
-  ResolutionInfo,
   getMappingInfo,
   getResolutionInfo,
   getSegmentationLayerByName,
@@ -37,6 +36,7 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 import { V3 } from "libs/mjs";
 import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;

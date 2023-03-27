@@ -8,11 +8,12 @@ import {
   getSomeResolutionInfoForDataset,
   getSegmentationLayers,
   getResolutionInfo,
-  ResolutionInfo,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+
 type Props = {
   datasetId: APIDatasetId;
   onClose: () => void;

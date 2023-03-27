@@ -27,7 +27,6 @@ import {
   getVisibleSegmentationLayer,
   getResolutionInfoOfVisibleSegmentationLayer,
   getMappingInfo,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -57,6 +56,7 @@ import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset

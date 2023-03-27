@@ -27,7 +27,6 @@ import BoundingBox from "../bucket_data_handling/bounding_box";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { Identity4x4 } from "./flycam_accessor";
 
-export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
   smaller: boolean;
   higher: boolean;
@@ -446,18 +445,6 @@ export function getSegmentationLayerByName(
   layerName: string,
 ): APISegmentationLayer {
   const layer = getLayerByName(dataset, layerName);
-
-  if (layer.category !== "segmentation") {
-    throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
-  }
-
-  return layer;
-}
-export function getSegmentationLayerByNameOrFallbackName(
-  dataset: APIDataset,
-  layerName: string,
-): APISegmentationLayer {
-  const layer = getLayerByNameOrFallbackName(dataset, layerName);
 
   if (layer.category !== "segmentation") {
     throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);

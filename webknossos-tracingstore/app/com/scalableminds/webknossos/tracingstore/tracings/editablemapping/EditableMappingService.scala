@@ -179,7 +179,9 @@ class EditableMappingService @Inject()(
 
     def updateIter(mappingFox: Fox[EditableMappingProto],
                    nextVersion: Long,
-                   remainingUpdates: List[EditableMappingUpdateAction]): Fox[EditableMappingProto] = {
+                   remainingUpdates: List[EditableMappingUpdateAction],
+                   segmentToAgglomerateBuffer: mutable.Map[String, Seq[(Long, Long)]],
+                   agglomerateToGraphBuffer: mutable.Map[String, Seq[(Long, Long)]]): Fox[EditableMappingProto] = {
       logger.info(s"Applying ${remainingUpdates.length} updates...")
       mappingFox.futureBox.flatMap {
         case Empty => Fox.empty
@@ -187,26 +189,44 @@ class EditableMappingService @Inject()(
           remainingUpdates match {
             case List() => Fox.successful(mapping)
             case head :: tail =>
-              updateIter(applyOneUpdate(mapping, editableMappingId, nextVersion, head, remoteFallbackLayer, userToken),
-                         nextVersion + 1L,
-                         tail)
+              updateIter(
+                applyOneUpdate(mapping,
+                               editableMappingId,
+                               nextVersion,
+                               head,
+                               remoteFallbackLayer,
+                               userToken,
+                               segmentToAgglomerateBuffer,
+                               agglomerateToGraphBuffer),
+                nextVersion + 1L,
+                tail
+              )
           }
         case _ => mappingFox
       }
     }
 
+    val segmentToAgglomerateBuffer = new mutable.HashMap[String, Seq[(Long, Long)]]()
+    val agglomerateToGraphBuffer = new mutable.HashMap[String, AgglomerateGraph]()
     for {
-      updatedInfo <- updateIter(Some(existingEditabeMappingInfo), version, updates)
+      updatedInfo <- updateIter(Some(existingEditabeMappingInfo),
+                                version,
+                                updates,
+                                segmentToAgglomerateBuffer,
+                                agglomerateToGraphBuffer)
       _ <- tracingDataStore.editableMappings.put(editableMappingId, version, updatedInfo)
     } yield ()
   }
 
-  private def applyOneUpdate(mapping: EditableMappingProto,
-                             editableMappingId: String,
-                             newVersion: Long,
-                             update: EditableMappingUpdateAction,
-                             remoteFallbackLayer: RemoteFallbackLayer,
-                             userToken: Option[String]): Fox[EditableMappingProto] =
+  private def applyOneUpdate(
+      mapping: EditableMappingProto,
+      editableMappingId: String,
+      newVersion: Long,
+      update: EditableMappingUpdateAction,
+      remoteFallbackLayer: RemoteFallbackLayer,
+      userToken: Option[String],
+      segmentToAgglomerateBuffer: mutable.Map[String, Seq[(Long, Long)]],
+      agglomerateToGraphBuffer: mutable.Map[String, Seq[(Long, Long)]]): Fox[EditableMappingProto] =
     update match {
       case splitAction: SplitAgglomerateUpdateAction =>
         applySplitAction(mapping, editableMappingId, newVersion, splitAction, remoteFallbackLayer, userToken)

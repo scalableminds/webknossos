@@ -23,6 +23,12 @@ export class ResolutionInfo {
     // a zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
     // Therefore, the largest dim for each resolution has to be unique across all resolutions.
     // This function creates a map which maps from powerOfTwo (2**index) to resolution.
+    // E.g.
+    // {
+    //  0: [1, 1, 1],
+    //  2: [2, 2, 1],
+    //  4: [4, 4, 2]
+    // }
     const { resolutions } = this;
     const resolutionMap = new Map();
 

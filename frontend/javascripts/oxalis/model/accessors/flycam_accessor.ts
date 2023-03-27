@@ -589,17 +589,18 @@ function _getActiveResolutionInfo(state: OxalisState) {
   const activeMagOfEnabledLayers = Object.fromEntries(
     enabledLayers.map((l) => [
       l.name,
-      getResolutionInfo(l.resolutions).getDenseResolutions()[activeMagIndices[l.name]],
+      getResolutionInfo(l.resolutions).getResolutionByIndex(activeMagIndices[l.name]),
     ]),
   );
 
   const isActiveResolutionGlobal = _.uniq(Object.values(activeMagOfEnabledLayers)).length === 1;
-  let representativeResolution: Vector3 | undefined;
+  let representativeResolution: Vector3 | undefined | null;
   if (isActiveResolutionGlobal) {
     representativeResolution = Object.values(activeMagOfEnabledLayers)[0];
   } else {
-    representativeResolution = _.minBy(Object.values(activeMagOfEnabledLayers), (mag) =>
-      Math.min(...mag),
+    representativeResolution = _.minBy(
+      Object.values(activeMagOfEnabledLayers).filter((mag) => !!mag),
+      (mag) => Math.min(...(mag as Vector3)),
     );
   }
 

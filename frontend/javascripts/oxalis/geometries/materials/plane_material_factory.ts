@@ -414,11 +414,12 @@ class PlaneMaterialFactory {
           let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(Store.getState().dataset, layerName);
-            const activeMag = getResolutionInfo(layer.resolutions).getDenseResolutions()[
-              activeMagIndex
-            ];
+            const activeMag = getResolutionInfo(layer.resolutions).getResolutionByIndex(
+              activeMagIndex,
+            );
+
             const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
-            if (!hasTransform) {
+            if (!hasTransform && activeMag) {
               representativeMagForVertexAlignment = V3.min(
                 representativeMagForVertexAlignment,
                 activeMag,

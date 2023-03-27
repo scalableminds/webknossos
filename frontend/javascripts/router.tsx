@@ -224,7 +224,7 @@ class ReactRouter extends React.Component<Props> {
                 exact
                 path="/"
                 render={() => {
-                  if (!this.props.hasOrganizations && !features().isDemoInstance) {
+                  if (!this.props.hasOrganizations && !features().isWkorgInstance) {
                     return <Redirect to="/onboarding" />;
                   }
 
@@ -705,7 +705,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              {!features().isDemoInstance && (
+              {!features().isWkorgInstance && (
                 <RouteWithErrorBoundary path="/onboarding" component={Onboarding} />
               )}
               <RouteWithErrorBoundary component={PageNotFoundView} />

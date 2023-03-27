@@ -650,7 +650,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               targetFolderId: new URLSearchParams(location.search).get("to"),
             }}
           >
-            {features().isDemoInstance && (
+            {features().isWkorgInstance && (
               <Alert
                 message={
                   <>
@@ -698,7 +698,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                       });
                     }}
                     afterFetchedTeams={(fetchedTeams) => {
-                      if (!features().isDemoInstance) {
+                      if (!features().isWkorgInstance) {
                         return;
                       }
 

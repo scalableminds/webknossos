@@ -17,8 +17,10 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import type { LayoutProps } from "oxalis/view/action-bar/tracing_actions_view";
-import TracingActionsView, { LayoutMenu } from "oxalis/view/action-bar/tracing_actions_view";
+import TracingActionsView, {
+  getLayoutMenu,
+  LayoutProps,
+} from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import ToolbarView from "oxalis/view/action-bar/toolbar_view";
@@ -148,20 +150,19 @@ class ActionBarView extends React.PureComponent<Props, State> {
     } = this.props;
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
-    const layoutMenu = (
-      <LayoutMenu
-        {...layoutProps}
-        key="layout-menu"
-        addNewLayout={() => {
-          this.setState({
-            isNewLayoutModalOpen: true,
-          });
-        }}
-        onResetLayout={this.handleResetLayout}
-        onSelectLayout={layoutProps.setCurrentLayout}
-        onDeleteLayout={this.handleLayoutDeleted}
-      />
-    );
+
+    const layoutMenu = getLayoutMenu({
+      ...layoutProps,
+      addNewLayout: () => {
+        this.setState({
+          isNewLayoutModalOpen: true,
+        });
+      },
+      onResetLayout: this.handleResetLayout,
+      onSelectLayout: layoutProps.setCurrentLayout,
+      onDeleteLayout: this.handleLayoutDeleted,
+    });
+
     return (
       <React.Fragment>
         <div className="action-bar">

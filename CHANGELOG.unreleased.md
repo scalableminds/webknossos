@@ -13,6 +13,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added support for datasets where layers are transformed individually (with an affine matrix). Transformations can be specified via datasource-properties.json or via JS API (will be ephemeral, then). [#6748](https://github.com/scalableminds/webknossos/pull/6748)
 - Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
+- Added email notifications for WK worker jobs. [#6918](https://github.com/scalableminds/webknossos/pull/6918)
+- Added support for viewing sharded neuroglancer precomputed datasets. [#6920](https://github.com/scalableminds/webknossos/pull/6920)
 - Added support for uploading zip64 files. [#6939](https://github.com/scalableminds/webknossos/pull/6939)
 
 ### Changed
@@ -27,7 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed support for rendering of negative floats. [#6895](https://github.com/scalableminds/webknossos/pull/6895)
 - Fixed caching issues with webworkers. [#6932](https://github.com/scalableminds/webknossos/pull/6932)
 - Fixed download button for annotations which was disabled in some cases. [#6931](https://github.com/scalableminds/webknossos/pull/6931)
-
+- Fixed antd deprecation warning for Dropdown menus. [#6898](https://github.com/scalableminds/webknossos/pull/6898)
 ### Removed
 
 ### Breaking Changes

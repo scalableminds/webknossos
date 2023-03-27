@@ -4,11 +4,11 @@ import {
   Dropdown,
   Empty,
   Input,
-  Menu,
   Spin,
   Modal,
   Tooltip,
   notification,
+  MenuProps,
 } from "antd";
 import type { Dispatch } from "redux";
 import {
@@ -695,54 +695,57 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
   }
 
-  getSettingsDropdown() {
+  getSettingsDropdown(): MenuProps {
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
       ? "sortByName"
       : "sortByTime";
-    return (
-      <Menu selectedKeys={[activeMenuKey]} onClick={this.handleDropdownClick}>
-        <Menu.Item key="sortByName">by name</Menu.Item>
-        <Menu.Item key="sortByTime">by creation time</Menu.Item>
-      </Menu>
-    );
+    return {
+      selectedKeys: [activeMenuKey],
+      onClick: this.handleDropdownClick,
+      items: [
+        { key: "sortByName", label: "by name" },
+        { key: "sortByTime", label: "by creation time" },
+      ],
+    };
   }
 
-  getActionsDropdown() {
+  getActionsDropdown(): MenuProps {
     const isEditingDisabled = !this.props.allowUpdate;
-    return (
-      <Menu>
-        <Menu.Item
-          key="shuffleAllTreeColors"
-          onClick={this.shuffleAllTreeColors}
-          title="Shuffle All Tree Colors"
-          disabled={isEditingDisabled}
-        >
-          <i className="fas fa-random" /> Shuffle All Tree Colors
-        </Menu.Item>
-        <Menu.Item
-          key="handleNmlDownload"
-          onClick={this.handleNmlDownload}
-          title="Download selected trees as NML"
-        >
-          <DownloadOutlined /> Download Selected Trees
-        </Menu.Item>
-        <Menu.Item
-          key="importNml"
-          onClick={this.props.showDropzoneModal}
-          title="Import NML files"
-          disabled={isEditingDisabled}
-        >
-          <UploadOutlined /> Import NML
-        </Menu.Item>
-        <Menu.Item
-          key="measureAllSkeletons"
-          onClick={this.handleMeasureAllSkeletonsLength}
-          title="Measure Length of All Skeletons"
-        >
-          <i className="fas fa-ruler" /> Measure Length of All Skeletons
-        </Menu.Item>
-      </Menu>
-    );
+    return {
+      items: [
+        {
+          key: "shuffleAllTreeColors",
+          onClick: this.shuffleAllTreeColors,
+          title: "Shuffle All Tree Colors",
+          disabled: isEditingDisabled,
+          icon: <i className="fas fa-random" />,
+          label: "Shuffle All Tree Colors",
+        },
+        {
+          key: "handleNmlDownload",
+          onClick: this.handleNmlDownload,
+          title: "Download selected trees as NML",
+          icon: <DownloadOutlined />,
+          label: "Download Selected Trees",
+        },
+        {
+          key: "importNml",
+          onClick: this.props.showDropzoneModal,
+          title: "Import NML files",
+          disabled: isEditingDisabled,
+          icon: <UploadOutlined />,
+          label: "Import NML",
+        },
+        {
+          key: "measureAllSkeletons",
+          onClick: this.handleMeasureAllSkeletonsLength,
+          title: "Measure Length of All Skeletons",
+
+          icon: <i className="fas fa-ruler" />,
+          label: "Measure Length of All Skeletons",
+        },
+      ],
+    };
   }
 
   getSelectedTreesAlert = () =>
@@ -865,7 +868,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   >
                     <i className="fas fa-toggle-off" />
                   </ButtonComponent>
-                  <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
+                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent>
                       More
                       <DownOutlined />
@@ -896,7 +899,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   >
                     <i className="fas fa-arrow-right" />
                   </ButtonComponent>
-                  <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
+                  <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
                     <ButtonComponent title="Sort">
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>

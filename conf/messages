@@ -295,6 +295,7 @@ job.meshFile.notAllowed.organization = Calculating mesh files is only allowed fo
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.materializeVolumeAnnotation.notAllowed.organization = Materializing volume annotations is only allowed for datasets of your own organization.
 job.noWorkerForDatastore = Processing jobs are not available for the datastore this dataset belongs to.
+job.emailNotifactionsDisabled = Email notifications are not enabled for this job type.
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

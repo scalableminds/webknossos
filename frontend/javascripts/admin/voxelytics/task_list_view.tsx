@@ -4,7 +4,6 @@ import {
   Input,
   Row,
   Col,
-  Menu,
   Button,
   Dropdown,
   notification,
@@ -12,6 +11,7 @@ import {
   Tag,
   Tooltip,
   Select,
+  MenuProps,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -406,28 +406,26 @@ export default function TaskListView({
 
   const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 
-  const overflowMenu = (
-    <Menu>
-      <Menu.Item key="1" onClick={copyAllArtifactPaths}>
-        Copy All Artifact Paths
-      </Menu.Item>
-      <Menu.Item key="2" onClick={downloadReportJSON}>
-        Download Report as JSON
-      </Menu.Item>
-      <Menu.Item key="3" onClick={downloadWorkflowYAML}>
-        Download Workflow YAML
-      </Menu.Item>
-      <Menu.Item key="4" onClick={downloadLog} disabled={singleRunId == null}>
-        {singleRunId == null ? (
-          <Tooltip title="Please select a specific run for log download.">
-            <div>Download Log</div>
-          </Tooltip>
-        ) : (
-          "Download Log"
-        )}
-      </Menu.Item>
-    </Menu>
-  );
+  const overflowMenu: MenuProps = {
+    items: [
+      { key: "1", onClick: copyAllArtifactPaths, label: "Copy All Artifact Paths" },
+      { key: "2", onClick: downloadReportJSON, label: "Download Report as JSON" },
+      { key: "3", onClick: downloadWorkflowYAML, label: "Download Workflow YAML" },
+      {
+        key: "4",
+        onClick: downloadLog,
+        disabled: singleRunId == null,
+        label:
+          singleRunId == null ? (
+            <Tooltip title="Please select a specific run for log download.">
+              <div>Download Log</div>
+            </Tooltip>
+          ) : (
+            "Download Log"
+          ),
+      },
+    ],
+  };
 
   const renderTaskGroupOrTask = (taskGroup: VoxelyticsTaskConfigWithHierarchy) => {
     const taskInfo = aggregateTaskInfos(taskGroup, report.tasks, runId);
@@ -631,7 +629,7 @@ export default function TaskListView({
               </Select.Option>
             ))}
           </Select>
-          <Dropdown.Button overlay={overflowMenu} onClick={() => setExpandedTasks([])}>
+          <Dropdown.Button menu={overflowMenu} onClick={() => setExpandedTasks([])}>
             Collapse All
           </Dropdown.Button>
         </div>

@@ -1,7 +1,5 @@
-// @ts-nocheck
 import "test/mocks/lz4";
 import _ from "lodash";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { sleep } from "libs/utils";
 import type { TestInterface } from "ava";
@@ -10,6 +8,9 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { Vector3, Vector4 } from "oxalis/constants";
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 
 const StoreMock = {
   getState: () => ({
@@ -30,11 +31,12 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
 });
 mockRequire("app", {});
 mockRequire("libs/error_handling", {
-  assertExists(expr) {
+  assertExists(expr: any) {
+    // @ts-ignore
     this.assert(expr != null);
   },
 
-  assert(expr) {
+  assert(expr: boolean) {
     if (!expr) throw new Error("Assertion failed");
   },
 
@@ -61,16 +63,16 @@ test.beforeEach((t) => {
       [8, 8, 8],
       [16, 16, 16],
       [32, 32, 32],
-    ],
+    ] as Vector3[],
   };
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
   const cube = new Cube([100, 100, 100], resolutionInfo, "uint32", false);
 
   class PullQueueMock {
-    queue = [];
-    processedQueue = [];
+    queue: Array<{ bucket: Vector4 }> = [];
+    processedQueue: Array<{ bucket: Vector4 }> = [];
 
-    add(item) {
+    add(item: { bucket: Vector4 }) {
       this.queue.push(item);
     }
 
@@ -209,7 +211,7 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   cube.getOrCreateBucket([2, 2, 2, 0]);
   cube.getOrCreateBucket([3, 3, 3, 0]);
   t.is(b1.shouldCollect(), false);
-  const addresses = cube.buckets.map((b) => b.zoomedAddress);
+  const addresses = cube.buckets.map((b: DataBucket) => b.zoomedAddress);
   t.deepEqual(addresses, [
     [0, 0, 0, 0],
     [3, 3, 3, 0],
@@ -226,7 +228,7 @@ test("Garbage Collection should grow beyond soft limit if necessary", (t) => {
   [b1, b2, b3].map((b) => b.markAsPulled());
   // Allocate a 4th one which should still be possible (will exceed BUCKET_COUNT_SOFT_LIMIT)
   cube.getOrCreateBucket([3, 3, 3, 0]);
-  const addresses = cube.buckets.map((b) => b.zoomedAddress);
+  const addresses = cube.buckets.map((b: DataBucket) => b.zoomedAddress);
   t.deepEqual(addresses, [
     [0, 0, 0, 0],
     [1, 1, 1, 0],

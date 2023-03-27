@@ -188,8 +188,8 @@ class VolumeTracingController @Inject()(
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
-              editableMappingService.duplicate(tracing.mappingName, tracing, tracingId))
+            newEditableMappingId <- Fox
+              .runIf(tracing.mappingIsEditable.contains(true))(editableMappingService.duplicate(tracing.mappingName))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
               tracing,

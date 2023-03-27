@@ -123,14 +123,41 @@ class EditableMappingService @Inject()(
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
 
-  def duplicate(editableMappingIdOpt: Option[String], tracing: VolumeTracing, tracingId: String): Fox[String] =
+  def duplicate(editableMappingIdOpt: Option[String]): Fox[String] =
     for {
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
       editableMapping <- getInfo(editableMappingId)
       newId = generateId
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping))
-      // TODO: duplicate agglomerateToGraph, segmentToAgglomerate
+      _ <- duplicateSegmentToAgglomerate(editableMappingId, newId)
+      _ <- duplicateAgglomerateToGraph(editableMappingId, newId)
     } yield newId
+
+  private def duplicateSegmentToAgglomerate(editableMappingId: String, newId: String): Fox[Unit] = {
+    val iterator = new VersionedIterator(editableMappingId, tracingDataStore.editableMappingsSegmentToAgglomerate, None)
+    for {
+      _ <- Fox.combined(iterator.map { keyValuePair =>
+        for {
+          chunkId <- chunkIdFromSegmentToAgglomerateKey(keyValuePair.key).toFox
+          newKey = segmentToAgglomerateKey(newId, chunkId)
+          _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(newKey, version = 0L, keyValuePair.value)
+        } yield ()
+      }.toList)
+    } yield ()
+  }
+
+  private def duplicateAgglomerateToGraph(editableMappingId: String, newId: String): Fox[Unit] = {
+    val iterator = new VersionedIterator(editableMappingId, tracingDataStore.editableMappingsAgglomerateToGraph, None)
+    for {
+      _ <- Fox.combined(iterator.map { keyValuePair =>
+        for {
+          agglomerateId <- agglomerateIdFromAgglomerateGraphKey(keyValuePair.key).toFox
+          newKey = agglomerateGraphKey(newId, agglomerateId)
+          _ <- tracingDataStore.editableMappingsAgglomerateToGraph.put(newKey, version = 0L, keyValuePair.value)
+        } yield ()
+      }.toList)
+    } yield ()
+  }
 
   def updateActionLog(editableMappingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[EditableMappingUpdateAction])): JsObject =
@@ -385,6 +412,10 @@ class EditableMappingService @Inject()(
 
   def segmentToAgglomerateKey(mappingId: String, chunkId: Long): String =
     s"$mappingId/$chunkId"
+
+  private def chunkIdFromSegmentToAgglomerateKey(key: String): Box[Long] = tryo(key.split("/")(1).toLong)
+
+  private def agglomerateIdFromAgglomerateGraphKey(key: String): Box[Long] = tryo(key.split("/")(1).toLong)
 
   def getAgglomerateGraphForId(mappingId: String,
                                agglomerateId: Long,

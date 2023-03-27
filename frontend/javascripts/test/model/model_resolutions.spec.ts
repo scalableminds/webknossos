@@ -2,7 +2,7 @@ import "test/mocks/lz4";
 import test from "ava";
 import {
   convertToDenseResolution,
-  getResolutionUnion,
+  deprecated_getResolutionUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { Vector3 } from "oxalis/constants";
 import { APIDataset } from "types/api_flow_types";
@@ -63,17 +63,17 @@ test("Complex convertToDenseResolution", (t) => {
   t.deepEqual(densify(dataset.dataSource.dataLayers[0]), expectedResolutions[0]);
   t.deepEqual(densify(dataset.dataSource.dataLayers[1]), expectedResolutions[1]);
 });
-test("Test empty getResolutionUnion", (t) => {
+test("Test empty deprecated_getResolutionUnion", (t) => {
   const dataset = {
     dataSource: {
       dataLayers: [],
     },
   } as any as APIDataset;
   const expectedResolutions: Vector3[] = [];
-  const union = getResolutionUnion(dataset);
+  const union = deprecated_getResolutionUnion(dataset);
   t.deepEqual(union, expectedResolutions);
 });
-test("Test getResolutionUnion", (t) => {
+test("Test deprecated_getResolutionUnion", (t) => {
   const dataset = {
     dataSource: {
       dataLayers: [
@@ -102,6 +102,6 @@ test("Test getResolutionUnion", (t) => {
     [16, 16, 2],
     [32, 32, 4],
   ];
-  const union = getResolutionUnion(dataset);
+  const union = deprecated_getResolutionUnion(dataset);
   t.deepEqual(union, expectedResolutions);
 });

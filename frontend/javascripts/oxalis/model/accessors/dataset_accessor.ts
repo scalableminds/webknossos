@@ -68,6 +68,7 @@ export class ResolutionInfo {
     const resolutionMap = new Map();
 
     if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
+      debugger;
       throw new Error("Max dimension in resolutions is not unique.");
     }
 
@@ -288,7 +289,7 @@ export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: 
 // Don't use memoizeOne here, since we want to cache the resolutions for all layers
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
-export function getResolutionUnion(
+export function deprecated_getResolutionUnion(
   dataset: APIDataset,
   shouldThrow: boolean = false,
 ): Array<Vector3> {
@@ -318,7 +319,16 @@ export function getResolutionUnion(
 }
 
 // todo: rename
-export function getResolutionUnionNew(dataset: APIDataset): Array<Vector3[]> {
+export const getResolutionUnionNew = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
+  /*
+   * Returns a list of existent mags per mag level. For example:
+   * [
+   *    [[1, 1, 1]],
+   *    [[2, 2, 2], [2, 2, 1]],
+   *    [[4, 4, 4], [4, 4, 1]],
+   *    [[8, 8, 8], [8, 8, 2]],
+   * ]
+   */
   const resolutionUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
@@ -343,7 +353,11 @@ export function getResolutionUnionNew(dataset: APIDataset): Array<Vector3[]> {
     .map((el) => Number(el));
 
   return keys.map((key) => resolutionUnionDict[key]);
-}
+});
+
+export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): ResolutionInfo => {
+  return new ResolutionInfo(getResolutionUnionNew(dataset).map((mags) => mags[0]));
+});
 
 // todo
 export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
@@ -378,20 +392,20 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
     .reverse();
 }
 
-function _getResolutions(dataset: APIDataset): Vector3[] {
-  // In the long term, getResolutions should not be used anymore.
+function _deprecated_getResolutions(dataset: APIDataset): Vector3[] {
+  // In the long term, deprecated_getResolutions should not be used anymore.
   // Instead, all the code should use the ResolutionInfo class which represents
   // exactly which resolutions exist per layer.
-  return convertToDenseResolution(getResolutionUnion(dataset));
+  return convertToDenseResolution(deprecated_getResolutionUnion(dataset));
 }
 
-// _getResolutions itself is not very performance intensive, but other functions which rely
+// _deprecated_getResolutions itself is not very performance intensive, but other functions which rely
 // on the returned resolutions are. To avoid busting memoization caches (which rely on references),
-// we memoize _getResolutions, as well.
-export const getResolutions = memoizeOne(_getResolutions);
+// we memoize _deprecated_getResolutions, as well.
+const deprecated_getResolutions = memoizeOne(_deprecated_getResolutions);
 
 export function deprecated_getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
-  return getResolutionInfo(getResolutions(dataset));
+  return getResolutionInfo(deprecated_getResolutions(dataset));
 }
 
 export function getLargestResolutions(dataset: APIDataset): Vector3[] {

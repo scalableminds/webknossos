@@ -11,7 +11,7 @@ import {
 import Store, { type Tracing } from "oxalis/store";
 import { addAnnotationLayer } from "admin/admin_rest_api";
 import {
-  deprecated_getDatasetResolutionInfo,
+  getSomeResolutionInfoForDataset,
   getLayerByName,
   getMappingInfo,
   getSegmentationLayers,
@@ -122,7 +122,7 @@ export default function AddVolumeLayerModal({
   }, [dataset, tracing]);
   const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
-  const datasetResolutionInfo = deprecated_getDatasetResolutionInfo(dataset);
+  const datasetResolutionInfo = getSomeResolutionInfoForDataset(dataset);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
 
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>

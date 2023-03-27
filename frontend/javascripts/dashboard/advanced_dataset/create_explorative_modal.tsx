@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
-  deprecated_getDatasetResolutionInfo,
+  getSomeResolutionInfoForDataset,
   getSegmentationLayers,
   getResolutionInfo,
   ResolutionInfo,
@@ -192,7 +192,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
       selectedSegmentationLayer != null
         ? `&fallbackLayerName=${selectedSegmentationLayer.name}`
         : "";
-    const datasetResolutionInfo = deprecated_getDatasetResolutionInfo(dataset);
+    const datasetResolutionInfo = getSomeResolutionInfoForDataset(dataset);
     let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
     let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
 

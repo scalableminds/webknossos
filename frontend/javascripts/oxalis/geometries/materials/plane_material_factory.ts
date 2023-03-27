@@ -408,6 +408,8 @@ class PlaneMaterialFactory {
           // an artificial mag (meaning, there's not necessarily a layer with that exact
           // mag). It is derived from the layers that are not transformed by considering
           // the minimum for each axis.
+          // For example, one layer might render mag 4-4-1, whereas another layer renders
+          // 4-2-1. The representative mag would be 1-2-1.
           // If all layers have a transform, the representativeMagForVertexAlignment
           // isn't relevant which is why it can default to [1, 1, 1].
 
@@ -430,7 +432,6 @@ class PlaneMaterialFactory {
           if (Math.max(...representativeMagForVertexAlignment) === Infinity) {
             representativeMagForVertexAlignment = [1, 1, 1];
           }
-          console.log("representativeMagForVertexAlignment", representativeMagForVertexAlignment);
           this.uniforms.representativeMagForVertexAlignment = {
             value: representativeMagForVertexAlignment,
           };
@@ -917,7 +918,6 @@ class PlaneMaterialFactory {
     ];
   }
 
-  // todo: move somewhere else?
   getTotalResolutionCount(): number {
     const storeState = Store.getState();
     const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(

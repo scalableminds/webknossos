@@ -69,9 +69,24 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })
+
+  def gridSize: Array[Int] = (chunkSize, precomputedScale.size).zipped.map((c, s) => (s.toDouble / c).ceil.toInt)
+
+  override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }
 
-case class ShardingSpecification(`@type`: String)
+case class ShardingSpecification(`@type`: String,
+                                 preshift_bits: Long,
+                                 hash: String,
+                                 minishard_bits: Int,
+                                 shard_bits: Long,
+                                 minishard_index_encoding: String = "raw",
+                                 data_encoding: String = "raw") {
+
+  def hashFunction(input: Long): Long =
+    if (hash == "identity") input
+    else ??? // not implemented: murmurhash3_x86_128
+}
 
 object ShardingSpecification extends JsonImplicits {
   implicit object ShardingSpecificationFormat extends Format[ShardingSpecification] {

@@ -12,7 +12,7 @@ import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
   getDatasetExtentAsString,
-  getResolutionUnionNew,
+  getResolutionUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -576,7 +576,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { dataset, activeResolutionInfo, activeUser } = this.props;
     const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
       activeResolutionInfo;
-    const resolutionUnion = getResolutionUnionNew(dataset);
+    const resolutionUnion = getResolutionUnion(dataset);
     const resolutionInfo =
       representativeResolution != null ? (
         <Tooltip

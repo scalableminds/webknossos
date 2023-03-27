@@ -289,8 +289,7 @@ export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: 
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
 
-// todo: rename
-export const getResolutionUnionNew = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
+export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
   /*
    * Returns a list of existent mags per mag level. For example:
    * [
@@ -327,7 +326,7 @@ export const getResolutionUnionNew = memoizeOne((dataset: APIDataset): Array<Vec
 });
 
 export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): ResolutionInfo => {
-  return new ResolutionInfo(getResolutionUnionNew(dataset).map((mags) => mags[0]));
+  return new ResolutionInfo(getResolutionUnion(dataset).map((mags) => mags[0]));
 });
 
 // todo
@@ -380,7 +379,7 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 
   const maxZoomstep = Math.max(
     minimumZoomStepCount,
-    _.max(_.flattenDeep(getResolutionUnionNew(dataset))) || minimumZoomStepCount,
+    _.max(_.flattenDeep(getResolutionUnion(dataset))) || minimumZoomStepCount,
   );
 
   return maxZoomstep;

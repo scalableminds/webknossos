@@ -586,7 +586,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               <ul>
                 {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => (
                   <li key={layerName}>
-                    {layerName}: {mag.join("-")}
+                    {layerName}: {mag ? mag.join("-") : "none"}
                   </li>
                 ))}
               </ul>

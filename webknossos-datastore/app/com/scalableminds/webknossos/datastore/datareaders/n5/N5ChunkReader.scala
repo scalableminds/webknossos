@@ -5,6 +5,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import scala.collection.immutable.NumericRange
 import scala.util.Using
 
 object N5ChunkReader {
@@ -23,7 +24,9 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
 
   val dataExtractor: N5DataExtractor = new N5DataExtractor
 
-  override protected def readChunkBytesAndShape(path: String): Option[(Array[Byte], Option[Array[Int]])] =
+  override protected def readChunkBytesAndShape(
+      path: String,
+      range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] =
     Using.Manager { use =>
       def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
         val is = use(new ByteArrayInputStream(bytes))
@@ -37,7 +40,7 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
       }
 
       for {
-        bytes <- (vaultPath / path).readBytes()
+        bytes <- (vaultPath / path).readBytes(range)
         (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
         paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
       } yield (paddedChunkBytes, Some(blockHeader.blockSize))

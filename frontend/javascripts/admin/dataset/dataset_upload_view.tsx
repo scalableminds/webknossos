@@ -9,9 +9,15 @@ import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone, FileWithPath } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
-import type { RouteComponentProps } from "react-router-dom";
+import { Link, RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
+import type {
+  APITeam,
+  APIDataStore,
+  APIUser,
+  APIDatasetId,
+  APIOrganization,
+} from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
   reserveDatasetUpload,
@@ -41,6 +47,8 @@ import { FormInstance } from "antd/lib/form";
 import type { Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
+import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -56,6 +64,7 @@ type OwnProps = {
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
+  organization: APIOrganization;
 };
 type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
@@ -613,6 +622,23 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         }}
       >
         <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+          {hasPricingPlanExceededStorage(this.props.organization) ? (
+            <Alert
+              type="error"
+              message={
+                <>
+                  Your organization has exceeded the available storage. Uploading new datasets is
+                  disabled. Visit the{" "}
+                  <Link to={`/organizations/${this.props.organization.name}`}>
+                    organization page
+                  </Link>{" "}
+                  for details.
+                </>
+              }
+              style={{ marginBottom: 8 }}
+            />
+          ) : null}
+
           <Form
             onFinish={this.handleSubmit}
             layout="vertical"
@@ -856,6 +882,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 size="large"
                 type="primary"
                 htmlType="submit"
+                disabled={hasPricingPlanExceededStorage(this.props.organization)}
                 style={{
                   width: "100%",
                 }}
@@ -1043,6 +1070,7 @@ function FileUploadArea({
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
+  organization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);

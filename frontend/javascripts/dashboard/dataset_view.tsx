@@ -7,7 +7,6 @@ import {
   Col,
   Dropdown,
   Input,
-  Menu,
   Row,
   Spin,
   Tooltip,
@@ -48,6 +47,8 @@ import {
 } from "./dataset/queries";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { MenuProps } from "rc-menu";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
 
 type Props = {
   user: APIUser;
@@ -82,7 +83,7 @@ function filterDatasetsForUsersOrganization(datasets: APIDatasetCompact[], user:
     : datasets;
 }
 
-const refreshMenuItems = [
+const refreshMenuItems: ItemType[] = [
   {
     key: "1",
     label: "Scan disk for new datasets",
@@ -179,7 +180,7 @@ function DatasetView(props: Props) {
     </Radio>
   );
 
-  const filterMenu = {
+  const filterMenu: MenuProps = {
     items: [
       { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
       {
@@ -212,7 +213,6 @@ function DatasetView(props: Props) {
   const search = isUserAdminOrDatasetManager ? (
     <Input.Group compact style={{ display: "flex" }}>
       {searchBox}
-
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
           <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
@@ -241,7 +241,7 @@ function DatasetView(props: Props) {
             }
           >
             <Dropdown.Button
-              overlay={<Menu onClick={context.checkDatasets} items={refreshMenuItems} />}
+              menu={{ onClick: context.checkDatasets, items: refreshMenuItems }}
               style={margin}
               onClick={() => context.fetchDatasets()}
               disabled={context.isChecking}

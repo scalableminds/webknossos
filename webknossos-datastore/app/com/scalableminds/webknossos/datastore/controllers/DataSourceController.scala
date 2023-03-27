@@ -288,7 +288,8 @@ Expects:
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
       urlOrHeaderToken(token, request)) {
-      Ok(Json.toJson(dataSourceService.exploreMappings(organizationName, dataSetName, dataLayerName)))
+      addNoCacheHeaderFallback(
+        Ok(Json.toJson(dataSourceService.exploreMappings(organizationName, dataSetName, dataLayerName))))
     }
   }
 

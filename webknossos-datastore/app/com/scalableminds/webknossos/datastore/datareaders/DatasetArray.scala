@@ -13,6 +13,7 @@ import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 import java.io.IOException
 import java.nio.ByteOrder
 import java.util
+import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatasetArray(relativePath: DatasetPath,
@@ -89,24 +90,25 @@ class DatasetArray(relativePath: DatasetPath,
     }
   }
 
-  protected def readShardedChunk(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[Array[Byte]] = ???
+  protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext): Future[(VaultPath, NumericRange[Long])] = ???
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
-    chunkContentsCache.getOrLoad(chunkIndex.mkString(","), key => readSourceChunkData(chunkIndex))
+    chunkContentsCache.getOrLoad(chunkIndex.mkString(","), _ => readSourceChunkData(chunkIndex))
 
   private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
     if (header.isSharded) {
       for {
-        chunkData: Array[Byte] <- readShardedChunk(chunkIndex)
+        (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex)
         chunkShape = header.chunkSizeAtIndex(chunkIndex)
-        multiArray <- chunkReader.parseChunk(chunkData, chunkShape)
+        multiArray <- chunkReader.read(shardPath.toString, chunkShape, Some(chunkRange))
       } yield multiArray
     } else {
       val chunkFilename = getChunkFilename(chunkIndex)
       val chunkFilePath = relativePath.resolve(chunkFilename)
       val storeKey = chunkFilePath.storeKey
       val chunkShape = header.chunkSizeAtIndex(chunkIndex)
-      chunkReader.read(storeKey, chunkShape)
+      chunkReader.read(storeKey, chunkShape, None)
     }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =

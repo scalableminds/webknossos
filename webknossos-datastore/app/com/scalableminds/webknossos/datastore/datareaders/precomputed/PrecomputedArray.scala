@@ -128,9 +128,7 @@ class PrecomputedArray(relativePath: DatasetPath,
     shardIndexCache.getOrLoad(shardPath, readShardIndex)
 
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    for {
-      bytes <- Fox.option2Fox(shardPath.readBytes(Some(shardIndexRange)))
-    } yield bytes
+    Fox.option2Fox(shardPath.readBytes(Some(shardIndexRange)))
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
     // See https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#shard-index-format
@@ -165,8 +163,8 @@ class PrecomputedArray(relativePath: DatasetPath,
 
   private def getMinishardIndexRange(minishardNumber: Int,
                                      parsedShardIndex: Seq[(Long, Long)]): NumericRange.Exclusive[Long] = {
-    val miniShardIndexStart: Long = (shardIndexRange.end).toLong + parsedShardIndex(minishardNumber)._1
-    val miniShardIndexEnd: Long = (shardIndexRange.end).toLong + parsedShardIndex(minishardNumber)._2
+    val miniShardIndexStart: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._1
+    val miniShardIndexEnd: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._2
     Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
   }
 
@@ -234,11 +232,12 @@ class PrecomputedArray(relativePath: DatasetPath,
                             minishardIndex: Seq[(Long, Long, Long)]): Option[NumericRange.Exclusive[Long]] =
     for {
       chunkSpecification <- minishardIndex.find(_._1 == chunkId)
-      chunkStart = (shardIndexRange.end).toLong + chunkSpecification._2
-      chunkEnd = (shardIndexRange.end).toLong + chunkSpecification._2 + chunkSpecification._3
+      chunkStart = (shardIndexRange.end) + chunkSpecification._2
+      chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)
 
-  override def readShardedChunk(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[Array[Byte]] = {
+  override def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext): Future[(VaultPath, NumericRange[Long])] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = getMinishardInfo(chunkIdentifier)
     val shardPath = getPathForShard(minishardInfo._1)
@@ -248,10 +247,7 @@ class PrecomputedArray(relativePath: DatasetPath,
       chunkRange: NumericRange.Exclusive[Long] <- Fox
         .option2Fox(getChunkRange(chunkIdentifier, minishardIndex))
         .toFutureOrThrowException("Chunk range not found in minishard index")
-      chunkData <- Fox
-        .option2Fox(shardPath.readBytes(Some(chunkRange)))
-        .toFutureOrThrowException(s"Could not read chunk data from path ${shardPath.toString}")
-    } yield chunkData
+    } yield (shardPath, chunkRange)
   }
 
 }

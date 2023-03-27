@@ -1,5 +1,6 @@
 package models.job
 
+import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Formatter
@@ -10,9 +11,11 @@ import com.typesafe.scalalogging.LazyLogging
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.binary.{DataSetDAO, DataStoreDAO}
 import models.job.JobState.JobState
+import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
-import models.user.{MultiUserDAO, User, UserDAO}
+import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import oxalis.telemetry.SlackNotificationService
+import oxalis.mail.{DefaultMails, Send}
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
@@ -28,7 +31,7 @@ case class Job(
     _id: ObjectId,
     _owner: ObjectId,
     _dataStore: String,
-    command: String,
+    command: JobCommand,
     commandArgs: JsObject = Json.obj(),
     state: JobState = JobState.PENDING,
     manualState: Option[JobState] = None,
@@ -59,17 +62,17 @@ case class Job(
 
   private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
 
-  def resultLink(organizationName: String, dataStorePublicUrl: String): Option[String] =
+  def resultLink(organizationName: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
-        case "convert_to_wkw" =>
+        case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
-        case "export_tiff" =>
-          Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
-        case "infer_nuclei" | "infer_neurons" | "materialize_volume_annotation" =>
+        case JobCommand.export_tiff =>
+          Some(s"/api/jobs/${this._id}/export")
+        case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }
@@ -77,13 +80,17 @@ case class Job(
       }
     }
 
-  def resultLinkSlackFormatted(organizationName: String,
-                               dataStorePublicUrl: String,
-                               webKnossosPublicUrl: String): Option[String] =
+  def resultLinkPublic(organizationName: String, webKnossosPublicUrl: String): Option[String] =
     for {
-      resultLink <- resultLink(organizationName, dataStorePublicUrl)
-      resultLinkFormatted = if (resultLink.startsWith("/")) s" <$webKnossosPublicUrl$resultLink|Result>"
-      else s" <$resultLink|Result>"
+      resultLink <- resultLink(organizationName)
+      resultLinkPublic = if (resultLink.startsWith("/")) s"$webKnossosPublicUrl$resultLink"
+      else s"$resultLink"
+    } yield resultLinkPublic
+
+  def resultLinkSlackFormatted(organizationName: String, webKnossosPublicUrl: String): Option[String] =
+    for {
+      resultLink <- resultLinkPublic(organizationName, webKnossosPublicUrl)
+      resultLinkFormatted = s" <$resultLink|Result>"
     } yield resultLinkFormatted
 }
 
@@ -98,12 +105,13 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString)
       state <- JobState.fromString(r.state)
+      command <- JobCommand.fromString(r.command)
     } yield {
       Job(
         ObjectId(r._Id),
         ObjectId(r._Owner),
         r._Datastore.trim,
-        r.command,
+        command,
         Json.parse(r.commandargs).as[JsObject],
         state,
         manualStateOpt,
@@ -251,6 +259,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 }
 
 class JobService @Inject()(wkConf: WkConf,
+                           actorSystem: ActorSystem,
                            userDAO: UserDAO,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
@@ -258,11 +267,16 @@ class JobService @Inject()(wkConf: WkConf,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
                            dataSetDAO: DataSetDAO,
+                           defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
+                           userService: UserService,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Formatter {
+
+  private lazy val Mailer =
+    actorSystem.actorSelection("/user/mailActor")
 
   def trackStatusChange(jobBeforeChange: Job, jobAfterChange: Job): Unit =
     if (!jobBeforeChange.isEnded) {
@@ -284,6 +298,7 @@ class JobService @Inject()(wkConf: WkConf,
         s"Failed job$superUserLabel",
         msg
       )
+      _ = sendFailedEmailNotification(user, jobAfterChange)
     } yield ()
     ()
   }
@@ -292,24 +307,81 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
+      resultLink = jobAfterChange.resultLinkPublic(organization.name, wkConf.Http.uri)
+      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLink
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLinkSlack
         .getOrElse("")}"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
         msg
       )
+      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
     } yield ()
     ()
   }
 
+  private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
+    for {
+      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      datasetName = job.datasetName.getOrElse("")
+      genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(user, userEmail, datasetName, resultLink, _, _)
+      emailTemplate <- (job.command match {
+        case JobCommand.convert_to_wkw =>
+          Some(defaultMails.jobSuccessfulUploadConvertMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.export_tiff =>
+          Some(
+            genericEmailTemplate(
+              "Tiff Export",
+              "Your dataset has been exported as Tiff and is ready for download."
+            ))
+        case JobCommand.infer_nuclei =>
+          Some(
+            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Nuclei Segmentation"))
+        case JobCommand.infer_neurons =>
+          Some(
+            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Neuron Segmentation",
+            ))
+        case JobCommand.materialize_volume_annotation =>
+          Some(
+            genericEmailTemplate(
+              "Volume Annotation Merged",
+              "Your volume annotation has been successfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
+            ))
+        case JobCommand.globalize_floodfills =>
+          Some(
+            genericEmailTemplate(
+              "Globalize Flood Fill",
+              "The flood fill operations have been extended to the whole dataset. The result is available as a new dataset in your dashboard."
+            ))
+        case JobCommand.compute_mesh_file =>
+          Some(
+            genericEmailTemplate(
+              "Mesh Generation",
+              "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
+            ))
+        case _ => None
+      }) ?~> "job.emailNotifactionsDisabled"
+      // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification
+      _ = Mailer ! Send(emailTemplate)
+    } yield ()
+
+  private def sendFailedEmailNotification(user: User, job: Job): Unit =
+    for {
+      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      datasetName = job.datasetName.getOrElse("")
+      emailTemplate = job.command match {
+        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
+        case _                         => defaultMails.jobFailedGenericMail(user, userEmail, datasetName, job.command.toString)
+      }
+      _ = Mailer ! Send(emailTemplate)
+    } yield ()
+
   def cleanUpIfFailed(job: Job): Fox[Unit] =
-    if (job.state == JobState.FAILURE && job.command == "convert_to_wkw") {
+    if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
       val commandArgs = job.commandArgs.value
       for {
@@ -324,8 +396,7 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
-      resultLink = job.resultLink(organization.name, dataStore.publicUrl)
+      resultLink = job.resultLink(organization.name)
     } yield {
       Json.obj(
         "id" -> job._id.id,
@@ -349,7 +420,7 @@ class JobService @Inject()(wkConf: WkConf,
       "job_kwargs" -> job.commandArgs
     )
 
-  def submitJob(command: String, commandArgs: JsObject, owner: User, dataStoreName: String)(
+  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String)(
       implicit ctx: DBAccessContext): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"

@@ -279,7 +279,7 @@ class ReactRouter extends React.Component<Props> {
                     return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
                   }
 
-                  // Hard navigate so that webknossos.org is shown for the demo instance.
+                  // Hard navigate so that webknossos.org is shown for the wkorg instance.
                   window.location.href = "/";
                   return null;
                 }}

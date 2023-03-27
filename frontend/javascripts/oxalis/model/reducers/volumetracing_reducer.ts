@@ -264,7 +264,7 @@ function VolumeTracingReducer(
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {
-      return setActiveCellReducer(state, volumeTracing, action.cellId);
+      return setActiveCellReducer(state, volumeTracing, action.segmentId);
     }
 
     case "CREATE_CELL": {
@@ -292,7 +292,7 @@ function VolumeTracingReducer(
     }
 
     case "SET_LARGEST_SEGMENT_ID": {
-      return setLargestSegmentIdReducer(state, volumeTracing, action.cellId);
+      return setLargestSegmentIdReducer(state, volumeTracing, action.segmentId);
     }
 
     case "FINISH_ANNOTATION_STROKE": {

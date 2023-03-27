@@ -144,17 +144,17 @@ export const finishEditingAction = () =>
     type: "FINISH_EDITING",
   } as const);
 
-export const setActiveCellAction = (cellId: number, somePosition?: Vector3) =>
+export const setActiveCellAction = (segmentId: number, somePosition?: Vector3) =>
   ({
     type: "SET_ACTIVE_CELL",
-    cellId,
+    segmentId,
     somePosition,
   } as const);
 
-export const clickSegmentAction = (cellId: number, somePosition: Vector3) =>
+export const clickSegmentAction = (segmentId: number, somePosition: Vector3) =>
   ({
     type: "CLICK_SEGMENT",
-    cellId,
+    segmentId,
     somePosition,
   } as const);
 
@@ -251,10 +251,10 @@ export const importVolumeTracingAction = () =>
     type: "IMPORT_VOLUMETRACING",
   } as const);
 
-export const setLargestSegmentIdAction = (cellId: number) =>
+export const setLargestSegmentIdAction = (segmentId: number) =>
   ({
     type: "SET_LARGEST_SEGMENT_ID",
-    cellId,
+    segmentId,
   } as const);
 
 export const dispatchFloodfillAsync = async (

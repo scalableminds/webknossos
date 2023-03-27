@@ -66,7 +66,7 @@ const refreshInterval = 5000;
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111],
   // ASCII codes for ISO
-  cellIdIndex: 3, // Write cell index after the isosurfaceMarker
+  segmentIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
 const segmentsTabId = "segment-list";
 
@@ -139,12 +139,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
-  loadAdHocMesh(cellId: number, seedPosition: Vector3) {
-    dispatch(loadAdHocMeshAction(cellId, seedPosition));
+  loadAdHocMesh(segmentId: number, seedPosition: Vector3) {
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition));
   },
 
-  loadPrecomputedMesh(cellId: number, seedPosition: Vector3, meshFileName: string) {
-    dispatch(loadPrecomputedMeshAction(cellId, seedPosition, meshFileName));
+  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, meshFileName: string) {
+    dispatch(loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName));
   },
 
   setActiveCell(segmentId: number, somePosition?: Vector3) {

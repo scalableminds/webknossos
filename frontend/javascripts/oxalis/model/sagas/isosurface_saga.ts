@@ -72,7 +72,7 @@ import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { UpdateSegmentAction } from "../actions/volumetracing_actions";
+import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -829,14 +829,18 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   yield* put(addPrecomputedIsosurfaceAction(layerName, segmentId, seedPosition, "unknown"));
 }
 
-function removeIsosurface(action: RemoveIsosurfaceAction, removeFromScene: boolean = true): void {
-  const { layerName, cellId } = action;
+function removeIsosurface(
+  action: RemoveIsosurfaceAction | RemoveSegmentAction,
+  removeFromScene: boolean = true,
+): void {
+  const { layerName } = action;
+  const segmentId = "cellId" in action ? action.cellId : action.segmentId;
 
   if (removeFromScene) {
-    getSceneController().removeIsosurfaceById(cellId);
+    getSceneController().removeIsosurfaceById(segmentId);
   }
 
-  removeMapForSegment(layerName, cellId);
+  removeMapForSegment(layerName, segmentId);
 }
 
 function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
@@ -865,10 +869,10 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
   yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield* takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
-  yield* takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
+  yield* takeEvery(["REMOVE_SEGMENT", "REMOVE_ISOSURFACE"], removeIsosurface);
   yield* takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
   yield* takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
-  yield* takeEvery(["UPDATE_SEGMENT"], handleIsosurfaceColorChange);
+  yield* takeEvery("UPDATE_SEGMENT", handleIsosurfaceColorChange);
 }

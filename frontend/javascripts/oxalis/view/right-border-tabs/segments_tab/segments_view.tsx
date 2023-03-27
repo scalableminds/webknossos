@@ -36,6 +36,7 @@ import { updateTemporarySettingAction } from "oxalis/model/actions/settings_acti
 import {
   updateSegmentAction,
   setActiveCellAction,
+  removeSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -160,6 +161,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   updateSegment(segmentId: number, segmentShape: Partial<Segment>, layerName: string) {
     dispatch(updateSegmentAction(segmentId, segmentShape, layerName));
+  },
+
+  removeSegment(segmentId: number, layerName: string) {
+    dispatch(removeSegmentAction(segmentId, layerName));
   },
 });
 
@@ -697,6 +702,7 @@ class SegmentsView extends React.Component<Props, State> {
                         setHoveredSegmentId={this.props.setHoveredSegmentId}
                         allowUpdate={this.props.allowUpdate}
                         updateSegment={this.props.updateSegment}
+                        removeSegment={this.props.removeSegment}
                         visibleSegmentationLayer={this.props.visibleSegmentationLayer}
                         loadAdHocMesh={this.props.loadAdHocMesh}
                         loadPrecomputedMesh={this.props.loadPrecomputedMesh}

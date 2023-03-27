@@ -12,6 +12,7 @@ import {
   cancelQuickSelectAction,
   VolumeTracingSaveRelevantActions,
   setSegmentsAction,
+  RemoveSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { UserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -157,6 +158,7 @@ type RelevantActionsForUndoRedo = {
   undo?: UndoAction;
   redo?: RedoAction;
   updateSegment?: UpdateSegmentAction;
+  removeSegment?: RemoveSegmentAction;
 };
 
 function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo {
@@ -183,6 +185,10 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   } else if (action.type === "UPDATE_SEGMENT") {
     return {
       updateSegment: action,
+    };
+  } else if (action.type === "REMOVE_SEGMENT") {
+    return {
+      removeSegment: action,
     };
   } else if (UndoRedoRelevantBoundingBoxActions.includes(action.type)) {
     return {
@@ -235,6 +241,7 @@ export function* collectUndoStates(): Saga<never> {
     "FINISH_ANNOTATION_STROKE",
     "IMPORT_VOLUMETRACING",
     "UPDATE_SEGMENT",
+    "REMOVE_SEGMENT",
     "UNDO",
     "REDO",
   ]);
@@ -259,6 +266,7 @@ export function* collectUndoStates(): Saga<never> {
       undo,
       redo,
       updateSegment,
+      removeSegment,
     } = unpackRelevantActionForUndo(currentAction);
 
     if (
@@ -394,20 +402,48 @@ export function* collectUndoStates(): Saga<never> {
       }
 
       yield* put(setBusyBlockingInfoAction(false));
-    } else if (updateSegment) {
-      // Updates to the segment list should not create new undo states. Either, the segment list
-      // was updated by annotating (then, that action will have caused a new undo state) or
-      // the segment list was updated by selecting/hovering a cell (in that case, no new undo state
-      // should be created, either).
-      // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
-      // have been dispatched), prevSegments doesn't need to be updated, as it's not used.
-      const volumeTracing = yield* select((state) =>
-        getVolumeTracingByLayerName(state.tracing, updateSegment.layerName),
-      );
+    } else if (updateSegment || removeSegment) {
+      // Updates to the segment list shouldn't necessarily create new undo states. In the following
+      // cases, no new undo state should be added:
+      // - the segment list was updated by annotating (then, that action will have caused a new undo state
+      //   anyway)
+      // - the segment list was updated by selecting/hovering a cell (in that case, no new undo state
+      //   should be created, either).
+      // Renaming or removing a segment, on the other hand, should create an undo state.
+      const action = updateSegment || removeSegment;
+      if (!action) {
+        throw new Error("Unexpected action");
+      }
+      const addToUndo = removeSegment != null || (updateSegment && "name" in updateSegment.segment);
+      if (addToUndo) {
+        const activeVolumeTracing = yield* select((state) =>
+          getVolumeTracingByLayerName(state.tracing, action.layerName),
+        );
+        if (activeVolumeTracing) {
+          const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
+          undoStack.push({
+            type: "volume",
+            data: {
+              buckets: [],
+              segments: volumeInfo.prevSegments,
+              tracingId: activeVolumeTracing.tracingId,
+            },
+          });
+          // The SegmentMap is immutable. So, no need to copy.
+          volumeInfo.prevSegments = activeVolumeTracing.segments;
+        }
+      } else {
+        // Update most recent undo stack entry in-place.
+        const volumeTracing = yield* select((state) =>
+          getVolumeTracingByLayerName(state.tracing, action.layerName),
+        );
 
-      if (volumeTracing != null) {
-        const volumeInfo = volumeInfoById[volumeTracing.tracingId];
-        volumeInfo.prevSegments = volumeTracing.segments;
+        // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
+        // have been dispatched), prevSegments doesn't need to be updated, as it's not used.
+        if (volumeTracing != null) {
+          const volumeInfo = volumeInfoById[volumeTracing.tracingId];
+          volumeInfo.prevSegments = volumeTracing.segments;
+        }
       }
     }
 

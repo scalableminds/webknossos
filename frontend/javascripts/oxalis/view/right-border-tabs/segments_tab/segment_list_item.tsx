@@ -155,6 +155,7 @@ type Props = {
   activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
   updateSegment: (arg0: number, arg1: Partial<Segment>, arg2: string) => void;
+  removeSegment: (arg0: number, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (arg0: number, arg1: Vector3) => void;
@@ -320,6 +321,7 @@ function _SegmentListItem({
   activeDropdownSegmentId,
   allowUpdate,
   updateSegment,
+  removeSegment,
   onSelectSegment,
   visibleSegmentationLayer,
   loadAdHocMesh,
@@ -409,6 +411,18 @@ function _SegmentListItem({
           );
         },
         label: "Reset Segment Color",
+      },
+      {
+        key: "removeSegmentFromList",
+        disabled: isEditingDisabled,
+        onClick: () => {
+          if (isEditingDisabled || visibleSegmentationLayer == null) {
+            return;
+          }
+          removeSegment(segment.id, visibleSegmentationLayer.name);
+          andCloseContextMenu();
+        },
+        label: "Remove Segment From List",
       },
     ],
   });

@@ -35,6 +35,7 @@ export type ImportVolumeTracingAction = ReturnType<typeof importVolumeTracingAct
 export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
+export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
@@ -61,6 +62,7 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
+  | RemoveSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -76,6 +78,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
+  "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
   // Note that the following two actions are defined in settings_actions.ts
@@ -172,6 +175,18 @@ export const updateSegmentAction = (
     type: "UPDATE_SEGMENT",
     segmentId,
     segment,
+    layerName,
+    timestamp,
+  } as const);
+
+export const removeSegmentAction = (
+  segmentId: number,
+  layerName: string,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "REMOVE_SEGMENT",
+    segmentId,
     layerName,
     timestamp,
   } as const);

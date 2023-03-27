@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
 - Added email notifications for WK worker jobs. [#6918](https://github.com/scalableminds/webknossos/pull/6918)
 - Added support for viewing sharded neuroglancer precomputed datasets. [#6920](https://github.com/scalableminds/webknossos/pull/6920)
+- Added support for uploading zip64 files. [#6939](https://github.com/scalableminds/webknossos/pull/6939)
 
 ### Changed
 - Interpolation during rendering is now more performance intensive, since the rendering approach was changed. Therefore, interpolation is disabled by default. On the flip side, the rendered quality is often higher than it used to be. [#6748](https://github.com/scalableminds/webknossos/pull/6748)

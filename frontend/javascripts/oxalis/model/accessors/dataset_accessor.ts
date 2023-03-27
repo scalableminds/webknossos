@@ -67,7 +67,6 @@ export class ResolutionInfo {
     const resolutionMap = new Map();
 
     if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
-      debugger;
       throw new Error("Max dimension in resolutions is not unique.");
     }
 

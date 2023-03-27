@@ -56,10 +56,7 @@ import {
   getTransformsForLayerOrNull,
   getLargestResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getActiveMagIndicesForLayers,
-  getMaxZoomValueForResolution,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -129,7 +126,6 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
-  activeMagIndicesForLayers: { [layerName: string]: number };
 };
 
 type State = {
@@ -1134,7 +1130,6 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
-  activeMagIndicesForLayers: getActiveMagIndicesForLayers(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

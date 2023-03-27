@@ -11,14 +11,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   SegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultsService
 import play.api.libs.json.{Json, OFormat}
 
 trait PrecomputedLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.neuroglancerPrecomputed
 
-  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) =
+  def bucketProvider(fileSystemServiceOpt: Option[DataVaultsService]) =
     new PrecomputedBucketProvider(this, fileSystemServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)

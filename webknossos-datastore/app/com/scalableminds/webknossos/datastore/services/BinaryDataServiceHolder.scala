@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultsService
 
 import javax.inject.Inject
 
@@ -16,7 +16,7 @@ import javax.inject.Inject
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         agglomerateService: AgglomerateService,
                                         applicationHealthService: ApplicationHealthService,
-                                        fileSystemService: FileSystemService) {
+                                        fileSystemService: DataVaultsService) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
     Paths.get(config.Datastore.baseFolder),

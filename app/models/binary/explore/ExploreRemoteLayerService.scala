@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.{DataVaultsHolder, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
@@ -21,7 +22,6 @@ import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
@@ -186,7 +186,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
     else uri
 
   private def exploreRemoteLayersForRemotePath(
-      remotePath: Path,
+      remotePath: VaultPath,
       credentialId: Option[String],
       reportMutable: ListBuffer[String],
       explorers: List[RemoteLayerExplorer])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =

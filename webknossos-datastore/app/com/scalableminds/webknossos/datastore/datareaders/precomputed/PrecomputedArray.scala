@@ -19,7 +19,7 @@ object PrecomputedArray extends LazyLogging {
   @throws[IOException]
   def open(magPath: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
 
-    val basePath = magPath.getParent.asInstanceOf[VaultPath]
+    val basePath = magPath.parent
     val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
     val headerBytes = (basePath / headerPath).readBytes()
     if (headerBytes.isEmpty)
@@ -34,18 +34,16 @@ object PrecomputedArray extends LazyLogging {
           throw new Exception("Validating json as precomputed metadata failed: " + JsError.toJson(errors).toString())
       }
 
-    val key = magPath.getFileName
+    val key = magPath.fileName
 
     val scaleHeader: PrecomputedScaleHeader = PrecomputedScaleHeader(
-      rootHeader
-        .getScale(key.toString)
-        .getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),
+      rootHeader.getScale(key).getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),
       rootHeader)
     if (scaleHeader.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
       throw new IllegalArgumentException(
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
-    val datasetPath = new DatasetPath(key.toString)
+    val datasetPath = new DatasetPath(key)
     new PrecomputedArray(datasetPath,
                          basePath,
                          scaleHeader,

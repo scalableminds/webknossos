@@ -11,9 +11,9 @@ import scala.concurrent.ExecutionContext
 
 case class RemoteSourceDescriptor(uri: URI, credential: Option[FileSystemCredential])
 
-class FileSystemService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient) {
+class DataVaultsService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient) {
 
-  def remotePathFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[VaultPath] =
+  def vaultPathFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).futureBox
       remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)

@@ -15,13 +15,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultsService}
 
 import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
-  override def fileSystemServiceOpt: Option[FileSystemService] = None
+  override def fileSystemServiceOpt: Option[DataVaultsService] = None
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] = {
@@ -73,7 +73,7 @@ case class EditableMappingLayer(name: String,
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider =
+  override def bucketProvider(fileSystemServiceOpt: Option[DataVaultsService]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
   override def mappings: Option[Set[String]] = None

@@ -1,69 +1,31 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.io.ZipIO
+import net.liftweb.util.Helpers.tryo
+
 import java.net.URI
-import java.nio.ByteBuffer
-import java.nio.file.{FileSystem, Files, LinkOption, Path, WatchEvent, WatchKey, WatchService}
+import java.nio.file.Path
 import scala.collection.immutable.NumericRange
 
-class FileSystemVaultPath(basePath: Path) extends VaultPath(uri = new URI(""), dataVault = FileSystemDataVault.create) {
+class FileSystemVaultPath(basePath: Path, dataVault: FileSystemDataVault)
+    extends VaultPath(uri = new URI(""), dataVault = dataVault) {
 
-  override def readBytesGet(range: Option[NumericRange[Long]]): Array[Byte] =
-    range match {
-      case Some(r) =>
-        val channel = Files.newByteChannel(basePath)
-        val buf = ByteBuffer.allocateDirect(r.length)
-        channel.position(r.start)
-        channel.read(buf)
-        buf.position(0)
-        val arr = new Array[Byte](r.length)
-        buf.get(arr)
-        arr
-      case None => Files.readAllBytes(basePath)
-    }
+  override def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
+    tryo(dataVault.readBytesLocal(basePath, range)).toOption.map(ZipIO.tryGunzip)
 
-  override def getFileSystem: FileSystem = basePath.getFileSystem
+  override def fileName: String = basePath.getFileName.toString
 
-  override def isAbsolute: Boolean = basePath.isAbsolute
+  override def parent: VaultPath = new FileSystemVaultPath(basePath.getParent, dataVault)
 
-  override def getRoot: Path = new FileSystemVaultPath(basePath.getRoot)
-
-  override def getFileName: Path = new FileSystemVaultPath(basePath.getFileName)
-
-  override def getParent: Path = new FileSystemVaultPath(basePath.getParent)
-
-  override def getNameCount: Int = basePath.getNameCount
-
-  override def getName(index: Int): Path = new FileSystemVaultPath(basePath.getName(index))
-
-  override def subpath(beginIndex: Int, endIndex: Int): Path = basePath.subpath(beginIndex: Int, endIndex: Int)
-
-  override def startsWith(other: Path): Boolean = basePath.startsWith(other)
-
-  override def endsWith(other: Path): Boolean = basePath.endsWith(other)
-
-  override def normalize(): Path = new FileSystemVaultPath(basePath.normalize())
-
-  override def resolve(other: Path): Path = new FileSystemVaultPath(basePath.resolve(other))
-
-  override def /(key: String): VaultPath = new FileSystemVaultPath(basePath.resolve(key))
-
-  override def relativize(other: Path): Path = new FileSystemVaultPath(basePath.relativize(other))
+  override def /(key: String): VaultPath = new FileSystemVaultPath(basePath.resolve(key), dataVault)
 
   override def toUri: URI = basePath.toUri
 
-  override def toAbsolutePath: Path = new FileSystemVaultPath(basePath.toAbsolutePath)
-
-  override def toRealPath(options: LinkOption*): Path = ???
-
-  override def register(watcher: WatchService,
-                        events: Array[WatchEvent.Kind[_]],
-                        modifiers: WatchEvent.Modifier*): WatchKey = ???
-
-  override def compareTo(other: Path): Int = basePath.compareTo(other)
-
   override def toString: String = basePath.toString
+
+  def exists: Boolean = basePath.toFile.exists()
 }
 
 object FileSystemVaultPath {
-  def fromPath(path: Path): FileSystemVaultPath = new FileSystemVaultPath(path)
+  def fromPath(path: Path): FileSystemVaultPath = new FileSystemVaultPath(path, FileSystemDataVault.create)
 }

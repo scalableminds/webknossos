@@ -4,14 +4,14 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultsService
 import play.api.libs.json.{Json, OFormat}
 
 trait N5Layer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.n5
 
-  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) = new N5BucketProvider(this, fileSystemServiceOpt)
+  def bucketProvider(fileSystemServiceOpt: Option[DataVaultsService]) = new N5BucketProvider(this, fileSystemServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

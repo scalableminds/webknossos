@@ -1,7 +1,6 @@
 package models.binary.explore
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
-import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
@@ -10,26 +9,22 @@ import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class MagWithAttributes(mag: MagLocator,
-                             remotePath: Path,
+                             remotePath: VaultPath,
                              elementClass: ElementClass.Value,
                              boundingBox: BoundingBox)
 
 trait RemoteLayerExplorer extends FoxImplicits {
 
-  def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]]
+  def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]]
 
   def name: String
 
-  protected def parseJsonFromPath[T: Reads](path: Path): Fox[T] =
+  protected def parseJsonFromPath[T: Reads](path: VaultPath): Fox[T] =
     for {
-      fileBytes <- path match {
-        case path: VaultPath => path.readBytes() ?~> "dataSet.explore.failed.readFile"
-        case _               => tryo(ZipIO.tryGunzip(Files.readAllBytes(path))) ?~> "dataSet.explore.failed.readFile"
-      }
+      fileBytes <- path.readBytes().toFox
       fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "dataSet.explore.failed.readFile"
       parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
     } yield parsed
@@ -38,8 +33,8 @@ trait RemoteLayerExplorer extends FoxImplicits {
     Set("segmentation", "labels").contains(layerName.toLowerCase) && ElementClass.segmentationElementClasses.contains(
       elementClass)
 
-  protected def guessNameFromPath(path: Path): Fox[String] =
-    path.toString.split("/").lastOption.toFox
+  protected def guessNameFromPath(path: VaultPath): String =
+    path.fileName
 
   protected def elementClassFromMags(magsWithAttributes: List[MagWithAttributes]): Fox[ElementClass.Value] = {
     val elementClasses = magsWithAttributes.map(_.elementClass)

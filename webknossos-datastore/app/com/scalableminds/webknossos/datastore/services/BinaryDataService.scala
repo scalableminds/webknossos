@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class BinaryDataService(val dataBaseDir: Path,
                         maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
-                        fileSystemServiceOpt: Option[FileSystemService],
+                        fileSystemServiceOpt: Option[DataVaultsService],
                         val applicationHealthService: Option[ApplicationHealthService])
     extends FoxImplicits
     with DataSetDeleter

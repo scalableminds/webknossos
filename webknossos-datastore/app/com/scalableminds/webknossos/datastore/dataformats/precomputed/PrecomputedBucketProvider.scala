@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.precomputed.Precompute
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultsService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
@@ -32,7 +32,7 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray)
 
 }
 
-class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOpt: Option[FileSystemService])
+class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOpt: Option[DataVaultsService])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -46,10 +46,10 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOp
       case None => Fox.empty
       case Some(precomputedMag) =>
         fileSystemServiceOpt match {
-          case Some(fileSystemService: FileSystemService) =>
+          case Some(fileSystemService: DataVaultsService) =>
             for {
               magPath: VaultPath <- if (precomputedMag.isRemote) {
-                fileSystemService.remotePathFor(precomputedMag)
+                fileSystemService.vaultPathFor(precomputedMag)
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(
                 PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))

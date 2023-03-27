@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.{FileSystemVaultPath, VaultPath}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultsService}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
 
@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def fileSystemServiceOpt: Option[FileSystemService]
+  def fileSystemServiceOpt: Option[DataVaultsService]
 
   // To be defined in subclass.
   def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[DataCubeHandle] =
@@ -52,7 +52,7 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
         .resolve(readInstruction.dataSource.id.name)
         .resolve(readInstruction.dataLayer.name)
         .resolve(relativeMagPath))
-    if (magPath.toFile.exists()) {
+    if (magPath.exists) {
       Fox.successful(magPath)
     } else Fox.empty
   }

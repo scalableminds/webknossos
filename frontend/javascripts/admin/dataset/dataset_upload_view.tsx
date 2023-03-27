@@ -492,6 +492,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         try {
           const reader = new ZipReader(new BlobReader(file));
           const entries = await reader.getEntries();
+          await reader.close();
           const wkwFile = entries.find((entry: Entry) =>
             Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
           );

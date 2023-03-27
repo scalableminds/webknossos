@@ -285,38 +285,9 @@ export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: 
   return getResolutionInfoByLayer(dataset)[layerName].getDenseResolutions();
 }
 
-// todo: remove when getResolutions is not used anymore?
 // Don't use memoizeOne here, since we want to cache the resolutions for all layers
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
-export function deprecated_getResolutionUnion(
-  dataset: APIDataset,
-  shouldThrow: boolean = false,
-): Array<Vector3> {
-  const resolutionUnionDict: { [key: number]: Vector3 } = {};
-
-  for (const layer of dataset.dataSource.dataLayers) {
-    for (const resolution of layer.resolutions) {
-      const key = maxValue(resolution);
-
-      if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = resolution;
-      } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
-        // the same resolution was already picked up
-      } else if (shouldThrow) {
-        throw new Error(
-          `The resolutions of the different layers don't match. ${resolutionUnionDict[key].join(
-            "-",
-          )} != ${resolution.join("-")}.`,
-        );
-      } else {
-        // The resolutions don't match, but shouldThrow is false
-      }
-    }
-  }
-
-  return _.chain(resolutionUnionDict).values().sortBy(maxValue).valueOf();
-}
 
 // todo: rename
 export const getResolutionUnionNew = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
@@ -390,22 +361,6 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
       return lastResolution as Vector3;
     })
     .reverse();
-}
-
-function _deprecated_getResolutions(dataset: APIDataset): Vector3[] {
-  // In the long term, deprecated_getResolutions should not be used anymore.
-  // Instead, all the code should use the ResolutionInfo class which represents
-  // exactly which resolutions exist per layer.
-  return convertToDenseResolution(deprecated_getResolutionUnion(dataset));
-}
-
-// _deprecated_getResolutions itself is not very performance intensive, but other functions which rely
-// on the returned resolutions are. To avoid busting memoization caches (which rely on references),
-// we memoize _deprecated_getResolutions, as well.
-const deprecated_getResolutions = memoizeOne(_deprecated_getResolutions);
-
-export function deprecated_getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
-  return getResolutionInfo(deprecated_getResolutions(dataset));
 }
 
 export function getLargestResolutions(dataset: APIDataset): Vector3[] {

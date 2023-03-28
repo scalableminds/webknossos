@@ -31,7 +31,10 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
-      editableMapping <- layer.editableMappingService.getInfo(editableMappingId)
+      editableMapping <- layer.editableMappingService.getInfo(editableMappingId,
+                                                              version = None,
+                                                              remoteFallbackLayer = remoteFallbackLayer,
+                                                              userToken = layer.token)
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,

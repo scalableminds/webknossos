@@ -25,8 +25,7 @@ type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
   segmentationLayerNames: string[];
-  packingDegreeLookup: Record<string, number>;
-  dataTextureCountPerLayer: number;
+  textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
@@ -44,7 +43,6 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
-const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
@@ -59,7 +57,7 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
-  uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
+  uniform sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
@@ -199,14 +197,14 @@ void main() {
           getMaybeFilteredColorOrFallback(
             <%= formatNumberAsGLSLFloat(layerIndex) %>,
             <%= name %>_data_texture_width,
-            <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
+            <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
             transformedCoordUVW,
             false,
             fallbackGray,
             !<%= name %>_has_transform
           ).xyz;
 
-        <% if (packingDegreeLookup[name] === 2.0) { %>
+        <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
           // Workaround for 16-bit color layers
           color_value = vec3(color_value.g * 256.0 + color_value.r);
         <% } %>

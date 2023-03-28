@@ -80,16 +80,23 @@ function getSanitizedColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map((layer) => sanitizeName(layer.name));
 }
 
-function getPackingDegreeLookup(): Record<string, number> {
+function getTextureLayerInfos(): Record<
+  string,
+  { packingDegree: number; dataTextureCount: number }
+> {
   const { dataset } = Store.getState();
   const layers = getDataLayers(dataset);
 
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
   const layersObject = _.keyBy(layers, (layer) => sanitizeName(layer.name));
 
-  return _.mapValues(layersObject, (layer) =>
-    getPackingDegree(getByteCount(dataset, layer.name), getElementClass(dataset, layer.name)),
-  );
+  return _.mapValues(layersObject, (layer) => ({
+    packingDegree: getPackingDegree(
+      getByteCount(dataset, layer.name),
+      getElementClass(dataset, layer.name),
+    ),
+    dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
+  }));
 }
 
 class PlaneMaterialFactory {
@@ -898,16 +905,15 @@ class PlaneMaterialFactory {
       getGlobalLayerIndexForLayerName(layerName, sanitizeName),
     );
 
-    const packingDegreeLookup = getPackingDegreeLookup();
+    const textureLayerInfos = getTextureLayerInfos();
+    console.log("textureLayerInfos", textureLayerInfos);
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
     const code = getMainFragmentShader({
       globalLayerCount,
       colorLayerNames,
       segmentationLayerNames,
-      packingDegreeLookup,
-      // Todo: this is not computed per layer. See #4018
-      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
+      textureLayerInfos,
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
@@ -932,7 +938,7 @@ class PlaneMaterialFactory {
     const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
-    const packingDegreeLookup = getPackingDegreeLookup();
+    const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
 
@@ -940,9 +946,7 @@ class PlaneMaterialFactory {
       globalLayerCount,
       colorLayerNames,
       segmentationLayerNames,
-      packingDegreeLookup,
-      // Todo: this is not computed per layer. See #4018
-      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
+      textureLayerInfos,
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,

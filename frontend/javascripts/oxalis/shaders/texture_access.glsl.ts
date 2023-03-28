@@ -55,14 +55,14 @@ export const getRgbaAtXYIndex: ShaderModule = {
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
-        <% if (dataTextureCountPerLayer === 1) { %>
+        <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
             // Don't use if-else when there is only one data texture anyway
 
             return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
         <% } else { %>
           if (textureIdx == 0.0) {
             return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
-          } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
+          } <% _.range(1, textureLayerInfos[name].dataTextureCount).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
             return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
           }

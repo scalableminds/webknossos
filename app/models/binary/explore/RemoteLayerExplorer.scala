@@ -34,7 +34,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
       elementClass)
 
   protected def guessNameFromPath(path: VaultPath): String =
-    path.fileName
+    path.basename
 
   protected def elementClassFromMags(magsWithAttributes: List[MagWithAttributes]): Fox[ElementClass.Value] = {
     val elementClasses = magsWithAttributes.map(_.elementClass)

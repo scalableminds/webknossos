@@ -11,7 +11,7 @@ class VaultPath(uri: URI, dataVault: DataVault) {
   def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
     tryo(dataVault.readBytes(this, range)).toOption.map(ZipIO.tryGunzip)
 
-  def fileName: String =
+  def basename: String =
     uri.toString.split("/").last
 
   def parent: VaultPath = {

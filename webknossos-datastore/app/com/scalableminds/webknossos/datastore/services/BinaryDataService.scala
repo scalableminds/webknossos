@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class BinaryDataService(val dataBaseDir: Path,
                         maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
-                        fileSystemServiceOpt: Option[DataVaultsService],
+                        dataVaultServiceOpt: Option[DataVaultService],
                         val applicationHealthService: Option[ApplicationHealthService])
     extends FoxImplicits
     with DataSetDeleter
@@ -83,7 +83,7 @@ class BinaryDataService(val dataBaseDir: Path,
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       val bucketProvider = bucketProviderCache.getOrLoadAndPut(request.dataLayer)(dataLayer =>
-        dataLayer.bucketProvider(fileSystemServiceOpt))
+        dataLayer.bucketProvider(dataVaultServiceOpt))
       bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))

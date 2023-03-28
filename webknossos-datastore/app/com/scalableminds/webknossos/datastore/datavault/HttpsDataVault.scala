@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.webknossos.datastore.storage.{
-  FileSystemCredential,
+  DataVaultCredential,
   HttpBasicAuthCredential,
-  LegacyFileSystemCredential,
+  LegacyDataVaultCredential,
   RemoteSourceDescriptor
 }
 
@@ -14,7 +14,7 @@ import sttp.model.Uri
 
 import scala.collection.immutable.NumericRange
 
-class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault {
+class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault {
 
   private val connectionTimeout = 1 minute
   private val readTimeout = 10 minutes
@@ -24,7 +24,7 @@ class HttpsDataVault(credential: Option[FileSystemCredential]) extends DataVault
     credential.flatMap { c =>
       c match {
         case h: HttpBasicAuthCredential    => Some(h)
-        case l: LegacyFileSystemCredential => Some(l.toBasicAuth)
+        case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
         case _                             => None
       }
     }

@@ -4,15 +4,15 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.DataVaultsService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
 
 trait ZarrLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr
 
-  def bucketProvider(fileSystemServiceOpt: Option[DataVaultsService]) =
-    new ZarrBucketProvider(this, fileSystemServiceOpt)
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]) =
+    new ZarrBucketProvider(this, dataVaultServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

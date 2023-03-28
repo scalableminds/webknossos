@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataVaultsService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
@@ -29,7 +29,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 
 }
 
-class ZarrBucketProvider(layer: ZarrLayer, val fileSystemServiceOpt: Option[DataVaultsService])
+class ZarrBucketProvider(layer: ZarrLayer, val dataVaultServiceOpt: Option[DataVaultService])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -42,11 +42,11 @@ class ZarrBucketProvider(layer: ZarrLayer, val fileSystemServiceOpt: Option[Data
     zarrMagOpt match {
       case None => Fox.empty
       case Some(zarrMag) =>
-        fileSystemServiceOpt match {
-          case Some(fileSystemService: DataVaultsService) =>
+        dataVaultServiceOpt match {
+          case Some(dataVaultService: DataVaultService) =>
             for {
               magPath: VaultPath <- if (zarrMag.isRemote) {
-                fileSystemService.vaultPathFor(zarrMag)
+                dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(
                 ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))

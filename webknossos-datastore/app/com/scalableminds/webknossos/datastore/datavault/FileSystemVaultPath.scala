@@ -13,7 +13,7 @@ class FileSystemVaultPath(basePath: Path, dataVault: FileSystemDataVault)
   override def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
     tryo(dataVault.readBytesLocal(basePath, range)).toOption.map(ZipIO.tryGunzip)
 
-  override def fileName: String = basePath.getFileName.toString
+  override def basename: String = basePath.getFileName.toString
 
   override def parent: VaultPath = new FileSystemVaultPath(basePath.getParent, dataVault)
 

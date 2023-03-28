@@ -34,7 +34,7 @@ object PrecomputedArray extends LazyLogging {
           throw new Exception("Validating json as precomputed metadata failed: " + JsError.toJson(errors).toString())
       }
 
-    val key = magPath.fileName
+    val key = magPath.basename
 
     val scaleHeader: PrecomputedScaleHeader = PrecomputedScaleHeader(
       rootHeader.getScale(key).getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),

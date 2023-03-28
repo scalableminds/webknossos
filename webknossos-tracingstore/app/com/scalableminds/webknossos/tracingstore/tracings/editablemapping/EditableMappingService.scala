@@ -195,13 +195,10 @@ class EditableMappingService @Inject()(
         closestMaterializedVersion.version,
         userToken
       )
-      _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
+      _ <- Fox.runIf(closestMaterializedVersion.version < desiredVersion) {
         tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized.toProto)
       }
     } yield materialized
-
-  private def shouldPersistMaterialized(previouslyMaterializedVersion: Long, newVersion: Long): Boolean =
-    newVersion > previouslyMaterializedVersion && newVersion % 10 == 5
 
   private def findDesiredOrNewestPossibleVersion(editableMappingId: String, desiredVersion: Option[Long]): Fox[Long] =
     /*

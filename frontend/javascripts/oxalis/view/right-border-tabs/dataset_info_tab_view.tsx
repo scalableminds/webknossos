@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Tooltip, Button, Dropdown, Menu } from "antd";
+import { Tooltip, Button, Dropdown } from "antd";
 import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
@@ -29,8 +29,9 @@ import {
   NeuronInferralModal,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { mayUserEditDataset } from "libs/utils";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { mayUserEditDataset } from "libs/utils";
+import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -306,36 +307,34 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       );
     }
 
-    const jobMenuItems = [
-      <Menu.Item
-        key="start_nuclei_inferal"
-        onClick={() =>
+    const jobMenuItems: MenuItemType[] = [
+      {
+        key: "start_nuclei_inferal",
+        onClick: () =>
           this.setState({
             showJobsDetailsModal: StartableJobsEnum.NUCLEI_INFERRAL,
-          })
-        }
-      >
-        <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
-          Start Nuclei Inferral
-        </Tooltip>
-      </Menu.Item>,
+          }),
+        label: (
+          <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
+            Start Nuclei Inferral
+          </Tooltip>
+        ),
+      },
     ];
 
     if (this.props.activeUser?.isSuperUser) {
-      jobMenuItems.push(
-        <Menu.Item
-          key="start_neuron_inferral"
-          onClick={() =>
-            this.setState({
-              showJobsDetailsModal: StartableJobsEnum.NEURON_INFERRAL,
-            })
-          }
-        >
+      jobMenuItems.push({
+        key: "start_neuron_inferral",
+        onClick: () =>
+          this.setState({
+            showJobsDetailsModal: StartableJobsEnum.NEURON_INFERRAL,
+          }),
+        label: (
           <Tooltip title="Start a job that automatically reconstructs neurons for this dataset.">
             Start Neuron Inferral
           </Tooltip>
-        </Menu.Item>,
-      );
+        ),
+      });
     }
 
     return (
@@ -355,7 +354,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           />
         </td>
         <Dropdown
-          overlay={<Menu>{jobMenuItems}</Menu>}
+          menu={{ items: jobMenuItems }}
           overlayStyle={{
             minWidth: "unset",
           }}

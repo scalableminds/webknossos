@@ -76,7 +76,7 @@ function _ShareViewDatasetModalView(props: Props) {
                 value={zarrBaseUrl}
                 readOnly
               />
-              <Dropdown overlay={copyLayerUrlMenu}>
+              <Dropdown menu={copyLayerUrlMenu}>
                 <Button
                   style={{
                     width: "15%",

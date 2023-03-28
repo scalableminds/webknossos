@@ -63,6 +63,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
     } yield Vec3Int(x, y, z)
 
   def product: Int = x * y * z
+
+  def alignWithGridFloor(gridCellSize: Vec3Int): Vec3Int =
+    this / gridCellSize * gridCellSize
 }
 
 object Vec3Int {

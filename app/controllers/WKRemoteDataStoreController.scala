@@ -60,6 +60,9 @@ class WKRemoteDataStoreController @Inject()(
           organization <- organizationDAO.findOneByName(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             uploadInfo.organization) ~> NOT_FOUND
+          usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
+          _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
+            bool2Fox(usedStorageBytes <= includedStorage)) ?~> "dataSet.upload.storageExceeded" ~> FORBIDDEN
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- dataSetService.assertValidDataSetName(uploadInfo.name)
           _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"

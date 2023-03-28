@@ -3,24 +3,24 @@ package models.binary.explore
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSource}
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class WebknossosZarrExplorer extends RemoteLayerExplorer {
 
   override def name: String = "WEBKNOSSOS-based Zarr"
 
-  override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
-      dataSourcePropertiesPath <- Fox.successful(remotePath.resolve("datasource-properties.json"))
+      dataSourcePropertiesPath <- Fox.successful(remotePath / "datasource-properties.json")
       dataSource <- parseJsonFromPath[DataSource](dataSourcePropertiesPath)
       ngffExplorer = new NgffExplorer
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: ZarrSegmentationLayer =>
           for {
-            zarrLayersFromNgff <- ngffExplorer.explore(remotePath.resolve(l.name), credentialId)
+            zarrLayersFromNgff <- ngffExplorer.explore(remotePath / l.name, credentialId)
           } yield
             zarrLayersFromNgff.map(
               zarrLayer =>
@@ -32,7 +32,7 @@ class WebknossosZarrExplorer extends RemoteLayerExplorer {
                  zarrLayer._2))
         case l: ZarrDataLayer =>
           for {
-            zarrLayersFromNgff <- ngffExplorer.explore(remotePath.resolve(l.name), credentialId)
+            zarrLayersFromNgff <- ngffExplorer.explore(remotePath / l.name, credentialId)
           } yield
             zarrLayersFromNgff.map(
               zarrLayer =>

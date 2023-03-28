@@ -23,7 +23,7 @@ object ChunkUtils extends LazyLogging {
     }
     if (numChunks < 0) {
       logger.warn(
-        s"Failed to compute zarr chunk indices. array shape ${arrayShape.toList}, chunkShape: ${arrayChunkSize.toList}, requested ${selectedShape.toList} at ${selectedOffset.toList}")
+        s"Failed to compute chunk indices. array shape ${arrayShape.toList}, chunkShape: ${arrayChunkSize.toList}, requested ${selectedShape.toList} at ${selectedOffset.toList}")
     }
     val chunkIndices = new Array[Array[Int]](numChunks)
     val currentIdx = start.clone

@@ -213,6 +213,7 @@ class EditableMappingService @Inject()(
                           remoteFallbackLayer: RemoteFallbackLayer,
                           userToken: Option[String]): Fox[EditableMappingInfo] =
     for {
+      _ <- Fox.successful(logger.info("cache miss, applyPendingUpdates"))
       closestMaterializedWithVersion <- getClosestMaterialized(editableMappingId, desiredVersion)
       updatedEditableMappingInfo: EditableMappingInfo <- if (desiredVersion == closestMaterializedWithVersion.version)
         Fox.successful(closestMaterializedWithVersion.value)
@@ -220,6 +221,7 @@ class EditableMappingService @Inject()(
         for {
           pendingUpdates <- getPendingUpdates(editableMappingId, closestMaterializedWithVersion.version, desiredVersion)
           updater = new EditableMappingUpdater(editableMappingId,
+                                               closestMaterializedWithVersion.version,
                                                desiredVersion,
                                                remoteFallbackLayer,
                                                userToken,
@@ -487,7 +489,7 @@ class EditableMappingService @Inject()(
                                userToken: Option[String],
                                version: Option[Long] = None): Fox[AgglomerateGraph] =
     for {
-      _ <- getInfo(mappingId, version = None, remoteFallbackLayer, userToken)
+      _ <- getInfo(mappingId, version = version, remoteFallbackLayer, userToken)
       keyValuePair: VersionedKeyValuePair[AgglomerateGraph] <- tracingDataStore.editableMappingsAgglomerateToGraph.get(
         agglomerateGraphKey(mappingId, agglomerateId),
         version,

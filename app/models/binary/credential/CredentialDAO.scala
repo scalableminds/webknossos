@@ -2,7 +2,7 @@ package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
-  FileSystemCredential,
+  DataVaultCredential,
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
   S3AccessKeyCredential
@@ -79,14 +79,14 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                        values(${_id}, ${CredentialType.GoogleServiceAccount}, ${credential.name}, ${credential.secretJson.toString}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
-  def findOne(id: ObjectId): Fox[FileSystemCredential] =
+  def findOne(id: ObjectId): Fox[DataVaultCredential] =
     for {
       r <- run(q"select $columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed
 
-  private def parseAnyCredential(r: CredentialsRow): Fox[FileSystemCredential] =
+  private def parseAnyCredential(r: CredentialsRow): Fox[DataVaultCredential] =
     for {
       typeParsed <- CredentialType.fromString(r.`type`).toFox
       parsed <- typeParsed match {

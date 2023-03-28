@@ -1,5 +1,12 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
+  CompressedSegmentation,
+  CompressedSegmentation32,
+  CompressedSegmentation64
+}
 import com.sun.jna.ptr.NativeLongByReference
 import org.apache.commons.compress.compressors.gzip.{
   GzipCompressorInputStream,
@@ -15,7 +22,7 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.zip.{Deflater, DeflaterOutputStream, Inflater, InflaterInputStream}
 import javax.imageio.ImageIO
-import javax.imageio.ImageIO.{createImageInputStream}
+import javax.imageio.ImageIO.createImageInputStream
 import javax.imageio.stream.ImageInputStream
 
 sealed trait CompressionSetting
@@ -280,4 +287,32 @@ class JpegCompressor() extends Compressor {
     val data = dbb.getData.grouped(width).toList
     os.write(data.flatten.toArray)
   }
+}
+
+class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize: Array[Int], blockSize: Array[Int])
+    extends Compressor {
+  override def getId: String = "compressedsegmentation"
+
+  override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
+
+  override def uncompress(is: InputStream, os: OutputStream): Unit =
+    dataType match {
+      case PrecomputedDataType.uint32 => {
+        val arr = new Array[Byte](65536)
+        is.read(arr)
+        val out = CompressedSegmentation32.decompress(arr, volumeSize, blockSize)
+        os.write(out)
+      }
+      case PrecomputedDataType.uint64 => {
+        val arr = new Array[Byte](65536)
+        is.read(arr)
+        val out = CompressedSegmentation64.decompress(arr, volumeSize, blockSize)
+        os.write(out)
+      }
+      case _ =>
+        throw new UnsupportedOperationException(
+          "Can not use compressed segmentation for datatypes other than u32, u64.")
+    }
+
+  override def compress(is: InputStream, os: OutputStream): Unit = ???
 }

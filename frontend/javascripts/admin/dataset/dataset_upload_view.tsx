@@ -32,8 +32,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-// @ts-expect-error ts-migrate(2306) FIXME: File ... Remove this comment to see the full error message
-import { createReader, BlobReader, ZipReader, Entry } from "zip-js-webpack";
+import { BlobReader, ZipReader, Entry } from "@zip.js/zip.js";
 import {
   CardContainer,
   DatasetNameFormItem,
@@ -473,7 +472,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
   };
 
-  validateFiles = (files: FileWithPath[]) => {
+  validateFiles = async (files: FileWithPath[]) => {
     if (files.length === 0) {
       return;
     }
@@ -490,41 +489,40 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
 
       if (fileExtension === "zip") {
-        createReader(
-          new BlobReader(file),
-          (reader: ZipReader) => {
-            reader.getEntries((entries: Array<Entry>) => {
-              const wkwFile = entries.find((entry: Entry) =>
-                Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
-              );
-              const needsConversion = wkwFile == null;
-              this.handleNeedsConversionInfo(needsConversion);
+        try {
+          const reader = new ZipReader(new BlobReader(file));
+          const entries = await reader.getEntries();
+          await reader.close();
+          const wkwFile = entries.find((entry: Entry) =>
+            Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
+          );
+          const needsConversion = wkwFile == null;
+          this.handleNeedsConversionInfo(needsConversion);
 
-              const nmlFile = entries.find((entry: Entry) =>
-                Utils.isFileExtensionEqualTo(entry.filename, "nml"),
-              );
-              if (nmlFile) {
-                Modal.error({
-                  content: messages["dataset.upload_zip_with_nml"],
-                });
-              }
-            });
-          },
-          () => {
+          const nmlFile = entries.find((entry: Entry) =>
+            Utils.isFileExtensionEqualTo(entry.filename, "nml"),
+          );
+          if (nmlFile) {
             Modal.error({
-              content: messages["dataset.upload_invalid_zip"],
+              content: messages["dataset.upload_zip_with_nml"],
             });
-            const form = this.formRef.current;
+          }
+        } catch (e) {
+          console.error(e);
+          ErrorHandling.notify(e as Error);
+          Modal.error({
+            content: messages["dataset.upload_invalid_zip"],
+          });
+          const form = this.formRef.current;
 
-            if (!form) {
-              return;
-            }
+          if (!form) {
+            return;
+          }
 
-            form.setFieldsValue({
-              zipFile: [],
-            });
-          },
-        );
+          form.setFieldsValue({
+            zipFile: [],
+          });
+        }
         // We return here since not more than 1 zip archive is supported anyway.
         return;
       } else if (fileExtension === "wkw") {

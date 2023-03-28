@@ -23,9 +23,9 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
   def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
     credential.flatMap { c =>
       c match {
-        case h: HttpBasicAuthCredential    => Some(h)
+        case h: HttpBasicAuthCredential   => Some(h)
         case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
-        case _                             => None
+        case _                            => None
       }
     }
 

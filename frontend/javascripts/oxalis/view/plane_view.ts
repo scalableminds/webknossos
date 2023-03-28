@@ -14,8 +14,7 @@ import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
-
-type RaycastIntersection = THREE.Intersection<THREE.Object3D<THREE.Event>>;
+import Raycaster, { type RaycastIntersection } from "libs/raycaster";
 
 const createDirLight = (
   position: Vector3,
@@ -32,7 +31,7 @@ const createDirLight = (
   return dirLight;
 };
 
-const raycaster = new THREE.Raycaster();
+const raycaster = new Raycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
 const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
 
@@ -45,7 +44,7 @@ class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: (
     arg0: [number, number],
-  ) => RaycastIntersection | null | undefined;
+  ) => RaycastIntersection<THREE.Object3D> | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
@@ -147,7 +146,7 @@ class PlaneView {
 
   performIsosurfaceHitTest(
     mousePosition: [number, number],
-  ): RaycastIntersection | null | undefined {
+  ): RaycastIntersection<THREE.Object3D> | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesLODRootGroup } = SceneController;

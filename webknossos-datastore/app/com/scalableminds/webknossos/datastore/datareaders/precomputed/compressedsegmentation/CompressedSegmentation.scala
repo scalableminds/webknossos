@@ -101,7 +101,7 @@ trait CompressedSegmentation[T <: AnyVal] {
       result(i) = (w & 0xFF).toByte
       w >>= 8
     }
-    result
+    result.reverse
   }
 }
 

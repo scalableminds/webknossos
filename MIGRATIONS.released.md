@@ -1,9 +1,16 @@
 # Migration Guide (Released)
-All migrations of WEBKNOSOSS are documented in this file.
+
+All migrations of WEBKNOSSOS are documented in this file.
 See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an official release.
 
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
+
+## [23.04.0](https://github.com/scalableminds/webknossos/releases/tag/23.04.0) - 2023-03-27
+[Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...23.04.0)
+
+### Postgres Evolutions:
+None.
 
 ## [23.03.1](https://github.com/scalableminds/webknossos/releases/tag/23.03.1) - 2023-03-14
 [Commits](https://github.com/scalableminds/webknossos/compare/23.03.0...23.03.1)

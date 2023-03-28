@@ -1,6 +1,6 @@
 import { FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Dropdown, Table, Tag, Tooltip } from "antd";
+import { Dropdown, MenuProps, Table, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
@@ -68,12 +68,12 @@ type ContextMenuProps = {
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
   const { datasets, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
-  let overlay = <div />;
+  let menu: MenuProps = { items: [] };
 
   if (contextMenuPosition != null) {
     // getDatasetActionContextMenu should not be turned into <DatasetActionMenu />
     // as this breaks antd's styling of the menu within the dropdown.
-    overlay = getDatasetActionContextMenu({
+    menu = getDatasetActionContextMenu({
       hideContextMenu,
       datasets,
       reloadDataset,
@@ -87,11 +87,10 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
     <React.Fragment>
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
       <Dropdown
-        overlay={overlay}
+        menu={menu}
         overlayClassName="dropdown-overlay-container-for-context-menu"
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        // @ts-ignore
         destroyPopupOnHide
       >
         <div />

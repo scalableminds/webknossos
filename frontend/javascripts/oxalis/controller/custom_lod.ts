@@ -16,7 +16,6 @@ export default class CustomLOD extends THREE.LOD {
     const levels = this.levels;
 
     const visibleIndex = getTDViewportLOD(Store.getState());
-    // Keep level 0 always visible as this includes all meshes that do not have different LODs.
     for (let i = 0; i < this.levels.length; i++) {
       levels[i].object.visible = i === visibleIndex;
     }
@@ -28,7 +27,7 @@ export default class CustomLOD extends THREE.LOD {
 
   addLODMesh(meshGroup: THREE.Group, level: number) {
     while (this.lodLevelCount <= level) {
-      this.addLevel(new THREE.Object3D(), this.lodLevelCount);
+      this.addLevel(new THREE.Group(), this.lodLevelCount);
       this.lodLevelCount++;
     }
     this.levels[level].object.add(meshGroup);

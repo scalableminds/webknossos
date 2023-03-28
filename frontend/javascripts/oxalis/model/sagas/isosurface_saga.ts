@@ -722,7 +722,7 @@ function* loadPrecomputedMeshForSegmentId(
   const loadChunksTasks = _.compact(
     _.flatten(
       loadingOrder.map((lod) => {
-        if (availableChunksMap == null || availableChunksMap[lod] == null) {
+        if (availableChunksMap[lod] == null) {
           return;
         }
         const availableChunks = availableChunksMap[lod];
@@ -846,7 +846,13 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   const dataView = new DataView(buffer);
   const segmentId = dataView.getUint32(stlIsosurfaceConstants.cellIdIndex, true);
   const geometry = yield* call(parseStlBuffer, buffer);
-  getSceneController().addIsosurfaceFromGeometry(geometry, segmentId);
+  getSceneController().addIsosurfaceFromGeometry(
+    geometry,
+    segmentId,
+    null,
+    null,
+    NO_LOD_MESH_INDEX,
+  );
   yield* put(setImportingMeshStateAction(false));
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.

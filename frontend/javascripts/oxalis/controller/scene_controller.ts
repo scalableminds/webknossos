@@ -278,7 +278,7 @@ class SceneController {
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
 
-    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
+    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, null, null, NO_LOD_MESH_INDEX);
   }
 
   addIsosurfaceFromGeometry(
@@ -286,7 +286,7 @@ class SceneController {
     segmentationId: number,
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
-    lod: number = 0,
+    lod: number,
   ): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       this.isosurfacesGroupsPerSegmentationId[segmentationId] = {};

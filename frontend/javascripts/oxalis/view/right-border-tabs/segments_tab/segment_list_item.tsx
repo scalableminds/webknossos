@@ -192,10 +192,6 @@ function _MeshInfoItem(props: {
   };
 
   const { segment, isSelectedInList, isHovered, isosurface } = props;
-  const deemphasizedStyle = {
-    fontStyle: "italic",
-    color: "#989898",
-  };
 
   if (!isosurface) {
     if (isSelectedInList) {

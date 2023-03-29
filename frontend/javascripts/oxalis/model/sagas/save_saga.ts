@@ -303,14 +303,65 @@ export function* collectUndoStates(): Saga<never> {
       removeSegment,
     } = unpackRelevantActionForUndo(currentAction);
 
-    if (
-      skeletonUserAction ||
-      addBucketToUndoAction ||
-      finishAnnotationStrokeAction ||
-      userBoundingBoxAction ||
-      updateSegment ||
-      removeSegment
-    ) {
+    if (importVolumeTracingAction) {
+      redoStack.splice(0);
+      undoStack.splice(0);
+      undoStack.push({
+        type: "warning",
+        reason: messages["undo.import_volume_tracing"],
+      } as WarnUndoState);
+    } else if (undo) {
+      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
+        continue;
+      }
+      const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
+      if (!wasInterpreted) {
+        previousAction = null;
+        yield* call(
+          applyStateOfStack,
+          undoStack,
+          redoStack,
+          prevSkeletonTracingOrNull,
+          prevUserBoundingBoxes,
+          "undo",
+        );
+
+        yield* call(setPrevSegmentsToCurrent);
+      }
+
+      if (undo.callback != null) {
+        undo.callback();
+      }
+
+      yield* put(setBusyBlockingInfoAction(false));
+    } else if (redo) {
+      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
+        continue;
+      }
+
+      previousAction = null;
+      yield* call(
+        applyStateOfStack,
+        redoStack,
+        undoStack,
+        prevSkeletonTracingOrNull,
+        prevUserBoundingBoxes,
+        "redo",
+      );
+
+      yield* call(setPrevSegmentsToCurrent);
+
+      if (redo.callback != null) {
+        redo.callback();
+      }
+
+      yield* put(setBusyBlockingInfoAction(false));
+    } else {
+      // The received action in this branch potentially causes a new
+      // entry on the undo stack because the annotation was edited.
+
       let shouldClearRedoState = false;
 
       if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
@@ -441,61 +492,6 @@ export function* collectUndoStates(): Saga<never> {
       if (undoStack.length > UNDO_HISTORY_SIZE) {
         undoStack.shift();
       }
-    } else if (importVolumeTracingAction) {
-      redoStack.splice(0);
-      undoStack.splice(0);
-      undoStack.push({
-        type: "warning",
-        reason: messages["undo.import_volume_tracing"],
-      } as WarnUndoState);
-    } else if (undo) {
-      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
-        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
-        continue;
-      }
-      const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
-      if (!wasInterpreted) {
-        previousAction = null;
-        yield* call(
-          applyStateOfStack,
-          undoStack,
-          redoStack,
-          prevSkeletonTracingOrNull,
-          prevUserBoundingBoxes,
-          "undo",
-        );
-
-        yield* call(setPrevSegmentsToCurrent);
-      }
-
-      if (undo.callback != null) {
-        undo.callback();
-      }
-
-      yield* put(setBusyBlockingInfoAction(false));
-    } else if (redo) {
-      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
-        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
-        continue;
-      }
-
-      previousAction = null;
-      yield* call(
-        applyStateOfStack,
-        redoStack,
-        undoStack,
-        prevSkeletonTracingOrNull,
-        prevUserBoundingBoxes,
-        "redo",
-      );
-
-      yield* call(setPrevSegmentsToCurrent);
-
-      if (redo.callback != null) {
-        redo.callback();
-      }
-
-      yield* put(setBusyBlockingInfoAction(false));
     }
 
     // We need the updated tracing here

@@ -264,6 +264,9 @@ export function* manageUndoStates(): Saga<never> {
           "undo",
         );
 
+        // Since the current segments map changed, we need to update our reference to it.
+        // Note that we don't need to do this for currentVolumeUndoBuckets, as this
+        // was and is empty, anyway (due to the constraint we checked above).
         yield* call(setPrevSegmentsToCurrent);
       }
 
@@ -288,6 +291,7 @@ export function* manageUndoStates(): Saga<never> {
         "redo",
       );
 
+      // See undo branch for an explanation.
       yield* call(setPrevSegmentsToCurrent);
 
       if (redo.callback != null) {

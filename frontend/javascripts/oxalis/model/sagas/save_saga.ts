@@ -206,32 +206,66 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
 }
 
 export function* collectUndoStates(): Saga<never> {
+  // At its core, this saga maintains an undo and redo stack to implement
+  // undo/redo functionality.
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
+
+  // Declaration of local state necessary to manage the undo/redo mechanism.
   let previousAction: Action | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   let pendingCompressions: Array<Task> = [];
   const volumeInfoById: Record<
-    string,
+    string, // volume tracing id
     {
+      // The set of volume buckets which were mutated during the current volume
+      // operation (e.g., brushing). After a volume operation, the set is added
+      // to the stack and cleared afterwards. This means the set is always
+      // empty unless a volume operation is ongoing.
       currentVolumeUndoBuckets: VolumeUndoBuckets;
+      // The "old" segment list that needs to be added to the next volume undo stack
+      // entry so that that segment list can be restored upon undo.
       prevSegments: SegmentMap;
     }
   > = {};
+
   yield* take("WK_READY");
+
+  // Initialization of the local state variables from above.
   prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
   prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
-
   for (const volumeTracing of volumeTracings) {
     volumeInfoById[volumeTracing.tracingId] = {
       currentVolumeUndoBuckets: [],
-      // The copy of the segment list that needs to be added to the next volume undo stack entry.
       // The SegmentMap is immutable. So, no need to copy. If there's no volume
       // tracing, prevSegments can remain empty as it's not needed.
       prevSegments: volumeTracing.segments,
     };
+  }
+
+  // Helper functions for functionality related to volumeInfoById.
+  function* setPrevSegmentsToCurrent() {
+    // Read the current segments map and store it in volumeInfoById for all volume layers.
+    const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+    for (const volumeTracing of volumeTracings) {
+      volumeInfoById[volumeTracing.tracingId].prevSegments = volumeTracing.segments;
+    }
+  }
+  function* areCurrentVolumeUndoBucketsEmpty() {
+    // Check that currentVolumeUndoBuckets is empty for all layers (see above for an
+    // explanation of this invariant).
+    // In case the invariant is violated for some reason, we forbid undo/redo.
+    // The case can be provoked by brushing and hitting ctrl+z without lifting the
+    // mouse button.
+    const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+    for (const volumeTracing of volumeTracings) {
+      if (volumeInfoById[volumeTracing.tracingId].currentVolumeUndoBuckets.length > 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   const channel = yield* actionChannel([
@@ -273,7 +307,9 @@ export function* collectUndoStates(): Saga<never> {
       skeletonUserAction ||
       addBucketToUndoAction ||
       finishAnnotationStrokeAction ||
-      userBoundingBoxAction
+      userBoundingBoxAction ||
+      updateSegment ||
+      removeSegment
     ) {
       let shouldClearRedoState = false;
 
@@ -350,6 +386,51 @@ export function* collectUndoStates(): Saga<never> {
         }
 
         previousAction = userBoundingBoxAction;
+      } else if (updateSegment || removeSegment) {
+        // Updates to the segment list shouldn't necessarily create new undo states. In the following
+        // cases, no new undo state should be added:
+        // - the segment list was updated by annotating (then, that action will have caused a new undo state
+        //   anyway)
+        // - the segment list was updated by selecting/hovering a cell (in that case, no new undo state
+        //   should be created, either).
+        // Renaming or removing a segment, on the other hand, should create an undo state.
+        const action = updateSegment || removeSegment;
+        if (!action) {
+          throw new Error("Unexpected action");
+        }
+        const addToUndo =
+          removeSegment != null || (updateSegment && "name" in updateSegment.segment);
+        if (addToUndo) {
+          const activeVolumeTracing = yield* select((state) =>
+            getVolumeTracingByLayerName(state.tracing, action.layerName),
+          );
+          if (activeVolumeTracing) {
+            const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
+            undoStack.push({
+              type: "volume",
+              data: {
+                buckets: [],
+                segments: volumeInfo.prevSegments,
+                tracingId: activeVolumeTracing.tracingId,
+              },
+            });
+            // The SegmentMap is immutable. So, no need to copy.
+            volumeInfo.prevSegments = activeVolumeTracing.segments;
+            shouldClearRedoState = true;
+          }
+        } else {
+          // Update most recent undo stack entry in-place.
+          const volumeTracing = yield* select((state) =>
+            getVolumeTracingByLayerName(state.tracing, action.layerName),
+          );
+
+          // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
+          // have been dispatched), prevSegments doesn't need to be updated, as it's not used.
+          if (volumeTracing != null) {
+            const volumeInfo = volumeInfoById[volumeTracing.tracingId];
+            volumeInfo.prevSegments = volumeTracing.segments;
+          }
+        }
       }
 
       if (shouldClearRedoState) {
@@ -368,6 +449,10 @@ export function* collectUndoStates(): Saga<never> {
         reason: messages["undo.import_volume_tracing"],
       } as WarnUndoState);
     } else if (undo) {
+      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
+        continue;
+      }
       const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
       if (!wasInterpreted) {
         previousAction = null;
@@ -379,6 +464,8 @@ export function* collectUndoStates(): Saga<never> {
           prevUserBoundingBoxes,
           "undo",
         );
+
+        yield* call(setPrevSegmentsToCurrent);
       }
 
       if (undo.callback != null) {
@@ -387,6 +474,11 @@ export function* collectUndoStates(): Saga<never> {
 
       yield* put(setBusyBlockingInfoAction(false));
     } else if (redo) {
+      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
+        continue;
+      }
+
       previousAction = null;
       yield* call(
         applyStateOfStack,
@@ -397,54 +489,13 @@ export function* collectUndoStates(): Saga<never> {
         "redo",
       );
 
+      yield* call(setPrevSegmentsToCurrent);
+
       if (redo.callback != null) {
         redo.callback();
       }
 
       yield* put(setBusyBlockingInfoAction(false));
-    } else if (updateSegment || removeSegment) {
-      // Updates to the segment list shouldn't necessarily create new undo states. In the following
-      // cases, no new undo state should be added:
-      // - the segment list was updated by annotating (then, that action will have caused a new undo state
-      //   anyway)
-      // - the segment list was updated by selecting/hovering a cell (in that case, no new undo state
-      //   should be created, either).
-      // Renaming or removing a segment, on the other hand, should create an undo state.
-      const action = updateSegment || removeSegment;
-      if (!action) {
-        throw new Error("Unexpected action");
-      }
-      const addToUndo = removeSegment != null || (updateSegment && "name" in updateSegment.segment);
-      if (addToUndo) {
-        const activeVolumeTracing = yield* select((state) =>
-          getVolumeTracingByLayerName(state.tracing, action.layerName),
-        );
-        if (activeVolumeTracing) {
-          const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
-          undoStack.push({
-            type: "volume",
-            data: {
-              buckets: [],
-              segments: volumeInfo.prevSegments,
-              tracingId: activeVolumeTracing.tracingId,
-            },
-          });
-          // The SegmentMap is immutable. So, no need to copy.
-          volumeInfo.prevSegments = activeVolumeTracing.segments;
-        }
-      } else {
-        // Update most recent undo stack entry in-place.
-        const volumeTracing = yield* select((state) =>
-          getVolumeTracingByLayerName(state.tracing, action.layerName),
-        );
-
-        // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
-        // have been dispatched), prevSegments doesn't need to be updated, as it's not used.
-        if (volumeTracing != null) {
-          const volumeInfo = volumeInfoById[volumeTracing.tracingId];
-          volumeInfo.prevSegments = volumeTracing.segments;
-        }
-      }
     }
 
     // We need the updated tracing here

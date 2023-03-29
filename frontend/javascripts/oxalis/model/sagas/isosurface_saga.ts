@@ -829,10 +829,14 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   yield* put(addPrecomputedIsosurfaceAction(layerName, segmentId, seedPosition, "unknown"));
 }
 
-function removeIsosurface(
-  action: RemoveIsosurfaceAction | RemoveSegmentAction,
-  removeFromScene: boolean = true,
-): void {
+function* handleRemoveSegment(action: RemoveSegmentAction) {
+  // The dispatched action will make sure that the isosurface entry is removed from the
+  // store **and** from the scene. Otherwise, the store will still contain a reference
+  // to the mesh even though it's not in the scene, anymore.
+  yield* put(removeIsosurfaceAction(action.layerName, action.segmentId));
+}
+
+function removeIsosurface(action: RemoveIsosurfaceAction, removeFromScene: boolean = true): void {
   const { layerName } = action;
   const segmentId = action.segmentId;
 
@@ -869,7 +873,8 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
   yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield* takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
-  yield* takeEvery(["REMOVE_SEGMENT", "REMOVE_ISOSURFACE"], removeIsosurface);
+  yield* takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
+  yield* takeEvery("REMOVE_SEGMENT", handleRemoveSegment);
   yield* takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
   yield* takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);

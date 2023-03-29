@@ -390,6 +390,7 @@ export function* manageUndoStates(): Saga<never> {
         if (!action) {
           throw new Error("Unexpected action");
         }
+        shouldClearRedoState = true;
         const addToUndo =
           removeSegment != null || (updateSegment && "name" in updateSegment.segment);
         if (addToUndo) {
@@ -408,7 +409,6 @@ export function* manageUndoStates(): Saga<never> {
             });
             // The SegmentMap is immutable. So, no need to copy.
             volumeInfo.prevSegments = activeVolumeTracing.segments;
-            shouldClearRedoState = true;
           }
         } else {
           // Update most recent undo stack entry in-place.

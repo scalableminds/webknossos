@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- Moved the view mode selection in the toolbar next to the position field. [#6949](https://github.com/scalableminds/webknossos/pull/6949)
 
 ### Fixed
 

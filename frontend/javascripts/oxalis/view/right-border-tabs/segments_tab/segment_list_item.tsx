@@ -201,7 +201,8 @@ function _MeshInfoItem(props: {
     if (isSelectedInList) {
       return (
         <div
-          style={{ ...deemphasizedStyle, marginLeft: 8 }}
+          className="deemphasized italic"
+          style={{ marginLeft: 8 }}
           onContextMenu={(evt) => {
             evt.preventDefault();
             props.handleSegmentDropdownMenuVisibility(segment.id, true);
@@ -216,7 +217,7 @@ function _MeshInfoItem(props: {
   }
 
   const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-  const textStyle = isVisible ? {} : deemphasizedStyle;
+  const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
     <Tooltip title="Download Mesh">
       <VerticalAlignBottomOutlined
@@ -282,10 +283,11 @@ function _MeshInfoItem(props: {
         >
           {toggleVisibilityCheckbox}
           <span
+            className={className}
             onClick={() => {
               props.setPosition(seedPosition);
             }}
-            style={{ ...textStyle, marginLeft: 8 }}
+            style={{ marginLeft: 8 }}
           >
             {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
           </span>
@@ -431,7 +433,7 @@ function _SegmentListItem({
     if (isJSONMappingEnabled && segment.id !== mappedId)
       return (
         <Tooltip title="Segment ID (Unmapped ID → Mapped ID)">
-          <span className="deemphasized-segment-name">
+          <span className="deemphasized italic">
             {segment.id} → {mappedId}
           </span>
         </Tooltip>
@@ -439,7 +441,7 @@ function _SegmentListItem({
     // Only if segment.name is truthy, render additional info.
     return segment.name ? (
       <Tooltip title="Segment ID">
-        <span className="deemphasized-segment-name">{segment.id}</span>
+        <span className="deemphasized italic">{segment.id}</span>
       </Tooltip>
     ) : null;
   }
@@ -505,7 +507,7 @@ function _SegmentListItem({
             {segment.id === centeredSegmentId ? (
               <Tooltip title="This segment is currently centered in the data viewports.">
                 <i
-                  className="fas fa-crosshairs deemphasized-segment-name"
+                  className="fas fa-crosshairs deemphasized"
                   style={{
                     marginLeft: 4,
                   }}
@@ -515,7 +517,7 @@ function _SegmentListItem({
             {segment.id === activeCellId ? (
               <Tooltip title="The currently active segment id belongs to this segment.">
                 <i
-                  className="fas fa-paint-brush deemphasized-segment-name"
+                  className="fas fa-paint-brush deemphasized"
                   style={{
                     marginLeft: 4,
                   }}

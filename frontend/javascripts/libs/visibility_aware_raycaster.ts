@@ -7,7 +7,7 @@ function ascSort(a: RaycastIntersection<THREE.Object3D>, b: RaycastIntersection<
   return a.distance - b.distance;
 }
 
-export default class Raycaster extends THREE.Raycaster {
+export default class VisibilityAwareRaycaster extends THREE.Raycaster {
   // A modified version of the Raycaster.js from three.js.
   // The original version can be found here: https://github.com/mrdoob/three.js/blob/dev/src/core/Raycaster.js.
   // Types retrieved from https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/three/src/core/Raycaster.d.ts.

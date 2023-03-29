@@ -73,7 +73,6 @@ import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
-import { getTDViewportLOD } from "../accessors/view_mode_accessor";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -623,7 +622,11 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
-  const currentLODIndex = yield* select(getTDViewportLOD);
+  const sceneController = yield* call(getSceneController);
+  const currentLODIndex = yield* call({
+    context: sceneController.isosurfacesLODRootGroup,
+    fn: sceneController.isosurfacesLODRootGroup.getCurrentLOD,
+  });
 
   let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
@@ -717,7 +720,6 @@ function* loadPrecomputedMeshForSegmentId(
     yield* put(removeIsosurfaceAction(layerName, id));
     return;
   }
-  const sceneController = yield* call(getSceneController);
 
   const loadChunksTasks = _.compact(
     _.flatten(

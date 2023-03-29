@@ -14,7 +14,9 @@ import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
-import Raycaster, { type RaycastIntersection } from "libs/raycaster";
+import VisibilityAwareRaycaster, {
+  type RaycastIntersection,
+} from "libs/visibility_aware_raycaster";
 
 const createDirLight = (
   position: Vector3,
@@ -31,7 +33,7 @@ const createDirLight = (
   return dirLight;
 };
 
-const raycaster = new Raycaster();
+const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
 const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
 

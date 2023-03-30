@@ -122,7 +122,7 @@ function RegistrationViewDemo() {
 }
 
 function RegistrationView() {
-  return features().isDemoInstance ? <RegistrationViewDemo /> : <RegistrationViewNotDemo />;
+  return features().isWkorgInstance ? <RegistrationViewDemo /> : <RegistrationViewNotDemo />;
 }
 
 export default RegistrationView;

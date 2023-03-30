@@ -77,7 +77,7 @@ function useOlvy() {
   const [isInitialized, setIsInitialized] = useState(false);
   // Initialize Olvy after mounting
   useEffect(() => {
-    if (!features().isDemoInstance) {
+    if (!features().isWkorgInstance) {
       return;
     }
 
@@ -118,7 +118,7 @@ function useOlvyUnreadReleasesCount(activeUser: APIUser) {
   const unreadCount = useFetch(
     async () => {
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
-      if (!isInitialized || !features().isDemoInstance || !window.Olvy) {
+      if (!isInitialized || !features().isWkorgInstance || !window.Olvy) {
         return null;
       }
 
@@ -360,7 +360,7 @@ function getHelpSubMenu(
       label: "Ask a Question",
     });
 
-  if (features().isDemoInstance) {
+  if (features().isWkorgInstance) {
     helpSubMenuItems.push({
       key: "contact",
       label: (

@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation
 
-import java.math.BigInteger
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.reflect.ClassTag
 
@@ -123,11 +122,8 @@ object CompressedSegmentation64 extends CompressedSegmentation[Long] {
   override def initializeArray(length: Int): Array[Long] =
     new Array[Long](length)
 
-  override def readValue(input: Array[Int], position: Int): Long = {
-    var value = input(position).toLong
-    value |= (input(position + 1)).toLong << 32
-    value
-  }
+  override def readValue(input: Array[Int], position: Int): Long =
+    ByteBuffer.wrap(ByteBuffer.allocate(8).putInt(input(position + 1)).putInt(input(position)).array()).getLong
 
   override def valueAsLong(v: Long): Long = v
 }

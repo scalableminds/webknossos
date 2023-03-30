@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
-  CompressedSegmentation,
   CompressedSegmentation32,
   CompressedSegmentation64
 }

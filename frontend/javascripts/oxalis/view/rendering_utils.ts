@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import type { OrthoView } from "oxalis/constants";
+import { OUTER_CSS_BORDER, OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
@@ -13,7 +13,6 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { convertBufferToImage } from "libs/utils";
 import html2canvas from "html2canvas";
-import Constants from "oxalis/constants";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
@@ -117,26 +116,23 @@ export async function downloadScreenshot() {
     const buffer = renderToTexture(planeId, null, null, false, clearColor);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
-    const scalebar = inputCatcherElement?.querySelector(".scalebar") as HTMLElement;
-    let drawImageIntoCanvasCallback = null;
-    if (scalebar) {
-      drawImageIntoCanvasCallback = (ctx: CanvasRenderingContext2D) => {
-        const scalebarDistanceToRightBorder =
-          scalebar.offsetParent != null
-            ? scalebar.offsetParent.clientWidth - scalebar.offsetLeft - scalebar.clientWidth
-            : 0;
-        const scalebarDistanceToTopBorder = scalebar.offsetTop;
-        const logoHeight = constants.SCALEBAR_HEIGHT;
-        const logoWidth = (logoHeight / logo.height) * logo.width;
-        ctx.drawImage(
-          logo,
-          scalebarDistanceToRightBorder,
-          scalebarDistanceToTopBorder,
-          logoWidth,
-          logoHeight,
-        );
-      };
-    }
+    const drawImageIntoCanvasCallback = (ctx: CanvasRenderingContext2D) => {
+      const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
+      const scalebarDistanceToTopBorder =
+        ctx.canvas.height +
+        OUTER_CSS_BORDER -
+        constants.SCALEBAR_OFFSET -
+        constants.SCALEBAR_HEIGHT;
+      const logoHeight = constants.SCALEBAR_HEIGHT;
+      const logoWidth = (logoHeight / logo.height) * logo.width;
+      ctx.drawImage(
+        logo,
+        scalebarDistanceToRightBorder,
+        scalebarDistanceToTopBorder,
+        logoWidth,
+        logoHeight,
+      );
+    };
     const canvas =
       inputCatcherElement != null
         ? await html2canvas(inputCatcherElement as HTMLElement, {

@@ -19,7 +19,7 @@ type Props = {
   onClose: () => void;
 };
 type RestrictResolutionSliderProps = {
-  datasetResolutionInfo: ResolutionInfo;
+  resolutionInfo: ResolutionInfo;
   selectedSegmentationLayer: APISegmentationLayer | null;
   resolutionIndices: number[];
   setResolutionIndices: (userIndices: number[]) => void;
@@ -84,13 +84,13 @@ export function NewVolumeLayerSelection({
 }
 
 export function RestrictResolutionSlider({
-  datasetResolutionInfo,
+  resolutionInfo,
   selectedSegmentationLayer,
   resolutionIndices,
   setResolutionIndices,
 }: RestrictResolutionSliderProps) {
-  let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
-  let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
+  let highestResolutionIndex = resolutionInfo.getHighestResolutionIndex();
+  let lowestResolutionIndex = resolutionInfo.getClosestExistingIndex(0);
 
   if (selectedSegmentationLayer != null) {
     const datasetFallbackLayerResolutionInfo = getResolutionInfo(
@@ -136,7 +136,7 @@ export function RestrictResolutionSlider({
             marginRight: 20,
           }}
         >
-          {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+          {resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
         </div>
         <Slider
           tooltipVisible={false}
@@ -156,7 +156,7 @@ export function RestrictResolutionSlider({
             textAlign: "right",
           }}
         >
-          {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
+          {resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
         </div>
       </div>
     </React.Fragment>
@@ -193,24 +193,19 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
       selectedSegmentationLayer != null
         ? `&fallbackLayerName=${selectedSegmentationLayer.name}`
         : "";
-    const datasetResolutionInfo = getSomeResolutionInfoForDataset(dataset);
-    let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
-    let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
-
-    if (selectedSegmentationLayer != null) {
-      const datasetFallbackLayerResolutionInfo = getResolutionInfo(
-        selectedSegmentationLayer.resolutions,
-      );
-      highestResolutionIndex = datasetFallbackLayerResolutionInfo.getHighestResolutionIndex();
-      lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getClosestExistingIndex(0);
-    }
+    const resolutionInfo =
+      selectedSegmentationLayer == null
+        ? getSomeResolutionInfoForDataset(dataset)
+        : getResolutionInfo(selectedSegmentationLayer.resolutions);
+    const highestResolutionIndex = resolutionInfo.getHighestResolutionIndex();
+    const lowestResolutionIndex = resolutionInfo.getClosestExistingIndex(0);
 
     const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
     const resolutionSlider =
       annotationType !== "skeleton" ? (
         <RestrictResolutionSlider
-          datasetResolutionInfo={datasetResolutionInfo}
+          resolutionInfo={resolutionInfo}
           selectedSegmentationLayer={selectedSegmentationLayer}
           resolutionIndices={userDefinedResolutionIndices}
           setResolutionIndices={setUserDefinedResolutionIndices}
@@ -249,9 +244,9 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
             }/createExplorative/${annotationType}/?minRes=${Math.max(
-              ...datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
+              ...resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
             )}&maxRes=${Math.max(
-              ...datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
+              ...resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
             )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >

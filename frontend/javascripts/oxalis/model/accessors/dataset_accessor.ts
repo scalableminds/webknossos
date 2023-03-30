@@ -88,10 +88,6 @@ export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector
   return keys.map((key) => resolutionUnionDict[key]);
 });
 
-export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): ResolutionInfo => {
-  return new ResolutionInfo(getResolutionUnion(dataset).map((mags) => mags[0]));
-});
-
 export function getLargestResolutions(dataset: APIDataset): Vector3[] {
   const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
     convertToDenseResolution(layer.resolutions),
@@ -99,6 +95,17 @@ export function getLargestResolutions(dataset: APIDataset): Vector3[] {
 
   return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
 }
+
+export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): ResolutionInfo => {
+  const resolutionUnion = getResolutionUnion(dataset);
+  const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
+
+  if (areMagsDistinct) {
+    return new ResolutionInfo(resolutionUnion.map((mags) => mags[0]));
+  } else {
+    return new ResolutionInfo(getLargestResolutions(dataset));
+  }
+});
 
 function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;

@@ -2,7 +2,7 @@ import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import React, { useMemo, useState } from "react";
 import _ from "lodash";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   NewVolumeLayerSelection,
@@ -15,6 +15,7 @@ import {
   getLayerByName,
   getMappingInfo,
   getSegmentationLayers,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAllReadableLayerNames,
@@ -120,9 +121,16 @@ export default function AddVolumeLayerModal({
       return name;
     }
   }, [dataset, tracing]);
+  const selectedSegmentationLayer =
+    selectedSegmentationLayerName != null
+      ? (getLayerByName(dataset, selectedSegmentationLayerName) as APISegmentationLayer)
+      : null;
   const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
-  const datasetResolutionInfo = getSomeResolutionInfoForDataset(dataset);
+  const resolutionInfo =
+    selectedSegmentationLayer == null
+      ? getSomeResolutionInfoForDataset(dataset)
+      : getResolutionInfo(selectedSegmentationLayer.resolutions);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
 
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>
@@ -132,7 +140,7 @@ export default function AddVolumeLayerModal({
   const volumeTracingLayers = getVolumeTracingLayers(dataset);
 
   const availableSegmentationLayers = _.differenceWith(segmentationLayers, volumeTracingLayers);
-  let selectedSegmentationLayer = null;
+
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
     const validationResult = validateReadableLayerName(
@@ -145,10 +153,10 @@ export default function AddVolumeLayerModal({
       return;
     }
     const minResolutionAllowed = Math.max(
-      ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
+      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
     );
     const maxResolutionAllowed = Math.max(
-      ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
+      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
     );
 
     if (selectedSegmentationLayerName == null) {
@@ -162,7 +170,9 @@ export default function AddVolumeLayerModal({
         },
       });
     } else {
-      selectedSegmentationLayer = getLayerByName(dataset, selectedSegmentationLayerName);
+      if (selectedSegmentationLayer == null) {
+        throw new Error("Segmentation layer is null");
+      }
       const fallbackLayerName = selectedSegmentationLayer.name;
 
       const mappingInfo = getMappingInfo(
@@ -222,7 +232,7 @@ export default function AddVolumeLayerModal({
         />
       ) : null}
       <RestrictResolutionSlider
-        datasetResolutionInfo={datasetResolutionInfo}
+        resolutionInfo={resolutionInfo}
         selectedSegmentationLayer={selectedSegmentationLayer}
         resolutionIndices={resolutionIndices}
         setResolutionIndices={setResolutionIndices}

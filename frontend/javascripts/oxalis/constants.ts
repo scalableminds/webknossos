@@ -321,7 +321,7 @@ const Constants = {
   },
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
   SCALEBAR_HEIGHT: 22,
-  SCALEBAR_OFFSET: 12,
+  SCALEBAR_OFFSET: 10,
 };
 export default Constants;
 

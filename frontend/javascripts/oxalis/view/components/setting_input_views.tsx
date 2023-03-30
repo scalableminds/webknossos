@@ -190,7 +190,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     );
   }
 }
-type SwitchSettingProps = {
+export type SwitchSettingProps = {
   onChange: (value: boolean) => void | Promise<void>;
   value: boolean;
   label: string | React.ReactNode;

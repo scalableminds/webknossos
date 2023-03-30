@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Alert, ButtonProps, Button, Result, Popover } from "antd";
+import { Alert, ButtonProps, Button, Result, Popover, Switch } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -14,6 +14,8 @@ import { rgbToHex } from "libs/utils";
 import { PRIMARY_COLOR } from "oxalis/constants";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import { APIOrganization, APIUser } from "types/api_flow_types";
+import { TooltipPlacement } from "antd/lib/tooltip";
+import { SwitchSettin, type SwitchSettingProps } from "oxalis/view/components/setting_input_views";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 
@@ -42,16 +44,26 @@ function getUpgradeNowButton(
   ) : null;
 }
 
-export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> = ({
-  children,
-  requiredPricingPlan,
-}) => {
+const useActiveUserAndOrganization = (): [APIUser | null | undefined, APIOrganization | null] => {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
-  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+  return [activeUser, activeOrganization];
+};
 
-  if (isFeatureAllowed) return <>{children}</>;
-
+type PopoverEnforcedProps = RequiredPricingProps & {
+  activeUser: APIUser | null | undefined;
+  activeOrganization: APIOrganization | null;
+  placement?: TooltipPlacement;
+  zIndex?: number;
+};
+const PricingEnforcedPopover: React.FunctionComponent<PopoverEnforcedProps> = ({
+  children,
+  requiredPricingPlan,
+  activeUser,
+  activeOrganization,
+  placement,
+  zIndex,
+}) => {
   return (
     <Popover
       color={PRIMARY_COLOR_HEX}
@@ -61,8 +73,30 @@ export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> 
           {getUpgradeNowButton(activeUser, activeOrganization)}
         </div>
       }
-      placement="right"
+      placement={placement}
       trigger="hover"
+      zIndex={zIndex}
+    >
+      {children}
+    </Popover>
+  );
+};
+
+export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> = ({
+  children,
+  requiredPricingPlan,
+}) => {
+  const [activeUser, activeOrganization] = useActiveUserAndOrganization();
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+
+  if (isFeatureAllowed) return <>{children}</>;
+
+  return (
+    <PricingEnforcedPopover
+      requiredPricingPlan={requiredPricingPlan}
+      activeUser={activeUser}
+      activeOrganization={activeOrganization}
+      placement="right"
       zIndex={1500}
     >
       <span
@@ -75,7 +109,7 @@ export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> 
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
       </span>
-    </Popover>
+    </PricingEnforcedPopover>
   );
 };
 
@@ -84,29 +118,55 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
   requiredPricingPlan,
   ...buttonProps
 }) => {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed) return <Button {...buttonProps}>{children}</Button>;
 
   return (
-    <Popover
-      color={PRIMARY_COLOR_HEX}
-      content={
-        <div style={popOverStyle}>
-          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
-          {getUpgradeNowButton(activeUser, activeOrganization)}
-        </div>
-      }
+    <PricingEnforcedPopover
+      requiredPricingPlan={requiredPricingPlan}
+      activeUser={activeUser}
+      activeOrganization={activeOrganization}
       placement="bottom"
-      trigger="hover"
     >
       <Button {...buttonProps} disabled>
         {children}
         <LockOutlined style={{ marginLeft: 5 }} />
       </Button>
-    </Popover>
+    </PricingEnforcedPopover>
+  );
+};
+
+// TODO!!!!!!!
+export const PricingEnforcedSwitchSetting: React.FunctionComponent<
+  RequiredPricingProps & SwitchSettingProps & {defaultValue: boolean}
+> = ({  requiredPricingPlan, ...buttonProps, defaultValue, label }) => {
+  const [activeUser, activeOrganization] = useActiveUserAndOrganization();
+  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+
+  if (isFeatureAllowed)
+    return (
+      <SwitchSetting
+        label={
+          label
+        }
+        value={this.props.userConfiguration.displayScalebars}
+        onChange={this.onChangeUser.displayScalebars}
+      />
+    );
+
+  return (
+    <PricingEnforcedPopover
+      requiredPricingPlan={requiredPricingPlan}
+      activeUser={activeUser}
+      activeOrganization={activeOrganization}
+      placement="bottom"
+    >
+      <Switch checked={defaultValue} disabled />
+      </Switch>
+        <LockOutlined style={{ marginLeft: 5 }} />
+    </PricingEnforcedPopover>
   );
 };
 
@@ -115,8 +175,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
   requiredPricingPlan,
   ...restProps
 }) => {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
   if (isFeatureAllowed)
@@ -136,15 +195,10 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
     );
 
   return (
-    <Popover
-      color={PRIMARY_COLOR_HEX}
-      content={
-        <div style={popOverStyle}>
-          {getFeatureNotAvailableInPlanMessage(requiredPricingPlan, activeOrganization, activeUser)}
-          {getUpgradeNowButton(activeUser, activeOrganization)}
-        </div>
-      }
-      trigger="hover"
+    <PricingEnforcedPopover
+      requiredPricingPlan={requiredPricingPlan}
+      activeUser={activeUser}
+      activeOrganization={activeOrganization}
     >
       <div style={{ position: "relative", cursor: "not-allowed" }}>
         <div
@@ -176,7 +230,7 @@ export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> 
           />
         </div>
       </div>
-    </Popover>
+    </PricingEnforcedPopover>
   );
 };
 
@@ -185,8 +239,7 @@ export function PageUnavailableForYourPlanView({
 }: {
   requiredPricingPlan: PricingPlanEnum;
 }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const [activeUser, activeOrganization] = useActiveUserAndOrganization();
 
   const linkToOrganizationSettings =
     activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (

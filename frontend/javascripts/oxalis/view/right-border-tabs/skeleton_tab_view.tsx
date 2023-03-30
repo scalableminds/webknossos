@@ -21,7 +21,7 @@ import {
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import { saveAs } from "file-saver";
-import JSZip from "jszip";
+import { BlobReader, BlobWriter, ZipReader, Entry } from "@zip.js/zip.js";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -208,22 +208,29 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const tryParsingFileAsZip = async (file: File) => {
       try {
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Promise<ArrayBuffer>' is not ass... Remove this comment to see the full error message
-        const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
-        const nmlFileName = Object.keys(zipFile.files).find((key) =>
-          Utils.isFileExtensionEqualTo(key, "nml"),
-        );
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-        const nmlFile = await zipFile.file(nmlFileName).async("blob");
-        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
-        const dataFileName = Object.keys(zipFile.files).find((key) =>
-          Utils.isFileExtensionEqualTo(key, "zip"),
+        const reader = new ZipReader(new BlobReader(file));
+        const entries = await reader.getEntries();
+        const nmlFileEntry = entries.find((entry: Entry) =>
+          Utils.isFileExtensionEqualTo(entry.filename, "nml"),
         );
 
-        if (dataFileName) {
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-          const dataBlob = await zipFile.file(dataFileName).async("blob");
-          const dataFile = new File([dataBlob], dataFileName);
+        if (nmlFileEntry == null) {
+          await reader.close();
+          throw Error("Zip file doesn't contain an NML file.");
+        }
+
+        const nmlBlob = await nmlFileEntry.getData(new BlobWriter());
+        const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
+
+        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
+
+        const dataFileEntry = entries.find((entry: Entry) =>
+          Utils.isFileExtensionEqualTo(entry.filename, "zip"),
+        );
+
+        if (dataFileEntry) {
+          const dataBlob = await dataFileEntry.getData(new BlobWriter());
+          const dataFile = new File([dataBlob], dataFileEntry.filename);
           await Model.ensureSavedState();
           const storeState = Store.getState();
           const { tracing, dataset } = storeState;
@@ -263,6 +270,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           }
         }
 
+        await reader.close();
         return nmlImportActions;
       } catch (error) {
         // @ts-ignore

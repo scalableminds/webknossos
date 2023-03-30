@@ -11,8 +11,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.04.0...HEAD)
 
 ### Added
+- Added rendering precomputed meshes with level of detail depending on the zoom of the 3D viewport. This feature only works with version 3 mesh files. [#6909](https://github.com/scalableminds/webknossos/pull/6909)
 
 ### Changed
+- Moved the view mode selection in the toolbar next to the position field. [#6949](https://github.com/scalableminds/webknossos/pull/6949)
 
 ### Fixed
 

@@ -159,8 +159,15 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setPositionAction(position));
   },
 
-  updateSegment(segmentId: number, segmentShape: Partial<Segment>, layerName: string) {
-    dispatch(updateSegmentAction(segmentId, segmentShape, layerName));
+  updateSegment(
+    segmentId: number,
+    segmentShape: Partial<Segment>,
+    layerName: string,
+    createsNewUndoState: boolean,
+  ) {
+    dispatch(
+      updateSegmentAction(segmentId, segmentShape, layerName, undefined, createsNewUndoState),
+    );
   },
 
   removeSegment(segmentId: number, layerName: string) {

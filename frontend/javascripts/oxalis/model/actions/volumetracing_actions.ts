@@ -170,6 +170,7 @@ export const updateSegmentAction = (
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
+  createsNewUndoState: boolean = false,
 ) =>
   ({
     type: "UPDATE_SEGMENT",
@@ -177,6 +178,7 @@ export const updateSegmentAction = (
     segment,
     layerName,
     timestamp,
+    createsNewUndoState,
   } as const);
 
 export const removeSegmentAction = (

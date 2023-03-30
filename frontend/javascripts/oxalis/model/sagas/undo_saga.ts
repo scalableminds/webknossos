@@ -379,31 +379,23 @@ export function* manageUndoStates(): Saga<never> {
 
         previousAction = userBoundingBoxAction;
       } else if (updateSegment || removeSegment) {
-        // Updates to the segment list shouldn't necessarily create new undo states. In the following
-        // cases, no new undo state should be added:
-        // - the segment list was updated by annotating (then, that action will have caused a new undo state
-        //   anyway)
-        // - the segment list was updated by selecting/hovering a cell (in that case, no new undo state
-        //   should be created, either).
-        // Renaming or removing a segment, on the other hand, should create an undo state.
+        // Updates to the segment list shouldn't necessarily create new undo states. In particular,
+        // no new undo state is created when the updateSegment action is a byproduct of another
+        // UI action (mainly by annotating with volume tools). Also, if a segment's anchor position is
+        // updated automatically (e.g., by clicking), this should also not add another undo state.
+        // On the other hand, a new undo state should be created when the user explicitly caused a
+        // change to a segment. For example:
+        // - by selecting/hovering a cell so that a new entry gets added to the list
+        // - renaming or removing a segment
+        // - changing the color of a segment
         const action = updateSegment || removeSegment;
         if (!action) {
           throw new Error("Unexpected action");
         }
 
-        const addToUndo =
-          removeSegment != null || (updateSegment && "name" in updateSegment.segment);
-        // Even if addToUndo is false, we will clear the redo state. Otherwise,
-        // selecting a segment while being in an earlier state and then doing a redo operation
-        // would forget about the newly registered segment which is weird.
-        // Clearing the redo state after an explicit action (such as selecting a segment)
-        // seems more intuitive.
-        // Also note that a segment update as a consequence of an annotation operation
-        // is already accompanied by an empty redo stack (because the volume operation
-        // will have cleared that stack). So, in that case shouldClearRedoState is true,
-        // but essentially nothing will be cleared, anyway.
-        shouldClearRedoState = true;
-        if (addToUndo) {
+        const createNewUndoState = removeSegment != null || updateSegment?.createsNewUndoState;
+        if (createNewUndoState) {
+          shouldClearRedoState = true;
           const activeVolumeTracing = yield* select((state) =>
             getVolumeTracingByLayerName(state.tracing, action.layerName),
           );

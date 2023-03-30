@@ -43,6 +43,7 @@ import {
   getMaximumBrushSize,
   getRenderableResolutionForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
+  getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -661,6 +662,10 @@ function* ensureSegmentExists(
       return;
     }
 
+    const doesSegmentExist = yield* select((state) =>
+      getSegmentsForLayer(state, layerName).has(segmentId),
+    );
+
     yield* put(
       updateSegmentAction(
         segmentId,
@@ -668,6 +673,8 @@ function* ensureSegmentExists(
           somePosition,
         },
         layerName,
+        undefined,
+        !doesSegmentExist,
       ),
     );
   }

@@ -154,7 +154,12 @@ type Props = {
   handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
   activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
-  updateSegment: (arg0: number, arg1: Partial<Segment>, arg2: string) => void;
+  updateSegment: (
+    arg0: number,
+    arg1: Partial<Segment>,
+    arg2: string,
+    createsNewUndoState: boolean,
+  ) => void;
   removeSegment: (arg0: number, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
@@ -363,20 +368,20 @@ function _SegmentListItem({
         andCloseContextMenu,
       ),
       getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu),
-      /*
-       * Disable the change-color menu if the segment was mapped to another segment, because
-       * changing the color wouldn't do anything as long as the mapping is still active.
-       * This is because the id (A) is mapped to another one (B). So, the user would need
-       * to change the color of B to see the effect for A.
-       */
       {
         key: "changeSegmentColor",
+        /*
+         * Disable the change-color menu if the segment was mapped to another segment, because
+         * changing the color wouldn't do anything as long as the mapping is still active.
+         * This is because the id (A) is mapped to another one (B). So, the user would need
+         * to change the color of B to see the effect for A.
+         */
         disabled: isEditingDisabled || segment.id !== mappedId,
         label: (
           <ChangeColorMenuItemContent
             isDisabled={isEditingDisabled}
             title="Change Segment Color"
-            onSetColor={(color) => {
+            onSetColor={(color, createsNewUndoState) => {
               if (visibleSegmentationLayer == null) {
                 return;
               }
@@ -386,6 +391,7 @@ function _SegmentListItem({
                   color,
                 },
                 visibleSegmentationLayer.name,
+                createsNewUndoState,
               );
             }}
             rgb={Utils.take3(segmentColorRGBA)}
@@ -406,6 +412,7 @@ function _SegmentListItem({
               color: null,
             },
             visibleSegmentationLayer.name,
+            true,
           );
         },
         label: "Reset Segment Color",
@@ -487,6 +494,7 @@ function _SegmentListItem({
                       name,
                     },
                     visibleSegmentationLayer.name,
+                    true,
                   );
                 }
               }}

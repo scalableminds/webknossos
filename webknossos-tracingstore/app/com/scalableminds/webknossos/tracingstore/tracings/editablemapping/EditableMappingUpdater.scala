@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
-import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingInfo
+import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentAgglomeratePair,
   SegmentToAgglomerateProto

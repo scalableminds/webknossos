@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
-import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingInfo
+import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -81,7 +81,7 @@ class EditableMappingService @Inject()(
     with LazyLogging
     with ProtoGeometryImplicits {
 
-  val defaultSegmentToAgglomerateChunkSize: Int = 256 * 1024 // 256 KiB chunks
+  val defaultSegmentToAgglomerateChunkSize: Int = 16 * 1024 // 256 KiB chunks (2 8-byte numbers per element)
 
   private def generateId: String = UUID.randomUUID.toString
 

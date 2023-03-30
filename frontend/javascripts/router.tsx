@@ -224,7 +224,7 @@ class ReactRouter extends React.Component<Props> {
                 exact
                 path="/"
                 render={() => {
-                  if (!this.props.hasOrganizations && !features().isDemoInstance) {
+                  if (!this.props.hasOrganizations && !features().isWkorgInstance) {
                     return <Redirect to="/onboarding" />;
                   }
 
@@ -279,7 +279,7 @@ class ReactRouter extends React.Component<Props> {
                     return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
                   }
 
-                  // Hard navigate so that webknossos.org is shown for the demo instance.
+                  // Hard navigate so that webknossos.org is shown for the wkorg instance.
                   window.location.href = "/";
                   return null;
                 }}
@@ -705,7 +705,7 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-              {!features().isDemoInstance && (
+              {!features().isWkorgInstance && (
                 <RouteWithErrorBoundary path="/onboarding" component={Onboarding} />
               )}
               <RouteWithErrorBoundary component={PageNotFoundView} />

@@ -77,7 +77,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
     val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
-    val activatedInConfig = bool2Fox(conf.Features.isDemoInstance) ?~> "allowOrganizationCreation.notEnabled"
+    val activatedInConfig = bool2Fox(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = requestingUser.toFox.flatMap(user =>
       multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
 
@@ -93,7 +93,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
-      initialPricingParameters = if (conf.Features.isDemoInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
+      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
 

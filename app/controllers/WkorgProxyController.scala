@@ -14,7 +14,7 @@ import utils.WkConf
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
 
-class DemoProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[WkEnv], multiUserDAO: MultiUserDAO)(
+class WkorgProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[WkEnv], multiUserDAO: MultiUserDAO)(
     implicit ec: ExecutionContext)
     extends Controller {
 
@@ -30,7 +30,7 @@ class DemoProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[
   }
 
   private def matchesProxyPage(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =
-    conf.Features.isDemoInstance && conf.Proxy.routes
+    conf.Features.isWkorgInstance && conf.Proxy.routes
       .exists(route => matchesPageWithWildcard(route, request.path)) && (request.identity.isEmpty || request.uri != "/")
 
   private def matchesPageWithWildcard(routeWithWildcard: String, actualRequest: String): Boolean = {

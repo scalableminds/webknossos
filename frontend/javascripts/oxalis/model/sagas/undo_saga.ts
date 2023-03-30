@@ -390,9 +390,19 @@ export function* manageUndoStates(): Saga<never> {
         if (!action) {
           throw new Error("Unexpected action");
         }
-        shouldClearRedoState = true;
+
         const addToUndo =
           removeSegment != null || (updateSegment && "name" in updateSegment.segment);
+        // Even if addToUndo is false, we will clear the redo state. Otherwise,
+        // selecting a segment while being in an earlier state and then doing a redo operation
+        // would forget about the newly registered segment which is weird.
+        // Clearing the redo state after an explicit action (such as selecting a segment)
+        // seems more intuitive.
+        // Also note that a segment update as a consequence of an annotation operation
+        // is already accompanied by an empty redo stack (because the volume operation
+        // will have cleared that stack). So, in that case shouldClearRedoState is true,
+        // but essentially nothing will be cleared, anyway.
+        shouldClearRedoState = true;
         if (addToUndo) {
           const activeVolumeTracing = yield* select((state) =>
             getVolumeTracingByLayerName(state.tracing, action.layerName),

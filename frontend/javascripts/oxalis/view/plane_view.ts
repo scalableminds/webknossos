@@ -151,7 +151,7 @@ class PlaneView {
   ): RaycastIntersection<THREE.Object3D> | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
-    const { isosurfacesLODRootGroup } = SceneController;
+    const { isosurfacesLODRootGroup } = SceneController.meshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
 

@@ -95,7 +95,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   }
 
   object Features {
-    val isDemoInstance: Boolean = get[Boolean]("features.isDemoInstance")
+    val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds

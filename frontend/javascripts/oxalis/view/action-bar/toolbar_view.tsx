@@ -301,15 +301,19 @@ function VolumeInterpolationButton() {
   );
 
   return (
-    <Dropdown.Button
-      icon={<DownOutlined />}
-      menu={menu}
-      onClick={onInterpolateClick}
-      style={{ padding: "0 5px 0 6px" }}
-      buttonsRender={buttonsRender}
-    >
-      {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
-    </Dropdown.Button>
+    // Without the outer div, the Dropdown can eat up all the remaining horizontal space,
+    // moving sibling elements to the far right.
+    <div>
+      <Dropdown.Button
+        icon={<DownOutlined />}
+        menu={menu}
+        onClick={onInterpolateClick}
+        style={{ padding: "0 5px 0 6px" }}
+        buttonsRender={buttonsRender}
+      >
+        {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
+      </Dropdown.Button>
+    </div>
   );
 }
 

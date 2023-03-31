@@ -5,19 +5,19 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class N5ArrayExplorer extends RemoteLayerExplorer {
 
   override def name: String = "N5 Array"
 
-  override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
     for {
-      headerPath <- Fox.successful(remotePath.resolve(N5Header.FILENAME_ATTRIBUTES_JSON))
-      name <- guessNameFromPath(remotePath)
+      headerPath <- Fox.successful(remotePath / N5Header.FILENAME_ATTRIBUTES_JSON)
+      name = guessNameFromPath(remotePath)
       n5Header <- parseJsonFromPath[N5Header](headerPath) ?~> s"failed to read n5 header at $headerPath"
       elementClass <- n5Header.elementClass ?~> "failed to read element class from n5 header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(n5Header.rank)

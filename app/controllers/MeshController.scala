@@ -11,6 +11,9 @@ import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
+// Note that this wk-side controller deals with user-uploaded meshes stored in postgres
+// Not to be confused with the DSMeshController that deals with on-disk meshfiles
+
 class MeshController @Inject()(meshDAO: MeshDAO,
                                annotationDAO: AnnotationDAO,
                                sil: Silhouette[WkEnv],

@@ -5,9 +5,9 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, _}
+import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
-  override def fileSystemServiceOpt: Option[FileSystemService] = None
+  override def dataVaultServiceOpt: Option[DataVaultService] = None
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
@@ -100,7 +100,7 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider = volumeBucketProvider
+  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider = volumeBucketProvider
 
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
 

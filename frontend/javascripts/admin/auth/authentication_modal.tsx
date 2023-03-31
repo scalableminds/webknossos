@@ -41,7 +41,7 @@ export default function AuthenticationModal({
   // SpotlightRegistrationForm always creates a new organization. If an inviteToken
   // exists, a normal RegistrationForm needs to be used.
   const registrationForm =
-    inviteToken == null && features().isDemoInstance ? (
+    inviteToken == null && features().isWkorgInstance ? (
       <SpotlightRegistrationForm onRegistered={onRegistered} />
     ) : (
       <RegistrationForm onRegistered={onRegistered} inviteToken={inviteToken} />

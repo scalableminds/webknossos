@@ -291,7 +291,7 @@ class ReactRouter extends React.Component<Props> {
                   <DashboardView
                     userId={match.params.userId}
                     isAdminView={match.params.userId !== null}
-                    initialTabKey="explorativeAnnotations"
+                    initialTabKey={null}
                   />
                 )}
               />

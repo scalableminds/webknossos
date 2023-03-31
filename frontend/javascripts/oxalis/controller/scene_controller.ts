@@ -86,7 +86,8 @@ class SceneController {
   // Each group can hold multiple meshes.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isosurfacesRootGroup' has no initializer... Remove this comment to see the full error message
   isosurfacesLODRootGroup: CustomLOD;
-  isosurfacesGroupsPerSegmentationId: Record<number, Record<number, THREE.Group>> = {};
+  isosurfacesGroupsPerSegmentationId: Record<string, Record<number, Record<number, THREE.Group>>> =
+    {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -207,23 +208,23 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometryInBestLOD(cellId: number): THREE.Group {
+  getIsosurfaceGeometryInBestLOD(segmentId: number, layerName: string): THREE.Group {
     const bestLod = Math.min(
-      ...Object.keys(this.isosurfacesGroupsPerSegmentationId[cellId]).map((lodVal) =>
+      ...Object.keys(this.isosurfacesGroupsPerSegmentationId[layerName][segmentId]).map((lodVal) =>
         parseInt(lodVal),
       ),
     );
-    return this.isosurfacesGroupsPerSegmentationId[cellId][bestLod];
+    return this.isosurfacesGroupsPerSegmentationId[layerName][segmentId][bestLod];
   }
 
-  getColorObjectForSegment(cellId: number) {
-    const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), cellId);
+  getColorObjectForSegment(segmentId: number) {
+    const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId);
     const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
     return color;
   }
 
-  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry) {
-    const color = this.getColorObjectForSegment(cellId);
+  constructIsosurfaceMesh(segmentId: number, geometry: THREE.BufferGeometry) {
+    const color = this.getColorObjectForSegment(segmentId);
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
     });
@@ -264,7 +265,14 @@ class SceneController {
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
 
-    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, null, null, NO_LOD_MESH_INDEX);
+    this.addIsosurfaceFromGeometry(
+      bufferGeometry,
+      segmentationId,
+      null,
+      null,
+      NO_LOD_MESH_INDEX,
+      layerName,
+    );
   }
 
   addIsosurfaceFromGeometry(
@@ -273,13 +281,16 @@ class SceneController {
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
+    layerName: string,
   ): void {
-    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
-      this.isosurfacesGroupsPerSegmentationId[segmentationId] = {};
+    // todo: use layername
+
+    if (this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId] == null) {
+      this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId] = {};
     }
-    if (this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] == null) {
+    if (this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId][lod] == null) {
       const newGroup = new THREE.Group();
-      this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] = newGroup;
+      this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId][lod] = newGroup;
       if (lod === NO_LOD_MESH_INDEX) {
         this.isosurfacesLODRootGroup.addNoLODSupportedMesh(newGroup);
       } else {
@@ -298,22 +309,25 @@ class SceneController {
       mesh.translateZ(offset[2]);
     }
 
-    this.isosurfacesGroupsPerSegmentationId[segmentationId][lod].add(mesh);
+    this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId][lod].add(mesh);
   }
 
-  removeIsosurfaceById(segmentationId: number): void {
-    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
+  removeIsosurfaceById(segmentationId: number, layerName: string): void {
+    if (this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId] == null) {
       return;
     }
-    _.forEach(this.isosurfacesGroupsPerSegmentationId[segmentationId], (meshGroup, lod) => {
-      const lodNumber = parseInt(lod);
-      if (lodNumber !== NO_LOD_MESH_INDEX) {
-        this.isosurfacesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
-      } else {
-        this.isosurfacesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
-      }
-    });
-    delete this.isosurfacesGroupsPerSegmentationId[segmentationId];
+    _.forEach(
+      this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId],
+      (meshGroup, lod) => {
+        const lodNumber = parseInt(lod);
+        if (lodNumber !== NO_LOD_MESH_INDEX) {
+          this.isosurfacesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+        } else {
+          this.isosurfacesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+        }
+      },
+    );
+    delete this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId];
   }
 
   addLights(): void {
@@ -356,15 +370,15 @@ class SceneController {
     this.stlMeshes[id].visible = visibility;
   }
 
-  setIsosurfaceVisibility(id: number, visibility: boolean): void {
-    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup) => {
+  setIsosurfaceVisibility(id: number, visibility: boolean, layerName: string): void {
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[layerName][id], (meshGroup) => {
       meshGroup.visible = visibility;
     });
   }
 
-  setIsosurfaceColor(id: number): void {
+  setIsosurfaceColor(id: number, layerName: string): void {
     const color = this.getColorObjectForSegment(id);
-    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup) => {
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[layerName][id], (meshGroup) => {
       if (meshGroup) {
         for (const child of meshGroup.children) {
           // @ts-ignore

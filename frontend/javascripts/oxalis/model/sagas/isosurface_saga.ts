@@ -406,10 +406,10 @@ function* maybeLoadIsosurface(
       const vertices = new Float32Array(responseBuffer);
 
       if (removeExistingIsosurface) {
-        getSceneController().removeIsosurfaceById(segmentId);
+        getSceneController().removeIsosurfaceById(segmentId, layer.name);
       }
 
-      getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+      getSceneController().addIsosurfaceFromVertices(vertices, segmentId, layer.name);
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
@@ -763,6 +763,7 @@ function* loadPrecomputedMeshForSegmentId(
                   // Apply the scale from the segment info, which includes dataset scale and mag
                   scale,
                   lod,
+                  layerName,
                 );
               } else {
                 // V0
@@ -792,6 +793,7 @@ function* loadPrecomputedMeshForSegmentId(
                   null,
                   null,
                   lod,
+                  layerName,
                 );
               }
             },
@@ -816,9 +818,13 @@ function* loadPrecomputedMeshForSegmentId(
  * Ad Hoc and Precomputed Meshes
  *
  */
-function* downloadIsosurfaceCellById(cellName: string, cellId: number): Saga<void> {
+function* downloadIsosurfaceCellById(
+  cellName: string,
+  cellId: number,
+  layerName: string,
+): Saga<void> {
   const sceneController = getSceneController();
-  const geometry = sceneController.getIsosurfaceGeometryInBestLOD(cellId);
+  const geometry = sceneController.getIsosurfaceGeometryInBestLOD(cellId, layerName);
 
   if (geometry == null) {
     const errorMessage = messages["tracing.not_isosurface_available_to_download"];
@@ -840,7 +846,7 @@ function* downloadIsosurfaceCellById(cellName: string, cellId: number): Saga<voi
 }
 
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
-  yield* call(downloadIsosurfaceCellById, action.cellName, action.cellId);
+  yield* call(downloadIsosurfaceCellById, action.cellName, action.cellId, action.layerName);
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
@@ -854,6 +860,7 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
     null,
     null,
     NO_LOD_MESH_INDEX,
+    layerName,
   );
   yield* put(setImportingMeshStateAction(false));
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
@@ -869,22 +876,22 @@ function removeIsosurface(action: RemoveIsosurfaceAction, removeFromScene: boole
   const { layerName, cellId } = action;
 
   if (removeFromScene) {
-    getSceneController().removeIsosurfaceById(cellId);
+    getSceneController().removeIsosurfaceById(cellId, layerName);
   }
 
   removeMapForSegment(layerName, cellId);
 }
 
 function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
-  const { id, visibility } = action;
+  const { id, visibility, layerName } = action;
   const SceneController = yield* call(getSceneController);
-  SceneController.setIsosurfaceVisibility(id, visibility);
+  SceneController.setIsosurfaceVisibility(id, visibility, layerName);
 }
 
 function* handleIsosurfaceColorChange(action: UpdateSegmentAction): Saga<void> {
   const SceneController = yield* call(getSceneController);
   if ("color" in action.segment) {
-    SceneController.setIsosurfaceColor(action.segmentId);
+    SceneController.setIsosurfaceColor(action.segmentId, action.layerName);
   }
 }
 

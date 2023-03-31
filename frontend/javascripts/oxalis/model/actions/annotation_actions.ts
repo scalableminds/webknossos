@@ -211,11 +211,16 @@ export const maybeFetchMeshFilesAction = (
     callback,
   } as const);
 
-export const triggerIsosurfaceDownloadAction = (cellName: string, cellId: number) =>
+export const triggerIsosurfaceDownloadAction = (
+  cellName: string,
+  cellId: number,
+  layerName: string,
+) =>
   ({
     type: "TRIGGER_ISOSURFACE_DOWNLOAD",
     cellName,
     cellId,
+    layerName,
   } as const);
 
 export const refreshIsosurfacesAction = () =>

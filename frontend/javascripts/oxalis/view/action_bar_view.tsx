@@ -173,8 +173,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
         <AddNewLayoutModal

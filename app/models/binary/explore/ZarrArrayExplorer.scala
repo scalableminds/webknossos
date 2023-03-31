@@ -6,19 +6,19 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import java.nio.file.Path
 
 class ZarrArrayExplorer extends RemoteLayerExplorer {
 
   override def name: String = "Zarr Array"
 
-  override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
-      zarrayPath <- Fox.successful(remotePath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY))
-      name <- guessNameFromPath(remotePath)
+      zarrayPath <- Fox.successful(remotePath / ZarrHeader.FILENAME_DOT_ZARRAY)
+      name = guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)

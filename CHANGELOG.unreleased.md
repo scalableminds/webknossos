@@ -12,8 +12,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added support for datasets with mixed magnifications (e.g., one layer contains mag 2-2-2 and another contains 2-2-1). [#6943](https://github.com/scalableminds/webknossos/pull/6943)
+- Added rendering precomputed meshes with level of detail depending on the zoom of the 3D viewport. This feature only works with version 3 mesh files. [#6909](https://github.com/scalableminds/webknossos/pull/6909)
 
 ### Changed
+- Moved the view mode selection in the toolbar next to the position field. [#6949](https://github.com/scalableminds/webknossos/pull/6949)
 
 ### Fixed
 

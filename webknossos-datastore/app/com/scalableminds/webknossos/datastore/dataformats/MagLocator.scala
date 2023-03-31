@@ -3,14 +3,14 @@ package com.scalableminds.webknossos.datastore.dataformats
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.models.datasource.ResolutionFormatHelper
-import com.scalableminds.webknossos.datastore.storage.{DataVaultsHolder, LegacyFileSystemCredential}
+import com.scalableminds.webknossos.datastore.storage.{DataVaultsHolder, LegacyDataVaultCredential}
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
 
 case class MagLocator(mag: Vec3Int,
                       path: Option[String],
-                      credentials: Option[LegacyFileSystemCredential],
+                      credentials: Option[LegacyDataVaultCredential],
                       axisOrder: Option[AxisOrder],
                       channelIndex: Option[Int],
                       credentialId: Option[String]) {

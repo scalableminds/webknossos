@@ -7,7 +7,6 @@ import AnnotationSagas from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
-import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
 import { watchMaximumRenderableLayers, watchZ1Downsampling } from "oxalis/model/sagas/dataset_saga";
 import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
@@ -44,7 +43,6 @@ function* restartableSaga(): Saga<void> {
       call(watchDataRelevantChanges),
       call(isosurfaceSaga),
       call(watchTasksAsync),
-      call(handleMeshChanges),
       call(watchMaximumRenderableLayers),
       call(MappingSaga),
       call(watchToolDeselection),

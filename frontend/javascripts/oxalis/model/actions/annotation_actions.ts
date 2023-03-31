@@ -36,12 +36,7 @@ type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
 type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
-export type UpdateRemoteMeshMetaDataAction = ReturnType<typeof updateRemoteMeshMetaDataAction>;
-export type UpdateLocalMeshMetaDataAction = ReturnType<typeof updateLocalMeshMetaDataAction>;
 export type UpdateIsosurfaceVisibilityAction = ReturnType<typeof updateIsosurfaceVisibilityAction>;
-export type AddMeshMetadataAction = ReturnType<typeof addMeshMetaDataAction>;
-export type DeleteMeshAction = ReturnType<typeof deleteMeshAction>;
-export type CreateMeshFromBufferAction = ReturnType<typeof createMeshFromBufferAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
 export type TriggerIsosurfaceDownloadAction = ReturnType<typeof triggerIsosurfaceDownloadAction>;
 export type RefreshIsosurfacesAction = ReturnType<typeof refreshIsosurfacesAction>;
@@ -66,18 +61,13 @@ export type AnnotationActionTypes =
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | SetBlockedByUserAction
-  | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
   | FinishedResizingUserBoundingBoxAction
   | AddNewUserBoundingBox
   | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction
-  | AddMeshMetadataAction
-  | DeleteMeshAction
-  | CreateMeshFromBufferAction
   | MaybeFetchMeshFilesAction
-  | UpdateLocalMeshMetaDataAction
   | UpdateIsosurfaceVisibilityAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
@@ -196,23 +186,6 @@ export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBounding
     userBoundingBoxes,
   } as const);
 
-export const updateRemoteMeshMetaDataAction = (
-  id: string,
-  meshShape: Partial<RemoteMeshMetaData>,
-) =>
-  ({
-    type: "UPDATE_REMOTE_MESH_METADATA",
-    id,
-    meshShape,
-  } as const);
-
-export const updateLocalMeshMetaDataAction = (id: string, meshShape: Partial<LocalMeshMetaData>) =>
-  ({
-    type: "UPDATE_LOCAL_MESH_METADATA",
-    id,
-    meshShape,
-  } as const);
-
 export const updateIsosurfaceVisibilityAction = (
   layerName: string,
   id: number,
@@ -223,25 +196,6 @@ export const updateIsosurfaceVisibilityAction = (
     layerName,
     id,
     visibility,
-  } as const);
-
-export const addMeshMetaDataAction = (mesh: MeshMetaData) =>
-  ({
-    type: "ADD_MESH_METADATA",
-    mesh,
-  } as const);
-
-export const deleteMeshAction = (id: string) =>
-  ({
-    type: "DELETE_MESH",
-    id,
-  } as const);
-
-export const createMeshFromBufferAction = (name: string, buffer: ArrayBuffer) =>
-  ({
-    type: "CREATE_MESH_FROM_BUFFER",
-    buffer,
-    name,
   } as const);
 
 export const maybeFetchMeshFilesAction = (

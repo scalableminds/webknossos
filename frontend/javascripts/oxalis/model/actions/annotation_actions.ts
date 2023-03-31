@@ -6,9 +6,6 @@ import type {
   APIMeshFile,
   APIUserCompact,
   EditableLayerProperties,
-  LocalMeshMetaData,
-  MeshMetaData,
-  RemoteMeshMetaData,
 } from "types/api_flow_types";
 import type {
   MappingType,

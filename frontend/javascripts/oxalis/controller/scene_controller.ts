@@ -5,7 +5,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import Maybe from "data.maybe";
-import type { APIDataLayer, MeshMetaData } from "types/api_flow_types";
+import type { APIDataLayer } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
 import {
   getBoundaries,
@@ -253,25 +253,11 @@ class SceneController {
     return mesh;
   }
 
-  addSTL(meshMetaData: MeshMetaData, geometry: THREE.BufferGeometry): void {
-    const { id, position } = meshMetaData;
-
-    if (this.stlMeshes[id] != null) {
-      console.warn(`Mesh with id ${id} has already been added to the scene.`);
-      return;
-    }
-
-    geometry.computeVertexNormals();
-
-    const meshNumber = _.size(this.stlMeshes);
-
-    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry);
-    this.meshesRootGroup.add(mesh);
-    this.stlMeshes[id] = mesh;
-    this.updateMeshPostion(id, position);
-  }
-
-  addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
+  addIsosurfaceFromVertices(
+    vertices: Float32Array,
+    segmentationId: number,
+    layerName: string,
+  ): void {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 

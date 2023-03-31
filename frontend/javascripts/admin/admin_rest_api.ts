@@ -50,8 +50,6 @@ import type {
   AnnotationViewConfiguration,
   EditableLayerProperties,
   ExperienceDomainList,
-  MeshMetaData,
-  RemoteMeshMetaData,
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,

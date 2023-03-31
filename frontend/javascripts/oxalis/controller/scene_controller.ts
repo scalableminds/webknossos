@@ -283,8 +283,9 @@ class SceneController {
     lod: number,
     layerName: string,
   ): void {
-    // todo: use layername
-
+    if (this.isosurfacesGroupsPerSegmentationId[layerName] == null) {
+      this.isosurfacesGroupsPerSegmentationId[layerName] = {};
+    }
     if (this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId] == null) {
       this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId] = {};
     }
@@ -313,6 +314,9 @@ class SceneController {
   }
 
   removeIsosurfaceById(segmentationId: number, layerName: string): void {
+    if (this.isosurfacesGroupsPerSegmentationId[layerName] == null) {
+      return;
+    }
     if (this.isosurfacesGroupsPerSegmentationId[layerName][segmentationId] == null) {
       return;
     }

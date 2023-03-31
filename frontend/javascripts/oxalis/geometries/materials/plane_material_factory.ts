@@ -412,9 +412,10 @@ class PlaneMaterialFactory {
           // needed. Since the current mag can differ from layer to layer, the shader
           // needs to know which mag is safe to use.
           // For this purpose, we define the representativeMagForVertexAlignment which is
-          // an artificial mag (meaning, there's not necessarily a layer with that exact
+          // an virtual mag (meaning, there's not necessarily a layer with that exact
           // mag). It is derived from the layers that are not transformed by considering
-          // the minimum for each axis.
+          // the minimum for each axis. That way, the vertices are aligned using the
+          // lowest common multiple.
           // For example, one layer might render mag 4-4-1, whereas another layer renders
           // 4-2-1. The representative mag would be 1-2-1.
           // If all layers have a transform, the representativeMagForVertexAlignment
@@ -906,7 +907,6 @@ class PlaneMaterialFactory {
     );
 
     const textureLayerInfos = getTextureLayerInfos();
-    console.log("textureLayerInfos", textureLayerInfos);
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
     const code = getMainFragmentShader({

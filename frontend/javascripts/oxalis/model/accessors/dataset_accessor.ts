@@ -88,7 +88,7 @@ export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector
   return keys.map((key) => resolutionUnionDict[key]);
 });
 
-export function getLargestResolutions(dataset: APIDataset): Vector3[] {
+export function getWidestResolutions(dataset: APIDataset): Vector3[] {
   const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
     convertToDenseResolution(layer.resolutions),
   );
@@ -103,7 +103,7 @@ export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset):
   if (areMagsDistinct) {
     return new ResolutionInfo(resolutionUnion.map((mags) => mags[0]));
   } else {
-    return new ResolutionInfo(getLargestResolutions(dataset));
+    return new ResolutionInfo(getWidestResolutions(dataset));
   }
 });
 
@@ -602,7 +602,7 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
-// used for valid task range
+// Currently, only used for valid task range
 function _keyResolutionsByMax(dataset: APIDataset, layerName: string): Record<number, Vector3> {
   const resolutions = getDenseResolutionsForLayerName(dataset, layerName);
   return _.keyBy(resolutions, (res) => Math.max(...res));

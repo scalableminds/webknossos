@@ -54,7 +54,7 @@ import {
   getLayerByName,
   getResolutionInfo,
   getTransformsForLayerOrNull,
-  getLargestResolutions,
+  getWidestResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -827,7 +827,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? fallbackLayerInfo.resolutions
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
-          getLargestResolutions(this.props.dataset);
+          getWidestResolutions(this.props.dataset);
 
     const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
 

@@ -642,7 +642,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   );
 
   getAvailableSteps() {
-    if (features().isDemoInstance) {
+    if (features().isWkorgInstance) {
       return [
         {
           title: "Create Organization",

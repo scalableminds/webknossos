@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.04.0...HEAD)
 
 ### Added
+- Added support for viewing neuroglancer precomputed segmentations using "compressed segmentation" compression. [#6947](https://github.com/scalableminds/webknossos/pull/6947)
 
 ### Changed
 

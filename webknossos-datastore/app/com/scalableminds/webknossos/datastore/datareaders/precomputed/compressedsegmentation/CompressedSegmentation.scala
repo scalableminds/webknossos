@@ -4,6 +4,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import scala.reflect.ClassTag
 
 // Based on https://github.com/janelia-flyem/compressedseg, see LICENSE.txt
+// Original author: Stephen Plaza (plazas@janelia.hhmi.org)
 
 trait CompressedSegmentation[T <: AnyVal] {
 

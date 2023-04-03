@@ -50,7 +50,7 @@ function showWelcomeToast() {
 export default function WelcomeToast() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   useEffect(() => {
-    if (!features().isDemoInstance) {
+    if (!features().isWkorgInstance) {
       return;
     }
     const hasSeenToast = null; //UserLocalStorage.getItem(

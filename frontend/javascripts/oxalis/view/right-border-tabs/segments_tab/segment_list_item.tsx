@@ -5,7 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, Menu, MenuItemProps } from "antd";
+import { List, Tooltip, Dropdown, MenuProps } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -22,7 +22,6 @@ import {
   refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
@@ -30,6 +29,8 @@ import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import { withMappingActivationConfirmation } from "./segments_view_helper";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -45,11 +46,6 @@ function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vect
   );
 }
 
-const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
-  MenuItemProps,
-  typeof Menu.Item
->(Menu.Item);
-
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFile | null | undefined,
@@ -59,10 +55,11 @@ const getLoadPrecomputedMeshMenuItem = (
   mappingInfo: ActiveMappingInfo,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
-  return (
-    <MenuItemWithMappingActivationConfirmation
-      key="loadPrecomputedMesh"
-      onClick={() => {
+  return {
+    key: "loadPrecomputedMesh",
+    disabled: !currentMeshFile,
+    onClick: withMappingActivationConfirmation(
+      () => {
         if (!currentMeshFile) {
           return;
         }
@@ -78,13 +75,13 @@ const getLoadPrecomputedMeshMenuItem = (
         andCloseContextMenu(
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
         );
-      }}
-      disabled={!currentMeshFile}
-      mappingName={mappingName}
-      descriptor="mesh file"
-      layerName={layerName}
-      mappingInfo={mappingInfo}
-    >
+      },
+      mappingName,
+      "mesh file",
+      layerName,
+      mappingInfo,
+    ),
+    label: (
       <Tooltip
         key="tooltip"
         title={
@@ -95,8 +92,8 @@ const getLoadPrecomputedMeshMenuItem = (
       >
         Load Mesh (precomputed)
       </Tooltip>
-    </MenuItemWithMappingActivationConfirmation>
-  );
+    ),
+  };
 };
 
 const getComputeMeshAdHocMenuItem = (
@@ -104,29 +101,26 @@ const getComputeMeshAdHocMenuItem = (
   loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
-) => {
+): MenuItemType => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
-  return (
-    <Menu.Item
-      key="loadAdHocMesh"
-      onClick={() => {
-        if (!segment.somePosition) {
-          Toast.info(
-            <React.Fragment>
-              Cannot load a mesh for this segment, because its position is unknown.
-            </React.Fragment>,
-          );
-          andCloseContextMenu();
-          return;
-        }
+  return {
+    key: "loadAdHocMesh",
+    onClick: () => {
+      if (!segment.somePosition) {
+        Toast.info(
+          <React.Fragment>
+            Cannot load a mesh for this segment, because its position is unknown.
+          </React.Fragment>,
+        );
+        andCloseContextMenu();
+        return;
+      }
 
-        andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
-      }}
-      disabled={disabled}
-    >
-      <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
-    </Menu.Item>
-  );
+      andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
+    },
+    disabled,
+    label: <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>,
+  };
 };
 
 const getMakeSegmentActiveMenuItem = (
@@ -134,20 +128,17 @@ const getMakeSegmentActiveMenuItem = (
   setActiveCell: (arg0: number, somePosition?: Vector3) => void,
   activeCellId: number | null | undefined,
   andCloseContextMenu: (_ignore?: any) => void,
-) => {
+): MenuItemType => {
   const disabled = segment.id === activeCellId;
   const title = disabled
     ? "This segment ID is already active."
     : "Make this the active segment ID.";
-  return (
-    <Menu.Item
-      key="setActiveCell"
-      onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
-      disabled={disabled}
-    >
-      <Tooltip title={title}>Activate Segment ID</Tooltip>
-    </Menu.Item>
-  );
+  return {
+    key: "setActiveCell",
+    onClick: () => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition)),
+    disabled,
+    label: <Tooltip title={title}>Activate Segment ID</Tooltip>,
+  };
 };
 
 type Props = {
@@ -355,54 +346,57 @@ function _SegmentListItem({
 
   const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(0, false);
 
-  const createSegmentContextMenu = () => (
-    <Menu>
-      {getLoadPrecomputedMeshMenuItem(
+  const createSegmentContextMenu = (): MenuProps => ({
+    items: [
+      getLoadPrecomputedMeshMenuItem(
         segment,
         currentMeshFile,
         loadPrecomputedMesh,
         andCloseContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
-      )}
-      {getComputeMeshAdHocMenuItem(
+      ),
+      getComputeMeshAdHocMenuItem(
         segment,
         loadAdHocMesh,
         visibleSegmentationLayer != null,
         andCloseContextMenu,
-      )}
-      {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
-      {/*
+      ),
+      getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu),
+      /*
        * Disable the change-color menu if the segment was mapped to another segment, because
        * changing the color wouldn't do anything as long as the mapping is still active.
        * This is because the id (A) is mapped to another one (B). So, the user would need
        * to change the color of B to see the effect for A.
-       */}
-      <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
-        <ChangeColorMenuItemContent
-          isDisabled={isEditingDisabled}
-          title="Change Segment Color"
-          onSetColor={(color) => {
-            if (visibleSegmentationLayer == null) {
-              return;
-            }
-            updateSegment(
-              segment.id,
-              {
-                color,
-              },
-              visibleSegmentationLayer.name,
-            );
-          }}
-          rgb={Utils.take3(segmentColorRGBA)}
-          hidePickerIcon
-        />
-      </Menu.Item>
-
-      <Menu.Item
-        key="resetSegmentColor"
-        disabled={isEditingDisabled || segment.color == null}
-        onClick={() => {
+       */
+      {
+        key: "changeSegmentColor",
+        disabled: isEditingDisabled || segment.id !== mappedId,
+        label: (
+          <ChangeColorMenuItemContent
+            isDisabled={isEditingDisabled}
+            title="Change Segment Color"
+            onSetColor={(color) => {
+              if (visibleSegmentationLayer == null) {
+                return;
+              }
+              updateSegment(
+                segment.id,
+                {
+                  color,
+                },
+                visibleSegmentationLayer.name,
+              );
+            }}
+            rgb={Utils.take3(segmentColorRGBA)}
+            hidePickerIcon
+          />
+        ),
+      },
+      {
+        key: "resetSegmentColor",
+        disabled: isEditingDisabled || segment.color == null,
+        onClick: () => {
           if (isEditingDisabled || visibleSegmentationLayer == null) {
             return;
           }
@@ -413,12 +407,11 @@ function _SegmentListItem({
             },
             visibleSegmentationLayer.name,
           );
-        }}
-      >
-        Reset Segment Color
-      </Menu.Item>
-    </Menu>
-  );
+        },
+        label: "Reset Segment Color",
+      },
+    ],
+  });
 
   function getSegmentIdDetails() {
     if (isJSONMappingEnabled && segment.id !== mappedId)
@@ -454,7 +447,7 @@ function _SegmentListItem({
       }}
     >
       <Dropdown
-        overlay={createSegmentContextMenu} // The overlay is generated lazily. By default, this would make the overlay
+        menu={createSegmentContextMenu()} // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
         // The reason for this is that it's not destroyed after closing.
         // Therefore, autoDestroy is passed.

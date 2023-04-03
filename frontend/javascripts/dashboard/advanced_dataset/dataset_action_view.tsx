@@ -16,7 +16,7 @@ import { clearCache, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { Menu, Modal } from "antd";
+import { MenuProps, Modal } from "antd";
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
   color: "var(--ant-disabled)",
@@ -246,75 +246,70 @@ export function getDatasetActionContextMenu({
   reloadDataset: (arg0: APIDatasetId) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
-}) {
+}): MenuProps {
   if (datasets.length !== 1) {
-    return (
-      <Menu
-        onClick={hideContextMenu}
-        style={{
-          borderRadius: 6,
-        }}
-        mode="vertical"
-      >
-        <Menu.Item key="view" disabled>
-          No actions available.
-        </Menu.Item>
-      </Menu>
-    );
+    return {
+      onClick: hideContextMenu,
+      style: {
+        borderRadius: 6,
+      },
+      mode: "vertical",
+      items: [
+        {
+          key: "view",
+          disabled: true,
+          label: "No actions available.",
+        },
+      ],
+    };
   }
   const dataset = datasets[0];
 
-  return (
-    <Menu
-      onClick={hideContextMenu}
-      style={{
-        borderRadius: 6,
-      }}
-      mode="vertical"
-    >
-      {dataset.isActive && (
-        <Menu.Item
-          key="view"
-          onClick={() => {
-            window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/view`;
-          }}
-        >
-          View
-        </Menu.Item>
-      )}
-      {dataset.isEditable && dataset.isActive ? (
-        <Menu.Item
-          key="edit"
-          onClick={() => {
-            window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/edit`;
-          }}
-        >
-          Open Settings
-        </Menu.Item>
-      ) : null}
+  return {
+    onClick: hideContextMenu,
+    style: {
+      borderRadius: 6,
+    },
+    mode: "vertical",
+    items: [
+      dataset.isActive
+        ? {
+            key: "view",
+            label: "View",
+            onClick: () => {
+              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/view`;
+            },
+          }
+        : null,
+      dataset.isEditable && dataset.isActive
+        ? {
+            key: "edit",
+            label: "Open Settings",
+            onClick: () => {
+              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/edit`;
+            },
+          }
+        : null,
 
-      {dataset.isEditable && !dataset.isActive ? (
-        <Menu.Item
-          key="import"
-          onClick={() => {
-            window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/import`;
-          }}
-        >
-          Import
-        </Menu.Item>
-      ) : null}
-
-      <Menu.Item
-        key="reload"
-        onClick={async () => {
+      dataset.isEditable && !dataset.isActive
+        ? {
+            key: "import",
+            label: "Import",
+            onClick: () => {
+              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/import`;
+            },
+          }
+        : null,
+      {
+        key: "reload",
+        label: "Reload",
+        onClick: async () => {
           const fullDataset = await getDataset(dataset);
           return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
-        }}
-      >
-        Reload
-      </Menu.Item>
-    </Menu>
-  );
+        },
+      },
+    ],
+  };
 }
 
 export default withRouter<RouteComponentProps & Props, any>(DatasetActionView);

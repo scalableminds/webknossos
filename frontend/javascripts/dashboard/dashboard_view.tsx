@@ -86,7 +86,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     if (this.props.isAdminView) {
       defaultTabKey = "tasks";
-    } else if (features().isDemoInstance) {
+    } else if (features().isWkorgInstance) {
       defaultTabKey = "publications";
     }
 
@@ -144,7 +144,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   getValidTabKeys() {
     const { isAdminView } = this.props;
     return {
-      publications: features().isDemoInstance,
+      publications: features().isWkorgInstance,
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,

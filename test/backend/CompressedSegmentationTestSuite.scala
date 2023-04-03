@@ -1,10 +1,9 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
-  CompressedSegmentation32,
-  CompressedSegmentation64
-}
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.CompressedSegmentation64
 import org.scalatestplus.play.PlaySpec
+
+import java.nio.{ByteBuffer, ByteOrder}
 
 class CompressedSegmentationTestSuite extends PlaySpec {
 
@@ -43,8 +42,11 @@ class CompressedSegmentationTestSuite extends PlaySpec {
     "datatype uint64" should {
 
       "decompress compressed array" in {
-        val s = CompressedSegmentation64.decompress(compressed, volumeSize = Array(3, 3, 3))
-        assert(s.sameElements(Array(5, 3, 6, 4, 9, 3, 5, 4, 8, 5, 8, 1, 1, 8, 7, 3, 9, 0, 4, 5, 9, 7, 4, 8, 5, 3, 9)))
+        val decompressedBytes =
+          CompressedSegmentation64.decompress(compressed, volumeSize = Array(3, 3, 3), blockSize = Array(8, 8, 8))
+        val arr = new Array[Long](27)
+        ByteBuffer.wrap(decompressedBytes).order(ByteOrder.LITTLE_ENDIAN).asLongBuffer().get(arr)
+        assert(arr.sameElements(Array(5, 3, 6, 4, 9, 3, 5, 4, 8, 5, 8, 1, 1, 8, 7, 3, 9, 0, 4, 5, 9, 7, 4, 8, 5, 3, 9)))
       }
     }
   }

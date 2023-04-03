@@ -96,6 +96,8 @@ class DSMeshController @Inject()(
                                                       dataLayerName,
                                                       ListMeshChunksRequest(request.body.meshFile, segmentId))
                           .toOption)
+                    meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
+                    _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
                     chunkInfos = meshChunksForUnmappedSegments.flatten.reduce(_.merge(_))
                   } yield chunkInfos
               }

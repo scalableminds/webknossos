@@ -156,7 +156,9 @@ class EditableMappingUpdater(editableMappingId: String,
     val key = editableMappingService.segmentToAgglomerateKey(editableMappingId, chunkId)
     val fromBufferOpt = segmentToAgglomerateBuffer.get(key)
     fromBufferOpt.map(Fox.successful(_)).getOrElse {
-      editableMappingService.getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId).map(_.toMap)
+      editableMappingService
+        .getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version = None)
+        .map(_.toMap)
     }
   }
 

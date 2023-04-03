@@ -22,7 +22,9 @@ class DataSourceRepository @Inject()(
   def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
     for {
-      dataSource <- findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound")
+      dataSource <- findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound",
+                                                                                               organizationName,
+                                                                                               dataSetName)
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield (dataSource, dataLayer)
 

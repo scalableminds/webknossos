@@ -297,13 +297,13 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
   override def uncompress(is: InputStream, os: OutputStream): Unit =
     dataType match {
       case PrecomputedDataType.uint32 => {
-        val arr = new Array[Byte](65536)
+        val arr = new Array[Byte](is.available())
         is.read(arr)
         val out = CompressedSegmentation32.decompress(arr, volumeSize, blockSize)
         os.write(out)
       }
       case PrecomputedDataType.uint64 => {
-        val arr = new Array[Byte](65536)
+        val arr = new Array[Byte](is.available())
         is.read(arr)
         val out = CompressedSegmentation64.decompress(arr, volumeSize, blockSize)
         os.write(out)

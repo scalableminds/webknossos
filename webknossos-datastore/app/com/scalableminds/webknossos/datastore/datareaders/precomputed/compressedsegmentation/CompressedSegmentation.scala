@@ -19,7 +19,6 @@ trait CompressedSegmentation[T <: AnyVal] {
   private def decompressChannel(input: Array[Int], volumeSize: Array[Int], blockSize: Array[Int])(
       implicit c: ClassTag[T]): Array[T] = {
     assert(blockSize.length == 3)
-    val baseOffset = 0 // TODO: Remove?
     val numElements = volumeSize(0) * volumeSize(1) * volumeSize(2)
     val output = initializeArray(numElements)
 
@@ -28,7 +27,6 @@ trait CompressedSegmentation[T <: AnyVal] {
       for (block1 <- 0 until gridSize(1)) {
         for (block0 <- 0 until gridSize(0)) {
           val blockOffset = block0 + gridSize(0) * (block1 + gridSize(1) * block2)
-          // TODO: Access to input has to be adjusted because the input in the original is 32 Bit Word length, not bytes
           val tableOffset = input(blockOffset * kBlockHeaderSize) & 0xffffff
           val encodedBits = (input(blockOffset * kBlockHeaderSize) >> 24) & 0xff
           val encodedValueStart = input(blockOffset * kBlockHeaderSize + 1)
@@ -46,16 +44,13 @@ trait CompressedSegmentation[T <: AnyVal] {
           val bitmask = (1 << encodedBits) - 1
           for (z <- zmin until zmax) {
             for (y <- ymin until ymax) {
-              var outindex = (z * (volumeSize(1)) + y) * volumeSize(0) + xmin + baseOffset
+              var outindex = (z * (volumeSize(1)) + y) * volumeSize(0) + xmin
               var bitpos = blockSize(0) * ((z - zmin) * (blockSize(1)) + (y - ymin)) * encodedBits
               for (x <- xmin until xmax) {
                 val bitshift = bitpos % 32
                 val arraypos = bitpos / (32)
                 var bitval = 0
                 if (encodedBits > 0) {
-                  if (encodedValueStart + arraypos >= input.length) {
-                    println("Help me!")
-                  }
                   bitval = (input(encodedValueStart + arraypos) >> bitshift) & bitmask
                 }
                 val value = readValue(input, tableOffset + bitval * tableEntrySize)
@@ -89,7 +84,6 @@ trait CompressedSegmentation[T <: AnyVal] {
     val input32 = new Array[Int](encodedBytes.length / 4)
     ByteBuffer.wrap(encodedBytes).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(input32)
     val values = decompressChannels(input32, vs, blockSize)
-    // TODO: Is this necessary? We already have the real data types and convert them again into bytes
     values.flatMap(v => longToBytes(valueAsLong(v)))
   }
 

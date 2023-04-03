@@ -55,16 +55,18 @@ abstract class Compressor {
   def toString: String
 
   @throws[IOException]
-  def compress(is: InputStream, os: OutputStream): Unit
+  def compress(input: Array[Byte]): Array[Byte]
 
   @throws[IOException]
-  def uncompress(is: InputStream, os: OutputStream): Unit
+  def uncompress(input: Array[Byte]): Array[Byte]
 
   @throws[IOException]
   def passThrough(is: InputStream, os: OutputStream): Unit = {
     val bytes = new Array[Byte](4096)
     var read = is.read(bytes)
-    while ({ read >= 0 }) {
+    while ({
+      read >= 0
+    }) {
       if (read > 0)
         os.write(bytes, 0, read)
       read = is.read(bytes)
@@ -79,10 +81,10 @@ class NullCompressor extends Compressor {
   override def toString: String = getId
 
   @throws[IOException]
-  override def compress(is: InputStream, os: OutputStream): Unit = passThrough(is, os)
+  override def compress(input: Array[Byte]): Array[Byte] = input
 
   @throws[IOException]
-  override def uncompress(is: InputStream, os: OutputStream): Unit = passThrough(is, os)
+  override def uncompress(input: Array[Byte]): Array[Byte] = input
 }
 
 class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
@@ -104,17 +106,23 @@ class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Co
   override def getId = "zlib"
 
   @throws[IOException]
-  override def compress(is: InputStream, os: OutputStream): Unit = {
+  override def compress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+    val os = new ByteArrayOutputStream()
     val dos = new DeflaterOutputStream(os, new Deflater(level))
     try passThrough(is, dos)
     finally if (dos != null) dos.close()
+    os.toByteArray
   }
 
   @throws[IOException]
-  override def uncompress(is: InputStream, os: OutputStream): Unit = {
+  override def uncompress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+    val os = new ByteArrayOutputStream()
     val iis = new InflaterInputStream(is, new Inflater)
     try passThrough(iis, os)
     finally if (iis != null) iis.close()
+    os.toByteArray
   }
 }
 
@@ -137,19 +145,26 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
   override def getId = "gzip"
 
   @throws[IOException]
-  override def compress(is: InputStream, os: OutputStream): Unit = {
+  override def compress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+    val os = new ByteArrayOutputStream()
+
     val parameters = new GzipParameters
     parameters.setCompressionLevel(level)
     val dos = new GzipCompressorOutputStream(os, parameters)
     try passThrough(is, dos)
     finally if (dos != null) dos.close()
+    os.toByteArray
   }
 
   @throws[IOException]
-  override def uncompress(is: InputStream, os: OutputStream): Unit = {
+  override def uncompress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+    val os = new ByteArrayOutputStream()
     val iis = new GzipCompressorInputStream(is, true)
     try passThrough(iis, os)
     finally if (iis != null) iis.close()
+    os.toByteArray
   }
 }
 
@@ -228,7 +243,9 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     "compressor=" + getId + "/cname=" + cname + "/clevel=" + clevel.toString + "/blocksize=" + blocksize + "/shuffle=" + shuffle
 
   @throws[IOException]
-  override def compress(is: InputStream, os: OutputStream): Unit = {
+  override def compress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+
     val baos = new ByteArrayOutputStream
     passThrough(is, baos)
     val inputBytes = baos.toByteArray
@@ -239,11 +256,13 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     JBlosc.compressCtx(clevel, shuffle, 1, inputBuffer, inputSize, outBuffer, outputSize, cname, blocksize, 1)
     val bs = cbufferSizes(outBuffer)
     val compressedChunk = util.Arrays.copyOfRange(outBuffer.array, 0, bs.getCbytes.toInt)
-    os.write(compressedChunk)
+    compressedChunk
   }
 
   @throws[IOException]
-  override def uncompress(is: InputStream, os: OutputStream): Unit = {
+  override def uncompress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+
     val di = new DataInputStream(is)
     val header = new Array[Byte](JBlosc.OVERHEAD)
     di.readFully(header)
@@ -254,7 +273,8 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     di.readFully(inBytes, header.length, compressedSize - header.length)
     val outBuffer = ByteBuffer.allocate(uncompressedSize)
     JBlosc.decompressCtx(ByteBuffer.wrap(inBytes), outBuffer, outBuffer.limit, 1)
-    os.write(outBuffer.array)
+
+    outBuffer.array
   }
 
   private def cbufferSizes(cbuffer: ByteBuffer) = {
@@ -274,17 +294,18 @@ class JpegCompressor() extends Compressor {
   override def toString: String = getId
 
   @throws[IOException]
-  override def compress(is: InputStream, os: OutputStream): Unit = ???
+  override def compress(input: Array[Byte]): Array[Byte] = ???
 
   @throws[IOException]
-  override def uncompress(is: InputStream, os: OutputStream): Unit = {
+  override def uncompress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
     val iis: ImageInputStream = createImageInputStream(is)
     val bi: BufferedImage = ImageIO.read(iis: ImageInputStream)
     val raster = bi.getRaster
     val dbb: DataBufferByte = raster.getDataBuffer.asInstanceOf[DataBufferByte]
     val width = raster.getWidth
     val data = dbb.getData.grouped(width).toList
-    os.write(data.flatten.toArray)
+    data.flatten.toArray
   }
 }
 
@@ -294,24 +315,16 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
 
   override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
 
-  override def uncompress(is: InputStream, os: OutputStream): Unit =
+  override def uncompress(input: Array[Byte]): Array[Byte] =
     dataType match {
-      case PrecomputedDataType.uint32 => {
-        val arr = new Array[Byte](is.available())
-        is.read(arr)
-        val out = CompressedSegmentation32.decompress(arr, volumeSize, blockSize)
-        os.write(out)
-      }
-      case PrecomputedDataType.uint64 => {
-        val arr = new Array[Byte](is.available())
-        is.read(arr)
-        val out = CompressedSegmentation64.decompress(arr, volumeSize, blockSize)
-        os.write(out)
-      }
+      case PrecomputedDataType.uint32 =>
+        CompressedSegmentation32.decompress(input, volumeSize, blockSize)
+      case PrecomputedDataType.uint64 =>
+        CompressedSegmentation64.decompress(input, volumeSize, blockSize)
       case _ =>
         throw new UnsupportedOperationException(
           "Can not use compressed segmentation for datatypes other than u32, u64.")
     }
 
-  override def compress(is: InputStream, os: OutputStream): Unit = ???
+  override def compress(input: Array[Byte]): Array[Byte] = ???
 }

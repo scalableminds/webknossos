@@ -6,23 +6,25 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import java.io.IOException
 import java.nio.ByteOrder
 import java.util
+import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatasetArray(relativePath: DatasetPath,
-                   store: FileSystemStore,
+                   vaultPath: VaultPath,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int])
     extends LazyLogging {
 
   protected val chunkReader: ChunkReader =
-    ChunkReader.create(store, header)
+    ChunkReader.create(vaultPath, header)
 
   // cache currently limited to 1 GB per array
   private lazy val chunkContentsCache: Cache[String, MultiArray] = {
@@ -72,7 +74,7 @@ class DatasetArray(relativePath: DatasetPath,
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetInCOrder: MultiArray =
         MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
-      val wasCopiedFox = Fox.serialCombined(chunkIndices) { chunkIndex: Array[Int] =>
+      val copiedFuture = Future.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
           offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
@@ -81,21 +83,33 @@ class DatasetArray(relativePath: DatasetPath,
                                                                              flip = header.order != ArrayOrder.C)
           _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
         } yield ()
-      }
+      })
       for {
-        _ <- wasCopiedFox
+        _ <- copiedFuture
       } yield targetBuffer
     }
   }
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
-    val chunkFilename = getChunkFilename(chunkIndex)
-    val chunkFilePath = relativePath.resolve(chunkFilename)
-    val storeKey = chunkFilePath.storeKey
-    val chunkShape = header.chunkSizeAtIndex(chunkIndex)
+  protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext): Future[(VaultPath, NumericRange[Long])] = ???
 
-    chunkContentsCache.getOrLoad(storeKey, key => chunkReader.read(key, chunkShape))
-  }
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
+    chunkContentsCache.getOrLoad(chunkIndex.mkString(","), _ => readSourceChunkData(chunkIndex))
+
+  private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
+    if (header.isSharded) {
+      for {
+        (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex)
+        chunkShape = header.chunkSizeAtIndex(chunkIndex)
+        multiArray <- chunkReader.read(shardPath.toString, chunkShape, Some(chunkRange))
+      } yield multiArray
+    } else {
+      val chunkFilename = getChunkFilename(chunkIndex)
+      val chunkFilePath = relativePath.resolve(chunkFilename)
+      val storeKey = chunkFilePath.storeKey
+      val chunkShape = header.chunkSizeAtIndex(chunkIndex)
+      chunkReader.read(storeKey, chunkShape, None)
+    }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)
@@ -126,7 +140,7 @@ class DatasetArray(relativePath: DatasetPath,
 
   override def toString: String =
     s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.datasetShape.mkString(
-      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
+      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }
 

@@ -15,10 +15,11 @@ import {
   getVisibleSegmentationLayer,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
-import type {
+import {
   LoadAdHocMeshAction,
   LoadPrecomputedMeshAction,
   AdHocIsosurfaceInfo,
+  loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
@@ -73,6 +74,7 @@ import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
 
+export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
@@ -90,7 +92,7 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
  * Ad Hoc Meshes
  *
  */
-const isosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
+const adhocIsosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
   // @ts-ignore
   return window.__marchingCubeSizeInMag1 != null
@@ -108,8 +110,8 @@ export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
 }
 
 function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
-  isosurfacesMapByLayer[layerName] = isosurfacesMapByLayer[layerName] || new Map();
-  const isosurfacesMap = isosurfacesMapByLayer[layerName];
+  adhocIsosurfacesMapByLayer[layerName] = adhocIsosurfacesMapByLayer[layerName] || new Map();
+  const isosurfacesMap = adhocIsosurfacesMapByLayer[layerName];
   const maybeMap = isosurfacesMap.get(segmentId);
 
   if (maybeMap == null) {
@@ -124,11 +126,11 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
 }
 
 function removeMapForSegment(layerName: string, segmentId: number): void {
-  if (isosurfacesMapByLayer[layerName] == null) {
+  if (adhocIsosurfacesMapByLayer[layerName] == null) {
     return;
   }
 
-  isosurfacesMapByLayer[layerName].delete(segmentId);
+  adhocIsosurfacesMapByLayer[layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -442,9 +444,9 @@ function* refreshIsosurfaces(): Saga<void> {
     return;
   }
 
-  isosurfacesMapByLayer[segmentationLayer.name] =
-    isosurfacesMapByLayer[segmentationLayer.name] || new Map();
-  const isosurfacesMapForLayer = isosurfacesMapByLayer[segmentationLayer.name];
+  adhocIsosurfacesMapByLayer[segmentationLayer.name] =
+    adhocIsosurfacesMapByLayer[segmentationLayer.name] || new Map();
+  const isosurfacesMapForLayer = adhocIsosurfacesMapByLayer[segmentationLayer.name];
 
   for (const [cellId, threeDMap] of Array.from(isosurfacesMapForLayer.entries())) {
     if (!currentlyModifiedCells.has(cellId)) {
@@ -457,9 +459,26 @@ function* refreshIsosurfaces(): Saga<void> {
 
 function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   const { cellId, layerName } = action;
-  const threeDMap = isosurfacesMapByLayer[action.layerName].get(cellId);
-  if (threeDMap == null) return;
-  yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+
+  const isosurfaceInfo = yield* select(
+    (state) => state.localSegmentationData[layerName].isosurfaces[cellId],
+  );
+
+  if (isosurfaceInfo.isPrecomputed) {
+    yield* put(removeIsosurfaceAction(layerName, isosurfaceInfo.segmentId));
+    yield* put(
+      loadPrecomputedMeshAction(
+        isosurfaceInfo.segmentId,
+        isosurfaceInfo.seedPosition,
+        isosurfaceInfo.meshFileName,
+        layerName,
+      ),
+    );
+  } else {
+    const threeDMap = adhocIsosurfacesMapByLayer[action.layerName].get(cellId);
+    if (threeDMap == null) return;
+    yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+  }
 }
 
 function* _refreshIsosurfaceWithMap(
@@ -591,6 +610,8 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   });
 }
 
+type ChunksMap = Record<number, Vector3[] | meshV3.MeshChunk[] | null | undefined>;
+
 function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
@@ -601,9 +622,15 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
+  const sceneController = yield* call(getSceneController);
+  const currentLODIndex = yield* call({
+    context: sceneController.isosurfacesLODRootGroup,
+    fn: sceneController.isosurfacesLODRootGroup.getCurrentLOD,
+  });
 
-  let availableChunks = null;
+  let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
+  let loadingOrder: number[] = [];
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -669,9 +696,14 @@ function* loadPrecomputedMeshForSegmentId(
         segmentInfo.transform[1][1],
         segmentInfo.transform[2][2],
       ];
-      availableChunks = _.first(segmentInfo.chunks.lods)?.chunks || [];
+      segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
+        availableChunksMap[lodIndex] = chunks?.chunks;
+        loadingOrder.push(lodIndex);
+      });
+      // Load the chunks closest to the current LOD first.
+      loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
     } else {
-      availableChunks = yield* call(
+      availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
         meshV0.getMeshfileChunksForSegment,
         dataset.dataStore.url,
         dataset,
@@ -679,6 +711,7 @@ function* loadPrecomputedMeshForSegmentId(
         meshFileName,
         id,
       );
+      loadingOrder = [NO_LOD_MESH_INDEX];
     }
   } catch (exception) {
     console.warn("Mesh chunk couldn't be loaded due to", exception);
@@ -688,73 +721,88 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
-  const sortedAvailableChunks = _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshChunk) =>
-    V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
-  ) as Array<Vector3> | Array<meshV3.MeshChunk>;
-
-  const tasks = sortedAvailableChunks.map(
-    (chunk) =>
-      function* loadChunk() {
-        const sceneController = yield* call(getSceneController);
-
-        if ("position" in chunk) {
-          // V3
-          const dracoData = yield* call(
-            meshV3.getMeshfileChunkData,
-            dataset.dataStore.url,
-            dataset,
-            getBaseSegmentationName(segmentationLayer),
-            meshFileName,
-            chunk.byteOffset,
-            chunk.byteSize,
-          );
-          const loader = getDracoLoader();
-
-          const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
-          // Compute vertex normals to achieve smooth shading
-          geometry.computeVertexNormals();
-
-          yield* call(
-            { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
-            geometry,
-            id,
-            chunk.position,
-            // Apply the scale from the segment info, which includes dataset scale and mag
-            scale,
-          );
-        } else {
-          // V0
-          const stlData = yield* call(
-            meshV0.getMeshfileChunkData,
-            dataset.dataStore.url,
-            dataset,
-            getBaseSegmentationName(segmentationLayer),
-            meshFileName,
-            id,
-            chunk,
-          );
-          let geometry = yield* call(parseStlBuffer, stlData);
-
-          // Delete existing vertex normals (since these are not interpolated
-          // across faces).
-          geometry.deleteAttribute("normal");
-          // Ensure that vertices of adjacent faces are shared.
-          geometry = mergeVertices(geometry);
-          // Recompute normals to achieve smooth shading
-          geometry.computeVertexNormals();
-
-          yield* call(
-            { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
-            geometry,
-            id,
-          );
+  const loadChunksTasks = _.compact(
+    _.flatten(
+      loadingOrder.map((lod) => {
+        if (availableChunksMap[lod] == null) {
+          return;
         }
-      },
+        const availableChunks = availableChunksMap[lod];
+        // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
+        const sortedAvailableChunks = _.sortBy(
+          availableChunks,
+          (chunk: Vector3 | meshV3.MeshChunk) =>
+            V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
+        ) as Array<Vector3> | Array<meshV3.MeshChunk>;
+
+        const tasks = sortedAvailableChunks.map(
+          (chunk) =>
+            function* loadChunk(): Saga<void> {
+              if ("position" in chunk) {
+                // V3
+                const dracoData = yield* call(
+                  meshV3.getMeshfileChunkData,
+                  dataset.dataStore.url,
+                  dataset,
+                  getBaseSegmentationName(segmentationLayer),
+                  meshFileName,
+                  chunk.byteOffset,
+                  chunk.byteSize,
+                );
+                const loader = getDracoLoader();
+
+                const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+                // Compute vertex normals to achieve smooth shading
+                geometry.computeVertexNormals();
+
+                yield* call(
+                  { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+                  geometry,
+                  id,
+                  chunk.position,
+                  // Apply the scale from the segment info, which includes dataset scale and mag
+                  scale,
+                  lod,
+                );
+              } else {
+                // V0
+                const stlData = yield* call(
+                  meshV0.getMeshfileChunkData,
+                  dataset.dataStore.url,
+                  dataset,
+                  getBaseSegmentationName(segmentationLayer),
+                  meshFileName,
+                  id,
+                  chunk,
+                );
+                let geometry = yield* call(parseStlBuffer, stlData);
+
+                // Delete existing vertex normals (since these are not interpolated
+                // across faces).
+                geometry.deleteAttribute("normal");
+                // Ensure that vertices of adjacent faces are shared.
+                geometry = mergeVertices(geometry);
+                // Recompute normals to achieve smooth shading
+                geometry.computeVertexNormals();
+
+                yield* call(
+                  { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+                  geometry,
+                  id,
+                  null,
+                  null,
+                  lod,
+                );
+              }
+            },
+        );
+        return tasks;
+      }),
+    ),
   );
 
   try {
-    yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
     console.error(exception);
     Toast.warning("Some mesh objects could not be loaded.");
@@ -770,7 +818,7 @@ function* loadPrecomputedMeshForSegmentId(
  */
 function* downloadIsosurfaceCellById(cellName: string, cellId: number): Saga<void> {
   const sceneController = getSceneController();
-  const geometry = sceneController.getIsosurfaceGeometry(cellId);
+  const geometry = sceneController.getIsosurfaceGeometryInBestLOD(cellId);
 
   if (geometry == null) {
     const errorMessage = messages["tracing.not_isosurface_available_to_download"];
@@ -800,7 +848,13 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   const dataView = new DataView(buffer);
   const segmentId = dataView.getUint32(stlIsosurfaceConstants.cellIdIndex, true);
   const geometry = yield* call(parseStlBuffer, buffer);
-  getSceneController().addIsosurfaceFromGeometry(geometry, segmentId);
+  getSceneController().addIsosurfaceFromGeometry(
+    geometry,
+    segmentId,
+    null,
+    null,
+    NO_LOD_MESH_INDEX,
+  );
   yield* put(setImportingMeshStateAction(false));
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.

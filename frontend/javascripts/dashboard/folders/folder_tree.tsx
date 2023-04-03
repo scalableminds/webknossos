@@ -7,7 +7,7 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Menu, Modal } from "antd";
+import { Dropdown, Modal, MenuProps } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
@@ -143,11 +143,11 @@ export function FolderTreeSidebar({
     [context],
   );
 
-  const createMenu = () => (
-    <Menu
-      items={[{ key: "disabled", disabled: true, label: "Please right-click an existing folder." }]}
-    />
-  );
+  const createMenu = (): MenuProps => {
+    return {
+      items: [{ key: "disabled", disabled: true, label: "Please right-click an existing folder." }],
+    };
+  };
 
   return (
     <div
@@ -186,12 +186,9 @@ export function FolderTreeSidebar({
         />
       </div>
       <Dropdown
-        overlay={createMenu}
+        menu={createMenu()}
         placement="bottom"
-        // The overlay is generated lazily. By default, this would make the overlay
-        // re-render on each parent's render() after it was shown for the first time.
-        // The reason for this is that it's not destroyed after closing.
-        // Therefore, autoDestroy is passed.
+        // AutoDestroy is used to remove the menu from DOM and keep up the performance.
         // destroyPopupOnHide should also be an option according to the docs, but
         // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
         // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
@@ -220,49 +217,46 @@ function generateTitle(
   }
 
   const createMenu = () => {
-    const menuItems = [
-      {
-        key: "create",
-        disabled: !folder.isEditable,
-        onClick: () => context.showCreateFolderPrompt(id),
-        label: (
-          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <PlusOutlined />
-            New Folder
-          </PricingEnforcedSpan>
-        ),
-      },
-      {
-        key: "edit",
-        disabled: !folder.isEditable,
-        onClick: editFolder,
-        label: (
-          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <EditOutlined />
-            Edit Folder
-          </PricingEnforcedSpan>
-        ),
-      },
-      {
-        key: "delete",
-        onClick: deleteFolder,
-        disabled: !folder.isEditable,
-        icon: <DeleteOutlined />,
-        label: <span>Delete Folder</span>,
-      },
-    ];
-
-    return <Menu items={menuItems} />;
+    return {
+      items: [
+        {
+          key: "create",
+          disabled: !folder.isEditable,
+          onClick: () => context.showCreateFolderPrompt(id),
+          label: (
+            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+              <PlusOutlined />
+              New Folder
+            </PricingEnforcedSpan>
+          ),
+        },
+        {
+          key: "edit",
+          disabled: !folder.isEditable,
+          onClick: editFolder,
+          label: (
+            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+              <EditOutlined />
+              Edit Folder
+            </PricingEnforcedSpan>
+          ),
+        },
+        {
+          key: "delete",
+          onClick: deleteFolder,
+          disabled: !folder.isEditable,
+          icon: <DeleteOutlined />,
+          label: <span>Delete Folder</span>,
+        },
+      ],
+    };
   };
 
   return (
     <Dropdown
-      overlay={createMenu}
+      menu={createMenu()}
       placement="bottom"
-      // The overlay is generated lazily. By default, this would make the overlay
-      // re-render on each parent's render() after it was shown for the first time.
-      // The reason for this is that it's not destroyed after closing.
-      // Therefore, autoDestroy is passed.
+      // AutoDestroy is used to remove the menu from DOM and keep up the performance.
       // destroyPopupOnHide should also be an option according to the docs, but
       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message

@@ -144,7 +144,7 @@ class AuthenticationController @Inject()(
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
       brainDBResult <- Fox.runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")))
-      _ = if (conf.Features.isDemoInstance) {
+      _ = if (conf.Features.isWkorgInstance) {
         mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
       } else {
         Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult.flatten, autoActivate))
@@ -394,6 +394,7 @@ class AuthenticationController @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim).futureBox.flatMap {
           case Full(user) =>
             for {
+              - <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} reset their password."))
               _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(
                 GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
@@ -420,6 +421,7 @@ class AuthenticationController @Inject()(
                   Future.successful(NotFound(Messages("error.noUser")))
                 case Some(user) =>
                   for {
+                    - <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
                     _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
                     _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
                     userEmail <- userService.emailFor(user)
@@ -595,7 +597,7 @@ class AuthenticationController @Inject()(
                       defaultMails.newOrganizationMail(organization.displayName,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
-                    if (conf.Features.isDemoInstance) {
+                    if (conf.Features.isWkorgInstance) {
                       mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }
                     Ok

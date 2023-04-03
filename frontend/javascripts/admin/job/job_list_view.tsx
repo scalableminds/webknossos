@@ -3,7 +3,7 @@ import _ from "lodash";
 import { PropTypes } from "@scalableminds/prop-types";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { Link } from "react-router-dom";
-import { Table, Spin, Input, Tooltip } from "antd";
+import { Table, Spin, Input, Tooltip, Typography } from "antd";
 import {
   CheckCircleTwoTone,
   ClockCircleTwoTone,
@@ -14,10 +14,11 @@ import {
   LoadingOutlined,
   QuestionCircleTwoTone,
   ToolTwoTone,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
-import type { APIJob } from "types/api_flow_types";
-import { getJobs, doWithToken, cancelJob } from "admin/admin_rest_api";
+import { APIJob, APIJobType } from "types/api_flow_types";
+import { getJobs, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import FormattedDate from "components/formatted_date";
@@ -66,7 +67,6 @@ type State = {
   isLoading: boolean;
   jobs: Array<APIJob>;
   searchQuery: string;
-  token: string;
 };
 const persistence = new Persistence<Pick<State, "searchQuery">>(
   {
@@ -81,7 +81,6 @@ class JobListView extends React.PureComponent<Props, State> {
     isLoading: true,
     jobs: [],
     searchQuery: "",
-    token: "",
   };
 
   componentDidMount() {
@@ -102,12 +101,10 @@ class JobListView extends React.PureComponent<Props, State> {
 
   async fetchData(): Promise<void> {
     const jobs = await getJobs();
-    const token = await doWithToken(async (t) => t);
     this.setState(
       {
         isLoading: false,
         jobs,
-        token,
       }, // refresh jobs according to the refresh interval
       () => {
         if (this.intervalID != null) {
@@ -126,9 +123,9 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderDescription = (__: any, job: APIJob) => {
-    if (job.type === "convert_to_wkw" && job.datasetName) {
+    if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
+    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationName && job.datasetName) {
       const labelToAnnotationOrDataset =
         job.annotationId != null ? (
           <Link to={`/annotations/${job.annotationId}`}>
@@ -146,7 +143,11 @@ class JobListView extends React.PureComponent<Props, State> {
           {job.boundingBox})
         </span>
       );
-    } else if (job.type === "compute_mesh_file" && job.organizationName && job.datasetName) {
+    } else if (
+      job.type === APIJobType.COMPUTE_MESH_FILE &&
+      job.organizationName &&
+      job.datasetName
+    ) {
       return (
         <span>
           Mesh file computation for{" "}
@@ -156,7 +157,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "find_largest_segment_id" &&
+      job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
       job.organizationName &&
       job.datasetName &&
       job.layerName
@@ -170,7 +171,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "infer_nuclei" &&
+      job.type === APIJobType.INFER_NUCLEI &&
       job.organizationName &&
       job.datasetName &&
       job.layerName
@@ -184,7 +185,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "infer_neurons" &&
+      job.type === APIJobType.INFER_NEURONS &&
       job.organizationName &&
       job.datasetName &&
       job.layerName
@@ -198,7 +199,7 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "materialize_volume_annotation" &&
+      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION &&
       job.organizationName &&
       job.datasetName
     ) {
@@ -239,7 +240,7 @@ class JobListView extends React.PureComponent<Props, State> {
           Cancel
         </AsyncLink>
       );
-    } else if (job.type === "convert_to_wkw") {
+    } else if (job.type === APIJobType.CONVERT_TO_WKW) {
       return (
         <span>
           {job.resultLink && (
@@ -250,11 +251,11 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
-    } else if (job.type === "export_tiff") {
+    } else if (job.type === APIJobType.EXPORT_TIFF) {
       return (
         <span>
           {job.resultLink && (
-            <a href={`${job.resultLink}?token=${this.state.token}`} title="Download">
+            <a href={job.resultLink} title="Download">
               <DownOutlined />
               Download
             </a>
@@ -264,9 +265,10 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "find_largest_segment_id") {
       return <span>{job.result}</span>;
     } else if (
-      job.type === "infer_nuclei" ||
-      job.type === "infer_neurons" ||
-      job.type === "materialize_volume_annotation"
+      job.type === APIJobType.INFER_NUCLEI ||
+      job.type === APIJobType.INFER_NEURONS ||
+      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
+      job.type === APIJobType.COMPUTE_MESH_FILE
     ) {
       return (
         <span>
@@ -282,7 +284,6 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderState = (__: any, job: APIJob) => {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
     const jobStateNormalized = _.capitalize(job.state.toLowerCase());
@@ -298,74 +299,82 @@ class JobListView extends React.PureComponent<Props, State> {
   render() {
     return (
       <div className="container">
-        <div
-          style={{
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
-            marginTag: 20,
-          }}
-        >
-          <div className="pull-right">
-            <Search
-              style={{
-                width: 200,
-              }}
-              onChange={this.handleSearch}
-              value={this.state.searchQuery}
-            />
-          </div>
-          <h3>Jobs</h3>
-          <div
-            className="clearfix"
+        <div className="pull-right">
+          <Search
             style={{
-              margin: "20px 0px",
+              width: 200,
             }}
+            onChange={this.handleSearch}
+            value={this.state.searchQuery}
           />
-
-          <Spin spinning={this.state.isLoading} size="large">
-            <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.jobs,
-                ["datasetName"],
-                this.state.searchQuery,
-              )}
-              rowKey="id"
-              pagination={{
-                defaultPageSize: 50,
-              }}
-              style={{
-                marginTop: 30,
-                marginBottom: 30,
-              }}
-            >
-              <Column
-                title="Job Id"
-                dataIndex="id"
-                key="id"
-                sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
-              />
-              <Column title="Description" key="datasetName" render={this.renderDescription} />
-              <Column
-                title="Created at"
-                key="createdAt"
-                render={(job) => <FormattedDate timestamp={job.createdAt} />}
-                sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
-              />
-              <Column
-                title="State"
-                key="state"
-                render={this.renderState}
-                sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
-              />
-              <Column
-                title="Action"
-                key="actions"
-                fixed="right"
-                width={150}
-                render={this.renderActions}
-              />
-            </Table>
-          </Spin>
         </div>
+        <h3>Jobs</h3>
+        <Typography.Paragraph type="secondary">
+          Some actions such as dataset conversions or export as Tiff files require some time for
+          processing in the background.
+          <a
+            href="https://docs.webknossos.org/webknossos/jobs.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Tooltip title="Read more in the documentation">
+              <InfoCircleOutlined style={{ marginLeft: 10 }} />
+            </Tooltip>
+          </a>
+          <br />
+          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
+          progress.
+        </Typography.Paragraph>
+        <div
+          className="clearfix"
+          style={{
+            margin: "20px 0px",
+          }}
+        />
+        <Spin spinning={this.state.isLoading} size="large">
+          <Table
+            dataSource={Utils.filterWithSearchQueryAND(
+              this.state.jobs,
+              ["datasetName"],
+              this.state.searchQuery,
+            )}
+            rowKey="id"
+            pagination={{
+              defaultPageSize: 50,
+            }}
+            style={{
+              marginTop: 30,
+              marginBottom: 30,
+            }}
+          >
+            <Column
+              title="Job Id"
+              dataIndex="id"
+              key="id"
+              sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
+            />
+            <Column title="Description" key="datasetName" render={this.renderDescription} />
+            <Column
+              title="Created at"
+              key="createdAt"
+              render={(job) => <FormattedDate timestamp={job.createdAt} />}
+              sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
+            />
+            <Column
+              title="State"
+              key="state"
+              render={this.renderState}
+              sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
+            />
+            <Column
+              title="Action"
+              key="actions"
+              fixed="right"
+              width={150}
+              render={this.renderActions}
+            />
+          </Table>
+        </Spin>
       </div>
     );
   }

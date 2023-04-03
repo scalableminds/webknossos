@@ -1,38 +1,167 @@
-import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button } from "antd";
+import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Alert } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { APIAnnotationType } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { Model } from "oxalis/singletons";
 import features from "features";
-import { downloadAnnotation, getAuthToken } from "admin/admin_rest_api";
+import {
+  doWithToken,
+  downloadAnnotation,
+  downloadWithFilename,
+  getAuthToken,
+  startExportTiffJob,
+} from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
 import {
   LayerSelection,
   BoundingBoxSelection,
+  getReadableNameOfVolumeLayer,
+  MagSlider,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import { hasVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
-import { getDataLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
 import {
-  handleStartExport,
-  getLayerInfos,
-  isBoundingBoxExportable,
-} from "../right-border-tabs/export_bounding_box_modal";
+  getVolumeTracingById,
+  hasVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getByteCountFromLayer,
+  getDataLayers,
+  getLayerByName,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
+import { useSelector } from "react-redux";
+import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+import {
+  computeArrayFromBoundingBox,
+  computeBoundingBoxFromBoundingBoxObject,
+  computeShapeFromBoundingBox,
+} from "libs/utils";
+import { formatBytes, formatScale } from "libs/format_utils";
+import { BoundingBoxType, Vector3 } from "oxalis/constants";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
+
+type TabKeys = "download" | "export" | "python";
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  annotationType: APIAnnotationType;
-  annotationId: string;
-  hasVolumeFallback: boolean;
+  initialTab?: TabKeys;
+  initialBoundingBoxId?: number;
 };
+
+type ExportLayerInfos = {
+  displayName: string;
+  layerName: string | null;
+  tracingId: string | null;
+  annotationId: string | null;
+};
+
+enum ExportFormat {
+  OME_TIFF = "OME_TIFF",
+  TIFF_STACK = "TIFF_STACK",
+}
+
+const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
+
+const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
+  `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${mag.join("-")}`;
+
+function getExportLayerInfos(
+  layer: APIDataLayer,
+  tracing: HybridTracing | null | undefined,
+): ExportLayerInfos {
+  const annotationId = tracing != null ? tracing.annotationId : null;
+
+  if (layer.category === "color" || !layer.tracingId) {
+    return {
+      displayName: layer.name,
+      layerName: layer.name,
+      tracingId: null,
+      annotationId: null,
+    };
+  }
+
+  // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
+  // must exist.
+  if (tracing == null) {
+    // Satisfy TS.
+    throw new Error("Tracing is null, but layer.tracingId is defined.");
+  }
+  const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";
+  const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
+
+  return {
+    displayName: readableVolumeLayerName,
+    layerName: layer.fallbackLayerInfo?.name ?? null,
+    tracingId: volumeTracing.tracingId,
+    annotationId,
+  };
+}
+
+function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
+  const shape = computeShapeFromBoundingBox(boundingBox);
+  const volume =
+    Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
+  const volumeExceeded = volume > features().exportTiffMaxVolumeMVx * 1024 * 1024;
+  const edgeLengthExceeded = shape.some(
+    (length, index) => length / mag[index] > features().exportTiffMaxEdgeLengthVx,
+  );
+
+  const alerts = (
+    <>
+      {volumeExceeded && (
+        <Alert
+          type="error"
+          message={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
+            features().exportTiffMaxVolumeMVx
+          } Megavoxels.`}
+        />
+      )}
+      {edgeLengthExceeded && (
+        <Alert
+          type="error"
+          message={`An edge length of the selected bounding box (${shape.join(
+            ", ",
+          )}) is too large. Tiff export is only supported for boxes with no edge length over ${
+            features().exportTiffMaxEdgeLengthVx
+          } vx.`}
+        />
+      )}
+    </>
+  );
+
+  return {
+    isExportable: !volumeExceeded && !edgeLengthExceeded,
+    alerts,
+  };
+}
+
+function estimateFileSize(
+  selectedLayer: APIDataLayer,
+  mag: Vector3,
+  boundingBox: BoundingBoxType,
+  exportFormat: ExportFormat,
+) {
+  const shape = computeShapeFromBoundingBox(boundingBox);
+  const volume =
+    Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
+  return formatBytes(
+    volume *
+      getByteCountFromLayer(selectedLayer) *
+      (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1),
+  );
+}
+
+function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
+  const scale = dataset.dataSource.scale;
+  return formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
+}
 
 export function Hint({
   children,
@@ -46,7 +175,7 @@ export function Hint({
   );
 }
 
-export async function copyToClipboard(code: string) {
+async function copyToClipboard(code: string) {
   await navigator.clipboard.writeText(code);
   Toast.success("Snippet copied to clipboard.");
 }
@@ -95,99 +224,108 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
   );
 }
 
-const okTextForTab = new Map([
+const okTextForTab = new Map<TabKeys, string | null>([
   ["download", "Download"],
-  ["export", "Start Export Job"],
+  ["export", "Export"],
   ["python", null],
 ]);
 
-function Footer({
-  tabKey,
-  onClick,
-  boundingBoxCompatible,
-}: {
-  tabKey: string;
-  onClick: () => void;
-  boundingBoxCompatible: boolean;
-}) {
-  const okText = okTextForTab.get(tabKey);
-  return okText != null ? (
-    <Button
-      key="ok"
-      type="primary"
-      disabled={tabKey === "export" && (!features().jobsEnabled || !boundingBoxCompatible)}
-      onClick={onClick}
-    >
-      {okText}
-    </Button>
-  ) : null;
-}
-
-function _DownloadModalView(props: Props): JSX.Element {
-  const { isOpen, onClose, annotationType, annotationId, hasVolumeFallback } = props;
-
-  const [activeTabKey, setActiveTabKey] = useState("download");
-  const [includeVolumeData, setIncludeVolumeData] = useState(true);
-  const [keepWindowOpen, setKeepWindowOpen] = useState(false);
-  const [startedExports, setStartedExports] = useState<string[]>([]);
-  const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
-  const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
-
+function _DownloadModalView({
+  isOpen,
+  onClose,
+  initialTab,
+  initialBoundingBoxId,
+}: Props): JSX.Element {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const userBoundingBoxes = useSelector((state: OxalisState) =>
+  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  const activeMappingInfos = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
+  const hasVolumeFallback = tracing.volumes.some((volume) => volume.fallbackLayer != null);
+
+  const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
+  const [includeVolumeData, setIncludeVolumeData] = useState(true);
+  const [keepWindowOpen, setKeepWindowOpen] = useState(true);
+  const [selectedLayerName, setSelectedLayerName] = useState<string>(
+    dataset.dataSource.dataLayers[0].name,
   );
 
   const layers = getDataLayers(dataset);
 
-  const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxID);
-  let boundingBoxCompatibleInfo = null;
-  if (selectedBoundingBox != null) {
-    boundingBoxCompatibleInfo = isBoundingBoxExportable(selectedBoundingBox.boundingBox);
-  }
+  const selectedLayer = getLayerByName(dataset, selectedLayerName);
+  const selectedLayerInfos = getExportLayerInfos(selectedLayer, tracing);
+  const selectedLayerResolutionInfo = getResolutionInfo(selectedLayer.resolutions);
+
+  const userBoundingBoxes = [
+    ...rawUserBoundingBoxes,
+    {
+      id: -1,
+      name: "Full layer",
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(selectedLayer.boundingBox),
+      color: [255, 255, 255],
+      isVisible: true,
+    } as UserBoundingBox,
+  ];
+
+  const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
+    initialBoundingBoxId ?? userBoundingBoxes[0].id,
+  );
+  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getLowestResolution());
+  const mag = selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
+
+  const selectedBoundingBox = userBoundingBoxes.find(
+    (bbox) => bbox.id === selectedBoundingBoxId,
+  ) as UserBoundingBox;
+  const { isExportable, alerts: boundingBoxCompatibilityAlerts } = isBoundingBoxExportable(
+    selectedBoundingBox.boundingBox,
+    mag,
+  );
+
+  const { runningJobs: runningExportJobs, startJob } = useStartAndPollJob({
+    async onSuccess(job) {
+      if (job.resultLink != null) {
+        const token = await doWithToken(async (t) => t);
+        downloadWithFilename(`${job.resultLink}?token=${token}`);
+      }
+    },
+    onFailure() {
+      Toast.error("Error when exporting data. Please contact us for support.");
+    },
+  });
 
   const handleOk = async () => {
     if (activeTabKey === "download") {
       await Model.ensureSavedState();
-      downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
+      downloadAnnotation(
+        tracing.annotationId,
+        tracing.annotationType,
+        hasVolumeFallback,
+        {},
+        includeVolumeData,
+      );
       onClose();
-    } else if (activeTabKey === "export") {
-      const missingSelection = selectedLayerName == null || selectedBoundingBoxID === -1;
-      const basicWarning = "Starting an export job with the chosen parameters was not possible.";
-      const missingSelectionWarning = " Please choose a layer and a bounding box for export.";
+    } else if (activeTabKey === "export" && startJob != null) {
+      await Model.ensureSavedState();
+      await startJob(async () => {
+        const job = await startExportTiffJob(
+          dataset.name,
+          dataset.owningOrganization,
+          computeArrayFromBoundingBox(selectedBoundingBox.boundingBox),
+          selectedLayerInfos.layerName,
+          mag.join("-"),
+          selectedLayerInfos.annotationId,
+          selectedLayerInfos.displayName,
+          exportFormat === ExportFormat.OME_TIFF,
+        );
+        return [exportKey(selectedLayerInfos, mag), job.id];
+      });
 
-      if (selectedLayerName == null || selectedBoundingBoxID === -1) {
-        Toast.warning(basicWarning + missingSelectionWarning);
-      } else {
-        const selectedLayer = getLayerByName(dataset, selectedLayerName);
-        if (selectedLayer != null && selectedBoundingBox != null) {
-          const layerInfos = getLayerInfos(
-            selectedLayer,
-            tracing,
-            activeMappingInfos,
-            isMergerModeEnabled,
-          );
-          await handleStartExport(
-            dataset,
-            layerInfos,
-            selectedBoundingBox.boundingBox,
-            startedExports,
-            setStartedExports,
-          );
-          Toast.success("A new export job was started successfully.");
-        } else {
-          Toast.warning(basicWarning);
-        }
-      }
-      if (!keepWindowOpen && !missingSelection) {
+      if (!keepWindowOpen) {
         onClose();
       }
     }
@@ -227,7 +365,7 @@ function _DownloadModalView(props: Props): JSX.Element {
   };
 
   const handleTabChange = (key: string) => {
-    setActiveTabKey(key);
+    setActiveTabKey(key as TabKeys);
   };
 
   const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
@@ -252,7 +390,7 @@ function _DownloadModalView(props: Props): JSX.Element {
         type="warning"
       >
         {messages["annotation.export_no_worker"]}
-        <a href="mailto:hello@webknossos.com">hello@webknossos.com.</a>
+        <a href="mailto:hello@webknossos.org">hello@webknossos.org.</a>
       </Text>
     </Row>
   );
@@ -278,10 +416,7 @@ with wk.webknossos_context(
     token="${authToken || "<insert token here>"}",
     url="${window.location.origin}"
 ):
-    annotation = wk.Annotation.download(
-        "${annotationId}",
-        annotation_type="${annotationType}",
-    )
+    annotation = wk.Annotation.download("${tracing.annotationId}")
 `;
 
   const alertTokenIsPrivate = () => {
@@ -295,19 +430,33 @@ with wk.webknossos_context(
   const hasVolumes = hasVolumeTracings(tracing);
   const hasSkeleton = tracing.skeleton != null;
 
+  const okText = okTextForTab.get(activeTabKey);
+  const isCurrentlyRunningExportJob =
+    activeTabKey === "export" &&
+    runningExportJobs.some(([key]) => key === exportKey(selectedLayerInfos, mag));
+
+  const isOkButtonDisabled =
+    activeTabKey === "export" &&
+    (!isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled);
+
   return (
     <Modal
       title="Download this annotation"
       open={isOpen}
       width={600}
-      footer={[
-        <Footer
-          tabKey={activeTabKey}
-          onClick={handleOk}
-          key="footer"
-          boundingBoxCompatible={boundingBoxCompatibleInfo?.isExportable || false}
-        />,
-      ]}
+      footer={
+        okText != null ? (
+          <Button
+            key="ok"
+            type="primary"
+            disabled={isOkButtonDisabled}
+            onClick={handleOk}
+            loading={isCurrentlyRunningExportJob}
+          >
+            {okText}
+          </Button>
+        ) : null
+      }
       onCancel={onClose}
       style={{ overflow: "visible" }}
     >
@@ -396,10 +545,6 @@ with wk.webknossos_context(
               }}
             >
               {messages["annotation.export"]}
-              <a href="/jobs" target="_blank" rel="noreferrer">
-                Jobs Overview Page
-              </a>
-              .
             </Text>
           </Row>
           {activeTabKey === "export" && !features().jobsEnabled ? (
@@ -411,27 +556,33 @@ with wk.webknossos_context(
                   margin: "18px 0",
                 }}
               >
+                Export format
+              </Divider>
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <Radio.Group
+                  value={exportFormat}
+                  onChange={(ev) => setExportFormat(ev.target.value)}
+                >
+                  <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
+                  <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
+                </Radio.Group>
+              </div>
+
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
+              >
                 Layer
               </Divider>
-              <Row>
-                <Col
-                  span={9}
-                  style={{
-                    lineHeight: "20px",
-                    padding: "5px 12px",
-                  }}
-                >
-                  Select the layer you would like to prepare for export.
-                </Col>
-                <Col span={15}>
-                  <LayerSelection
-                    layers={layers}
-                    onChange={setSelectedLayerName}
-                    tracing={tracing}
-                    style={{ width: 330 }}
-                  />
-                </Col>
-              </Row>
+              <LayerSelection
+                layers={layers}
+                value={selectedLayerName}
+                onChange={setSelectedLayerName}
+                tracing={tracing}
+                style={{ width: "100%" }}
+              />
+
               <Divider
                 style={{
                   margin: "18px 0",
@@ -439,25 +590,65 @@ with wk.webknossos_context(
               >
                 Bounding Box
               </Divider>
+              <BoundingBoxSelection
+                value={selectedBoundingBoxId}
+                userBoundingBoxes={userBoundingBoxes}
+                setSelectedBoundingBoxId={(boxId: number | null) => {
+                  if (boxId != null) {
+                    setSelectedBoundingBoxId(boxId);
+                  }
+                }}
+                style={{ width: "100%" }}
+              />
+              {boundingBoxCompatibilityAlerts}
+
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
+              >
+                Mag
+              </Divider>
               <Row>
-                <Col
-                  span={9}
-                  style={{
-                    lineHeight: "20px",
-                    padding: "5px 12px",
-                  }}
-                >
-                  Select a bounding box to constrain the data for export.
-                </Col>
-                <Col span={15}>
-                  <BoundingBoxSelection
-                    userBoundingBoxes={userBoundingBoxes}
-                    setSelectedBoundingBoxId={setSelectedBoundingBoxId}
-                    style={{ width: 330 }}
+                <Col span={19}>
+                  <MagSlider
+                    resolutionInfo={selectedLayerResolutionInfo}
+                    value={mag}
+                    onChange={setMag}
                   />
                 </Col>
-                {boundingBoxCompatibleInfo?.alerts}
+                <Col
+                  span={5}
+                  style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
+                >
+                  {mag.join("-")}
+                </Col>
               </Row>
+              <Text
+                style={{
+                  margin: "0 6px 12px",
+                  display: "block",
+                }}
+              >
+                Estimated file size:{" "}
+                {estimateFileSize(
+                  selectedLayer,
+                  mag,
+                  selectedBoundingBox.boundingBox,
+                  exportFormat,
+                )}
+                <br />
+                Resolution: {formatSelectedScale(dataset, mag)}
+              </Text>
+
+              <Divider />
+              <p>
+                Go to the{" "}
+                <a href="/jobs" target="_blank" rel="noreferrer">
+                  Jobs Overview Page
+                </a>{" "}
+                to see running exports and to download the results.
+              </p>
             </div>
           )}
           <Divider
@@ -467,7 +658,7 @@ with wk.webknossos_context(
           />
           <MoreInfoHint />
           <Checkbox
-            style={{ position: "absolute", bottom: "16px" }}
+            style={{ position: "absolute", bottom: -62 }}
             checked={keepWindowOpen}
             onChange={handleKeepWindowOpenChecked}
             disabled={activeTabKey === "export" && !features().jobsEnabled}

@@ -1,5 +1,6 @@
 package com.scalableminds.util.geometry
 
+import com.scalableminds.util.tools.Math.ceilDiv
 import net.liftweb.common.Full
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
@@ -55,6 +56,10 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def *(that: Vec3Int): BoundingBox =
     BoundingBox(topLeft * that, width * that.x, height * that.y, depth * that.z)
 
+  def /(that: Vec3Int): BoundingBox =
+    // Since floorDiv is used for topLeft, ceilDiv is used for the size to avoid voxels being lost at the border
+    BoundingBox(topLeft / that, ceilDiv(width, that.x), ceilDiv(height, that.y), ceilDiv(depth, that.z))
+
   def toSql: List[Int] =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)
 
@@ -71,7 +76,8 @@ object BoundingBox {
 
   import play.api.libs.json._
 
-  private val literalPattern = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
+  private val literalPattern =
+    "\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
   def empty: BoundingBox =
     BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)

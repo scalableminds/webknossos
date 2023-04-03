@@ -5,10 +5,16 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import Maybe from "data.maybe";
-import type { MeshMetaData } from "types/api_flow_types";
+import type { APIDataLayer, MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
-import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getBoundaries,
+  getDataLayers,
+  getLayerBoundingBox,
+  getLayerNameToIsDisabled,
+  getTransformsForLayerOrNull,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getPosition, getActiveMagIndicesForLayers } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -37,8 +43,11 @@ import { setSceneController } from "oxalis/controller/scene_controller_provider"
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
+import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/isosurface_saga";
+import CustomLOD from "oxalis/controller/custom_lod";
 
 const CUBE_COLOR = 0x999999;
+const LAYER_CUBE_COLOR = 0xffff99;
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -49,8 +58,9 @@ class SceneController {
   datasetBoundingBox: Cube;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxGroup' has no initializer... Remove this comment to see the full error message
   userBoundingBoxGroup: THREE.Group;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxes' has no initializer an... Remove this comment to see the full error message
-  userBoundingBoxes: Array<Cube>;
+  layerBoundingBoxGroup!: THREE.Group;
+  userBoundingBoxes!: Array<Cube>;
+  layerBoundingBoxes!: { [layerName: string]: Cube };
   annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
@@ -75,8 +85,8 @@ class SceneController {
   // isosurfacesRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isosurfacesRootGroup' has no initializer... Remove this comment to see the full error message
-  isosurfacesRootGroup: THREE.Group;
-  isosurfacesGroupsPerSegmentationId: Record<number, THREE.Group> = {};
+  isosurfacesLODRootGroup: CustomLOD;
+  isosurfacesGroupsPerSegmentationId: Record<number, Record<number, THREE.Group>> = {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -105,14 +115,14 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
-    this.isosurfacesRootGroup = new THREE.Group();
+    this.isosurfacesLODRootGroup = new CustomLOD();
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
-    this.scene.add(this.isosurfacesRootGroup);
+    this.scene.add(this.isosurfacesLODRootGroup);
     this.scene.add(this.meshesRootGroup);
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
@@ -123,9 +133,17 @@ class SceneController {
     // These methods are attached to window, since we would run into circular import errors
     // otherwise.
     // @ts-ignore
-    window.addBucketMesh = (position: Vector3, zoomStep: number, optColor?: string) => {
-      const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
-      const bucketSize = [bucketExtent, bucketExtent, bucketExtent];
+    window.addBucketMesh = (
+      position: Vector3,
+      zoomStep: number,
+      resolution: Vector3,
+      optColor?: string,
+    ) => {
+      const bucketSize = [
+        constants.BUCKET_WIDTH * resolution[0],
+        constants.BUCKET_WIDTH * resolution[1],
+        constants.BUCKET_WIDTH * resolution[2],
+      ];
       const boxGeometry = new THREE.BoxGeometry(...bucketSize);
       const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
       const material = new THREE.LineBasicMaterial({
@@ -189,8 +207,13 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): THREE.Group {
-    return this.isosurfacesGroupsPerSegmentationId[cellId];
+  getIsosurfaceGeometryInBestLOD(cellId: number): THREE.Group {
+    const bestLod = Math.min(
+      ...Object.keys(this.isosurfacesGroupsPerSegmentationId[cellId]).map((lodVal) =>
+        parseInt(lodVal),
+      ),
+    );
+    return this.isosurfacesGroupsPerSegmentationId[cellId][bestLod];
   }
 
   getColorObjectForSegment(cellId: number) {
@@ -208,6 +231,7 @@ class SceneController {
     meshMaterial.transparent = true;
 
     const mesh = new THREE.Mesh(geometry, meshMaterial);
+
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     const tweenAnimation = new TWEEN.Tween({
@@ -254,7 +278,7 @@ class SceneController {
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
 
-    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
+    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, null, null, NO_LOD_MESH_INDEX);
   }
 
   addIsosurfaceFromGeometry(
@@ -262,11 +286,19 @@ class SceneController {
     segmentationId: number,
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
+    lod: number,
   ): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
+      this.isosurfacesGroupsPerSegmentationId[segmentationId] = {};
+    }
+    if (this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] == null) {
       const newGroup = new THREE.Group();
-      this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
-      this.isosurfacesRootGroup.add(newGroup);
+      this.isosurfacesGroupsPerSegmentationId[segmentationId][lod] = newGroup;
+      if (lod === NO_LOD_MESH_INDEX) {
+        this.isosurfacesLODRootGroup.addNoLODSupportedMesh(newGroup);
+      } else {
+        this.isosurfacesLODRootGroup.addLODMesh(newGroup, lod);
+      }
       // @ts-ignore
       newGroup.cellId = segmentationId;
       if (scale != null) {
@@ -280,18 +312,22 @@ class SceneController {
       mesh.translateZ(offset[2]);
     }
 
-    this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
+    this.isosurfacesGroupsPerSegmentationId[segmentationId][lod].add(mesh);
   }
 
   removeIsosurfaceById(segmentationId: number): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       return;
     }
-
-    const group = this.isosurfacesGroupsPerSegmentationId[segmentationId];
-    this.isosurfacesRootGroup.remove(group);
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Group'.
-    this.isosurfacesGroupsPerSegmentationId[segmentationId] = null;
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[segmentationId], (meshGroup, lod) => {
+      const lodNumber = parseInt(lod);
+      if (lodNumber !== NO_LOD_MESH_INDEX) {
+        this.isosurfacesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+      } else {
+        this.isosurfacesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+      }
+    });
+    delete this.isosurfacesGroupsPerSegmentationId[segmentationId];
   }
 
   addLights(): void {
@@ -320,10 +356,10 @@ class SceneController {
     pointLight.position.y = -25;
     pointLight.position.z = 10;
 
-    this.isosurfacesRootGroup.add(ambientLight);
-    this.isosurfacesRootGroup.add(directionalLight);
-    this.isosurfacesRootGroup.add(directionalLight2);
-    this.isosurfacesRootGroup.add(pointLight);
+    this.isosurfacesLODRootGroup.add(ambientLight);
+    this.isosurfacesLODRootGroup.add(directionalLight);
+    this.isosurfacesLODRootGroup.add(directionalLight2);
+    this.isosurfacesLODRootGroup.add(pointLight);
   }
 
   removeSTL(id: string): void {
@@ -335,18 +371,21 @@ class SceneController {
   }
 
   setIsosurfaceVisibility(id: number, visibility: boolean): void {
-    this.isosurfacesGroupsPerSegmentationId[id].visible = visibility;
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup) => {
+      meshGroup.visible = visibility;
+    });
   }
 
   setIsosurfaceColor(id: number): void {
     const color = this.getColorObjectForSegment(id);
-    const group = this.isosurfacesGroupsPerSegmentationId[id];
-    if (group) {
-      for (const child of group.children) {
-        // @ts-ignore
-        child.material.color = color;
+    _.forEach(this.isosurfacesGroupsPerSegmentationId[id], (meshGroup) => {
+      if (meshGroup) {
+        for (const child of meshGroup.children) {
+          // @ts-ignore
+          child.material.color = color;
+        }
       }
-    }
+    });
   }
 
   updateMeshPostion(id: string, position: Vector3): void {
@@ -360,7 +399,9 @@ class SceneController {
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
+    this.layerBoundingBoxGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
+    this.rootNode.add(this.layerBoundingBoxGroup);
     this.annotationToolsGeometryGroup = new THREE.Group();
     this.rootNode.add(this.annotationToolsGeometryGroup);
     this.userBoundingBoxes = [];
@@ -450,17 +491,26 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
-    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = Store.getState().userConfiguration;
+    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
+      Store.getState().userConfiguration;
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
+    const layerNameToIsDisabled = getLayerNameToIsDisabled(Store.getState().datasetConfiguration);
+    Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
+      const bbCube = this.layerBoundingBoxes[layerName];
+      const visible =
+        id === OrthoViews.TDView && tdViewDisplayLayerBorders && !layerNameToIsDisabled[layerName];
+      bbCube.setVisibility(visible);
+      bbCube.updateForCam(id);
+    });
 
     this.taskBoundingBox?.updateForCam(id);
 
-    this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
+    this.isosurfacesLODRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
     const originalPosition = getPosition(Store.getState().flycam);
@@ -482,6 +532,7 @@ class SceneController {
         } else {
           this.planes[planeId].setVisible(false);
         }
+        this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = false;
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -491,6 +542,7 @@ class SceneController {
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
           this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
         );
+        this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
       }
     }
   };
@@ -499,22 +551,17 @@ class SceneController {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
-    // The anchor point refers to the top-left-front bucket of the bounding box
-    // which covers all three rendered planes. Relative to this anchor point,
-    // all buckets necessary for rendering are addressed. The anchorPoint is
-    // defined with bucket indices for the coordinate system of the current zoomStep.
-    let anchorPoint;
-    const zoomStep = getRequestLogZoomStep(Store.getState());
 
+    const magIndices = getActiveMagIndicesForLayers(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(globalPosition, zoomStep);
+      dataLayer.layerRenderingManager.updateDataTextures(
+        globalPosition,
+        magIndices[dataLayer.name],
+      );
     }
 
-    if (optArbitraryPlane) {
-      optArbitraryPlane.updateAnchorPoints(anchorPoint);
-    } else {
+    if (!optArbitraryPlane) {
       for (const currentPlane of _.values<Plane>(this.planes)) {
-        currentPlane.updateAnchorPoints(anchorPoint);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 
@@ -580,6 +627,40 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
+  setLayerBoundingBoxes(layers: APIDataLayer[]): void {
+    const state = Store.getState();
+    const dataset = state.dataset;
+
+    const newLayerBoundingBoxGroup = new THREE.Group();
+    this.layerBoundingBoxes = Object.fromEntries(
+      layers.map((layer) => {
+        const boundingBox = getLayerBoundingBox(dataset, layer.name);
+        const { min, max } = boundingBox;
+        const bbCube = new Cube({
+          min,
+          max,
+          color: LAYER_CUBE_COLOR,
+          showCrossSections: false,
+          isHighlighted: false,
+        });
+        bbCube.getMeshes().forEach((mesh) => {
+          const transformMatrix = getTransformsForLayerOrNull(layer);
+          if (transformMatrix) {
+            const matrix = new THREE.Matrix4();
+            // @ts-ignore
+            matrix.set(...transformMatrix);
+            mesh.applyMatrix4(matrix);
+          }
+          newLayerBoundingBoxGroup.add(mesh);
+        });
+        return [layer.name, bbCube];
+      }),
+    );
+    this.rootNode.remove(this.layerBoundingBoxGroup);
+    this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
+    this.rootNode.add(this.layerBoundingBoxGroup);
+  }
+
   highlightUserBoundingBox(bboxId: number | null | undefined): void {
     if (this.highlightedBBoxId === bboxId) {
       return;
@@ -620,8 +701,8 @@ class SceneController {
 
     this.taskBoundingBox?.setVisibility(false);
 
-    if (this.isosurfacesRootGroup != null) {
-      this.isosurfacesRootGroup.visible = false;
+    if (this.isosurfacesLODRootGroup != null) {
+      this.isosurfacesLODRootGroup.visible = false;
     }
   }
 
@@ -652,6 +733,10 @@ class SceneController {
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).userBoundingBoxes,
       (bboxes) => this.setUserBoundingBoxes(bboxes),
+    );
+    listenToStoreProperty(
+      (storeState) => getDataLayers(storeState.dataset),
+      (layers) => this.setLayerBoundingBoxes(layers),
     );
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).boundingBox,

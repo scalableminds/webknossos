@@ -7,7 +7,7 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS } from "oxalis/constants";
+import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS, Vector4 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
@@ -36,6 +36,10 @@ type APIDataLayerBase = {
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
+  readonly coordinateTransformations?: Array<{
+    type: "affine";
+    matrix: [Vector4, Vector4, Vector4, Vector4];
+  }>;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -602,7 +606,7 @@ export type APIFeatureToggles = {
   readonly discussionBoard: string | false;
   readonly discussionBoardRequiresAdmin: boolean;
   readonly hideNavbarLogin: boolean;
-  readonly isDemoInstance: boolean;
+  readonly isWkorgInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
@@ -617,14 +621,16 @@ export type APIFeatureToggles = {
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
-export type APIJobType =
-  | "convert_to_wkw"
-  | "export_tiff"
-  | "compute_mesh_file"
-  | "find_largest_segment_id"
-  | "infer_nuclei"
-  | "infer_neurons"
-  | "materialize_volume_annotation";
+export enum APIJobType {
+  "CONVERT_TO_WKW" = "convert_to_wkw",
+  "EXPORT_TIFF" = "export_tiff",
+  "COMPUTE_MESH_FILE" = "compute_mesh_file",
+  "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
+  "INFER_NUCLEI" = "infer_nuclei",
+  "INFER_NEURONS" = "infer_neurons",
+  "MATERIALIZE_VOLUME_ANNOTATION" = "materialize_volume_annotation",
+}
+
 export type APIJob = {
   readonly id: string;
   readonly datasetName: string | null | undefined;
@@ -638,7 +644,7 @@ export type APIJob = {
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
-  readonly state: string;
+  readonly state: APIJobState;
   readonly manualState: string;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;

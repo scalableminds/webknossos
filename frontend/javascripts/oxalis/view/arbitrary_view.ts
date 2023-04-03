@@ -243,10 +243,7 @@ class ArbitraryView {
     const usedBuckets = [];
 
     while (index < buffer.length) {
-      const bucketAddress = buffer
-        .subarray(index, index + 4)
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'currentAnchorPoint' does not exist on ty... Remove this comment to see the full error message
-        .map((el, idx) => (idx < 3 ? window.currentAnchorPoint[idx] + el : el));
+      const bucketAddress = buffer.subarray(index, index + 4);
       index += 4;
       const id = bucketAddress.join(",");
 

@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, Z
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
@@ -24,7 +24,7 @@ object DataFormat extends ExtendedEnumeration {
 object Category extends ExtendedEnumeration {
   val color, mask, segmentation = Value
 
-  def fromElementClass(elementClass: ElementClass.Value): Category.Value =
+  def guessFromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
       case ElementClass.uint16 => segmentation
       case ElementClass.uint32 => segmentation
@@ -143,6 +143,8 @@ trait DataLayerLike {
 
   // This is the default from the DataSet Edit View.
   def adminViewConfiguration: Option[LayerViewConfiguration]
+
+  def coordinateTransformations: Option[List[CoordinateTransformation]]
 }
 
 object DataLayerLike {
@@ -179,7 +181,7 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
-  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 
@@ -236,14 +238,8 @@ object DataLayer {
 }
 
 trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
-
   val category: Category.Value = Category.segmentation
-
   lazy val mappingProvider: MappingProvider = new MappingProvider(this)
-}
-
-object SegmentationLayer {
-  val defaultLargestSegmentId = 0
 }
 
 case class AbstractDataLayer(
@@ -253,7 +249,8 @@ case class AbstractDataLayer(
     resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -266,7 +263,8 @@ object AbstractDataLayer {
       layer.resolutions,
       layer.elementClass,
       layer.defaultViewConfiguration,
-      layer.adminViewConfiguration
+      layer.adminViewConfiguration,
+      layer.coordinateTransformations
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -281,7 +279,8 @@ case class AbstractSegmentationLayer(
     largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -296,7 +295,8 @@ object AbstractSegmentationLayer {
       layer.largestSegmentId,
       layer.mappings,
       layer.defaultViewConfiguration,
-      layer.adminViewConfiguration
+      layer.adminViewConfiguration,
+      layer.coordinateTransformations
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

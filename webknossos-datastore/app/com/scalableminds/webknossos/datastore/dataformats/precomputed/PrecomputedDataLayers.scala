@@ -5,20 +5,21 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
+  CoordinateTransformation,
   DataFormat,
   DataLayer,
   ElementClass,
   SegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
 
 trait PrecomputedLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.neuroglancerPrecomputed
 
-  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) =
-    new PrecomputedBucketProvider(this, fileSystemServiceOpt)
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]) =
+    new PrecomputedBucketProvider(this, dataVaultServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
@@ -37,6 +38,7 @@ case class PrecomputedDataLayer(
     mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends PrecomputedLayer
 
@@ -53,6 +55,7 @@ case class PrecomputedSegmentationLayer(
     mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends SegmentationLayer
     with PrecomputedLayer

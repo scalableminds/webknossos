@@ -5,14 +5,14 @@ import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging with RateLimitedErrorLogging {
@@ -29,7 +29,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 
 }
 
-class ZarrBucketProvider(layer: ZarrLayer, val fileSystemServiceOpt: Option[FileSystemService])
+class ZarrBucketProvider(layer: ZarrLayer, val dataVaultServiceOpt: Option[DataVaultService])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -42,11 +42,11 @@ class ZarrBucketProvider(layer: ZarrLayer, val fileSystemServiceOpt: Option[File
     zarrMagOpt match {
       case None => Fox.empty
       case Some(zarrMag) =>
-        fileSystemServiceOpt match {
-          case Some(fileSystemService: FileSystemService) =>
+        dataVaultServiceOpt match {
+          case Some(dataVaultService: DataVaultService) =>
             for {
-              magPath: Path <- if (zarrMag.isRemote) {
-                fileSystemService.remotePathFor(zarrMag)
+              magPath: VaultPath <- if (zarrMag.isRemote) {
+                dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(
                 ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))

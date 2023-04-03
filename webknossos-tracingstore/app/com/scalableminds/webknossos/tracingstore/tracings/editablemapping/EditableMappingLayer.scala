@@ -7,15 +7,21 @@ import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataLayer, ElementClass, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  CoordinateTransformation,
+  DataFormat,
+  DataLayer,
+  ElementClass,
+  SegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
 
 import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
-  override def fileSystemServiceOpt: Option[FileSystemService] = None
+  override def dataVaultServiceOpt: Option[DataVaultService] = None
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] = {
@@ -63,9 +69,11 @@ case class EditableMappingLayer(name: String,
     extends SegmentationLayer {
   override def dataFormat: DataFormat.Value = DataFormat.wkw
 
+  override def coordinateTransformations: Option[List[CoordinateTransformation]] = None
+
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider =
+  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
   override def mappings: Option[Set[String]] = None

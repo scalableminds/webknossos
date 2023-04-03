@@ -1,18 +1,18 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.datavault.{FileSystemVaultPath, VaultPath}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def fileSystemServiceOpt: Option[FileSystemService]
+  def dataVaultServiceOpt: Option[DataVaultService]
 
   // To be defined in subclass.
   def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[DataCubeHandle] =
@@ -45,13 +45,14 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
     Iterator.empty
 
   protected def localPathFrom(readInstruction: DataReadInstruction, relativeMagPath: String)(
-      implicit ec: ExecutionContext): Fox[Path] = {
-    val magPath = readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.team)
-      .resolve(readInstruction.dataSource.id.name)
-      .resolve(readInstruction.dataLayer.name)
-      .resolve(relativeMagPath)
-    if (magPath.toFile.exists()) {
+      implicit ec: ExecutionContext): Fox[VaultPath] = {
+    val magPath = FileSystemVaultPath.fromPath(
+      readInstruction.baseDir
+        .resolve(readInstruction.dataSource.id.team)
+        .resolve(readInstruction.dataSource.id.name)
+        .resolve(readInstruction.dataLayer.name)
+        .resolve(relativeMagPath))
+    if (magPath.exists) {
       Fox.successful(magPath)
     } else Fox.empty
   }

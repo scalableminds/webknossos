@@ -100,12 +100,13 @@ dataSet.upload.validation.failed=Failed to validate Dataset information for uplo
 dataSet.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a failed finish request, see previous errors.
+dataSet.upload.storageExceeded=Cannot upload dataset because the storage quota of the organization is exceeded.
 dataSet.explore.failed.readFile=Failed to read remote file
 dataSet.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
 
-remoteFileSystem.insert.failed=Failed to store remote file system credential
-remoteFileSystem.setup.failed=Failed to set up remote file system
-remoteFileSystem.getPath.failed=Failed to get remote path
+dataVault.insert.failed=Failed to store remote file system credential
+dataVault.setup.failed=Failed to set up remote file system
+dataVault.getPath.failed=Failed to get remote path
 
 
 dataSource.notFound=Datasource not found on datastore server
@@ -285,14 +286,16 @@ job.disabled = Long-running jobs are not enabled for this WEBKNOSSOS instance.
 job.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
 job.export.tiff.invalidBoundingBox = The selected bounding box could not be parsed, must be x,y,z,width,height,depth
+job.export.tiff.invalidMag = The selected mag could not be parsed, must be x-y-z
 job.export.tiff.volumeExceeded = The volume of the selected bounding box is too large.
 job.export.tiff.edgeLengthExceeded = An edge length of the selected bounding box is too large.
 job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allowed for datasets of your own organization.
 job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
-job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
+job.materializeVolumeAnnotation.notAllowed.organization = Materializing volume annotations is only allowed for datasets of your own organization.
 job.noWorkerForDatastore = Processing jobs are not available for the datastore this dataset belongs to.
+job.emailNotifactionsDisabled = Email notifications are not enabled for this job type.
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

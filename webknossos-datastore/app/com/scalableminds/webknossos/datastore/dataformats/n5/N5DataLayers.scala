@@ -4,14 +4,14 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
 
 trait N5Layer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.n5
 
-  def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]) = new N5BucketProvider(this, fileSystemServiceOpt)
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]) = new N5BucketProvider(this, dataVaultServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
@@ -30,6 +30,7 @@ case class N5DataLayer(
     mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends N5Layer
 
@@ -46,6 +47,7 @@ case class N5SegmentationLayer(
     mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends SegmentationLayer
     with N5Layer

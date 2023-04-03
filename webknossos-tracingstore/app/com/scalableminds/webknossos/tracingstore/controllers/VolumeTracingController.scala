@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   MinCutParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  MergedVolumeStats,
   ResolutionRestrictions,
   UpdateMappingNameAction,
   VolumeTracingService
@@ -94,7 +95,11 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[VolumeTracing]] = request.body
-          val mergedTracing = tracingService.merge(tracings.flatten)
+          val mergedTracing =
+            tracingService
+              .merge(tracings.flatten, MergedVolumeStats.empty)
+              // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
+              .copy(segments = List.empty)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
             Ok(Json.toJson(newId))
           }

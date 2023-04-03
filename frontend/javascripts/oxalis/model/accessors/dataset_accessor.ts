@@ -3,6 +3,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
   APIAllowedMode,
+  APIDataLayer,
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
@@ -17,13 +18,16 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import type { Vector3, ViewMode } from "oxalis/constants";
+import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, map3 } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import { M4x4, Matrix4x4 } from "libs/mjs";
+import { Identity4x4 } from "./flycam_accessor";
+
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
   smaller: boolean;
@@ -96,6 +100,10 @@ export class ResolutionInfo {
   hasIndex(index: number): boolean {
     const powerOfTwo = this.indexToPowerOf2(index);
     return this.resolutionMap.has(powerOfTwo);
+  }
+
+  hasResolution(resolution: Vector3): boolean {
+    return this.resolutionMap.has(Math.max(...resolution));
   }
 
   getResolutionByIndex(index: number): Vector3 | null | undefined {
@@ -213,6 +221,11 @@ export class ResolutionInfo {
     }
 
     return bestIndexWithDistance[0];
+  }
+
+  getClosestExistingResolution(resolution: Vector3): Vector3 {
+    const index = Math.log2(Math.max(...resolution));
+    return this.getResolutionByIndex(this.getClosestExistingIndex(index)) as Vector3;
   }
 
   hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {
@@ -868,6 +881,17 @@ export function isLayerVisible(
   const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
+
+function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
+  const nameToIsDisabled: { [name: string]: boolean } = {};
+  for (const layerName of Object.keys(datasetConfiguration.layers)) {
+    nameToIsDisabled[layerName] = datasetConfiguration.layers[layerName].isDisabled;
+  }
+  return nameToIsDisabled;
+}
+
+export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
+
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.
   // This avoids that the empty dummy dataset is rendered with a 2D layout
@@ -905,3 +929,52 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
     layer ? layer.name : null,
   );
 }
+
+function _getTransformsForLayerOrNull(layer: APIDataLayer): Matrix4x4 | null {
+  if (!layer.coordinateTransformations) {
+    return null;
+  }
+  if (layer.coordinateTransformations.length > 1) {
+    console.error(
+      "Data layer has defined multiple coordinate transforms. This is currently not supported and ignored",
+    );
+    return null;
+  }
+  if (layer.coordinateTransformations[0].type !== "affine") {
+    console.error(
+      "Data layer has defined a coordinate transform that is not affine. This is currently not supported and ignored",
+    );
+    return null;
+  }
+  const nestedMatrix = layer.coordinateTransformations[0].matrix;
+  return nestedToFlatMatrix(nestedMatrix);
+}
+
+export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);
+export function getTransformsForLayer(layer: APIDataLayer): Matrix4x4 {
+  return getTransformsForLayerOrNull(layer) || Identity4x4;
+}
+
+export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
+  return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
+}
+
+export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector4, Vector4] {
+  return [
+    matrix.slice(0, 4) as Vector4,
+    matrix.slice(4, 8) as Vector4,
+    matrix.slice(8, 12) as Vector4,
+    matrix.slice(12, 16) as Vector4,
+  ];
+}
+
+// Transposition is often needed so that the matrix has the right format
+// for matrix operations (e.g., on the GPU; but not for ThreeJS).
+// Inversion is needed when the position of an "output voxel" (e.g., during
+// rendering in the fragment shader) needs to be mapped to its original
+// data position (i.e., how it's stored without the transformation).
+// Without the inversion, the matrix maps from stored position to the position
+// where it should be rendered.
+export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
+  return M4x4.transpose(M4x4.inverse(mat));
+});

@@ -62,16 +62,31 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   lazy val voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
-    chunkIndex.zipWithIndex.map(indices => {
-      val (cIndex, dim) = indices
-      val beginOffset = voxelOffset(dim) + cIndex * precomputedScale.primaryChunkSize(dim)
-      val endOffset = voxelOffset(dim) + ((cIndex + 1) * precomputedScale.primaryChunkSize(dim))
+    chunkIndex.zipWithIndex.map(chunkIndexWithDim => {
+      val (chunkIndexAtDim, dim) = chunkIndexWithDim
+      val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkSize(dim)
+      val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkSize(dim))
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })
+
+  def gridSize: Array[Int] = (chunkSize, precomputedScale.size).zipped.map((c, s) => (s.toDouble / c).ceil.toInt)
+
+  override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }
 
-case class ShardingSpecification(`@type`: String)
+case class ShardingSpecification(`@type`: String,
+                                 preshift_bits: Long,
+                                 hash: String,
+                                 minishard_bits: Int,
+                                 shard_bits: Long,
+                                 minishard_index_encoding: String = "raw",
+                                 data_encoding: String = "raw") {
+
+  def hashFunction(input: Long): Long =
+    if (hash == "identity") input
+    else ??? // not implemented: murmurhash3_x86_128
+}
 
 object ShardingSpecification extends JsonImplicits {
   implicit object ShardingSpecificationFormat extends Format[ShardingSpecification] {

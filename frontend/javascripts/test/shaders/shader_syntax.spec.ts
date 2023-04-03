@@ -1,12 +1,8 @@
 import "test/mocks/lz4";
-import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import constants from "oxalis/constants";
-import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
 import resolutions from "test/fixtures/resolutions";
 import test, { ExecutionContext } from "ava";
 import { parser } from "@shaderfrog/glsl-parser";
-
-const DEFAULT_LOOK_UP_TEXTURE_WIDTH = getLookupBufferSize(constants.DEFAULT_GPU_MEMORY_FACTOR);
 
 test.beforeEach((t: ExecutionContext<any>) => {
   t.context.originalWarn = console.warn;
@@ -23,6 +19,7 @@ test.afterEach(async (t: ExecutionContext<any>) => {
 
 test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -30,10 +27,9 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
     },
     segmentationLayerNames: [],
     dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   /*
@@ -48,6 +44,7 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
 
 test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -56,10 +53,9 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
     },
     segmentationLayerNames: ["segmentationLayer"],
     dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -67,6 +63,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
 
 test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -75,10 +72,9 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
     },
     segmentationLayerNames: ["segmentationLayer"],
     dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   parser.parse(code);
@@ -87,6 +83,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
 
 test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -94,10 +91,9 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
     },
     segmentationLayerNames: [],
     dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -105,6 +101,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
 
 test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 4.0,
@@ -113,10 +110,9 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
     },
     segmentationLayerNames: ["segmentationLayer"],
     dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -124,6 +120,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
 
 test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
       color_layer_1: 1.0,
@@ -131,10 +128,9 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
     },
     segmentationLayerNames: [],
     dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);

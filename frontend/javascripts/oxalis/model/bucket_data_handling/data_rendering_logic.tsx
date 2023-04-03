@@ -1,7 +1,6 @@
 import React from "react";
 import _ from "lodash";
 import { document } from "libs/window";
-import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { ElementClass } from "types/api_flow_types";
 import Toast from "libs/toast";
@@ -11,7 +10,7 @@ type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
 };
-const lookupTextureCountPerLayer = 1;
+const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
   // @ts-ignore
   const canvas = document.createElement("canvas");
@@ -170,6 +169,7 @@ function getDataTextureCount(
   );
 }
 
+// Only exported for testing
 export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   byteCount: number,
@@ -180,7 +180,8 @@ export function calculateTextureSizeAndCountForLayer(
   const packingDegree = getPackingDegree(byteCount, elementClass);
 
   // Try to half the texture size as long as it does not require more
-  // data textures
+  // data textures. This ensures that we maximize the number of simultaneously
+  // renderable layers.
   while (
     getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
     getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity)
@@ -258,8 +259,8 @@ function getRenderSupportedLayerCount<
   // and two for mappings.
   const textureCountForSegmentation = hasSegmentation ? 3 : 0;
   const maximumLayerCountToRender = Math.floor(
-    (specs.maxTextureCount - textureCountForSegmentation) /
-      (lookupTextureCountPerLayer + maximumTextureCountForLayer),
+    (specs.maxTextureCount - textureCountForSegmentation - lookupTextureCount) /
+      maximumTextureCountForLayer,
   );
   return {
     maximumLayerCountToRender,
@@ -277,7 +278,7 @@ export function computeDataTexturesSetup<
   getByteCountForLayer: (arg0: Layer) => number,
   hasSegmentation: boolean,
   requiredBucketCapacity: number,
-): any {
+) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     getByteCountForLayer,
@@ -306,37 +307,8 @@ export function getGpuFactorsWithLabels() {
   return [
     ["12", "Very High"],
     ["6", "High"],
-    ["3", "Medium"],
-    ["1", "Low"],
+    ["4", "Medium"],
+    ["2", "Low"],
+    ["1", "Very Low"],
   ];
-}
-export function getLookupBufferSize(gpuMultiplier: number): number {
-  switch (gpuMultiplier) {
-    case 1:
-    case 3:
-      return 256;
-
-    case 6:
-      return 512;
-
-    case 12:
-      return 1024;
-
-    default:
-      return 512;
-  }
-}
-// A look up buffer with the size [key]**2 is able to represent
-// a volume with the dimensions of [value].
-// The values were chosen so that value[0]*value[1]*value[2] / key**2
-// approaches ~ 1 (i.e., the utilization ratio of the buffer is close to
-// 100%).
-const addressSpaceDimensionsTable: Record<string, Vector3> = {
-  "256": [36, 36, 50],
-  "512": [61, 61, 70],
-  "1024": [96, 96, 112],
-};
-export function getAddressSpaceDimensions(gpuMultiplier: number): Vector3 {
-  const lookupBufferSize = getLookupBufferSize(gpuMultiplier);
-  return addressSpaceDimensionsTable[lookupBufferSize] || addressSpaceDimensionsTable["256"];
 }

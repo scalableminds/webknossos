@@ -1,4 +1,4 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -57,6 +57,7 @@ import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 import { QuickSelectControls } from "./quick_select_settings";
+import { MenuInfo } from "rc-menu/lib/interface";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -268,26 +269,24 @@ function VolumeInterpolationButton() {
     getInterpolationInfo(state, "Not available since"),
   );
 
-  const menu = (
-    <Menu
-      onClick={(e) => {
-        dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
-        onInterpolateClick(null);
-      }}
-      items={[
-        {
-          label: "Interpolate current segment",
-          key: InterpolationModeEnum.INTERPOLATE,
-          icon: INTERPOLATION_ICON[InterpolationModeEnum.INTERPOLATE],
-        },
-        {
-          label: "Extrude (copy) current segment",
-          key: InterpolationModeEnum.EXTRUDE,
-          icon: INTERPOLATION_ICON[InterpolationModeEnum.EXTRUDE],
-        },
-      ]}
-    />
-  );
+  const menu: MenuProps = {
+    onClick: (e: MenuInfo) => {
+      dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
+      onInterpolateClick(null);
+    },
+    items: [
+      {
+        label: "Interpolate current segment",
+        key: InterpolationModeEnum.INTERPOLATE,
+        icon: INTERPOLATION_ICON[InterpolationModeEnum.INTERPOLATE],
+      },
+      {
+        label: "Extrude (copy) current segment",
+        key: InterpolationModeEnum.EXTRUDE,
+        icon: INTERPOLATION_ICON[InterpolationModeEnum.EXTRUDE],
+      },
+    ],
+  };
 
   const buttonsRender = useCallback(
     ([leftButton, rightButton]) => [
@@ -302,15 +301,19 @@ function VolumeInterpolationButton() {
   );
 
   return (
-    <Dropdown.Button
-      icon={<DownOutlined />}
-      overlay={menu}
-      onClick={onInterpolateClick}
-      style={{ padding: "0 5px 0 6px" }}
-      buttonsRender={buttonsRender}
-    >
-      {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
-    </Dropdown.Button>
+    // Without the outer div, the Dropdown can eat up all the remaining horizontal space,
+    // moving sibling elements to the far right.
+    <div>
+      <Dropdown.Button
+        icon={<DownOutlined />}
+        menu={menu}
+        onClick={onInterpolateClick}
+        style={{ padding: "0 5px 0 6px" }}
+        buttonsRender={buttonsRender}
+      >
+        {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
+      </Dropdown.Button>
+    </div>
   );
 }
 

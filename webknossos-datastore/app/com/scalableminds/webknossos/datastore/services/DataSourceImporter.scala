@@ -56,7 +56,7 @@ trait DataSourceImporter {
         Category.segmentation
       case _ =>
         report.warning(layer => s"Layer [$layer] - Falling back to elementClass for determining category")
-        Category.fromElementClass(elementClass)
+        Category.guessFromElementClass(elementClass)
     }
   }
 

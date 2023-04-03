@@ -11,7 +11,7 @@ import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_f
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
-  getPricingPlanStatus,
+  cachedGetPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
@@ -86,7 +86,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     if (this.props.isAdminView) {
       defaultTabKey = "tasks";
-    } else if (features().isDemoInstance) {
+    } else if (features().isWkorgInstance) {
       defaultTabKey = "publications";
     }
 
@@ -120,7 +120,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     const user =
       this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
 
-    const pricingPlanStatus = await getPricingPlanStatus();
+    // Use a cached version of this route to avoid that a tab switch in the dashboard
+    // causes a whole-page spinner. Since the different tabs are controlled by the
+    // router, the DashboardView re-mounts.
+    const pricingPlanStatus = await cachedGetPricingPlanStatus();
 
     this.setState({
       user,
@@ -141,7 +144,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   getValidTabKeys() {
     const { isAdminView } = this.props;
     return {
-      publications: features().isDemoInstance,
+      publications: features().isWkorgInstance,
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,

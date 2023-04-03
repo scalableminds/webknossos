@@ -17,8 +17,10 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import type { LayoutProps } from "oxalis/view/action-bar/tracing_actions_view";
-import TracingActionsView, { LayoutMenu } from "oxalis/view/action-bar/tracing_actions_view";
+import TracingActionsView, {
+  getLayoutMenu,
+  LayoutProps,
+} from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import ToolbarView from "oxalis/view/action-bar/toolbar_view";
@@ -43,7 +45,6 @@ type StateProps = {
   dataset: APIDataset;
   activeUser: APIUser | null | undefined;
   controlMode: ControlMode;
-  hasVolumeFallback: boolean;
   hasSkeleton: boolean;
   showVersionRestore: boolean;
   isReadOnly: boolean;
@@ -139,7 +140,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
-      hasVolumeFallback,
       is2d,
       isReadOnly,
       showVersionRestore,
@@ -150,32 +150,31 @@ class ActionBarView extends React.PureComponent<Props, State> {
     } = this.props;
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
-    const layoutMenu = (
-      <LayoutMenu
-        {...layoutProps}
-        key="layout-menu"
-        addNewLayout={() => {
-          this.setState({
-            isNewLayoutModalOpen: true,
-          });
-        }}
-        onResetLayout={this.handleResetLayout}
-        onSelectLayout={layoutProps.setCurrentLayout}
-        onDeleteLayout={this.handleLayoutDeleted}
-      />
-    );
+
+    const layoutMenu = getLayoutMenu({
+      ...layoutProps,
+      addNewLayout: () => {
+        this.setState({
+          isNewLayoutModalOpen: true,
+        });
+      },
+      onResetLayout: this.handleResetLayout,
+      onSelectLayout: layoutProps.setCurrentLayout,
+      onDeleteLayout: this.handleLayoutDeleted,
+    });
+
     return (
       <React.Fragment>
         <div className="action-bar">
           {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
           ) : (
-            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
+            <TracingActionsView layoutMenu={layoutMenu} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
         <AddNewLayoutModal
@@ -197,7 +196,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasVolumeFallback: state.tracing.volumes.some((volume) => volume.fallbackLayer != null),
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),

@@ -14,6 +14,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def *(that: Int): Vec3Int =
     Vec3Int(x * that, y * that, z * that)
 
+  def /(that: Vec3Int): Vec3Int =
+    Vec3Int(x / that.x, y / that.y, z / that.z)
+
   def scale(s: Float): Vec3Int =
     Vec3Int((x * s).toInt, (y * s).toInt, (z * s).toInt)
 
@@ -60,6 +63,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
     } yield Vec3Int(x, y, z)
 
   def product: Int = x * y * z
+
+  def alignWithGridFloor(gridCellSize: Vec3Int): Vec3Int =
+    this / gridCellSize * gridCellSize
 }
 
 object Vec3Int {

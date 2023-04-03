@@ -1,4 +1,4 @@
-import { Button, Dropdown, Menu, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -69,14 +69,14 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
+import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
 );
 
 type OwnProps = {
-  layoutMenu: React.ReactNode;
-  hasVolumeFallback: boolean;
+  layoutMenu: SubMenuType;
 };
 type StateProps = {
   annotationType: APIAnnotationType;
@@ -98,8 +98,9 @@ type State = {
   isZarrPrivateLinksModalOpen: boolean;
   isReopenAllowed: boolean;
 };
+
 export type LayoutProps = {
-  storedLayoutNamesForView: Array<string>;
+  storedLayoutNamesForView: string[];
   activeLayout: string;
   layoutKey: LayoutKeys;
   autoSaveLayouts: boolean;
@@ -113,7 +114,8 @@ type LayoutMenuProps = LayoutProps & {
   onDeleteLayout: (arg0: string) => void;
   addNewLayout: () => void;
 };
-export function LayoutMenu(props: LayoutMenuProps) {
+
+export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   const {
     storedLayoutNamesForView,
     layoutKey,
@@ -127,8 +129,8 @@ export function LayoutMenu(props: LayoutMenuProps) {
     saveCurrentLayout,
     // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
     setCurrentLayout,
-    ...others
   } = props;
+
   const layoutMissingHelpTitle = (
     <React.Fragment>
       <h5
@@ -141,15 +143,15 @@ export function LayoutMenu(props: LayoutMenuProps) {
       <p>{messages["layouting.missing_custom_layout_info"]}</p>
     </React.Fragment>
   );
+
   const customLayoutsItems = storedLayoutNamesForView.map((layout) => {
     const isSelectedLayout = layout === activeLayout;
-    return (
-      <Menu.Item
-        key={layout}
-        className={
-          isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
-        }
-      >
+    return {
+      key: layout,
+      className: isSelectedLayout
+        ? "selected-layout-item bullet-point-less-li"
+        : "bullet-point-less-li",
+      label: (
         <div className="layout-dropdown-list-item-container">
           <div className="layout-dropdown-selection-area" onClick={() => onSelectLayout(layout)}>
             {layout}
@@ -165,86 +167,87 @@ export function LayoutMenu(props: LayoutMenuProps) {
             </Tooltip>
           )}
         </div>
-      </Menu.Item>
-    );
+      ),
+    };
   });
-  return (
-    <Menu.SubMenu
-      {...others}
-      title={
-        <span
-          style={{
-            display: "inline-block",
-            minWidth: 120,
-          }}
-        >
-          <LayoutOutlined />
-          Layout
-          <Tooltip placement="top" title={layoutMissingHelpTitle}>
-            <InfoCircleOutlined
-              style={{
-                color: "gray",
-                marginRight: 36,
-              }}
-              className="right-floating-icon"
-            />
-          </Tooltip>
-        </span>
-      }
-    >
-      <Menu.Item
+
+  return {
+    key: "layout-menu",
+    label: (
+      <span
         style={{
           display: "inline-block",
+          minWidth: 120,
         }}
-        onClick={addNewLayout}
-        title="Add a new Layout"
       >
-        <PlusOutlined />
-      </Menu.Item>
-      <Menu.Item
-        style={{
+        <LayoutOutlined />
+        Layout
+        <Tooltip placement="top" title={layoutMissingHelpTitle}>
+          <InfoCircleOutlined
+            style={{
+              color: "gray",
+              marginRight: 36,
+            }}
+            className="right-floating-icon"
+          />
+        </Tooltip>
+      </span>
+    ),
+    children: [
+      {
+        key: "new-layout",
+        style: {
           display: "inline-block",
-        }}
-        onClick={onResetLayout}
-        title="Reset Layout"
-      >
-        <RollbackOutlined />
-      </Menu.Item>
-      <Menu.Item
-        style={{
+        },
+        onClick: addNewLayout,
+        title: "Add a new Layout",
+        icon: <PlusOutlined />,
+      },
+      {
+        key: "reset-layout",
+        style: {
           display: "inline-block",
-        }}
-        onClick={() => setAutoSaveLayouts(!autoSaveLayouts)}
-        title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}
-      >
-        {autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />}
-      </Menu.Item>
-      {autoSaveLayouts ? null : (
-        <Menu.Item
-          style={{
-            display: "inline-block",
-          }}
-          onClick={saveCurrentLayout}
-          title="Save current layout"
-        >
-          <SaveOutlined />
-        </Menu.Item>
-      )}
-      <Menu.Divider />
-      <Menu.ItemGroup
-        className="available-layout-list"
-        title={
+        },
+        onClick: onResetLayout,
+        title: "Reset Layout",
+        icon: <RollbackOutlined />,
+      },
+      {
+        key: "autosave-layout",
+        style: {
+          display: "inline-block",
+        },
+        onClick: () => setAutoSaveLayouts(!autoSaveLayouts),
+        title: `${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`,
+        icon: autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />,
+      },
+      autoSaveLayouts
+        ? null
+        : {
+            key: "save-layout",
+            style: {
+              display: "inline-block",
+            },
+            onClick: saveCurrentLayout,
+            title: "Save current layout",
+            icon: <SaveOutlined />,
+          },
+      { key: "divider", type: "divider" },
+      {
+        key: "available-layouts",
+        type: "group",
+        className: "available-layout-list",
+        label: (
           <span
             style={{
               fontSize: 14,
             }}
           >{`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}</span>
-        }
-      >
-        {customLayoutsItems}
-      </Menu.ItemGroup>
-    </Menu.SubMenu>
-  );
+        ),
+        children: customLayoutsItems,
+      },
+    ],
+  };
 }
 
 class TracingActionsView extends React.PureComponent<Props, State> {
@@ -452,7 +455,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       hasTracing,
       restrictions,
       task,
-      hasVolumeFallback,
       annotationType,
       annotationId,
       activeUser,
@@ -563,52 +565,47 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Undo Finish
       </ButtonComponent>
     ) : null;
-    const elements = [];
+    const menuItems: ItemType[] = [];
     const modals = [];
 
     if (restrictions.allowFinish) {
-      elements.push(
-        <Menu.Item key="finish-button" onClick={this.handleFinish}>
-          <CheckCircleOutlined />
-          {archiveButtonText}
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "finish-button",
+        onClick: this.handleFinish,
+        icon: <CheckCircleOutlined />,
+        label: archiveButtonText,
+      });
     }
 
     if (restrictions.allowDownload) {
-      elements.push(
-        <Menu.Item key="download-button" onClick={this.handleDownloadOpen}>
-          <DownloadOutlined />
-          Download
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "download-button",
+        onClick: this.handleDownloadOpen,
+        icon: <DownloadOutlined />,
+        label: "Download",
+      });
       modals.push(
         <DownloadModalView
           key="download-modal"
           isOpen={this.props.isDownloadModalOpen}
           onClose={this.handleDownloadClose}
-          annotationType={annotationType}
-          annotationId={annotationId}
-          hasVolumeFallback={hasVolumeFallback}
         />,
       );
     }
 
-    elements.push(
-      <Menu.Item key="share-button" onClick={this.handleShareOpen}>
-        <ShareAltOutlined />
-        Share
-      </Menu.Item>,
-    );
-    elements.push(
-      <Menu.Item
-        key="zarr-links-button"
-        onClick={() => this.setState({ isZarrPrivateLinksModalOpen: true })}
-      >
-        <LinkOutlined />
-        Zarr Links
-      </Menu.Item>,
-    );
+    menuItems.push({
+      key: "share-button",
+      onClick: this.handleShareOpen,
+      icon: <ShareAltOutlined />,
+      label: "Share",
+    });
+    menuItems.push({
+      key: "zarr-links-button",
+      onClick: () => this.setState({ isZarrPrivateLinksModalOpen: true }),
+
+      icon: <LinkOutlined />,
+      label: "Zarr Links",
+    });
 
     modals.push(
       <ShareModalView
@@ -628,20 +625,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       />,
     );
     if (activeUser != null) {
-      elements.push(
-        <Menu.Item key="duplicate-button" onClick={this.handleDuplicate}>
-          <CopyOutlined />
-          Duplicate
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "duplicate-button",
+        onClick: this.handleDuplicate,
+        icon: <CopyOutlined />,
+        label: "Duplicate",
+      });
     }
-    elements.push(screenshotMenuItem);
-    elements.push(
-      <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
-        <SettingOutlined />
-        Add Script
-      </Menu.Item>,
-    );
+    menuItems.push(screenshotMenuItem);
+    menuItems.push({
+      key: "user-scripts-button",
+      onClick: this.handleUserScriptsOpen,
+      icon: <SettingOutlined />,
+      label: "Add Script",
+    });
     modals.push(
       <UserScriptsModalView
         key="user-scripts-modal"
@@ -651,12 +648,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     );
 
     if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
-      elements.push(
-        <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
-          <FolderOpenOutlined />
-          Merge Annotation
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "merge-button",
+        onClick: this.handleMergeOpen,
+        icon: <FolderOpenOutlined />,
+        label: "Merge Annotation",
+      });
       modals.push(
         <MergeModalView
           key="merge-modal"
@@ -666,26 +663,25 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       );
     }
     if (controlMode !== ControlModeEnum.SANDBOX) {
-      elements.push(
-        <Menu.Item key="restore-button" onClick={this.handleRestore}>
-          <HistoryOutlined />
-          Restore Older Version
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "restore-button",
+        onClick: this.handleRestore,
+        icon: <HistoryOutlined />,
+        label: "Restore Older Version",
+      });
     }
 
-    elements.push(layoutMenu);
+    menuItems.push(layoutMenu);
 
     if (restrictions.allowSave && !task) {
-      elements.push(
-        <Menu.Item key="disable-saving" onClick={this.handleDisableSaving}>
-          <StopOutlined />
-          Disable saving
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "disable-saving",
+        onClick: this.handleDisableSaving,
+        icon: <StopOutlined />,
+        label: "Disable saving",
+      });
     }
 
-    const menu = <Menu>{elements}</Menu>;
     return (
       <>
         <div className="antd-legacy-group">
@@ -695,7 +691,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {modals}
         </div>
         <div>
-          <Dropdown overlay={menu} trigger={["click"]}>
+          <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">
               Menu
               <DownOutlined />

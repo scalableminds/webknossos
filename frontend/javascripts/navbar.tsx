@@ -77,7 +77,7 @@ function useOlvy() {
   const [isInitialized, setIsInitialized] = useState(false);
   // Initialize Olvy after mounting
   useEffect(() => {
-    if (!features().isDemoInstance) {
+    if (!features().isWkorgInstance) {
       return;
     }
 
@@ -118,7 +118,7 @@ function useOlvyUnreadReleasesCount(activeUser: APIUser) {
   const unreadCount = useFetch(
     async () => {
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
-      if (!isInitialized || !features().isDemoInstance || !window.Olvy) {
+      if (!isInitialized || !features().isWkorgInstance || !window.Olvy) {
         return null;
       }
 
@@ -360,7 +360,7 @@ function getHelpSubMenu(
       label: "Ask a Question",
     });
 
-  if (features().isDemoInstance) {
+  if (features().isWkorgInstance) {
     helpSubMenuItems.push({
       key: "contact",
       label: (
@@ -464,6 +464,21 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
   );
 }
 
+export const switchTo = async (org: APIOrganization) => {
+  Toast.info(`Switching to ${org.displayName || org.name}`);
+
+  // If the user is currently at the datasets tab, the active folder is encoded
+  // in the URI. Switching to another organization means that the folder id
+  // becomes invalid. That's why, we are removing any identifiers from the
+  // current datasets path before reloading the page (which is done in
+  // switchToOrganization).
+  if (window.location.pathname.startsWith("/dashboard/datasets/")) {
+    window.history.replaceState({}, "", "/dashboard/datasets/");
+  }
+
+  await switchToOrganization(org.name);
+};
+
 function LoggedInAvatar({
   activeUser,
   handleLogout,
@@ -476,21 +491,6 @@ function LoggedInAvatar({
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
-
-  const switchTo = async (org: APIOrganization) => {
-    Toast.info(`Switching to ${org.displayName || org.name}`);
-
-    // If the user is currently at the datasets tab, the active folder is encoded
-    // in the URI. Switching to another organization means that the folder id
-    // becomes invalid. That's why, we are removing any identifiers from the
-    // current datasets path before reloading the page (which is done in
-    // switchToOrganization).
-    if (window.location.pathname.startsWith("/dashboard/datasets/")) {
-      window.history.replaceState({}, "", "/dashboard/datasets/");
-    }
-
-    await switchToOrganization(org.name);
-  };
 
   const setSelectedTheme = async (theme: APIUserTheme) => {
     let newTheme = theme;
@@ -546,13 +546,12 @@ function LoggedInAvatar({
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
       triggerSubMenuAction="click"
+      className="right-navbar"
       items={[
         {
           key: "loggedMenu",
           label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
-          style: {
-            padding: 0,
-          },
+          style: { padding: 0 },
           children: [
             {
               key: "userName",

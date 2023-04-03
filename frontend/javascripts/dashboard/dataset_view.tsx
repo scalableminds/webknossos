@@ -7,7 +7,6 @@ import {
   Col,
   Dropdown,
   Input,
-  Menu,
   Row,
   Spin,
   Tooltip,
@@ -48,8 +47,8 @@ import {
 } from "./dataset/queries";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-
-const { Group: InputGroup } = Input;
+import { MenuProps } from "rc-menu";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
 
 type Props = {
   user: APIUser;
@@ -79,12 +78,12 @@ const persistence = new Persistence<PersistenceState>(
 );
 
 function filterDatasetsForUsersOrganization(datasets: APIDatasetCompact[], user: APIUser) {
-  return features().isDemoInstance
+  return features().isWkorgInstance
     ? datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
 }
 
-const refreshMenuItems = [
+const refreshMenuItems: ItemType[] = [
   {
     key: "1",
     label: "Scan disk for new datasets",
@@ -181,22 +180,20 @@ function DatasetView(props: Props) {
     </Radio>
   );
 
-  const filterMenu = (
-    <Menu
-      onClick={() => {}}
-      items={[
-        { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
-        {
-          label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
-          key: "available",
-        },
-        {
-          label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
-          key: "missing",
-        },
-      ]}
-    />
-  );
+  const filterMenu: MenuProps = {
+    items: [
+      { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
+      {
+        label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
+        key: "available",
+      },
+      {
+        label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
+        key: "missing",
+      },
+    ],
+  };
+
   const searchBox = (
     <Input
       prefix={<SearchOutlined />}
@@ -214,16 +211,16 @@ function DatasetView(props: Props) {
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <InputGroup compact>
+    <Input.Group compact style={{ display: "flex" }}>
       {searchBox}
-      <Dropdown overlay={filterMenu} trigger={["click"]}>
+      <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
           <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
             <SettingOutlined />
           </Badge>
         </Button>
       </Dropdown>
-    </InputGroup>
+    </Input.Group>
   ) : (
     searchBox
   );
@@ -244,7 +241,7 @@ function DatasetView(props: Props) {
             }
           >
             <Dropdown.Button
-              overlay={<Menu onClick={context.checkDatasets} items={refreshMenuItems} />}
+              menu={{ onClick: context.checkDatasets, items: refreshMenuItems }}
               style={margin}
               onClick={() => context.fetchDatasets()}
               disabled={context.isChecking}
@@ -430,7 +427,6 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       }}
     >
       {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map((job) => {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
         return (
           <Row key={job.id} gutter={16}>
@@ -545,7 +541,7 @@ function renderPlaceholder(
     >
       <Col span={18}>
         <Row gutter={16} justify="center" align="bottom">
-          {features().isDemoInstance ? openPublicDatasetCard : null}
+          {features().isWkorgInstance ? openPublicDatasetCard : null}
           {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
         </Row>
         <div

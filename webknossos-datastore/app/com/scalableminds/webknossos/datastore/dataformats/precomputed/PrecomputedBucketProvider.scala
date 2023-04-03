@@ -5,14 +5,14 @@ import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class PrecomputedCubeHandle(precomputedArray: PrecomputedArray)
@@ -32,7 +32,7 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray)
 
 }
 
-class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOpt: Option[FileSystemService])
+class PrecomputedBucketProvider(layer: PrecomputedLayer, val dataVaultServiceOpt: Option[DataVaultService])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -45,11 +45,11 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer, val fileSystemServiceOp
     precomputedMagOpt match {
       case None => Fox.empty
       case Some(precomputedMag) =>
-        fileSystemServiceOpt match {
-          case Some(fileSystemService: FileSystemService) =>
+        dataVaultServiceOpt match {
+          case Some(dataVaultService: DataVaultService) =>
             for {
-              magPath: Path <- if (precomputedMag.isRemote) {
-                fileSystemService.remotePathFor(precomputedMag)
+              magPath: VaultPath <- if (precomputedMag.isRemote) {
+                dataVaultService.vaultPathFor(precomputedMag)
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(
                 PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))

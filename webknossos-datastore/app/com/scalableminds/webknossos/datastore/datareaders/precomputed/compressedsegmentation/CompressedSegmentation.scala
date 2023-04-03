@@ -16,8 +16,7 @@ trait CompressedSegmentation[T <: AnyVal] {
 
   def initializeArray(length: Int): Array[T]
 
-  private def decompressChannel(input: Array[Int], volumeSize: Array[Int], blockSize: Array[Int])(
-      implicit c: ClassTag[T]): Array[T] = {
+  private def decompressChannel(input: Array[Int], volumeSize: Array[Int], blockSize: Array[Int]): Array[T] = {
     assert(blockSize.length == 3)
     val numElements = volumeSize(0) * volumeSize(1) * volumeSize(2)
     val output = initializeArray(numElements)

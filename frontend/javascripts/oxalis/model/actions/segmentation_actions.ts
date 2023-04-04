@@ -12,28 +12,28 @@ export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAct
 export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
 
 export const loadAdHocMeshAction = (
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
   extraInfo?: AdHocIsosurfaceInfo,
   layerName?: string,
 ) =>
   ({
     type: "LOAD_AD_HOC_MESH_ACTION",
-    cellId,
+    segmentId,
     seedPosition,
     extraInfo,
     layerName,
   } as const);
 
 export const loadPrecomputedMeshAction = (
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
   meshFileName: string,
   layerName?: string,
 ) =>
   ({
     type: "LOAD_PRECOMPUTED_MESH_ACTION",
-    cellId,
+    segmentId,
     seedPosition,
     meshFileName,
     layerName,

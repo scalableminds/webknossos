@@ -13,11 +13,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added support for datasets with mixed magnifications (e.g., one layer contains mag 2-2-2 and another contains 2-2-1). [#6943](https://github.com/scalableminds/webknossos/pull/6943)
 - Added rendering precomputed meshes with level of detail depending on the zoom of the 3D viewport. This feature only works with version 3 mesh files. [#6909](https://github.com/scalableminds/webknossos/pull/6909)
+- Segments can now be removed from the segment list via the context menu. [#6944](https://github.com/scalableminds/webknossos/pull/6944)
+- Editing the meta data of segments (e.g., the name) is now undoable. [#6944](https://github.com/scalableminds/webknossos/pull/6944)
 
 ### Changed
 - Moved the view mode selection in the toolbar next to the position field. [#6949](https://github.com/scalableminds/webknossos/pull/6949)
 
 ### Fixed
+- Fixed incorrect initial tab when clicking "Show Annotations" for a user in the user list. Also, the datasets tab was removed from that page as it was the same as the datasets table from the main dashboard. [#6957](https://github.com/scalableminds/webknossos/pull/6957)
 
 ### Removed
 

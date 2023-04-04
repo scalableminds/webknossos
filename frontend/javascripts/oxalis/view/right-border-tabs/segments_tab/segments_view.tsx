@@ -35,6 +35,7 @@ import { updateTemporarySettingAction } from "oxalis/model/actions/settings_acti
 import {
   updateSegmentAction,
   setActiveCellAction,
+  removeSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -65,7 +66,7 @@ const refreshInterval = 5000;
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111],
   // ASCII codes for ISO
-  cellIdIndex: 3, // Write cell index after the isosurfaceMarker
+  segmentIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
 const segmentsTabId = "segment-list";
 
@@ -138,12 +139,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
-  loadAdHocMesh(cellId: number, seedPosition: Vector3) {
-    dispatch(loadAdHocMeshAction(cellId, seedPosition));
+  loadAdHocMesh(segmentId: number, seedPosition: Vector3) {
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition));
   },
 
-  loadPrecomputedMesh(cellId: number, seedPosition: Vector3, meshFileName: string) {
-    dispatch(loadPrecomputedMeshAction(cellId, seedPosition, meshFileName));
+  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, meshFileName: string) {
+    dispatch(loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName));
   },
 
   setActiveCell(segmentId: number, somePosition?: Vector3) {
@@ -158,8 +159,19 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setPositionAction(position));
   },
 
-  updateSegment(segmentId: number, segmentShape: Partial<Segment>, layerName: string) {
-    dispatch(updateSegmentAction(segmentId, segmentShape, layerName));
+  updateSegment(
+    segmentId: number,
+    segmentShape: Partial<Segment>,
+    layerName: string,
+    createsNewUndoState: boolean,
+  ) {
+    dispatch(
+      updateSegmentAction(segmentId, segmentShape, layerName, undefined, createsNewUndoState),
+    );
+  },
+
+  removeSegment(segmentId: number, layerName: string) {
+    dispatch(removeSegmentAction(segmentId, layerName));
   },
 });
 
@@ -693,6 +705,7 @@ class SegmentsView extends React.Component<Props, State> {
                         setHoveredSegmentId={this.props.setHoveredSegmentId}
                         allowUpdate={this.props.allowUpdate}
                         updateSegment={this.props.updateSegment}
+                        removeSegment={this.props.removeSegment}
                         visibleSegmentationLayer={this.props.visibleSegmentationLayer}
                         loadAdHocMesh={this.props.loadAdHocMesh}
                         loadPrecomputedMesh={this.props.loadPrecomputedMesh}

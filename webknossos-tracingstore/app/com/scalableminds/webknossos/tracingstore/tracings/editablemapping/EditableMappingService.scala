@@ -93,7 +93,10 @@ class EditableMappingService @Inject()(
     maxEntries = 100)
 
   private lazy val segmentToAgglomerateChunkCache: AlfuFoxCache[(String, Long, Long), Seq[(Long, Long)]] =
-    AlfuFoxCache(maxEntries = 1000)
+    AlfuFoxCache()
+
+  private lazy val agglomerateToGraphCache: AlfuFoxCache[(String, Long, Long), AgglomerateGraph] =
+    AlfuFoxCache(maxEntries = 50)
 
   def currentVersion(editableMappingId: String): Fox[Long] =
     tracingDataStore.editableMappingsInfo.getVersion(editableMappingId,
@@ -296,7 +299,7 @@ class EditableMappingService @Inject()(
                                                  editableMappingId: String,
                                                  version: Long): Fox[Map[Long, Long]] = {
     val chunkIds = segmentIds.map(_ / defaultSegmentToAgglomerateChunkSize)
-    for { // TODO: optimization: fossil-multiget. also: caching
+    for {
       maps: List[Seq[(Long, Long)]] <- Fox.serialCombined(chunkIds.toList)(chunkId =>
         getSegmentToAgglomerateChunkFiltered(editableMappingId, chunkId, version, segmentIds))
     } yield maps.flatten.toMap
@@ -502,14 +505,18 @@ class EditableMappingService @Inject()(
                                agglomerateId: Long,
                                remoteFallbackLayer: RemoteFallbackLayer,
                                userToken: Option[String],
-                               version: Option[Long] = None): Fox[AgglomerateGraph] =
+                               requestedVersion: Option[Long] = None): Fox[AgglomerateGraph] =
     for {
-      _ <- getInfo(mappingId, version = version, remoteFallbackLayer, userToken)
-      keyValuePair: VersionedKeyValuePair[AgglomerateGraph] <- tracingDataStore.editableMappingsAgglomerateToGraph.get(
-        agglomerateGraphKey(mappingId, agglomerateId),
-        version,
-        mayBeEmpty = Some(true))(fromProtoBytes[AgglomerateGraph])
-    } yield keyValuePair.value
+      (_, version) <- getInfoAndActualVersion(mappingId, requestedVersion, remoteFallbackLayer, userToken)
+      agglomerateGraph <- agglomerateToGraphCache.getOrLoad(
+        (mappingId, agglomerateId, version),
+        _ =>
+          tracingDataStore.editableMappingsAgglomerateToGraph
+            .get(agglomerateGraphKey(mappingId, agglomerateId), Some(version), mayBeEmpty = Some(true))(
+              fromProtoBytes[AgglomerateGraph])
+            .map(_.value)
+      )
+    } yield agglomerateGraph
 
   def getAgglomerateGraphForIdWithFallback(mapping: EditableMappingInfo,
                                            editableMappingId: String,

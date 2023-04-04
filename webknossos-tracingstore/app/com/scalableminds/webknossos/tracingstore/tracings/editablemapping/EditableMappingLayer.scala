@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider

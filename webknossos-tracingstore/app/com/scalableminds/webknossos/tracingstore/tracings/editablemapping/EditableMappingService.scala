@@ -154,7 +154,8 @@ class EditableMappingService @Inject()(
     } yield newId
 
   private def duplicateSegmentToAgglomerate(editableMappingId: String, newId: String): Fox[Unit] = {
-    val iterator = new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsSegmentToAgglomerate, None)
+    val iterator =
+      new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsSegmentToAgglomerate, None)
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {
@@ -167,7 +168,8 @@ class EditableMappingService @Inject()(
   }
 
   private def duplicateAgglomerateToGraph(editableMappingId: String, newId: String): Fox[Unit] = {
-    val iterator = new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsAgglomerateToGraph, None)
+    val iterator =
+      new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsAgglomerateToGraph, None)
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {
@@ -240,9 +242,10 @@ class EditableMappingService @Inject()(
                                                remoteDatastoreClient,
                                                this,
                                                tracingDataStore)
-          _ = logger.info(s"Applying ${pendingUpdates.length} updates, saving as v$desiredVersion")
+
           updated <- updater.applyUpdates(closestMaterializedWithVersion.value, pendingUpdates)
-          _ = logger.info(s"Applying updates took ${Instant.now - before}")
+          _ = logger.debug(
+            s"Applyied ${pendingUpdates.length} updates for editable mapping $editableMappingId, saved as v$desiredVersion, took ${Instant.now - before}")
         } yield updated
     } yield updatedEditableMappingInfo
 

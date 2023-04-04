@@ -6,7 +6,7 @@ import messages from "messages";
 import features from "features";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import LinkButton from "components/link_button";
-import RegistrationForm from "./registration_form";
+import RegistrationFormGeneric from "./registration_form_generic";
 import LoginForm from "./login_form";
 type Props = {
   onLoggedIn: (userJustRegistered: boolean) => unknown;
@@ -38,13 +38,13 @@ export default function AuthenticationModal({
     showLogin();
   };
 
-  // RegistrationFormWKOrg always creates a new organization. If an inviteToken
-  // exists, a normal RegistrationFormGeneric needs to be used.
+  // RegistrationFormWKOrg always creates a new organization. 
+  // If an inviteToken exists, a normal RegistrationFormGeneric needs to be used.
   const registrationForm =
     inviteToken == null && features().isWkorgInstance ? (
       <RegistrationFormWKOrg onRegistered={onRegistered} />
     ) : (
-      <RegistrationForm onRegistered={onRegistered} inviteToken={inviteToken} />
+      <RegistrationFormGeneric onRegistered={onRegistered} inviteToken={inviteToken} />
     );
   return (
     <Modal title={step} onCancel={onCancel} open={isOpen} footer={null} maskClosable={false}>

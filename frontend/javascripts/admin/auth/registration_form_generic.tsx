@@ -23,7 +23,7 @@ type Props = {
   tryAutoLogin?: boolean;
 };
 
-function RegistrationForm(props: Props) {
+function RegistrationFormGeneric(props: Props) {
   const [form] = Form.useForm();
 
   const onFinish = async (formValues: Record<string, any>) => {
@@ -308,4 +308,4 @@ function RegistrationForm(props: Props) {
   );
 }
 
-export default RegistrationForm;
+export default RegistrationFormGeneric;

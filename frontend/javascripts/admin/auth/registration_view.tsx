@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
-import RegistrationForm from "admin/auth/registration_form";
+import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import { APIOrganization } from "types/api_flow_types";
 
 function RegistrationViewGeneric() {
@@ -49,7 +49,7 @@ function RegistrationViewGeneric() {
         >
           You are about to join the organization &ldquo;{organization.displayName}&rdquo;!
         </Card>
-        <RegistrationForm // The key is used to enforce a remount in case the organizationName changes.
+        <RegistrationFormGeneric // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
           key={organization.name}
           targetOrganization={organization}

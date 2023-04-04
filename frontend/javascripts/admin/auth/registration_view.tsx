@@ -118,7 +118,7 @@ function RegistrationViewWkOrg() {
 }
 
 function RegistrationView() {
-  return features().isDemoInstance ? <RegistrationViewWkOrg /> : <RegistrationViewGeneric />;
+  return features().isWkorgInstance ? <RegistrationViewWkOrg /> : <RegistrationViewGeneric />;
 }
 
 export default RegistrationView;

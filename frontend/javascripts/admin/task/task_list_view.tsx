@@ -286,7 +286,7 @@ class TaskListView extends React.PureComponent<Props, State> {
         >
           Tasks
         </h3>
-        {features().isDemoInstance ? (
+        {features().isWkorgInstance ? (
           <>
             <a
               href="https://webknossos.org/services/annotations"

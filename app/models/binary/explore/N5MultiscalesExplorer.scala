@@ -6,25 +6,25 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5._
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 import net.liftweb.util.Helpers.tryo
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
 
   override def name: String = "N5 Multiscales"
 
-  override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
     for {
-      metadataPath <- Fox.successful(remotePath.resolve(N5Metadata.FILENAME_ATTRIBUTES_JSON))
+      metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- parseJsonFromPath[N5Metadata](metadataPath) ?~> s"Failed to read N5 header at $metadataPath"
       layers <- Fox.serialCombined(n5Metadata.multiscales)(layerFromN5MultiscalesItem(_, remotePath, credentialId))
     } yield layers
 
   private def layerFromN5MultiscalesItem(multiscalesItem: N5MultiscalesItem,
-                                         remotePath: Path,
+                                         remotePath: VaultPath,
                                          credentialId: Option[String]): Fox[(N5Layer, Vec3Double)] =
     for {
       voxelSizeNanometers <- extractVoxelSize(multiscalesItem.datasets.map(_.transform))
@@ -33,7 +33,7 @@ class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
       _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
-      name <- guessNameFromPath(remotePath)
+      name = guessNameFromPath(remotePath)
       layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         N5SegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
@@ -96,14 +96,14 @@ class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
     tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.z)))
 
   private def n5MagFromDataset(n5Dataset: N5MultiscalesDataset,
-                               layerPath: Path,
+                               layerPath: VaultPath,
                                voxelSize: Vec3Double,
                                credentialId: Option[String]): Fox[MagWithAttributes] =
     for {
       axisOrder <- extractAxisOrder(n5Dataset.transform.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       mag <- magFromTransform(voxelSize, n5Dataset.transform) ?~> "Could not extract mag from transforms"
-      magPath = layerPath.resolve(n5Dataset.path)
-      headerPath = magPath.resolve(N5Header.FILENAME_ATTRIBUTES_JSON)
+      magPath = layerPath / n5Dataset.path
+      headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON
       n5Header <- parseJsonFromPath[N5Header](headerPath) ?~> s"failed to read n5 header at $headerPath"
       elementClass <- n5Header.elementClass ?~> s"failed to read element class from n5 header at $headerPath"
       boundingBox <- n5Header.boundingBox(axisOrder) ?~> s"failed to read bounding box from n5 header at $headerPath"

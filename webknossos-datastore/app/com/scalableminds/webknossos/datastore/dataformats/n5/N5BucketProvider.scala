@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
@@ -29,7 +29,7 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging wit
 
 }
 
-class N5BucketProvider(layer: N5Layer, val fileSystemServiceOpt: Option[FileSystemService])
+class N5BucketProvider(layer: N5Layer, val dataVaultServiceOpt: Option[DataVaultService])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -42,11 +42,11 @@ class N5BucketProvider(layer: N5Layer, val fileSystemServiceOpt: Option[FileSyst
     n5MagOpt match {
       case None => Fox.empty
       case Some(n5Mag) =>
-        fileSystemServiceOpt match {
-          case Some(fileSystemService: FileSystemService) =>
+        dataVaultServiceOpt match {
+          case Some(dataVaultService: DataVaultService) =>
             for {
               magPath: VaultPath <- if (n5Mag.isRemote) {
-                fileSystemService.remotePathFor(n5Mag)
+                dataVaultService.vaultPathFor(n5Mag)
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
               cubeHandle <- tryo(onError = e => logError(e))(N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex))
                 .map(new N5CubeHandle(_))

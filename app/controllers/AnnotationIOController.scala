@@ -103,9 +103,9 @@ Expects:
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles =
           annotationUploadService.extractFromFiles(attachedFiles, useZipName = true, overwritingDataSetName)
-        val parsedFilesWraped =
+        val parsedFilesWrapped =
           annotationUploadService.wrapOrPrefixTrees(parsedFiles.parseResults, shouldCreateGroupForEachFile)
-        val parseResultsFiltered: List[NmlParseResult] = parsedFilesWraped.filter(_.succeeded)
+        val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
 
         if (parseResultsFiltered.isEmpty) {
           returnError(parsedFiles)
@@ -114,13 +114,15 @@ Expects:
             parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox)
             name = nameForUploaded(parseResultsFiltered.map(_.fileName))
             description = descriptionForNMLs(parseResultsFiltered.map(_.description))
+            wkUrl = wkUrlsForNMLs(parseResultsFiltered.map(_.wkUrl))
             _ <- assertNonEmpty(parseSuccesses)
             skeletonTracings = parseSuccesses.flatMap(_.skeletonTracing)
             // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
             // This is what determines the merging strategy for volume layers
             volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
             dataSet <- findDataSetForUploadedAnnotations(skeletonTracings,
-                                                         volumeLayersGroupedRaw.flatten.map(_.tracing))
+                                                         volumeLayersGroupedRaw.flatten.map(_.tracing),
+                                                         wkUrl)
             volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataSet)
             tracingStoreClient <- tracingStoreService.clientFor(dataSet)
             mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
@@ -199,19 +201,31 @@ Expects:
 
   private def findDataSetForUploadedAnnotations(
       skeletonTracings: List[SkeletonTracing],
-      volumeTracings: List[VolumeTracing])(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[DataSet] =
+      volumeTracings: List[VolumeTracing],
+      wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[DataSet] =
     for {
       dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationNameOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
         organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
-      } ?~> Messages("organization.notFound", organizationNameOpt.getOrElse("")) ~> NOT_FOUND
+      } ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
+               Messages("organization.notFound.wrongHost", organizationNameOpt.getOrElse(""), wkUrl, conf.Http.uri)
+             } else { Messages("organization.notFound", organizationNameOpt.getOrElse("")) }) ~>
+        NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
         dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
       } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
-        "dataSet.noAccess",
-        dataSetName) ~> FORBIDDEN
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
+                                                                                             Messages(
+                                                                                               "dataSet.noAccess.wrongHost",
+                                                                                               dataSetName,
+                                                                                               wkUrl,
+                                                                                               conf.Http.uri)
+                                                                                           } else {
+                                                                                             Messages(
+                                                                                               "dataSet.noAccess",
+                                                                                               dataSetName)
+                                                                                           }) ~> FORBIDDEN
     } yield dataSet
 
   private def nameForUploaded(fileNames: Seq[String]) =
@@ -222,6 +236,9 @@ Expects:
 
   private def descriptionForNMLs(descriptions: Seq[Option[String]]) =
     if (descriptions.size == 1) descriptions.headOption.flatten.getOrElse("") else ""
+
+  private def wkUrlsForNMLs(wkUrls: Seq[Option[String]]) =
+    if (wkUrls.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""
 
   private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(implicit messagesProvider: MessagesProvider) =
     if (zipParseResult.containsFailure) {

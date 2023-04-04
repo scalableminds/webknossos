@@ -41,8 +41,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   scale: Option[Vec3Double],
                   volumeFilename: Option[String],
                   organizationName: String,
-                  datasetName: String,
                   wkUrl: String,
+                  datasetName: String,
                   annotationOwner: Option[User],
                   annotationTask: Option[Task],
                   skipVolumeData: Boolean = false): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>

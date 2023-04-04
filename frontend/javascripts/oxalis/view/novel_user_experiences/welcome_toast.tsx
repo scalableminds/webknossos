@@ -1,10 +1,9 @@
 import React, { useEffect } from "react";
-import { Button, notification, Typography } from "antd";
+import { Button, notification } from "antd";
 import { useSelector } from "react-redux";
 import features from "features";
 import UserLocalStorage from "libs/user_local_storage";
 import { OxalisState } from "oxalis/store";
-import classNames from "classnames";
 
 function showWelcomeToast() {
   notification.open({
@@ -15,7 +14,7 @@ function showWelcomeToast() {
       width: 360,
     },
     icon: <i className="logo" />,
-    message: "Welcome to WEBKNOSSOS!",
+    message: "Welcome to WEBKNOSSOS",
     description: (
       <div>
         <p>

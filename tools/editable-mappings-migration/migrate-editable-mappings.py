@@ -12,7 +12,7 @@ import EditableMapping_pb2
 
 import EditableMappingInfo_pb2
 import SegmentToAgglomerateProto_pb2
-import logging
+import datetime
 
 from timeit import default_timer as timer
 
@@ -22,6 +22,7 @@ MAX_MESSAGE_LENGTH = 1073741824
 def main():
     verbose = False
     doWrite = True
+    print(f"Starting migration script (doWrite={doWrite}) at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     collectionEditableMappings = "editableMappings"
     collectionEditableMappingsInfo = "editableMappingsInfo"
@@ -53,13 +54,12 @@ def main():
             getMultipleVersionsReply = stub.GetMultipleVersions(proto.GetMultipleVersionsRequest(collection=collectionEditableMappings, key=key))
             assertSuccess(getMultipleVersionsReply)
             for version, valueBytes in zip(getMultipleVersionsReply.versions, getMultipleVersionsReply.values):
-                print(f"handling {key} v{version}...")
+                print(f"handling {key} v{version} at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}...")
                 editableMapping = EditableMapping_pb2.EditableMappingProto()
                 editableMapping.ParseFromString(valueBytes)
                 segmentToAgglomerate = editableMapping.segmentToAgglomerate
                 largestAgglomerateId = 0
 
-                t5 = timer()
                 chunks = {}
                 for pair in editableMapping.segmentToAgglomerate:
                     pair_converted = SegmentToAgglomerateProto_pb2.SegmentAgglomeratePair()
@@ -69,8 +69,6 @@ def main():
                     if chunk_id not in chunks:
                         chunks[chunk_id] = SegmentToAgglomerateProto_pb2.SegmentToAgglomerateProto()
                     chunks[chunk_id].segmentToAgglomerate.append(pair_converted)
-                t6 = timer()
-                print(f"grouping chunks {t6 - t5}")
                 for chunk_id, chunk in chunks.items():
                     chunk_key = f"{key}/{chunk_id}"
                     chunkBytes = chunk.SerializeToString()
@@ -81,7 +79,6 @@ def main():
                         assertSuccess(putReply)
                         putCount += 1
 
-                t7 = timer()
                 for agglomerateToGraphPair in editableMapping.agglomerateToGraph:
                     agglomerateId = agglomerateToGraphPair.agglomerateId
                     largestAgglomerateId = max(largestAgglomerateId, agglomerateId)
@@ -94,7 +91,6 @@ def main():
                         putReply = stub.Put(proto.PutRequest(collection=collectionAgglomerateToGraph, key=agglomerateToGraphKey, version=version, value=graphBytes))
                         assertSuccess(putReply)
                         putCount += 1
-                print(f"converting + putting graphs: {timer() - t7}")
 
                 editableMappingInfo = EditableMappingInfo_pb2.EditableMappingInfo()
                 editableMappingInfo.baseMappingName = editableMapping.baseMappingName

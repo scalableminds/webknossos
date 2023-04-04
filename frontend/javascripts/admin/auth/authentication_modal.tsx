@@ -38,7 +38,7 @@ export default function AuthenticationModal({
     showLogin();
   };
 
-  // RegistrationFormWKOrg always creates a new organization. 
+  // RegistrationFormWKOrg always creates a new organization.
   // If an inviteToken exists, a normal RegistrationFormGeneric needs to be used.
   const registrationForm =
     inviteToken == null && features().isWkorgInstance ? (

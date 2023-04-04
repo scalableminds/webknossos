@@ -109,7 +109,7 @@ dataVault.setup.failed=Failed to set up remote file system
 dataVault.getPath.failed=Failed to get remote path
 
 
-dataSource.notFound=Datasource {0}/{1} not found on datastore server
+dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.

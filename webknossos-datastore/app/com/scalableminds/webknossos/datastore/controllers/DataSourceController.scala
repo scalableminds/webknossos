@@ -68,8 +68,7 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
       for {
         _ <- dataSourceService.checkInbox(verbose = true)
-        map: Map[String, Seq[String]] = Map(("hi", Seq("you")))
-      } yield Redirect("hi", map, 303)
+      } yield Ok
     }
   }
 

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -81,7 +82,7 @@ class EditableMappingService @Inject()(
     with LazyLogging
     with ProtoGeometryImplicits {
 
-  val defaultSegmentToAgglomerateChunkSize: Int = 16 * 1024 // 256 KiB chunks (2 8-byte numbers per element)
+  val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
 
   private def generateId: String = UUID.randomUUID.toString
 
@@ -224,7 +225,7 @@ class EditableMappingService @Inject()(
                           remoteFallbackLayer: RemoteFallbackLayer,
                           userToken: Option[String]): Fox[EditableMappingInfo] =
     for {
-      _ <- Fox.successful(logger.info("cache miss, applyPendingUpdates"))
+      before <- Fox.successful(Instant.now)
       closestMaterializedWithVersion <- getClosestMaterialized(editableMappingId, desiredVersion)
       updatedEditableMappingInfo: EditableMappingInfo <- if (desiredVersion == closestMaterializedWithVersion.version)
         Fox.successful(closestMaterializedWithVersion.value)
@@ -241,6 +242,7 @@ class EditableMappingService @Inject()(
                                                tracingDataStore)
           _ = logger.info(s"Applying ${pendingUpdates.length} updates, saving as v$desiredVersion")
           updated <- updater.applyUpdates(closestMaterializedWithVersion.value, pendingUpdates)
+          _ = logger.info(s"Applying updates took ${Instant.now - before}")
         } yield updated
     } yield updatedEditableMappingInfo
 
@@ -360,6 +362,7 @@ class EditableMappingService @Inject()(
                                          agglomerateId: Long,
                                          userToken: Option[String]): Fox[Array[Byte]] =
     for {
+      // called here to ensure updates are applied
       editableMapping <- getInfo(editableMappingId, version = None, remoteFallbackLayer, userToken)
       agglomerateGraphBox <- getAgglomerateGraphForId(editableMappingId, agglomerateId, remoteFallbackLayer, userToken).futureBox
       skeletonBytes <- agglomerateGraphBox match {
@@ -507,6 +510,7 @@ class EditableMappingService @Inject()(
                                userToken: Option[String],
                                requestedVersion: Option[Long] = None): Fox[AgglomerateGraph] =
     for {
+      // called here to ensure updates are applied
       (_, version) <- getInfoAndActualVersion(mappingId, requestedVersion, remoteFallbackLayer, userToken)
       agglomerateGraph <- agglomerateToGraphCache.getOrLoad(
         (mappingId, agglomerateId, version),
@@ -547,6 +551,7 @@ class EditableMappingService @Inject()(
     for {
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
+      // called here to ensure updates are applied
       mapping <- getInfo(parameters.editableMappingId, version = None, remoteFallbackLayer, userToken)
       agglomerateGraph <- getAgglomerateGraphForIdWithFallback(mapping,
                                                                parameters.editableMappingId,

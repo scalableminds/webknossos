@@ -29,10 +29,10 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
     val bucket: BucketPosition = readInstruction.bucket
     for {
       editableMappingId <- Fox.successful(layer.name)
-      i1 = Instant.now
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
+      // called here to ensure updates are applied
       (editableMapping, editableMappingVersion) <- layer.editableMappingService.getInfoAndActualVersion(
         editableMappingId,
         requestedVersion = None,
@@ -46,31 +46,21 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         applyAgglomerate = None,
         version = None
       )
-      i2 = Instant.now
       (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
                                                                                            List(dataRequest),
                                                                                            layer.token)
       _ <- bool2Fox(indices.isEmpty)
-      i3 = Instant.now
-      _ = logger.info(s"get fallback data took ${i3 - i2}")
       unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
-      i4 = Instant.now
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      i5 = Instant.now
-      _ = logger.info(s"collectSegmentIds took ${i5 - i4}")
       relevantMapping <- layer.editableMappingService.generateCombinedMappingSubset(segmentIds,
                                                                                     editableMapping,
                                                                                     editableMappingVersion,
                                                                                     editableMappingId,
                                                                                     remoteFallbackLayer,
                                                                                     layer.token)
-      i6 = Instant.now
-      _ = logger.info(s"generateCombinedMappingSubset took ${i6 - i5}")
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       layer.elementClass)
-      i7 = Instant.now
-      _ = logger.info(s"bucket loading total took ${i7 - i1}")
     } yield mappedData
   }
 }

@@ -41,7 +41,7 @@ def main():
 
     putCount = 0
 
-    segmentToAgglomerateChunkSize = 16 * 1024
+    segmentToAgglomerateChunkSize = 64 * 1024 # max 1MB chunks (two 8-byte numbers per element)
 
     lastKey = None
     while True:

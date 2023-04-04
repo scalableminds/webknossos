@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -22,13 +23,10 @@ object AccessResourceType extends ExtendedEnumeration {
   val datasource, tracing, webknossos, jobExport = Value
 }
 
-case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
-  def toCacheKey(token: Option[String]) = s"$token#$resourceId#$resourceType#$mode"
-}
-
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
 object UserAccessAnswer { implicit val jsonFormat: OFormat[UserAccessAnswer] = Json.format[UserAccessAnswer] }
 
+case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value)
 object UserAccessRequest {
   implicit val jsonFormat: OFormat[UserAccessRequest] = Json.format[UserAccessRequest]
 
@@ -57,9 +55,10 @@ object UserAccessRequest {
 
 trait AccessTokenService {
   val remoteWebKnossosClient: RemoteWebKnossosClient
-  val cache: SyncCacheApi
 
-  val AccessExpiration: FiniteDuration = 2.minutes
+  private val AccessExpiration: FiniteDuration = 2 minutes
+  private lazy val accessAnswersCache: AlfuFoxCache[UserAccessRequest, UserAccessAnswer] =
+    AlfuFoxCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
   def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
       implicit ec: ExecutionContext): Fox[Result] =
@@ -67,22 +66,19 @@ trait AccessTokenService {
       Future.successful(block)
     }
 
-  def validateAccess[A](accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(
+  def validateAccess(accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(
       implicit ec: ExecutionContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
 
-  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String]): Fox[UserAccessAnswer] = {
-    val key = accessRequest.toCacheKey(token)
-    cache.getOrElseUpdate(key, AccessExpiration) {
-      remoteWebKnossosClient.requestUserAccess(token, accessRequest)
-    }
-  }
+  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
+      implicit ec: ExecutionContext): Fox[UserAccessAnswer] =
+    accessAnswersCache.getOrLoad(accessRequest, key => remoteWebKnossosClient.requestUserAccess(token, key))
 
-  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer,
-                                              block: => Future[Result]): Future[Result] =
+  private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
+                                           block: => Future[Result]): Future[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block
@@ -93,6 +89,5 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient,
-                                            val cache: SyncCacheApi)
+class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient)
     extends AccessTokenService

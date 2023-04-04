@@ -90,6 +90,7 @@ class TSRemoteDatastoreClient @Inject()(
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId")
         .addQueryStringOptional("token", userToken)
+        .silent
         .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
     } yield result
 

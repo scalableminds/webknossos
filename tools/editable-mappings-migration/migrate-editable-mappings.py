@@ -12,6 +12,7 @@ import EditableMapping_pb2
 
 import EditableMappingInfo_pb2
 import SegmentToAgglomerateProto_pb2
+import logging
 import datetime
 
 from timeit import default_timer as timer
@@ -51,15 +52,24 @@ def main():
         if len(listKeysReply.keys) == 0:
             break
         for key in listKeysReply.keys:
-            getMultipleVersionsReply = stub.GetMultipleVersions(proto.GetMultipleVersionsRequest(collection=collectionEditableMappings, key=key))
-            assertSuccess(getMultipleVersionsReply)
-            for version, valueBytes in zip(getMultipleVersionsReply.versions, getMultipleVersionsReply.values):
-                print(f"handling {key} v{version} at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}...")
+            print(f"listing versions for {key}...")
+            # TODO instead of list versions, do get without version, then count down by 5 to 0?
+            listVersionsReply  = stub.ListVersions(proto.ListVersionsRequest(collection=collectionEditableMappings, key=key))
+            assertSuccess(listVersionsReply)
+            versions = list(listVersionsReply.versions)
+            for version in versions:
+                print(f"Getting {key} v{version} (there are {len(versions)} versions total)...")
+                getReply = stub.Get(proto.GetRequest(collection=collectionEditableMappings, key=key, version=version))
+                assertSuccess(getReply)
+                assert(version == getReply.actualVersion, f"got a different version from requested one for key {key} v{version} (got {getReply.actualVersion})")
+                print(f"For {key} got version {getReply.actualVersion} ({len(getReply.value)} bytes) at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}...")
+
                 editableMapping = EditableMapping_pb2.EditableMappingProto()
-                editableMapping.ParseFromString(valueBytes)
+                editableMapping.ParseFromString(getReply.value)
                 segmentToAgglomerate = editableMapping.segmentToAgglomerate
                 largestAgglomerateId = 0
 
+                t5 = timer()
                 chunks = {}
                 for pair in editableMapping.segmentToAgglomerate:
                     pair_converted = SegmentToAgglomerateProto_pb2.SegmentAgglomeratePair()
@@ -69,16 +79,20 @@ def main():
                     if chunk_id not in chunks:
                         chunks[chunk_id] = SegmentToAgglomerateProto_pb2.SegmentToAgglomerateProto()
                     chunks[chunk_id].segmentToAgglomerate.append(pair_converted)
+                t6 = timer()
+                if verbose:
+                    print(f"grouping chunks {t6 - t5}")
                 for chunk_id, chunk in chunks.items():
                     chunk_key = f"{key}/{chunk_id}"
                     chunkBytes = chunk.SerializeToString()
                     if verbose:
-                        print(f"segment to agglomerate chunk with {len(chunk)} pairs, to be saved at {chunk_key} v{version}")
+                        print(f"segment to agglomerate chunk with {len(chunk.segmentToAgglomerate)} pairs, to be saved at {chunk_key} v{version}")
                     if doWrite:
                         putReply = stub.Put(proto.PutRequest(collection=collectionSegmentToAgglomerate, key=chunk_key, version=version, value=chunkBytes))
                         assertSuccess(putReply)
                         putCount += 1
 
+                t7 = timer()
                 for agglomerateToGraphPair in editableMapping.agglomerateToGraph:
                     agglomerateId = agglomerateToGraphPair.agglomerateId
                     largestAgglomerateId = max(largestAgglomerateId, agglomerateId)
@@ -91,6 +105,9 @@ def main():
                         putReply = stub.Put(proto.PutRequest(collection=collectionAgglomerateToGraph, key=agglomerateToGraphKey, version=version, value=graphBytes))
                         assertSuccess(putReply)
                         putCount += 1
+
+                if verbose:
+                    print(f"converting + putting graphs: {timer() - t7}")
 
                 editableMappingInfo = EditableMappingInfo_pb2.EditableMappingInfo()
                 editableMappingInfo.baseMappingName = editableMapping.baseMappingName

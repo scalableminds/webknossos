@@ -99,7 +99,7 @@ class EditableMappingService @Inject()(
   private lazy val agglomerateToGraphCache: AlfuFoxCache[(String, Long, Long), AgglomerateGraph] =
     AlfuFoxCache(maxEntries = 50)
 
-  def currentVersion(editableMappingId: String): Fox[Long] =
+  def newestMaterializableVersion(editableMappingId: String): Fox[Long] =
     tracingDataStore.editableMappingsInfo.getVersion(editableMappingId,
                                                      mayBeEmpty = Some(true),
                                                      emptyFallback = Some(0L))
@@ -154,7 +154,7 @@ class EditableMappingService @Inject()(
     } yield newId
 
   private def duplicateSegmentToAgglomerate(editableMappingId: String, newId: String): Fox[Unit] = {
-    val iterator = new VersionedIterator(editableMappingId, tracingDataStore.editableMappingsSegmentToAgglomerate, None)
+    val iterator = new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsSegmentToAgglomerate, None)
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {
@@ -167,7 +167,7 @@ class EditableMappingService @Inject()(
   }
 
   private def duplicateAgglomerateToGraph(editableMappingId: String, newId: String): Fox[Unit] = {
-    val iterator = new VersionedIterator(editableMappingId, tracingDataStore.editableMappingsAgglomerateToGraph, None)
+    val iterator = new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsAgglomerateToGraph, None)
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {

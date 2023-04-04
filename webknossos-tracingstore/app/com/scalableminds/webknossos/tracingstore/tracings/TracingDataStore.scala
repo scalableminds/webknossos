@@ -48,6 +48,8 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
     volumeData.shutdown()
     volumeUpdates.shutdown()
     editableMappingsInfo.shutdown()
+    editableMappingsAgglomerateToGraph.shutdown()
+    editableMappingsSegmentToAgglomerate.shutdown()
     editableMappingUpdates.shutdown()
     ()
   }

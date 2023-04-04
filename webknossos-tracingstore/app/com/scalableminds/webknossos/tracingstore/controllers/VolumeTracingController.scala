@@ -343,7 +343,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
           _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
-          currentVersion <- editableMappingService.currentVersion(mappingName)
+          currentVersion <- editableMappingService.newestMaterializableVersion(mappingName)
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update request must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"

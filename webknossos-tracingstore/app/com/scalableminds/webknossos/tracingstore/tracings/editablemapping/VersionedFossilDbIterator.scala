@@ -7,7 +7,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   VersionedKeyValuePair
 }
 
-class VersionedIterator(prefix: String, fossilDbClient: FossilDBClient, version: Option[Long] = None)
+import scala.annotation.tailrec
+
+class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, version: Option[Long] = None)
     extends Iterator[VersionedKeyValuePair[Array[Byte]]]
     with KeyValueStoreImplicits
     with FoxImplicits {
@@ -26,7 +28,8 @@ class VersionedIterator(prefix: String, fossilDbClient: FossilDBClient, version:
     currentBatchIterator
   }
 
-  def getNextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] =
+  @tailrec
+  private def getNextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] =
     if (currentBatchIterator.hasNext) {
       val keyValuePair = currentBatchIterator.next
       currentStartKey = keyValuePair.key

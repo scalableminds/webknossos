@@ -5,7 +5,6 @@ import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import play.api.cache.SyncCacheApi
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden

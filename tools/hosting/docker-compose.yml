@@ -94,6 +94,8 @@ services:
       - ./persistent/nginx/certs:/etc/nginx/certs
       - ./persistent/nginx/vhost.d:/etc/nginx/vhost.d
       - ./persistent/nginx/html:/usr/share/nginx/html
+    labels:
+      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
 
   nginx-letsencrypt:
     image: nginxproxy/acme-companion

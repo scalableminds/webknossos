@@ -12,12 +12,15 @@ import EditableMapping_pb2
 
 import EditableMappingInfo_pb2
 import SegmentToAgglomerateProto_pb2
+import logging
+
+from timeit import default_timer as timer
 
 MAX_MESSAGE_LENGTH = 1073741824
 
 
 def main():
-    verbose = True
+    verbose = False
     doWrite = True
 
     collectionEditableMappings = "editableMappings"
@@ -26,6 +29,8 @@ def main():
     collectionAgglomerateToGraph = "editableMappingsAgglomerateToGraph"
 
     fossilHost = "localhost:7155"
+
+    startTime = timer()
 
     channel = grpc.insecure_channel(fossilHost, options=[("grpc.max_send_message_length", MAX_MESSAGE_LENGTH), ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH)])
     stub = proto_rpc.FossilDBStub(channel)
@@ -54,19 +59,21 @@ def main():
                 segmentToAgglomerate = editableMapping.segmentToAgglomerate
                 largestAgglomerateId = 0
 
-                chunks = defaultdict(list)
+                t5 = timer()
+                chunks = {}
                 for pair in editableMapping.segmentToAgglomerate:
+                    pair_converted = SegmentToAgglomerateProto_pb2.SegmentAgglomeratePair()
+                    pair_converted.segmentId = pair.segmentId
+                    pair_converted.agglomerateId = pair.agglomerateId
                     chunk_id = pair.segmentId // segmentToAgglomerateChunkSize
-                    chunks[chunk_id].append(pair)
+                    if chunk_id not in chunks:
+                        chunks[chunk_id] = SegmentToAgglomerateProto_pb2.SegmentToAgglomerateProto()
+                    chunks[chunk_id].segmentToAgglomerate.append(pair_converted)
+                t6 = timer()
+                print(f"grouping chunks {t6 - t5}")
                 for chunk_id, chunk in chunks.items():
                     chunk_key = f"{key}/{chunk_id}"
-                    chunk_wrapped = SegmentToAgglomerateProto_pb2.SegmentToAgglomerateProto()
-                    for pair in chunk:
-                        pair_converted = SegmentToAgglomerateProto_pb2.SegmentAgglomeratePair()
-                        pair_converted.segmentId = pair.segmentId
-                        pair_converted.agglomerateId = pair.agglomerateId
-                        chunk_wrapped.segmentToAgglomerate.append(pair_converted)
-                    chunkBytes = chunk_wrapped.SerializeToString()
+                    chunkBytes = chunk.SerializeToString()
                     if verbose:
                         print(f"segment to agglomerate chunk with {len(chunk)} pairs, to be saved at {chunk_key} v{version}")
                     if doWrite:
@@ -74,6 +81,7 @@ def main():
                         assertSuccess(putReply)
                         putCount += 1
 
+                t7 = timer()
                 for agglomerateToGraphPair in editableMapping.agglomerateToGraph:
                     agglomerateId = agglomerateToGraphPair.agglomerateId
                     largestAgglomerateId = max(largestAgglomerateId, agglomerateId)
@@ -86,6 +94,7 @@ def main():
                         putReply = stub.Put(proto.PutRequest(collection=collectionAgglomerateToGraph, key=agglomerateToGraphKey, version=version, value=graphBytes))
                         assertSuccess(putReply)
                         putCount += 1
+                print(f"converting + putting graphs: {timer() - t7}")
 
                 editableMappingInfo = EditableMappingInfo_pb2.EditableMappingInfo()
                 editableMappingInfo.baseMappingName = editableMapping.baseMappingName
@@ -100,10 +109,9 @@ def main():
                     assertSuccess(putReply)
                     putCount += 1
 
-
         lastKey = listKeysReply.keys[-1]
 
-    print("Done. total put count:", putCount)
+    print(f"Done after {timer() - startTime}. Total put count:", putCount)
 
 def testHealth(stub, label):
     try:

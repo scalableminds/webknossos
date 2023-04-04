@@ -204,7 +204,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
       bodyStyle={{
         padding: 0,
       }}
-      className="spotlight-item-card"
+      className="publication-item-card"
       bordered={false}
     >
       <div

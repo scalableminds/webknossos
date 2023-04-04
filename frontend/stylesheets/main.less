@@ -14,7 +14,7 @@
 @import "_variables.less";
 @import "_utils.less";
 @import "_dashboard.less";
-@import "_spotlight.less";
+@import "_publications.less";
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_status_bar.less";
 @import "trace_view/_user_settings_view.less";
@@ -27,6 +27,7 @@
 @import "_admin.less";
 @import "_google-charts-overwrites.less";
 @import "flex_layout_overwrites.less";
+@import "_drawings.less";
 
 @font-face {
   font-family: "Nunito";
@@ -641,7 +642,7 @@ i.without-icon-margin,
   .login-content {
     background-color: white;
     width: 600px;
-    padding: 100px; 
+    padding: 80px; 
 
     h3 {
       color: @black // always enforce dark text color to prevent dark mode bugs
@@ -650,6 +651,24 @@ i.without-icon-margin,
     @media @smartphones {
       padding: 20px;
       margin: 20px;
+    }
+
+    &:before {
+      width: 260px;
+      height: 170px;
+      display: block;
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      content: " ";
+      transform: translate(-14%, -70%);
+      background-image: url(/assets/images/drawings/login.svg);
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+
+    .ant-checkbox + span {
+      color: @black;
     }
   }
 }

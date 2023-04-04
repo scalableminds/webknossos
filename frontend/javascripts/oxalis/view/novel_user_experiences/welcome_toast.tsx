@@ -52,10 +52,10 @@ export default function WelcomeToast() {
     if (!features().isWkorgInstance) {
       return;
     }
-    const hasSeenToast = null; //UserLocalStorage.getItem(
-    // "novelUserExperienceInfos.hasSeenWelcomeToast",
-    // false,
-    // );
+    const hasSeenToast = UserLocalStorage.getItem(
+      "novelUserExperienceInfos.hasSeenWelcomeToast",
+      false,
+    );
 
     if (activeUser == null && hasSeenToast == null) {
       // Only if the user is not logged in and has never seen the toast before, we show it here.

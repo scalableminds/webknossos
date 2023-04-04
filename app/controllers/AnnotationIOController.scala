@@ -43,7 +43,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -62,6 +62,7 @@ class AnnotationIOController @Inject()(
     temporaryFileCreator: TemporaryFileCreator,
     annotationService: AnnotationService,
     analyticsService: AnalyticsService,
+    conf: WkConf,
     sil: Silhouette[WkEnv],
     provider: AnnotationInformationProvider,
     annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
@@ -370,6 +371,7 @@ Expects:
                                           dataSet.scale,
                                           None,
                                           organizationName,
+                                          conf.Http.uri,
                                           dataSet.name,
                                           Some(user),
                                           taskOpt)
@@ -395,15 +397,18 @@ Expects:
         }
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-        nmlStream = nmlWriter.toNmlStream(fetchedSkeletonLayers ::: fetchedVolumeLayers,
-                                          Some(annotation),
-                                          dataset.scale,
-                                          None,
-                                          organizationName,
-                                          dataset.name,
-                                          Some(user),
-                                          taskOpt,
-                                          skipVolumeData)
+        nmlStream = nmlWriter.toNmlStream(
+          fetchedSkeletonLayers ::: fetchedVolumeLayers,
+          Some(annotation),
+          dataset.scale,
+          None,
+          organizationName,
+          conf.Http.uri,
+          dataset.name,
+          Some(user),
+          taskOpt,
+          skipVolumeData
+        )
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
         _ <- zipper.addFileFromEnumerator(name + ".nml", nmlStream)

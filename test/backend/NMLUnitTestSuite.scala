@@ -29,7 +29,7 @@ class NMLUnitTestSuite extends PlaySpec {
                              AnnotationLayer.defaultSkeletonLayerName,
                              Left(skeletonTracing),
                              None))
-    val nmlEnumarator =
+    val nmlEnumerator =
       new NmlWriter().toNmlStream(annotationLayers,
                                   None,
                                   None,
@@ -39,7 +39,7 @@ class NMLUnitTestSuite extends PlaySpec {
                                   "dummy_dataset",
                                   None,
                                   None)
-    val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
+    val arrayFuture = Iteratee.flatten(nmlEnumerator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
     NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)
   }

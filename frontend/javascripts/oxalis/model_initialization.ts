@@ -592,7 +592,7 @@ function determineDefaultState(
   }
 
   let rotation = undefined;
-  if (viewMode != "orthogonal") {
+  if (viewMode !== "orthogonal") {
     rotation = datasetConfiguration.rotation;
 
     if (someTracing != null) {

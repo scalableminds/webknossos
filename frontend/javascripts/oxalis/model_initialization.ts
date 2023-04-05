@@ -558,6 +558,7 @@ function determineDefaultState(
     rotation: urlStateRotation,
     activeNode: urlStateActiveNode,
     stateByLayer: urlStateByLayer,
+    mode,
     ...rest
   } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
@@ -590,14 +591,17 @@ function determineDefaultState(
     zoomStep = urlStateZoomStep;
   }
 
-  let { rotation } = datasetConfiguration;
+  let rotation = undefined;
+  if (mode != "orthogonal") {
+    rotation = datasetConfiguration.rotation;
 
-  if (someTracing != null) {
-    rotation = Utils.point3ToVector3(someTracing.editRotation);
-  }
+    if (someTracing != null) {
+      rotation = Utils.point3ToVector3(someTracing.editRotation);
+    }
 
-  if (urlStateRotation != null) {
-    rotation = urlStateRotation;
+    if (urlStateRotation != null) {
+      rotation = urlStateRotation;
+    }
   }
 
   const stateByLayer = urlStateByLayer ?? {};
@@ -628,6 +632,7 @@ function determineDefaultState(
     rotation,
     activeNode,
     stateByLayer,
+    mode,
     ...rest,
   };
 }

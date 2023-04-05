@@ -146,6 +146,7 @@ nml.edge.invalid=Invalid edge {0} {1}
 nml.tree.id.invalid=Invalid tree id {0}
 nml.tree.elements.invalid=Invalid {0} in tree {1}
 nml.treegroup.id.invalid=Invalid tree group id {0}
+nml.segmentGroup.id.invalid=Invalid segment group id {0}
 nml.boundingbox.id.invalid=Invalid user bounding box id {0}
 
 project.name.alreadyTaken=The name “{0}” is already being used for a different project. Please choose a different name.

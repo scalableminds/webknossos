@@ -155,7 +155,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       prevProps.activeGroupId !== this.props.activeGroupId;
 
     if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
-      await this.setState({
+      this.setState({
         searchFocusOffset: 1,
       });
       this.setState({

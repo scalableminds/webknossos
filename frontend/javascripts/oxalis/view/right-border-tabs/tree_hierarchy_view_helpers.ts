@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { Tree, TreeMap, TreeGroup } from "oxalis/store";
+import type { Tree, TreeMap, TreeGroup, SegmentMap, Segment } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
 export const TYPE_GROUP = "GROUP";
 export const TYPE_TREE = "TREE";
@@ -7,6 +7,9 @@ const GroupTypeEnum = {
   [TYPE_GROUP]: TYPE_GROUP,
   [TYPE_TREE]: TYPE_TREE,
 };
+
+type GroupableItem = { groupId: number | null | undefined };
+
 type TreeOrGroup = keyof typeof GroupTypeEnum;
 export type TreeNode = {
   name: string;
@@ -37,20 +40,18 @@ function makeTreeNode(
   type: TreeOrGroup,
   optionalProperties: Partial<TreeNode>,
 ): TreeNode {
-  return _.extend(
-    {
-      id,
-      type,
-      name,
-      timestamp: 0,
-      isChecked: false,
-      isIndeterminate: false,
-      containsTrees: false,
-      children: [],
-      expanded: true,
-    },
-    optionalProperties,
-  );
+  return {
+    id,
+    type,
+    name,
+    timestamp: 0,
+    isChecked: false,
+    isIndeterminate: false,
+    containsTrees: false,
+    children: [],
+    expanded: true,
+    ...optionalProperties,
+  };
 }
 
 function makeTreeNodeFromTree(tree: Tree): TreeNode {
@@ -200,9 +201,26 @@ export function findTreeNode(
     }
   }
 }
-export function createGroupToTreesMap(trees: TreeMap): Record<number, Array<Tree>> {
+
+export function createGroupToTreesMap<T extends GroupableItem>(trees: {
+  [x: number]: T;
+}): Record<number, Array<T>> {
   return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
+
+export function createGroupToSegmentsMap(segments: SegmentMap): Record<number, Segment[]> {
+  const groupToSegments: Record<number, Segment[]> = {};
+  for (const segment of segments.values()) {
+    const { groupId } = segment;
+    const keyId = groupId || MISSING_GROUP_ID;
+
+    groupToSegments[keyId] ||= [];
+    groupToSegments[keyId].push(segment);
+  }
+
+  return groupToSegments;
+}
+
 export function getGroupByIdWithSubgroups(
   treeGroups: Array<TreeGroup>,
   groupId: number | undefined,

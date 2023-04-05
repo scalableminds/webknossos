@@ -4,6 +4,7 @@ import type {
   CommentType,
   TreeGroup,
   RecommendedConfiguration,
+  SegmentGroup,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -739,6 +740,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;
+  segmentGroups: Array<SegmentGroup> | null | undefined;
   largestSegmentId: number;
   // `resolutions` will be undefined for legacy annotations
   // which were created before the multi-resolution capabilities

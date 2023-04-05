@@ -1,6 +1,22 @@
-import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
+import {
+  Button,
+  ConfigProvider,
+  List,
+  Tooltip,
+  Select,
+  Popover,
+  Empty,
+  TreeProps,
+  Tree,
+} from "antd";
 import type { Dispatch } from "redux";
-import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  LoadingOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+  PlusOutlined,
+  DownOutlined,
+} from "@ant-design/icons";
 import { connect, useSelector } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -48,6 +64,7 @@ import type {
   IsosurfaceInformation,
   OxalisState,
   Segment,
+  SegmentGroup,
   SegmentMap,
 } from "oxalis/store";
 import Store from "oxalis/store";
@@ -58,6 +75,12 @@ import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import { DataNode } from "antd/lib/tree";
+import {
+  createGroupToSegmentsMap,
+  createGroupToTreesMap,
+  MISSING_GROUP_ID,
+} from "../tree_hierarchy_view_helpers";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -79,6 +102,7 @@ type StateProps = {
   hasVolumeTracing: boolean;
   hoveredSegmentId: number | null | undefined;
   segments: SegmentMap | null | undefined;
+  segmentGroups: Array<SegmentGroup>;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   allowUpdate: boolean;
   organization: string;
@@ -99,6 +123,9 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     state.temporaryConfiguration.activeMappingByLayer,
     visibleSegmentationLayer?.name,
   );
+
+  const { segments, segmentGroups } = getVisibleSegments(state);
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     isosurfaces:
@@ -112,7 +139,8 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     flycam: state.flycam,
     hasVolumeTracing: state.tracing.volumes.length > 0,
     hoveredSegmentId: state.temporaryConfiguration.hoveredSegmentId,
-    segments: getVisibleSegments(state),
+    segments,
+    segmentGroups,
     visibleSegmentationLayer,
     allowUpdate: state.tracing.restrictions.allowUpdate,
     organization: state.dataset.owningOrganization,
@@ -181,6 +209,7 @@ type State = {
   selectedSegmentId: number | null | undefined;
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentId: number | null | undefined;
+  groupTree: TreeNode[];
 };
 const getSortedSegments = memoizeOne((segments: SegmentMap | null | undefined) =>
   _.sortBy(segments ? Array.from(segments.values()) : [], "id"),
@@ -226,6 +255,7 @@ class SegmentsView extends React.Component<Props, State> {
     selectedSegmentId: null,
     activeMeshJobId: null,
     activeDropdownSegmentId: null,
+    groupTree: [],
   };
 
   componentDidMount() {
@@ -249,6 +279,41 @@ class SegmentsView extends React.Component<Props, State> {
   componentWillUnmount() {
     if (this.intervalID != null) {
       clearTimeout(this.intervalID);
+    }
+  }
+
+  static getDerivedStateFromProps(nextProps: Props, prevState: State) {
+    // if (prevState.prevProps == null || didTreeDataChange(prevState.prevProps, nextProps)) {
+    // Insert the trees into the corresponding groups and create a
+    // groupTree object that can be rendered using a SortableTree component
+    const { segments } = nextProps;
+    if (segments != null) {
+      const groupToTreesMap = createGroupToSegmentsMap(segments);
+      const rootGroup = {
+        name: "Root",
+        groupId: MISSING_GROUP_ID,
+        key: MISSING_GROUP_ID,
+        children: nextProps.segmentGroups,
+      };
+
+      // const expandedGroupIds = _.cloneDeep(prevState.expandedGroupIds);
+      const expandedGroupIds = {};
+
+      const generatedGroupTree = constructTreeData(
+        [rootGroup],
+        groupToTreesMap,
+        expandedGroupIds,
+        "id", // nextProps.sortBy,
+      );
+      return {
+        groupTree: generatedGroupTree,
+        expandedGroupIds,
+        prevProps: nextProps,
+      };
+      // } else {
+      //   return {
+      //     prevProps: nextProps,
+      //   };
     }
   }
 
@@ -647,6 +712,20 @@ class SegmentsView extends React.Component<Props, State> {
   );
 
   render() {
+    // const treeData: DataNode[] = [
+    //   {
+    //     title: "parent 1",
+    //     key: "0-0",
+    //     children: [
+    //       {
+
+    //   },
+    // ];
+
+    const onSelect: TreeProps["onSelect"] = (selectedKeys, info) => {
+      console.log("selected", selectedKeys, info);
+    };
+
     return (
       <div id={segmentsTabId} className="padded-tab-content">
         <DomVisibilityObserver targetId={segmentsTabId}>
@@ -656,6 +735,66 @@ class SegmentsView extends React.Component<Props, State> {
             const allSegments = getSortedSegments(this.props.segments);
             const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
             const mapId = getMapIdFn(visibleSegmentationLayer);
+
+            const titleRender = (treeItem: TreeNode) => {
+              if (treeItem.type === "segment") {
+                const segment = treeItem;
+                return (
+                  <SegmentListItem
+                    key={segment.id}
+                    mapId={mapId}
+                    segment={segment}
+                    centeredSegmentId={centeredSegmentId}
+                    selectedSegmentId={this.state.selectedSegmentId}
+                    activeDropdownSegmentId={this.state.activeDropdownSegmentId}
+                    onSelectSegment={this.onSelectSegment}
+                    handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
+                    isosurface={this.props.isosurfaces[segment.id]}
+                    isJSONMappingEnabled={this.props.isJSONMappingEnabled}
+                    mappingInfo={this.props.mappingInfo}
+                    isHoveredSegmentId={this.props.hoveredSegmentId === segment.id}
+                    activeCellId={this.props.activeCellId}
+                    setHoveredSegmentId={this.props.setHoveredSegmentId}
+                    allowUpdate={this.props.allowUpdate}
+                    updateSegment={this.props.updateSegment}
+                    removeSegment={this.props.removeSegment}
+                    visibleSegmentationLayer={this.props.visibleSegmentationLayer}
+                    loadAdHocMesh={this.props.loadAdHocMesh}
+                    loadPrecomputedMesh={this.props.loadPrecomputedMesh}
+                    setActiveCell={this.props.setActiveCell}
+                    setPosition={this.props.setPosition}
+                    currentMeshFile={this.props.currentMeshFile}
+                  />
+                );
+              } else {
+                return treeItem.name || treeItem.id;
+              }
+            };
+
+            const onDrop = ({
+              node,
+              dragNode,
+              dropToGap,
+            }: {
+              node: Segment | null;
+              dragNode: Segment;
+              dropToGap: boolean;
+            }) => {
+              // Node is the node onto which dragNode is dropped
+              if (node == null) {
+                return;
+              }
+
+              function moveIfAllowed(sourceId: number, targetId: number) {}
+
+              if (dropToGap && node.parent) {
+                // dragNode was dragged *next to* node. Move into parent.
+                moveIfAllowed(dragNode.id, node.parent);
+              } else {
+                // dragNode was dragged *into* node
+                moveIfAllowed(dragNode.id, node.id);
+              }
+            };
 
             if (!visibleSegmentationLayer) {
               return (
@@ -680,45 +819,23 @@ class SegmentsView extends React.Component<Props, State> {
                     }`}
                   />
                 ) : (
-                  <List
-                    size="small"
-                    split={false}
+                  <Tree
+                    defaultExpandAll
+                    className="segments-tree"
+                    blockNode
+                    draggable={{ icon: false }}
+                    showLine
+                    switcherIcon={<DownOutlined />}
+                    defaultExpandedKeys={["0-0-0"]}
+                    onSelect={onSelect}
+                    treeData={this.state.groupTree}
+                    titleRender={titleRender}
                     style={{
                       marginTop: 12,
                       flex: "1 1 auto",
                       overflow: "auto",
                     }}
-                  >
-                    {allSegments.map((segment) => (
-                      <SegmentListItem
-                        key={segment.id}
-                        mapId={mapId}
-                        segment={segment}
-                        centeredSegmentId={centeredSegmentId}
-                        selectedSegmentId={this.state.selectedSegmentId}
-                        activeDropdownSegmentId={this.state.activeDropdownSegmentId}
-                        onSelectSegment={this.onSelectSegment}
-                        handleSegmentDropdownMenuVisibility={
-                          this.handleSegmentDropdownMenuVisibility
-                        }
-                        isosurface={this.props.isosurfaces[segment.id]}
-                        isJSONMappingEnabled={this.props.isJSONMappingEnabled}
-                        mappingInfo={this.props.mappingInfo}
-                        isHoveredSegmentId={this.props.hoveredSegmentId === segment.id}
-                        activeCellId={this.props.activeCellId}
-                        setHoveredSegmentId={this.props.setHoveredSegmentId}
-                        allowUpdate={this.props.allowUpdate}
-                        updateSegment={this.props.updateSegment}
-                        removeSegment={this.props.removeSegment}
-                        visibleSegmentationLayer={this.props.visibleSegmentationLayer}
-                        loadAdHocMesh={this.props.loadAdHocMesh}
-                        loadPrecomputedMesh={this.props.loadPrecomputedMesh}
-                        setActiveCell={this.props.setActiveCell}
-                        setPosition={this.props.setPosition}
-                        currentMeshFile={this.props.currentMeshFile}
-                      />
-                    ))}
-                  </List>
+                  />
                 )}
               </React.Fragment>
             );
@@ -731,3 +848,74 @@ class SegmentsView extends React.Component<Props, State> {
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
 export default connector(SegmentsView);
+
+type SegmentOrGroup = "segment" | "group";
+
+export type TreeNode = {
+  name: string | null | undefined;
+  id: number;
+  key: number;
+  // timestamp: number;
+  type: SegmentOrGroup;
+  children: Array<TreeNode>;
+};
+
+function constructTreeData(
+  groups: { name: string; groupId: number; children: SegmentGroup[] }[],
+  groupToTreesMap: Record<number, Segment[]>,
+  expandedGroupIds: {},
+  arg3: string,
+): TreeNode[] {
+  // return {
+  //   key: "string",
+  //   children: [],
+  // };
+
+  // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
+  return groups.map((group) => {
+    const { groupId } = group;
+    const segments = groupToTreesMap[groupId];
+    const treeNode: TreeNode = {
+      ...group,
+      key: groupId,
+      id: groupId,
+      type: "group",
+      // Ensure that groups are always at the top when sorting by timestamp
+      // timestamp: 0,
+      // treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(segments);
+      children: constructTreeData(
+        group.children,
+        groupToTreesMap,
+        expandedGroupIds,
+        "sortBy",
+      ).concat(
+        segments.map(
+          (segment): TreeNode => ({
+            ...segment,
+            type: "segment",
+            key: segment.id,
+            id: segment.id,
+            children: [],
+          }),
+        ),
+      ),
+    };
+
+    // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
+
+    // treeNode.isChecked = _.every(
+    //   treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
+    //   (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
+    // );
+    // treeNode.isIndeterminate = treeNode.isChecked
+    //   ? false
+    //   : _.some(
+    //       treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
+    //       (groupOrTree) =>
+    //         (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
+    //     );
+    // treeNode.containsTrees =
+    //   trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
+    return treeNode;
+  });
+}

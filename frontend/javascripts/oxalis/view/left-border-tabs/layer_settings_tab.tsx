@@ -1084,7 +1084,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             <Button
               onClick={this.addSkeletonAnnotationLayer}
               style={{
-                width: 235,
                 marginTop: 10,
               }}
             >

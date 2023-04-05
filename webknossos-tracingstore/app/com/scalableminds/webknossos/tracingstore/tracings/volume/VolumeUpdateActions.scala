@@ -1,9 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.util.Base64
-
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
@@ -17,6 +16,9 @@ trait VolumeUpdateActionHelper {
                             transformSegment: Segment => Segment): Seq[Segment] =
     tracing.segments.map((segment: Segment) =>
       if (segment.segmentId == segmentId) transformSegment(segment) else segment)
+
+  protected def convertSegmentGroup(aSegmentGroup: UpdateActionSegmentGroup): SegmentGroup =
+    SegmentGroup(aSegmentGroup.name, aSegmentGroup.groupId, aSegmentGroup.children.map(convertSegmentGroup))
 
 }
 
@@ -334,6 +336,26 @@ object CompactVolumeUpdateAction {
   }
 }
 
+case class UpdateSegmentGroupsVolumeAction(treeGroups: List[UpdateActionSegmentGroup],
+                                           actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[String] = None,
+                                           info: Option[String] = None)
+    extends UpdateAction.VolumeUpdateAction
+    with VolumeUpdateActionHelper {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withSegmentGroups(treeGroups.map(convertSegmentGroup))
+
+  override def addTimestamp(timestamp: Long): UpdateAction[VolumeTracing] =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): UpdateAction[VolumeTracing] =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction[VolumeTracing] = this.copy(info = info)
+}
+
+object UpdateSegmentGroupsVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentGroupsVolumeAction] = Json.format[UpdateSegmentGroupsVolumeAction]
+}
+
 object VolumeUpdateAction {
 
   implicit object volumeUpdateActionFormat extends Format[VolumeUpdateAction] {
@@ -379,6 +401,8 @@ object VolumeUpdateAction {
       case s: DeleteSegmentVolumeAction =>
         Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
+      case s: UpdateSegmentGroupsVolumeAction =>
+        Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
     }
   }
 

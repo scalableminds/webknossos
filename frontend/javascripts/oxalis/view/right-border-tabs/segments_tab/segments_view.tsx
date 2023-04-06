@@ -642,7 +642,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMeshesHeader = () => (
-    <div>
+    <>
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
         <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
           <Select
@@ -707,7 +707,7 @@ class SegmentsView extends React.Component<Props, State> {
           <SettingOutlined />
         </Popover>
       </Tooltip>
-    </div>
+    </>
   );
 
   render() {
@@ -806,49 +806,53 @@ class SegmentsView extends React.Component<Props, State> {
 
             return (
               <React.Fragment>
-                {this.getMeshesHeader()}
+                <div style={{ flex: 0 }}>{this.getMeshesHeader()}</div>
 
-                {allSegments.length === 0 ? (
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description={`There are no segments yet. ${
-                      this.props.allowUpdate && this.props.hasVolumeTracing
-                        ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
-                        : "Select or click existing segments to add them to this list."
-                    }`}
-                  />
-                ) : (
-                  <AutoSizer>
-                    {({ height, width }) => (
-                      <div
-                        style={{
-                          height,
-                          width,
-                        }}
-                      >
-                        <Tree
-                          defaultExpandAll
-                          className="segments-tree"
-                          blockNode
-                          // Passing an explicit height here, makes the tree virtualized
-                          height={height}
-                          draggable={{ icon: false }}
-                          showLine
-                          switcherIcon={<DownOutlined />}
-                          defaultExpandedKeys={["0-0-0"]}
-                          onSelect={onSelect}
-                          treeData={this.state.groupTree}
-                          titleRender={titleRender}
+                {/* todo: scrollbar is not native */}
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  {allSegments.length === 0 ? (
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description={`There are no segments yet. ${
+                        this.props.allowUpdate && this.props.hasVolumeTracing
+                          ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
+                          : "Select or click existing segments to add them to this list."
+                      }`}
+                    />
+                  ) : (
+                    <AutoSizer>
+                      {({ height, width }) => (
+                        <div
                           style={{
-                            marginTop: 12,
-                            flex: "1 1 auto",
-                            overflow: "auto",
+                            height,
+                            width,
                           }}
-                        />
-                      </div>
-                    )}
-                  </AutoSizer>
-                )}
+                        >
+                          <Tree
+                            // virtual={false}
+                            defaultExpandAll
+                            className="segments-tree"
+                            blockNode
+                            // Passing an explicit height here, makes the tree virtualized
+                            height={height}
+                            draggable={{ icon: false }}
+                            showLine
+                            switcherIcon={<DownOutlined />}
+                            defaultExpandedKeys={["0-0-0"]}
+                            onSelect={onSelect}
+                            treeData={this.state.groupTree}
+                            titleRender={titleRender}
+                            style={{
+                              marginTop: 12,
+                              flex: "1 1 auto",
+                              overflow: "auto",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </AutoSizer>
+                  )}
+                </div>
               </React.Fragment>
             );
           }}

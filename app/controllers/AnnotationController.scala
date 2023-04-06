@@ -237,11 +237,12 @@ class AnnotationController @Inject()(
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
+        layer <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
           "annotation.layer.notFound",
           layerName)
         _ <- bool2Fox(annotation.annotationLayers.length != 1) ?~> "annotation.deleteLayer.onlyLayer"
-        _ = logger.info(s"Deleting annotation layer $layerName for annotation $id")
+        _ = logger.info(
+          s"Deleting annotation layer $layerName (tracing id ${layer.tracingId}, typ ${layer.typ}) for annotation $id")
         _ <- annotationService.deleteAnnotationLayer(annotation, layerName)
       } yield Ok
     }

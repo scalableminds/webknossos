@@ -2066,6 +2066,8 @@ class DataApi {
           color: rgbColor,
         },
         effectiveLayerName,
+        undefined,
+        true,
       ),
     );
   }

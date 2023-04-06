@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.04.1...HEAD)
 
 ### Added
-- WEBKNOSSOS screenshots now include a logo in the lower left corner. Users with a paid license can disable this feature. [#6910](https://github.com/scalableminds/webknossos/pull/6910)
+- WEBKNOSSOS screenshots now include a logo in the lower left corner. Users with a paid license can disable this feature in the viewport options in the settings tab on the left side of the screen. [#6910](https://github.com/scalableminds/webknossos/pull/6910)
 - Added rendering precomputed meshes with level of detail depending on the zoom of the 3D viewport. This feature only works with version 3 mesh files. [#6909](https://github.com/scalableminds/webknossos/pull/6909)
 - Segments can now be removed from the segment list via the context menu. [#6944](https://github.com/scalableminds/webknossos/pull/6944)
 - Editing the meta data of segments (e.g., the name) is now undoable. [#6944](https://github.com/scalableminds/webknossos/pull/6944)

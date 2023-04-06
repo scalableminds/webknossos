@@ -15,7 +15,7 @@ import { PRIMARY_COLOR } from "oxalis/constants";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import { APIOrganization, APIUser } from "types/api_flow_types";
 import { TooltipPlacement } from "antd/lib/tooltip";
-import { SwitchSettin, type SwitchSettingProps } from "oxalis/view/components/setting_input_views";
+import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 
@@ -138,34 +138,37 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
   );
 };
 
-// TODO!!!!!!!
 export const PricingEnforcedSwitchSetting: React.FunctionComponent<
-  RequiredPricingProps & SwitchSettingProps & {defaultValue: boolean}
-> = ({  requiredPricingPlan, ...buttonProps, defaultValue, label }) => {
+  RequiredPricingProps & {
+    label: React.ReactNode;
+    onChange: (value: boolean) => void;
+    value: boolean;
+    defaultValue: boolean;
+  }
+> = ({ requiredPricingPlan, onChange, value, defaultValue, label }) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
-  if (isFeatureAllowed)
-    return (
-      <SwitchSetting
-        label={
-          label
-        }
-        value={this.props.userConfiguration.displayScalebars}
-        onChange={this.onChangeUser.displayScalebars}
-      />
-    );
+  if (isFeatureAllowed) return <SwitchSetting label={label} value={value} onChange={onChange} />;
 
   return (
     <PricingEnforcedPopover
       requiredPricingPlan={requiredPricingPlan}
       activeUser={activeUser}
       activeOrganization={activeOrganization}
-      placement="bottom"
+      placement="top"
     >
-      <Switch checked={defaultValue} disabled />
-      </Switch>
-        <LockOutlined style={{ marginLeft: 5 }} />
+      {/* The react element <></> is needed as a wrapper as otherwise 
+      the PricingEnforcedPopover will not be rendered. */}
+      <>
+        <SwitchSetting
+          label={label}
+          value={defaultValue}
+          onChange={() => {}}
+          disabled
+          postSwitchIcon={<LockOutlined style={{ marginLeft: 5 }} />}
+        />
+      </>
     </PricingEnforcedPopover>
   );
 };

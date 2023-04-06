@@ -98,14 +98,15 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
 }
 
 export async function downloadScreenshot() {
-  const { dataset, flycam, temporaryConfiguration } = Store.getState();
+  const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
+  const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
   const baseName = `${datasetName}__${x}_${y}_${z}`;
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
-  const logo = await getScreenshotLogoImage();
+  const logo = renderWatermark ? await getScreenshotLogoImage() : null;
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
@@ -116,23 +117,26 @@ export async function downloadScreenshot() {
     const buffer = renderToTexture(planeId, null, null, false, clearColor);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
-    const drawImageIntoCanvasCallback = (ctx: CanvasRenderingContext2D) => {
-      const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
-      const scalebarDistanceToTopBorder =
-        ctx.canvas.height +
-        OUTER_CSS_BORDER -
-        constants.SCALEBAR_OFFSET -
-        constants.SCALEBAR_HEIGHT;
-      const logoHeight = constants.SCALEBAR_HEIGHT;
-      const logoWidth = (logoHeight / logo.height) * logo.width;
-      ctx.drawImage(
-        logo,
-        scalebarDistanceToRightBorder,
-        scalebarDistanceToTopBorder,
-        logoWidth,
-        logoHeight,
-      );
-    };
+    const drawImageIntoCanvasCallback =
+      renderWatermark && logo != null
+        ? (ctx: CanvasRenderingContext2D) => {
+            const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
+            const scalebarDistanceToTopBorder =
+              ctx.canvas.height +
+              OUTER_CSS_BORDER -
+              constants.SCALEBAR_OFFSET -
+              constants.SCALEBAR_HEIGHT;
+            const logoHeight = constants.SCALEBAR_HEIGHT;
+            const logoWidth = (logoHeight / logo.height) * logo.width;
+            ctx.drawImage(
+              logo,
+              scalebarDistanceToRightBorder,
+              scalebarDistanceToTopBorder,
+              logoWidth,
+              logoHeight,
+            );
+          }
+        : null;
     const canvas =
       inputCatcherElement != null
         ? await html2canvas(inputCatcherElement as HTMLElement, {
@@ -159,5 +163,7 @@ export async function downloadScreenshot() {
       saveAs(blob, `${baseName}__${planeDescriptor}.png`);
     }
   }
-  logo.remove();
+  if (logo) {
+    logo.remove();
+  }
 }

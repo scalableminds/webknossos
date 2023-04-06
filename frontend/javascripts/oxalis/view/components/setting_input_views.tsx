@@ -198,16 +198,19 @@ export type SwitchSettingProps = {
   tooltipText: string | null | undefined;
   loading: boolean;
   labelSpan?: number | null;
+  postSwitchIcon: React.ReactNode | null | undefined;
 };
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
     disabled: false,
     tooltipText: null,
     loading: false,
+    postSwitchIcon: null,
   };
 
   render() {
-    const { label, onChange, value, disabled, tooltipText, loading, labelSpan } = this.props;
+    const { label, onChange, value, disabled, tooltipText, loading, labelSpan, postSwitchIcon } =
+      this.props;
     const leftSpanValue = labelSpan || SETTING_LEFT_SPAN;
     const rightSpanValue = labelSpan != null ? ANTD_TOTAL_SPAN - leftSpanValue : SETTING_RIGHT_SPAN;
     return (
@@ -220,7 +223,9 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
             {/* This div is necessary for the tooltip to be displayed */}
             <div
               style={{
-                display: "inline-block",
+                display: "inline-flex",
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
               <Switch
@@ -230,6 +235,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 disabled={disabled}
                 loading={loading}
               />
+              {postSwitchIcon}
             </div>
           </Tooltip>
           {this.props.children}

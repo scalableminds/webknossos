@@ -99,6 +99,11 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
+import { enforceActiveOrganization } from "./model/accessors/organization_accessors";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -177,8 +182,10 @@ export async function initialize(
     dataset,
     initialDatasetSettings,
   );
+  const enforcedInitialUserSettings =
+    enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
   initializeSettings(
-    initialUserSettings,
+    enforcedInitialUserSettings,
     annotationSpecificDatasetSettings,
     initialDatasetSettings,
   );
@@ -774,6 +781,19 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
     }
   }
+}
+
+function enforcePricingRestrictionsOnUserConfiguration(
+  userConfiguration: UserConfiguration,
+): UserConfiguration {
+  const activeOrganization = enforceActiveOrganization(Store.getState().activeOrganization);
+  if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
+    return {
+      ...userConfiguration,
+      renderWatermark: true,
+    };
+  }
+  return userConfiguration;
 }
 
 function applyAnnotationSpecificViewConfiguration(

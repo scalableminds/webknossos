@@ -778,7 +778,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { skeletonTracing } = this.props;
 
     if (!skeletonTracing) {
-      return null;
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            "This annotation does not contain a skeleton layer. You can add one in the Layers tab in the left sidebar."
+          }
+        />
+      );
     }
 
     const { showSkeletons } = skeletonTracing;

@@ -139,6 +139,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       creationTime: action.timestamp,
       name: null,
       color: null,
+      groupId: null,
       ...oldSegment,
       ...segment,
       somePosition,

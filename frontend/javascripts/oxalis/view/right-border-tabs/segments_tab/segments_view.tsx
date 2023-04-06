@@ -1,3 +1,4 @@
+import { AutoSizer } from "react-virtualized";
 import {
   Button,
   ConfigProvider,
@@ -76,11 +77,7 @@ import {
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { DataNode } from "antd/lib/tree";
-import {
-  createGroupToSegmentsMap,
-  createGroupToTreesMap,
-  MISSING_GROUP_ID,
-} from "../tree_hierarchy_view_helpers";
+import { createGroupToSegmentsMap, MISSING_GROUP_ID } from "../tree_hierarchy_view_helpers";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -819,23 +816,36 @@ class SegmentsView extends React.Component<Props, State> {
                     }`}
                   />
                 ) : (
-                  <Tree
-                    defaultExpandAll
-                    className="segments-tree"
-                    blockNode
-                    draggable={{ icon: false }}
-                    showLine
-                    switcherIcon={<DownOutlined />}
-                    defaultExpandedKeys={["0-0-0"]}
-                    onSelect={onSelect}
-                    treeData={this.state.groupTree}
-                    titleRender={titleRender}
-                    style={{
-                      marginTop: 12,
-                      flex: "1 1 auto",
-                      overflow: "auto",
-                    }}
-                  />
+                  <AutoSizer>
+                    {({ height, width }) => (
+                      <div
+                        style={{
+                          height,
+                          width,
+                        }}
+                      >
+                        <Tree
+                          defaultExpandAll
+                          className="segments-tree"
+                          blockNode
+                          // Passing an explicit height here, makes the tree virtualized
+                          height={height}
+                          draggable={{ icon: false }}
+                          showLine
+                          switcherIcon={<DownOutlined />}
+                          defaultExpandedKeys={["0-0-0"]}
+                          onSelect={onSelect}
+                          treeData={this.state.groupTree}
+                          titleRender={titleRender}
+                          style={{
+                            marginTop: 12,
+                            flex: "1 1 auto",
+                            overflow: "auto",
+                          }}
+                        />
+                      </div>
+                    )}
+                  </AutoSizer>
                 )}
               </React.Fragment>
             );
@@ -851,14 +861,19 @@ export default connector(SegmentsView);
 
 type SegmentOrGroup = "segment" | "group";
 
-export type TreeNode = {
-  name: string | null | undefined;
-  id: number;
-  key: number;
-  // timestamp: number;
-  type: SegmentOrGroup;
-  children: Array<TreeNode>;
-};
+export type TreeNode =
+  | (Segment & {
+      type: "segment";
+      key: number;
+    })
+  | {
+      type: "group";
+      name: string | null | undefined;
+      id: number;
+      key: number;
+      // timestamp: number;
+      children: Array<TreeNode>;
+    };
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
@@ -895,7 +910,6 @@ function constructTreeData(
             type: "segment",
             key: segment.id,
             id: segment.id,
-            children: [],
           }),
         ),
       ),

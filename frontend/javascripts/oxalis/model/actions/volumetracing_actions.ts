@@ -1,7 +1,7 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { Segment, SegmentMap } from "oxalis/store";
+import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
@@ -36,6 +36,7 @@ export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAct
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
+export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
@@ -63,6 +64,7 @@ export type VolumeTracingAction =
   | SetSegmentsAction
   | UpdateSegmentAction
   | RemoveSegmentAction
+  | SetSegmentGroupsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -191,6 +193,13 @@ export const removeSegmentAction = (
     segmentId,
     layerName,
     timestamp,
+  } as const);
+
+export const setSegmentGroupsAction = (segmentGroups: Array<SegmentGroup>, layerName: string) =>
+  ({
+    type: "SET_SEGMENT_GROUPS",
+    segmentGroups,
+    layerName,
   } as const);
 
 export const interpolateSegmentationLayerAction = () =>

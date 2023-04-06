@@ -1,6 +1,12 @@
 import update from "immutability-helper";
 import { ContourModeEnum } from "oxalis/constants";
-import type { EditableMapping, OxalisState, SegmentMap, VolumeTracing } from "oxalis/store";
+import type {
+  EditableMapping,
+  OxalisState,
+  SegmentGroup,
+  SegmentMap,
+  VolumeTracing,
+} from "oxalis/store";
 import type {
   VolumeTracingAction,
   UpdateSegmentAction,
@@ -105,6 +111,23 @@ function updateSegments(
   return updateKey2(state, "localSegmentationData", updateInfo.layerName, {
     segments: newSegmentMap,
   });
+}
+
+function setSegmentGroups(state: OxalisState, layerName: string, newSegmentGroups: SegmentGroup[]) {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type === "NOOP") {
+    return state;
+  }
+
+  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
+    return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
+      segmentGroups: newSegmentGroups,
+    });
+  }
+
+  // Don't update groups for non-tracings
+  return state;
 }
 
 function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
@@ -245,6 +268,13 @@ function VolumeTracingReducer(
 
     case "REMOVE_SEGMENT": {
       return handleRemoveSegment(state, action);
+    }
+
+    case "SET_SEGMENT_GROUPS": {
+      const { segmentGroups } = action;
+      // todo: in case a group is deleted which has still segments:
+      // const updatedTrees = removeMissingGroupsFromTrees(skeletonTracing, treeGroups);
+      return setSegmentGroups(state, action.layerName, segmentGroups);
     }
 
     default: // pass

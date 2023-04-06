@@ -9,6 +9,8 @@ import {
   Empty,
   TreeProps,
   Tree,
+  Dropdown,
+  MenuProps,
 } from "antd";
 import type { Dispatch } from "redux";
 import {
@@ -17,6 +19,7 @@ import {
   SettingOutlined,
   PlusOutlined,
   DownOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { connect, useSelector } from "react-redux";
 import React from "react";
@@ -54,6 +57,7 @@ import {
   updateSegmentAction,
   setActiveCellAction,
   removeSegmentAction,
+  setSegmentGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -77,7 +81,12 @@ import {
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { DataNode } from "antd/lib/tree";
-import { createGroupToSegmentsMap, MISSING_GROUP_ID } from "../tree_hierarchy_view_helpers";
+import {
+  callDeep,
+  createGroupToSegmentsMap,
+  MISSING_GROUP_ID,
+} from "../tree_hierarchy_view_helpers";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -198,6 +207,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   removeSegment(segmentId: number, layerName: string) {
     dispatch(removeSegmentAction(segmentId, layerName));
   },
+
+  onUpdateSegmentGroups(segmentGroups: SegmentGroup[], layerName: string) {
+    dispatch(setSegmentGroupsAction(segmentGroups, layerName));
+  },
 });
 
 type DispatchProps = ReturnType<typeof mapDispatchToProps>;
@@ -228,11 +241,11 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
   return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
 
-function _getMapIdFn(visibleSegmentationLayer: DataLayer | null | undefined) {
-  const mapId =
-    visibleSegmentationLayer != null
-      ? (id: number) => visibleSegmentationLayer.cube.mapId(id)
-      : (id: number) => id;
+function _getMapIdFn(visibleSegmentationLayer: APISegmentationLayer | null | undefined) {
+  const dataLayer =
+    visibleSegmentationLayer != null ? Model.getLayerByName(visibleSegmentationLayer.name) : null;
+
+  const mapId = dataLayer != null ? (id: number) => dataLayer.cube.mapId(id) : (id: number) => id;
   return mapId;
 }
 
@@ -245,6 +258,81 @@ function renderEmptyMeshFileSelect() {
       description="No mesh file found. Click the + icon to compute a mesh file."
     />
   );
+}
+
+type SegmentOrGroup = "segment" | "group";
+
+export type TreeNode =
+  | (Segment & {
+      type: "segment";
+      key: string;
+    })
+  | {
+      type: "group";
+      name: string | null | undefined;
+      id: number;
+      key: string;
+      // timestamp: number;
+      children: Array<TreeNode>;
+    };
+
+function constructTreeData(
+  groups: { name: string; groupId: number; children: SegmentGroup[] }[],
+  groupToTreesMap: Record<number, Segment[]>,
+  expandedGroupIds: {},
+  arg3: string,
+): TreeNode[] {
+  // return {
+  //   key: "string",
+  //   children: [],
+  // };
+
+  // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
+  return groups.map((group) => {
+    const { groupId } = group;
+    const segments = groupToTreesMap[groupId] || [];
+    const treeNode: TreeNode = {
+      ...group,
+      key: `group-${groupId}`,
+      id: groupId,
+      type: "group",
+      // Ensure that groups are always at the top when sorting by timestamp
+      // timestamp: 0,
+      // treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(segments);
+      children: constructTreeData(
+        group.children,
+        groupToTreesMap,
+        expandedGroupIds,
+        "sortBy",
+      ).concat(
+        segments.map(
+          (segment): TreeNode => ({
+            ...segment,
+            type: "segment",
+            key: `segment-${segment.id}`,
+            id: segment.id,
+          }),
+        ),
+      ),
+    };
+
+    // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
+
+    // treeNode.isChecked = _.every(
+    //   treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
+    //   (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
+    // );
+    // treeNode.isIndeterminate = treeNode.isChecked
+    //   ? false
+    //   : _.some(
+    //       treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
+    //       (groupOrTree) =>
+    //         (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
+    //     );
+    // treeNode.containsTrees =
+    //   trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
+    return treeNode;
+  });
 }
 
 class SegmentsView extends React.Component<Props, State> {
@@ -285,8 +373,12 @@ class SegmentsView extends React.Component<Props, State> {
     // if (prevState.prevProps == null || didTreeDataChange(prevState.prevProps, nextProps)) {
     // Insert the trees into the corresponding groups and create a
     // groupTree object that can be rendered using a SortableTree component
-    const { segments } = nextProps;
-    if (segments != null && prevState.prevProps?.segments != segments) {
+    const { segments, segmentGroups } = nextProps;
+    if (
+      segments != null &&
+      (prevState.prevProps?.segments != segments ||
+        prevState.prevProps?.segmentGroups != segmentGroups)
+    ) {
       const groupToTreesMap = createGroupToSegmentsMap(segments);
       const rootGroup = {
         name: "Root",
@@ -731,9 +823,17 @@ class SegmentsView extends React.Component<Props, State> {
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;
             const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
-            const allSegments = getSortedSegments(this.props.segments);
-            const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
-            const mapId = getMapIdFn(visibleSegmentationLayer);
+            const allSegments = this.props.segments;
+            const mapId = getMapIdFn(this.props.visibleSegmentationLayer);
+
+            if (!this.props.visibleSegmentationLayer) {
+              return (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="No segmentation layer visible."
+                />
+              );
+            }
 
             const titleRender = (treeItem: TreeNode) => {
               if (treeItem.type === "segment") {
@@ -766,7 +866,58 @@ class SegmentsView extends React.Component<Props, State> {
                   />
                 );
               } else {
-                return treeItem.name || treeItem.id;
+                // The root group must not be removed or renamed
+                const { id, name } = treeItem;
+                const isEditingDisabled = !this.props.allowUpdate;
+
+                const createMenu: MenuProps = {
+                  items: [
+                    {
+                      key: "create",
+                      onClick: () => this.createGroup(id),
+                      disabled: isEditingDisabled,
+                      icon: <PlusOutlined />,
+                      label: "Create new group",
+                    },
+                    {
+                      key: "delete",
+                      disabled: isEditingDisabled,
+                      onClick: () => this.deleteGroup(id),
+                      icon: <DeleteOutlined />,
+                      label: "Delete group",
+                    },
+                  ],
+                };
+
+                // Make sure the displayed name is not empty
+                const displayableName = name?.trim() || "<no name>";
+                return (
+                  <div>
+                    <Dropdown
+                      menu={createMenu}
+                      placement="bottom"
+                      // AutoDestroy is used to remove the menu from DOM and keep up the performance.
+                      // destroyPopupOnHide should also be an option according to the docs, but
+                      // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+                      autoDestroy
+                      trigger={["contextMenu"]}
+                    >
+                      <span>
+                        <span
+                          data-id={id}
+                          style={{
+                            marginLeft: 9,
+                          }}
+                        >
+                          {displayableName}
+                        </span>
+                      </span>
+                    </Dropdown>
+                  </div>
+                );
+
+                // return treeItem.name || treeItem.id;
               }
             };
 
@@ -795,22 +946,13 @@ class SegmentsView extends React.Component<Props, State> {
               }
             };
 
-            if (!visibleSegmentationLayer) {
-              return (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="No segmentation layer visible."
-                />
-              );
-            }
-
             return (
               <React.Fragment>
                 <div style={{ flex: 0 }}>{this.getMeshesHeader()}</div>
 
                 {/* todo: scrollbar is not native */}
                 <div style={{ flex: 1, overflow: "hidden" }}>
-                  {allSegments.length === 0 ? (
+                  {allSegments == null || allSegments.size() === 0 ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
                       description={`There are no segments yet. ${
@@ -860,82 +1002,32 @@ class SegmentsView extends React.Component<Props, State> {
       </div>
     );
   }
+  deleteGroup(id: number): void {
+    throw new Error("Method not implemented.");
+  }
+  createGroup(groupId: number): void {
+    if (!this.props.visibleSegmentationLayer) {
+      return;
+    }
+    const newSegmentGroups = _.cloneDeep(this.props.segmentGroups);
+    const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
+    const newGroup = {
+      name: `Group ${newGroupId}`,
+      groupId: newGroupId,
+      children: [],
+    };
+
+    if (groupId === MISSING_GROUP_ID) {
+      newSegmentGroups.push(newGroup);
+    } else {
+      callDeep(newSegmentGroups, groupId, (item) => {
+        item.children.push(newGroup);
+      });
+    }
+
+    this.props.onUpdateSegmentGroups(newSegmentGroups, this.props.visibleSegmentationLayer.name);
+  }
 }
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
 export default connector(SegmentsView);
-
-type SegmentOrGroup = "segment" | "group";
-
-export type TreeNode =
-  | (Segment & {
-      type: "segment";
-      key: number;
-    })
-  | {
-      type: "group";
-      name: string | null | undefined;
-      id: number;
-      key: number;
-      // timestamp: number;
-      children: Array<TreeNode>;
-    };
-
-function constructTreeData(
-  groups: { name: string; groupId: number; children: SegmentGroup[] }[],
-  groupToTreesMap: Record<number, Segment[]>,
-  expandedGroupIds: {},
-  arg3: string,
-): TreeNode[] {
-  // return {
-  //   key: "string",
-  //   children: [],
-  // };
-
-  // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
-  return groups.map((group) => {
-    const { groupId } = group;
-    const segments = groupToTreesMap[groupId];
-    const treeNode: TreeNode = {
-      ...group,
-      key: groupId,
-      id: groupId,
-      type: "group",
-      // Ensure that groups are always at the top when sorting by timestamp
-      // timestamp: 0,
-      // treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(segments);
-      children: constructTreeData(
-        group.children,
-        groupToTreesMap,
-        expandedGroupIds,
-        "sortBy",
-      ).concat(
-        segments.map(
-          (segment): TreeNode => ({
-            ...segment,
-            type: "segment",
-            key: segment.id,
-            id: segment.id,
-          }),
-        ),
-      ),
-    };
-
-    // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
-
-    // treeNode.isChecked = _.every(
-    //   treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-    //   (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
-    // );
-    // treeNode.isIndeterminate = treeNode.isChecked
-    //   ? false
-    //   : _.some(
-    //       treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-    //       (groupOrTree) =>
-    //         (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
-    //     );
-    // treeNode.containsTrees =
-    //   trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
-    return treeNode;
-  });
-}

@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.04.0...23.04.1)
 
 ### Fixed
-- Fixed incorrect initial tab when clicking "Show Annotations" for a user in the user list. Also, the datasets tab was removed from that page as it was the same as the datasets table from the main dashboard. [#6957](https://github.com/scalableminds/webknossos/pull/6957)
+- Fixed missing data during rendering in annotations in which the oblique or flight mode were used before the release of 23.04.0. [#6967](https://github.com/scalableminds/webknossos/pull/6967)
 
 ## [23.04.0](https://github.com/scalableminds/webknossos/releases/tag/23.04.0) - 2023-03-27
 [Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...23.04.0)

@@ -1,10 +1,11 @@
 import update from "immutability-helper";
 import { ContourModeEnum } from "oxalis/constants";
-import type { EditableMapping, OxalisState, VolumeTracing } from "oxalis/store";
+import type { EditableMapping, OxalisState, SegmentMap, VolumeTracing } from "oxalis/store";
 import type {
   VolumeTracingAction,
   UpdateSegmentAction,
   SetSegmentsAction,
+  RemoveSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
@@ -53,9 +54,7 @@ function getSegmentUpdateInfo(
   state: OxalisState,
   layerName: string | null | undefined,
 ): SegmentUpdateInfo {
-  // If the the action is referring to a volume tracing, only update
-  // the given state if handleVolumeTracing is true.
-  // Returns [shouldHandleUpdate, layerName]
+  // Returns an object describing how to update a segment in the specified layer.
   const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
 
   if (!layer) {
@@ -78,29 +77,12 @@ function getSegmentUpdateInfo(
   }
 }
 
-function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
-  const { segments, layerName } = action;
+function updateSegments(
+  state: OxalisState,
+  layerName: string,
+  mapFn: (segments: SegmentMap) => SegmentMap,
+) {
   const updateInfo = getSegmentUpdateInfo(state, layerName);
-
-  if (updateInfo.type === "NOOP") {
-    return state;
-  }
-
-  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
-      segments,
-    });
-  }
-
-  // Update localSegmentationData
-  return updateKey2(state, "localSegmentationData", updateInfo.layerName, {
-    segments,
-  });
-}
-
-function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
-  const { segmentId, segment, layerName: _layerName } = action;
-  const updateInfo = getSegmentUpdateInfo(state, _layerName);
 
   if (updateInfo.type === "NOOP") {
     return state;
@@ -110,33 +92,8 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     updateInfo.type === "UPDATE_VOLUME_TRACING"
       ? updateInfo.volumeTracing
       : state.localSegmentationData[updateInfo.layerName];
-  const oldSegment = segments.getNullable(segmentId);
-  let somePosition;
 
-  if (segment.somePosition) {
-    somePosition = Utils.floor3(segment.somePosition);
-  } else if (oldSegment != null) {
-    somePosition = oldSegment.somePosition;
-  } else {
-    // UPDATE_SEGMENT was called for a non-existing segment without providing
-    // a position. This is necessary to define custom colors for segments
-    // which are listed in a JSON mapping. The action will store the segment
-    // without a position.
-  }
-
-  const newSegment = {
-    // If oldSegment exists, its creationTime will be
-    // used by ...oldSegment
-    creationTime: action.timestamp,
-    name: null,
-    color: null,
-    ...oldSegment,
-    ...segment,
-    somePosition,
-    id: segmentId,
-  };
-
-  const newSegmentMap = segments.set(segmentId, newSegment);
+  const newSegmentMap = mapFn(segments);
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
     return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
@@ -147,6 +104,49 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   // Update localSegmentationData
   return updateKey2(state, "localSegmentationData", updateInfo.layerName, {
     segments: newSegmentMap,
+  });
+}
+
+function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
+  const { segments, layerName } = action;
+  return updateSegments(state, layerName, (_oldSegments) => segments);
+}
+
+function handleRemoveSegment(state: OxalisState, action: RemoveSegmentAction) {
+  return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
+}
+
+function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
+  return updateSegments(state, action.layerName, (segments) => {
+    const { segmentId, segment } = action;
+    const oldSegment = segments.getNullable(segmentId);
+
+    let somePosition;
+    if (segment.somePosition) {
+      somePosition = Utils.floor3(segment.somePosition);
+    } else if (oldSegment != null) {
+      somePosition = oldSegment.somePosition;
+    } else {
+      // UPDATE_SEGMENT was called for a non-existing segment without providing
+      // a position. This is necessary to define custom colors for segments
+      // which are listed in a JSON mapping. The action will store the segment
+      // without a position.
+    }
+
+    const newSegment = {
+      // If oldSegment exists, its creationTime will be
+      // used by ...oldSegment
+      creationTime: action.timestamp,
+      name: null,
+      color: null,
+      ...oldSegment,
+      ...segment,
+      somePosition,
+      id: segmentId,
+    };
+
+    const newSegmentMap = segments.set(segmentId, newSegment);
+    return newSegmentMap;
   });
 }
 
@@ -241,6 +241,10 @@ function VolumeTracingReducer(
       return handleUpdateSegment(state, action);
     }
 
+    case "REMOVE_SEGMENT": {
+      return handleRemoveSegment(state, action);
+    }
+
     default: // pass
   }
 
@@ -260,7 +264,7 @@ function VolumeTracingReducer(
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {
-      return setActiveCellReducer(state, volumeTracing, action.cellId);
+      return setActiveCellReducer(state, volumeTracing, action.segmentId);
     }
 
     case "CREATE_CELL": {
@@ -288,7 +292,7 @@ function VolumeTracingReducer(
     }
 
     case "SET_LARGEST_SEGMENT_ID": {
-      return setLargestSegmentIdReducer(state, volumeTracing, action.cellId);
+      return setLargestSegmentIdReducer(state, volumeTracing, action.segmentId);
     }
 
     case "FINISH_ANNOTATION_STROKE": {

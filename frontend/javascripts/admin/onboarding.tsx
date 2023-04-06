@@ -23,7 +23,7 @@ import LinkButton from "components/link_button";
 import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
-import RegistrationForm from "admin/auth/registration_form";
+import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import CreditsFooter from "components/credits_footer";
 import Toast from "libs/toast";
 import features from "features";
@@ -466,7 +466,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       }
       icon={<UserOutlined className="icon-big" />}
     >
-      <RegistrationForm
+      <RegistrationFormGeneric
         hidePrivacyStatement
         organizationNameToCreate={this.state.organizationName}
         onRegistered={() => {
@@ -642,7 +642,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   );
 
   getAvailableSteps() {
-    if (features().isDemoInstance) {
+    if (features().isWkorgInstance) {
       return [
         {
           title: "Create Organization",

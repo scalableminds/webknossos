@@ -1,5 +1,5 @@
 import com.typesafe.scalalogging.LazyLogging
-import controllers.{Assets, DemoProxyController, SitemapController}
+import controllers.{Assets, WkorgProxyController, SitemapController}
 import javax.inject.Inject
 import play.api.OptionalDevContext
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
@@ -13,7 +13,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
                                router: Router,
                                errorHandler: HttpErrorHandler,
                                httpConfiguration: HttpConfiguration,
-                               demoProxyController: DemoProxyController,
+                               wkorgProxyController: WkorgProxyController,
                                filters: HttpFilters,
                                conf: WkConf,
                                assets: Assets,
@@ -35,11 +35,11 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     } else if (request.uri.matches("^(/assets/).*$")) {
       val path = request.path.replaceFirst("^(/assets/)", "")
       Some(assets.at(path = "/public", file = path))
-    } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
+    } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isWkorgInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
-    } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isDemoInstance) {
+    } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isWkorgInstance) {
       Some(Action { Ok("").as("text/javascript") })
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
-    } else Some(demoProxyController.proxyPageOrMainView)
+    } else Some(wkorgProxyController.proxyPageOrMainView)
 }

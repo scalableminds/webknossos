@@ -1,12 +1,15 @@
 const defaultItemsPerBatch = 1000;
 let idCounter = 0;
-const idSymbol = Symbol("id"); // DiffableMap is an immutable key-value data structure which supports fast diffing.
+const idSymbol = Symbol("id");
+
+// DiffableMap is an immutable key-value data structure which supports fast diffing.
 // Updating a DiffableMap returns a new DiffableMap, in which case the Maps are
 // derived from each other ("dependent").
 // Diffing is very fast when the given Maps are dependent, since the separate chunks
 // can be compared shallowly.
 // The insertion order of the DiffableMap is not guaranteed.
-// Stored values may be null. However, `undefined` is equal to "does not exist".
+// Stored values may be null. However, be careful when dealing with `undefined`, as
+// it's interpreted as "does not exist", but can still be listed during enumeration.
 
 class DiffableMap<K extends number, V> {
   chunks: Array<Map<K, V>>;

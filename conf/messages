@@ -104,9 +104,9 @@ dataSet.upload.storageExceeded=Cannot upload dataset because the storage quota o
 dataSet.explore.failed.readFile=Failed to read remote file
 dataSet.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
 
-remoteFileSystem.insert.failed=Failed to store remote file system credential
-remoteFileSystem.setup.failed=Failed to set up remote file system
-remoteFileSystem.getPath.failed=Failed to get remote path
+dataVault.insert.failed=Failed to store remote file system credential
+dataVault.setup.failed=Failed to set up remote file system
+dataVault.getPath.failed=Failed to get remote path
 
 
 dataSource.notFound=Datasource not found on datastore server

@@ -1005,7 +1005,7 @@ export async function downloadAnnotation(
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
 
-  if (showVolumeFallbackDownloadWarning) {
+  if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {
       timeout: 12000,
     });

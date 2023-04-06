@@ -207,6 +207,7 @@ type State = {
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentId: number | null | undefined;
   groupTree: TreeNode[];
+  prevProps: Props | null | undefined;
 };
 const getSortedSegments = memoizeOne((segments: SegmentMap | null | undefined) =>
   _.sortBy(segments ? Array.from(segments.values()) : [], "id"),
@@ -253,6 +254,7 @@ class SegmentsView extends React.Component<Props, State> {
     activeMeshJobId: null,
     activeDropdownSegmentId: null,
     groupTree: [],
+    prevProps: null,
   };
 
   componentDidMount() {
@@ -284,7 +286,7 @@ class SegmentsView extends React.Component<Props, State> {
     // Insert the trees into the corresponding groups and create a
     // groupTree object that can be rendered using a SortableTree component
     const { segments } = nextProps;
-    if (segments != null) {
+    if (segments != null && prevState.prevProps?.segments != segments) {
       const groupToTreesMap = createGroupToSegmentsMap(segments);
       const rootGroup = {
         name: "Root",
@@ -307,10 +309,10 @@ class SegmentsView extends React.Component<Props, State> {
         expandedGroupIds,
         prevProps: nextProps,
       };
-      // } else {
-      //   return {
-      //     prevProps: nextProps,
-      //   };
+    } else {
+      return {
+        prevProps: nextProps,
+      };
     }
   }
 

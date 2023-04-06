@@ -260,13 +260,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     if (node.type === TYPE_TREE && nextParentNode) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
-      const moveActions = allTreesToMove.map((treeId) =>
-        setTreeGroupAction(
+      const moveActions = allTreesToMove.map((treeId) => {
+        return setTreeGroupAction(
           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-          parseInt(treeId, 10),
-        ),
-      );
+          treeId,
+        );
+      });
       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
     } else {
       // A group was dragged - update the groupTree

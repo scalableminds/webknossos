@@ -971,6 +971,7 @@ class SegmentsView extends React.Component<Props, State> {
                           }}
                         >
                           <Tree
+                            onDrop={this.onDrop}
                             // virtual={false}
                             defaultExpandAll
                             className="segments-tree"
@@ -1027,6 +1028,68 @@ class SegmentsView extends React.Component<Props, State> {
 
     this.props.onUpdateSegmentGroups(newSegmentGroups, this.props.visibleSegmentationLayer.name);
   }
+
+  // onDrop Callback function for when the onDrop event occurs  function({event, node, dragNode, dragNodesKeys})
+
+  onDrop = ({
+    node,
+    dragNode,
+    dropToGap,
+  }: {
+    node: TreeNode | null;
+    dragNode: TreeNode;
+    dropToGap: boolean;
+  }) => {
+    // Node is the node onto which dragNode is dropped
+    if (node == null || this.props.visibleSegmentationLayer == null) {
+      return;
+    }
+
+    // todo: do we need to take dropToGap into account?
+    // if (dropToGap) {
+    if (node.type === "segment") {
+      // dragNode was dragged *next to* node. Move into the same
+      // group as node.
+      this.props.updateSegment(
+        dragNode.id,
+        { groupId: node.groupId },
+        this.props.visibleSegmentationLayer.name,
+        true,
+      );
+    } else if (node.type === "group") {
+      // dragNode was dragged *into* node
+      this.props.updateSegment(
+        dragNode.id,
+        { groupId: node.id },
+        this.props.visibleSegmentationLayer.name,
+        true,
+      );
+    }
+  };
+
+  // onDrop = ({ event, node, dragNode, dragNodesKeys }) =>
+  //   // params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
+
+  //   {
+  //     const { nextParentNode, node, treeData } = params;
+
+  //     if (node.type === TYPE_TREE && nextParentNode) {
+  //       const allTreesToMove = [...this.props.selectedTrees, node.id];
+  //       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
+  //       const moveActions = allTreesToMove.map((treeId) => {
+  //         return setTreeGroupAction(
+  //           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+  //           treeId,
+  //         );
+  //       });
+  //       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
+  //     } else {
+  //       // A group was dragged - update the groupTree
+  //       // Exclude root group and remove trees from groupTree object
+  //       const newTreeGroups = removeTreesAndTransform(treeData[0].children);
+  //       this.props.onUpdateTreeGroups(newTreeGroups);
+  //     }
+  //   };
 }
 
 const connector = connect(mapStateToProps, mapDispatchToProps);

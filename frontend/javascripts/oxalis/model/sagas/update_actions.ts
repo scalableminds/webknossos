@@ -130,6 +130,7 @@ export type UpdateSegmentUpdateAction = {
     anchorPosition: Vector3 | null | undefined;
     name: string | null | undefined;
     color: Vector3 | null;
+    groupId: number;
     creationTime: number | null | undefined;
   };
 };
@@ -459,6 +460,7 @@ export function updateSegmentVolumeAction(
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
   color: Vector3 | null,
+  groupId: number,
   creationTime: number | null | undefined = Date.now(),
 ): UpdateSegmentUpdateAction {
   return {
@@ -467,8 +469,9 @@ export function updateSegmentVolumeAction(
       id,
       anchorPosition,
       name,
-      creationTime,
       color,
+      groupId,
+      creationTime,
     },
   };
 }

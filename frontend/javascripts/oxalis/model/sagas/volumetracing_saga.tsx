@@ -574,6 +574,7 @@ function* uncachedDiffSegmentLists(
         segment.somePosition,
         segment.name,
         segment.color,
+        segment.groupId,
         segment.creationTime,
       );
     }

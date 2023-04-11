@@ -9,5 +9,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/23.04.1...HEAD)
 
  - The config key features.isDemoInstance was renamed to features.isWkorgInstance (only needs to be adapted for the main wkorg instance). [#6941](https://github.com/scalableminds/webknossos/pull/6941/files)
+ - For instances with existing editable mapping (a.k.a supervoxel proofreading) annotations: The python migration located at tools/migrate-editable-mappings/migrate-editable-mappings.py needs to be run.
 
 ### Postgres Evolutions:

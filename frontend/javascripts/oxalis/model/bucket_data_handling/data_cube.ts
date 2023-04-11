@@ -351,7 +351,7 @@ class DataCube {
   async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
     label: number,
-    activeCellId?: number | null | undefined,
+    activeSegmentId?: number | null | undefined,
   ): Promise<void> {
     // This function is only provided for the wK front-end api and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized.
@@ -360,7 +360,7 @@ class DataCube {
 
     for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
       promises.push(
-        this._labelVoxelInResolution_DEPRECATED(voxel, label, resolutionIndex, activeCellId),
+        this._labelVoxelInResolution_DEPRECATED(voxel, label, resolutionIndex, activeSegmentId),
       );
     }
 
@@ -372,7 +372,7 @@ class DataCube {
     voxel: Vector3,
     label: number,
     zoomStep: number,
-    activeCellId: number | null | undefined,
+    activeSegmentId: number | null | undefined,
   ): Promise<void> {
     let voxelInCube = true;
 
@@ -388,9 +388,9 @@ class DataCube {
         const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
         let shouldUpdateVoxel = true;
 
-        if (activeCellId != null) {
+        if (activeSegmentId != null) {
           const voxelValue = this.getMappedDataValue(voxel, zoomStep);
-          shouldUpdateVoxel = activeCellId === voxelValue;
+          shouldUpdateVoxel = activeSegmentId === voxelValue;
         }
 
         if (shouldUpdateVoxel) {
@@ -406,7 +406,7 @@ class DataCube {
 
   async floodFill(
     globalSeedVoxel: Vector3,
-    cellIdNumber: number,
+    segmentIdNumber: number,
     dimensionIndices: DimensionMap,
     floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
@@ -460,11 +460,11 @@ class DataCube {
 
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
     const seedBucketData = seedBucket.getOrCreateData();
-    const sourceCellId = seedBucketData[seedVoxelIndex];
+    const sourceSegmentId = seedBucketData[seedVoxelIndex];
 
-    const cellId = castForArrayType(cellIdNumber, seedBucketData);
+    const segmentId = castForArrayType(segmentIdNumber, seedBucketData);
 
-    if (sourceCellId === cellId) {
+    if (sourceSegmentId === segmentId) {
       return {
         bucketsWithLabeledVoxelsMap,
         wasBoundingBoxExceeded: false,
@@ -534,15 +534,15 @@ class DataCube {
       const bucketData = await currentBucket.getDataForMutation();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
 
-      if (bucketData[initialVoxelIndex] !== sourceCellId) {
-        // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
+      if (bucketData[initialVoxelIndex] !== sourceSegmentId) {
+        // Ignoring neighbour buckets whose segmentId at the initial voxel does not match the source cell id.
         continue;
       }
 
       // Add the bucket to the current volume undo batch, if it isn't already part of it.
       currentBucket.startDataMutation();
       // Mark the initial voxel.
-      bucketData[initialVoxelIndex] = cellId;
+      bucketData[initialVoxelIndex] = segmentId;
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
@@ -609,8 +609,8 @@ class DataCube {
             // Label the current neighbour and add it to the neighbourVoxelStackUvw to iterate over its neighbours.
             const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
 
-            if (bucketData[neighbourVoxelIndex] === sourceCellId) {
-              bucketData[neighbourVoxelIndex] = cellId;
+            if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
+              bucketData[neighbourVoxelIndex] = segmentId;
               markUvwInSliceAsLabeled(neighbourVoxelUvw);
               neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
               labeledVoxelCount++;

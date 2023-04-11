@@ -260,11 +260,11 @@ export const maybeFetchMeshFilesAction = (
     callback,
   } as const);
 
-export const triggerIsosurfaceDownloadAction = (cellName: string, cellId: number) =>
+export const triggerIsosurfaceDownloadAction = (cellName: string, segmentId: number) =>
   ({
     type: "TRIGGER_ISOSURFACE_DOWNLOAD",
     cellName,
-    cellId,
+    segmentId,
   } as const);
 
 export const refreshIsosurfacesAction = () =>
@@ -272,25 +272,25 @@ export const refreshIsosurfacesAction = () =>
     type: "REFRESH_ISOSURFACES",
   } as const);
 
-export const refreshIsosurfaceAction = (layerName: string, cellId: number) =>
+export const refreshIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "REFRESH_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
-export const startedLoadingIsosurfaceAction = (layerName: string, cellId: number) =>
+export const startedLoadingIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "STARTED_LOADING_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
-export const finishedLoadingIsosurfaceAction = (layerName: string, cellId: number) =>
+export const finishedLoadingIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "FINISHED_LOADING_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
 export const updateMeshFileListAction = (layerName: string, meshFiles: Array<APIMeshFile>) =>
@@ -317,16 +317,16 @@ export const importIsosurfaceFromStlAction = (layerName: string, buffer: ArrayBu
     buffer,
   } as const);
 
-export const removeIsosurfaceAction = (layerName: string, cellId: number) =>
+export const removeIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "REMOVE_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
 export const addAdHocIsosurfaceAction = (
   layerName: string,
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
@@ -334,7 +334,7 @@ export const addAdHocIsosurfaceAction = (
   ({
     type: "ADD_AD_HOC_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
     seedPosition,
     mappingName,
     mappingType,
@@ -342,14 +342,14 @@ export const addAdHocIsosurfaceAction = (
 
 export const addPrecomputedIsosurfaceAction = (
   layerName: string,
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
   meshFileName: string,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
     seedPosition,
     meshFileName,
   } as const);

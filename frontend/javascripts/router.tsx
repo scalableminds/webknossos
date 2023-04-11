@@ -31,7 +31,7 @@ import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
-import { Alert, Layout } from "antd";
+import { Button, Col, Layout, Result, Row } from "antd";
 import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
@@ -56,7 +56,7 @@ import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import React, { lazy, Suspense } from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { ContextRouter, RouteProps } from "react-router-dom";
+import { ContextRouter, Link, RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import {
   APICompoundTypeEnum,
@@ -114,18 +114,23 @@ browserHistory.listen((location) => {
 
 function PageNotFoundView() {
   return (
-    <div className="container">
-      <Alert
-        style={{
-          maxWidth: "500px",
-          margin: "0 auto",
-        }}
-        message="Error 404"
-        description="Page not found."
-        type="error"
-        showIcon
-      />
-    </div>
+    <Row justify="center" align="middle" className="background-organelles">
+      <Col>
+        <Result
+          icon={<i className="drawing-404" />}
+          status="warning"
+          title={
+            <span style={{ color: "white" }}>Sorry, the page you visited does not exist.</span>
+          }
+          style={{ height: "100%" }}
+          extra={[
+            <Link to="/">
+              <Button>Back to Dashboard</Button>
+            </Link>,
+          ]}
+        />
+      </Col>
+    </Row>
   );
 }
 

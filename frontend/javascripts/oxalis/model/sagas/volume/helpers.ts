@@ -72,7 +72,7 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
   dimensionIndices: DimensionMap,
   resolutionInfo: ResolutionInfo,
   segmentationCube: DataCube,
-  cellId: number,
+  segmentId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
@@ -135,7 +135,7 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
       applyVoxelMap(
         currentLabeledVoxelMap,
         segmentationCube,
-        cellId,
+        segmentId,
         get3DAddressCreator(targetResolution),
         numberOfSlices,
         thirdDim,

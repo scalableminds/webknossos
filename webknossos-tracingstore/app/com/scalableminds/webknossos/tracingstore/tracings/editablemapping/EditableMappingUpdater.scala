@@ -37,7 +37,7 @@ class EditableMappingUpdater(editableMappingId: String,
   private val agglomerateToGraphBuffer: mutable.Map[String, AgglomerateGraph] =
     new mutable.HashMap[String, AgglomerateGraph]()
 
-  def applyUpdates(existingEditabeMappingInfo: EditableMappingInfo, updates: List[EditableMappingUpdateAction])(
+  def applyUpdatesAndSave(existingEditabeMappingInfo: EditableMappingInfo, updates: List[EditableMappingUpdateAction])(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     for {
       updatedEditableMappingInfo <- updateIter(Some(existingEditabeMappingInfo), updates)
@@ -106,9 +106,9 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
+      (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
-      (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
       _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
       _ = updateAgglomerateGraph(update.agglomerateId, graph1)
       _ = updateAgglomerateGraph(agglomerateId2, graph2)
@@ -252,8 +252,8 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    userToken)
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
-      mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"
+      mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
       _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, update.agglomerateId1) ?~> s"failed to update segment to agglomerate buffer"
       _ = updateAgglomerateGraph(update.agglomerateId1, mergedGraph)
       _ = updateAgglomerateGraph(update.agglomerateId2,

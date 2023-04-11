@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
-import com.scalableminds.webknossos.datastore.LongList.LongList
+import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -75,11 +75,11 @@ class TSRemoteDatastoreClient @Inject()(
                                      userToken: Option[String]): Fox[List[Long]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      segmentIdsOrderedProto = LongList(items = segmentIdsOrdered)
+      segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
       result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments")
         .addQueryStringOptional("token", userToken)
         .silent
-        .postProtoWithProtoResponse[LongList, LongList](segmentIdsOrderedProto)(LongList)
+        .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
     } yield result.items.toList
 
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer,

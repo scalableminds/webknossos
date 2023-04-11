@@ -2,6 +2,6 @@ syntax = "proto2";
 
 package com.scalableminds.webknossos.datastore;
 
-message LongList {
+message ListOfLong {
   repeated int64 items = 1;
 }

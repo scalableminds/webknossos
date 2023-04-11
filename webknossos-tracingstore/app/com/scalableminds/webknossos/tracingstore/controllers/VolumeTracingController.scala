@@ -296,7 +296,8 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
-            (editableMappingId, editableMapping) <- editableMappingService.create(baseMappingName = tracingMappingName)
+            (editableMappingId, editableMappingInfo) <- editableMappingService.create(
+              baseMappingName = tracingMappingName)
             volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
                                                    isEditable = Some(true),
                                                    actionTimestamp = Some(System.currentTimeMillis()))
@@ -315,7 +316,7 @@ class VolumeTracingController @Inject()(
             )
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
                                                         editableMappingId = editableMappingId,
-                                                        editableMapping = editableMapping,
+                                                        editableMappingInfo = editableMappingInfo,
                                                         version = Some(0L))
           } yield Ok(infoJson)
         }
@@ -343,7 +344,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
           _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
-          currentVersion <- editableMappingService.newestMaterializableVersion(mappingName)
+          currentVersion <- editableMappingService.getClosestMaterializableVersionOrZero(mappingName, None)
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update request must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
@@ -374,13 +375,13 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMapping <- editableMappingService.getInfo(mappingName,
-                                                              version,
-                                                              remoteFallbackLayer,
-                                                              urlOrHeaderToken(token, request))
+            editableMappingInfo <- editableMappingService.getInfo(mappingName,
+                                                                  version,
+                                                                  remoteFallbackLayer,
+                                                                  urlOrHeaderToken(token, request))
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
                                                         editableMappingId = mappingName,
-                                                        editableMapping = editableMapping,
+                                                        editableMappingInfo = editableMappingInfo,
                                                         version = version)
           } yield Ok(infoJson)
         }

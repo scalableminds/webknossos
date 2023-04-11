@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.LongList.LongList
+import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
   InboxDataSourceLike,
@@ -383,7 +383,7 @@ Expects:
       dataSetName: String,
       dataLayerName: String,
       mappingName: String
-  ): Action[LongList] = Action.async(validateProto[LongList]) { implicit request =>
+  ): Action[ListOfLong] = Action.async(validateProto[ListOfLong]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
@@ -399,7 +399,7 @@ Expects:
             request.body.items
           )
           .toFox
-      } yield Ok(LongList(agglomerateIds).toByteArray)
+      } yield Ok(ListOfLong(agglomerateIds).toByteArray)
     }
   }
 

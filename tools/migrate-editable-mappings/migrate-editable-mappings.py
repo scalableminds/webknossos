@@ -4,6 +4,9 @@ import json
 import grpc
 import sys
 from collections import defaultdict
+import logging
+import datetime
+from timeit import default_timer as timer
 
 import fossildbapi_pb2 as proto
 import fossildbapi_pb2_grpc as proto_rpc
@@ -12,15 +15,14 @@ import EditableMapping_pb2
 
 import EditableMappingInfo_pb2
 import SegmentToAgglomerateProto_pb2
-import logging
-import datetime
 
-from timeit import default_timer as timer
 
 fossilHost = "localhost:7155"
 
 verbose = False
 doWrite = True
+
+# TODO snake_case
 
 # To minimize downtime for instances with large editable mappings: run with migrateHistory=False
 # Then, while the new wk is already running, run with migrateHistory=True
@@ -66,6 +68,7 @@ def main():
 
             if migrateHistory:
                 nextVersion = getReply.actualVersion - persistedVersionInterval
+                # TODO: ensure v0 is always migrated
                 while nextVersion >= 0:
                     print(f"Getting {key} v{nextVersion}...")
                     getReply = stub.Get(proto.GetRequest(collection=collectionEditableMappings, key=key, version=nextVersion))

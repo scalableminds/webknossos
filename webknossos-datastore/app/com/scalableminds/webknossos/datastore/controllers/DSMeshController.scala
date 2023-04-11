@@ -98,7 +98,7 @@ class DSMeshController @Inject()(
                           .toOption)
                     meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
                     _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
-                    chunkInfos = meshChunksForUnmappedSegments.flatten.reduce(_.merge(_))
+                    chunkInfos = meshChunksForUnmappedSegmentsFlat.reduce(_.merge(_))
                   } yield chunkInfos
               }
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST

@@ -56,7 +56,7 @@ trait AccessTokenService {
   val remoteWebKnossosClient: RemoteWebKnossosClient
 
   private val AccessExpiration: FiniteDuration = 2 minutes
-  private lazy val accessAnswersCache: AlfuFoxCache[UserAccessRequest, UserAccessAnswer] =
+  private lazy val accessAnswersCache: AlfuFoxCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
     AlfuFoxCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
   def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
@@ -74,7 +74,8 @@ trait AccessTokenService {
 
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] =
-    accessAnswersCache.getOrLoad(accessRequest, key => remoteWebKnossosClient.requestUserAccess(token, key))
+    accessAnswersCache.getOrLoad((accessRequest, token),
+                                 _ => remoteWebKnossosClient.requestUserAccess(token, accessRequest))
 
   private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
                                            block: => Future[Result]): Future[Result] =

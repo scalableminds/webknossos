@@ -90,14 +90,14 @@ export function RestrictResolutionSlider({
   setResolutionIndices,
 }: RestrictResolutionSliderProps) {
   let highestResolutionIndex = resolutionInfo.getHighestResolutionIndex();
-  let lowestResolutionIndex = resolutionInfo.getClosestExistingIndex(0);
+  let lowestResolutionIndex = resolutionInfo.getLowestResolutionIndex();
 
   if (selectedSegmentationLayer != null) {
     const datasetFallbackLayerResolutionInfo = getResolutionInfo(
       selectedSegmentationLayer.resolutions,
     );
     highestResolutionIndex = datasetFallbackLayerResolutionInfo.getHighestResolutionIndex();
-    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getClosestExistingIndex(0);
+    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getLowestResolutionIndex();
   }
 
   const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
@@ -198,7 +198,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
         ? getSomeResolutionInfoForDataset(dataset)
         : getResolutionInfo(selectedSegmentationLayer.resolutions);
     const highestResolutionIndex = resolutionInfo.getHighestResolutionIndex();
-    const lowestResolutionIndex = resolutionInfo.getClosestExistingIndex(0);
+    const lowestResolutionIndex = resolutionInfo.getLowestResolutionIndex();
 
     const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);

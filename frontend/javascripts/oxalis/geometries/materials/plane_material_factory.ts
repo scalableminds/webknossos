@@ -417,7 +417,7 @@ class PlaneMaterialFactory {
           // the minimum for each axis. That way, the vertices are aligned using the
           // lowest common multiple.
           // For example, one layer might render mag 4-4-1, whereas another layer renders
-          // 4-2-1. The representative mag would be 1-2-1.
+          // 2-2-2. The representative mag would be 2-2-1.
           // If all layers have a transform, the representativeMagForVertexAlignment
           // isn't relevant which is why it can default to [1, 1, 1].
 

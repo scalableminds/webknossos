@@ -412,7 +412,7 @@ class PlaneMaterialFactory {
           // needed. Since the current mag can differ from layer to layer, the shader
           // needs to know which mag is safe to use.
           // For this purpose, we define the representativeMagForVertexAlignment which is
-          // an virtual mag (meaning, there's not necessarily a layer with that exact
+          // a virtual mag (meaning, there's not necessarily a layer with that exact
           // mag). It is derived from the layers that are not transformed by considering
           // the minimum for each axis. That way, the vertices are aligned using the
           // lowest common multiple.

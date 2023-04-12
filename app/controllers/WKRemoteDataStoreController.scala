@@ -93,9 +93,9 @@ class WKRemoteDataStoreController @Inject()(
   def reportDatasetUpload(name: String,
                           key: String,
                           token: String,
-                          needsConversion: Boolean,
                           dataSetName: String,
-                          dataSetSizeBytes: Long): Action[AnyContent] =
+                          dataSetSizeBytes: Long,
+                          needsConversion: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {

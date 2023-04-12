@@ -27,7 +27,7 @@ import {
   isElementClassSupported,
   isSegmentationLayer,
   getSegmentationLayers,
-  getLayerByNameOrFallbackName,
+  getLayerByName,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -658,7 +658,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 
     try {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-      effectiveLayerName = getLayerByNameOrFallbackName(dataset, layerName).name;
+      effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
       console.error(e);
       Toast.error(

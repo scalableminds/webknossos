@@ -32,6 +32,7 @@ import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
 import { mayUserEditDataset } from "libs/utils";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -572,7 +573,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { dataset, activeResolutionInfo, activeUser } = this.props;
+    const { dataset, tracing, activeResolutionInfo, activeUser } = this.props;
     const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
       activeResolutionInfo;
     const resolutionUnion = getResolutionUnion(dataset);
@@ -583,11 +584,15 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <div>
               Rendered magnification per layer:
               <ul>
-                {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => (
-                  <li key={layerName}>
-                    {layerName}: {mag ? mag.join("-") : "none"}
-                  </li>
-                ))}
+                {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+                  const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+
+                  return (
+                    <li key={layerName}>
+                      {readableName}: {mag ? mag.join("-") : "none"}
+                    </li>
+                  );
+                })}
               </ul>
               Available resolutions:
               <ul>

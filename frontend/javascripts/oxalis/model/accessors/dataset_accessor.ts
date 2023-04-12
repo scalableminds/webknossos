@@ -160,24 +160,7 @@ export function getLayerByName(
 
   return layer;
 }
-export function getLayerByNameOrFallbackName(
-  dataset: APIDataset,
-  layerName: string,
-): DataLayerType {
-  const dataLayers = getDataLayers(dataset);
-  const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
-  ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
-  const layer = dataLayers.find(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
-    (l) => l.name === layerName || (l.fallbackLayer && l.fallbackLayer === layerName),
-  );
 
-  if (!layer) {
-    throw new Error(`Layer "${layerName}" not found`);
-  }
-
-  return layer;
-}
 export function getSegmentationLayerByName(
   dataset: APIDataset,
   layerName: string,

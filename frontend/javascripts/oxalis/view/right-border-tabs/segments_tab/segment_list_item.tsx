@@ -223,11 +223,18 @@ function _MeshInfoItem(props: {
     <Tooltip title="Download Mesh">
       <VerticalAlignBottomOutlined
         key="download-button"
-        onClick={() =>
+        onClick={() => {
+          if (!props.visibleSegmentationLayer) {
+            return;
+          }
           Store.dispatch(
-            triggerIsosurfaceDownloadAction(segment.name ? segment.name : "mesh", segment.id),
-          )
-        }
+            triggerIsosurfaceDownloadAction(
+              segment.name ? segment.name : "mesh",
+              segment.id,
+              props.visibleSegmentationLayer.name,
+            ),
+          );
+        }}
       />
     </Tooltip>
   );

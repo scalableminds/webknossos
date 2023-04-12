@@ -138,6 +138,7 @@ WKW is versatile in the image formats it can hold: Grayscale, Multi-Channel, Seg
 Additionally, WKW supports compression for disk space efficiency.
 
 Each layer of a WKW dataset may contain one of the following:
+
 * Grayscale data (8 Bit, 16 Bit, Float), also referred to as `color` data
 * RGB data (24 Bit)
 * Segmentation data (8 Bit, 16 Bit, 32 Bit)

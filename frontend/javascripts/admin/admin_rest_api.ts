@@ -50,8 +50,6 @@ import type {
   AnnotationViewConfiguration,
   EditableLayerProperties,
   ExperienceDomainList,
-  MeshMetaData,
-  RemoteMeshMetaData,
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,
@@ -2098,52 +2096,7 @@ export function setMaintenance(bool: boolean): Promise<void> {
 // @ts-ignore
 window.setMaintenance = setMaintenance;
 
-// ### Meshes
-type MeshMetaDataForCreation = Omit<MeshMetaData, "id">;
-
-export async function createMesh(
-  metadata: MeshMetaDataForCreation,
-  data: ArrayBuffer,
-): Promise<MeshMetaData> {
-  const mesh = await createMeshMetaData(metadata);
-  await updateMeshData(mesh.id, data);
-  return mesh;
-}
-
-function createMeshMetaData(metadata: MeshMetaDataForCreation): Promise<MeshMetaData> {
-  return Request.sendJSONReceiveJSON("/api/meshes", {
-    method: "POST",
-    data: metadata,
-  });
-}
-
-export async function updateMeshMetaData(metadata: RemoteMeshMetaData): Promise<void> {
-  return Request.sendJSONReceiveJSON(`/api/meshes/${metadata.id}`, {
-    method: "PUT",
-    data: metadata,
-  });
-}
-
-export async function updateMeshData(id: string, data: ArrayBuffer): Promise<void> {
-  return Request.sendJSONReceiveJSON(`/api/meshes/${id}/data`, {
-    method: "PUT",
-    data,
-  });
-}
-
-export function deleteMesh(id: string): Promise<void> {
-  return Request.triggerRequest(`/api/meshes/${id}`, {
-    method: "DELETE",
-  });
-}
-
-export function getMeshMetaData(id: string): Promise<MeshMetaData> {
-  return Request.receiveJSON(`/api/meshes/${id}`);
-}
-
-export function getMeshData(id: string): Promise<ArrayBuffer> {
-  return Request.receiveArraybuffer(`/api/meshes/${id}/data`);
-}
+// Meshes
 
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.

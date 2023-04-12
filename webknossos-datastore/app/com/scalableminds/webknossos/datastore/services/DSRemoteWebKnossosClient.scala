@@ -74,7 +74,7 @@ class DSRemoteWebKnossosClient @Inject()(
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
-        .addQueryString("needsConversion" -> needsConversion)
+        .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()

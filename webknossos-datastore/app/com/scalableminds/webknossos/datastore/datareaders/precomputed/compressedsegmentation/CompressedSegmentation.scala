@@ -3,8 +3,10 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed.compresse
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.reflect.ClassTag
 
-// Based on https://github.com/janelia-flyem/compressedseg, see LICENSE.txt
-// Original author: Stephen Plaza (plazas@janelia.hhmi.org)
+// Implementation of compressed segmentation as specified in:
+// https://github.com/google/neuroglancer/tree/master/src/neuroglancer/sliceview/compressed_segmentation
+// For a reference implementation, see also:
+// https://github.com/janelia-flyem/compressedseg
 
 trait CompressedSegmentation[T <: AnyVal] {
 

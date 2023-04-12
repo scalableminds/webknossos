@@ -3,9 +3,10 @@
 import json
 import grpc
 import sys
-from collections import defaultdict
 import logging
 import datetime
+from collections import defaultdict
+import argparse
 from timeit import default_timer as timer
 
 import fossildbapi_pb2 as proto
@@ -16,77 +17,74 @@ import EditableMapping_pb2
 import EditableMappingInfo_pb2
 import SegmentToAgglomerateProto_pb2
 
-
-fossilHost = "localhost:7155"
-
-verbose = False
-doWrite = True
-
-# TODO snake_case
-
-# To minimize downtime for instances with large editable mappings: run with migrateHistory=False
-# Then, while the new wk is already running, run with migrateHistory=True
+# To minimize downtime for instances with large editable mappings: run with migrate_history=False
+# Then, while the new wk is already running, run with migrate_history=True
 # the history is not currently used (we’d migrate it only to support possibly later-added feature of version restore)
-migrateHistory = False
+migrate_history = False
 
 MAX_MESSAGE_LENGTH = 1073741824
 
-collectionEditableMappings = "editableMappings"
-collectionEditableMappingsInfo = "editableMappingsInfo"
-collectionSegmentToAgglomerate = "editableMappingsSegmentToAgglomerate"
-collectionAgglomerateToGraph = "editableMappingsAgglomerateToGraph"
-listKeysBatchSize = 100
+collection_editable_mappings = "editableMappings"
+collection_editable_mappings_info = "editableMappingsInfo"
+collection_segment_to_agglomerate = "editableMappingsSegmentToAgglomerate"
+collection_agglomerate_to_graph = "editableMappingsAgglomerateToGraph"
+list_keys_batch_size = 100
 
-segmentToAgglomerateChunkSize = 64 * 1024 # max 1MB chunks (two 8-byte numbers per element) # must match the value in new wk code
-persistedVersionInterval = 20
+segment_to_agglomerate_chunk_size = 64 * 1024 # max 1MB chunks (two 8-byte numbers per element) # must match the value in new wk code
+persisted_version_interval = 20
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("fossil_host", help="example: localhost:7155")
+    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-w", "--do_write", action="store_true")
+    args = parser.parse_args()
 
-    print(f"Starting migration script (doWrite={doWrite}) at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Starting migration script (do_write={args.do_write}) at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    startTime = timer()
+    start_time = timer()
 
-    channel = grpc.insecure_channel(fossilHost, options=[("grpc.max_send_message_length", MAX_MESSAGE_LENGTH), ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH)])
+    channel = grpc.insecure_channel(args.fossil_host, options=[("grpc.max_send_message_length", MAX_MESSAGE_LENGTH), ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH)])
     stub = proto_rpc.FossilDBStub(channel)
 
-    testHealth(stub, f"fossildb at {fossilHost}")
+    test_health(stub, f"fossildb at {args.fossil_host}")
 
-    putCount = 0
+    put_count = 0
 
-    lastListedKey = None
+    previous_listed_key = None
     while True:
-        listKeysReply = stub.ListKeys(proto.ListKeysRequest(collection=collectionEditableMappings, limit=listKeysBatchSize, startAfterKey=lastListedKey))
-        assertSuccess(listKeysReply)
-        if len(listKeysReply.keys) == 0:
+        list_keys_reply = stub.ListKeys(proto.ListKeysRequest(collection=collection_editable_mappings, limit=list_keys_batch_size, startAfterKey=previous_listed_key))
+        assert_success(list_keys_reply)
+        if len(list_keys_reply.keys) == 0:
             break
-        for key in listKeysReply.keys:
+        for key in list_keys_reply.keys:
             print(f"Getting newest version for {key}...")
-            getReply = stub.Get(proto.GetRequest(collection=collectionEditableMappings, key=key, version=None))
-            assertSuccess(getReply)
+            get_reply = stub.Get(proto.GetRequest(collection=collection_editable_mappings, key=key, version=None))
+            assert_success(get_reply)
 
-            convertAndSave(key, getReply.actualVersion, getReply.value, stub, putCount)
+            convert_and_save(key, get_reply.actualVersion, get_reply.value, stub, put_count, args)
 
-            if migrateHistory:
-                nextVersion = getReply.actualVersion - persistedVersionInterval
+            if migrate_history:
+                next_version = get_reply.actualVersion - persisted_version_interval
                 # TODO: ensure v0 is always migrated
-                while nextVersion >= 0:
-                    print(f"Getting {key} v{nextVersion}...")
-                    getReply = stub.Get(proto.GetRequest(collection=collectionEditableMappings, key=key, version=nextVersion))
-                    assertSuccess(getReply)
-                    convertAndSave(key, getReply.actualVersion, getReply.value, stub, putCount)
-                    nextVersion = getReply.actualVersion - persistedVersionInterval
+                while next_version >= 0:
+                    print(f"Getting {key} v{next_version}...")
+                    get_reply = stub.Get(proto.GetRequest(collection=collection_editable_mappings, key=key, version=next_version))
+                    assert_success(get_reply)
+                    convert_and_save(key, get_reply.actualVersion, get_reply.value, stub, put_count, args)
+                    next_version = get_reply.actualVersion - persisted_version_interval
 
-        lastListedKey = listKeysReply.keys[-1]
+        previous_listed_key = list_keys_reply.keys[-1]
 
-    print(f"Done after {timer() - startTime}. Total put count:", putCount)
+    print(f"Done after {timer() - start_time}. Total put count:", put_count)
 
 
-def convertAndSave(key, version, editableMappingBytes, stub, putCount):
-    print(f"For {key} got version {version} ({len(editableMappingBytes)} bytes) at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}...")
-    editableMapping = EditableMapping_pb2.EditableMappingProto()
-    editableMapping.ParseFromString(editableMappingBytes)
-    segmentToAgglomerate = editableMapping.segmentToAgglomerate
-    largestAgglomerateId = 0
+def convert_and_save(key, version, editable_mapping_bytes, stub, put_count, args):
+    print(f"For {key} got version {version} ({len(editable_mapping_bytes)} bytes) at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}...")
+    editable_mapping = EditableMapping_pb2.EditableMappingProto()
+    editable_mapping.ParseFromString(editable_mapping_bytes)
+    segmentToAgglomerate = editable_mapping.segmentToAgglomerate
+    largest_agglomerate_id = 0
 
     t5 = timer()
     chunks = {}
@@ -94,64 +92,64 @@ def convertAndSave(key, version, editableMappingBytes, stub, putCount):
         pair_converted = SegmentToAgglomerateProto_pb2.SegmentAgglomeratePair()
         pair_converted.segmentId = pair.segmentId
         pair_converted.agglomerateId = pair.agglomerateId
-        chunk_id = pair.segmentId // segmentToAgglomerateChunkSize
+        chunk_id = pair.segmentId // segment_to_agglomerate_chunk_size
         if chunk_id not in chunks:
             chunks[chunk_id] = SegmentToAgglomerateProto_pb2.SegmentToAgglomerateProto()
         chunks[chunk_id].segmentToAgglomerate.append(pair_converted)
     t6 = timer()
-    if verbose:
+    if args.verbose:
         print(f"grouping chunks {t6 - t5}")
     for chunk_id, chunk in chunks.items():
         chunk_key = f"{key}/{chunk_id}"
         chunkBytes = chunk.SerializeToString()
-        if verbose:
+        if args.verbose:
             print(f"segment to agglomerate chunk with {len(chunk.segmentToAgglomerate)} pairs, to be saved at {chunk_key} v{version}")
-        if doWrite:
-            putReply = stub.Put(proto.PutRequest(collection=collectionSegmentToAgglomerate, key=chunk_key, version=version, value=chunkBytes))
-            assertSuccess(putReply)
-            putCount += 1
+        if args.do_write:
+            put_reply = stub.Put(proto.PutRequest(collection=collection_segment_to_agglomerate, key=chunk_key, version=version, value=chunkBytes))
+            assert_success(put_reply)
+            put_count += 1
 
     t7 = timer()
-    for agglomerateToGraphPair in editableMapping.agglomerateToGraph:
+    for agglomerateToGraphPair in editable_mapping.agglomerateToGraph:
         agglomerateId = agglomerateToGraphPair.agglomerateId
-        largestAgglomerateId = max(largestAgglomerateId, agglomerateId)
+        largest_agglomerate_id = max(largest_agglomerate_id, agglomerateId)
         graph = agglomerateToGraphPair.agglomerateGraph
         agglomerateToGraphKey = f"{key}/{agglomerateId}"
         graphBytes = graph.SerializeToString()
-        if verbose:
+        if args.verbose:
             print(f"agglomerate {agglomerateId} has graph with {len(graph.edges)} edges, to be saved at {agglomerateToGraphKey} v{version}")
-        if doWrite:
-            putReply = stub.Put(proto.PutRequest(collection=collectionAgglomerateToGraph, key=agglomerateToGraphKey, version=version, value=graphBytes))
-            assertSuccess(putReply)
-            putCount += 1
+        if args.do_write:
+            put_reply = stub.Put(proto.PutRequest(collection=collection_agglomerate_to_graph, key=agglomerateToGraphKey, version=version, value=graphBytes))
+            assert_success(put_reply)
+            put_count += 1
 
-    if verbose:
+    if args.verbose:
         print(f"converting + putting graphs: {timer() - t7}")
 
-    editableMappingInfo = EditableMappingInfo_pb2.EditableMappingInfo()
-    editableMappingInfo.baseMappingName = editableMapping.baseMappingName
-    editableMappingInfo.createdTimestamp = editableMapping.createdTimestamp
-    editableMappingInfo.largestAgglomerateId = largestAgglomerateId
+    editable_mapping_info = EditableMappingInfo_pb2.EditableMappingInfo()
+    editable_mapping_info.baseMappingName = editable_mapping.baseMappingName
+    editable_mapping_info.createdTimestamp = editable_mapping.createdTimestamp
+    editable_mapping_info.largestAgglomerateId = largest_agglomerate_id
 
-    if verbose:
-        print(f"EditableMappingInfo with largest agglomerate id {editableMappingInfo.largestAgglomerateId}, to be saved at {key} v{version}")
-    infoBytes = editableMappingInfo.SerializeToString()
-    if doWrite:
-        putReply = stub.Put(proto.PutRequest(collection=collectionEditableMappingsInfo, key=key, version=version, value=infoBytes))
-        assertSuccess(putReply)
-        putCount += 1
+    if args.verbose:
+        print(f"EditableMappingInfo with largest agglomerate id {editable_mapping_info.largestAgglomerateId}, to be saved at {key} v{version}")
+    info_bytes = editable_mapping_info.SerializeToString()
+    if args.do_write:
+        put_reply = stub.Put(proto.PutRequest(collection=collection_editable_mappings_info, key=key, version=version, value=info_bytes))
+        assert_success(put_reply)
+        put_count += 1
 
 
-def testHealth(stub, label):
+def test_health(stub, label):
     try:
         reply = stub.Health(proto.HealthRequest())
-        assertSuccess(reply)
+        assert_success(reply)
         print('successfully connected to ' + label)
     except Exception as e:
         print('failed to connect to ' + label + ': ' + str(e))
         sys.exit(1)
 
-def assertSuccess(reply):
+def assert_success(reply):
     if not reply.success:
         raise Exception("reply.success failed: " + reply.errorMessage)
 

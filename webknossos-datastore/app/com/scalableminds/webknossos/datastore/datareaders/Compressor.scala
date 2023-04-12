@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
@@ -315,12 +316,14 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
 
   override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
 
+  private def blockSizeVec = Vec3Int(x = blockSize(0), y = blockSize(1), z = blockSize(2))
+
   override def decompress(input: Array[Byte]): Array[Byte] =
     dataType match {
       case PrecomputedDataType.uint32 =>
-        CompressedSegmentation32.decompress(input, volumeSize, blockSize)
+        CompressedSegmentation32.decompress(input, volumeSize, blockSizeVec)
       case PrecomputedDataType.uint64 =>
-        CompressedSegmentation64.decompress(input, volumeSize, blockSize)
+        CompressedSegmentation64.decompress(input, volumeSize, blockSizeVec)
       case _ =>
         throw new UnsupportedOperationException(
           "Can not use compressed segmentation for datatypes other than u32, u64.")

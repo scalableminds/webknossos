@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.CompressedSegmentation64
 import com.scalableminds.webknossos.datastore.datareaders.{
   CompressedSegmentationCompressor,
   Compressor,
@@ -19,9 +20,10 @@ object PrecomputedCompressorFactory {
       case "raw"  => nullCompressor
       case "jpeg" => new JpegCompressor
       case "compressed_segmentation" =>
-        new CompressedSegmentationCompressor(dataType,
-                                             chunkSize,
-                                             compressedSegmentationBlockSize.getOrElse(Array(8, 8, 8)))
+        new CompressedSegmentationCompressor(
+          dataType,
+          chunkSize,
+          compressedSegmentationBlockSize.getOrElse(CompressedSegmentation64.defaultBlockSize))
       case _ => throw new IllegalArgumentException(s"Chunk encoding '$encoding' not supported.")
     }
 

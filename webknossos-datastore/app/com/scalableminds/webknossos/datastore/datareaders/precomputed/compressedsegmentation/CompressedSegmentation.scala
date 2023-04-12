@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation
 
+import com.scalableminds.util.geometry.Vec3Int
+
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.reflect.ClassTag
 
@@ -11,7 +13,7 @@ import scala.reflect.ClassTag
 trait CompressedSegmentation[T <: AnyVal] {
 
   private val kBlockHeaderSize = 2
-  private val defaultBlockSize = Array(8, 8, 8)
+  val defaultBlockSize: Array[Int] = Array(8, 8, 8)
 
   val typeWidthBytes: Int
 
@@ -19,12 +21,11 @@ trait CompressedSegmentation[T <: AnyVal] {
 
   def initializeArray(length: Int): Array[T]
 
-  private def decompressChannel(input: Array[Int], volumeSize: Array[Int], blockSize: Array[Int]): Array[T] = {
-    assert(blockSize.length == 3)
+  private def decompressChannel(input: Array[Int], volumeSize: Array[Int], blockSize: Vec3Int): Array[T] = {
     val numElements = volumeSize(0) * volumeSize(1) * volumeSize(2)
     val output = initializeArray(numElements)
 
-    val gridSize: Array[Int] = (volumeSize, blockSize).zipped.map((v, b) => (v + b - 1) / b)
+    val gridSize: Array[Int] = (volumeSize, blockSize.toList).zipped.map((v, b) => (v + b - 1) / b)
     for (block2 <- 0 until gridSize(2)) {
       for (block1 <- 0 until gridSize(1)) {
         for (block0 <- 0 until gridSize(0)) {
@@ -34,20 +35,20 @@ trait CompressedSegmentation[T <: AnyVal] {
           val encodedValueStart = input(blockOffset * kBlockHeaderSize + 1)
           val tableEntrySize = typeWidthBytes / 4
 
-          val xmin = block0 * blockSize(0)
-          val xmax = (xmin + blockSize(0)).min(volumeSize(0))
+          val xmin = block0 * blockSize.x
+          val xmax = (xmin + blockSize.x).min(volumeSize(0))
 
-          val ymin = block1 * blockSize(1)
-          val ymax = (ymin + blockSize(1)).min(volumeSize(1))
+          val ymin = block1 * blockSize.y
+          val ymax = (ymin + blockSize.y).min(volumeSize(1))
 
-          val zmin = block2 * blockSize(2)
-          val zmax = (zmin + blockSize(2)).min(volumeSize(2))
+          val zmin = block2 * blockSize.z
+          val zmax = (zmin + blockSize.z).min(volumeSize(2))
 
           val bitmask = (1 << encodedBits) - 1
           for (z <- zmin until zmax) {
             for (y <- ymin until ymax) {
               var outindex = (z * (volumeSize(1)) + y) * volumeSize(0) + xmin
-              var bitpos = blockSize(0) * ((z - zmin) * (blockSize(1)) + (y - ymin)) * encodedBits
+              var bitpos = blockSize.x * ((z - zmin) * (blockSize.y) + (y - ymin)) * encodedBits
               for (x <- xmin until xmax) {
                 val bitshift = bitpos % 32
                 val arraypos = bitpos / (32)
@@ -68,7 +69,7 @@ trait CompressedSegmentation[T <: AnyVal] {
     output
   }
 
-  private def decompressChannels(input: Array[Int], volumeSize: Array[Int], blockSize: Array[Int])(
+  private def decompressChannels(input: Array[Int], volumeSize: Array[Int], blockSize: Vec3Int)(
       implicit c: ClassTag[T]): Array[T] =
     (0 until volumeSize(3))
       .flatMap(channel => decompressChannel(input.drop(input(channel)), volumeSize, blockSize))
@@ -76,7 +77,7 @@ trait CompressedSegmentation[T <: AnyVal] {
 
   def valueAsLong(v: T): Long
 
-  def decompress(encodedBytes: Array[Byte], volumeSize: Array[Int], blockSize: Array[Int] = defaultBlockSize)(
+  def decompress(encodedBytes: Array[Byte], volumeSize: Array[Int], blockSize: Vec3Int)(
       implicit c: ClassTag[T]): Array[Byte] = {
     val vs = if (volumeSize.length == 3) {
       volumeSize :+ 1
@@ -89,7 +90,7 @@ trait CompressedSegmentation[T <: AnyVal] {
     values.flatMap(v => longToBytes(valueAsLong(v)))
   }
 
-  def longToBytes(l: Long): Array[Byte] = {
+  private def longToBytes(l: Long): Array[Byte] = {
     var w = l
     val result = new Array[Byte](8)
     for (i <- 7 to 0 by -1) {

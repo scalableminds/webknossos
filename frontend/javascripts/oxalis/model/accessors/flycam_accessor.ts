@@ -598,10 +598,22 @@ function _getActiveResolutionInfo(state: OxalisState) {
   if (isActiveResolutionGlobal) {
     representativeResolution = Object.values(activeMagOfEnabledLayers)[0];
   } else {
-    representativeResolution = _.minBy(
-      Object.values(activeMagOfEnabledLayers).filter((mag) => !!mag),
-      (mag) => Math.min(...(mag as Vector3)),
-    );
+    const activeMags = Object.values(activeMagOfEnabledLayers).filter((mag) => !!mag) as Vector3[];
+
+    // Find the "best" mag by sorting by the best magnification factor (use the second-best and third-best
+    // factor as a tie breaker).
+    // That way, having the mags [[4, 4, 1], [2, 2, 1], [8, 8, 1]] will yield [2, 2, 1] as a representative,
+    // even though all mags have the same minimum.
+    const activeMagsWithSorted = activeMags.map((mag) => ({
+      mag, // e.g., 4, 4, 1
+      sortedMag: _.sortBy(mag), // e.g., 1, 4, 4
+    }));
+    representativeResolution = _.sortBy(
+      activeMagsWithSorted,
+      ({ sortedMag }) => sortedMag[0],
+      ({ sortedMag }) => sortedMag[1],
+      ({ sortedMag }) => sortedMag[2],
+    )[0].mag;
   }
 
   return {

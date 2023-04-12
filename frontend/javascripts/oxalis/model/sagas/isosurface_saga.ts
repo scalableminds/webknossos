@@ -385,6 +385,8 @@ function* maybeLoadIsosurface(
 
   let retryCount = 0;
 
+  const { segmentMeshController } = getSceneController();
+
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(
@@ -406,10 +408,10 @@ function* maybeLoadIsosurface(
       const vertices = new Float32Array(responseBuffer);
 
       if (removeExistingIsosurface) {
-        getSceneController().removeIsosurfaceById(segmentId);
+        segmentMeshController.removeIsosurfaceById(segmentId, layer.name);
       }
 
-      getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+      segmentMeshController.addIsosurfaceFromVertices(vertices, segmentId, layer.name);
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
@@ -622,10 +624,10 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
-  const sceneController = yield* call(getSceneController);
+  const { segmentMeshController } = yield* call(getSceneController);
   const currentLODIndex = yield* call({
-    context: sceneController.isosurfacesLODRootGroup,
-    fn: sceneController.isosurfacesLODRootGroup.getCurrentLOD,
+    context: segmentMeshController.isosurfacesLODRootGroup,
+    fn: segmentMeshController.isosurfacesLODRootGroup.getCurrentLOD,
   });
 
   let availableChunksMap: ChunksMap = {};
@@ -756,13 +758,17 @@ function* loadPrecomputedMeshForSegmentId(
                 geometry.computeVertexNormals();
 
                 yield* call(
-                  { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+                  {
+                    context: segmentMeshController,
+                    fn: segmentMeshController.addIsosurfaceFromGeometry,
+                  },
                   geometry,
                   id,
                   chunk.position,
                   // Apply the scale from the segment info, which includes dataset scale and mag
                   scale,
                   lod,
+                  layerName,
                 );
               } else {
                 // V0
@@ -786,12 +792,16 @@ function* loadPrecomputedMeshForSegmentId(
                 geometry.computeVertexNormals();
 
                 yield* call(
-                  { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+                  {
+                    context: segmentMeshController,
+                    fn: segmentMeshController.addIsosurfaceFromGeometry,
+                  },
                   geometry,
                   id,
                   null,
                   null,
                   lod,
+                  layerName,
                 );
               }
             },
@@ -816,9 +826,13 @@ function* loadPrecomputedMeshForSegmentId(
  * Ad Hoc and Precomputed Meshes
  *
  */
-function* downloadIsosurfaceCellById(cellName: string, segmentId: number): Saga<void> {
-  const sceneController = getSceneController();
-  const geometry = sceneController.getIsosurfaceGeometryInBestLOD(segmentId);
+function* downloadIsosurfaceCellById(
+  cellName: string,
+  segmentId: number,
+  layerName: string,
+): Saga<void> {
+  const { segmentMeshController } = getSceneController();
+  const geometry = segmentMeshController.getIsosurfaceGeometryInBestLOD(segmentId, layerName);
 
   if (geometry == null) {
     const errorMessage = messages["tracing.not_isosurface_available_to_download"];
@@ -840,7 +854,7 @@ function* downloadIsosurfaceCellById(cellName: string, segmentId: number): Saga<
 }
 
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
-  yield* call(downloadIsosurfaceCellById, action.cellName, action.segmentId);
+  yield* call(downloadIsosurfaceCellById, action.cellName, action.segmentId, action.layerName);
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
@@ -848,12 +862,13 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   const dataView = new DataView(buffer);
   const segmentId = dataView.getUint32(stlIsosurfaceConstants.segmentIdIndex, true);
   const geometry = yield* call(parseStlBuffer, buffer);
-  getSceneController().addIsosurfaceFromGeometry(
+  getSceneController().segmentMeshController.addIsosurfaceFromGeometry(
     geometry,
     segmentId,
     null,
     null,
     NO_LOD_MESH_INDEX,
+    layerName,
   );
   yield* put(setImportingMeshStateAction(false));
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
@@ -877,22 +892,22 @@ function removeIsosurface(action: RemoveIsosurfaceAction, removeFromScene: boole
   const segmentId = action.segmentId;
 
   if (removeFromScene) {
-    getSceneController().removeIsosurfaceById(segmentId);
+    getSceneController().segmentMeshController.removeIsosurfaceById(segmentId, layerName);
   }
 
   removeMapForSegment(layerName, segmentId);
 }
 
 function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
-  const { id, visibility } = action;
-  const SceneController = yield* call(getSceneController);
-  SceneController.setIsosurfaceVisibility(id, visibility);
+  const { id, visibility, layerName } = action;
+  const { segmentMeshController } = yield* call(getSceneController);
+  segmentMeshController.setIsosurfaceVisibility(id, visibility, layerName);
 }
 
 function* handleIsosurfaceColorChange(action: UpdateSegmentAction): Saga<void> {
-  const SceneController = yield* call(getSceneController);
+  const { segmentMeshController } = yield* call(getSceneController);
   if ("color" in action.segment) {
-    SceneController.setIsosurfaceColor(action.segmentId);
+    segmentMeshController.setIsosurfaceColor(action.segmentId, action.layerName);
   }
 }
 

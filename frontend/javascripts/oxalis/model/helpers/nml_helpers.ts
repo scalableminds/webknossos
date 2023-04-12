@@ -27,6 +27,8 @@ import messages from "messages";
 import * as Utils from "libs/utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
+import { location } from "libs/window";
+
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
 const TASK_BOUNDING_BOX_COLOR: Vector3 = [0, 1, 0];

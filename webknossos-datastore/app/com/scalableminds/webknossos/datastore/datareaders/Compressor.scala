@@ -58,7 +58,7 @@ abstract class Compressor {
   def compress(input: Array[Byte]): Array[Byte]
 
   @throws[IOException]
-  def uncompress(input: Array[Byte]): Array[Byte]
+  def decompress(input: Array[Byte]): Array[Byte]
 
   @throws[IOException]
   def passThrough(is: InputStream, os: OutputStream): Unit = {
@@ -84,7 +84,7 @@ class NullCompressor extends Compressor {
   override def compress(input: Array[Byte]): Array[Byte] = input
 
   @throws[IOException]
-  override def uncompress(input: Array[Byte]): Array[Byte] = input
+  override def decompress(input: Array[Byte]): Array[Byte] = input
 }
 
 class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
@@ -116,7 +116,7 @@ class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Co
   }
 
   @throws[IOException]
-  override def uncompress(input: Array[Byte]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val iis = new InflaterInputStream(is, new Inflater)
@@ -158,7 +158,7 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
   }
 
   @throws[IOException]
-  override def uncompress(input: Array[Byte]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val iis = new GzipCompressorInputStream(is, true)
@@ -260,7 +260,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
   }
 
   @throws[IOException]
-  override def uncompress(input: Array[Byte]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
 
     val di = new DataInputStream(is)
@@ -297,7 +297,7 @@ class JpegCompressor() extends Compressor {
   override def compress(input: Array[Byte]): Array[Byte] = ???
 
   @throws[IOException]
-  override def uncompress(input: Array[Byte]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val iis: ImageInputStream = createImageInputStream(is)
     val bi: BufferedImage = ImageIO.read(iis: ImageInputStream)
@@ -315,7 +315,7 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
 
   override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
 
-  override def uncompress(input: Array[Byte]): Array[Byte] =
+  override def decompress(input: Array[Byte]): Array[Byte] =
     dataType match {
       case PrecomputedDataType.uint32 =>
         CompressedSegmentation32.decompress(input, volumeSize, blockSize)

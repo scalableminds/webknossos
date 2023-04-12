@@ -39,7 +39,7 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
   protected def readChunkBytesAndShape(path: String,
                                        range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] =
     (vaultPath / path).readBytes(range).map { bytes =>
-      (header.compressorImpl.uncompress(bytes), None)
+      (header.compressorImpl.decompress(bytes), None)
     }
 }
 

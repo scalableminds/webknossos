@@ -26,7 +26,7 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
       path: String,
       range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] = {
     def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
-      val output = header.compressorImpl.uncompress(bytes)
+      val output = header.compressorImpl.decompress(bytes)
       val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
         header.fillValueNumber.byteValue()
       }

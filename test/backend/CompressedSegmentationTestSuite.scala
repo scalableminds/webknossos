@@ -1,5 +1,6 @@
 package backend
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.CompressedSegmentation64
 import org.scalatestplus.play.PlaySpec
 
@@ -47,7 +48,7 @@ class CompressedSegmentationTestSuite extends PlaySpec {
 
       "decompress compressed array" in {
         val decompressedBytes =
-          CompressedSegmentation64.decompress(compressed, volumeSize = Array(3, 3, 3), blockSize = Array(8, 8, 8))
+          CompressedSegmentation64.decompress(compressed, volumeSize = Array(3, 3, 3), blockSize = Vec3Int(8, 8, 8))
         val arr = new Array[Long](27)
         ByteBuffer.wrap(decompressedBytes).order(ByteOrder.LITTLE_ENDIAN).asLongBuffer().get(arr)
         assert(arr.sameElements(Array(5, 3, 6, 4, 9, 3, 5, 4, 8, 5, 8, 1, 1, 8, 7, 3, 9, 0, 4, 5, 9, 7, 4, 8, 5, 3, 9)))

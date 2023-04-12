@@ -342,7 +342,7 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
                                            actionTimestamp: Option[Long] = None,
                                            actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
-    extends UpdateAction.VolumeUpdateAction
+    extends ApplyableVolumeAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
@@ -373,6 +373,7 @@ object VolumeUpdateAction {
         case "updateTdCamera"                  => (json \ "value").validate[UpdateTdCamera]
         case "createSegment"                   => (json \ "value").validate[CreateSegmentVolumeAction]
         case "updateSegment"                   => (json \ "value").validate[UpdateSegmentVolumeAction]
+        case "updateSegmentGroups"             => (json \ "value").validate[UpdateSegmentGroupsVolumeAction]
         case "deleteSegment"                   => (json \ "value").validate[DeleteSegmentVolumeAction]
         case "updateMappingName"               => (json \ "value").validate[UpdateMappingNameAction]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
@@ -402,9 +403,9 @@ object VolumeUpdateAction {
         Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(UpdateSegmentVolumeAction.jsonFormat))
       case s: DeleteSegmentVolumeAction =>
         Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
-      case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
       case s: UpdateSegmentGroupsVolumeAction =>
         Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
+      case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }
 

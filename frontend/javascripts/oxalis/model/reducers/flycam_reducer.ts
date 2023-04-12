@@ -164,8 +164,11 @@ export function setDirectionReducer(state: OxalisState, direction: Vector3) {
     },
   });
 }
+
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {
-  if (state.dataset != null) {
+  // Don't change rotation in orthogonal mode, because this would lead to incorrect
+  // buckets being selected.
+  if (state.dataset != null && state.temporaryConfiguration.viewMode !== "orthogonal") {
     const [x, y, z] = rotation;
     let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);

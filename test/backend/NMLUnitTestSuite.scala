@@ -22,8 +22,8 @@ class NMLUnitTestSuite extends PlaySpec {
     override def messages: Messages = m.preferred({ FakeRequest("GET", "/") })
   }
 
-  def writeAndParseTracing(
-      skeletonTracing: SkeletonTracing): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, String)] = {
+  def writeAndParseTracing(skeletonTracing: SkeletonTracing)
+    : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] = {
     val annotationLayers = List(
       FetchedAnnotationLayer("dummySkeletonTracingId",
                              AnnotationLayer.defaultSkeletonLayerName,

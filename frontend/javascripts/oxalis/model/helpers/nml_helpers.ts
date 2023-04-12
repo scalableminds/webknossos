@@ -226,6 +226,7 @@ function serializeParameters(
           name: state.dataset.name,
           description: annotation.description,
           organization: state.dataset.owningOrganization,
+          wkUrl: `${location.protocol}//${location.host}`,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],

@@ -26,7 +26,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private val DEFAULT_RESOLUTION = 0
   private val DEFAULT_BITDEPTH = 0
   private val DEFAULT_DESCRIPTION = ""
-  private val DEFAULT_WKURL = ""
   private val DEFAULT_INTERPOLATION = false
   private val DEFAULT_TIMESTAMP = 0L
 
@@ -35,7 +34,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             overwritingDataSetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
-      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, String)] =
+      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -234,8 +233,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseDescription(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "description")).getOrElse(DEFAULT_DESCRIPTION)
 
-  private def parseWkUrl(nodes: NodeSeq): String =
-    nodes.headOption.map(node => getSingleAttribute(node, "wkUrl")).getOrElse(DEFAULT_WKURL)
+  private def parseWkUrl(nodes: NodeSeq): Option[String] =
+    nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
   private def parseOrganizationName(nodes: NodeSeq): Option[String] =
     nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization"))

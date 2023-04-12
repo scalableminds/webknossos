@@ -238,7 +238,7 @@ Expects:
     if (descriptions.size == 1) descriptions.headOption.flatten.getOrElse("") else ""
 
   private def wkUrlsForNMLs(wkUrls: Seq[Option[String]]) =
-    if (wkUrls.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""
+    if (wkUrls.toSet.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""
 
   private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(implicit messagesProvider: MessagesProvider) =
     if (zipParseResult.containsFailure) {

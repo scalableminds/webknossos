@@ -34,12 +34,12 @@ object NmlResults extends LazyLogging {
                              skeletonTracing: Option[SkeletonTracing],
                              volumeLayers: List[UploadedVolumeLayer],
                              _description: String,
-                             _wkUrl: String)
+                             _wkUrl: Option[String])
       extends NmlParseResult {
     def succeeded = true
 
     override def description: Option[String] = Some(_description)
-    override def wkUrl: Option[String] = Some(_wkUrl)
+    override def wkUrl: Option[String] = _wkUrl
 
     override def withName(name: String): NmlParseResult = this.copy(fileName = name)
   }

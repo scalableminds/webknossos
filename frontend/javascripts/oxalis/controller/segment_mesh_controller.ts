@@ -10,8 +10,8 @@ import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_acce
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/isosurface_saga";
 import Store from "oxalis/store";
 
-export default class MeshController {
-  // isosurfacesRootGroup holds lights and one group per segmentation id.
+export default class SegmentMeshController {
+  // isosurfacesLODRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   isosurfacesLODRootGroup: CustomLOD;
   isosurfacesGroupsPerSegmentationId: Record<string, Record<number, Record<number, THREE.Group>>> =
@@ -19,6 +19,7 @@ export default class MeshController {
 
   constructor() {
     this.isosurfacesLODRootGroup = new CustomLOD();
+    this.addLights();
   }
 
   addIsosurfaceFromVertices(
@@ -163,5 +164,37 @@ export default class MeshController {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId);
     const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
     return color;
+  }
+
+  addLights(): void {
+    // Note that the PlaneView also attaches a directional light directly to the TD camera,
+    // so that the light moves along the cam.
+    const AMBIENT_INTENSITY = 30;
+    const DIRECTIONAL_INTENSITY = 5;
+    const POINT_INTENSITY = 5;
+
+    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
+
+    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
+    directionalLight.position.x = 1;
+    directionalLight.position.y = 1;
+    directionalLight.position.z = 1;
+    directionalLight.position.normalize();
+
+    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
+    directionalLight2.position.x = -1;
+    directionalLight2.position.y = -1;
+    directionalLight2.position.z = -1;
+    directionalLight2.position.normalize();
+
+    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
+    pointLight.position.x = 0;
+    pointLight.position.y = -25;
+    pointLight.position.z = 10;
+
+    this.isosurfacesLODRootGroup.add(ambientLight);
+    this.isosurfacesLODRootGroup.add(directionalLight);
+    this.isosurfacesLODRootGroup.add(directionalLight2);
+    this.isosurfacesLODRootGroup.add(pointLight);
   }
 }

@@ -39,7 +39,7 @@ import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
 import type { APIDataLayer } from "types/api_flow_types";
-import MeshController from "./mesh_controller";
+import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
@@ -77,7 +77,7 @@ class SceneController {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'meshesRootGroup' has no initializer and ... Remove this comment to see the full error message
   meshesRootGroup: THREE.Object3D;
   stlMeshes: Record<string, THREE.Mesh> = {};
-  meshController: MeshController;
+  segmentMeshController: SegmentMeshController;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -92,7 +92,7 @@ class SceneController {
       [OrthoViews.TDView]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.meshController = new MeshController();
+    this.segmentMeshController = new SegmentMeshController();
   }
 
   initialize() {
@@ -114,10 +114,9 @@ class SceneController {
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
-    this.scene.add(this.meshController.isosurfacesLODRootGroup);
+    this.scene.add(this.segmentMeshController.isosurfacesLODRootGroup);
     this.scene.add(this.meshesRootGroup);
     this.rootGroup.add(new THREE.DirectionalLight());
-    this.addLights();
     this.setupDebuggingMethods();
   }
 
@@ -197,38 +196,6 @@ class SceneController {
 
     // @ts-ignore
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
-  }
-
-  addLights(): void {
-    // Note that the PlaneView also attaches a directional light directly to the TD camera,
-    // so that the light moves along the cam.
-    const AMBIENT_INTENSITY = 30;
-    const DIRECTIONAL_INTENSITY = 5;
-    const POINT_INTENSITY = 5;
-
-    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
-
-    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight.position.x = 1;
-    directionalLight.position.y = 1;
-    directionalLight.position.z = 1;
-    directionalLight.position.normalize();
-
-    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight2.position.x = -1;
-    directionalLight2.position.y = -1;
-    directionalLight2.position.z = -1;
-    directionalLight2.position.normalize();
-
-    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
-    pointLight.position.x = 0;
-    pointLight.position.y = -25;
-    pointLight.position.z = 10;
-
-    this.meshController.isosurfacesLODRootGroup.add(ambientLight);
-    this.meshController.isosurfacesLODRootGroup.add(directionalLight);
-    this.meshController.isosurfacesLODRootGroup.add(directionalLight2);
-    this.meshController.isosurfacesLODRootGroup.add(pointLight);
   }
 
   removeSTL(id: string): void {
@@ -361,7 +328,7 @@ class SceneController {
 
     this.taskBoundingBox?.updateForCam(id);
 
-    this.meshController.isosurfacesLODRootGroup.visible = id === OrthoViews.TDView;
+    this.segmentMeshController.isosurfacesLODRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
     const originalPosition = getPosition(Store.getState().flycam);
@@ -552,8 +519,8 @@ class SceneController {
 
     this.taskBoundingBox?.setVisibility(false);
 
-    if (this.meshController.isosurfacesLODRootGroup != null) {
-      this.meshController.isosurfacesLODRootGroup.visible = false;
+    if (this.segmentMeshController.isosurfacesLODRootGroup != null) {
+      this.segmentMeshController.isosurfacesLODRootGroup.visible = false;
     }
   }
 

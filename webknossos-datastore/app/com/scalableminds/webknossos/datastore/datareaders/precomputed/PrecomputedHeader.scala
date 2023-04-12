@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -24,7 +25,7 @@ case class PrecomputedScale(key: String,
                             chunk_sizes: Array[Array[Int]],
                             encoding: String,
                             voxel_offset: Option[Array[Int]],
-                            compressed_segmentation_block_size: Option[Array[Int]],
+                            compressed_segmentation_block_size: Option[Vec3Int],
                             sharding: Option[ShardingSpecification]) {
 
   // From the neuroglancer specification (https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#info-json-file-specification)

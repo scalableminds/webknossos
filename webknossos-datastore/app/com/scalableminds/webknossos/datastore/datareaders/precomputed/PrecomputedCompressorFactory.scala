@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.CompressedSegmentation64
 import com.scalableminds.webknossos.datastore.datareaders.{
@@ -15,7 +16,7 @@ object PrecomputedCompressorFactory {
   def create(encoding: String,
              dataType: PrecomputedDataType,
              chunkSize: Array[Int],
-             compressedSegmentationBlockSize: Option[Array[Int]]): Compressor =
+             compressedSegmentationBlockSize: Option[Vec3Int]): Compressor =
     encoding.toLowerCase match {
       case "raw"  => nullCompressor
       case "jpeg" => new JpegCompressor

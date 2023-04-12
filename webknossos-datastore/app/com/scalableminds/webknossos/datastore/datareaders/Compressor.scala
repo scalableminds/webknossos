@@ -310,20 +310,18 @@ class JpegCompressor() extends Compressor {
   }
 }
 
-class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize: Array[Int], blockSize: Array[Int])
+class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize: Array[Int], blockSize: Vec3Int)
     extends Compressor {
   override def getId: String = "compressedsegmentation"
 
   override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
 
-  private def blockSizeVec = Vec3Int(x = blockSize(0), y = blockSize(1), z = blockSize(2))
-
   override def decompress(input: Array[Byte]): Array[Byte] =
     dataType match {
       case PrecomputedDataType.uint32 =>
-        CompressedSegmentation32.decompress(input, volumeSize, blockSizeVec)
+        CompressedSegmentation32.decompress(input, volumeSize, blockSize)
       case PrecomputedDataType.uint64 =>
-        CompressedSegmentation64.decompress(input, volumeSize, blockSizeVec)
+        CompressedSegmentation64.decompress(input, volumeSize, blockSize)
       case _ =>
         throw new UnsupportedOperationException(
           "Can not use compressed segmentation for datatypes other than u32, u64.")

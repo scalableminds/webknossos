@@ -13,7 +13,7 @@ import scala.reflect.ClassTag
 trait CompressedSegmentation[T <: AnyVal] {
 
   private val kBlockHeaderSize = 2
-  val defaultBlockSize: Array[Int] = Array(8, 8, 8)
+  val defaultBlockSize: Vec3Int = Vec3Int(8, 8, 8)
 
   val typeWidthBytes: Int
 

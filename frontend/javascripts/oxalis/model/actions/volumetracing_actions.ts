@@ -6,6 +6,7 @@ import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 type CreateCellAction = ReturnType<typeof createCellAction>;
@@ -80,6 +81,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
+  "SET_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,

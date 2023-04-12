@@ -241,6 +241,7 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      name: Option[String],
                                      color: Option[com.scalableminds.util.image.Color],
                                      creationTime: Option[Long],
+                                     groupId: Option[Int],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None)
     extends ApplyableVolumeAction
@@ -261,7 +262,8 @@ case class UpdateSegmentVolumeAction(id: Long,
         anchorPosition = anchorPosition.map(vec3IntToProto),
         name = name,
         creationTime = creationTime,
-        color = colorOptToProto(color)
+        color = colorOptToProto(color),
+        groupId = groupId
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }
@@ -336,14 +338,14 @@ object CompactVolumeUpdateAction {
   }
 }
 
-case class UpdateSegmentGroupsVolumeAction(treeGroups: List[UpdateActionSegmentGroup],
+case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
                                            actionTimestamp: Option[Long] = None,
                                            actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
     extends UpdateAction.VolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withSegmentGroups(treeGroups.map(convertSegmentGroup))
+    tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
 
   override def addTimestamp(timestamp: Long): UpdateAction[VolumeTracing] =
     this.copy(actionTimestamp = Some(timestamp))

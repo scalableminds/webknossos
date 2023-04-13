@@ -225,9 +225,6 @@ type State = {
   groupTree: TreeNode[];
   prevProps: Props | null | undefined;
 };
-const getSortedSegments = memoizeOne((segments: SegmentMap | null | undefined) =>
-  _.sortBy(segments ? Array.from(segments.values()) : [], "id"),
-);
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
   // index refers to the array of available mags. Thus, we can directly
@@ -283,7 +280,7 @@ function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
   groupToTreesMap: Record<number, Segment[]>,
   expandedGroupIds: {},
-  arg3: string,
+  _arg3: string,
 ): TreeNode[] {
   // return {
   //   key: "string",
@@ -379,8 +376,8 @@ class SegmentsView extends React.Component<Props, State> {
     const { segments, segmentGroups } = nextProps;
     if (
       segments != null &&
-      (prevState.prevProps?.segments != segments ||
-        prevState.prevProps?.segmentGroups != segmentGroups)
+      (prevState.prevProps?.segments !== segments ||
+        prevState.prevProps?.segmentGroups !== segmentGroups)
     ) {
       const groupToTreesMap = createGroupToSegmentsMap(segments);
       const rootGroup = {
@@ -972,7 +969,7 @@ class SegmentsView extends React.Component<Props, State> {
       </div>
     );
   }
-  deleteGroup(id: number): void {
+  deleteGroup(_id: number): void {
     throw new Error("Method not implemented.");
   }
   createGroup(groupId: number): void {

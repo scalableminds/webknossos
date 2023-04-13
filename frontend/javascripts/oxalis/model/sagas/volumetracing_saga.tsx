@@ -599,7 +599,7 @@ export function* diffVolumeTracing(
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
 
-  if (prevVolumeTracing != volumeTracing) {
+  if (prevVolumeTracing !== volumeTracing) {
     if (prevVolumeTracing.segments !== volumeTracing.segments) {
       for (const action of cachedDiffSegmentLists(
         prevVolumeTracing.segments,

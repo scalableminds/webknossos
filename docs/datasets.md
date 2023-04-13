@@ -16,6 +16,7 @@ The easiest way to get started with working on your datasets is through the WEBK
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Provide some metadata information:  
+
   - a *name* 
   - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
   - *scale* of each voxel (in nanometers)
@@ -53,6 +54,7 @@ With other converters, you may need to add the layers separately.
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Remote Dataset* tab
 3. For each layer, provide some metadata information:  
+
   - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
   - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button

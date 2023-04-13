@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed rendering problems in orthogonal when working with nodes that were created in flight or oblique mode. [#6978](https://github.com/scalableminds/webknossos/pull/6978)
 
 ### Removed
 

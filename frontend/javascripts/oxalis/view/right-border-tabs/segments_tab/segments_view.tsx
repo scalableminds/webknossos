@@ -1,68 +1,67 @@
-import { AutoSizer } from "react-virtualized";
+import {
+  DeleteOutlined,
+  DownOutlined,
+  LoadingOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
+import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
+import {
+  getFeatureNotAvailableInPlanMessage,
+  isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
+} from "admin/organization/pricing_plan_utils";
 import {
   Button,
   ConfigProvider,
-  List,
-  Tooltip,
-  Select,
-  Popover,
-  Empty,
-  TreeProps,
-  Tree,
   Dropdown,
+  Empty,
   MenuProps,
+  Popover,
+  Select,
+  Tooltip,
+  Tree,
+  TreeProps,
 } from "antd";
-import type { Dispatch } from "redux";
-import {
-  LoadingOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-  PlusOutlined,
-  DownOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
-import { connect, useSelector } from "react-redux";
-import React from "react";
+import features from "features";
+import Toast from "libs/toast";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
-import {
-  maybeFetchMeshFilesAction,
-  updateCurrentMeshFileAction,
-} from "oxalis/model/actions/annotation_actions";
+  getMappingInfo,
+  getResolutionInfoOfVisibleSegmentationLayer,
+  getVisibleSegmentationLayer,
+  ResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
-  getVisibleSegmentationLayer,
-  getResolutionInfoOfVisibleSegmentationLayer,
-  getMappingInfo,
-  ResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+  maybeFetchMeshFilesAction,
+  updateCurrentMeshFileAction,
+} from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
-  updateSegmentAction,
-  setActiveCellAction,
   removeSegmentAction,
+  setActiveCellAction,
   setSegmentGroupsAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import DataLayer from "oxalis/model/data_layer";
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { Model } from "oxalis/singletons";
-import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import type {
   ActiveMappingInfo,
   Flycam,
@@ -73,14 +72,14 @@ import type {
   SegmentMap,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import features from "features";
-import {
-  getFeatureNotAvailableInPlanMessage,
-  isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
-} from "admin/organization/pricing_plan_utils";
-import { DataNode } from "antd/lib/tree";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
+import React from "react";
+import { connect, useSelector } from "react-redux";
+import { AutoSizer } from "react-virtualized";
+import type { Dispatch } from "redux";
+import type { APIDataset, APIMeshFile, APISegmentationLayer, APIUser } from "types/api_flow_types";
 import {
   callDeep,
   createGroupToSegmentsMap,
@@ -88,8 +87,6 @@ import {
   findParentIdForGroupId,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -259,8 +256,6 @@ function renderEmptyMeshFileSelect() {
     />
   );
 }
-
-type SegmentOrGroup = "segment" | "group";
 
 export type TreeNode =
   | (Segment & {

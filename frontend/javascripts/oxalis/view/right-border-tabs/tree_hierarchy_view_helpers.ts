@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { Tree, TreeMap, TreeGroup, SegmentMap, Segment } from "oxalis/store";
+import type { Tree, TreeGroup, SegmentMap, Segment } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
 export const TYPE_GROUP = "GROUP";
 export const TYPE_TREE = "TREE";

@@ -47,7 +47,8 @@ class UserService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  private val userCache: AlfuFoxCache[ObjectId, User] = AlfuFoxCache(timeToLive = conf.WebKnossos.Cache.User.timeout)
+  private val userCache: AlfuFoxCache[ObjectId, User] =
+    AlfuFoxCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {

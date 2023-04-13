@@ -239,7 +239,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_ROTATION": {
       // This action should only be dispatched when *not* being in orthogonal mode,
-      // because this would lead to incorrect buckets being selected.
+      // because this would lead to incorrect buckets being selected for rendering.
       if (state.temporaryConfiguration.viewMode !== "orthogonal") {
         return setRotationReducer(state, action.rotation);
       }

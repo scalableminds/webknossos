@@ -951,7 +951,7 @@ class SegmentsView extends React.Component<Props, State> {
                 <div style={{ flex: 0 }}>{this.getMeshesHeader()}</div>
 
                 {/* todo: scrollbar is not native */}
-                <div style={{ flex: 1, overflow: "hidden" }}>
+                <div style={{ flex: 1 }}>
                   {allSegments == null || allSegments.size() === 0 ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -962,7 +962,9 @@ class SegmentsView extends React.Component<Props, State> {
                       }`}
                     />
                   ) : (
-                    <AutoSizer>
+                    /* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
+                       This has a major performance impact. */
+                    <AutoSizer defaultHeight={500}>
                       {({ height, width }) => (
                         <div
                           style={{
@@ -972,12 +974,11 @@ class SegmentsView extends React.Component<Props, State> {
                         >
                           <Tree
                             onDrop={this.onDrop}
-                            // virtual={false}
                             defaultExpandAll
                             className="segments-tree"
                             blockNode
                             // Passing an explicit height here, makes the tree virtualized
-                            height={height}
+                            height={height} // without virtualization, pass 0 here and/or virtual={false}
                             draggable={{ icon: false }}
                             showLine
                             switcherIcon={<DownOutlined />}
@@ -988,7 +989,7 @@ class SegmentsView extends React.Component<Props, State> {
                             style={{
                               marginTop: 12,
                               flex: "1 1 auto",
-                              overflow: "auto",
+                              overflow: "auto", // use hidden when not using virtualization
                             }}
                           />
                         </div>

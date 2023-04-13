@@ -26,10 +26,6 @@
     // todo: why doesnt this work?
     padding: 0 !important;
   }
-
-  .ant-tree-list-scrollbar {
-    display: block !important;
-  }
 }
 
 .segment-list-item {
@@ -81,6 +77,8 @@
   height: inherit;
   display: flex;
   flex-direction: column;
+  // Scroll behavior is handled by the children of this view.
+  overflow: hidden; // use auto when not using virtualization
 }
 
 #connectome-view {

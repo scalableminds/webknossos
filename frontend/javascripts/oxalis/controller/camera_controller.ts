@@ -26,7 +26,7 @@ import { api } from "oxalis/singletons";
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   onCameraPositionChanged: () => void;
-  onTDCameraChanged: () => void;
+  onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
 };
 
@@ -151,7 +151,7 @@ class CameraController extends React.PureComponent<Props> {
       tdCamera.left = oldMid - newWidth / 2;
       tdCamera.right = oldMid + newWidth / 2;
       tdCamera.updateProjectionMatrix();
-      this.props.onTDCameraChanged();
+      this.props.onTDCameraChanged(false);
     }
   }
 

@@ -11,7 +11,6 @@ WEBKNOSSOS natively supports loading and streaming data in the following formats
 - webKnossos-wrap (WKW)
 - Zarr ([OME NGFF v0.4+ spec](https://ngff.openmicroscopy.org/latest/))
 - Neuroglancer `precomputed` stored on Google Cloud
-- BossDB
 - N5
 
 See the page on [datasets](./datasets.md) for uploading and configuring datasets.
@@ -28,7 +27,7 @@ In particular, the following file formats are supported:
 - Single-file images (tif, czi, nifti, raw)
 - KNOSSOS file hierarchy 
 
-Note, for datasets in the Zarr, N5, Neuroglancer `Pre-Computed` or BossDB formats uploading and automatic conversion are not supported.
+Note, for datasets in the Zarr, N5 and Neuroglancer Precomputed formats uploading and automatic conversion are not supported.
 Instead, they can be directly streamed from an HTTP server or the cloud.
 See the page on [datasets](./datasets.md) for uploading and configuring these formats.
 
@@ -139,6 +138,7 @@ WKW is versatile in the image formats it can hold: Grayscale, Multi-Channel, Seg
 Additionally, WKW supports compression for disk space efficiency.
 
 Each layer of a WKW dataset may contain one of the following:
+
 * Grayscale data (8 Bit, 16 Bit, Float), also referred to as `color` data
 * RGB data (24 Bit)
 * Segmentation data (8 Bit, 16 Bit, 32 Bit)

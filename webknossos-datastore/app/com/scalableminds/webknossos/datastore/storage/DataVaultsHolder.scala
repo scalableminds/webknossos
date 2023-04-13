@@ -44,11 +44,11 @@ object DataVaultsHolder extends LazyLogging {
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")
       }
-      logger.info(s"Successfully created file system for ${remoteSource.uri.toString}")
+      logger.info(s"Successfully created data vault for ${remoteSource.uri.toString}")
       Fox.successful(fs)
     } catch {
       case e: Exception =>
-        val msg = s"get file system errored for ${remoteSource.uri.toString}:"
+        val msg = s"get vault path errored for ${remoteSource.uri.toString}:"
         logger.error(msg, e)
         Fox.failure(msg, Full(e))
     }

@@ -36,6 +36,9 @@ const initialState = {
     currentMatrix: M4x4.identity,
     spaceDirectionOrtho: [1, 1, 1],
   },
+  temporaryConfiguration: {
+    viewMode: "oblique",
+  },
 };
 test("Flycam should calculate zoomed matrix", (t) => {
   t.deepEqual(

@@ -114,10 +114,10 @@ export function callDeep(
   groups: Array<TreeGroup>,
   groupId: number,
   callback: (
-    arg0: TreeGroup,
-    arg1: number,
-    arg2: Array<TreeGroup>,
-    arg3: number | null | undefined,
+    group: TreeGroup,
+    index: number,
+    treeGroups: Array<TreeGroup>,
+    parentGroupId: number | null | undefined,
   ) => void,
   parentGroupId: number | null | undefined = MISSING_GROUP_ID,
 ) {
@@ -125,9 +125,7 @@ export function callDeep(
   groups.forEach((group: TreeGroup, index: number, array: Array<TreeGroup>) => {
     if (group.groupId === groupId) {
       callback(group, index, array, parentGroupId);
-    }
-
-    if (group.children) {
+    } else if (group.children) {
       callDeep(group.children, groupId, callback, group.groupId);
     }
   });
@@ -136,10 +134,10 @@ export function callDeepWithChildren(
   groups: Array<TreeGroup>,
   groupId: number | undefined,
   callback: (
-    arg0: TreeGroup,
-    arg1: number,
-    arg2: Array<TreeGroup>,
-    arg3: number | null | undefined,
+    group: TreeGroup,
+    index: number,
+    treeGroups: Array<TreeGroup>,
+    parentGroupId: number | null | undefined,
   ) => void,
   parentGroupId: number | null | undefined = MISSING_GROUP_ID,
   isWithinTargetGroup: boolean = false,
@@ -159,11 +157,23 @@ export function callDeepWithChildren(
 }
 export function findGroup(groups: Array<TreeGroup>, groupId: number): TreeGroup | null | undefined {
   let foundGroup = null;
-  callDeep(groups, groupId, (group) => {
+  callDeep(groups, groupId, (group, _index, _groups) => {
     foundGroup = group;
   });
   return foundGroup;
 }
+
+export function findParentIdForGroupId(
+  groups: Array<TreeGroup>,
+  groupId: number,
+): number | null | undefined {
+  let foundParentGroupId: number | null | undefined = null;
+  callDeep(groups, groupId, (_group, _index, _groups, parentGroupId) => {
+    foundParentGroupId = parentGroupId;
+  });
+  return foundParentGroupId;
+}
+
 export function forEachTreeNode(groups: Array<TreeNode>, callback: (arg0: TreeNode) => void) {
   for (const group of groups) {
     callback(group);

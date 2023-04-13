@@ -84,6 +84,8 @@ import { DataNode } from "antd/lib/tree";
 import {
   callDeep,
   createGroupToSegmentsMap,
+  findGroup,
+  findParentIdForGroupId,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -921,31 +923,6 @@ class SegmentsView extends React.Component<Props, State> {
               }
             };
 
-            const onDrop = ({
-              node,
-              dragNode,
-              dropToGap,
-            }: {
-              node: Segment | null;
-              dragNode: Segment;
-              dropToGap: boolean;
-            }) => {
-              // Node is the node onto which dragNode is dropped
-              if (node == null) {
-                return;
-              }
-
-              function moveIfAllowed(sourceId: number, targetId: number) {}
-
-              if (dropToGap && node.parent) {
-                // dragNode was dragged *next to* node. Move into parent.
-                moveIfAllowed(dragNode.id, node.parent);
-              } else {
-                // dragNode was dragged *into* node
-                moveIfAllowed(dragNode.id, node.id);
-              }
-            };
-
             return (
               <React.Fragment>
                 <div style={{ flex: 0 }}>{this.getMeshesHeader()}</div>
@@ -1032,65 +1009,79 @@ class SegmentsView extends React.Component<Props, State> {
 
   // onDrop Callback function for when the onDrop event occurs  function({event, node, dragNode, dragNodesKeys})
 
-  onDrop = ({
-    node,
-    dragNode,
-    dropToGap,
-  }: {
-    node: TreeNode | null;
-    dragNode: TreeNode;
-    dropToGap: boolean;
-  }) => {
+  onDrop = (dropInfo: { node: TreeNode | null; dragNode: TreeNode; dropToGap: boolean }) => {
+    const { node, dragNode, dropToGap } = dropInfo;
+    console.log("dropinfo", dropInfo);
+
     // Node is the node onto which dragNode is dropped
     if (node == null || this.props.visibleSegmentationLayer == null) {
       return;
     }
 
-    // todo: do we need to take dropToGap into account?
-    // if (dropToGap) {
-    if (node.type === "segment") {
-      // dragNode was dragged *next to* node. Move into the same
-      // group as node.
+    console.log("dropToGap", { node, dragNode, dropToGap });
+
+    function mapGroup(group: SegmentGroup, fn: (g: SegmentGroup) => SegmentGroup): SegmentGroup {
+      const newChildren = mapGroups(group.children, fn);
+      return fn({ ...group, children: newChildren });
+    }
+
+    function mapGroups(
+      groups: SegmentGroup[],
+      fn: (g: SegmentGroup) => SegmentGroup,
+    ): SegmentGroup[] {
+      return groups.map((group) => mapGroup(group, fn));
+    }
+
+    const dropTargetGroupId = node.type === "segment" ? node.groupId : node.id;
+    let targetGroupId: number | null | undefined = null;
+    if (dropTargetGroupId != null) {
+      targetGroupId = dropToGap
+        ? findParentIdForGroupId(this.props.segmentGroups, dropTargetGroupId)
+        : dropTargetGroupId;
+    }
+    if (dragNode.type === "segment") {
+      // A segment is being dropped onto/next to a segment or group.
       this.props.updateSegment(
         dragNode.id,
-        { groupId: node.groupId },
+        { groupId: targetGroupId },
         this.props.visibleSegmentationLayer.name,
         true,
       );
-    } else if (node.type === "group") {
-      // dragNode was dragged *into* node
-      this.props.updateSegment(
-        dragNode.id,
-        { groupId: node.id },
+    } else {
+      // A group is being dropped onto/next to a segment or group.
+      const movedGroup = findGroup(this.props.segmentGroups, dragNode.id);
+      if (!movedGroup) {
+        console.error("Could not find group to move");
+        return;
+      }
+
+      // todo: make root handling nicer?
+      const segmentGroupsWithoutDraggedGroup = mapGroups(
+        [
+          {
+            name: "Root",
+            groupId: MISSING_GROUP_ID,
+            children: this.props.segmentGroups,
+          },
+        ],
+        (parentGroup) => ({
+          ...parentGroup,
+          children: parentGroup.children.filter((subgroup) => subgroup.groupId !== dragNode.id),
+        }),
+      );
+      const newSegmentGroups = mapGroups(segmentGroupsWithoutDraggedGroup, (parentGroup) => ({
+        ...parentGroup,
+        children:
+          parentGroup.groupId === targetGroupId
+            ? parentGroup.children.concat([movedGroup])
+            : parentGroup.children,
+      }));
+      this.props.onUpdateSegmentGroups(
+        newSegmentGroups[0].children,
         this.props.visibleSegmentationLayer.name,
-        true,
       );
     }
   };
-
-  // onDrop = ({ event, node, dragNode, dragNodesKeys }) =>
-  //   // params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
-
-  //   {
-  //     const { nextParentNode, node, treeData } = params;
-
-  //     if (node.type === TYPE_TREE && nextParentNode) {
-  //       const allTreesToMove = [...this.props.selectedTrees, node.id];
-  //       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
-  //       const moveActions = allTreesToMove.map((treeId) => {
-  //         return setTreeGroupAction(
-  //           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-  //           treeId,
-  //         );
-  //       });
-  //       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
-  //     } else {
-  //       // A group was dragged - update the groupTree
-  //       // Exclude root group and remove trees from groupTree object
-  //       const newTreeGroups = removeTreesAndTransform(treeData[0].children);
-  //       this.props.onUpdateTreeGroups(newTreeGroups);
-  //     }
-  //   };
 }
 
 const connector = connect(mapStateToProps, mapDispatchToProps);

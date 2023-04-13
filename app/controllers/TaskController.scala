@@ -207,7 +207,7 @@ Expects:
       for {
         taskIdValidated <- ObjectId.fromString(id)
         userIdValidated <- ObjectId.fromString(userId)
-        assignee <- userService.findOneById(userIdValidated, useCache = true)
+        assignee <- userService.findOneCached(userIdValidated, useCache = true)
         teams <- userService.teamIdsFor(userIdValidated)
         task <- taskDAO.findOne(taskIdValidated)
         project <- projectDAO.findOne(task._project)

@@ -89,6 +89,7 @@ import {
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -805,16 +806,6 @@ class SegmentsView extends React.Component<Props, State> {
   );
 
   render() {
-    // const treeData: DataNode[] = [
-    //   {
-    //     title: "parent 1",
-    //     key: "0-0",
-    //     children: [
-    //       {
-
-    //   },
-    // ];
-
     const onSelect: TreeProps["onSelect"] = (selectedKeys, info) => {
       console.log("selected", selectedKeys, info);
     };
@@ -1007,29 +998,12 @@ class SegmentsView extends React.Component<Props, State> {
     this.props.onUpdateSegmentGroups(newSegmentGroups, this.props.visibleSegmentationLayer.name);
   }
 
-  // onDrop Callback function for when the onDrop event occurs  function({event, node, dragNode, dragNodesKeys})
-
   onDrop = (dropInfo: { node: TreeNode | null; dragNode: TreeNode; dropToGap: boolean }) => {
     const { node, dragNode, dropToGap } = dropInfo;
-    console.log("dropinfo", dropInfo);
 
     // Node is the node onto which dragNode is dropped
     if (node == null || this.props.visibleSegmentationLayer == null) {
       return;
-    }
-
-    console.log("dropToGap", { node, dragNode, dropToGap });
-
-    function mapGroup(group: SegmentGroup, fn: (g: SegmentGroup) => SegmentGroup): SegmentGroup {
-      const newChildren = mapGroups(group.children, fn);
-      return fn({ ...group, children: newChildren });
-    }
-
-    function mapGroups(
-      groups: SegmentGroup[],
-      fn: (g: SegmentGroup) => SegmentGroup,
-    ): SegmentGroup[] {
-      return groups.map((group) => mapGroup(group, fn));
     }
 
     const dropTargetGroupId = node.type === "segment" ? node.groupId : node.id;

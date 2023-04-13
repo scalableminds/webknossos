@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
 
+# Migrating Editable Mappings a.k.a. proofreading annotations
+# 2023-04 https://github.com/scalableminds/webknossos/pull/6903
+#
+## Required python packages:
+# pip install grpcio-tools grpcio-health-checking
+#
+## Development
+# Note: needs both old and new format editable mapping proto definitions
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. --grpc_python_out=. ../../webknossos/webknossos-datastore/proto/fossildbapi.proto
+#
+### from old code:
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. ../../webknossos/webknossos-datastore/proto/EditableMapping.proto
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. ../../webknossos/webknossos-datastore/proto/geometry.proto
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. ../../webknossos/webknossos-datastore/proto/SkeletonTracing.proto
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. ../../webknossos/webknossos-datastore/proto/VolumeTracing.proto
+#
+### from new code / editable mapping distributed branch:
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. ../../webknossos/webknossos-datastore/proto/EditableMappingInfo.proto
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. ../../webknossos/webknossos-datastore/proto/SegmentToAgglomerateProto.proto
+# python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. ../../webknossos/webknossos-datastore/proto/AgglomerateGraph.proto
+
+
+
 import json
 import grpc
 import sys
@@ -16,11 +39,6 @@ import EditableMapping_pb2
 
 import EditableMappingInfo_pb2
 import SegmentToAgglomerateProto_pb2
-
-# To minimize downtime for instances with large editable mappings: run with migrate_history=False
-# Then, while the new wk is already running, run with migrate_history=True
-# the history is not currently used (we’d migrate it only to support possibly later-added feature of version restore)
-migrate_history = False
 
 MAX_MESSAGE_LENGTH = 1073741824
 
@@ -41,6 +59,7 @@ def main():
     parser.add_argument("fossil_host", help="example: localhost:7155")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-w", "--do_write", action="store_true")
+    parser.add_argument("-o", "--do_migrate_older_versions", action="store_true", help="To minimize downtime for instances with large editable mappings: run without -o. Then, while the new wk is already running, run with -o. The history is not currently used by wk (we’d migrate it only to support possibly later-added feature of version restore)")
     args = parser.parse_args()
 
     print(f"Starting migration script (do_write={args.do_write}) at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -64,16 +83,22 @@ def main():
             assert_success(get_reply)
 
             convert_and_save(key, get_reply.actualVersion, get_reply.value, stub, args)
+            migrated_versions = {get_reply.actualVersion}
 
-            if migrate_history:
+            if args.do_migrate_older_versions:
                 next_version = get_reply.actualVersion - persisted_version_interval
-                # TODO: ensure v0 is always migrated
                 while next_version >= 0:
                     print(f"Getting {key} v{next_version}...")
                     get_reply = stub.Get(proto.GetRequest(collection=collection_editable_mappings, key=key, version=next_version))
                     assert_success(get_reply)
                     convert_and_save(key, get_reply.actualVersion, get_reply.value, stub, args)
+                    migrated_versions.add(get_reply.actualVersion)
                     next_version = get_reply.actualVersion - persisted_version_interval
+                if 0 not in migrated_versions:
+                    print(f"Getting {key} v0...")
+                    get_reply = stub.Get(proto.GetRequest(collection=collection_editable_mappings, key=key, version=0))
+                    assert_success(get_reply)
+                    convert_and_save(key, get_reply.actualVersion, get_reply.value, stub, args)
 
         previous_listed_key = list_keys_reply.keys[-1]
 

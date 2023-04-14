@@ -1,4 +1,4 @@
-import type { ViewMode, ControlMode, BLEND_MODES } from "oxalis/constants";
+import type { ViewMode, ControlMode, RENDER_MODES } from "oxalis/constants";
 import type {
   UserConfiguration,
   DatasetConfiguration,
@@ -27,7 +27,6 @@ export type SetMappingEnabledAction = ReturnType<typeof setMappingEnabledAction>
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
-type SetBlendModeAction = ReturnType<typeof setBlendModeAction>;
 export type SettingAction =
   | UpdateUserSettingAction
   | UpdateDatasetSettingAction
@@ -44,8 +43,7 @@ export type SettingAction =
   | SetHideUnmappedIdsAction
   | SetHistogramDataForLayerAction
   | ReloadHistogramAction
-  | InitializeGpuSetupAction
-  | SetBlendModeAction;
+  | InitializeGpuSetupAction;
 
 export const updateUserSettingAction = <Key extends keyof UserConfiguration>(
   propertyName: Key,
@@ -233,10 +231,4 @@ export const initializeGpuSetupAction = (
     bucketCapacity,
     gpuFactor,
     maximumLayerCountToRender,
-  } as const);
-
-export const setBlendModeAction = (blendMode: BLEND_MODES) =>
-  ({
-    type: "SET_BLEND_MODE",
-    blendMode,
   } as const);

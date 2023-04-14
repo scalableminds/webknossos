@@ -43,7 +43,7 @@ import type {
   OrthoViewWithoutTD,
   InterpolationMode,
 } from "oxalis/constants";
-import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
+import { RENDER_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -286,6 +286,7 @@ export type DatasetConfiguration = {
   readonly renderMissingDataBlack: boolean;
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
+  readonly renderMode: RENDER_MODES;
 };
 export type PartialDatasetConfiguration = Partial<
   DatasetConfiguration & {
@@ -380,7 +381,6 @@ export type TemporaryConfiguration = {
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;
   readonly lastVisibleSegmentationLayerName: string | null | undefined;
-  readonly blendMode: BLEND_MODES;
 };
 export type Script = APIScript;
 export type Task = APITask;

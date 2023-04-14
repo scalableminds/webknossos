@@ -117,9 +117,6 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
 
       // if alpha === 0 -> No data
       color = mix(color, fallbackColor, float(color.a < 0.0));
-      vec4 usedFallbackColor = mix(vec4(0.0), vec4(1.0), float(color.a < 0.0));
-      return color;
-
       return color;
     }
 

@@ -10,7 +10,7 @@ import {
   SwitchSetting,
   DropdownSetting,
 } from "oxalis/view/components/setting_input_views";
-import type { UserConfiguration, OxalisState, DatasetConfiguration } from "oxalis/store";
+import { type UserConfiguration, type OxalisState, type DatasetConfiguration } from "oxalis/store";
 import { clearCache } from "admin/admin_rest_api";
 import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -22,7 +22,7 @@ import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ViewMode } from "oxalis/constants";
-import Constants from "oxalis/constants";
+import Constants, { RENDER_MODES } from "oxalis/constants";
 import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
@@ -295,6 +295,23 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               {
                 value: "PROGRESSIVE_QUALITY",
                 label: "Progressive quality",
+              },
+            ]}
+          />
+          <DropdownSetting
+            label={
+              <Tooltip title={settingsTooltips.renderMode}>{settingsLabels.renderMode}</Tooltip>
+            }
+            value={this.props.datasetConfiguration.renderMode}
+            onChange={this.onChangeDataset.renderMode}
+            options={[
+              {
+                value: RENDER_MODES.Additive,
+                label: "Additive",
+              },
+              {
+                value: RENDER_MODES.Cover,
+                label: "Cover",
               },
             ]}
           />

@@ -107,7 +107,7 @@ uniform vec3 globalPosition;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
 uniform bool useBilinearFiltering;
-uniform int blendMode;
+uniform int renderMode;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
@@ -171,7 +171,7 @@ void main() {
     gl_FragColor = vec4(bucketPosition, activeMagIdx) / 255.;
     return;
   }
-  vec3 data_color = vec3(0.0);
+  vec4 data_color = vec4(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     vec4 <%= segmentationName%>_id_low = vec4(0.);
@@ -205,6 +205,7 @@ void main() {
             fallbackGray,
             !<%= name %>_has_transform
           );
+          // For uint24 the alpha channel is always 0.0 :/
         color_value = maybe_filtered_color_value.rgb;
         <% if (packingDegreeLookup[name] === 2.0) { %>
           // Workaround for 16-bit color layers
@@ -224,21 +225,21 @@ void main() {
         color_value = abs(color_value - <%= name %>_is_inverted);
         // Catch the case where max == min would causes a NaN value and use black as a fallback color.
         color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        // additive blendmode == 1
+        // Additive renderMode == 1
         color_value = color_value * <%= name %>_alpha * <%= name %>_color;
-        vec3 additive_color = data_color + color_value;
-        // cover blendmode == 0
-        // TODO: gimp calls this blend mode "merge" -> rename
+        vec4 additive_color = data_color + vec4(color_value, maybe_filtered_color_value.a);
+        // Cover renderMode == 0
         float is_valid_color = float(maybe_filtered_color_value.a > 0.0);
-        vec3 cover_color = mix(data_color, color_value, is_valid_color);
-        // choose color depending on blendmode
-        data_color = mix(cover_color, additive_color, float(blendMode == 1));
+        vec4 cover_color = mix(data_color, vec4(color_value, maybe_filtered_color_value.a), is_valid_color);
+        // choose color depending on renderMode
+        data_color = mix(cover_color, additive_color, float(renderMode == 1));
       }
     }
   <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);
+  data_color.a = 1.0;
 
-  gl_FragColor = vec4(data_color, 1.0);
+  gl_FragColor = data_color;
 
   <% if (hasSegmentation) { %>
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
@@ -255,7 +256,7 @@ void main() {
       float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
       float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
       gl_FragColor = vec4(mix(
-        data_color,
+        data_color.rgb,
         convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low),
         <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
       ), 1.0);

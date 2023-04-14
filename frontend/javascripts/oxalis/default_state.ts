@@ -8,7 +8,6 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
-  RENDER_MODES,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 const defaultViewportRect = {

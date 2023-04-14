@@ -1,4 +1,4 @@
-import type { ViewMode, ControlMode, RENDER_MODES } from "oxalis/constants";
+import type { ViewMode, ControlMode } from "oxalis/constants";
 import type {
   UserConfiguration,
   DatasetConfiguration,

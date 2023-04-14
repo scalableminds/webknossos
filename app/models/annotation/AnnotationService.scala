@@ -838,8 +838,6 @@ class AnnotationService @Inject()(
         requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      meshes <- meshDAO.findAllWithAnnotation(annotation._id)
-      meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
       teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
       teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
       tracingStore <- tracingStoreDAO.findFirst
@@ -871,7 +869,6 @@ class AnnotationService @Inject()(
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
         "owner" -> userJson,
-        "meshes" -> meshesJs,
         "contributors" -> contributorsJs,
         "othersMayEdit" -> annotation.othersMayEdit
       )

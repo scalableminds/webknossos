@@ -19,7 +19,6 @@ import type {
   APIUser,
   APIUserBase,
   AnnotationLayerDescriptor,
-  MeshMetaData,
   TracingType,
   APIMeshFile,
   ServerEditableMapping,
@@ -181,9 +180,6 @@ export type Annotation = {
   readonly name: string;
   readonly tracingStore: APITracingStore;
   readonly annotationType: APIAnnotationType;
-  // This property contains back-end stored mesh objects for which
-  // the support is about to end. See webknossos/#5633.
-  readonly meshes: Array<MeshMetaData>;
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;

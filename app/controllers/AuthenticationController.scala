@@ -144,7 +144,7 @@ class AuthenticationController @Inject()(
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
       brainDBResult <- Fox.runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")))
-      _ = if (conf.Features.isDemoInstance) {
+      _ = if (conf.Features.isWkorgInstance) {
         mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
       } else {
         Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult.flatten, autoActivate))
@@ -597,7 +597,7 @@ class AuthenticationController @Inject()(
                       defaultMails.newOrganizationMail(organization.displayName,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
-                    if (conf.Features.isDemoInstance) {
+                    if (conf.Features.isWkorgInstance) {
                       mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }
                     Ok

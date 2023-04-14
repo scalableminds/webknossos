@@ -160,7 +160,6 @@ export const annotation: APIAnnotation = {
       },
     ],
   },
-  meshes: [],
   contributors: [],
   othersMayEdit: false,
   teams: [

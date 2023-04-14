@@ -7,8 +7,10 @@ import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+
 const FormItem = Form.Item;
 const { Password } = Input;
+
 type Props = {
   onRegistered: (isUserLoggedIn: true) => void;
 };
@@ -25,7 +27,7 @@ function generateOrganizationName() {
   return output;
 }
 
-function SpotlightRegistrationForm(props: Props) {
+function RegistrationFormWKOrg(props: Props) {
   const [form] = Form.useForm();
   const organizationName = useRef(generateOrganizationName());
 
@@ -191,4 +193,4 @@ function SpotlightRegistrationForm(props: Props) {
     </Form>
   );
 }
-export default memo(SpotlightRegistrationForm);
+export default memo(RegistrationFormWKOrg);

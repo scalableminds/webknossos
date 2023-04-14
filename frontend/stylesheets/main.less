@@ -14,7 +14,7 @@
 @import "_variables.less";
 @import "_utils.less";
 @import "_dashboard.less";
-@import "_spotlight.less";
+@import "_publications.less";
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_status_bar.less";
 @import "trace_view/_user_settings_view.less";
@@ -27,6 +27,7 @@
 @import "_admin.less";
 @import "_google-charts-overwrites.less";
 @import "flex_layout_overwrites.less";
+@import "_drawings.less";
 
 @font-face {
   font-family: "Nunito";
@@ -70,7 +71,7 @@ body {
 
 .ant-layout-header {
   .logo {
-    background: url(/assets/images/icon-only.svg) 15px center no-repeat;
+    background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
     padding-left: 46px;
     height: 48px;
     float: left;
@@ -383,48 +384,63 @@ i.without-icon-margin,
 }
 
 .webknossos-welcome-toast {
-  background: url(/assets/images/mesh_background.webp) 50% 50% / cover no-repeat, rgb(23, 103, 139);
-
-  &:before {
-    content: "";
-    background: linear-gradient(0deg, #222222d4 0%, rgba(23, 103, 139, 0.73) 100%);
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-  }
-
+  background-color: @primary-color;
+  color: white;
+  
   .logo {
-    background: url(/assets/images/icon-only.svg) 15px center no-repeat;
-    padding-left: 105px;
-    height: 140px;
-    float: left;
-    margin-top: 2px;
-    margin-left: -15px;
-    background-size: 70px 70px;
+    background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
+    filter: brightness(4);
+    width: 74px;
+    height: 50px;
+    background-size: 50px 50px;
+    display: inline-block;
   }
 
   .ant-notification-notice-content {
     position: relative;
   }
   .ant-notification-notice-message {
+    padding-left: 40px; 
+    margin-top: 20px;
+    margin-bottom: 30px;
     color: white;
     font-size: 24px;
-    font-weight: bold;
   }
 
   .ant-notification-notice-description {
     font-size: 16px;
     line-height: 21px;
-    color: #ececec;
+    color: white;
+    margin-left: 24px;
+
+    p {
+      margin-bottom: 30px;
+      margin-right: 60px;
+    }
+    
+    .drawing-welcome-guy{
+      position: relative;
+    
+      &:before {
+        width: 53px;
+        height: 100px;
+        display: block;
+        position: absolute;
+        top: 0px;
+        right: 0px;
+        content: " ";
+        transform: translate(15%, -104%);
+        background-image: url(/assets/images/drawings/waving-person.svg);
+        background-repeat: no-repeat;
+        background-size: cover;
+      }
+    }
   }
 
   .ant-notification-notice-close {
     color: white;
   }
 
-  color: white;
 }
 
 .no-borders {
@@ -622,7 +638,7 @@ i.without-icon-margin,
   .login-content {
     background-color: white;
     width: 600px;
-    padding: 100px; 
+    padding: 80px; 
 
     h3 {
       color: @black // always enforce dark text color to prevent dark mode bugs
@@ -631,6 +647,24 @@ i.without-icon-margin,
     @media @smartphones {
       padding: 20px;
       margin: 20px;
+    }
+
+    &:before {
+      width: 260px;
+      height: 170px;
+      display: block;
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      content: " ";
+      transform: translate(-14%, -70%);
+      background-image: url(/assets/images/drawings/login.svg);
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+
+    .ant-checkbox + span {
+      color: @black;
     }
   }
 }

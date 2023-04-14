@@ -204,20 +204,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 
-    case "UPDATE_REMOTE_MESH_METADATA": {
-      const { id, meshShape } = action;
-      const newMeshes = state.tracing.meshes.map((mesh) => {
-        if (mesh.id === id) {
-          return { ...mesh, ...meshShape, id };
-        } else {
-          return mesh;
-        }
-      });
-      return updateKey(state, "tracing", {
-        meshes: newMeshes,
-      });
-    }
-
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
       const isosurfaceInfo: Partial<IsosurfaceInformation> = {
@@ -233,24 +219,9 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       );
     }
 
-    case "ADD_MESH_METADATA": {
-      const newMeshes = state.tracing.meshes.concat(action.mesh);
-      return updateKey(state, "tracing", {
-        meshes: newMeshes,
-      });
-    }
-
-    case "DELETE_MESH": {
-      const { id } = action;
-      const newMeshes = state.tracing.meshes.filter((mesh) => mesh.id !== id);
-      return updateKey(state, "tracing", {
-        meshes: newMeshes,
-      });
-    }
-
     case "REMOVE_ISOSURFACE": {
-      const { layerName, cellId } = action;
-      const { [cellId]: _, ...remainingIsosurfaces } =
+      const { layerName, segmentId } = action;
+      const { [segmentId]: _, ...remainingIsosurfaces } =
         state.localSegmentationData[layerName].isosurfaces;
       return updateKey2(state, "localSegmentationData", layerName, {
         isosurfaces: remainingIsosurfaces,
@@ -258,9 +229,9 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_AD_HOC_ISOSURFACE": {
-      const { layerName, cellId, seedPosition, mappingName, mappingType } = action;
+      const { layerName, segmentId, seedPosition, mappingName, mappingType } = action;
       const isosurfaceInfo: IsosurfaceInformation = {
-        segmentId: cellId,
+        segmentId: segmentId,
         seedPosition,
         isLoading: false,
         isVisible: true,
@@ -273,15 +244,15 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         "localSegmentationData",
         layerName,
         "isosurfaces",
-        cellId,
+        segmentId,
         isosurfaceInfo,
       );
     }
 
     case "ADD_PRECOMPUTED_ISOSURFACE": {
-      const { layerName, cellId, seedPosition, meshFileName } = action;
+      const { layerName, segmentId, seedPosition, meshFileName } = action;
       const isosurfaceInfo: IsosurfaceInformation = {
-        segmentId: cellId,
+        segmentId: segmentId,
         seedPosition,
         isLoading: false,
         isVisible: true,
@@ -293,13 +264,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         "localSegmentationData",
         layerName,
         "isosurfaces",
-        cellId,
+        segmentId,
         isosurfaceInfo,
       );
     }
 
     case "STARTED_LOADING_ISOSURFACE": {
-      const { layerName, cellId } = action;
+      const { layerName, segmentId } = action;
       const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isLoading: true,
       };
@@ -308,13 +279,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         "localSegmentationData",
         layerName,
         "isosurfaces",
-        cellId,
+        segmentId,
         isosurfaceInfo,
       );
     }
 
     case "FINISHED_LOADING_ISOSURFACE": {
-      const { layerName, cellId } = action;
+      const { layerName, segmentId } = action;
       const isosurfaceInfo: Partial<IsosurfaceInformation> = {
         isLoading: false,
       };
@@ -323,7 +294,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         "localSegmentationData",
         layerName,
         "isosurfaces",
-        cellId,
+        segmentId,
         isosurfaceInfo,
       );
     }

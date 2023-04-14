@@ -8,14 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.04.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.04.2...HEAD)
 
 ### Added
 
 ### Changed
 
 ### Fixed
-- Fixed rendering problems in orthogonal when working with nodes that were created in flight or oblique mode. [#6978](https://github.com/scalableminds/webknossos/pull/6978)
 
 ### Removed
 

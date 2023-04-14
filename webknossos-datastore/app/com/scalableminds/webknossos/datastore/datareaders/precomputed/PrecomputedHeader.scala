@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -24,7 +25,7 @@ case class PrecomputedScale(key: String,
                             chunk_sizes: Array[Array[Int]],
                             encoding: String,
                             voxel_offset: Option[Array[Int]],
-                            compressed_segmentation_block_size: Option[Array[Int]],
+                            compressed_segmentation_block_size: Option[Vec3Int],
                             sharding: Option[ShardingSpecification]) {
 
   // From the neuroglancer specification (https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#info-json-file-specification)
@@ -54,7 +55,11 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override def resolvedDataType: ArrayDataType =
     PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(dataType.toLowerCase).get)
 
-  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(precomputedScale.encoding)
+  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(
+    precomputedScale.encoding,
+    PrecomputedDataType.fromString(dataType.toLowerCase).get,
+    chunkSize,
+    precomputedScale.compressed_segmentation_block_size)
 
   override def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] =
     chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
@@ -69,9 +74,24 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })
+
+  def gridSize: Array[Int] = (chunkSize, precomputedScale.size).zipped.map((c, s) => (s.toDouble / c).ceil.toInt)
+
+  override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }
 
-case class ShardingSpecification(`@type`: String)
+case class ShardingSpecification(`@type`: String,
+                                 preshift_bits: Long,
+                                 hash: String,
+                                 minishard_bits: Int,
+                                 shard_bits: Long,
+                                 minishard_index_encoding: String = "raw",
+                                 data_encoding: String = "raw") {
+
+  def hashFunction(input: Long): Long =
+    if (hash == "identity") input
+    else ??? // not implemented: murmurhash3_x86_128
+}
 
 object ShardingSpecification extends JsonImplicits {
   implicit object ShardingSpecificationFormat extends Format[ShardingSpecification] {

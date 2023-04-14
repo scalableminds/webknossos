@@ -4,8 +4,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, ChunkTyp
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import scala.util.Using
+import scala.collection.immutable.NumericRange
 
 object N5ChunkReader {
   def create(vaultPath: VaultPath, header: DatasetHeader): ChunkReader =
@@ -23,23 +22,21 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
 
   val dataExtractor: N5DataExtractor = new N5DataExtractor
 
-  override protected def readChunkBytesAndShape(path: String): Option[(Array[Byte], Option[Array[Int]])] =
-    Using.Manager { use =>
-      def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
-        val is = use(new ByteArrayInputStream(bytes))
-        val os = use(new ByteArrayOutputStream())
-        header.compressorImpl.uncompress(is, os)
-        val output = os.toByteArray
-        val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
-          header.fillValueNumber.byteValue()
-        }
-        paddedBlock
+  override protected def readChunkBytesAndShape(
+      path: String,
+      range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] = {
+    def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
+      val output = header.compressorImpl.decompress(bytes)
+      val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
+        header.fillValueNumber.byteValue()
       }
+      paddedBlock
+    }
 
-      for {
-        bytes <- (vaultPath / path).readBytes()
-        (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
-        paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
-      } yield (paddedChunkBytes, Some(blockHeader.blockSize))
-    }.get
+    for {
+      bytes <- (vaultPath / path).readBytes(range)
+      (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
+      paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
+    } yield (paddedChunkBytes, Some(blockHeader.blockSize))
+  }
 }

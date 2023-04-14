@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.Fox
 import models.binary.DataSetDAO
 import models.job._
 import models.organization.OrganizationDAO
+import models.binary.DataStoreDAO
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
@@ -26,7 +27,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                wkconf: WkConf,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                slackNotificationService: SlackNotificationService,
-                               organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+                               organizationDAO: OrganizationDAO,
+                               dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
     extends Controller {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -85,7 +87,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "convert_to_wkw"
+          command = JobCommand.convert_to_wkw
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -112,7 +114,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataSet.notFound",
           dataSetName) ~> NOT_FOUND
-        command = "compute_mesh_file"
+        command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
           "dataset_name" -> dataSetName,
@@ -139,7 +141,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "infer_nuclei"
+          command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -167,7 +169,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "infer_neurons"
+          command = JobCommand.infer_neurons
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -203,7 +205,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "globalize_floodfills"
+          command = JobCommand.globalize_floodfills
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -238,7 +240,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox, mag)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
-          command = "export_tiff"
+          command = JobCommand.export_tiff
           exportFileName = if (asOmeTiff)
             s"${formatDateForFilename(new Date())}__${dataSetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
           else
@@ -281,7 +283,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             dataSetName) ~> NOT_FOUND
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
-          command = "materialize_volume_annotation"
+          command = JobCommand.materialize_volume_annotation
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -311,7 +313,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "find_largest_segment_id"
+          command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -321,6 +323,18 @@ class JobsController @Inject()(jobDAO: JobDAO,
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
+    }
+
+  def export(jobId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        jobIdValidated <- ObjectId.fromString(jobId)
+        job <- jobDAO.findOne(jobIdValidated)
+        dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
+        userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
+          request.identity.loginInfo)
+        uri = s"${dataStore.publicUrl}/data/exports/${jobId}/download"
+      } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
     }
 
 }

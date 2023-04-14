@@ -446,18 +446,6 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
   };
 }
 
-export type LocalMeshMetaData = {
-  isVisible?: boolean;
-  isLoaded?: boolean;
-  isLoading?: boolean;
-};
-export type RemoteMeshMetaData = {
-  annotationId: string;
-  position: Vector3;
-  description: string;
-  id: string;
-};
-export type MeshMetaData = LocalMeshMetaData & RemoteMeshMetaData;
 export type AnnotationViewConfiguration = {
   layers: Record<
     string,
@@ -477,7 +465,6 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly user?: APIUserBase;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
-  readonly meshes: Array<MeshMetaData>;
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;
@@ -606,7 +593,7 @@ export type APIFeatureToggles = {
   readonly discussionBoard: string | false;
   readonly discussionBoardRequiresAdmin: boolean;
   readonly hideNavbarLogin: boolean;
-  readonly isDemoInstance: boolean;
+  readonly isWkorgInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
@@ -621,14 +608,16 @@ export type APIFeatureToggles = {
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
-export type APIJobType =
-  | "convert_to_wkw"
-  | "export_tiff"
-  | "compute_mesh_file"
-  | "find_largest_segment_id"
-  | "infer_nuclei"
-  | "infer_neurons"
-  | "materialize_volume_annotation";
+export enum APIJobType {
+  "CONVERT_TO_WKW" = "convert_to_wkw",
+  "EXPORT_TIFF" = "export_tiff",
+  "COMPUTE_MESH_FILE" = "compute_mesh_file",
+  "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
+  "INFER_NUCLEI" = "infer_nuclei",
+  "INFER_NEURONS" = "infer_neurons",
+  "MATERIALIZE_VOLUME_ANNOTATION" = "materialize_volume_annotation",
+}
+
 export type APIJob = {
   readonly id: string;
   readonly datasetName: string | null | undefined;

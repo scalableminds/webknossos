@@ -6,9 +6,6 @@ import type {
   APIMeshFile,
   APIUserCompact,
   EditableLayerProperties,
-  LocalMeshMetaData,
-  MeshMetaData,
-  RemoteMeshMetaData,
 } from "types/api_flow_types";
 import type {
   MappingType,
@@ -36,12 +33,7 @@ type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
 type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
-export type UpdateRemoteMeshMetaDataAction = ReturnType<typeof updateRemoteMeshMetaDataAction>;
-export type UpdateLocalMeshMetaDataAction = ReturnType<typeof updateLocalMeshMetaDataAction>;
 export type UpdateIsosurfaceVisibilityAction = ReturnType<typeof updateIsosurfaceVisibilityAction>;
-export type AddMeshMetadataAction = ReturnType<typeof addMeshMetaDataAction>;
-export type DeleteMeshAction = ReturnType<typeof deleteMeshAction>;
-export type CreateMeshFromBufferAction = ReturnType<typeof createMeshFromBufferAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
 export type TriggerIsosurfaceDownloadAction = ReturnType<typeof triggerIsosurfaceDownloadAction>;
 export type RefreshIsosurfacesAction = ReturnType<typeof refreshIsosurfacesAction>;
@@ -66,18 +58,13 @@ export type AnnotationActionTypes =
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | SetBlockedByUserAction
-  | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
   | FinishedResizingUserBoundingBoxAction
   | AddNewUserBoundingBox
   | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction
-  | AddMeshMetadataAction
-  | DeleteMeshAction
-  | CreateMeshFromBufferAction
   | MaybeFetchMeshFilesAction
-  | UpdateLocalMeshMetaDataAction
   | UpdateIsosurfaceVisibilityAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
@@ -196,23 +183,6 @@ export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBounding
     userBoundingBoxes,
   } as const);
 
-export const updateRemoteMeshMetaDataAction = (
-  id: string,
-  meshShape: Partial<RemoteMeshMetaData>,
-) =>
-  ({
-    type: "UPDATE_REMOTE_MESH_METADATA",
-    id,
-    meshShape,
-  } as const);
-
-export const updateLocalMeshMetaDataAction = (id: string, meshShape: Partial<LocalMeshMetaData>) =>
-  ({
-    type: "UPDATE_LOCAL_MESH_METADATA",
-    id,
-    meshShape,
-  } as const);
-
 export const updateIsosurfaceVisibilityAction = (
   layerName: string,
   id: number,
@@ -223,25 +193,6 @@ export const updateIsosurfaceVisibilityAction = (
     layerName,
     id,
     visibility,
-  } as const);
-
-export const addMeshMetaDataAction = (mesh: MeshMetaData) =>
-  ({
-    type: "ADD_MESH_METADATA",
-    mesh,
-  } as const);
-
-export const deleteMeshAction = (id: string) =>
-  ({
-    type: "DELETE_MESH",
-    id,
-  } as const);
-
-export const createMeshFromBufferAction = (name: string, buffer: ArrayBuffer) =>
-  ({
-    type: "CREATE_MESH_FROM_BUFFER",
-    buffer,
-    name,
   } as const);
 
 export const maybeFetchMeshFilesAction = (
@@ -260,11 +211,16 @@ export const maybeFetchMeshFilesAction = (
     callback,
   } as const);
 
-export const triggerIsosurfaceDownloadAction = (cellName: string, cellId: number) =>
+export const triggerIsosurfaceDownloadAction = (
+  cellName: string,
+  segmentId: number,
+  layerName: string,
+) =>
   ({
     type: "TRIGGER_ISOSURFACE_DOWNLOAD",
     cellName,
-    cellId,
+    segmentId,
+    layerName,
   } as const);
 
 export const refreshIsosurfacesAction = () =>
@@ -272,25 +228,25 @@ export const refreshIsosurfacesAction = () =>
     type: "REFRESH_ISOSURFACES",
   } as const);
 
-export const refreshIsosurfaceAction = (layerName: string, cellId: number) =>
+export const refreshIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "REFRESH_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
-export const startedLoadingIsosurfaceAction = (layerName: string, cellId: number) =>
+export const startedLoadingIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "STARTED_LOADING_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
-export const finishedLoadingIsosurfaceAction = (layerName: string, cellId: number) =>
+export const finishedLoadingIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "FINISHED_LOADING_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
 export const updateMeshFileListAction = (layerName: string, meshFiles: Array<APIMeshFile>) =>
@@ -317,16 +273,16 @@ export const importIsosurfaceFromStlAction = (layerName: string, buffer: ArrayBu
     buffer,
   } as const);
 
-export const removeIsosurfaceAction = (layerName: string, cellId: number) =>
+export const removeIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "REMOVE_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
   } as const);
 
 export const addAdHocIsosurfaceAction = (
   layerName: string,
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
@@ -334,7 +290,7 @@ export const addAdHocIsosurfaceAction = (
   ({
     type: "ADD_AD_HOC_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
     seedPosition,
     mappingName,
     mappingType,
@@ -342,14 +298,14 @@ export const addAdHocIsosurfaceAction = (
 
 export const addPrecomputedIsosurfaceAction = (
   layerName: string,
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
   meshFileName: string,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_ISOSURFACE",
     layerName,
-    cellId,
+    segmentId,
     seedPosition,
     meshFileName,
   } as const);

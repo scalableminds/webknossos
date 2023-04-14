@@ -85,15 +85,14 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     let defaultTabKey = "datasets";
 
     if (this.props.isAdminView) {
-      defaultTabKey = "tasks";
-    } else if (features().isDemoInstance) {
+      defaultTabKey = "explorativeAnnotations";
+    } else if (features().isWkorgInstance) {
       defaultTabKey = "publications";
     }
 
-    // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
     const activeTabKey =
-      (initialTabKey && initialTabKey in validTabKeys && initialTabKey) ||
-      (lastUsedTabKey && lastUsedTabKey in validTabKeys && lastUsedTabKey) ||
+      (initialTabKey && validTabKeys[initialTabKey] ? initialTabKey : null) ||
+      (lastUsedTabKey && validTabKeys[lastUsedTabKey] ? lastUsedTabKey : null) ||
       defaultTabKey;
 
     this.state = {
@@ -144,11 +143,11 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   getValidTabKeys() {
     const { isAdminView } = this.props;
     return {
-      publications: features().isDemoInstance,
+      publications: features().isWkorgInstance,
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
-    };
+    } as { [key: string]: boolean };
   }
 
   getTabs(user: APIUser): Tab[] {
@@ -166,15 +165,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
               ),
             }
           : null,
-        {
-          label: <span>Datasets</span>,
-          key: "datasets",
-          children: (
-            <RenderingTabContext.Provider value="datasets">
-              <DatasetFolderView user={user} />
-            </RenderingTabContext.Provider>
-          ),
-        },
+        validTabKeys.datasets
+          ? {
+              label: <span>Datasets</span>,
+              key: "datasets",
+              children: (
+                <RenderingTabContext.Provider value="datasets">
+                  <DatasetFolderView user={user} />
+                </RenderingTabContext.Provider>
+              ),
+            }
+          : null,
         {
           label: "Tasks",
           key: "tasks",

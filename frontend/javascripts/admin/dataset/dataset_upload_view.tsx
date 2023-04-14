@@ -9,9 +9,15 @@ import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone, FileWithPath } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
-import type { RouteComponentProps } from "react-router-dom";
+import { Link, RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
+import type {
+  APITeam,
+  APIDataStore,
+  APIUser,
+  APIDatasetId,
+  APIOrganization,
+} from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
   reserveDatasetUpload,
@@ -26,8 +32,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-// @ts-expect-error ts-migrate(2306) FIXME: File ... Remove this comment to see the full error message
-import { createReader, BlobReader, ZipReader, Entry } from "zip-js-webpack";
+import { BlobReader, ZipReader, Entry } from "@zip.js/zip.js";
 import {
   CardContainer,
   DatasetNameFormItem,
@@ -41,6 +46,8 @@ import { FormInstance } from "antd/lib/form";
 import type { Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
+import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -56,6 +63,7 @@ type OwnProps = {
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
+  organization: APIOrganization;
 };
 type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
@@ -464,7 +472,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
   };
 
-  validateFiles = (files: FileWithPath[]) => {
+  validateFiles = async (files: FileWithPath[]) => {
     if (files.length === 0) {
       return;
     }
@@ -481,41 +489,40 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
 
       if (fileExtension === "zip") {
-        createReader(
-          new BlobReader(file),
-          (reader: ZipReader) => {
-            reader.getEntries((entries: Array<Entry>) => {
-              const wkwFile = entries.find((entry: Entry) =>
-                Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
-              );
-              const needsConversion = wkwFile == null;
-              this.handleNeedsConversionInfo(needsConversion);
+        try {
+          const reader = new ZipReader(new BlobReader(file));
+          const entries = await reader.getEntries();
+          await reader.close();
+          const wkwFile = entries.find((entry: Entry) =>
+            Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
+          );
+          const needsConversion = wkwFile == null;
+          this.handleNeedsConversionInfo(needsConversion);
 
-              const nmlFile = entries.find((entry: Entry) =>
-                Utils.isFileExtensionEqualTo(entry.filename, "nml"),
-              );
-              if (nmlFile) {
-                Modal.error({
-                  content: messages["dataset.upload_zip_with_nml"],
-                });
-              }
-            });
-          },
-          () => {
+          const nmlFile = entries.find((entry: Entry) =>
+            Utils.isFileExtensionEqualTo(entry.filename, "nml"),
+          );
+          if (nmlFile) {
             Modal.error({
-              content: messages["dataset.upload_invalid_zip"],
+              content: messages["dataset.upload_zip_with_nml"],
             });
-            const form = this.formRef.current;
+          }
+        } catch (e) {
+          console.error(e);
+          ErrorHandling.notify(e as Error);
+          Modal.error({
+            content: messages["dataset.upload_invalid_zip"],
+          });
+          const form = this.formRef.current;
 
-            if (!form) {
-              return;
-            }
+          if (!form) {
+            return;
+          }
 
-            form.setFieldsValue({
-              zipFile: [],
-            });
-          },
-        );
+          form.setFieldsValue({
+            zipFile: [],
+          });
+        }
         // We return here since not more than 1 zip archive is supported anyway.
         return;
       } else if (fileExtension === "wkw") {
@@ -613,6 +620,23 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         }}
       >
         <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+          {hasPricingPlanExceededStorage(this.props.organization) ? (
+            <Alert
+              type="error"
+              message={
+                <>
+                  Your organization has exceeded the available storage. Uploading new datasets is
+                  disabled. Visit the{" "}
+                  <Link to={`/organizations/${this.props.organization.name}`}>
+                    organization page
+                  </Link>{" "}
+                  for details.
+                </>
+              }
+              style={{ marginBottom: 8 }}
+            />
+          ) : null}
+
           <Form
             onFinish={this.handleSubmit}
             layout="vertical"
@@ -624,7 +648,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               targetFolderId: new URLSearchParams(location.search).get("to"),
             }}
           >
-            {features().isDemoInstance && (
+            {features().isWkorgInstance && (
               <Alert
                 message={
                   <>
@@ -672,7 +696,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                       });
                     }}
                     afterFetchedTeams={(fetchedTeams) => {
-                      if (!features().isDemoInstance) {
+                      if (!features().isWkorgInstance) {
                         return;
                       }
 
@@ -856,6 +880,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 size="large"
                 type="primary"
                 htmlType="submit"
+                disabled={hasPricingPlanExceededStorage(this.props.organization)}
                 style={{
                   width: "100%",
                 }}
@@ -1043,6 +1068,7 @@ function FileUploadArea({
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
+  organization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);

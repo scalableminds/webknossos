@@ -16,9 +16,9 @@ The easiest way to get started with working on your datasets is through the WEBK
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Provide some metadata information:  
-  - a *name* 
-  - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
-  - *scale* of each voxel (in nanometers)
+    - a *name* 
+    - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
+    - *scale* of each voxel (in nanometers)
 3. Drag and drop your data into the upload section
 4. Click the *Upload* button
 
@@ -53,8 +53,8 @@ With other converters, you may need to add the layers separately.
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Remote Dataset* tab
 3. For each layer, provide some metadata information:  
-  - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
-  - authentication credentials for accessing the resources on the remote service (optional)
+    - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
+    - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
 5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc) as possible and preview a [WEBKNOSSOS `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
   Consider setting the dataset `name` property and double-check all other properties for correctness.
@@ -69,25 +69,6 @@ Note that data streaming may incur costs and count against any usage limits or m
 
 Hint: If you happen to have any Zarr dataset locally that you would like to view in WEBKNOSSOS, consider running an HTTP server locally to serve the dataset. 
 Then WEBKNOSSOS can easily stream the data.
-
-### Working with Neuroglancer and BossDB datasets on webknossos.org
-webknossos.org supports loading and remotely streaming datasets in the [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) stored in the Google Cloud or datasets served from [BossDB](https://bossdb.org).
-
-To import these datasets:
-
-1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
-2. Select the *Add Neuroglancer Dataset* or *Add BossDB Dataset* tab
-3. Provide some metadata information:  
-  - a *dataset name* 
-  - a URL or domain/collection identifier to locate the dataset on the remote service
-  - authentication credentials for accessing the resources on the remote service (optional)
-4. Click the *Add* button
-
-WEBKNOSSOS will NOT download/copy any data from these third-party data providers. 
-Rather, any data viewed in WEBKNOSSOS will be streamed read-only and directly from the remote source. 
-Any other WEBKNOSSOS feature, e.g., annotations, and access rights, will be stored in WEBKNOSSOS and do not affect these services. 
-
-Note that data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the WEBKNOSSOS [Python library](https://github.com/scalableminds/webknossos-libs). It allows you to create, manage and upload datasets as well. 

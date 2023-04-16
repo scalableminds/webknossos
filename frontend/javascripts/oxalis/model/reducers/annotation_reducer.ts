@@ -204,20 +204,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 
-    case "UPDATE_REMOTE_MESH_METADATA": {
-      const { id, meshShape } = action;
-      const newMeshes = state.tracing.meshes.map((mesh) => {
-        if (mesh.id === id) {
-          return { ...mesh, ...meshShape, id };
-        } else {
-          return mesh;
-        }
-      });
-      return updateKey(state, "tracing", {
-        meshes: newMeshes,
-      });
-    }
-
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
       const isosurfaceInfo: Partial<IsosurfaceInformation> = {
@@ -231,21 +217,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         id,
         isosurfaceInfo,
       );
-    }
-
-    case "ADD_MESH_METADATA": {
-      const newMeshes = state.tracing.meshes.concat(action.mesh);
-      return updateKey(state, "tracing", {
-        meshes: newMeshes,
-      });
-    }
-
-    case "DELETE_MESH": {
-      const { id } = action;
-      const newMeshes = state.tracing.meshes.filter((mesh) => mesh.id !== id);
-      return updateKey(state, "tracing", {
-        meshes: newMeshes,
-      });
     }
 
     case "REMOVE_ISOSURFACE": {

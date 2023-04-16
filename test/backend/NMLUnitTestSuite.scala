@@ -45,7 +45,7 @@ class NMLUnitTestSuite extends PlaySpec {
   }
 
   def isParseSuccessful(
-      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, String)]): Boolean =
+      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])]): Boolean =
     parsedTracing match {
       case Full(tuple) =>
         tuple match {

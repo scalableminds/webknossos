@@ -198,11 +198,16 @@ export const removeSegmentAction = (
     timestamp,
   } as const);
 
-export const setSegmentGroupsAction = (segmentGroups: Array<SegmentGroup>, layerName: string) =>
+export const setSegmentGroupsAction = (
+  segmentGroups: Array<SegmentGroup>,
+  layerName: string,
+  calledFromUndoSaga: boolean = false,
+) =>
   ({
     type: "SET_SEGMENT_GROUPS",
     segmentGroups,
     layerName,
+    calledFromUndoSaga,
   } as const);
 
 export const interpolateSegmentationLayerAction = () =>

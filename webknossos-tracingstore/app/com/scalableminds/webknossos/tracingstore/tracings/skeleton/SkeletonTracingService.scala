@@ -238,4 +238,6 @@ class SkeletonTracingService @Inject()(
     }
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
+
+  def hasEditableMapping(tracing: SkeletonTracing): Boolean = false
 }

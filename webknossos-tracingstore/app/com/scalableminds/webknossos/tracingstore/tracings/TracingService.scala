@@ -189,4 +189,5 @@ trait TracingService[T <: GeneratedMessage]
                       newVersion: Long,
                       toCache: Boolean): Fox[MergedVolumeStats]
 
+  def hasEditableMapping(tracing: T): Boolean
 }

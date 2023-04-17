@@ -637,6 +637,6 @@ export function mapStateToProps(state: OxalisState): StateProps {
     activeTool: state.uiInformation.activeTool,
   };
 }
-export { PlaneController as PlaneControllerClass };
+
 const connector = connect(mapStateToProps);
 export default connector(PlaneController);

@@ -201,8 +201,10 @@ Expects:
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient
-                .reportUpload(dataSourceId, dataSetSizeBytes, urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+              _ <- remoteWebKnossosClient.reportUpload(dataSourceId,
+                                                       dataSetSizeBytes,
+                                                       request.body.needsConversion.getOrElse(false),
+                                                       urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
             } yield Ok
           }
         } yield result

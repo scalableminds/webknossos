@@ -281,8 +281,7 @@ Expects:
       largestSegmentId =
         annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
                                                                fallbackLayerOpt.map(_.largestSegmentId)),
-      resolutions =
-        VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto)
+      resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto)
     )
   }
 

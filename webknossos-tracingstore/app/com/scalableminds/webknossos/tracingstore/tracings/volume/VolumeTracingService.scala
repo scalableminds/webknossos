@@ -578,4 +578,7 @@ class VolumeTracingService @Inject()(
 
   def dummyTracing: VolumeTracing = ???
 
+  def hasEditableMapping(tracing: VolumeTracing): Boolean =
+    tracing.mappingIsEditable.contains(true)
+
 }

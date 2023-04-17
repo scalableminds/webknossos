@@ -245,6 +245,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                                                 newId,
                                                                 newVersion = 0L,
                                                                 toCache = !persist)
+            newEditableMappingId <- Fox.runIf(tracings.forall(t => tracingService.hasEditableMapping(t)))(
+              editableMappingService.merge(tracings.map(_.mappingName), remoteFallbackLayer, userToken))
             mergedTracing = tracingService.merge(tracings, mergedVolumeStats)
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
           } yield {

@@ -1,21 +1,23 @@
-// @ts-nocheck
 import _ from "lodash";
 import "test/model/binary/layers/wkstore_adapter.mock.js";
-import { ResolutionInfo, getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { byteArrayToLz4Base64 } from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { APIDataLayer } from "types/api_flow_types";
+
 const RequestMock = {
-  always: (promise, func) => promise.then(func, func),
+  always: (promise: Promise<any>, func: (v: any) => any) => promise.then(func, func),
   sendJSONReceiveArraybufferWithHeaders: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
 const { dataSource } = datasetServerObject;
 let _fourBit = false;
 
-function setFourBit(bool) {
+function setFourBit(bool: boolean) {
   _fourBit = bool;
 }
 
@@ -64,11 +66,13 @@ const tokenResponse = {
 test.beforeEach((t) => {
   RequestMock.receiveJSON = sinon.stub();
   RequestMock.receiveJSON.returns(Promise.resolve(tokenResponse));
-  t.context.layer = dataSource.dataLayers[0];
-  t.context.segmentationLayer = dataSource.dataLayers[1];
+  // @ts-ignore
+  t.context.layer = dataSource.dataLayers[0] as APIDataLayer;
+  // @ts-ignore
+  t.context.segmentationLayer = dataSource.dataLayers[1] as APIDataLayer;
 });
 test.serial("Initialization should set the attributes correctly", (t) => {
-  const { layer } = t.context;
+  const { layer } = t.context as { layer: APIDataLayer };
   t.is(layer.name, "color");
   t.is(layer.category, "color");
   t.is(getBitDepth(layer), 8);
@@ -105,7 +109,7 @@ function prepare() {
 test.serial(
   "requestWithFallback: Token Handling should re-request a token when it's invalid",
   (t) => {
-    const { layer } = t.context;
+    const { layer } = t.context as { layer: APIDataLayer };
     const { batch, responseBuffer, bucketData1, bucketData2 } = prepare();
     RequestMock.sendJSONReceiveArraybufferWithHeaders = sinon.stub();
     RequestMock.sendJSONReceiveArraybufferWithHeaders
@@ -135,15 +139,17 @@ test.serial(
           token: "token2",
         }),
       );
-    return requestWithFallback(layer, batch).then(([buffer1, buffer2]) => {
-      t.deepEqual(buffer1, bucketData1);
-      t.deepEqual(buffer2, bucketData2);
-      t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 2);
-      const url = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args[0];
-      t.is(url, "url/data/datasets/organization/dataSet/layers/color/data?token=token");
-      const url2 = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(1).args[0];
-      t.is(url2, "url/data/datasets/organization/dataSet/layers/color/data?token=token2");
-    });
+    return requestWithFallback(layer, batch).then(
+      ([buffer1, buffer2]: [ArrayBuffer, ArrayBuffer]) => {
+        t.deepEqual(buffer1, bucketData1);
+        t.deepEqual(buffer2, bucketData2);
+        t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 2);
+        const url = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args[0];
+        t.is(url, "url/data/datasets/organization/dataSet/layers/color/data?token=token");
+        const url2 = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(1).args[0];
+        t.is(url2, "url/data/datasets/organization/dataSet/layers/color/data?token=token2");
+      },
+    );
   },
 );
 
@@ -171,7 +177,7 @@ function createExpectedOptions(fourBit: boolean = false) {
 test.serial(
   "requestWithFallback: Request Handling: should pass the correct request parameters",
   (t) => {
-    const { layer } = t.context;
+    const { layer } = t.context as { layer: APIDataLayer };
     const { batch } = prepare();
     const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions();
@@ -188,7 +194,7 @@ test.serial(
   async (t) => {
     setFourBit(true);
     // test four bit color and 8 bit seg
-    const { layer } = t.context;
+    const { layer } = t.context as { layer: APIDataLayer };
     const { batch } = prepare();
     const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions(true);
@@ -205,7 +211,7 @@ test.serial(
   "requestWithFallback: Request Handling: four bit mode should not be respected for segmentation layers",
   async (t) => {
     setFourBit(true);
-    const { segmentationLayer } = t.context;
+    const { segmentationLayer } = t.context as { segmentationLayer: APIDataLayer };
     const { batch } = prepare();
     const expectedUrl =
       "url/data/datasets/organization/dataSet/layers/segmentation/data?token=token2";

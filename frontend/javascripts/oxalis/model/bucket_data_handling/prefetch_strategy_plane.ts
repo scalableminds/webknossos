@@ -1,6 +1,5 @@
 import _ from "lodash";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -9,6 +8,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { ResolutionInfo } from "../helpers/resolution_info";
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 
 export enum ContentTypes {

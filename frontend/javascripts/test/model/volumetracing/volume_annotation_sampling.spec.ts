@@ -1,5 +1,4 @@
 import "test/mocks/lz4";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
 import type { Vector3, Vector4 } from "oxalis/constants";
@@ -9,6 +8,7 @@ import anyTest from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 const StoreMock = {
   getState: () => ({
@@ -48,9 +48,8 @@ test.beforeEach((t) => {
       [8, 8, 8],
       [16, 16, 16],
       [32, 32, 32],
-    ],
+    ] as Vector3[],
   };
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[][]' is not assignable to... Remove this comment to see the full error message
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
   const cube = new Cube([1024, 1024, 1024], resolutionInfo, "uint32", false);
   const pullQueue = {

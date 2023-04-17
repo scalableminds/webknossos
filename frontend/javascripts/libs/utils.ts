@@ -1112,3 +1112,19 @@ export function conjugate(
 export function truncateStringToLength(str: string, length: number): string {
   return str.length > length ? `${str.substring(0, length)}...` : str;
 }
+
+export function maxValue(array: Array<number>): number {
+  const value = _.max(array);
+  if (value == null) {
+    throw Error(`Max of empty array: ${array}`);
+  }
+  return value;
+}
+
+export function minValue(array: Array<number>): number {
+  const value = _.min(array);
+  if (value == null) {
+    throw Error(`Min of empty array: ${array}`);
+  }
+  return value;
+}

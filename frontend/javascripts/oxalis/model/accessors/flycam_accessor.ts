@@ -2,21 +2,20 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import type { Matrix4x4 } from "libs/mjs";
+import { Matrix4x4, V3 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getColorLayers,
   getDataLayers,
+  getDenseResolutionsForLayerName,
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
   getResolutionByMax,
   getResolutionInfo,
-  getResolutions,
   getTransformsForLayer,
   invertAndTranspose,
-  SmallerOrHigherInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
@@ -37,6 +36,7 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { SmallerOrHigherInfo } from "../helpers/resolution_info";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -221,7 +221,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
     state.dataset.dataSource.scale,
-    getResolutions(state.dataset),
+    getResolutionInfo(layer.resolutions).getDenseResolutions(),
     getViewportRects(state),
     Math.min(
       state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
@@ -363,10 +363,10 @@ function getValidZoomRangeForResolution(
   targetResolution: Vector3,
 ): Vector2 {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layerName);
-  const resolutions = getResolutions(state.dataset);
+  const resolutions = getDenseResolutionsForLayerName(state.dataset, layerName);
 
   const targetResolutionIndex = _.findIndex(resolutions, (resolution) =>
-    _.isEqual(resolution, targetResolution),
+    V3.isEqual(resolution, targetResolution),
   );
 
   const max = maximumZoomSteps[targetResolutionIndex];
@@ -406,7 +406,7 @@ export function getValidTaskZoomRange(
           getValidZoomRangeForResolution(
             state,
             firstColorLayerName,
-            getResolutionByMax(state.dataset, value),
+            getResolutionByMax(state.dataset, firstColorLayerName, value),
           )[idx]) || defaultRange[idx]
     );
   }
@@ -586,26 +586,43 @@ function _getActiveResolutionInfo(state: OxalisState) {
   const activeMagIndicesOfEnabledLayers = Object.fromEntries(
     enabledLayers.map((l) => [l.name, activeMagIndices[l.name]]),
   );
+  const activeMagOfEnabledLayers = Object.fromEntries(
+    enabledLayers.map((l) => [
+      l.name,
+      getResolutionInfo(l.resolutions).getResolutionByIndex(activeMagIndices[l.name]),
+    ]),
+  );
 
   const isActiveResolutionGlobal =
-    _.uniq(Object.values(activeMagIndicesOfEnabledLayers)).length === 1;
-  const resolutions = getResolutions(state.dataset);
-  let representativeResolution: Vector3 | undefined;
+    _.uniqBy(Object.values(activeMagOfEnabledLayers), (mag) => (mag != null ? mag.join("-") : null))
+      .length === 1;
+  let representativeResolution: Vector3 | undefined | null;
   if (isActiveResolutionGlobal) {
-    const someResolutionIndex = Object.values(activeMagIndicesOfEnabledLayers)[0];
-    representativeResolution = resolutions[someResolutionIndex];
+    representativeResolution = Object.values(activeMagOfEnabledLayers)[0];
   } else {
-    const bestMagIndex = _.min(Object.values(activeMagIndicesOfEnabledLayers));
-    if (bestMagIndex != null) {
-      representativeResolution = resolutions[bestMagIndex];
-    }
+    const activeMags = Object.values(activeMagOfEnabledLayers).filter((mag) => !!mag) as Vector3[];
+
+    // Find the "best" mag by sorting by the best magnification factor (use the second-best and third-best
+    // factor as a tie breaker).
+    // That way, having the mags [[4, 4, 1], [2, 2, 1], [8, 8, 1]] will yield [2, 2, 1] as a representative,
+    // even though all mags have the same minimum.
+    const activeMagsWithSorted = activeMags.map((mag) => ({
+      mag, // e.g., 4, 4, 1
+      sortedMag: _.sortBy(mag), // e.g., 1, 4, 4
+    }));
+    representativeResolution = _.sortBy(
+      activeMagsWithSorted,
+      ({ sortedMag }) => sortedMag[0],
+      ({ sortedMag }) => sortedMag[1],
+      ({ sortedMag }) => sortedMag[2],
+    )[0].mag;
   }
 
   return {
     representativeResolution,
     activeMagIndicesOfEnabledLayers,
+    activeMagOfEnabledLayers,
     isActiveResolutionGlobal,
-    resolutions,
   };
 }
 

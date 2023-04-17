@@ -6,6 +6,7 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import { api } from "oxalis/singletons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -73,6 +74,7 @@ import type {
 } from "oxalis/store";
 import Store from "oxalis/store";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import React from "react";
@@ -888,16 +890,22 @@ class SegmentsView extends React.Component<Props, State> {
                       autoDestroy
                       trigger={["contextMenu"]}
                     >
-                      <span>
-                        <span
-                          data-id={id}
-                          style={{
-                            marginLeft: 9,
-                          }}
-                        >
-                          {displayableName}
-                        </span>
-                      </span>
+                      <EditableTextLabel
+                        value={displayableName}
+                        label="Group Name"
+                        // onClick={() => onSelectSegment(segment)}
+                        onChange={(name) => {
+                          if (this.props.visibleSegmentationLayer != null) {
+                            api.data.renameSegmentGroup(
+                              this.props.visibleSegmentationLayer.name,
+                              id,
+                              name,
+                            );
+                          }
+                        }}
+                        margin="0 5px"
+                        disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
+                      />
                     </Dropdown>
                   </div>
                 );

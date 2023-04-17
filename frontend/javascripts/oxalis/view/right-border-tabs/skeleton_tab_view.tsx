@@ -398,7 +398,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     },
   );
 
-  handleChangeTreeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
+  handleChangeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -406,7 +406,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { activeGroupId } = this.props.skeletonTracing;
 
     if (activeGroupId != null) {
-      api.tracing.renameGroup(activeGroupId, evt.target.value);
+      api.tracing.renameSkeletonGroup(activeGroupId, evt.target.value);
     } else {
       this.props.onChangeTreeName(evt.target.value);
     }
@@ -890,7 +890,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
                   <InputComponent
-                    onChange={this.handleChangeTreeName}
+                    onChange={this.handleChangeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
                     title={

@@ -32,7 +32,10 @@ import {
   scaleGlobalPositionWithResolution,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
-import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  callDeep,
+  MISSING_GROUP_ID,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
@@ -53,6 +56,7 @@ import {
   getTree,
   getFlatTreeGroups,
   getTreeGroupsMap,
+  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
@@ -62,6 +66,7 @@ import {
   getRequestedOrVisibleSegmentationLayerEnforced,
   getSegmentColorAsRGBA,
   getVolumeDescriptors,
+  getVolumeTracingByLayerName,
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -89,6 +94,7 @@ import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
   setActiveCellAction,
+  setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -475,10 +481,26 @@ class TracingApi {
    * Renames the group referenced by the provided id.
    *
    * @example
-   * api.tracing.renameGroup(
+   * api.tracing.renameSkeletonGroup(
    *   3,
    *   "New group name",
    * );
+   */
+  renameSkeletonGroup(groupId: number, newName: string) {
+    const { tracing } = Store.getState();
+    const skeletonTracing = assertSkeleton(tracing);
+
+    const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
+
+    callDeep(newTreeGroups, groupId, (item) => {
+      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'name' because it is a read-only ... Remove this comment to see the full error message
+      item.name = newName;
+    });
+    Store.dispatch(setTreeGroupsAction(newTreeGroups));
+  }
+
+  /**
+   * Deprecated! Use renameSkeletonGroup instead.
    */
   renameGroup(groupId: number, newName: string) {
     const { tracing } = Store.getState();
@@ -1099,6 +1121,48 @@ class DataApi {
    */
   getSegmentationLayerNames(): Array<string> {
     return this.model.getSegmentationLayers().map((layer) => layer.name);
+  }
+
+  /**
+   * Renames the segment group referenced by the provided id.
+   *
+   * @example
+   * api.data.renameSegmentGroup(
+   *   volumeLayerName, // see getSegmentationLayerNames
+   *   3,
+   *   "New group name",
+   * );
+   */
+  renameSegmentGroup(volumeLayerName: string, groupId: number, newName: string) {
+    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+    if (volumeTracing == null) {
+      throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
+    }
+    const { segmentGroups } = volumeTracing;
+
+    const segmentGroupsWithoutDraggedGroup = mapGroups(
+      [
+        {
+          name: "Root",
+          groupId: MISSING_GROUP_ID,
+          children: segmentGroups,
+        },
+      ],
+      (group) => {
+        if (group.groupId === groupId) {
+          return {
+            ...group,
+            name: newName,
+          };
+        } else {
+          return group;
+        }
+      },
+    );
+
+    Store.dispatch(
+      setSegmentGroupsAction(segmentGroupsWithoutDraggedGroup[0].children, volumeLayerName),
+    );
   }
 
   /**

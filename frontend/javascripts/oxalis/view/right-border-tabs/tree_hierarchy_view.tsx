@@ -458,7 +458,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     };
 
     // Make sure the displayed name is not empty
-    const displayableName = name.trim() || "<no name>";
+    const displayableName = name.trim() || "<Unnamed Group>";
     return (
       <div>
         <Dropdown

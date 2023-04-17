@@ -1,14 +1,16 @@
 import * as React from "react";
 import { Modal, Button } from "antd";
 import messages from "messages";
+
 type Props = {
   onJustDeleteGroup: () => void;
-  onDeleteGroupAndTrees: () => void;
+  onDeleteGroupAndChildren: () => void;
   onCancel: () => void;
 };
+
 export default function DeleteGroupModalView({
   onJustDeleteGroup,
-  onDeleteGroupAndTrees,
+  onDeleteGroupAndChildren,
   onCancel,
 }: Props) {
   return (
@@ -19,7 +21,7 @@ export default function DeleteGroupModalView({
       onCancel={onCancel}
       width={620}
       footer={[
-        <Button key="submit-all" onClick={onDeleteGroupAndTrees}>
+        <Button key="submit-all" danger onClick={onDeleteGroupAndChildren}>
           Remove group including all children
         </Button>,
         <Button key="submit-groups-only" type="primary" onClick={onJustDeleteGroup}>

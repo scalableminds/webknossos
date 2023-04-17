@@ -88,6 +88,7 @@ export const VolumeTracingSaveRelevantActions = [
   // Note that the following two actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
+  "DELETE_GROUP_AND_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];

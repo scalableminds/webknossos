@@ -451,22 +451,21 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       }
 
       // Finds all subtrees of the passed group recursively
-      const findSubtreesRecursively = (group: TreeGroup) => {
+      const findChildrenRecursively = (group: TreeGroup) => {
         const currentSubtrees =
           groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
         // Delete all trees of the current group
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
-        group.children.forEach((subgroup) => findSubtreesRecursively(subgroup));
+        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
       };
 
-      findSubtreesRecursively(item);
+      findChildrenRecursively(item);
     });
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
-      const deleteTreeActions = treeIdsToDelete.map((treeId) => deleteTreeAction(treeId));
+      const deleteTreeActions: Action[] = treeIdsToDelete.map((treeId) => deleteTreeAction(treeId));
       this.props.onBatchActions(
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         deleteTreeActions.concat(setTreeGroupsAction(newTreeGroups)),
         "DELETE_GROUP_AND_TREES",
       );
@@ -484,15 +483,18 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { trees, treeGroups } = this.props.skeletonTracing;
     const treeGroupToDelete = treeGroups.find((el) => el.groupId === id);
     const groupToTreesMap = createGroupToTreesMap(trees);
-    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id])
+    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id]) {
+      // Group is empty
       this.deleteGroup(id);
-    else if (id === MISSING_GROUP_ID)
-      // case: delete Root group
+    } else if (id === MISSING_GROUP_ID) {
+      // Delete all children of root group
       this.deleteGroup(id);
-    else
+    } else {
+      // Show modal
       this.setState({
         groupToDelete: id,
       });
+    }
   };
 
   handleDelete = () => {
@@ -950,7 +952,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onJustDeleteGroup={() => {
                       this.deleteGroupAndHideModal(groupToDelete, false);
                     }}
-                    onDeleteGroupAndTrees={() => {
+                    onDeleteGroupAndChildren={() => {
                       this.deleteGroupAndHideModal(groupToDelete, true);
                     }}
                   />

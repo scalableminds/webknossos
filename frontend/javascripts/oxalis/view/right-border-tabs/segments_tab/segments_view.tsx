@@ -6,6 +6,8 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import type { Action } from "oxalis/model/actions/actions";
+import { batchActions } from "redux-batched-actions";
 import { api } from "oxalis/singletons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
@@ -23,7 +25,6 @@ import {
   Select,
   Tooltip,
   Tree,
-  TreeProps,
 } from "antd";
 import features from "features";
 import Toast from "libs/toast";
@@ -89,6 +90,8 @@ import {
   findParentIdForGroupId,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
+import DeleteGroupModalView from "../delete_group_modal_view";
+import { values } from "libs/utils";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -213,6 +216,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   onUpdateSegmentGroups(segmentGroups: SegmentGroup[], layerName: string) {
     dispatch(setSegmentGroupsAction(segmentGroups, layerName));
   },
+
+  onBatchActions(actions: Array<Action>, actionName: string) {
+    dispatch(batchActions(actions, actionName));
+  },
 });
 
 type DispatchProps = ReturnType<typeof mapDispatchToProps>;
@@ -223,6 +230,7 @@ type State = {
   activeDropdownSegmentId: number | null | undefined;
   groupTree: TreeNode[];
   prevProps: Props | null | undefined;
+  groupToDelete: number | null | undefined;
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -275,7 +283,7 @@ export type TreeNode =
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
-  groupToTreesMap: Record<number, Segment[]>,
+  groupToSegmentsMap: Record<number, Segment[]>,
   expandedGroupIds: {},
   _arg3: string,
 ): TreeNode[] {
@@ -287,7 +295,7 @@ function constructTreeData(
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
   return groups.map((group) => {
     const { groupId } = group;
-    const segments = groupToTreesMap[groupId] || [];
+    const segments = groupToSegmentsMap[groupId] || [];
     const treeNode: TreeNode = {
       ...group,
       key: `group-${groupId}`,
@@ -298,7 +306,7 @@ function constructTreeData(
       // treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(segments);
       children: constructTreeData(
         group.children,
-        groupToTreesMap,
+        groupToSegmentsMap,
         expandedGroupIds,
         "sortBy",
       ).concat(
@@ -340,6 +348,7 @@ class SegmentsView extends React.Component<Props, State> {
     activeDropdownSegmentId: null,
     groupTree: [],
     prevProps: null,
+    groupToDelete: null,
   };
 
   componentDidMount() {
@@ -376,7 +385,7 @@ class SegmentsView extends React.Component<Props, State> {
       (prevState.prevProps?.segments !== segments ||
         prevState.prevProps?.segmentGroups !== segmentGroups)
     ) {
-      const groupToTreesMap = createGroupToSegmentsMap(segments);
+      const groupToSegmentsMap = createGroupToSegmentsMap(segments);
       const rootGroup = {
         name: "Root",
         groupId: MISSING_GROUP_ID,
@@ -389,7 +398,7 @@ class SegmentsView extends React.Component<Props, State> {
 
       const generatedGroupTree = constructTreeData(
         [rootGroup],
-        groupToTreesMap,
+        groupToSegmentsMap,
         expandedGroupIds,
         "id", // nextProps.sortBy,
       );
@@ -799,10 +808,116 @@ class SegmentsView extends React.Component<Props, State> {
     </>
   );
 
+  handleDeleteGroup = (id: number) => {
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return;
+    }
+    const segmentGroupToDelete = segmentGroups.find((el) => el.groupId === id);
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    if (
+      segmentGroupToDelete &&
+      segmentGroupToDelete.children.length === 0 &&
+      !groupToSegmentsMap[id]
+    ) {
+      // Group is empty. Delete directly without showing modal.
+      this.deleteGroup(id);
+    } else if (id === MISSING_GROUP_ID) {
+      // Delete all children of root group
+      this.deleteGroup(id);
+    } else {
+      // Show modal
+      this.setState({
+        groupToDelete: id,
+      });
+    }
+  };
+
+  hideDeleteGroupsModal = () => {
+    this.setState({
+      groupToDelete: null,
+    });
+  };
+
+  deleteGroupAndHideModal(
+    groupToDelete: number | null | undefined,
+    deleteChildren: boolean = false,
+  ) {
+    this.hideDeleteGroupsModal();
+
+    if (groupToDelete != null) {
+      this.deleteGroup(groupToDelete, deleteChildren);
+    }
+  }
+
+  deleteGroup(groupId: number, deleteChildren: boolean = false): void {
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return;
+    }
+    const layerName = visibleSegmentationLayer.name;
+
+    let newSegmentGroups = _.cloneDeep(segmentGroups);
+
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    let segmentIdsToDelete: number[] = [];
+
+    if (groupId === MISSING_GROUP_ID) {
+      // special case: delete Root group and all children (aka everything)
+      segmentIdsToDelete = Array.from(segments.values()).map((t) => t.id);
+      newSegmentGroups = [];
+    }
+
+    callDeep(newSegmentGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
+      const subsegments = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+      // Remove group
+      parentsChildren.splice(index, 1);
+
+      if (!deleteChildren) {
+        // Move all subgroups to the parent group
+        parentsChildren.push(...item.children);
+
+        // Update all segments
+        for (const segment of subsegments.values()) {
+          this.props.updateSegment(
+            segment.id,
+            { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
+            layerName,
+            true,
+          );
+        }
+
+        return;
+      }
+
+      // Finds all subtrees of the passed group recursively
+      const findChildrenRecursively = (group: SegmentGroup) => {
+        const currentSubsegments = groupToSegmentsMap[group.groupId] ?? [];
+        // Delete all segments of the current group
+        segmentIdsToDelete = segmentIdsToDelete.concat(
+          currentSubsegments.map((segment) => segment.id),
+        );
+        // Also delete the segments of all subgroups
+        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+      };
+
+      findChildrenRecursively(item);
+    });
+
+    // Update the store at once
+    const removeSegmentActions: Action[] = segmentIdsToDelete.map((segmentId) =>
+      removeSegmentAction(segmentId, layerName),
+    );
+    this.props.onBatchActions(
+      removeSegmentActions.concat([setSegmentGroupsAction(newSegmentGroups, layerName)]),
+      "DELETE_GROUP_AND_SEGMENTS",
+    );
+  }
+
   render() {
-    const onSelect: TreeProps["onSelect"] = (selectedKeys, info) => {
-      console.log("selected", selectedKeys, info);
-    };
+    const { groupToDelete } = this.state;
 
     return (
       <div id={segmentsTabId} className="padded-tab-content">
@@ -869,7 +984,7 @@ class SegmentsView extends React.Component<Props, State> {
                     {
                       key: "delete",
                       disabled: isEditingDisabled,
-                      onClick: () => this.deleteGroup(id),
+                      onClick: () => this.handleDeleteGroup(id),
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
@@ -877,7 +992,7 @@ class SegmentsView extends React.Component<Props, State> {
                 };
 
                 // Make sure the displayed name is not empty
-                const displayableName = name?.trim() || "<no name>";
+                const displayableName = name?.trim() || "<Unnamed Group>";
                 return (
                   <div>
                     <Dropdown
@@ -950,8 +1065,7 @@ class SegmentsView extends React.Component<Props, State> {
                             draggable={{ icon: false }}
                             showLine
                             switcherIcon={<DownOutlined />}
-                            defaultExpandedKeys={["0-0-0"]}
-                            onSelect={onSelect}
+                            // defaultExpandedKeys={["0-0-0"]}
                             treeData={this.state.groupTree}
                             titleRender={titleRender}
                             style={{
@@ -965,6 +1079,17 @@ class SegmentsView extends React.Component<Props, State> {
                     </AutoSizer>
                   )}
                 </div>
+                {groupToDelete !== null ? (
+                  <DeleteGroupModalView
+                    onCancel={this.hideDeleteGroupsModal}
+                    onJustDeleteGroup={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, false);
+                    }}
+                    onDeleteGroupAndChildren={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, true);
+                    }}
+                  />
+                ) : null}
               </React.Fragment>
             );
           }}
@@ -972,9 +1097,7 @@ class SegmentsView extends React.Component<Props, State> {
       </div>
     );
   }
-  deleteGroup(_id: number): void {
-    throw new Error("Method not implemented.");
-  }
+
   createGroup(groupId: number): void {
     if (!this.props.visibleSegmentationLayer) {
       return;

@@ -16,11 +16,7 @@ import {
   getActiveMagIndexForLayer,
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getResolutions,
-  isLayerVisible,
-  getResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+import { isLayerVisible, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
@@ -111,7 +107,7 @@ export function* prefetchForPlaneMode(
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
-  const resolutions = yield* select((state) => getResolutions(state.dataset));
+  const resolutions = resolutionInfo.getDenseResolutions();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,
@@ -172,7 +168,7 @@ export function* prefetchForArbitraryMode(
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const tracingTypes = yield* select(getTracingTypes);
   const resolutionInfo = getResolutionInfo(layer.resolutions);
-  const resolutions = yield* select((state) => getResolutions(state.dataset));
+  const resolutions = resolutionInfo.getDenseResolutions();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,

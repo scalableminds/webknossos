@@ -652,7 +652,7 @@ class AnnotationService @Inject()(
 
     def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Vec3Double]) =
       for {
-        user <- userService.findOneCached(annotation._user, useCache = true) ?~> "user.notFound"
+        user <- userService.findOneCached(annotation._user) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
         dataset <- dataSetDAO.findOne(annotation._dataSet)
@@ -917,7 +917,7 @@ class AnnotationService @Inject()(
       Fox.successful(None)
     } else {
       for {
-        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId, useCache = true)(GlobalAccessContext))
+        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext))
         userJson <- userService.compactWrites(user)
       } yield Some(userJson)
     }

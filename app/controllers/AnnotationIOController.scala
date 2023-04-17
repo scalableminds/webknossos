@@ -363,7 +363,7 @@ Expects:
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
           tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
-        user <- userService.findOneCached(annotation._user, useCache = true)
+        user <- userService.findOneCached(annotation._user)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(fetchedAnnotationLayers,
                                           Some(annotation),
@@ -393,7 +393,7 @@ Expects:
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
         }
-        user <- userService.findOneCached(annotation._user, useCache = true)
+        user <- userService.findOneCached(annotation._user)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(fetchedSkeletonLayers ::: fetchedVolumeLayers,
                                           Some(annotation),

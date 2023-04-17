@@ -81,7 +81,7 @@ class UserService @Inject()(conf: WkConf,
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
-  def findOneCached(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] =
+  def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad(userId, id => userDAO.findOne(id))
 
   def insert(organizationId: ObjectId,
@@ -207,7 +207,7 @@ class UserService @Inject()(conf: WkConf,
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
       userIdValidated <- ObjectId.fromString(loginInfo.providerKey)
-      user <- findOneCached(userIdValidated, useCache = true)(GlobalAccessContext)
+      user <- findOneCached(userIdValidated)(GlobalAccessContext)
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo
 
@@ -254,7 +254,7 @@ class UserService @Inject()(conf: WkConf,
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    findOneCached(ObjectId(loginInfo.providerKey), useCache = false)(GlobalAccessContext).futureBox.map(_.toOption)
+    userDAO.findOne(ObjectId(loginInfo.providerKey))(GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(userId: ObjectId): LoginInfo =
     LoginInfo(CredentialsProvider.ID, userId.id)

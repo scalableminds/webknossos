@@ -58,7 +58,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
         else if (annotation.visibility == AnnotationVisibility.Internal) {
           (for {
             user <- option2Fox(userOption)
-            owner <- userService.findOneCached(annotation._user, useCache = true)(GlobalAccessContext)
+            owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
           } yield owner._organization == user._organization).orElse(Fox.successful(false))
         } else {
           (for {

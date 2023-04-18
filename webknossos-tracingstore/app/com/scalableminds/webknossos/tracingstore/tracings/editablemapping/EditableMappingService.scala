@@ -132,6 +132,7 @@ class EditableMappingService @Inject()(
                 remoteFallbackLayer: RemoteFallbackLayer,
                 userToken: Option[String]): Fox[String] =
     for {
+      // TODO also duplicate update actions, and a v0
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
       editableMappingInfo <- getInfo(editableMappingId, version, remoteFallbackLayer, userToken)
       newId = generateId
@@ -247,7 +248,7 @@ class EditableMappingService @Inject()(
                                                        mayBeEmpty = Some(true),
                                                        emptyFallback = Some(0L))
 
-  private def getPendingUpdates(editableMappignId: String,
+  private def getPendingUpdates(editableMappingId: String,
                                 closestMaterializedVersion: Long,
                                 closestMaterializableVersion: Long): Fox[List[EditableMappingUpdateAction]] =
     if (closestMaterializableVersion == closestMaterializedVersion) {
@@ -255,7 +256,7 @@ class EditableMappingService @Inject()(
     } else {
       for {
         updates <- tracingDataStore.editableMappingUpdates.getMultipleVersions[List[EditableMappingUpdateAction]](
-          editableMappignId,
+          editableMappingId,
           newestVersion = Some(closestMaterializableVersion),
           oldestVersion = Some(closestMaterializedVersion + 1L))(fromJsonBytes[List[EditableMappingUpdateAction]])
       } yield updates.reverse.flatten
@@ -588,6 +589,38 @@ class EditableMappingService @Inject()(
         )
     }
 
-  def merge(editableMappingIdsWithFallbackLayers: List[(String, RemoteFallbackLayer)],
-            userToken: Option[String]): Fox[String] = Fox.successful("new mapping id")
+  def merge(editableMappingIds: List[String],
+            remoteFallbackLayer: RemoteFallbackLayer,
+            userToken: Option[String]): Fox[String] =
+    /*
+       - duplicate first editable mapping
+       - also duplicate its update actions, and a v0
+       - for all others:
+         - fetch update actions of next one (batched)
+         - apply them one by one on duplicated first one
+           - ignore agglomerate ids in update actions, look up agglomerate ids by positions only (look up segment, map using current mapping)
+           - skip adding edges that already exist
+           - skip deleting edges that don’t exist
+         - also save them, with new linear versioning
+     */
+    for {
+      firstMappingId <- editableMappingIds.headOption.toFox
+      newMappingId <- duplicate(Some(firstMappingId), version = None, remoteFallbackLayer, userToken)
+      _ <- Fox.serialCombined(editableMappingIds.tail)(editableMappingId =>
+        mergeInto(newMappingId, editableMappingId, remoteFallbackLayer, userToken))
+    } yield newMappingId
+
+  private def mergeInto(targetEditableMappingId: String,
+                        sourceEditableMappingId: String,
+                        remoteFallbackLayer: RemoteFallbackLayer,
+                        userToken: Option[String]): Fox[Unit] =
+    for {
+      // TODO batch fetching of update actions
+      sourceNewestVersion <- getClosestMaterializableVersionOrZero(sourceEditableMappingId, None)
+      updateActions <- getPendingUpdates(sourceEditableMappingId, 0L, sourceNewestVersion)
+      _ = logger.info(
+        s"merging ${updateActions.length} updates from $sourceEditableMappingId into $targetEditableMappingId")
+      // TODO apply updates + store them
+    } yield ()
+
 }

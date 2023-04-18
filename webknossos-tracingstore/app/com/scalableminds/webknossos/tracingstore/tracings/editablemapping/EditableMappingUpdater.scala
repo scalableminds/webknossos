@@ -121,28 +121,32 @@ class EditableMappingUpdater(editableMappingId: String,
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
-      agglomerateId <- agglomerateIdForSplitAction(update)
+      agglomerateId <- agglomerateIdForSplitAction(update, segmentId1)
       _ = updateAgglomerateGraph(agglomerateId, graph1)
       _ = updateAgglomerateGraph(agglomerateId2, graph2)
     } yield editableMappingInfo.withLargestAgglomerateId(agglomerateId2)
 
-  private def agglomerateIdForSplitAction(updateAction: SplitAgglomerateUpdateAction)(
+  private def agglomerateIdForSplitAction(updateAction: SplitAgglomerateUpdateAction, segmentId1: Long)(
       implicit ec: ExecutionContext): Fox[Long] =
     if (relyOnAgglomerateIds) {
       Fox.successful(updateAction.agglomerateId)
     } else {
-      // TODO: look up agglomerate id by position
-      Fox.successful(updateAction.agglomerateId)
+      agglomerateIdForSegmentId(segmentId1)
     }
 
-  private def agglomerateIdsForMergeAction(updateAction: MergeAgglomerateUpdateAction)(
-      implicit ec: ExecutionContext): Fox[(Long, Long)] =
+  private def agglomerateIdsForMergeAction(updateAction: MergeAgglomerateUpdateAction,
+                                           segmentId1: Long,
+                                           segmentId2: Long)(implicit ec: ExecutionContext): Fox[(Long, Long)] =
     if (relyOnAgglomerateIds) {
       Fox.successful((updateAction.agglomerateId1, updateAction.agglomerateId2))
     } else {
-      // TODO: look up agglomerate id by position
-      Fox.successful((updateAction.agglomerateId1, updateAction.agglomerateId2))
+      for {
+        agglomerateId1 <- agglomerateIdForSegmentId(segmentId1)
+        agglomerateId2 <- agglomerateIdForSegmentId(segmentId2)
+      } yield (agglomerateId1, agglomerateId2)
     }
+
+  private def agglomerateIdForSegmentId(segmentId: Long): Fox[Long] = ??? // TODO
 
   private def updateSegmentToAgglomerate(segmentIdsToUpdate: Seq[Long], agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Unit] =
@@ -296,8 +300,9 @@ class EditableMappingUpdater(editableMappingId: String,
       _ = if (segmentId2 == 0)
         logger.warn(
           s"Merge action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Merging outside of dataset?")
-      agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
-      agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
+      agglomerateIds <- agglomerateIdsForMergeAction(update, segmentId1, segmentId2)
+      agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateIds._1) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
+      agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateIds._2) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "Segment as queried by position is not contained in fetched agglomerate graph"
       mergedGraphOpt = mergeGraph(agglomerateGraph1, agglomerateGraph2, update, segmentId1, segmentId2)
       _ <- Fox.runOptional(mergedGraphOpt) { mergedGraph =>

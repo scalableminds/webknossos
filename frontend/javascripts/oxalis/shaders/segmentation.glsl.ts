@@ -281,7 +281,7 @@ export const getSegmentationId: ShaderModule = {
         getSegmentIdOrFallback(
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
-          <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,
+          <%= formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].packingDegree) %>,
           transformedCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
           !<%= segmentationName %>_has_transform
@@ -291,9 +291,9 @@ export const getSegmentationId: ShaderModule = {
       // which should be ignored (in the binary search as well as when comparing
       // a cell id with the hovered cell passed via uniforms, for example).
 
-      <% if (packingDegreeLookup[segmentationName] === 4) { %>
+      <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
         volume_color[1] = vec4(volume_color[1].r, 0.0, 0.0, 0.0);
-      <% } else if (packingDegreeLookup[segmentationName] === 2) { %>
+      <% } else if (textureLayerInfos[segmentationName].packingDegree === 2) { %>
         volume_color[1] = vec4(volume_color[1].r, volume_color[1].g, 0.0, 0.0);
       <% } %>
 

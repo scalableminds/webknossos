@@ -9,7 +9,6 @@ import Deferred from "libs/deferred";
 
 import Store from "oxalis/store";
 import {
-  ResolutionInfo,
   getResolutionInfo,
   getMappingInfo,
   getVisibleSegmentationLayer,
@@ -73,6 +72,7 @@ import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;

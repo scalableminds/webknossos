@@ -96,7 +96,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           }
 
         val skeletonTracingOpt: Option[SkeletonTracing] =
-          if (treesSplit.isEmpty) None
+          if (treesSplit.isEmpty && userBoundingBoxes.isEmpty) None
           else
             Some(
               SkeletonTracing(

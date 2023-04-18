@@ -2,7 +2,7 @@
 
 ## WARNING: Interacting with the REST API directly is deprecated
 
-As of 2023, please use the WEBKNOSSOS python client to interact with WEBKNOSSOS programmatically. The API endpoints described in this document are now deprecated and after a grace period will no longer be held stable.
+As of 2023, please use the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) to interact with WEBKNOSSOS programmatically. The API endpoints described in this document are now deprecated and after a grace period will no longer be held stable.
 
 ## Introduction
 

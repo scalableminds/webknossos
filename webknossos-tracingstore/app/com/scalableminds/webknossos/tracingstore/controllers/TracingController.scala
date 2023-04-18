@@ -238,15 +238,14 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
           for {
             tracingOpts <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages(
               "tracing.notFound")
-            tracings = tracingOpts.flatten
+            tracings = tracingOpts.flatten // TODO zip with id before flattening?
             newId = tracingService.generateTracingId
             mergedVolumeStats <- tracingService.mergeVolumeData(request.body.flatten,
                                                                 tracings,
                                                                 newId,
                                                                 newVersion = 0L,
                                                                 toCache = !persist)
-            newEditableMappingId <- Fox.runIf(tracings.forall(t => tracingService.hasEditableMapping(t)))(
-              editableMappingService.merge(tracings.map(_.mappingName), remoteFallbackLayer, userToken))
+            newEditableMappingIdOpt <- tracingService.mergeEditableMappings(tracings, urlOrHeaderToken(token, request))
             mergedTracing = tracingService.merge(tracings, mergedVolumeStats)
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
           } yield {

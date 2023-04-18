@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossos
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataHelper
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, FallbackDataHelper}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
@@ -44,6 +44,7 @@ class VolumeTracingService @Inject()(
     implicit val volumeDataCache: TemporaryVolumeDataStore,
     val handledGroupIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
+    editableMappingService: EditableMappingService,
     val temporaryTracingIdStore: TracingStoreRedisStore,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
@@ -578,7 +579,16 @@ class VolumeTracingService @Inject()(
 
   def dummyTracing: VolumeTracing = ???
 
-  def hasEditableMapping(tracing: VolumeTracing): Boolean =
-    tracing.mappingIsEditable.contains(true)
+  def mergeEditabelMappings(tracingsWithIds: Seq[(VolumeTracing, String)], userToken: Option[String]): Fox[String] =
+    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.mappingIsEditable.contains(true))) {
+      for {
+        remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds.toList)(tracingWithId =>
+          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
+      } editableMappingService.mergeN(tracingsWithIds.map(_._1.mappingName).zip(remoteFallbackLayers), userToken)
+    } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.mappingIsEditable.getOrElse(false))) {
+      Fox.empty
+    } else {
+      Fox.failure("Cannot merge tracings with and without editable mappings")
+    }
 
 }

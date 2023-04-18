@@ -344,7 +344,7 @@ const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
 
-  if (!features().isDemoInstance) {
+  if (!features().isWkorgInstance) {
     return null;
   }
 

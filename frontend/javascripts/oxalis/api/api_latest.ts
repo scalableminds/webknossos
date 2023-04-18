@@ -72,7 +72,6 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -152,6 +151,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransforms } from "oxalis/model/actions/dataset_actions";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -1313,7 +1313,7 @@ class DataApi {
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
       const resolutionInfo = getResolutionInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+      zoomStep = resolutionInfo.getLowestResolutionIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1373,7 +1373,7 @@ class DataApi {
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+      zoomStep = resolutionInfo.getLowestResolutionIndex();
     }
 
     const resolutions = resolutionInfo.getDenseResolutions();
@@ -2066,6 +2066,8 @@ class DataApi {
           color: rgbColor,
         },
         effectiveLayerName,
+        undefined,
+        true,
       ),
     );
   }

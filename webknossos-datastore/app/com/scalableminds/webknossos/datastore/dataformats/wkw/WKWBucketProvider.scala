@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.FileSystemService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Empty, Failure, Full}
 import java.nio.file.Path
@@ -33,7 +33,7 @@ class WKWCubeHandle(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle 
 
 class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper {
 
-  override def fileSystemServiceOpt: Option[FileSystemService] = None
+  override def dataVaultServiceOpt: Option[DataVaultService] = None
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[WKWCubeHandle] = {

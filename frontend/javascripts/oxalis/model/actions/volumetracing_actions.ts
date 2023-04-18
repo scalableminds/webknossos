@@ -35,6 +35,7 @@ export type ImportVolumeTracingAction = ReturnType<typeof importVolumeTracingAct
 export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
+export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
@@ -61,6 +62,7 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
+  | RemoveSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -76,6 +78,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
+  "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
   // Note that the following two actions are defined in settings_actions.ts
@@ -141,17 +144,17 @@ export const finishEditingAction = () =>
     type: "FINISH_EDITING",
   } as const);
 
-export const setActiveCellAction = (cellId: number, somePosition?: Vector3) =>
+export const setActiveCellAction = (segmentId: number, somePosition?: Vector3) =>
   ({
     type: "SET_ACTIVE_CELL",
-    cellId,
+    segmentId,
     somePosition,
   } as const);
 
-export const clickSegmentAction = (cellId: number, somePosition: Vector3) =>
+export const clickSegmentAction = (segmentId: number, somePosition: Vector3) =>
   ({
     type: "CLICK_SEGMENT",
-    cellId,
+    segmentId,
     somePosition,
   } as const);
 
@@ -167,11 +170,25 @@ export const updateSegmentAction = (
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
+  createsNewUndoState: boolean = false,
 ) =>
   ({
     type: "UPDATE_SEGMENT",
     segmentId,
     segment,
+    layerName,
+    timestamp,
+    createsNewUndoState,
+  } as const);
+
+export const removeSegmentAction = (
+  segmentId: number,
+  layerName: string,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "REMOVE_SEGMENT",
+    segmentId,
     layerName,
     timestamp,
   } as const);
@@ -236,10 +253,10 @@ export const importVolumeTracingAction = () =>
     type: "IMPORT_VOLUMETRACING",
   } as const);
 
-export const setLargestSegmentIdAction = (cellId: number) =>
+export const setLargestSegmentIdAction = (segmentId: number) =>
   ({
     type: "SET_LARGEST_SEGMENT_ID",
-    cellId,
+    segmentId,
   } as const);
 
 export const dispatchFloodfillAsync = async (

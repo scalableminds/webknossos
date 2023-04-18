@@ -18,12 +18,6 @@ We provide several free, open-source libraries and tools alongside WEBKNOSSOS to
 - [Read more about the support data formats](./data_formats.md)
 
 
-## WEBKNOSSOS Connect
-- [https://github.com/scalableminds/webknossos-connect](https://github.com/scalableminds/webknossos-connect)
-- A WEBKNOSSOS compatible data connector written in Python
-- WEBKNOSSOS-connect serves as an adapter between the WEBKNOSSOS data store interface and other alternative data storage servers (e.g., BossDB) or static files hosted on Cloud Storage (e.g. Neuroglancer Precomputed)
-
-
 ## webKnossos Wrap Data Format (wkw)
 - [webknossos-wrap](https://github.com/scalableminds/webknossos-wrap)
 - Library for low-level read and write operations to wkw datasets

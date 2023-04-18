@@ -6,6 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.04.2...HEAD)
+- The config key features.isDemoInstance was renamed to features.isWkorgInstance (only needs to be adapted for the main wkorg instance). [#6941](https://github.com/scalableminds/webknossos/pull/6941/files)
 
 ### Postgres Evolutions:

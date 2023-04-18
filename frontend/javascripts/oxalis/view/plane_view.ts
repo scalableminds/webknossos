@@ -14,8 +14,9 @@ import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
-
-type RaycastIntersection = THREE.Intersection<THREE.Object3D<THREE.Event>>;
+import VisibilityAwareRaycaster, {
+  type RaycastIntersection,
+} from "libs/visibility_aware_raycaster";
 
 const createDirLight = (
   position: Vector3,
@@ -32,7 +33,7 @@ const createDirLight = (
   return dirLight;
 };
 
-const raycaster = new THREE.Raycaster();
+const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
 const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
 
@@ -45,7 +46,7 @@ class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: (
     arg0: [number, number],
-  ) => RaycastIntersection | null | undefined;
+  ) => RaycastIntersection<THREE.Object3D> | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
@@ -147,10 +148,10 @@ class PlaneView {
 
   performIsosurfaceHitTest(
     mousePosition: [number, number],
-  ): RaycastIntersection | null | undefined {
+  ): RaycastIntersection<THREE.Object3D> | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
-    const { isosurfacesRootGroup } = SceneController;
+    const { isosurfacesLODRootGroup } = SceneController.segmentMeshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
@@ -172,7 +173,7 @@ class PlaneView {
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
-    const intersectableObjects = isosurfacesRootGroup.children;
+    const intersectableObjects = isosurfacesLODRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(intersectableObjects, true);

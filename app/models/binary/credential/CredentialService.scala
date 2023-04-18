@@ -2,7 +2,7 @@ package models.binary.credential
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
-  FileSystemCredential,
+  DataVaultCredential,
   DataVaultsHolder,
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
@@ -22,7 +22,7 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                           credentialIdentifier: Option[String],
                           credentialSecret: Option[String],
                           userId: ObjectId,
-                          organizationId: ObjectId): Option[FileSystemCredential] =
+                          organizationId: ObjectId): Option[DataVaultCredential] =
     uri.getScheme match {
       case DataVaultsHolder.schemeHttps | DataVaultsHolder.schemeHttp =>
         credentialIdentifier.map(
@@ -45,7 +45,7 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
         } yield GoogleServiceAccountCredential(uri.toString, secretJson, userId.toString, organizationId.toString)
     }
 
-  def insertOne(credential: FileSystemCredential)(implicit ec: ExecutionContext): Fox[ObjectId] = {
+  def insertOne(credential: DataVaultCredential)(implicit ec: ExecutionContext): Fox[ObjectId] = {
     val _id = ObjectId.generate
     for {
       _ <- credential match {

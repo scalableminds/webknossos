@@ -27,7 +27,6 @@ import {
   getVisibleSegmentationLayer,
   getResolutionInfoOfVisibleSegmentationLayer,
   getMappingInfo,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -36,6 +35,7 @@ import { updateTemporarySettingAction } from "oxalis/model/actions/settings_acti
 import {
   updateSegmentAction,
   setActiveCellAction,
+  removeSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -57,6 +57,7 @@ import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -65,7 +66,7 @@ const refreshInterval = 5000;
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111],
   // ASCII codes for ISO
-  cellIdIndex: 3, // Write cell index after the isosurfaceMarker
+  segmentIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
 const segmentsTabId = "segment-list";
 
@@ -138,12 +139,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
-  loadAdHocMesh(cellId: number, seedPosition: Vector3) {
-    dispatch(loadAdHocMeshAction(cellId, seedPosition));
+  loadAdHocMesh(segmentId: number, seedPosition: Vector3) {
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition));
   },
 
-  loadPrecomputedMesh(cellId: number, seedPosition: Vector3, meshFileName: string) {
-    dispatch(loadPrecomputedMeshAction(cellId, seedPosition, meshFileName));
+  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, meshFileName: string) {
+    dispatch(loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName));
   },
 
   setActiveCell(segmentId: number, somePosition?: Vector3) {
@@ -158,8 +159,19 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setPositionAction(position));
   },
 
-  updateSegment(segmentId: number, segmentShape: Partial<Segment>, layerName: string) {
-    dispatch(updateSegmentAction(segmentId, segmentShape, layerName));
+  updateSegment(
+    segmentId: number,
+    segmentShape: Partial<Segment>,
+    layerName: string,
+    createsNewUndoState: boolean,
+  ) {
+    dispatch(
+      updateSegmentAction(segmentId, segmentShape, layerName, undefined, createsNewUndoState),
+    );
+  },
+
+  removeSegment(segmentId: number, layerName: string) {
+    dispatch(removeSegmentAction(segmentId, layerName));
   },
 });
 
@@ -390,16 +402,16 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       mappingInfo,
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
-    const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
+    const defaultOrHigherIndex = resolutionInfo.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
     );
     const meshfileResolutionIndex =
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
-        : datasetResolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
+        : resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
+    const meshfileResolution = resolutionInfo.getResolutionByIndexWithFallback(
       meshfileResolutionIndex,
       null,
     );
@@ -466,7 +478,7 @@ class SegmentsView extends React.Component<Props, State> {
   getAdHocMeshSettings = () => {
     const {
       preferredQualityForMeshAdHocComputation,
-      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div>
@@ -478,12 +490,10 @@ class SegmentsView extends React.Component<Props, State> {
           style={{
             width: 220,
           }}
-          value={datasetResolutionInfo.getClosestExistingIndex(
-            preferredQualityForMeshAdHocComputation,
-          )}
+          value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
-          {datasetResolutionInfo
+          {resolutionInfo
             .getResolutionsWithIndices()
             .map(([log2Index, mag]: [number, Vector3], index: number) => (
               <Option value={log2Index} key={log2Index}>
@@ -499,7 +509,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
     const {
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div
@@ -527,12 +537,10 @@ class SegmentsView extends React.Component<Props, State> {
             style={{
               width: 220,
             }}
-            value={datasetResolutionInfo.getClosestExistingIndex(
-              preferredQualityForMeshPrecomputation,
-            )}
+            value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
             onChange={this.handleQualityChangeForPrecomputation}
           >
-            {datasetResolutionInfo
+            {resolutionInfo
               .getResolutionsWithIndices()
               .map(([log2Index, mag]: [number, Vector3], index: number) => (
                 <Option value={log2Index} key={log2Index}>
@@ -697,6 +705,7 @@ class SegmentsView extends React.Component<Props, State> {
                         setHoveredSegmentId={this.props.setHoveredSegmentId}
                         allowUpdate={this.props.allowUpdate}
                         updateSegment={this.props.updateSegment}
+                        removeSegment={this.props.removeSegment}
                         visibleSegmentationLayer={this.props.visibleSegmentationLayer}
                         loadAdHocMesh={this.props.loadAdHocMesh}
                         loadPrecomputedMesh={this.props.loadPrecomputedMesh}

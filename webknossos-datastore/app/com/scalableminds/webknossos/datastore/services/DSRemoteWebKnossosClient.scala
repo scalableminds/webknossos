@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.storage.FileSystemCredential
+import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
@@ -66,11 +66,15 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def reportUpload(dataSourceId: DataSourceId, dataSetSizeBytes: Long, userToken: Option[String]): Fox[Unit] =
+  def reportUpload(dataSourceId: DataSourceId,
+                   dataSetSizeBytes: Long,
+                   needsConversion: Boolean,
+                   userToken: Option[String]): Fox[Unit] =
     for {
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
+        .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()
@@ -150,10 +154,10 @@ class DSRemoteWebKnossosClient @Inject()(
           .getWithJsonResponse[AnnotationSource]
     )
 
-  private lazy val credentialCache: AlfuFoxCache[String, FileSystemCredential] =
+  private lazy val credentialCache: AlfuFoxCache[String, DataVaultCredential] =
     AlfuFoxCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
 
-  def getCredential(credentialId: String): Fox[FileSystemCredential] =
+  def getCredential(credentialId: String): Fox[DataVaultCredential] =
     credentialCache.getOrLoad(
       credentialId,
       _ =>
@@ -161,6 +165,6 @@ class DSRemoteWebKnossosClient @Inject()(
           .addQueryString("credentialId" -> credentialId)
           .addQueryString("key" -> dataStoreKey)
           .silent
-          .getWithJsonResponse[FileSystemCredential]
+          .getWithJsonResponse[DataVaultCredential]
     )
 }

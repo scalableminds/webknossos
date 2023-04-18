@@ -216,9 +216,12 @@ export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
 }
 export function getFlatTreeGroups(skeletonTracing: SkeletonTracing): Array<TreeGroupTypeFlat> {
   return Array.from(
-    mapGroupsToList(skeletonTracing.treeGroups, ({ children: _children, ...bareTreeGroup }) => ({
-      ...bareTreeGroup,
-    })),
+    mapGroupsToGenerator(
+      skeletonTracing.treeGroups,
+      ({ children: _children, ...bareTreeGroup }) => ({
+        ...bareTreeGroup,
+      }),
+    ),
   );
 }
 export function getTreeGroupsMap(
@@ -233,7 +236,7 @@ export const getTreeNameForAgglomerateSkeleton = (
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;
 
 // Helper
-export function* mapGroupsToList<R>(
+export function* mapGroupsToGenerator<R>(
   groups: Array<TreeGroup>,
   callback: (arg0: TreeGroup) => R,
 ): Generator<R, void, void> {
@@ -241,16 +244,16 @@ export function* mapGroupsToList<R>(
     yield callback(group);
 
     if (group.children) {
-      yield* mapGroupsToList(group.children, callback);
+      yield* mapGroupsToGenerator(group.children, callback);
     }
   }
 }
 
-export function mapGroup(group: TreeGroup, fn: (g: TreeGroup) => TreeGroup): TreeGroup {
+function mapGroupAndChildrenHelper(group: TreeGroup, fn: (g: TreeGroup) => TreeGroup): TreeGroup {
   const newChildren = mapGroups(group.children, fn);
   return fn({ ...group, children: newChildren });
 }
 
 export function mapGroups(groups: TreeGroup[], fn: (g: TreeGroup) => TreeGroup): TreeGroup[] {
-  return groups.map((group) => mapGroup(group, fn));
+  return groups.map((group) => mapGroupAndChildrenHelper(group, fn));
 }

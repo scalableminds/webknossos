@@ -203,10 +203,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
 
   def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      owner <- userService
-        .findOneById(project._owner, useCache = true)
-        .flatMap(u => userService.compactWrites(u))
-        .futureBox
+      owner <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).futureBox
       teamNameOpt <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).toFutureOption
     } yield {
       Json.obj(

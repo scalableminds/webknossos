@@ -708,8 +708,6 @@ type ServerSegment = {
   anchorPosition: Point3 | null | undefined;
   creationTime: number | null | undefined;
   color: ColorObject | null;
-  // todo: should it be groupId?: ...
-  // clarify for old annotations
   groupId: number | null | undefined;
 };
 export type ServerTracingBase = {

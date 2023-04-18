@@ -503,16 +503,7 @@ class TracingApi {
    * Deprecated! Use renameSkeletonGroup instead.
    */
   renameGroup(groupId: number, newName: string) {
-    const { tracing } = Store.getState();
-    const skeletonTracing = assertSkeleton(tracing);
-
-    const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
-
-    callDeep(newTreeGroups, groupId, (item) => {
-      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'name' because it is a read-only ... Remove this comment to see the full error message
-      item.name = newName;
-    });
-    Store.dispatch(setTreeGroupsAction(newTreeGroups));
+    this.renameSkeletonGroup(groupId, newName);
   }
 
   /**
@@ -1140,7 +1131,7 @@ class DataApi {
     }
     const { segmentGroups } = volumeTracing;
 
-    const segmentGroupsWithoutDraggedGroup = mapGroups(
+    const newSegmentGroupsWithRoot = mapGroups(
       [
         {
           name: "Root",
@@ -1160,9 +1151,7 @@ class DataApi {
       },
     );
 
-    Store.dispatch(
-      setSegmentGroupsAction(segmentGroupsWithoutDraggedGroup[0].children, volumeLayerName),
-    );
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroupsWithRoot[0].children, volumeLayerName));
   }
 
   /**

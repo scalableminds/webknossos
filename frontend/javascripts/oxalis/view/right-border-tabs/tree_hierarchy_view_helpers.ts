@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { Tree, TreeGroup, SegmentMap, Segment } from "oxalis/store";
+import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
 export const TYPE_GROUP = "GROUP";
 export const TYPE_TREE = "TREE";
@@ -168,7 +168,7 @@ export function findParentIdForGroupId(groups: Array<TreeGroup>, groupId: number
   callDeep(groups, groupId, (_group, _index, _groups, parentGroupId) => {
     foundParentGroupId = parentGroupId;
   });
-  return foundParentGroupId || MISSING_GROUP_ID;
+  return foundParentGroupId ?? MISSING_GROUP_ID;
 }
 
 export function forEachTreeNode(groups: Array<TreeNode>, callback: (arg0: TreeNode) => void) {
@@ -209,9 +209,7 @@ export function findTreeNode(
   }
 }
 
-export function createGroupToTreesMap<T extends GroupableItem>(trees: {
-  [x: number]: T;
-}): Record<number, Array<T>> {
+export function createGroupToTreesMap(trees: TreeMap): Record<number, Array<Tree>> {
   return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
 

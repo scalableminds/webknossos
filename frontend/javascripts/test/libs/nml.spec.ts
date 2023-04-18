@@ -10,6 +10,7 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import mock from "mock-require";
 import test from "ava";
+
 const TIMESTAMP = 123456789;
 const buildInfo = {
   webknossos: {

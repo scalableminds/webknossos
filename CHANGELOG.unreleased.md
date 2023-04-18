@@ -20,7 +20,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Moved the view mode selection in the toolbar next to the position field. [#6949](https://github.com/scalableminds/webknossos/pull/6949)
-- Redesigned welcome toast for new, anonymous users with new branding. [#6961](https://github.com/scalableminds/webknossos/pull/6961)
+- Redesigned welcome toast for new, annonymous users with new branding. [#6961](https://github.com/scalableminds/webknossos/pull/6961)
+- When saving annotations, the URL of the webknossos instance is stored in the resulting NML file. [#6964](https://github.com/scalableminds/webknossos/pull/6964)
 
 ### Fixed
 - Fixed unintended dependencies between segments of different volume layers which used the same segment id. Now, using the same segment id for segments in different volume layers should work without any problems. [#6960](https://github.com/scalableminds/webknossos/pull/6960)

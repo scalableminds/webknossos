@@ -1131,27 +1131,18 @@ class DataApi {
     }
     const { segmentGroups } = volumeTracing;
 
-    const newSegmentGroupsWithRoot = mapGroups(
-      [
-        {
-          name: "Root",
-          groupId: MISSING_GROUP_ID,
-          children: segmentGroups,
-        },
-      ],
-      (group) => {
-        if (group.groupId === groupId) {
-          return {
-            ...group,
-            name: newName,
-          };
-        } else {
-          return group;
-        }
-      },
-    );
+    const newSegmentGroups = mapGroups(segmentGroups, (group) => {
+      if (group.groupId === groupId) {
+        return {
+          ...group,
+          name: newName,
+        };
+      } else {
+        return group;
+      }
+    });
 
-    Store.dispatch(setSegmentGroupsAction(newSegmentGroupsWithRoot[0].children, volumeLayerName));
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
   }
 
   /**

@@ -31,7 +31,8 @@ class EditableMappingUpdater(editableMappingId: String,
                              userToken: Option[String],
                              remoteDatastoreClient: TSRemoteDatastoreClient,
                              editableMappingService: EditableMappingService,
-                             tracingDataStore: TracingDataStore)
+                             tracingDataStore: TracingDataStore,
+                             relyOnAgglomerateIds: Boolean)
     extends KeyValueStoreImplicits
     with FoxImplicits
     with LazyLogging {
@@ -120,9 +121,28 @@ class EditableMappingUpdater(editableMappingId: String,
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
-      _ = updateAgglomerateGraph(update.agglomerateId, graph1)
+      agglomerateId <- agglomerateIdForSplitAction(update)
+      _ = updateAgglomerateGraph(agglomerateId, graph1)
       _ = updateAgglomerateGraph(agglomerateId2, graph2)
     } yield editableMappingInfo.withLargestAgglomerateId(agglomerateId2)
+
+  private def agglomerateIdForSplitAction(updateAction: SplitAgglomerateUpdateAction)(
+      implicit ec: ExecutionContext): Fox[Long] =
+    if (relyOnAgglomerateIds) {
+      Fox.successful(updateAction.agglomerateId)
+    } else {
+      // TODO: look up agglomerate id by position
+      Fox.successful(updateAction.agglomerateId)
+    }
+
+  private def agglomerateIdsForMergeAction(updateAction: MergeAgglomerateUpdateAction)(
+      implicit ec: ExecutionContext): Fox[(Long, Long)] =
+    if (relyOnAgglomerateIds) {
+      Fox.successful((updateAction.agglomerateId1, updateAction.agglomerateId2))
+    } else {
+      // TODO: look up agglomerate id by position
+      Fox.successful((updateAction.agglomerateId1, updateAction.agglomerateId2))
+    }
 
   private def updateSegmentToAgglomerate(segmentIdsToUpdate: Seq[Long], agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Unit] =

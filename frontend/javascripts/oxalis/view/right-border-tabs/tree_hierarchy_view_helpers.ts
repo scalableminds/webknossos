@@ -8,8 +8,6 @@ const GroupTypeEnum = {
   [TYPE_TREE]: TYPE_TREE,
 };
 
-type GroupableItem = { groupId: number | null | undefined };
-
 type TreeOrGroup = keyof typeof GroupTypeEnum;
 export type TreeNode = {
   name: string;

@@ -91,7 +91,6 @@ import {
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import DeleteGroupModalView from "../delete_group_modal_view";
-import { values } from "libs/utils";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset

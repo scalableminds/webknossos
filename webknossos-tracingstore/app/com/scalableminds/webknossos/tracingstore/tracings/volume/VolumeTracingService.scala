@@ -420,7 +420,9 @@ class VolumeTracingService @Inject()(
       } else None
     } yield bucketPosOpt
 
-  def merge(tracings: Seq[VolumeTracing], mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
+  def merge(tracings: Seq[VolumeTracing],
+            mergedVolumeStats: MergedVolumeStats,
+            newEditableMappingIdOpt: Option[String]): VolumeTracing = {
     def mergeTwoWithStats(tracingAWithIndex: (VolumeTracing, Int),
                           tracingBWithIndex: (VolumeTracing, Int)): (VolumeTracing, Int) =
       (mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats),
@@ -432,6 +434,7 @@ class VolumeTracingService @Inject()(
       .copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
+        mappingName = newEditableMappingIdOpt
       )
   }
 
@@ -579,16 +582,18 @@ class VolumeTracingService @Inject()(
 
   def dummyTracing: VolumeTracing = ???
 
-  def mergeEditabelMappings(tracingsWithIds: Seq[(VolumeTracing, String)], userToken: Option[String]): Fox[String] =
+  def mergeEditableMappings(tracingsWithIds: List[(VolumeTracing, String)], userToken: Option[String]): Fox[String] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.mappingIsEditable.contains(true))) {
       for {
-        remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds.toList)(tracingWithId =>
+        remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
-      } editableMappingService.mergeN(tracingsWithIds.map(_._1.mappingName).zip(remoteFallbackLayers), userToken)
+        editableMappingIds <- Fox.serialCombined(tracingsWithIds)(tracingWithId => tracingWithId._1.mappingName)
+        _ <- bool2Fox(editableMappingIds.length == tracingsWithIds.length) ?~> "Not all volume tracings have editable mappings"
+        newEditableMappingId <- editableMappingService.merge(editableMappingIds.zip(remoteFallbackLayers), userToken)
+      } yield newEditableMappingId
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.mappingIsEditable.getOrElse(false))) {
       Fox.empty
     } else {
       Fox.failure("Cannot merge tracings with and without editable mappings")
     }
-
 }

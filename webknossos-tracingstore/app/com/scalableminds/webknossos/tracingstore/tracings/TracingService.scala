@@ -179,7 +179,7 @@ trait TracingService[T <: GeneratedMessage]
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 
-  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats): T
+  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): T
 
   def remapTooLargeTreeIds(tracing: T): T = tracing
 
@@ -189,5 +189,5 @@ trait TracingService[T <: GeneratedMessage]
                       newVersion: Long,
                       toCache: Boolean): Fox[MergedVolumeStats]
 
-  def mergeEditableMappings(tracingsWithIds: Seq[(T, String)], userToken: Option[String]): Option[String]
+  def mergeEditableMappings(tracingsWithIds: List[(T, String)], userToken: Option[String]): Fox[String]
 }

@@ -29,7 +29,8 @@ class EditableMappingUpdater(editableMappingId: String,
                              userToken: Option[String],
                              remoteDatastoreClient: TSRemoteDatastoreClient,
                              editableMappingService: EditableMappingService,
-                             tracingDataStore: TracingDataStore)
+                             tracingDataStore: TracingDataStore,
+                             relyOnAgglomerateIds: Boolean)
     extends KeyValueStoreImplicits {
 
   private val segmentToAgglomerateBuffer: mutable.Map[String, Map[Long, Long]] =
@@ -106,13 +107,32 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
-      (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
+      (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2) // TODO skip edge is already absent
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
-      _ = updateAgglomerateGraph(update.agglomerateId, graph1)
+      agglomerateId <- agglomerateIdForSplitAction(update)
+      _ = updateAgglomerateGraph(agglomerateId, graph1)
       _ = updateAgglomerateGraph(agglomerateId2, graph2)
     } yield editableMappingInfo.withLargestAgglomerateId(agglomerateId2)
+
+  private def agglomerateIdForSplitAction(updateAction: SplitAgglomerateUpdateAction)(
+      implicit ec: ExecutionContext): Fox[Long] =
+    if (relyOnAgglomerateIds) {
+      Fox.successful(updateAction.agglomerateId)
+    } else {
+      // TODO: look up agglomerate id by position
+      Fox.successful(updateAction.agglomerateId)
+    }
+
+  private def agglomerateIdsForMergeAction(updateAction: MergeAgglomerateUpdateAction)(
+      implicit ec: ExecutionContext): Fox[(Long, Long)] =
+    if (relyOnAgglomerateIds) {
+      Fox.successful((updateAction.agglomerateId1, updateAction.agglomerateId2))
+    } else {
+      // TODO: look up agglomerate id by position
+      Fox.successful((updateAction.agglomerateId1, updateAction.agglomerateId2))
+    }
 
   private def updateSegmentToAgglomerate(segmentIdsToUpdate: Seq[Long], agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Unit] =
@@ -250,10 +270,11 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
+      agglomerateIds <- agglomerateIdsForMergeAction(update)
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"
-      mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
+      mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2) // TODO skip if edge is already present
       _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, update.agglomerateId1) ?~> s"failed to update segment to agglomerate buffer"
       _ = updateAgglomerateGraph(update.agglomerateId1, mergedGraph)
       _ = updateAgglomerateGraph(update.agglomerateId2,

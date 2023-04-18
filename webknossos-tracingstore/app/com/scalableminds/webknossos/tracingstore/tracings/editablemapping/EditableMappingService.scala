@@ -222,14 +222,17 @@ class EditableMappingService @Inject()(
       else
         for {
           pendingUpdates <- getPendingUpdates(editableMappingId, closestMaterializedWithVersion.version, desiredVersion)
-          updater = new EditableMappingUpdater(editableMappingId,
-                                               closestMaterializedWithVersion.version,
-                                               desiredVersion,
-                                               remoteFallbackLayer,
-                                               userToken,
-                                               remoteDatastoreClient,
-                                               this,
-                                               tracingDataStore)
+          updater = new EditableMappingUpdater(
+            editableMappingId,
+            closestMaterializedWithVersion.version,
+            desiredVersion,
+            remoteFallbackLayer,
+            userToken,
+            remoteDatastoreClient,
+            this,
+            tracingDataStore,
+            relyOnAgglomerateIds = true
+          )
 
           updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion.value, pendingUpdates)
           _ = logger.debug(
@@ -616,11 +619,28 @@ class EditableMappingService @Inject()(
                         userToken: Option[String]): Fox[Unit] =
     for {
       // TODO batch fetching of update actions
-      sourceNewestVersion <- getClosestMaterializableVersionOrZero(sourceEditableMappingId, None)
+      targetNewestVersion <- getClosestMaterializableVersionOrZero(targetEditableMappingId, None)
+      closestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId,
+                                                                None,
+                                                                remoteFallbackLayer,
+                                                                userToken)
+      sourceNewestVersion = closestMaterializedWithVersion._2
       updateActions <- getPendingUpdates(sourceEditableMappingId, 0L, sourceNewestVersion)
       _ = logger.info(
         s"merging ${updateActions.length} updates from $sourceEditableMappingId into $targetEditableMappingId")
-      // TODO apply updates + store them
+      updater = new EditableMappingUpdater(
+        targetEditableMappingId,
+        targetNewestVersion,
+        targetNewestVersion + sourceNewestVersion,
+        remoteFallbackLayer,
+        userToken,
+        remoteDatastoreClient,
+        this,
+        tracingDataStore,
+        relyOnAgglomerateIds = false
+      )
+      updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion._1, updateActions)
+      // TODO store updates
     } yield ()
 
 }

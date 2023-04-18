@@ -163,15 +163,12 @@ export function findGroup(groups: Array<TreeGroup>, groupId: number): TreeGroup 
   return foundGroup;
 }
 
-export function findParentIdForGroupId(
-  groups: Array<TreeGroup>,
-  groupId: number,
-): number | null | undefined {
+export function findParentIdForGroupId(groups: Array<TreeGroup>, groupId: number): number {
   let foundParentGroupId: number | null | undefined = null;
   callDeep(groups, groupId, (_group, _index, _groups, parentGroupId) => {
     foundParentGroupId = parentGroupId;
   });
-  return foundParentGroupId;
+  return foundParentGroupId || MISSING_GROUP_ID;
 }
 
 export function forEachTreeNode(groups: Array<TreeNode>, callback: (arg0: TreeNode) => void) {

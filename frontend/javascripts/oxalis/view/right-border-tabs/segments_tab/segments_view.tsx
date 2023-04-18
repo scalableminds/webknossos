@@ -915,6 +915,9 @@ class SegmentsView extends React.Component<Props, State> {
             if (!isVisibleInDom) return null;
             const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
             const allSegments = this.props.segments;
+            const isSegmentHierarchyEmpty = !(
+              allSegments?.size() || this.props.segmentGroups.length
+            );
             const mapId = getMapIdFn(this.props.visibleSegmentationLayer);
 
             if (!this.props.visibleSegmentationLayer) {
@@ -1024,7 +1027,7 @@ class SegmentsView extends React.Component<Props, State> {
 
                 {/* todo: scrollbar is not native */}
                 <div style={{ flex: 1 }}>
-                  {allSegments == null || allSegments.size() === 0 ? (
+                  {isSegmentHierarchyEmpty ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
                       description={`There are no segments yet. ${

@@ -284,7 +284,6 @@ export type TreeNode =
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
   groupToSegmentsMap: Record<number, Segment[]>,
-  expandedGroupIds: {},
   _arg3: string,
 ): TreeNode[] {
   // return {
@@ -304,12 +303,7 @@ function constructTreeData(
       // Ensure that groups are always at the top when sorting by timestamp
       // timestamp: 0,
       // treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(segments);
-      children: constructTreeData(
-        group.children,
-        groupToSegmentsMap,
-        expandedGroupIds,
-        "sortBy",
-      ).concat(
+      children: constructTreeData(group.children, groupToSegmentsMap, "sortBy").concat(
         segments.map(
           (segment): TreeNode => ({
             ...segment,
@@ -393,18 +387,13 @@ class SegmentsView extends React.Component<Props, State> {
         children: nextProps.segmentGroups,
       };
 
-      // const expandedGroupIds = _.cloneDeep(prevState.expandedGroupIds);
-      const expandedGroupIds = {};
-
       const generatedGroupTree = constructTreeData(
         [rootGroup],
         groupToSegmentsMap,
-        expandedGroupIds,
         "id", // nextProps.sortBy,
       );
       return {
         groupTree: generatedGroupTree,
-        expandedGroupIds,
         prevProps: nextProps,
       };
     } else {

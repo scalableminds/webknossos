@@ -33,6 +33,8 @@ class AlfuFoxCache[K, V](underlyingAkkaCache: Cache[K, Box[V]]) extends FoxImpli
       result <- box.toFox
     } yield result
 
+  def remove(key: K): Unit = underlyingAkkaCache.remove(key)
+
   def clear(): Unit = underlyingAkkaCache.clear()
 }
 

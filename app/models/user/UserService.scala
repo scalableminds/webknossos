@@ -6,6 +6,7 @@ import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -38,7 +39,6 @@ class UserService @Inject()(conf: WkConf,
                             dataSetDAO: DataSetDAO,
                             tokenDAO: TokenDAO,
                             defaultMails: DefaultMails,
-                            userCache: UserCache,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
@@ -46,6 +46,9 @@ class UserService @Inject()(conf: WkConf,
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
+
+  private val userCache: AlfuFoxCache[ObjectId, User] =
+    AlfuFoxCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
@@ -78,11 +81,8 @@ class UserService @Inject()(conf: WkConf,
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
-  def findOneById(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] =
-    if (useCache)
-      userCache.findUser(userId)
-    else
-      userCache.store(userId, userDAO.findOne(userId))
+  def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+    userCache.getOrLoad(userId, id => userDAO.findOne(id))
 
   def insert(organizationId: ObjectId,
              email: String,
@@ -198,7 +198,7 @@ class UserService @Inject()(conf: WkConf,
                                 lastTaskTypeId)
       _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
-      _ = userCache.invalidateUser(user._id)
+      _ = userCache.remove(user._id)
       _ <- if (oldEmail == email) Fox.successful(()) else tokenDAO.updateEmail(oldEmail, email)
       updated <- userDAO.findOne(user._id)
     } yield updated
@@ -207,7 +207,7 @@ class UserService @Inject()(conf: WkConf,
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
       userIdValidated <- ObjectId.fromString(loginInfo.providerKey)
-      user <- findOneById(userIdValidated, useCache = true)(GlobalAccessContext)
+      user <- findOneCached(userIdValidated)(GlobalAccessContext)
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo
 
@@ -216,7 +216,7 @@ class UserService @Inject()(conf: WkConf,
 
   def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
-      userCache.invalidateUser(user._id)
+      userCache.remove(user._id)
       result
     }
 
@@ -249,12 +249,12 @@ class UserService @Inject()(conf: WkConf,
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
-      userCache.invalidateUser(user._id)
+      userCache.remove(user._id)
       result
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    findOneById(ObjectId(loginInfo.providerKey), useCache = false)(GlobalAccessContext).futureBox.map(_.toOption)
+    userDAO.findOne(ObjectId(loginInfo.providerKey))(GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(userId: ObjectId): LoginInfo =
     LoginInfo(CredentialsProvider.ID, userId.id)

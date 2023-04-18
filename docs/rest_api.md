@@ -1,5 +1,11 @@
 # WEBKNOSSOS REST API
 
+## WARNING: Interacting with the REST API directly is deprecated
+
+As of 2023, please use the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) to interact with WEBKNOSSOS programmatically. The API endpoints described in this document are now deprecated and after a grace period will no longer be held stable.
+
+## Introduction
+
 The following HTTP requests may be used to interact with the backend of WEBKNOSSOS. Please keep the server load in mind and avoid sending excessive amounts of requests or huge individual ones.
 
 ## Authentication
@@ -7,6 +13,8 @@ The following HTTP requests may be used to interact with the backend of WEBKNOSS
 All API routes expect the HTTP header `X-Auth-Token` to be set to your personal WEBKNOSSOS token. You can find this token in the WEBKNOSSOS menu, directly above “logout”.
 
 ## Versioning
+
+WARNING: Interacting with the REST API directly is deprecated. See the top of this document.
 
 The API is subject to frequent changes. However, older versions will be supported for some time via prefixed routes.
  - To access the latest version, call the routes below with only the `/api` prefix.

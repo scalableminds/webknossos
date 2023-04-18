@@ -94,7 +94,8 @@ class WKRemoteDataStoreController @Inject()(
                           key: String,
                           token: String,
                           dataSetName: String,
-                          dataSetSizeBytes: Long): Action[AnyContent] =
+                          dataSetSizeBytes: Long,
+                          needsConversion: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
@@ -102,9 +103,9 @@ class WKRemoteDataStoreController @Inject()(
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- usedStorageService.refreshStorageReportForDataset(dataSet)
+          _ <- Fox.runIf(!needsConversion)(usedStorageService.refreshStorageReportForDataset(dataSet))
           _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
-          _ = mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
+          _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
       }
     }

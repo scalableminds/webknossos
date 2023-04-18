@@ -10,7 +10,10 @@ import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getDatasetExtentAsString,
+  getResolutionUnion,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -29,6 +32,7 @@ import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
 import { mayUserEditDataset } from "libs/utils";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -569,10 +573,10 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { dataset, activeResolutionInfo, activeUser } = this.props;
-    const { activeMagIndicesOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
+    const { dataset, tracing, activeResolutionInfo, activeUser } = this.props;
+    const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
       activeResolutionInfo;
-    const resolutions = getResolutions(dataset);
+    const resolutionUnion = getResolutionUnion(dataset);
     const resolutionInfo =
       representativeResolution != null ? (
         <Tooltip
@@ -580,16 +584,20 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <div>
               Rendered magnification per layer:
               <ul>
-                {Object.entries(activeMagIndicesOfEnabledLayers).map(([layerName, magIndex]) => (
-                  <li key={layerName}>
-                    {layerName}: {resolutions[magIndex].join("-")}
-                  </li>
-                ))}
+                {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+                  const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+
+                  return (
+                    <li key={layerName}>
+                      {readableName}: {mag ? mag.join("-") : "none"}
+                    </li>
+                  );
+                })}
               </ul>
               Available resolutions:
               <ul>
-                {resolutions.map((r) => (
-                  <li key={r.join()}>{r.join("-")}</li>
+                {resolutionUnion.map((mags) => (
+                  <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
                 ))}
               </ul>
             </div>

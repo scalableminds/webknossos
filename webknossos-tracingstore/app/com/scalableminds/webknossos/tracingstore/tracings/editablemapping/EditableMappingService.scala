@@ -588,4 +588,6 @@ class EditableMappingService @Inject()(
         )
     }
 
+  def merge(editableMappingIdsWithFallbackLayers: List[(String, RemoteFallbackLayer)],
+            userToken: Option[String]): Fox[String] = Fox.successful("new mapping id")
 }

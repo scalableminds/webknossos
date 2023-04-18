@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingUpdatesReport
 }
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -238,19 +239,27 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
           for {
             tracingOpts <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages(
               "tracing.notFound")
-            tracings = tracingOpts.flatten // TODO zip with id before flattening?
+            tracingsWithIds = tracingOpts.zip(request.body).flatMap {
+              case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))
+              case _                               => None
+            }
             newId = tracingService.generateTracingId
             mergedVolumeStats <- tracingService.mergeVolumeData(request.body.flatten,
-                                                                tracings,
+                                                                tracingsWithIds.map(_._1),
                                                                 newId,
                                                                 newVersion = 0L,
                                                                 toCache = !persist)
-            newEditableMappingIdOpt <- tracingService.mergeEditableMappings(tracings, urlOrHeaderToken(token, request))
-            mergedTracing = tracingService.merge(tracings, mergedVolumeStats)
+            newEditableMappingIdBox <- tracingService
+              .mergeEditableMappings(tracingsWithIds, urlOrHeaderToken(token, request))
+              .futureBox
+            newEditableMappingIdOpt <- newEditableMappingIdBox match {
+              case Full(newEditableMappingId) => Fox.successful(Some(newEditableMappingId))
+              case Empty                      => Fox.successful(None)
+              case f: Failure                 => f.toFox
+            }
+            mergedTracing = tracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt)
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
-          } yield {
-            Ok(Json.toJson(newId))
-          }
+          } yield Ok(Json.toJson(newId))
         }
       }
     }

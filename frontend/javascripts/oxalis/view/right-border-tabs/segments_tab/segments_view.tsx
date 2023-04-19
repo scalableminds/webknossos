@@ -282,13 +282,7 @@ export type TreeNode =
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
   groupToSegmentsMap: Record<number, Segment[]>,
-  _arg3: string,
 ): TreeNode[] {
-  // return {
-  //   key: "string",
-  //   children: [],
-  // };
-
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
   return groups.map((group) => {
     const { groupId } = group;
@@ -298,10 +292,8 @@ function constructTreeData(
       key: `group-${groupId}`,
       id: groupId,
       type: "group",
-      // Ensure that groups are always at the top when sorting by timestamp
-      // timestamp: 0,
-      // treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(segments);
-      children: constructTreeData(group.children, groupToSegmentsMap, "sortBy").concat(
+      // todo: should these be sorted?
+      children: constructTreeData(group.children, groupToSegmentsMap).concat(
         segments.map(
           (segment): TreeNode => ({
             ...segment,
@@ -312,22 +304,6 @@ function constructTreeData(
         ),
       ),
     };
-
-    // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
-
-    // treeNode.isChecked = _.every(
-    //   treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-    //   (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
-    // );
-    // treeNode.isIndeterminate = treeNode.isChecked
-    //   ? false
-    //   : _.some(
-    //       treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-    //       (groupOrTree) =>
-    //         (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
-    //     );
-    // treeNode.containsTrees =
-    //   trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
     return treeNode;
   });
 }
@@ -368,9 +344,8 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
-    // if (prevState.prevProps == null || didTreeDataChange(prevState.prevProps, nextProps)) {
-    // Insert the trees into the corresponding groups and create a
-    // groupTree object that can be rendered using a SortableTree component
+    // Insert the segments into the corresponding groups and create a
+    // groupTree object that can be rendered using the antd Tree component
     const { segments, segmentGroups } = nextProps;
     if (
       segments != null &&
@@ -385,11 +360,7 @@ class SegmentsView extends React.Component<Props, State> {
         children: nextProps.segmentGroups,
       };
 
-      const generatedGroupTree = constructTreeData(
-        [rootGroup],
-        groupToSegmentsMap,
-        "id", // nextProps.sortBy,
-      );
+      const generatedGroupTree = constructTreeData([rootGroup], groupToSegmentsMap);
       return {
         groupTree: generatedGroupTree,
         prevProps: nextProps,

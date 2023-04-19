@@ -144,8 +144,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_ALL_TREES",
   "TOGGLE_INACTIVE_TREES",
   "SET_TREE_COLOR",
-  // Composited actions, only dispatched using `batchActions`
-  "BATCH_UPDATE_GROUPS_AND_TREES",
+  "BATCH_UPDATE_GROUPS_AND_TREES", // Composited actions, only dispatched using `batchActions`
   ...AllUserBoundingBoxActions,
 ];
 

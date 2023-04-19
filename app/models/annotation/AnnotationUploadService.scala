@@ -125,7 +125,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
         NmlParseSuccess(name,
                         Some(wrapTreesInGroup(name, skeletonTracing)),
                         wrapVolumeLayers(name, uploadedVolumeLayers),
-                        description, wkUrl)
+                        description,
+                        wkUrl)
       case r => r
     }
   }

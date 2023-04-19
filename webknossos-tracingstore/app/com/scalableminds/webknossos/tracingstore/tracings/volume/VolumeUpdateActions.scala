@@ -228,7 +228,8 @@ case class CreateSegmentVolumeAction(id: Long,
     CompactVolumeUpdateAction("createSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newSegment = Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime, colorOptToProto(color), groupId)
+    val newSegment =
+      Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime, colorOptToProto(color), groupId)
     tracing.addSegments(newSegment)
   }
 }

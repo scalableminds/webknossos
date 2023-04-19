@@ -441,6 +441,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
         // Update all subtrees
         for (const tree of subtrees) {
+          // also batch this?
           this.props.onSetTreeGroup(
             parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
             tree.treeId,

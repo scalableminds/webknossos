@@ -858,6 +858,7 @@ class SegmentsView extends React.Component<Props, State> {
       newSegmentGroups = [];
     }
 
+    const updateSegmentActions: Action[] = [];
     callDeep(newSegmentGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subsegments = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
       // Remove group
@@ -869,11 +870,15 @@ class SegmentsView extends React.Component<Props, State> {
 
         // Update all segments
         for (const segment of subsegments.values()) {
-          this.props.updateSegment(
-            segment.id,
-            { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
-            layerName,
-            true,
+          updateSegmentActions.push(
+            updateSegmentAction(
+              segment.id,
+              { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
+              layerName,
+              undefined,
+              // todo: is the "true" semantically correct?
+              true,
+            ),
           );
         }
 
@@ -899,8 +904,10 @@ class SegmentsView extends React.Component<Props, State> {
       removeSegmentAction(segmentId, layerName),
     );
     this.props.onBatchActions(
-      removeSegmentActions.concat([setSegmentGroupsAction(newSegmentGroups, layerName)]),
-      "DELETE_GROUP_AND_SEGMENTS",
+      updateSegmentActions.concat(
+        removeSegmentActions.concat([setSegmentGroupsAction(newSegmentGroups, layerName)]),
+      ),
+      "DELETE_GROUPS_AND_SEGMENTS",
     );
   }
 

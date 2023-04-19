@@ -94,6 +94,7 @@ type RelevantActionsForUndoRedo = {
   updateSegment?: UpdateSegmentAction;
   removeSegment?: RemoveSegmentAction;
   setSegmentGroups?: SetSegmentGroupsAction;
+  deleteGroupsAndSegments?: any;
 };
 
 // This function is needed so that TS is satisfied
@@ -135,12 +136,15 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     return {
       setSegmentGroups: action,
     };
+  } else if (action.type === "DELETE_GROUPS_AND_SEGMENTS") {
+    return {
+      deleteGroupsAndSegments: action,
+    };
   } else if (UndoRedoRelevantBoundingBoxActions.includes(action.type)) {
     return {
       userBoundingBoxAction: action as any as UserBoundingBoxAction,
     };
   }
-
   if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
     return {
       skeletonUserAction: action as any as SkeletonTracingAction,
@@ -226,6 +230,7 @@ export function* manageUndoStates(): Saga<never> {
     "REMOVE_SEGMENT",
     "UNDO",
     "REDO",
+    "DELETE_GROUPS_AND_SEGMENTS",
   ]);
   let loopCounter = 0;
 
@@ -239,6 +244,7 @@ export function* manageUndoStates(): Saga<never> {
     }
 
     const currentAction = yield* take(channel);
+    console.log("currentAction", currentAction);
     const {
       skeletonUserAction,
       addBucketToUndoAction,
@@ -250,6 +256,7 @@ export function* manageUndoStates(): Saga<never> {
       updateSegment,
       removeSegment,
       setSegmentGroups,
+      deleteGroupsAndSegments,
     } = unpackRelevantActionForUndo(currentAction);
 
     if (importVolumeTracingAction) {
@@ -439,14 +446,17 @@ export function* manageUndoStates(): Saga<never> {
             volumeInfo.prevSegments = volumeTracing.segments;
           }
         }
-      } else if (setSegmentGroups) {
-        if (setSegmentGroups.calledFromUndoSaga) {
+      } else if (setSegmentGroups || deleteGroupsAndSegments) {
+        if (setSegmentGroups?.calledFromUndoSaga) {
           // Ignore this action as it was dispatched from within this saga.
           continue;
         }
         shouldClearRedoState = true;
         const activeVolumeTracing = yield* select((state) =>
-          getVolumeTracingByLayerName(state.tracing, setSegmentGroups.layerName),
+          getVolumeTracingByLayerName(
+            state.tracing,
+            setSegmentGroups?.layerName || deleteGroupsAndSegments.payload[0].layerName,
+          ),
         );
         if (activeVolumeTracing) {
           const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];

@@ -5,11 +5,7 @@ import type { ElementClass } from "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  bucketPositionToGlobalAddress,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
@@ -623,37 +619,6 @@ export class DataBucket {
 
   getTracingId(): string {
     return this.cube.layerName;
-  }
-
-  getFallbackBucket(): Bucket {
-    if (this._fallbackBucket != null) {
-      return this._fallbackBucket;
-    }
-
-    const zoomStep = this.zoomedAddress[3];
-    const fallbackZoomStep = zoomStep + 1;
-    const resolutions = getResolutions(Store.getState().dataset);
-
-    if (fallbackZoomStep >= resolutions.length) {
-      this._fallbackBucket = NULL_BUCKET;
-      return NULL_BUCKET;
-    }
-
-    const fallbackBucketAddress = zoomedAddressToAnotherZoomStep(
-      this.zoomedAddress,
-      resolutions,
-      fallbackZoomStep,
-    );
-    const fallbackBucket = this.cube.getOrCreateBucket(fallbackBucketAddress);
-    this._fallbackBucket = fallbackBucket;
-
-    if (fallbackBucket.type !== "null") {
-      fallbackBucket.once("bucketCollected", () => {
-        this._fallbackBucket = null;
-      });
-    }
-
-    return fallbackBucket;
   }
 
   merge(fetchedData: BucketDataArray): void {

@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
@@ -20,249 +19,14 @@ import type {
 import ErrorHandling from "libs/error_handling";
 import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
-import { aggregateBoundingBox, map3 } from "libs/utils";
+import { aggregateBoundingBox, maxValue } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, Matrix4x4 } from "libs/mjs";
+import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { Identity4x4 } from "./flycam_accessor";
-
-export type ResolutionsMap = Map<number, Vector3>;
-export type SmallerOrHigherInfo = {
-  smaller: boolean;
-  higher: boolean;
-};
-
-function maxValue(array: Array<number>): number {
-  const value = _.max(array);
-  if (value == null) {
-    throw Error(`Max of empty array: ${array}`);
-  }
-  return value;
-}
-
-function minValue(array: Array<number>): number {
-  const value = _.min(array);
-  if (value == null) {
-    throw Error(`Min of empty array: ${array}`);
-  }
-  return value;
-}
-
-export class ResolutionInfo {
-  readonly resolutions: ReadonlyArray<Vector3>;
-  readonly resolutionMap: ReadonlyMap<number, Vector3>;
-
-  constructor(resolutions: Array<Vector3>) {
-    this.resolutions = resolutions;
-    this.resolutionMap = this._buildResolutionMap();
-  }
-
-  _buildResolutionMap() {
-    // Each resolution entry can be characterized by it's greatest resolution dimension.
-    // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-    // a zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-    // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-    // This function creates a map which maps from powerOfTwo (2**index) to resolution.
-    const { resolutions } = this;
-    const resolutionMap = new Map();
-
-    if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
-      throw new Error("Max dimension in resolutions is not unique.");
-    }
-
-    for (const resolution of resolutions) {
-      resolutionMap.set(maxValue(resolution), resolution);
-    }
-    return resolutionMap;
-  }
-
-  getDenseResolutions = memoizeOne(() => convertToDenseResolution(this.getResolutionList()));
-
-  getResolutionList = memoizeOne(() => Array.from(this.resolutionMap.values()));
-
-  getResolutionsWithIndices(): Array<[number, Vector3]> {
-    return _.sortBy(
-      Array.from(this.resolutionMap.entries()).map((entry) => {
-        const [powerOfTwo, resolution] = entry;
-        const resolutionIndex = Math.log2(powerOfTwo);
-        return [resolutionIndex, resolution];
-      }), // Sort by resolutionIndex
-      (tuple) => tuple[0],
-    );
-  }
-
-  indexToPowerOf2(index: number): number {
-    return 2 ** index;
-  }
-
-  hasIndex(index: number): boolean {
-    const powerOfTwo = this.indexToPowerOf2(index);
-    return this.resolutionMap.has(powerOfTwo);
-  }
-
-  hasResolution(resolution: Vector3): boolean {
-    return this.resolutionMap.has(Math.max(...resolution));
-  }
-
-  getResolutionByIndex(index: number): Vector3 | null | undefined {
-    const powerOfTwo = this.indexToPowerOf2(index);
-    return this.getResolutionByPowerOf2(powerOfTwo);
-  }
-
-  getResolutionByIndexOrThrow(index: number): Vector3 {
-    const resolution = this.getResolutionByIndex(index);
-
-    if (!resolution) {
-      throw new Error(`Magnification with index ${index} does not exist.`);
-    }
-
-    return resolution;
-  }
-
-  getIndexByResolution(resolution: Vector3): number {
-    const index = Math.log2(Math.max(...resolution));
-
-    // Assert that the index exists and that the resolution at that index
-    // equals the resolution argument
-    const resolutionMaybe = this.getResolutionByIndex(index);
-    if (!_.isEqual(resolution, resolutionMaybe)) {
-      throw new Error(
-        `Magnification ${resolution} with index ${index} is not equal to existing magnification at that index: ${resolutionMaybe}.`,
-      );
-    }
-    return index;
-  }
-
-  getResolutionByIndexWithFallback(
-    index: number,
-    fallbackResolutionInfo: ResolutionInfo | null | undefined,
-  ): Vector3 {
-    let resolutionMaybe = this.getResolutionByIndex(index);
-
-    if (resolutionMaybe) {
-      return resolutionMaybe;
-    }
-
-    resolutionMaybe =
-      fallbackResolutionInfo != null ? fallbackResolutionInfo.getResolutionByIndex(index) : null;
-
-    if (resolutionMaybe) {
-      return resolutionMaybe;
-    }
-
-    if (index === 0) {
-      // If the index is 0, only mag 1-1-1 can be meant.
-      return [1, 1, 1];
-    }
-
-    throw new Error(`Magnification could not be determined for index ${index}`);
-  }
-
-  getResolutionByPowerOf2(powerOfTwo: number): Vector3 | null | undefined {
-    return this.resolutionMap.get(powerOfTwo);
-  }
-
-  getHighestResolutionPowerOf2(): number {
-    return maxValue(Array.from(this.resolutionMap.keys()));
-  }
-
-  getLowestResolutionPowerOf2(): number {
-    return minValue(Array.from(this.resolutionMap.keys()));
-  }
-
-  getHighestResolutionIndex(): number {
-    return Math.log2(this.getHighestResolutionPowerOf2());
-  }
-
-  getLowestResolutionIndex(): number {
-    return Math.log2(this.getLowestResolutionPowerOf2());
-  }
-
-  getHighestResolution(): Vector3 {
-    // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getHighestResolutionPowerOf2());
-  }
-
-  getLowestResolution(): Vector3 {
-    // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getLowestResolutionPowerOf2());
-  }
-
-  getAllIndices(): Array<number> {
-    return this.getResolutionsWithIndices().map((entry) => entry[0]);
-  }
-
-  getClosestExistingIndex(index: number, errorMessage: string | null = null): number {
-    if (this.hasIndex(index)) {
-      return index;
-    }
-
-    const indices = this.getAllIndices();
-    const indicesWithDistances = indices.map((_index) => {
-      const distance = index - _index;
-
-      if (distance >= 0) {
-        // The candidate _index is smaller than the requested index.
-        // Since webKnossos only supports rendering from higher mags,
-        // when a mag is missing, we want to prioritize "higher" mags
-        // when looking for a substitute. Therefore, we artificially
-        // downrank the smaller mag _index.
-        return [_index, distance + 0.5];
-      } else {
-        return [_index, Math.abs(distance)];
-      }
-    });
-
-    const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
-    if (bestIndexWithDistance == null) {
-      throw new Error(errorMessage || "Couldn't find any resolution.");
-    }
-
-    return bestIndexWithDistance[0];
-  }
-
-  getClosestExistingResolution(resolution: Vector3): Vector3 {
-    const index = Math.log2(Math.max(...resolution));
-    return this.getResolutionByIndex(this.getClosestExistingIndex(index)) as Vector3;
-  }
-
-  hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {
-    const indices = this.getAllIndices();
-    const hasSmallOrHigher = {
-      smaller: false,
-      higher: false,
-    };
-
-    for (const currentIndex of indices) {
-      if (currentIndex < index) {
-        hasSmallOrHigher.smaller = true;
-      } else if (currentIndex > index) {
-        hasSmallOrHigher.higher = true;
-      }
-    }
-
-    return hasSmallOrHigher;
-  }
-
-  getIndexOrClosestHigherIndex(requestedIndex: number): number | null | undefined {
-    if (this.hasIndex(requestedIndex)) {
-      return requestedIndex;
-    }
-
-    const indices = this.getResolutionsWithIndices().map((entry) => entry[0]);
-
-    for (const index of indices) {
-      if (index > requestedIndex) {
-        // Return the first existing index which is higher than the requestedIndex
-        return index;
-      }
-    }
-
-    return null;
-  }
-}
+import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -271,95 +35,90 @@ function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
 // Don't use memoizeOne here, since we want to cache the resolutions for all layers
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
-export function getResolutionUnion(
-  dataset: APIDataset,
-  shouldThrow: boolean = false,
-): Array<Vector3> {
-  const resolutionUnionDict: { [key: number]: Vector3 } = {};
+
+function _getResolutionInfoByLayer(dataset: APIDataset): Record<string, ResolutionInfo> {
+  const infos: Record<string, ResolutionInfo> = {};
+
+  for (const layer of dataset.dataSource.dataLayers) {
+    infos[layer.name] = getResolutionInfo(layer.resolutions);
+  }
+
+  return infos;
+}
+
+export const getResolutionInfoByLayer = _.memoize(_getResolutionInfoByLayer);
+
+export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: string) {
+  return getResolutionInfoByLayer(dataset)[layerName].getDenseResolutions();
+}
+
+export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
+  /*
+   * Returns a list of existent mags per mag level. For example:
+   * [
+   *    [[1, 1, 1]],
+   *    [[2, 2, 2], [2, 2, 1]],
+   *    [[4, 4, 4], [4, 4, 1]],
+   *    [[8, 8, 8], [8, 8, 2]],
+   * ]
+   */
+  const resolutionUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
     for (const resolution of layer.resolutions) {
       const key = maxValue(resolution);
 
       if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = resolution;
-      } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
-        // the same resolution was already picked up
-      } else if (shouldThrow) {
-        throw new Error(
-          `The resolutions of the different layers don't match. ${resolutionUnionDict[key].join(
-            "-",
-          )} != ${resolution.join("-")}.`,
-        );
+        resolutionUnionDict[key] = [resolution];
       } else {
-        // The resolutions don't match, but shouldThrow is false
+        resolutionUnionDict[key].push(resolution);
       }
     }
   }
 
-  return _.chain(resolutionUnionDict).values().sortBy(maxValue).valueOf();
-}
-export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
-  // Each resolution entry can be characterized by it's greatest resolution dimension.
-  // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-  // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-  // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-  // This function returns an array of resolutions, for which each index will
-  // hold a resolution with highest_dim === 2**index and where resolutions are monotonously increasing.
-
-  if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
-    throw new Error("Max dimension in resolutions is not unique.");
+  for (const keyStr of Object.keys(resolutionUnionDict)) {
+    const key = Number(keyStr);
+    resolutionUnionDict[key] = _.uniqWith(resolutionUnionDict[key], V3.isEqual);
   }
 
-  const maxResolution = Math.log2(maxValue(resolutions.map((v) => maxValue(v))));
+  const keys = Object.keys(resolutionUnionDict)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((el) => Number(el));
 
-  const resolutionsLookUp = _.keyBy(resolutions, maxValue);
+  return keys.map((key) => resolutionUnionDict[key]);
+});
 
-  const maxResPower = 2 ** maxResolution;
-  let lastResolution = [maxResPower, maxResPower, maxResPower];
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
-  return _.range(maxResolution, -1, -1)
-    .map((exp) => {
-      const resPower = 2 ** exp;
-      // If the resolution does not exist, use the component-wise minimum of the next-higher
-      // resolution and an isotropic fallback resolution. Otherwise for anisotropic resolutions,
-      // the dense resolutions wouldn't be monotonously increasing.
-      const fallback = map3((i) => Math.min(lastResolution[i], resPower), [0, 1, 2]);
-      lastResolution = resolutionsLookUp[resPower] || fallback;
-      return lastResolution;
-    })
-    .reverse();
+export function getWidestResolutions(dataset: APIDataset): Vector3[] {
+  const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
+    convertToDenseResolution(layer.resolutions),
+  );
+
+  return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
 }
 
-function _getResolutions(dataset: APIDataset): Vector3[] {
-  // Different layers can have different resolutions. At the moment,
-  // mismatching resolutions will result in undefined behavior (rather than
-  // causing a hard error). During the model initialization, an error message
-  // will be shown, though.
-  // In the long term, getResolutions should not be used anymore.
-  // Instead, all the code should use the ResolutionInfo class which represents
-  // exactly which resolutions exist per layer.
-  return convertToDenseResolution(getResolutionUnion(dataset));
-}
+export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): ResolutionInfo => {
+  const resolutionUnion = getResolutionUnion(dataset);
+  const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
 
-// _getResolutions itself is not very performance intensive, but other functions which rely
-// on the returned resolutions are. To avoid busting memoization caches (which rely on references),
-// we memoize _getResolutions, as well.
-export const getResolutions = memoizeOne(_getResolutions);
-export function getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
-  return getResolutionInfo(getResolutions(dataset));
-}
+  if (areMagsDistinct) {
+    return new ResolutionInfo(resolutionUnion.map((mags) => mags[0]));
+  } else {
+    return new ResolutionInfo(getWidestResolutions(dataset));
+  }
+});
 
-function _getMaxZoomStep(maybeDataset: APIDataset | null | undefined): number {
+function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
-  const maxZoomstep = Maybe.fromNullable(maybeDataset)
-    .map((dataset) =>
-      Math.max(
-        minimumZoomStepCount,
-        Math.max(0, ...getResolutions(dataset).map((r) => Math.max(r[0], r[1], r[2]))),
-      ),
-    )
-    .getOrElse(2 ** (minimumZoomStepCount - 1));
+
+  if (!dataset) {
+    return minimumZoomStepCount;
+  }
+
+  const maxZoomstep = Math.max(
+    minimumZoomStepCount,
+    _.max(_.flattenDeep(getResolutionUnion(dataset))) || minimumZoomStepCount,
+  );
+
   return maxZoomstep;
 }
 
@@ -401,41 +160,12 @@ export function getLayerByName(
 
   return layer;
 }
-export function getLayerByNameOrFallbackName(
-  dataset: APIDataset,
-  layerName: string,
-): DataLayerType {
-  const dataLayers = getDataLayers(dataset);
-  const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
-  ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
-  const layer = dataLayers.find(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
-    (l) => l.name === layerName || (l.fallbackLayer && l.fallbackLayer === layerName),
-  );
 
-  if (!layer) {
-    throw new Error(`Layer "${layerName}" not found`);
-  }
-
-  return layer;
-}
 export function getSegmentationLayerByName(
   dataset: APIDataset,
   layerName: string,
 ): APISegmentationLayer {
   const layer = getLayerByName(dataset, layerName);
-
-  if (layer.category !== "segmentation") {
-    throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
-  }
-
-  return layer;
-}
-export function getSegmentationLayerByNameOrFallbackName(
-  dataset: APIDataset,
-  layerName: string,
-): APISegmentationLayer {
-  const layer = getLayerByNameOrFallbackName(dataset, layerName);
 
   if (layer.category !== "segmentation") {
     throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
@@ -855,14 +585,19 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
-function _keyResolutionsByMax(dataset: APIDataset): Record<number, Vector3> {
-  const resolutions = getResolutions(dataset);
+// Currently, only used for valid task range
+function _keyResolutionsByMax(dataset: APIDataset, layerName: string): Record<number, Vector3> {
+  const resolutions = getDenseResolutionsForLayerName(dataset, layerName);
   return _.keyBy(resolutions, (res) => Math.max(...res));
 }
 
 const keyResolutionsByMax = memoizeOne(_keyResolutionsByMax);
-export function getResolutionByMax(dataset: APIDataset, maxDim: number): Vector3 {
-  const keyedResolutionsByMax = keyResolutionsByMax(dataset);
+export function getResolutionByMax(
+  dataset: APIDataset,
+  layerName: string,
+  maxDim: number,
+): Vector3 {
+  const keyedResolutionsByMax = keyResolutionsByMax(dataset, layerName);
   return keyedResolutionsByMax[maxDim];
 }
 export function isLayerVisible(

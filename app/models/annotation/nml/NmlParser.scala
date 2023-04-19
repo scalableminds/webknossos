@@ -34,7 +34,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             overwritingDataSetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
-      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] =
+      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -52,6 +52,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
+        val wkUrl = parseWkUrl(parameters \ "experiment")
         val organizationName =
           if (overwritingDataSetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
@@ -96,7 +97,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           }
 
         val skeletonTracingOpt: Option[SkeletonTracing] =
-          if (treesSplit.isEmpty) None
+          if (treesSplit.isEmpty && userBoundingBoxes.isEmpty) None
           else
             Some(
               SkeletonTracing(
@@ -116,7 +117,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
               )
             )
 
-        (skeletonTracingOpt, volumeLayers, description)
+        (skeletonTracingOpt, volumeLayers, description, wkUrl)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
@@ -249,6 +250,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   private def parseDescription(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "description")).getOrElse(DEFAULT_DESCRIPTION)
+
+  private def parseWkUrl(nodes: NodeSeq): Option[String] =
+    nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
   private def parseOrganizationName(nodes: NodeSeq): Option[String] =
     nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization"))

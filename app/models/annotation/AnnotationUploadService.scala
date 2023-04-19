@@ -38,8 +38,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
                      isTaskUpload: Boolean,
                      basePath: Option[String] = None)(implicit m: MessagesProvider): NmlParseResult =
     NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath) match {
-      case Full((skeletonTracing, uploadedVolumeLayers, description)) =>
-        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description)
+      case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
+        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
@@ -84,8 +84,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
 
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
-          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), uploadedVolumeLayers, description)
+        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description, wkUrl) =>
+          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), uploadedVolumeLayers, description, wkUrl)
         case r => r
       }
     } else {
@@ -121,11 +121,11 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       volumeLayers.map(v => v.copy(tracing = wrapSegmentsInGroup(name, v.tracing)))
 
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
+      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description, wkUrl) =>
         NmlParseSuccess(name,
                         Some(wrapTreesInGroup(name, skeletonTracing)),
                         wrapVolumeLayers(name, uploadedVolumeLayers),
-                        description)
+                        description, wkUrl)
       case r => r
     }
   }

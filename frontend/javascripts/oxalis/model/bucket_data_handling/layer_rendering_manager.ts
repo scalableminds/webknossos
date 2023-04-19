@@ -6,7 +6,6 @@ import { M4x4, Matrix4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { map3 } from "libs/utils";
 import {
-  getResolutions,
   getByteCount,
   getElementClass,
   isLayerVisible,
@@ -196,7 +195,7 @@ export default class LayerRenderingManager {
       return;
     }
 
-    const resolutions = getResolutions(dataset);
+    const resolutions = getResolutionInfo(layer.resolutions).getDenseResolutions();
     const layerMatrix = invertAndTranspose(getTransformsForLayer(layer));
 
     const matrix = M4x4.scale1(

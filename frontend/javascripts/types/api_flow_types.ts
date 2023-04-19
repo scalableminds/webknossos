@@ -447,18 +447,6 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
   };
 }
 
-export type LocalMeshMetaData = {
-  isVisible?: boolean;
-  isLoaded?: boolean;
-  isLoading?: boolean;
-};
-export type RemoteMeshMetaData = {
-  annotationId: string;
-  position: Vector3;
-  description: string;
-  id: string;
-};
-export type MeshMetaData = LocalMeshMetaData & RemoteMeshMetaData;
 export type AnnotationViewConfiguration = {
   layers: Record<
     string,
@@ -478,7 +466,6 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly user?: APIUserBase;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
-  readonly meshes: Array<MeshMetaData>;
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;

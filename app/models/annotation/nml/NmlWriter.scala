@@ -22,6 +22,7 @@ case class NmlParameters(
     dataSetName: String,
     organizationName: String,
     description: Option[String],
+    wkUrl: String,
     scale: Option[Vec3Double],
     createdTimestamp: Long,
     editPosition: Vec3IntProto,
@@ -40,6 +41,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   scale: Option[Vec3Double],
                   volumeFilename: Option[String],
                   organizationName: String,
+                  wkUrl: String,
                   datasetName: String,
                   annotationOwner: Option[User],
                   annotationTask: Option[Task],
@@ -53,6 +55,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                    scale,
                    volumeFilename,
                    organizationName,
+                   wkUrl,
                    datasetName,
                    annotationOwner,
                    annotationTask,
@@ -66,6 +69,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             scale: Option[Vec3Double],
             volumeFilename: Option[String],
             organizationName: String,
+            wkUrl: String,
             datasetName: String,
             annotationOwner: Option[User],
             annotationTask: Option[Task],
@@ -82,6 +86,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                                  volumeLayers,
                                                  annotation: Option[Annotation],
                                                  organizationName,
+                                                 wkUrl,
                                                  datasetName,
                                                  scale)
           _ = writeParameters(parameters)
@@ -103,6 +108,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                volumeLayers: List[FetchedAnnotationLayer],
                                annotation: Option[Annotation],
                                organizationName: String,
+                               wkUrl: String,
                                datasetName: String,
                                scale: Option[Vec3Double]): Fox[NmlParameters] =
     for {
@@ -113,6 +119,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             datasetName,
             organizationName,
             annotation.map(_.description),
+            wkUrl,
             scale,
             s.createdTimestamp,
             s.editPosition,
@@ -127,6 +134,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             datasetName,
             organizationName,
             annotation.map(_.description),
+            wkUrl,
             scale,
             v.createdTimestamp,
             v.editPosition,
@@ -154,6 +162,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("name", parameters.dataSetName)
         writer.writeAttribute("organization", parameters.organizationName)
         parameters.description.foreach(writer.writeAttribute("description", _))
+        writer.writeAttribute("wkUrl", parameters.wkUrl)
       }
       Xml.withinElementSync("scale") {
         writer.writeAttribute("x", parameters.scale.map(_.x).getOrElse(-1).toString)

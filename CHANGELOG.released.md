@@ -7,11 +7,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [23.04.2](https://github.com/scalableminds/webknossos/releases/tag/23.04.2) - 2023-04-14
+[Commits](https://github.com/scalableminds/webknossos/compare/23.04.1...23.04.2)
+
+### Fixed
+- Fixed rendering problems in orthogonal when working with nodes that were created in flight or oblique mode. [#6978](https://github.com/scalableminds/webknossos/pull/6978)
+
 ## [23.04.1](https://github.com/scalableminds/webknossos/releases/tag/23.04.1) - 2023-04-06
 [Commits](https://github.com/scalableminds/webknossos/compare/23.04.0...23.04.1)
 
 ### Fixed
-- Fixed missing data during rendering in annotations in which the oblique or flight mode were used before the release of 23.04.0. [#6967](https://github.com/scalableminds/webknossos/pull/6967)
+- Fixed incorrect initial tab when clicking "Show Annotations" for a user in the user list. Also, the datasets tab was removed from that page as it was the same as the datasets table from the main dashboard. [#6957](https://github.com/scalableminds/webknossos/pull/6957)
 
 ## [23.04.0](https://github.com/scalableminds/webknossos/releases/tag/23.04.0) - 2023-03-27
 [Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...23.04.0)

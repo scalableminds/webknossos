@@ -122,7 +122,7 @@ test("SaveSaga should send request to server", (t) => {
     call(sendRequestWithToken, `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
       data: saveQueueWithVersions,
-      compress: true,
+      compress: false,
     }),
   );
 });
@@ -138,7 +138,7 @@ test("SaveSaga should retry update actions", (t) => {
     {
       method: "POST",
       data: saveQueueWithVersions,
-      compress: true,
+      compress: false,
     },
   );
   const saga = sendRequestToServer(TRACING_TYPE, tracingId);
@@ -177,7 +177,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
     call(sendRequestWithToken, `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
       data: saveQueueWithVersions,
-      compress: true,
+      compress: false,
     }),
   );
   saga.throw({

@@ -6,7 +6,6 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { api } from "oxalis/singletons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -35,7 +34,6 @@ import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -62,8 +60,9 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { Model } from "oxalis/singletons";
+import { api, Model } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   Flycam,
@@ -83,6 +82,7 @@ import { connect, useSelector } from "react-redux";
 import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIMeshFile, APISegmentationLayer, APIUser } from "types/api_flow_types";
+import DeleteGroupModalView from "../delete_group_modal_view";
 import {
   callDeep,
   createGroupToSegmentsMap,
@@ -90,7 +90,6 @@ import {
   findParentIdForGroupId,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import DeleteGroupModalView from "../delete_group_modal_view";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -552,16 +551,16 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       mappingInfo,
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
-    const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
+    const defaultOrHigherIndex = resolutionInfo.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
     );
     const meshfileResolutionIndex =
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
-        : datasetResolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
+        : resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
+    const meshfileResolution = resolutionInfo.getResolutionByIndexWithFallback(
       meshfileResolutionIndex,
       null,
     );
@@ -628,7 +627,7 @@ class SegmentsView extends React.Component<Props, State> {
   getAdHocMeshSettings = () => {
     const {
       preferredQualityForMeshAdHocComputation,
-      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div>
@@ -640,12 +639,10 @@ class SegmentsView extends React.Component<Props, State> {
           style={{
             width: 220,
           }}
-          value={datasetResolutionInfo.getClosestExistingIndex(
-            preferredQualityForMeshAdHocComputation,
-          )}
+          value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
-          {datasetResolutionInfo
+          {resolutionInfo
             .getResolutionsWithIndices()
             .map(([log2Index, mag]: [number, Vector3], index: number) => (
               <Option value={log2Index} key={log2Index}>
@@ -661,7 +658,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
     const {
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div
@@ -689,12 +686,10 @@ class SegmentsView extends React.Component<Props, State> {
             style={{
               width: 220,
             }}
-            value={datasetResolutionInfo.getClosestExistingIndex(
-              preferredQualityForMeshPrecomputation,
-            )}
+            value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
             onChange={this.handleQualityChangeForPrecomputation}
           >
-            {datasetResolutionInfo
+            {resolutionInfo
               .getResolutionsWithIndices()
               .map(([log2Index, mag]: [number, Vector3], index: number) => (
                 <Option value={log2Index} key={log2Index}>

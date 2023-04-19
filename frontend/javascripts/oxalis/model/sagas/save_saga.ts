@@ -173,7 +173,7 @@ export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: st
         {
           method: "POST",
           data: compactedSaveQueue,
-          compress: true,
+          compress: process.env.NODE_ENV === "production",
         },
       );
       const endTime = Date.now();

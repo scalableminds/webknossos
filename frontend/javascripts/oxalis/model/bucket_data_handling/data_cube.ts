@@ -8,11 +8,7 @@ import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
-import {
-  getResolutions,
-  ResolutionInfo,
-  getMappingInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -28,6 +24,7 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import Toast from "libs/toast";
 import type { Vector3, Vector4, BoundingBoxType, LabelMasksByBucketAndW } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -727,7 +724,7 @@ class DataCube {
   }
 
   getNextCurrentlyUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
-    const resolutions = getResolutions(Store.getState().dataset);
+    const resolutions = this.resolutionInfo.getDenseResolutions();
     let usableZoomStep = zoomStep;
 
     while (
@@ -745,7 +742,7 @@ class DataCube {
     position: Vector3,
     zoomStep: number,
   ): Promise<number> {
-    const resolutions = getResolutions(Store.getState().dataset);
+    const resolutions = this.resolutionInfo.getDenseResolutions();
     let usableZoomStep = zoomStep;
 
     while (
@@ -820,7 +817,7 @@ class DataCube {
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
-      getResolutions(Store.getState().dataset),
+      this.resolutionInfo.getDenseResolutions(),
       zoomStep,
     );
   }

@@ -6,7 +6,6 @@ import {
   isSegmentationLayer,
   getByteCountFromLayer,
   getMappingInfo,
-  ResolutionInfo,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
@@ -25,6 +24,7 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const COMPRESSION_WORKER_COUNT = 2;

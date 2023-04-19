@@ -15,7 +15,7 @@ export default function DeleteGroupModalView({
 }: Props) {
   return (
     <Modal
-      visible
+      open
       title={messages["tracing.group_deletion_message"]}
       onOk={onJustDeleteGroup}
       onCancel={onCancel}

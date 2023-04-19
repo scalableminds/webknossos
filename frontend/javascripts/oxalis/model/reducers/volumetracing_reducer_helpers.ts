@@ -6,10 +6,13 @@ import type {
   LabelAction,
   OxalisState,
   VolumeTracing,
+  SegmentGroup,
+  SegmentMap,
 } from "oxalis/store";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
+import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 export function updateVolumeTracing(
   state: OxalisState,
   volumeTracingId: string,
@@ -157,4 +160,22 @@ export function setMappingNameReducer(
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     mappingName,
   });
+}
+
+export function removeMissingGroupsFromSegments(
+  volumeTracing: VolumeTracing,
+  segmentGroups: Array<SegmentGroup>,
+): SegmentMap {
+  // Change the groupId of trees for groups that no longer exist
+  const groupIds = new Set(mapGroupsToGenerator(segmentGroups, (group) => group.groupId));
+  const newSegments = volumeTracing.segments.clone();
+  let hasChanged = false;
+  for (const [segmentId, segment] of volumeTracing.segments.entries()) {
+    if (segment.groupId != null && !groupIds.has(segment.groupId)) {
+      hasChanged = true;
+      newSegments.mutableSet(segmentId, { ...segment, groupId: null });
+    }
+  }
+  // Avoid changing the identity when it's not needed.
+  return hasChanged ? newSegments : volumeTracing.segments;
 }

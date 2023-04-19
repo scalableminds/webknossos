@@ -32,6 +32,7 @@ import {
   setLargestSegmentIdReducer,
   updateVolumeTracing,
   setMappingNameReducer,
+  removeMissingGroupsFromSegments,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
@@ -121,7 +122,16 @@ function setSegmentGroups(state: OxalisState, layerName: string, newSegmentGroup
   }
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
+    // In case a group is deleted which has still segments attached to it,
+    // adapt the segments so that they belong to the root group. This is
+    // done to avoid that segments get lost in nirvana if the segment groups
+    // were updated inappropriately.
+    const fixedSegments = removeMissingGroupsFromSegments(
+      updateInfo.volumeTracing,
+      newSegmentGroups,
+    );
     return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
+      segments: fixedSegments,
       segmentGroups: newSegmentGroups,
     });
   }
@@ -272,8 +282,6 @@ function VolumeTracingReducer(
 
     case "SET_SEGMENT_GROUPS": {
       const { segmentGroups } = action;
-      // todo: in case a group is deleted which has still segments:
-      // const updatedTrees = removeMissingGroupsFromTrees(skeletonTracing, treeGroups);
       return setSegmentGroups(state, action.layerName, segmentGroups);
     }
 

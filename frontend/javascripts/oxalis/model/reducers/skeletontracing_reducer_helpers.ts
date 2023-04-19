@@ -843,12 +843,12 @@ export function removeMissingGroupsFromTrees(
   treeGroups: Array<TreeGroup>,
 ): TreeMap {
   // Change the groupId of trees for groups that no longer exist
-  const groupIds = Array.from(mapGroupsToGenerator(treeGroups, (group) => group.groupId));
+  const groupIds = new Set(mapGroupsToGenerator(treeGroups, (group) => group.groupId));
   const changedTrees: TreeMap = {};
   Object.keys(skeletonTracing.trees).forEach((treeId) => {
     const tree = skeletonTracing.trees[Number(treeId)];
 
-    if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
+    if (tree.groupId != null && !groupIds.has(tree.groupId)) {
       // @ts-expect-error ts-migrate(7015) FIXME: Element implicitly has an 'any' type because index... Remove this comment to see the full error message
       changedTrees[treeId] = { ...tree, groupId: null };
     }

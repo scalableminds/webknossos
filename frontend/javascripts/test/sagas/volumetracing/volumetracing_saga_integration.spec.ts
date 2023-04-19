@@ -963,3 +963,81 @@ test.serial("Undo for deleting segment group (with recursion)", async (t) => {
   t.is(tracingRestored.segments.get(3).groupId, 2);
   t.is(tracingRestored.segments.get(4).groupId, 2);
 });
+
+test.serial.only("Undo for deleting segment group (bug repro)", async (t) => {
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  const position = [1, 2, 3] as Vector3;
+  Store.dispatch(clickSegmentAction(1, position));
+  Store.dispatch(clickSegmentAction(2, position));
+  Store.dispatch(clickSegmentAction(3, position));
+  Store.dispatch(clickSegmentAction(4, position));
+
+  /* Set up
+    Group 1
+      Segment 1
+      Segment 2
+    Group 2
+      Segment 3
+      Segment 4
+  */
+  Store.dispatch(
+    setSegmentGroupsAction(
+      [
+        { name: "Group 1", groupId: 1, children: [] },
+        { name: "Group 2", groupId: 2, children: [] },
+      ],
+      volumeTracingLayerName,
+    ),
+  );
+
+  Store.dispatch(updateSegmentAction(1, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(2, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
+
+  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+
+  // Delete everything
+  Store.dispatch(
+    batchUpdateGroupsAndSegmentsAction([
+      removeSegmentAction(1, volumeTracingLayerName),
+      removeSegmentAction(2, volumeTracingLayerName),
+      removeSegmentAction(3, volumeTracingLayerName),
+      removeSegmentAction(4, volumeTracingLayerName),
+      setSegmentGroupsAction([], volumeTracingLayerName),
+    ]),
+  );
+
+  const state = Store.getState();
+  const tracing = state.tracing.volumes[0];
+  t.is(tracing.segmentGroups.length, 0);
+  t.is(tracing.segments.size(), 0);
+
+  // Undo again
+  await dispatchUndoAsync(Store.dispatch);
+
+  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+
+  // Delete without recursion
+  Store.dispatch(
+    batchUpdateGroupsAndSegmentsAction([
+      updateSegmentAction(1, { groupId: -1 }, volumeTracingLayerName),
+      updateSegmentAction(2, { groupId: -1 }, volumeTracingLayerName),
+      updateSegmentAction(3, { groupId: -1 }, volumeTracingLayerName),
+      updateSegmentAction(4, { groupId: -1 }, volumeTracingLayerName),
+      setSegmentGroupsAction([], volumeTracingLayerName),
+    ]),
+  );
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  const stateRestored = Store.getState();
+  const tracingRestored = stateRestored.tracing.volumes[0];
+  t.is(tracingRestored.segments.size(), 4);
+  t.is(tracingRestored.segmentGroups.length, 2);
+
+  t.is(tracingRestored.segments.get(1).groupId, 1);
+  t.is(tracingRestored.segments.get(2).groupId, 1);
+  t.is(tracingRestored.segments.get(3).groupId, 2);
+  t.is(tracingRestored.segments.get(4).groupId, 2);
+});

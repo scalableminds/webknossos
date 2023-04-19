@@ -875,9 +875,8 @@ class SegmentsView extends React.Component<Props, State> {
               segment.id,
               { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
               layerName,
-              undefined,
-              // todo: is the "true" semantically correct?
-              true,
+              // The parameter createsNewUndoState is not passed, since the action
+              // is added to a batch and batch updates always crate a new undo state.
             ),
           );
         }
@@ -904,9 +903,9 @@ class SegmentsView extends React.Component<Props, State> {
       (segmentId) => removeSegmentAction(segmentId, layerName),
     );
     this.props.onBatchUpdateGroupsAndSegmentsAction(
-      updateSegmentActions.concat(
-        removeSegmentActions.concat([setSegmentGroupsAction(newSegmentGroups, layerName)]),
-      ),
+      updateSegmentActions.concat(removeSegmentActions, [
+        setSegmentGroupsAction(newSegmentGroups, layerName),
+      ]),
     );
   }
 
@@ -1029,8 +1028,6 @@ class SegmentsView extends React.Component<Props, State> {
             return (
               <React.Fragment>
                 <div style={{ flex: 0 }}>{this.getMeshesHeader()}</div>
-
-                {/* todo: scrollbar is not native */}
                 <div style={{ flex: 1 }}>
                   {isSegmentHierarchyEmpty ? (
                     <Empty

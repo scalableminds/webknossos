@@ -13,6 +13,7 @@ import Store from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import { batchActions } from "redux-batched-actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -57,6 +58,15 @@ type SetMergerModeEnabledAction = ReturnType<typeof setMergerModeEnabledAction>;
 type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
 type NoAction = ReturnType<typeof noAction>;
+
+export type BatchableUpdateTreeAction = SetTreeGroupAction | DeleteTreeAction | SetTreeGroupsAction;
+export type BatchUpdateGroupsAndTreesAction = {
+  type: "BATCH_UPDATE_GROUPS_AND_TREES";
+  payload: BatchableUpdateTreeAction[];
+  meta: {
+    batch: true;
+  };
+};
 
 export type SkeletonTracingAction =
   | InitializeSkeletonTracingAction
@@ -133,8 +143,9 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_TREE_GROUP",
   "TOGGLE_ALL_TREES",
   "TOGGLE_INACTIVE_TREES",
-  "SET_TREE_COLOR", // Composited actions, only dispatched using `batchActions`
-  "DELETE_GROUP_AND_TREES",
+  "SET_TREE_COLOR",
+  // Composited actions, only dispatched using `batchActions`
+  "BATCH_UPDATE_GROUPS_AND_TREES",
   ...AllUserBoundingBoxActions,
 ];
 
@@ -526,3 +537,9 @@ export const loadAgglomerateSkeletonAction = (
     mappingName,
     agglomerateId,
   } as const);
+
+export const batchUpdateGroupsAndTreesAction = (actions: BatchableUpdateTreeAction[]) =>
+  batchActions(
+    actions,
+    "BATCH_UPDATE_GROUPS_AND_TREES",
+  ) as unknown as BatchUpdateGroupsAndTreesAction;

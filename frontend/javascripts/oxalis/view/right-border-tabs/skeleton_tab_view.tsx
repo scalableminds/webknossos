@@ -72,6 +72,8 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
+  BatchableUpdateTreeAction,
+  batchUpdateGroupsAndTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -98,34 +100,23 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
+
 const InputGroup = Input.Group;
 const treeTabId = "tree-list";
+
 type TreeOrTreeGroup = {
   name: string;
   id: number;
   type: string;
 };
 type StateProps = {
-  onShuffleAllTreeColors: () => void;
-  onSortTree: (arg0: boolean) => void;
-  onSelectNextTreeForward: () => void;
-  onSelectNextTreeBackward: () => void;
-  onCreateTree: () => void;
-  onDeleteTree: () => void;
-  onSetTreeGroup: (arg0: number | null | undefined, arg1: number) => void;
-  onChangeTreeName: (arg0: string) => void;
-  onBatchActions: (arg0: Array<Action>, arg1: string) => void;
   annotation: Tracing;
   skeletonTracing: SkeletonTracing | null | undefined;
   userConfiguration: UserConfiguration;
-  onSetActiveTree: (arg0: number) => void;
-  onDeselectActiveTree: () => void;
-  onSetActiveGroup: (arg0: number) => void;
-  onDeselectActiveGroup: () => void;
-  showDropzoneModal: () => void;
   allowUpdate: boolean;
 };
-type Props = StateProps;
+type DispatchProps = ReturnType<typeof mapDispatchToProps>;
+type Props = DispatchProps & StateProps;
 type State = {
   isUploading: boolean;
   isDownloading: boolean;
@@ -430,6 +421,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       newTreeGroups = [];
     }
 
+    const updateTreeActions: BatchableUpdateTreeAction[] = [];
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       // Remove group
@@ -441,10 +433,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
         // Update all subtrees
         for (const tree of subtrees) {
-          // also batch this?
-          this.props.onSetTreeGroup(
-            parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
-            tree.treeId,
+          updateTreeActions.push(
+            setTreeGroupAction(
+              parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
+              tree.treeId,
+            ),
           );
         }
 
@@ -465,10 +458,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
-      const deleteTreeActions: Action[] = treeIdsToDelete.map((treeId) => deleteTreeAction(treeId));
-      this.props.onBatchActions(
-        deleteTreeActions.concat(setTreeGroupsAction(newTreeGroups)),
-        "DELETE_GROUP_AND_TREES",
+      const deleteTreeActions: BatchableUpdateTreeAction[] = treeIdsToDelete.map((treeId) =>
+        deleteTreeAction(treeId),
+      );
+      this.props.onBatchUpdateGroupsAndTreesAction(
+        updateTreeActions.concat(deleteTreeActions, [setTreeGroupsAction(newTreeGroups)]),
       );
     });
   };
@@ -1001,6 +995,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onBatchActions(actions: Array<Action>, actionName: string) {
     dispatch(batchActions(actions, actionName));
+  },
+
+  onBatchUpdateGroupsAndTreesAction(actions: BatchableUpdateTreeAction[]) {
+    dispatch(batchUpdateGroupsAndTreesAction(actions));
   },
 
   onSetTreeGroup(groupId: number | null | undefined, treeId: number) {

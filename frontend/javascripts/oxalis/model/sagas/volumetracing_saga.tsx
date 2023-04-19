@@ -561,7 +561,13 @@ function* uncachedDiffSegmentLists(
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
-    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name, segment.color);
+    yield createSegmentVolumeAction(
+      segment.id,
+      segment.somePosition,
+      segment.name,
+      segment.color,
+      segment.groupId,
+    );
   }
 
   for (const segmentId of bothSegmentIds) {

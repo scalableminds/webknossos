@@ -32,10 +32,7 @@ import {
   scaleGlobalPositionWithResolution,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
-import {
-  callDeep,
-  MISSING_GROUP_ID,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {

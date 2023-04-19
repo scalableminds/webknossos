@@ -212,6 +212,7 @@ case class CreateSegmentVolumeAction(id: Long,
                                      anchorPosition: Option[Vec3Int],
                                      name: Option[String],
                                      color: Option[com.scalableminds.util.image.Color],
+                                     groupId: Option[Int],
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None)
@@ -227,7 +228,7 @@ case class CreateSegmentVolumeAction(id: Long,
     CompactVolumeUpdateAction("createSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newSegment = Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime, colorOptToProto(color))
+    val newSegment = Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime, colorOptToProto(color), groupId)
     tracing.addSegments(newSegment)
   }
 }

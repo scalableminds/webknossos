@@ -6,6 +6,7 @@ import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import { batchActions } from "redux-batched-actions";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -45,6 +46,18 @@ export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAct
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
 
+export type BatchableUpdateSegmentAction =
+  | UpdateSegmentAction
+  | RemoveSegmentAction
+  | SetSegmentGroupsAction;
+export type BatchUpdateGroupsAndSegmentsAction = {
+  type: "BATCH_UPDATE_GROUPS_AND_SEGMENTS";
+  payload: BatchableUpdateSegmentAction[];
+  meta: {
+    batch: true;
+  };
+};
+
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
@@ -74,7 +87,8 @@ export type VolumeTracingAction =
   | ComputeQuickSelectForRectAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
-  | ConfirmQuickSelectAction;
+  | ConfirmQuickSelectAction
+  | BatchUpdateGroupsAndSegmentsAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -88,7 +102,7 @@ export const VolumeTracingSaveRelevantActions = [
   // Note that the following two actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
-  "DELETE_GROUPS_AND_SEGMENTS",
+  "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -319,6 +333,15 @@ export const fineTuneQuickSelectAction = (
     erodeValue,
     dilateValue,
   } as const);
+
+/*
+ * Note that all actions must refer to the same volume layer.
+ */
+export const batchUpdateGroupsAndSegmentsAction = (actions: BatchableUpdateSegmentAction[]) =>
+  batchActions(
+    actions,
+    "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
+  ) as unknown as BatchUpdateGroupsAndSegmentsAction;
 
 export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" } as const);
 

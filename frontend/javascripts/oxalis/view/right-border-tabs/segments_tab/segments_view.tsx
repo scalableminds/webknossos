@@ -6,8 +6,6 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import type { Action } from "oxalis/model/actions/actions";
-import { batchActions } from "redux-batched-actions";
 import { api } from "oxalis/singletons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
@@ -57,6 +55,8 @@ import {
 } from "oxalis/model/actions/segmentation_actions";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
+  BatchableUpdateSegmentAction,
+  batchUpdateGroupsAndSegmentsAction,
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
@@ -216,8 +216,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setSegmentGroupsAction(segmentGroups, layerName));
   },
 
-  onBatchActions(actions: Array<Action>, actionName: string) {
-    dispatch(batchActions(actions, actionName));
+  onBatchUpdateGroupsAndSegmentsAction(actions: Array<BatchableUpdateSegmentAction>) {
+    dispatch(batchUpdateGroupsAndSegmentsAction(actions));
   },
 });
 
@@ -858,7 +858,7 @@ class SegmentsView extends React.Component<Props, State> {
       newSegmentGroups = [];
     }
 
-    const updateSegmentActions: Action[] = [];
+    const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
     callDeep(newSegmentGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subsegments = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
       // Remove group
@@ -900,14 +900,13 @@ class SegmentsView extends React.Component<Props, State> {
     });
 
     // Update the store at once
-    const removeSegmentActions: Action[] = segmentIdsToDelete.map((segmentId) =>
-      removeSegmentAction(segmentId, layerName),
+    const removeSegmentActions: BatchableUpdateSegmentAction[] = segmentIdsToDelete.map(
+      (segmentId) => removeSegmentAction(segmentId, layerName),
     );
-    this.props.onBatchActions(
+    this.props.onBatchUpdateGroupsAndSegmentsAction(
       updateSegmentActions.concat(
         removeSegmentActions.concat([setSegmentGroupsAction(newSegmentGroups, layerName)]),
       ),
-      "DELETE_GROUPS_AND_SEGMENTS",
     );
   }
 

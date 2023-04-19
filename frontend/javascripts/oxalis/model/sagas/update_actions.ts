@@ -423,6 +423,7 @@ export function createSegmentVolumeAction(
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
   color: Vector3 | null,
+  groupId: number | null | undefined,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -432,6 +433,7 @@ export function createSegmentVolumeAction(
       anchorPosition,
       name,
       color,
+      groupId,
       creationTime,
     },
   } as const;

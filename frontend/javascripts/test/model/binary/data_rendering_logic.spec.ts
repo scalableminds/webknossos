@@ -93,18 +93,22 @@ test("calculateTextureSizeAndCountForLayer: color data + betterSpecs", (t) => {
 const grayscaleLayer1 = {
   byteCount: grayscaleByteCount,
   elementClass: grayscaleElementClass,
+  category: "color",
 };
 const grayscaleLayer2 = {
   byteCount: grayscaleByteCount,
   elementClass: grayscaleElementClass,
+  category: "color",
 };
 const grayscaleLayer3 = {
   byteCount: grayscaleByteCount,
   elementClass: grayscaleElementClass,
+  category: "color",
 };
 const volumeLayer1 = {
   byteCount: volumeByteCount,
   elementClass: volumeElementClass,
+  category: "segmentation",
 };
 
 type Layer = typeof grayscaleLayer1;
@@ -123,7 +127,7 @@ function computeDataTexturesSetupCurried(spec: typeof minSpecs, hasSegmentation:
   return (layers: Layer[]) =>
     computeDataTexturesSetup(
       spec,
-      layers as { elementClass: ElementClass }[],
+      layers as { elementClass: ElementClass; category: "color" | "segmentation" }[],
       getByteCount as any,
       hasSegmentation,
       DEFAULT_REQUIRED_BUCKET_CAPACITY,

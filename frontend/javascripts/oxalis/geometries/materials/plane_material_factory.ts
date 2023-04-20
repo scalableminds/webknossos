@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { RENDER_MODES, OrthoView, Vector3 } from "oxalis/constants";
+import { BLEND_MODES, OrthoView, Vector3 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -207,7 +207,7 @@ class PlaneMaterialFactory {
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
-      renderMode: { value: 1 },
+      blendMode: { value: 1 },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -504,12 +504,12 @@ class PlaneMaterialFactory {
     );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => storeState.datasetConfiguration.renderMode,
-        (renderMode) => {
-          if (renderMode === RENDER_MODES.Additive) {
-            this.uniforms.renderMode.value = 1;
+        (storeState) => storeState.datasetConfiguration.blendMode,
+        (blendMode) => {
+          if (blendMode === BLEND_MODES.Additive) {
+            this.uniforms.blendMode.value = 1;
           } else {
-            this.uniforms.renderMode.value = 0;
+            this.uniforms.blendMode.value = 0;
           }
         },
         true,

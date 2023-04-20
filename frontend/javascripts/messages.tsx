@@ -45,7 +45,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
-  renderMode: "Render Mode",
+  blendMode: "Blend Mode",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -73,8 +73,8 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
   zoom: "Zoom in or out in the data viewports",
   displayScalebars: "Show a scale in the lower-right corner of each viewport",
-  renderMode:
-    "The the rendering mode for the dataset. The additive mode adds the data values of all layers. The cover mode only shows the data of the top most layer in the list.",
+  blendMode:
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all layers. The cover mode only shows the data of the top most layer in the list.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",

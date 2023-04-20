@@ -1,4 +1,4 @@
-import { RENDER_MODES } from "oxalis/constants";
+import { BLEND_MODES } from "oxalis/constants";
 import { type DatasetLayerConfiguration, type DatasetConfiguration } from "oxalis/store";
 
 export function getDefaultLayerViewConfiguration(
@@ -71,7 +71,7 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,
   layers: {},
-  renderMode: RENDER_MODES.Additive,
+  blendMode: BLEND_MODES.Additive,
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,

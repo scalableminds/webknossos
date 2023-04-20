@@ -349,7 +349,7 @@ export enum LOG_LEVELS {
   CRITICAL = "CRITICAL",
 }
 
-export enum RENDER_MODES {
+export enum BLEND_MODES {
   Additive = "Additive",
   Cover = "Cover",
 }

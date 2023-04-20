@@ -107,7 +107,7 @@ uniform vec3 globalPosition;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
 uniform bool useBilinearFiltering;
-uniform int renderMode;
+uniform int blendMode;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
@@ -225,14 +225,14 @@ void main() {
         color_value = abs(color_value - <%= name %>_is_inverted);
         // Catch the case where max == min would causes a NaN value and use black as a fallback color.
         color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        // Additive renderMode == 1
+        // Additive blendMode == 1
         color_value = color_value * <%= name %>_alpha * <%= name %>_color;
         vec4 additive_color = data_color + vec4(color_value, maybe_filtered_color_value.a);
-        // Cover renderMode == 0
+        // Cover blendMode == 0
         float is_valid_color = float(maybe_filtered_color_value.a > 0.0);
         vec4 cover_color = mix(data_color, vec4(color_value, maybe_filtered_color_value.a), is_valid_color);
-        // choose color depending on renderMode
-        data_color = mix(cover_color, additive_color, float(renderMode == 1));
+        // choose color depending on blendMode
+        data_color = mix(cover_color, additive_color, float(blendMode == 1));
       }
     }
   <% }) %>

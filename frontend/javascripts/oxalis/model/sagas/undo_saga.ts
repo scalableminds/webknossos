@@ -198,11 +198,12 @@ export function* manageUndoStates(): Saga<never> {
   }
 
   // Helper functions for functionality related to volumeInfoById.
-  function* setPrevSegmentsToCurrent() {
+  function* setPrevSegmentsAndGroupsToCurrent() {
     // Read the current segments map and store it in volumeInfoById for all volume layers.
     const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
     for (const volumeTracing of volumeTracings) {
       volumeInfoById[volumeTracing.tracingId].prevSegments = volumeTracing.segments;
+      volumeInfoById[volumeTracing.tracingId].prevSegmentGroups = volumeTracing.segmentGroups;
     }
   }
   function* areCurrentVolumeUndoBucketsEmpty() {
@@ -245,7 +246,6 @@ export function* manageUndoStates(): Saga<never> {
     }
 
     const currentAction = yield* take(channel);
-    console.log("currentAction", currentAction);
     const {
       skeletonUserAction,
       addBucketToUndoAction,
@@ -287,7 +287,7 @@ export function* manageUndoStates(): Saga<never> {
         // Since the current segments map changed, we need to update our reference to it.
         // Note that we don't need to do this for currentVolumeUndoBuckets, as this
         // was and is empty, anyway (due to the constraint we checked above).
-        yield* call(setPrevSegmentsToCurrent);
+        yield* call(setPrevSegmentsAndGroupsToCurrent);
       }
 
       if (undo.callback != null) {
@@ -312,7 +312,7 @@ export function* manageUndoStates(): Saga<never> {
       );
 
       // See undo branch for an explanation.
-      yield* call(setPrevSegmentsToCurrent);
+      yield* call(setPrevSegmentsAndGroupsToCurrent);
 
       if (redo.callback != null) {
         redo.callback();

@@ -2,24 +2,24 @@ import { isFlightMode, getW } from "oxalis/shaders/utils.glsl";
 import type { ShaderModule } from "./shader_module_system";
 export const getResolution: ShaderModule = {
   code: `
-    vec3 getResolution(uint zoomStep) {
-      return resolutions[zoomStep];
+    vec3 getResolution(uint zoomStep, uint globalLayerIndex) {
+      return allResolutions[zoomStep + resolutionCountCumSum[globalLayerIndex]];
     }
   `,
 };
 export const getResolutionFactors: ShaderModule = {
   requirements: [getResolution],
   code: `
-    vec3 getResolutionFactors(uint zoomStepA, uint zoomStepB) {
-      return getResolution(zoomStepA) / getResolution(zoomStepB);
+    vec3 getResolutionFactors(uint zoomStepA, uint zoomStepB, uint globalLayerIndex) {
+      return getResolution(zoomStepA, globalLayerIndex) / getResolution(zoomStepB, globalLayerIndex);
     }
   `,
 };
 export const getAbsoluteCoords: ShaderModule = {
   requirements: [getResolution],
   code: `
-    vec3 getAbsoluteCoords(vec3 worldCoordUVW, uint usedZoomStep) {
-      vec3 resolution = getResolution(usedZoomStep);
+    vec3 getAbsoluteCoords(vec3 worldCoordUVW, uint usedZoomStep, uint globalLayerIndex) {
+      vec3 resolution = getResolution(usedZoomStep, globalLayerIndex);
       vec3 coords = transDim(worldCoordUVW) / resolution;
       return coords;
     }

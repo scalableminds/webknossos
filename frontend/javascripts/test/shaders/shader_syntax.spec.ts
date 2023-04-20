@@ -21,12 +21,11 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
     globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
     },
     segmentationLayerNames: [],
-    dataTextureCountPerLayer: 3,
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
@@ -46,13 +45,12 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
   const code = getMainFragmentShader({
     globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
-      segmentationLayer: 1.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["segmentationLayer"]: { packingDegree: 1.0, dataTextureCount: 4 },
     },
     segmentationLayerNames: ["segmentationLayer"],
-    dataTextureCountPerLayer: 3,
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
@@ -65,13 +63,12 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
   const code = getMainFragmentShader({
     globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
-      segmentationLayer: 1.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["segmentationLayer"]: { packingDegree: 1.0, dataTextureCount: 4 },
     },
     segmentationLayerNames: ["segmentationLayer"],
-    dataTextureCountPerLayer: 3,
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
@@ -85,12 +82,11 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
   const code = getMainFragmentShader({
     globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
     },
     segmentationLayerNames: [],
-    dataTextureCountPerLayer: 3,
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
@@ -103,13 +99,12 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
   const code = getMainFragmentShader({
     globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
-      segmentationLayer: 1.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["segmentationLayer"]: { packingDegree: 1.0, dataTextureCount: 4 },
     },
     segmentationLayerNames: ["segmentationLayer"],
-    dataTextureCountPerLayer: 3,
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
@@ -122,12 +117,11 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
   const code = getMainFragmentShader({
     globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 1.0,
-      color_layer_2: 4.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 1.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
     },
     segmentationLayerNames: [],
-    dataTextureCountPerLayer: 3,
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,

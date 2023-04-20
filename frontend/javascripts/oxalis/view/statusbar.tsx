@@ -30,7 +30,10 @@ import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor
 import { V3 } from "libs/mjs";
 import { Model } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getReadableNameForLayerName,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
@@ -356,12 +359,10 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const {
-    representativeResolution,
-    activeMagIndicesOfEnabledLayers,
-    isActiveResolutionGlobal,
-    resolutions,
-  } = useSelector((state: OxalisState) => getActiveResolutionInfo(state));
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const { representativeResolution, activeMagOfEnabledLayers, isActiveResolutionGlobal } =
+    useSelector((state: OxalisState) => getActiveResolutionInfo(state));
 
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
@@ -458,11 +459,15 @@ function Infos() {
               <>
                 Rendered magnification per layer:
                 <ul>
-                  {Object.entries(activeMagIndicesOfEnabledLayers).map(([layerName, magIndex]) => (
-                    <li key={layerName}>
-                      {layerName}: {resolutions[magIndex].join("-")}
-                    </li>
-                  ))}
+                  {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+                    const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+
+                    return (
+                      <li key={layerName}>
+                        {readableName}: {mag ? mag.join("-") : "none"}
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             }

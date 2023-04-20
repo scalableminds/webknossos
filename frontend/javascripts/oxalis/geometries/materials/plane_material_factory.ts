@@ -19,7 +19,6 @@ import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_renderi
 import {
   getColorLayers,
   getDataLayers,
-  getResolutions,
   getByteCount,
   getElementClass,
   getBoundaries,
@@ -30,6 +29,8 @@ import {
   getLayerByName,
   invertAndTranspose,
   getTransformsForLayer,
+  getResolutionInfoByLayer,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -48,6 +49,7 @@ import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import { V3 } from "libs/mjs";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -78,16 +80,23 @@ function getSanitizedColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map((layer) => sanitizeName(layer.name));
 }
 
-function getPackingDegreeLookup(): Record<string, number> {
+function getTextureLayerInfos(): Record<
+  string,
+  { packingDegree: number; dataTextureCount: number }
+> {
   const { dataset } = Store.getState();
   const layers = getDataLayers(dataset);
 
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
   const layersObject = _.keyBy(layers, (layer) => sanitizeName(layer.name));
 
-  return _.mapValues(layersObject, (layer) =>
-    getPackingDegree(getByteCount(dataset, layer.name), getElementClass(dataset, layer.name)),
-  );
+  return _.mapValues(layersObject, (layer) => ({
+    packingDegree: getPackingDegree(
+      getByteCount(dataset, layer.name),
+      getElementClass(dataset, layer.name),
+    ),
+    dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
+  }));
 }
 
 class PlaneMaterialFactory {
@@ -395,6 +404,46 @@ class PlaneMaterialFactory {
         (storeState) => getActiveMagIndicesForLayers(storeState),
         (activeMagIndices) => {
           this.uniforms.activeMagIndices.value = Object.values(activeMagIndices);
+
+          // The vertex shader looks up the buckets for rendering so that the
+          // fragment shader doesn't need to do so. Currently, this only works
+          // for layers that don't have a transformation (otherwise, the differing
+          // grids wouldn't align with each other).
+          // To align the vertices with the buckets, the current magnification is
+          // needed. Since the current mag can differ from layer to layer, the shader
+          // needs to know which mag is safe to use.
+          // For this purpose, we define the representativeMagForVertexAlignment which is
+          // a virtual mag (meaning, there's not necessarily a layer with that exact
+          // mag). It is derived from the layers that are not transformed by considering
+          // the minimum for each axis. That way, the vertices are aligned using the
+          // lowest common multiple.
+          // For example, one layer might render mag 4-4-1, whereas another layer renders
+          // 2-2-2. The representative mag would be 2-2-1.
+          // If all layers have a transform, the representativeMagForVertexAlignment
+          // isn't relevant which is why it can default to [1, 1, 1].
+
+          let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
+          for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
+            const layer = getLayerByName(Store.getState().dataset, layerName);
+            const activeMag = getResolutionInfo(layer.resolutions).getResolutionByIndex(
+              activeMagIndex,
+            );
+
+            const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
+            if (!hasTransform && activeMag) {
+              representativeMagForVertexAlignment = V3.min(
+                representativeMagForVertexAlignment,
+                activeMag,
+              );
+            }
+          }
+
+          if (Math.max(...representativeMagForVertexAlignment) === Infinity) {
+            representativeMagForVertexAlignment = [1, 1, 1];
+          }
+          this.uniforms.representativeMagForVertexAlignment = {
+            value: representativeMagForVertexAlignment,
+          };
         },
         true,
       ),
@@ -438,9 +487,26 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getResolutions(storeState.dataset),
-        (resolutions) => {
-          this.uniforms.resolutions = { value: _.flatten(resolutions) };
+        (storeState) => getResolutionInfoByLayer(storeState.dataset),
+        (resolutionInfosByLayer) => {
+          const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
+            resInfo.getDenseResolutions(),
+          );
+          const flatResolutions = _.flattenDeep(allDenseResolutions);
+          this.uniforms.allResolutions = {
+            value: flatResolutions,
+          };
+
+          let cumSum = 0;
+          const resolutionCountCumSum = [cumSum];
+          for (const denseResolutions of allDenseResolutions) {
+            cumSum += denseResolutions.length;
+            resolutionCountCumSum.push(cumSum);
+          }
+
+          this.uniforms.resolutionCountCumSum = {
+            value: resolutionCountCumSum,
+          };
         },
         true,
       ),
@@ -519,7 +585,6 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.dataLayers,
         (layers) => {
-          let representativeLayerIdxForMag = null;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
@@ -530,25 +595,7 @@ class PlaneMaterialFactory {
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
-            if (representativeLayerIdxForMag == null && !hasTransform) {
-              representativeLayerIdxForMag = layerIdx;
-            }
           }
-
-          // The vertex shader looks up the buckets for rendering so that the
-          // fragment shader doesn't need to do so. Currently, this only works
-          // for layers that don't have a transformation (otherwise, the differing
-          // grids wouldn't align with each other).
-          // To align the vertices with the buckets, the current magnification is
-          // needed. Since the current mag can differ from layer to layer, the shader
-          // needs to know which mag is safe to use.
-          // For this purpose, we define the representativeLayerIdxForMag which is
-          // essentially an index to *some* layer that doesn't have any transforms.
-          // If all layers have a transform, the representativeLayerIdxForMag
-          // isn't relevant which is why it can default to 0.
-          this.uniforms.representativeLayerIdxForMag = {
-            value: representativeLayerIdxForMag || 0,
-          };
         },
         true,
       ),
@@ -873,17 +920,15 @@ class PlaneMaterialFactory {
       getGlobalLayerIndexForLayerName(layerName, sanitizeName),
     );
 
-    const packingDegreeLookup = getPackingDegreeLookup();
+    const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
     const code = getMainFragmentShader({
       globalLayerCount,
       colorLayerNames,
       segmentationLayerNames,
-      packingDegreeLookup,
-      // Todo: this is not computed per layer. See #4018
-      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
-      resolutionsCount: getResolutions(dataset).length,
+      textureLayerInfos,
+      resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
     });
@@ -893,12 +938,21 @@ class PlaneMaterialFactory {
     ];
   }
 
+  getTotalResolutionCount(): number {
+    const storeState = Store.getState();
+    const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(
+      (resInfo) => resInfo.getDenseResolutions(),
+    );
+    const flatResolutions = _.flatten(allDenseResolutions);
+    return flatResolutions.length;
+  }
+
   getVertexShader(): string {
     const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
     const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
-    const packingDegreeLookup = getPackingDegreeLookup();
+    const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
 
@@ -906,10 +960,8 @@ class PlaneMaterialFactory {
       globalLayerCount,
       colorLayerNames,
       segmentationLayerNames,
-      packingDegreeLookup,
-      // Todo: this is not computed per layer. See #4018
-      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
-      resolutionsCount: getResolutions(dataset).length,
+      textureLayerInfos,
+      resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
     });

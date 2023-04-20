@@ -25,8 +25,7 @@ type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
   segmentationLayerNames: string[];
-  packingDegreeLookup: Record<string, number>;
-  dataTextureCountPerLayer: number;
+  textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
@@ -44,11 +43,11 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
-const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 resolutions[<%= resolutionsCount %>];
+uniform vec3 allResolutions[<%= resolutionsCount %>];
+uniform uint resolutionCountCumSum[<%= globalLayerCount %>];
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
@@ -58,7 +57,7 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
-  uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
+  uniform sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
@@ -166,7 +165,7 @@ void main() {
     // first renderable layer.
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[0u];
     uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
-    vec3 absoluteCoords = getAbsoluteCoords(worldCoordUVW, activeMagIdx);
+    vec3 absoluteCoords = getAbsoluteCoords(worldCoordUVW, activeMagIdx, globalLayerIndex);
     vec3 bucketPosition = div(floor(absoluteCoords), bucketWidth);
     gl_FragColor = vec4(bucketPosition, activeMagIdx) / 255.;
     return;
@@ -199,7 +198,7 @@ void main() {
           getMaybeFilteredColorOrFallback(
             <%= formatNumberAsGLSLFloat(layerIndex) %>,
             <%= name %>_data_texture_width,
-            <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
+            <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
             transformedCoordUVW,
             false,
             fallbackGray,
@@ -207,7 +206,7 @@ void main() {
           );
           // For uint24 the alpha channel is always 0.0 :/
         color_value = maybe_filtered_color_value.rgb;
-        <% if (packingDegreeLookup[name] === 2.0) { %>
+        <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
           // Workaround for 16-bit color layers
           color_value = vec3(color_value.g * 256.0 + color_value.r);
         <% } %>
@@ -309,7 +308,7 @@ flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
 
 uniform bool is3DViewBeingRendered;
-uniform int representativeLayerIdxForMag;
+uniform vec3 representativeMagForVertexAlignment;
 
 ${SHARED_UNIFORM_DECLARATIONS}
 
@@ -367,9 +366,8 @@ void main() {
   // Invert vertical axis to make calculation more intuitive with top-left coordinates.
   index.y = PLANE_SUBDIVISION - index.y;
 
-  uint activeMagIdx = uint(activeMagIndices[representativeLayerIdxForMag]);
   // d is the width/height of a bucket in the current resolution.
-  vec2 d = transDim(vec3(bucketWidth) * getResolution(activeMagIdx)).xy;
+  vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 datasetScaleUVW = transDim(datasetScale);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
@@ -425,7 +423,7 @@ void main() {
     outputMagIdx[globalLayerIndex] = 100u;
     for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
       renderedMagIdx = activeMagIdx + i;
-      vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx));
+      vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
       bucketAddress = lookUpBucket(
         globalLayerIndex,

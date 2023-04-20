@@ -20,13 +20,13 @@ import type {
 import type { AnnotationTool, ContourMode, Vector3, Vector4 } from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
-  ResolutionInfo,
   getMappingInfo,
   getResolutionInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
   getDataLayers,
+  getLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import {
@@ -37,6 +37,7 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 import { V3 } from "libs/mjs";
 import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -93,10 +94,10 @@ export function getVolumeDescriptorById(
 }
 
 export function getReadableNameByVolumeTracingId(
-  tracing: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
   tracingId: string,
 ) {
-  const volumeDescriptor = getVolumeDescriptorById(tracing, tracingId);
+  const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);
   return volumeDescriptor.name || "Volume";
 }
 
@@ -110,6 +111,20 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
     allReadableLayerNames.push("Skeleton");
   }
   return allReadableLayerNames;
+}
+
+export function getReadableNameForLayerName(
+  dataset: APIDataset,
+  tracing: Tracing,
+  layerName: string,
+): string {
+  const layer = getLayerByName(dataset, layerName, true);
+
+  if ("tracingId" in layer && layer.tracingId != null) {
+    return getReadableNameByVolumeTracingId(tracing, layer.tracingId);
+  } else {
+    return layer.name;
+  }
 }
 
 export function getSegmentationLayerForTracing(
@@ -186,7 +201,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   }
 
   const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingResolutionIndex = volumeResolutions.getClosestExistingIndex(0);
+  const lowestExistingResolutionIndex = volumeResolutions.getLowestResolutionIndex();
   // The current resolution is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
@@ -203,7 +218,7 @@ export function getMaximumBrushSize(state: OxalisState) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingResolutionIndex = volumeResolutions.getClosestExistingIndex(0);
+  const lowestExistingResolutionIndex = volumeResolutions.getLowestResolutionIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
   return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;

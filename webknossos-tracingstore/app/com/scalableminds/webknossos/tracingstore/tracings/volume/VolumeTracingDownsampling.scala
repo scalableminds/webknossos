@@ -23,12 +23,22 @@ object VolumeTracingDownsampling {
   def magsForVolumeTracingByLayerName(dataSource: DataSourceLike, fallbackLayerName: Option[String]): List[Vec3Int] = {
     val fallbackLayer: Option[DataLayerLike] =
       fallbackLayerName.flatMap(name => dataSource.dataLayers.find(_.name == name))
-    resolutionsForVolumeTracing(dataSource, fallbackLayer)
+    magsForVolumeTracing(dataSource, fallbackLayer)
   }
 
-  def resolutionsForVolumeTracing(dataSource: DataSourceLike, fallbackLayer: Option[DataLayerLike]): List[Vec3Int] = {
-    val fallBackLayerMags = fallbackLayer.map(_.resolutions)
-    fallBackLayerMags.getOrElse(dataSource.dataLayers.flatMap(_.resolutions).distinct).sortBy(_.maxDim)
+  def magsForVolumeTracing(dataSource: DataSourceLike, fallbackLayer: Option[DataLayerLike]): List[Vec3Int] = {
+    val fallbackLayerMags = fallbackLayer.map(_.resolutions)
+    fallbackLayerMags.getOrElse {
+      val unionOfAllLayers = dataSource.dataLayers.flatMap(_.resolutions).distinct
+      val unionHasDistinctMaxDims = unionOfAllLayers.map(_.maxDim).distinct.length == unionOfAllLayers.length
+      if (unionHasDistinctMaxDims) {
+        unionOfAllLayers
+      } else {
+        // If the union of all layer’s mags has conflicting mags (meaning non-distinct maxDims, e.g. 2-2-1 and 2-2-2),
+        // instead use one layer as template. Use the layer with the most mags.
+        dataSource.dataLayers.maxBy(_.resolutions.length).resolutions.distinct
+      }
+    }.sortBy(_.maxDim)
   }
 }
 

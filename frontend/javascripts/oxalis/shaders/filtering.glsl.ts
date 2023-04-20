@@ -115,7 +115,6 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
     ) {
       vec4 color = getMaybeFilteredColor(layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering, supportsPrecomputedBucketAddress);
 
-      // if alpha === 0 -> No data
       color = mix(color, fallbackColor, float(color.a < 0.0));
       return color;
     }

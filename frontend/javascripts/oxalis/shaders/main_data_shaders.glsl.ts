@@ -229,6 +229,7 @@ void main() {
         color_value = color_value * <%= name %>_alpha * <%= name %>_color;
         vec4 additive_color = data_color + vec4(color_value, maybe_filtered_color_value.a);
         // Cover blendMode == 0
+        // if alpha of maybe_filtered_color_value = 0.0, then the color_value is invalid and should not be used.
         float is_valid_color = float(maybe_filtered_color_value.a > 0.0);
         vec4 cover_color = mix(data_color, vec4(color_value, maybe_filtered_color_value.a), is_valid_color);
         // choose color depending on blendMode

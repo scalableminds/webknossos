@@ -8,7 +8,7 @@ const dummyOrga: APIOrganization = {
   displayName: "Dummy Orga",
   pricingPlan: PricingPlanEnum.Basic,
   enableAutoVerify: true,
-  newUserMailingList: "dummy@orga.com",
+  newUserMailingList: "dummy@example.com",
   paidUntil: 1681400966329137,
   includedUsers: 1,
   includedStorageBytes: 1200000,

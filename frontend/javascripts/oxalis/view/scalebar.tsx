@@ -74,7 +74,6 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
       <div
         style={{
           position: "absolute",
-          // TODO use this constant in the rendering utils and fix the offset of the wk watermark logi
           bottom: constants.SCALEBAR_OFFSET,
           right: constants.SCALEBAR_OFFSET,
           width: collapseScalebar

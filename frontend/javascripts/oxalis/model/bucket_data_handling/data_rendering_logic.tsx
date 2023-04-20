@@ -303,6 +303,7 @@ export function computeDataTexturesSetup<
     maximumTextureCountForLayer,
   };
 }
+
 export function getGpuFactorsWithLabels() {
   return [
     ["12", "Very High"],

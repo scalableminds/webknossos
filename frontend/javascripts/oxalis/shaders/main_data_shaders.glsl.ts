@@ -170,7 +170,7 @@ void main() {
     gl_FragColor = vec4(bucketPosition, activeMagIdx) / 255.;
     return;
   }
-  vec4 data_color = vec4(0.0);
+  vec4 data_color = vec4(0.0, 0.0, 0.0, -1.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     vec4 <%= segmentationName%>_id_low = vec4(0.);
@@ -194,7 +194,7 @@ void main() {
 
       vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
       if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
-        vec4 maybe_filtered_color_value =
+        vec4[2] maybe_filtered_color_and_used_fallback =
           getMaybeFilteredColorOrFallback(
             <%= formatNumberAsGLSLFloat(layerIndex) %>,
             <%= name %>_data_texture_width,
@@ -204,8 +204,10 @@ void main() {
             fallbackGray,
             !<%= name %>_has_transform
           );
+          float used_fallback = maybe_filtered_color_and_used_fallback[1].r;
           // For uint24 the alpha channel is always 0.0 :/
-        color_value = maybe_filtered_color_value.rgb;
+          vec4 maybe_filtered_color = maybe_filtered_color_and_used_fallback[0];
+        color_value = maybe_filtered_color_and_used_fallback[0].rgb;
         <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
           // Workaround for 16-bit color layers
           color_value = vec3(color_value.g * 256.0 + color_value.r);
@@ -224,13 +226,14 @@ void main() {
         color_value = abs(color_value - <%= name %>_is_inverted);
         // Catch the case where max == min would causes a NaN value and use black as a fallback color.
         color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        // Additive blendMode == 1
+        // Marking the color as invalid by setting alpha to -1 if the fallback color has been used.
+        vec4 layer_color = vec4(color_value, used_fallback == 1.0 ? -1.0 : maybe_filtered_color.a);
+        // Additive blendMode == 1 simply adding up all layer colors.
         color_value = color_value * <%= name %>_alpha * <%= name %>_color;
-        vec4 additive_color = data_color + vec4(color_value, maybe_filtered_color_value.a);
-        // Cover blendMode == 0
-        // if alpha of maybe_filtered_color_value = 0.0, then the color_value is invalid and should not be used.
-        float is_valid_color = float(maybe_filtered_color_value.a > 0.0);
-        vec4 cover_color = mix(data_color, vec4(color_value, maybe_filtered_color_value.a), is_valid_color);
+        vec4 additive_color = data_color + layer_color;
+        // Cover blendMode == 0 keeping data_color if it is already a valid color.
+        float is_previous_color_valid = float(data_color.a >= 0.0);
+        vec4 cover_color = mix(layer_color, data_color, is_previous_color_valid);
         // choose color depending on blendMode
         data_color = mix(cover_color, additive_color, float(blendMode == 1));
       }

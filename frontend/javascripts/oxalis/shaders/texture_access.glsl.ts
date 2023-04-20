@@ -333,7 +333,7 @@ export const getColorForCoords: ShaderModule = {
         // Negative values in the alpha channel would result in this
         // value being interpreted as missing. Therefore, we are clamping
         // the alpha value.
-        returnValue[1] = vec4(bucketColor.xyz, max(bucketColor.a, 1.0));
+        returnValue[1] = vec4(bucketColor.xyz, max(bucketColor.a, 0.0));
         return returnValue;
       }
 

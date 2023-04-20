@@ -1,6 +1,6 @@
 import { filterNullValues } from "libs/utils";
 import React, { useEffect, useState } from "react";
-import { APIDatasetCompact, APIUser } from "types/api_flow_types";
+import { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
@@ -32,6 +32,8 @@ function DatasetFolderViewInner(props: Props) {
       setSelectedDatasets([]);
       return;
     }
+    // Clear folder selection if a dataset is selected.
+    context.setSelectedFolder(null);
 
     setSelectedDatasets((oldSelectedDatasets) => {
       const set = new Set(oldSelectedDatasets);
@@ -52,6 +54,17 @@ function DatasetFolderViewInner(props: Props) {
       }
       return Array.from(set);
     });
+  };
+
+  const setSelectedFolder = (folder: FolderItem | null) => {
+    if (folder) {
+      setSelectedDatasets([]);
+    }
+    if (folder?.key === context.selectedFolder?.key) {
+      context.setSelectedFolder(null);
+      return;
+    }
+    context.setSelectedFolder(folder);
   };
 
   useEffect(() => {
@@ -99,6 +112,7 @@ function DatasetFolderViewInner(props: Props) {
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
+          onSelectFolder={setSelectedFolder}
           selectedDatasets={selectedDatasets}
           context={context}
         />
@@ -114,7 +128,7 @@ function DatasetFolderViewInner(props: Props) {
         <DetailsSidebar
           selectedDatasets={selectedDatasets}
           setSelectedDataset={setSelectedDataset}
-          activeFolderId={context.activeFolderId}
+          displayFolderId={context.selectedFolder?.key ?? context.activeFolderId}
           datasetCount={context.datasets.length}
           setFolderIdForEditModal={setFolderIdForEditModal}
           searchQuery={context.globalSearchQuery}

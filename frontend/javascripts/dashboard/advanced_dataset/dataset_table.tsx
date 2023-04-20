@@ -1,4 +1,4 @@
-import { FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
+import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Dropdown, MenuProps, Table, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
@@ -10,6 +10,7 @@ import type {
   APIDatasetCompact,
   APIDatasetId,
   APIMaybeUnimportedDataset,
+  FolderItem,
 } from "types/api_flow_types";
 import { type DatasetFilteringMode } from "dashboard/dataset_view";
 import { stringToColor } from "libs/format_utils";
@@ -48,9 +49,14 @@ type Props = {
   updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
+  // TODO: Figure out how to get the folder hierarchy from the context and display all folders together with the datasets
   context: DatasetCollectionContextValue;
 };
+type FolderItemWithName = FolderItem & { name: string };
+type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+
 type State = {
   prevSearchQuery: string;
   sortedInfo: SorterResult<string>;
@@ -120,6 +126,10 @@ interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElem
   index: number;
 }
 export const DraggableDatasetType = "DraggableDatasetRow";
+
+function isRecordADataset(record: DatasetOrFolder): record is APIDatasetCompact {
+  return (record as APIDatasetCompact).folderId !== undefined;
+}
 
 class DragPreviewProvider {
   static singleton: DragPreviewProvider | null;
@@ -230,7 +240,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   // currentPageData is only used for range selection (and not during
   // rendering). That's why it's not included in this.state (also it
   // would lead to infinite loops, too).
-  currentPageData: APIDatasetCompact[] = [];
+  currentPageData: DatasetOrFolder[] = [];
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
     const maybeSortedInfo: SorterResult<string> | {} = // Clear the sorting exactly when the search box is initially filled
@@ -325,35 +335,47 @@ class DatasetTable extends React.PureComponent<Props, State> {
   };
 
   render() {
+    const { context, selectedDatasets, onSelectFolder } = this.props;
+    const activeSubfolders: FolderItemWithName[] = context
+      .getActiveSubfolders()
+      .map((folder) => ({ ...folder, name: folder.title }));
     const filteredDataSource = this.getFilteredDatasets();
     const { sortedInfo } = this.state;
-    const dataSourceSortedByRank = useLruRank
+    let dataSourceSortedByRank: Array<DatasetOrFolder> = useLruRank
       ? _.sortBy(filteredDataSource, ["lastUsedByUser", "created"]).reverse()
       : filteredDataSource;
+    dataSourceSortedByRank = dataSourceSortedByRank.concat(activeSubfolders);
     // Create a map from dataset to its rank
-    const datasetToRankMap: Map<APIDatasetCompact, number> = new Map(
+    const datasetToRankMap: Map<DatasetOrFolder, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
     const sortedDataSource =
       // Sort using the dice coefficient if the table is not sorted by another key
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
       this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH && sortedInfo.columnKey == null
-        ? _.chain(filteredDataSource)
-            .map((dataset) => {
-              const diceCoefficient = dice(dataset.name, this.props.searchQuery);
-              const rank = useLruRank ? datasetToRankMap.get(dataset) || 0 : 0;
+        ? _.chain([...filteredDataSource, ...activeSubfolders])
+            .map((datasetOrFolder) => {
+              const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
+              const rank = useLruRank ? datasetToRankMap.get(datasetOrFolder) || 0 : 0;
               const rankCoefficient = 1 - rank / filteredDataSource.length;
               const coefficient = (diceCoefficient + rankCoefficient) / 2;
               return {
-                dataset,
+                datasetOrFolder,
                 coefficient,
               };
             })
             .sortBy("coefficient")
-            .map(({ dataset }) => dataset)
+            .map(({ datasetOrFolder }) => datasetOrFolder)
             .reverse()
             .value()
         : dataSourceSortedByRank;
+
+    const selectedRowKeys =
+      selectedDatasets.length > 0
+        ? selectedDatasets.map((ds) => ds.name)
+        : context.selectedFolder
+        ? [context.selectedFolder?.title]
+        : [];
 
     return (
       <DndProvider backend={HTML5Backend}>
@@ -381,138 +403,176 @@ class DatasetTable extends React.PureComponent<Props, State> {
             // Workaround to get to the currently rendered entries (since the ordering
             // is managed by antd).
             // Also see https://github.com/ant-design/ant-design/issues/24022.
-            this.currentPageData = currentPageData as APIDatasetCompact[];
+            this.currentPageData = currentPageData as DatasetOrFolder[];
             return null;
           }}
-          onRow={(record: APIDatasetCompact) => ({
-            onDragStart: () => {
-              if (!this.props.selectedDatasets.includes(record)) {
-                this.props.onSelectDataset(record);
-              }
-            },
-            onClick: (event) => {
-              // @ts-expect-error
-              if (event.target?.tagName !== "TD") {
-                // Don't (de)select when another element within the row was clicked
-                // (e.g., a link). Otherwise, clicking such elements would cause two actions
-                // (e.g., the link action and a (de)selection).
-                return;
-              }
-
-              if (!event.shiftKey || this.props.selectedDatasets.length === 0) {
-                this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
-              } else {
-                // Shift was pressed and there's already another selected dataset that was not
-                // clicked just now.
-                // We are using the current page data as there is no way to get the currently
-                // rendered datasets otherwise. Also see
-                // https://github.com/ant-design/ant-design/issues/24022.
-                const renderedDatasets = this.currentPageData;
-
-                const clickedDatasetIdx = renderedDatasets.indexOf(record);
-                const selectedIndices = this.props.selectedDatasets.map((selectedDS) =>
-                  renderedDatasets.indexOf(selectedDS),
-                );
-                const closestSelectedDatasetIdx = _.minBy(selectedIndices, (idx) =>
-                  Math.abs(idx - clickedDatasetIdx),
-                );
-
-                if (clickedDatasetIdx == null || closestSelectedDatasetIdx == null) {
+          onRow={(record: DatasetOrFolder) => {
+            const isADataset = isRecordADataset(record);
+            return {
+              onDragStart: () => {
+                if (isADataset && !selectedDatasets.includes(record)) {
+                  this.props.onSelectDataset(record);
+                }
+              },
+              onClick: (event) => {
+                debugger;
+                // @ts-expect-error
+                if (event.target?.tagName !== "TD") {
+                  // Don't (de)select when another element within the row was clicked
+                  // (e.g., a link). Otherwise, clicking such elements would cause two actions
+                  // (e.g., the link action and a (de)selection).
                   return;
                 }
+                if (!isADataset) {
+                  onSelectFolder(record);
+                  return;
+                }
+                if (!event.shiftKey || selectedDatasets.length === 0) {
+                  this.props.onSelectDataset(record, event.ctrlKey || event.metaKey);
+                } else {
+                  // Shift was pressed and there's already another selected dataset that was not
+                  // clicked just now.
+                  // We are using the current page data as there is no way to get the currently
+                  // rendered datasets otherwise. Also see
+                  // https://github.com/ant-design/ant-design/issues/24022.
+                  const renderedDatasets = this.currentPageData;
 
-                const [start, end] = [closestSelectedDatasetIdx, clickedDatasetIdx].sort(
-                  (a, b) => a - b,
-                );
+                  const clickedDatasetIdx = renderedDatasets.indexOf(record);
+                  const selectedIndices = selectedDatasets.map((selectedDS) =>
+                    renderedDatasets.indexOf(selectedDS),
+                  );
+                  const closestSelectedDatasetIdx = _.minBy(selectedIndices, (idx) =>
+                    Math.abs(idx - clickedDatasetIdx),
+                  );
 
-                for (let idx = start; idx <= end; idx++) {
-                  // closestSelectedDatasetIdx is already selected (don't deselect it).
-                  if (idx !== closestSelectedDatasetIdx) {
-                    this.props.onSelectDataset(renderedDatasets[idx], true);
+                  if (clickedDatasetIdx == null || closestSelectedDatasetIdx == null) {
+                    return;
+                  }
+
+                  const [start, end] = [closestSelectedDatasetIdx, clickedDatasetIdx].sort(
+                    (a, b) => a - b,
+                  );
+
+                  for (let idx = start; idx <= end; idx++) {
+                    // closestSelectedDatasetIdx is already selected (don't deselect it).
+                    const currentDataset = renderedDatasets[idx];
+                    if (idx !== closestSelectedDatasetIdx && isRecordADataset(currentDataset)) {
+                      this.props.onSelectDataset(currentDataset, true);
+                    }
                   }
                 }
-              }
-            },
-            onContextMenu: (event) => {
-              event.preventDefault();
+              },
+              onContextMenu: (event) => {
+                event.preventDefault();
 
-              // Find the overlay div whose parent acts as a reference for positioning the context menu.
-              // Since the dashboard tabs don't destroy their contents after switching the tabs,
-              // there might be several overlays. We will use the one with a non-zero width since
-              // this should be the relevant one.
-              const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
-              const referenceDiv = Array.from(overlayDivs)
-                .map((p) => p.parentElement)
-                .find((potentialParent) => {
-                  if (potentialParent == null) {
-                    return false;
+                // Find the overlay div whose parent acts as a reference for positioning the context menu.
+                // Since the dashboard tabs don't destroy their contents after switching the tabs,
+                // there might be several overlays. We will use the one with a non-zero width since
+                // this should be the relevant one.
+                const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
+                const referenceDiv = Array.from(overlayDivs)
+                  .map((p) => p.parentElement)
+                  .find((potentialParent) => {
+                    if (potentialParent == null) {
+                      return false;
+                    }
+                    const bounds = potentialParent.getBoundingClientRect();
+                    return bounds.width > 0;
+                  });
+
+                if (referenceDiv == null) {
+                  return;
+                }
+                const bounds = referenceDiv.getBoundingClientRect();
+                const x = event.clientX - bounds.left;
+                const y = event.clientY - bounds.top;
+
+                this.showContextMenuAt(x, y);
+                if (isADataset) {
+                  if (selectedDatasets.includes(record)) {
+                    this.setState({
+                      datasetsForContextMenu: selectedDatasets,
+                    });
+                  } else {
+                    // If dataset is clicked which is not selected, ignore the selected
+                    // datasets.
+                    this.setState({
+                      datasetsForContextMenu: [record],
+                    });
                   }
-                  const bounds = potentialParent.getBoundingClientRect();
-                  return bounds.width > 0;
-                });
-
-              if (referenceDiv == null) {
-                return;
-              }
-              const bounds = referenceDiv.getBoundingClientRect();
-              const x = event.clientX - bounds.left;
-              const y = event.clientY - bounds.top;
-
-              this.showContextMenuAt(x, y);
-              if (this.props.selectedDatasets.includes(record)) {
-                this.setState({
-                  datasetsForContextMenu: this.props.selectedDatasets,
-                });
-              } else {
-                // If dataset is clicked which is not selected, ignore the selected
-                // datasets.
-                this.setState({
-                  datasetsForContextMenu: [record],
-                });
-              }
-            },
-            onDoubleClick: () => {
-              window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
-            },
-          })}
+                }
+              },
+              onDoubleClick: () => {
+                if (isADataset) {
+                  window.location.href = `/datasets/${record.owningOrganization}/${record.name}/view`;
+                } else {
+                  context.setActiveFolderId(record.key);
+                }
+              },
+            };
+          }}
           rowSelection={{
-            selectedRowKeys: this.props.selectedDatasets.map((ds) => ds.name),
-            onSelectNone: () => this.props.onSelectDataset(null),
+            selectedRowKeys,
+            onSelectNone: () => {
+              this.props.onSelectDataset(null);
+              context.setSelectedFolder(null);
+            },
           }}
         >
+          <Column
+            width={100}
+            title="Type"
+            key="type"
+            render={(__, datasetOrFolder: DatasetOrFolder) => {
+              const a = isRecordADataset(datasetOrFolder) ? (
+                <FileOutlined style={{ fontSize: "32px" }} />
+              ) : (
+                <FolderOpenOutlined style={{ fontSize: "32px" }} />
+              );
+              return a;
+            }}
+          />
           <Column
             title="Name"
             dataIndex="name"
             key="name"
             width={280}
-            sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
+            sorter={Utils.localeCompareBy<DatasetOrFolder>(typeHint, (dataset) => dataset.name)}
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(_name: string, dataset: APIDatasetCompact) => (
-              <>
-                <Link
-                  to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-                  title="View Dataset"
-                  className="incognito-link"
-                >
-                  {dataset.name}
-                </Link>
-                <br />
+            render={(_name: string, datasetOrFolder: DatasetOrFolder) => {
+              if (isRecordADataset(datasetOrFolder)) {
+                return (
+                  <>
+                    <Link
+                      to={`/datasets/${datasetOrFolder.owningOrganization}/${datasetOrFolder.name}/view`}
+                      title="View Dataset"
+                      className="incognito-link"
+                    >
+                      {datasetOrFolder.name}
+                    </Link>
+                    <br />
 
-                {this.props.context.globalSearchQuery != null ? (
-                  <BreadcrumbsTag parts={this.props.context.getBreadcrumbs(dataset)} />
-                ) : null}
-              </>
-            )}
+                    {context.globalSearchQuery != null ? (
+                      <BreadcrumbsTag parts={context.getBreadcrumbs(datasetOrFolder)} />
+                    ) : null}
+                  </>
+                );
+              }
+              return datasetOrFolder.name;
+            }}
           />
           <Column
             title="Tags"
             dataIndex="tags"
             key="tags"
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(_tags: Array<string>, dataset: APIDatasetCompact) =>
-              dataset.isActive ? (
+            render={(_tags: Array<string>, datasetOrFolder: DatasetOrFolder) => {
+              if (!isRecordADataset(datasetOrFolder)) {
+                return null;
+              }
+              return datasetOrFolder.isActive ? (
                 <DatasetTags
-                  dataset={dataset}
+                  dataset={datasetOrFolder}
                   onClickTag={this.props.addTagToSearch}
                   updateDataset={this.props.updateDataset}
                 />
@@ -524,17 +584,21 @@ class DatasetTable extends React.PureComponent<Props, State> {
                     }}
                   />
                 </Tooltip>
-              )
-            }
+              );
+            }}
           />
           <Column
             width={180}
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
+            sorter={Utils.compareBy<DatasetOrFolder>(typeHint, (datasetOrFolder) =>
+              isRecordADataset(datasetOrFolder) ? datasetOrFolder.created : 0,
+            )}
             sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
-            render={(created) => <FormattedDate timestamp={created} />}
+            render={(created, datasetOrFolder: DatasetOrFolder) =>
+              isRecordADataset(datasetOrFolder) ? <FormattedDate timestamp={created} /> : null
+            }
           />
 
           <Column
@@ -542,9 +606,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
             title="Actions"
             key="actions"
             fixed="right"
-            render={(__, dataset: APIDatasetCompact) => (
-              <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
-            )}
+            render={(__, datasetOrFolder: DatasetOrFolder) =>
+              isRecordADataset(datasetOrFolder) ? (
+                <DatasetActionView
+                  dataset={datasetOrFolder}
+                  reloadDataset={this.reloadSingleDataset}
+                />
+              ) : (
+                "TODO"
+              )
+            }
           />
         </FixedExpandableTable>
       </DndProvider>

@@ -24,19 +24,18 @@ export function DetailsSidebar({
   setSelectedDataset,
   datasetCount,
   searchQuery,
-  activeFolderId,
+  displayFolderId,
   setFolderIdForEditModal,
 }: {
   selectedDatasets: APIDatasetCompact[];
   setSelectedDataset: (ds: APIDatasetCompact | null) => void;
+  displayFolderId: string | null;
   datasetCount: number;
   searchQuery: string | null;
-  activeFolderId: string | null;
   setFolderIdForEditModal: (value: string | null) => void;
 }) {
   const context = useDatasetCollectionContext();
-  const { data: folder, error } = useFolderQuery(activeFolderId);
-
+  const { data: folder, error } = useFolderQuery(displayFolderId);
   useEffect(() => {
     if (
       selectedDatasets.some((ds) => ds.folderId !== context.activeFolderId) &&
@@ -61,7 +60,7 @@ export function DetailsSidebar({
         <SearchDetails datasetCount={datasetCount} />
       ) : (
         <FolderDetails
-          activeFolderId={activeFolderId}
+          activeFolderId={displayFolderId}
           folder={folder}
           datasetCount={datasetCount}
           setFolderIdForEditModal={setFolderIdForEditModal}

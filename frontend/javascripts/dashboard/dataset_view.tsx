@@ -53,7 +53,8 @@ import { ItemType } from "antd/lib/menu/hooks/useItems";
 type Props = {
   user: APIUser;
   context: DatasetCollectionContextValue;
-  onSelectDataset: (dataset: APIDatasetCompact | null) => void;
+  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
@@ -155,6 +156,7 @@ function DatasetView(props: Props) {
         selectedDatasets={props.selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
+        onSelectFolder={props.onSelectFolder}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}

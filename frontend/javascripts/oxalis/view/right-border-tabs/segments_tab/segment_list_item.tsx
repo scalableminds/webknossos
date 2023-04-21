@@ -169,6 +169,8 @@ type Props = {
   isosurface: IsosurfaceInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
   currentMeshFile: APIMeshFile | null | undefined;
+  onRenameStart: () => void;
+  onRenameEnd: () => void;
 };
 
 function getSegmentTooltip(segment: Segment) {
@@ -340,6 +342,8 @@ function _SegmentListItem({
   setPosition,
   loadPrecomputedMesh,
   currentMeshFile,
+  onRenameStart,
+  onRenameEnd,
 }: Props) {
   const isEditingDisabled = !allowUpdate;
 
@@ -493,6 +497,8 @@ function _SegmentListItem({
               value={segment.name || `Segment ${segment.id}`}
               label="Segment Name"
               onClick={() => onSelectSegment(segment)}
+              onRenameStart={onRenameStart}
+              onRenameEnd={onRenameEnd}
               onChange={(name) => {
                 if (visibleSegmentationLayer != null) {
                   updateSegment(

@@ -223,6 +223,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
+  renamingCounter: number;
   selectedSegmentId: number | null | undefined;
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentId: number | null | undefined;
@@ -311,6 +312,7 @@ function constructTreeData(
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state: State = {
+    renamingCounter: 0,
     selectedSegmentId: null,
     activeMeshJobId: null,
     activeDropdownSegmentId: null,
@@ -875,6 +877,14 @@ class SegmentsView extends React.Component<Props, State> {
     );
   }
 
+  onRenameStart = () => {
+    this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter + 1 }));
+  };
+
+  onRenameEnd = () => {
+    this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
+  };
+
   render() {
     const { groupToDelete } = this.state;
 
@@ -927,6 +937,8 @@ class SegmentsView extends React.Component<Props, State> {
                     setActiveCell={this.props.setActiveCell}
                     setPosition={this.props.setPosition}
                     currentMeshFile={this.props.currentMeshFile}
+                    onRenameStart={this.onRenameStart}
+                    onRenameEnd={this.onRenameEnd}
                   />
                 );
               } else {
@@ -981,6 +993,8 @@ class SegmentsView extends React.Component<Props, State> {
                         margin="0 5px"
                         // The root group must not be removed or renamed
                         disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
+                        onRenameStart={this.onRenameStart}
+                        onRenameEnd={this.onRenameEnd}
                       />
                     </Dropdown>
                   </div>
@@ -1019,7 +1033,14 @@ class SegmentsView extends React.Component<Props, State> {
                             blockNode
                             // Passing an explicit height here, makes the tree virtualized
                             height={height} // without virtualization, pass 0 here and/or virtual={false}
-                            draggable={{ icon: false }}
+                            draggable={{
+                              icon: false,
+                              nodeDraggable: () =>
+                                // Forbid renaming when segments or groups are being renamed,
+                                // since selecting text within the editable input box would not work
+                                // otherwise (instead, the item would be dragged).
+                                this.state.renamingCounter === 0,
+                            }}
                             showLine
                             switcherIcon={<DownOutlined />}
                             treeData={this.state.groupTree}

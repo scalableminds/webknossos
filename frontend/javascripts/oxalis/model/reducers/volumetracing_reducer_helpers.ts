@@ -166,7 +166,7 @@ export function removeMissingGroupsFromSegments(
   volumeTracing: VolumeTracing,
   segmentGroups: Array<SegmentGroup>,
 ): SegmentMap {
-  // Change the groupId of trees for groups that no longer exist
+  // Change the groupId of segments for groups that no longer exist
   const groupIds = new Set(mapGroupsToGenerator(segmentGroups, (group) => group.groupId));
   const newSegments = volumeTracing.segments.clone();
   let hasChanged = false;

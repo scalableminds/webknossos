@@ -122,7 +122,7 @@ function setSegmentGroups(state: OxalisState, layerName: string, newSegmentGroup
   }
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    // In case a group is deleted which has still segments attached to it,
+    // In case a group is deleted which still has segments attached to it,
     // adapt the segments so that they belong to the root group. This is
     // done to avoid that segments get lost in nirvana if the segment groups
     // were updated inappropriately.

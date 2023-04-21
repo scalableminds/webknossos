@@ -1,6 +1,12 @@
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, MenuProps, Modal, notification } from "antd";
-import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  ShrinkOutlined,
+  ExpandAltOutlined,
+  ArrowRightOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import React from "react";
@@ -252,11 +258,39 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
+/*   onMoveNodeContextAction = (evt: React.MouseEvent<any>) => {
+  - get current node object or selected node as ids
+    const nextParentNodeId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
+    //selected trees or groups go to new group
+    const selectedNode=this.props.selectedTrees;
+    const treeData=this.state.groupTree;
+
+    // tree was dragged, tree needs parent.
+    // nextParentNode=nextParent, node=tree or group, treeData?
+
+    if (this.props.trees.includes(selectedNode[0])) {
+      // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
+      const moveActions = allTreesToMove.map((treeId) =>
+        setTreeGroupAction(
+          nextParentNodeId === MISSING_GROUP_ID ? null : nextParentNodeId,
+          parseInt(treeId, 10),
+        ),
+      );
+      this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
+    } else {
+      // A group was dragged - update the groupTree
+      // Exclude root group and remove trees from groupTree object
+      const newTreeGroups = removeTreesAndTransform(treeData[0].children);
+      this.props.onUpdateTreeGroups(newTreeGroups);
+    }
+  }; */
+
   onMoveNode = (
     params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
   ) => {
     const { nextParentNode, node, treeData } = params;
-
+    // tree was dragged, tree needs parent.
+    // nextParentNode=nextParent, node=tree or group, treeData?
     if (node.type === TYPE_TREE && nextParentNode) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
@@ -398,6 +432,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           label: "Create new group",
         },
         {
+          key: "moveHere",
+          onClick: () => {},
+          disabled: isEditingDisabled,
+          icon: <ArrowRightOutlined />,
+          label: "Move active tree/group here",
+        },
+        {
           key: "delete",
           disabled: isEditingDisabled,
           onClick: () => this.deleteGroup(id),
@@ -418,7 +459,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               key: "expandSubgroups",
               disabled: !hasCollapsedSubgroup,
               onClick: () => this.setExpansionOfAllSubgroupsTo(id, true),
-              icon: <ShrinkOutlined />,
+              icon: <ExpandAltOutlined />,
               label: "Expand all subgroups",
             }
           : null,

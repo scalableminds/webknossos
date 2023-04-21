@@ -1,7 +1,8 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
+import { Link } from "react-router-dom";
 import { Table, Spin, Button, Input, Modal, Alert, Tag } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
@@ -33,12 +34,12 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
     ...(user.isAdmin
       ? [["Admin - Access to all Teams", "red"]]
       : [
-          ...(user.isDatasetManager ? [["Dataset Manager - Edit all Datasets", "geekblue"]] : []),
-          ...user.teams.map((team) => {
-            const roleName = team.isTeamManager ? "Team Manager" : "Member";
-            return [`${team.name}: ${roleName}`, stringToColor(roleName)];
-          }),
-        ]),
+        ...(user.isDatasetManager ? [["Dataset Manager - Edit all Datasets", "geekblue"]] : []),
+        ...user.teams.map((team) => {
+          const roleName = team.isTeamManager ? "Team Manager" : "Member";
+          return [`${team.name}: ${roleName}`, stringToColor(roleName)];
+        }),
+      ]),
   ];
 
   return tags.map(([text, color]) => (
@@ -54,11 +55,11 @@ function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
   const tags = user.isAdmin
     ? [["Admin - Access to all Teams", "red"]]
     : user.teams
-        .filter((team) => team.id === highlightedTeam.id)
-        .map((team) => {
-          const roleName = team.isTeamManager ? "Team Manager" : "Member";
-          return [`${roleName}`, stringToColor(roleName)];
-        });
+      .filter((team) => team.id === highlightedTeam.id)
+      .map((team) => {
+        const roleName = team.isTeamManager ? "Team Manager" : "Member";
+        return [`${roleName}`, stringToColor(roleName)];
+      });
 
   return tags.map(([text, color]) => (
     <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
@@ -162,7 +163,7 @@ class TeamListView extends React.PureComponent<Props, State> {
   renderUsersForTeam(team: APITeam) {
     const teamMembers = this.state.users.filter(
       (user) =>
-        user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) || user.isAdmin,
+        (user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) || user.isAdmin) && user.isActive,
     );
 
     if (teamMembers.length === 0) return messages["team.no_members"];
@@ -248,13 +249,24 @@ class TeamListView extends React.PureComponent<Props, State> {
                 sorter={Utils.localeCompareBy(typeHint, (team) => team.name)}
               />
               <Column
-                title="Action"
+                title="Actions"
                 key="actions"
                 render={(__, script: APITeam) => (
-                  <LinkButton onClick={_.partial(this.deleteTeam, script)}>
-                    <DeleteOutlined />
-                    Delete
-                  </LinkButton>
+                  <span>
+                    <div>
+                      <Link to={"/users/"}
+                        title="You can add and remove team members in the User Administration page.">
+                        <UserOutlined />
+                        Add / Remove Users
+                      </Link>
+                    </div>
+                    <div>
+                      <LinkButton onClick={_.partial(this.deleteTeam, script)}>
+                        <DeleteOutlined />
+                        Delete
+                      </LinkButton>
+                    </div>
+                  </span>
                 )}
               />
             </Table>

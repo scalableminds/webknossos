@@ -270,8 +270,10 @@ export type TreeNode =
   | (Segment & {
       type: "segment";
       key: string;
+      title: string;
     })
   | {
+      title: string;
       type: "group";
       name: string | null | undefined;
       id: number;
@@ -290,6 +292,7 @@ function constructTreeData(
     const segments = groupToSegmentsMap[groupId] || [];
     const treeNode: TreeNode = {
       ...group,
+      title: group.name,
       key: `group-${groupId}`,
       id: groupId,
       type: "group",
@@ -298,6 +301,7 @@ function constructTreeData(
         segments.map(
           (segment): TreeNode => ({
             ...segment,
+            title: segment.name || "",
             type: "segment",
             key: `segment-${segment.id}`,
             id: segment.id,

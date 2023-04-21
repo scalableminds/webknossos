@@ -30,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that unsaved changes were shown when opening an annotation, although there weren't any. [#6972](https://github.com/scalableminds/webknossos/pull/6972)
 - Fixed misleading email about successful dataset upload, which was in some cases sent even for unusable datasets. [#6977](https://github.com/scalableminds/webknossos/pull/6977)
 - Fixed upload of skeleton annotations with no trees, only bounding boxes, being incorrectly rejected. [#6985](https://github.com/scalableminds/webknossos/pull/6985)
+- Fixed that Google Cloud Storage URLs with bucket names containing underscores could not be parsed. [#6998](https://github.com/scalableminds/webknossos/pull/6998)
 
 ### Removed
 

@@ -30,6 +30,7 @@ import { type ModelType } from "oxalis/model";
 import { type RequestType } from "libs/request";
 import { type ApiInterface } from "oxalis/api/api_latest";
 import { type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
@@ -883,10 +884,10 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
 
   Store.dispatch(
     batchUpdateGroupsAndSegmentsAction([
-      updateSegmentAction(1, { groupId: -1 }, volumeTracingLayerName),
-      updateSegmentAction(2, { groupId: -1 }, volumeTracingLayerName),
-      updateSegmentAction(3, { groupId: -1 }, volumeTracingLayerName),
-      updateSegmentAction(4, { groupId: -1 }, volumeTracingLayerName),
+      updateSegmentAction(1, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(2, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(3, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(4, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
       setSegmentGroupsAction([], volumeTracingLayerName),
     ]),
   );
@@ -923,10 +924,7 @@ test.serial("Undo for deleting segment group (with recursion)", async (t) => {
 
   Store.dispatch(
     setSegmentGroupsAction(
-      [
-        { name: "Group 1", groupId: 1, children: [] },
-        { name: "Group 2", groupId: 2, children: [] },
-      ],
+      [{ name: "Group 1", groupId: 1, children: [{ name: "Group 2", groupId: 2, children: [] }] }],
       volumeTracingLayerName,
     ),
   );
@@ -1021,10 +1019,10 @@ test.serial.only("Undo for deleting segment group (bug repro)", async (t) => {
   // Delete without recursion
   Store.dispatch(
     batchUpdateGroupsAndSegmentsAction([
-      updateSegmentAction(1, { groupId: -1 }, volumeTracingLayerName),
-      updateSegmentAction(2, { groupId: -1 }, volumeTracingLayerName),
-      updateSegmentAction(3, { groupId: -1 }, volumeTracingLayerName),
-      updateSegmentAction(4, { groupId: -1 }, volumeTracingLayerName),
+      updateSegmentAction(1, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(2, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(3, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(4, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
       setSegmentGroupsAction([], volumeTracingLayerName),
     ]),
   );

@@ -850,7 +850,7 @@ class SegmentsView extends React.Component<Props, State> {
         return;
       }
 
-      // Finds all subtrees of the passed group recursively
+      // Finds all subsegments of the passed group recursively
       const findChildrenRecursively = (group: SegmentGroup) => {
         const currentSubsegments = groupToSegmentsMap[group.groupId] ?? [];
         // Delete all segments of the current group
@@ -930,7 +930,6 @@ class SegmentsView extends React.Component<Props, State> {
                   />
                 );
               } else {
-                // The root group must not be removed or renamed
                 const { id, name } = treeItem;
                 const isEditingDisabled = !this.props.allowUpdate;
 
@@ -970,7 +969,6 @@ class SegmentsView extends React.Component<Props, State> {
                       <EditableTextLabel
                         value={displayableName}
                         label="Group Name"
-                        // onClick={() => onSelectSegment(segment)}
                         onChange={(name) => {
                           if (this.props.visibleSegmentationLayer != null) {
                             api.data.renameSegmentGroup(
@@ -981,13 +979,12 @@ class SegmentsView extends React.Component<Props, State> {
                           }
                         }}
                         margin="0 5px"
+                        // The root group must not be removed or renamed
                         disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
                       />
                     </Dropdown>
                   </div>
                 );
-
-                // return treeItem.name || treeItem.id;
               }
             };
 
@@ -1025,7 +1022,6 @@ class SegmentsView extends React.Component<Props, State> {
                             draggable={{ icon: false }}
                             showLine
                             switcherIcon={<DownOutlined />}
-                            // defaultExpandedKeys={["0-0-0"]}
                             treeData={this.state.groupTree}
                             titleRender={titleRender}
                             style={{

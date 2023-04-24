@@ -58,7 +58,6 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import { all } from "ndarray-ops";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
@@ -260,11 +259,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onMoveWithContextAction = (node: TreeNode) => {
-    const activeCom = this.getActiveComponent();
+    const activeComponent = this.getActiveComponent();
     let allTreesToMove;
-    if (activeCom == "tree") {
+    if (activeComponent === "tree") {
       allTreesToMove = [this.props.activeTreeId];
-    } else if (activeCom == "trees") {
+    } else if (activeComponent === "trees") {
       allTreesToMove = this.props.selectedTrees;
     }
     if (allTreesToMove) {
@@ -276,7 +275,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         ),
       );
       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
-    } else if (activeCom == "group") {
+    } else if (activeComponent === "group") {
       // TODO move group after #6966 (segment groups) is merged
     }
   };

@@ -101,10 +101,6 @@ class EditableMappingUpdater(editableMappingId: String,
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     for {
       agglomerateGraph <- agglomerateGraphForIdWithFallback(editableMappingInfo, update.agglomerateId)
-      _ = logger.info(
-        s"looking up segment id at ${update.segmentPosition1} in remote fallback layer ${remoteFallbackLayer.layerName}")
-      _ = logger.info(
-        s"looking up segment id at ${update.segmentPosition2} in remote fallback layer ${remoteFallbackLayer.layerName}")
       segmentId1 <- editableMappingService.findSegmentIdAtPosition(remoteFallbackLayer,
                                                                    update.segmentPosition1,
                                                                    update.mag,
@@ -113,12 +109,9 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
-      _ <- bool2Fox(segmentId1 > 0 && segmentId2 > 0) ?~> "Looking up segment id at position returned invalid value zero. Splitting outside of dataset?"
-      _ = logger.info(
-        s"Applying split action in agglomerate ${update.agglomerateId}, removing edge between segments $segmentId1 and $segmentId2...")
-      (graph1, graph2) <- tryo(splitGraph(agglomerateGraph, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
-      _ = logger.info(
-        s"graph1.segments.length: ${graph1.segments.length}, graph2.segments.length: ${graph2.segments.length}")
+      _ <- bool2Fox(segmentId1 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition1} returned invalid value zero. Splitting outside of dataset?"
+      _ <- bool2Fox(segmentId2 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition2} returned invalid value zero. Splitting outside of dataset?"
+      (graph1, graph2) <- tryo(splitGraph(update.agglomerateId, agglomerateGraph, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
@@ -175,7 +168,8 @@ class EditableMappingUpdater(editableMappingId: String,
     agglomerateToGraphBuffer.put(key, graph)
   }
 
-  private def splitGraph(agglomerateGraph: AgglomerateGraph,
+  private def splitGraph(agglomerateId: Long,
+                         agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,
                          segmentId2: Long): (AgglomerateGraph, AgglomerateGraph) = {
     val edgesAndAffinitiesMinusOne: Seq[(AgglomerateEdge, Float)] =
@@ -183,35 +177,43 @@ class EditableMappingUpdater(editableMappingId: String,
         case (AgglomerateEdge(from, to, _), _) =>
           (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
       }
-    val graph1Nodes: Set[Long] =
-      computeConnectedComponent(startNode = segmentId1, agglomerateGraph.segments, edgesAndAffinitiesMinusOne.map(_._1))
-    val graph1NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
-      case (seg, _) => graph1Nodes.contains(seg)
-    }
-    val graph1EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
-      case (e, _) => graph1Nodes.contains(e.source) && graph1Nodes.contains(e.target)
-    }
-    val graph1 = AgglomerateGraph(
-      segments = graph1NodesWithPositions.map(_._1),
-      edges = graph1EdgesWithAffinities.map(_._1),
-      positions = graph1NodesWithPositions.map(_._2),
-      affinities = graph1EdgesWithAffinities.map(_._2),
-    )
+    if (edgesAndAffinitiesMinusOne.length == agglomerateGraph.edges.length) {
+      logger.warn(
+        s"Split action for editable mapping $editableMappingId: Edge to remove ($segmentId1 to $segmentId2 in agglomerate $agglomerateId) already absent. This split becomes a no-op.")
+      (agglomerateGraph, AgglomerateGraph(Seq(), Seq(), Seq(), Seq()))
+    } else {
+      val graph1Nodes: Set[Long] =
+        computeConnectedComponent(startNode = segmentId1,
+                                  agglomerateGraph.segments,
+                                  edgesAndAffinitiesMinusOne.map(_._1))
+      val graph1NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
+        case (seg, _) => graph1Nodes.contains(seg)
+      }
+      val graph1EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
+        case (e, _) => graph1Nodes.contains(e.source) && graph1Nodes.contains(e.target)
+      }
+      val graph1 = AgglomerateGraph(
+        segments = graph1NodesWithPositions.map(_._1),
+        edges = graph1EdgesWithAffinities.map(_._1),
+        positions = graph1NodesWithPositions.map(_._2),
+        affinities = graph1EdgesWithAffinities.map(_._2),
+      )
 
-    val graph2Nodes: Set[Long] = agglomerateGraph.segments.toSet.diff(graph1Nodes)
-    val graph2NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
-      case (seg, _) => graph2Nodes.contains(seg)
+      val graph2Nodes: Set[Long] = agglomerateGraph.segments.toSet.diff(graph1Nodes)
+      val graph2NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
+        case (seg, _) => graph2Nodes.contains(seg)
+      }
+      val graph2EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
+        case (e, _) => graph2Nodes.contains(e.source) && graph2Nodes.contains(e.target)
+      }
+      val graph2 = AgglomerateGraph(
+        segments = graph2NodesWithPositions.map(_._1),
+        edges = graph2EdgesWithAffinities.map(_._1),
+        positions = graph2NodesWithPositions.map(_._2),
+        affinities = graph2EdgesWithAffinities.map(_._2),
+      )
+      (graph1, graph2)
     }
-    val graph2EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
-      case (e, _) => graph2Nodes.contains(e.source) && graph2Nodes.contains(e.target)
-    }
-    val graph2 = AgglomerateGraph(
-      segments = graph2NodesWithPositions.map(_._1),
-      edges = graph2EdgesWithAffinities.map(_._1),
-      positions = graph2NodesWithPositions.map(_._2),
-      affinities = graph2EdgesWithAffinities.map(_._2),
-    )
-    (graph1, graph2)
   }
 
   private def computeConnectedComponent(startNode: Long, nodes: Seq[Long], edges: Seq[AgglomerateEdge]): Set[Long] =
@@ -262,12 +264,13 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
-      _ <- bool2Fox(segmentId1 > 0 && segmentId2 > 0) ?~> "Looking up segment id at position returned invalid value zero. Merging outside of dataset?"
-      agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
-      agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
-      _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"
+      _ <- bool2Fox(segmentId1 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition1} returned invalid value zero. Merging outside of dataset?"
+      _ <- bool2Fox(segmentId2 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition2} returned invalid value zero. Merging outside of dataset?"
+      agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
+      agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
+      _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "Segment as queried by position is not contained in fetched agglomerate graph"
       mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
-      _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, update.agglomerateId1) ?~> s"failed to update segment to agglomerate buffer"
+      _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, update.agglomerateId1) ?~> s"Failed to update segment to agglomerate buffer"
       _ = updateAgglomerateGraph(update.agglomerateId1, mergedGraph)
       _ = updateAgglomerateGraph(update.agglomerateId2,
                                  AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))

@@ -483,6 +483,8 @@ Expects:
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
           organizationName)
         for {
+          _ <- Fox.runIf(layerName.isDefined)(
+            dataSourceRepository.invalidateVaultCache(organizationName, dataSetName, layerName.getOrElse("")))
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }

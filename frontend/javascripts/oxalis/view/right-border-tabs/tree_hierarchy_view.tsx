@@ -258,38 +258,30 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
-/*   onMoveNodeContextAction = (evt: React.MouseEvent<any>) => {
-  - get current node object or selected node as ids
-    const nextParentNodeId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
-    //selected trees or groups go to new group
-    const selectedNode=this.props.selectedTrees;
-    const treeData=this.state.groupTree;
-
-    // tree was dragged, tree needs parent.
-    // nextParentNode=nextParent, node=tree or group, treeData?
-
-    if (this.props.trees.includes(selectedNode[0])) {
-      // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
+  onMoveWithContextAction = (node: TreeNode) => {
+    if (this.props.selectedTrees.length > 0 || this.props.activeTreeId) {
+      // either activeTree or selectedTrees is set
+      const allTreesToMove = this.props.activeTreeId ? [this.props.activeTreeId] : this.props.selectedTrees; 
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(
-          nextParentNodeId === MISSING_GROUP_ID ? null : nextParentNodeId,
+          node.id === MISSING_GROUP_ID ? null : node.id,
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
           parseInt(treeId, 10),
         ),
       );
       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
-    } else {
-      // A group was dragged - update the groupTree
-      // Exclude root group and remove trees from groupTree object
-      const newTreeGroups = removeTreesAndTransform(treeData[0].children);
-      this.props.onUpdateTreeGroups(newTreeGroups);
     }
-  }; */
+    else if(this.props.activeGroupId){
+      // TODO move group after #6966 (segment groups) is merged
+    }
+  };
 
   onMoveNode = (
     params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
   ) => {
     const { nextParentNode, node, treeData } = params;
     // tree was dragged, tree needs parent.
+    // node is what was dragged
     // nextParentNode=nextParent, node=tree or group, treeData?
     if (node.type === TYPE_TREE && nextParentNode) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
@@ -433,7 +425,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         },
         {
           key: "moveHere",
-          onClick: () => {},
+          onClick: () => this.onMoveWithContextAction(node),
           disabled: isEditingDisabled,
           icon: <ArrowRightOutlined />,
           label: "Move active tree/group here",

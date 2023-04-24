@@ -103,6 +103,8 @@ class EditableMappingUpdater(editableMappingId: String,
       agglomerateGraph <- agglomerateGraphForIdWithFallback(editableMappingInfo, update.agglomerateId)
       _ = logger.info(
         s"looking up segment id at ${update.segmentPosition1} in remote fallback layer ${remoteFallbackLayer.layerName}")
+      _ = logger.info(
+        s"looking up segment id at ${update.segmentPosition2} in remote fallback layer ${remoteFallbackLayer.layerName}")
       segmentId1 <- editableMappingService.findSegmentIdAtPosition(remoteFallbackLayer,
                                                                    update.segmentPosition1,
                                                                    update.mag,
@@ -115,6 +117,8 @@ class EditableMappingUpdater(editableMappingId: String,
       _ = logger.info(
         s"Applying split action in agglomerate ${update.agglomerateId}, removing edge between segments $segmentId1 and $segmentId2...")
       (graph1, graph2) <- tryo(splitGraph(agglomerateGraph, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
+      _ = logger.info(
+        s"graph1.segments.length: ${graph1.segments.length}, graph2.segments.length: ${graph2.segments.length}")
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)

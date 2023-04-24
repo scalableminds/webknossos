@@ -38,9 +38,13 @@ case class MeshChunkDataRequestV0(
 )
 
 case class MeshChunkDataRequestV3(
-    meshFile: String,
     byteOffset: Long,
     byteSize: Int
+)
+
+case class MeshChunkDataRequestV3List(
+    meshFile: String,
+    requests: Seq[MeshChunkDataRequestV3]
 )
 
 object MeshChunkDataRequestV0 {
@@ -49,6 +53,10 @@ object MeshChunkDataRequestV0 {
 
 object MeshChunkDataRequestV3 {
   implicit val jsonFormat: OFormat[MeshChunkDataRequestV3] = Json.format[MeshChunkDataRequestV3]
+}
+
+object MeshChunkDataRequestV3List {
+  implicit val jsonFormat: OFormat[MeshChunkDataRequestV3List] = Json.format[MeshChunkDataRequestV3List]
 }
 
 case class MeshFileInfo(
@@ -293,7 +301,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       // get past the finer lods first, then take offset in selected lod
       bytesPerLod.take(lod).sum + chunkByteOffsetsInLod(lod)(currentChunk)
 
-
     def computeGlobalPositionAndOffset(lod: Int, currentChunk: Int): MeshChunk = {
       val globalPosition = segmentInfo.gridOrigin + segmentInfo
         .chunkPositions(lod)(currentChunk)
@@ -302,7 +309,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       MeshChunk(
         position = globalPosition, // This position is in Voxel Space
         byteOffset = meshByteStartOffset + getChunkByteOffset(lod, currentChunk),
-        byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt, // size must be int32 to fit in java array
+        byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt // size must be int32 to fit in java array
       )
     }
 
@@ -370,11 +377,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def readMeshChunkV3(organizationName: String,
                       dataSetName: String,
                       dataLayerName: String,
-                      meshChunkDataRequests: Seq[MeshChunkDataRequestV3],
+                      meshChunkDataRequests: MeshChunkDataRequestV3List,
   ): Fox[(Array[Byte], String)] =
     for {
       data: List[(Array[Byte], String, Int)] <- Fox.combined(
-        meshChunkDataRequests.zipWithIndex
+        meshChunkDataRequests.requests.zipWithIndex
           .sortBy(requestAndIndex => requestAndIndex._1.byteOffset)
           .map(requestAndIndex => {
             val meshChunkDataRequest = requestAndIndex._1
@@ -383,7 +390,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
               .resolve(dataSetName)
               .resolve(dataLayerName)
               .resolve(meshesDir)
-              .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
+              .resolve(s"${meshChunkDataRequests.meshFile}.$meshFileExtension")
 
             executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
               val meshFormat = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
@@ -398,12 +405,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
           })
           .toList)
       dataSorted = data.sortBy(d => d._3)
-      _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1)
+      _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) // Ensure same encoding for all responses
       encoding = data.map(d => d._2).head
       output = dataSorted
         .map(d => d._1.length)
         .scanLeft((data.length + 1).toLong)((a, b) => a + b)
-        .flatMap(l => longToBytes(l)).toArray ++ dataSorted.flatMap(d => d._1)
+        .flatMap(l => longToBytes(l))
+        .toArray ++ dataSorted.flatMap(d => d._1)
     } yield (output, encoding)
 
   private def positionLiteral(position: Vec3Int) =

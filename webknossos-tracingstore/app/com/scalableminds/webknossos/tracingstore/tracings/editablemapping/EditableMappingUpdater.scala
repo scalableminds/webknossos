@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
@@ -112,6 +111,7 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
+      _ <- bool2Fox(segmentId1 > 0 && segmentId2 > 0) ?~> "Looking up segment id at position returned invalid value zero. Splitting outside of dataset?"
       _ = logger.info(
         s"Applying split action in agglomerate ${update.agglomerateId}, removing edge between segments $segmentId1 and $segmentId2...")
       (graph1, graph2) <- tryo(splitGraph(agglomerateGraph, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
@@ -258,6 +258,7 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
+      _ <- bool2Fox(segmentId1 > 0 && segmentId2 > 0) ?~> "Looking up segment id at position returned invalid value zero. Merging outside of dataset?"
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"

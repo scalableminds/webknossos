@@ -147,7 +147,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     const tryParsingFileAsNml = async (file: File) => {
       try {
         const nmlString = await readFileAsText(file);
-        const { trees, treeGroups, userBoundingBoxes, datasetName } = await parseNml(nmlString);
+        const { trees, treeGroups, userBoundingBoxes, datasetName, containedVolumes } =
+          await parseNml(nmlString);
+        if (containedVolumes) {
+          Toast.warning(
+            "The NML file contained volume information which was ignored. Please upload the NML into the dashboard to create a new annotation which also contains the volume data.",
+          );
+        }
         return {
           importActions: wrappedAddTreesAndGroupsAction(
             trees,

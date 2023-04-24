@@ -280,18 +280,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  getActiveComponent(): "trees" | "tree" | "group" | null {
-    if (this.props.selectedTrees.length > 0) {
-      return "trees";
-    } else if (this.props.activeTreeId) {
-      return "tree";
-    } else if (this.props.activeGroupId) {
-      return "group";
-    }
-    return null;
-    //TODO multiple active groups?
-  }
-
   onMoveNode = (
     params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
   ) => {
@@ -696,6 +684,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   canNodeHaveChildren(node: TreeNode) {
     return node.type === TYPE_GROUP;
+  }
+
+  getActiveComponent(): "trees" | "tree" | "group" | null {
+    // Only one type of component can be selected. It is not possible to select multiple groups.
+    if (this.props.selectedTrees.length > 0) {
+      return "trees";
+    } else if (this.props.activeTreeId) {
+      return "tree";
+    } else if (this.props.activeGroupId) {
+      return "group";
+    }
+    return null;
   }
 
   render() {

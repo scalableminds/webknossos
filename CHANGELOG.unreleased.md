@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for viewing neuroglancer precomputed segmentations using "compressed segmentation" compression. [#6947](https://github.com/scalableminds/webknossos/pull/6947)
 - Added more graphics and branding to job notification emails. [#6994](https://github.com/scalableminds/webknossos/pull/6994)
 - Added action button in Team Admin page that links to the User Admin page to edit team members there. [#6958](https://github.com/scalableminds/webknossos/pull/6999)
+- In the Skeleton tab a right-click menu item appears for groups, allowing to move selected trees or groups there. [#7005](https://github.com/scalableminds/webknossos/pull/7005)
 
 ### Changed
 - Moved the view mode selection in the toolbar next to the position field. [#6949](https://github.com/scalableminds/webknossos/pull/6949)

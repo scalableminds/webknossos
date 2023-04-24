@@ -424,13 +424,15 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           icon: <PlusOutlined />,
           label: "Create new group",
         },
-        {
-          key: "moveHere",
-          onClick: () => this.onMoveWithContextAction(node),
-          disabled: isEditingDisabled,
-          icon: <ArrowRightOutlined />,
-          label: "Move active " + this.getActiveComponent() + " here",
-        },
+        this.getActiveComponent()
+          ? {
+              key: "moveHere",
+              onClick: () => this.onMoveWithContextAction(node),
+              disabled: isEditingDisabled,
+              icon: <ArrowRightOutlined />,
+              label: "Move active " + this.getActiveComponent() + " here",
+            }
+          : null,
         {
           key: "delete",
           disabled: isEditingDisabled,

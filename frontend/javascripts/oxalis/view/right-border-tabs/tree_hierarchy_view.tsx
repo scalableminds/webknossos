@@ -58,6 +58,7 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+import { all } from "ndarray-ops";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
@@ -259,9 +260,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onMoveWithContextAction = (node: TreeNode) => {
-    if (this.props.selectedTrees.length > 0 || this.props.activeTreeId) {
-      // either activeTree or selectedTrees is set
-      const allTreesToMove = this.props.activeTreeId ? [this.props.activeTreeId] : this.props.selectedTrees; 
+    const activeCom = this.getActiveComponent();
+    let allTreesToMove;
+    if (activeCom == "tree") {
+      allTreesToMove = [this.props.activeTreeId];
+    } else if (activeCom == "trees") {
+      allTreesToMove = this.props.selectedTrees;
+    }
+    if (allTreesToMove) {
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(
           node.id === MISSING_GROUP_ID ? null : node.id,
@@ -270,19 +276,27 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         ),
       );
       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
-    }
-    else if(this.props.activeGroupId){
+    } else if (activeCom == "group") {
       // TODO move group after #6966 (segment groups) is merged
     }
   };
+
+  getActiveComponent(): "trees" | "tree" | "group" | null {
+    if (this.props.selectedTrees.length > 0) {
+      return "trees";
+    } else if (this.props.activeTreeId) {
+      return "tree";
+    } else if (this.props.activeGroupId) {
+      return "group";
+    }
+    return null;
+    //TODO multiple active groups?
+  }
 
   onMoveNode = (
     params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
   ) => {
     const { nextParentNode, node, treeData } = params;
-    // tree was dragged, tree needs parent.
-    // node is what was dragged
-    // nextParentNode=nextParent, node=tree or group, treeData?
     if (node.type === TYPE_TREE && nextParentNode) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
@@ -428,7 +442,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           onClick: () => this.onMoveWithContextAction(node),
           disabled: isEditingDisabled,
           icon: <ArrowRightOutlined />,
-          label: "Move active tree/group here",
+          label: "Move active " + this.getActiveComponent() + " here",
         },
         {
           key: "delete",

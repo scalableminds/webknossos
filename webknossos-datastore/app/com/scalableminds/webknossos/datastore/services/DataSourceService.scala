@@ -9,10 +9,14 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
+import com.scalableminds.webknossos.datastore.dataformats.n5.N5Layer
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedLayer
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrLayer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
@@ -27,6 +31,7 @@ import scala.io.Source
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
+    dataVaultService: DataVaultService,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends IntervalScheduler
@@ -226,5 +231,23 @@ class DataSourceService @Inject()(
       UnusableDataSource(id, "Not imported yet.")
     }
   }
+
+  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: String): Fox[Unit] =
+    for {
+      genericDataSource <- dataSource.toUsable
+      dataLayer <- genericDataSource.getDataLayer(dataLayerName)
+      magsOpt = dataLayer match {
+        case layer: N5Layer          => Some(layer.mags)
+        case layer: PrecomputedLayer => Some(layer.mags)
+        case _: SegmentationLayer    => None
+        case _: WKWLayer             => None
+        case layer: ZarrLayer        => Some(layer.mags)
+        case _                       => None
+      }
+      _ = magsOpt match {
+        case Some(mags) => mags.map(mag => dataVaultService.clearVaultPath(mag))
+        case None       => ()
+      }
+    } yield ()
 
 }

@@ -484,7 +484,7 @@ Expects:
           organizationName)
         for {
           _ <- Fox.runIf(layerName.isDefined)(
-            dataSourceRepository.invalidateVaultCache(organizationName, dataSetName, layerName.getOrElse("")))
+            dataSourceService.invalidateVaultCache(reloadedDataSource, layerName.getOrElse("")))
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }

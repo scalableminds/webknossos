@@ -424,7 +424,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           icon: <PlusOutlined />,
           label: "Create new group",
         },
-        this.getActiveComponent()
+        this.getActiveComponent() === "tree" || this.getActiveComponent() === "trees"
           ? {
               key: "moveHere",
               onClick: () => this.onMoveWithContextAction(node),

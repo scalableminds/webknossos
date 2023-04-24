@@ -439,6 +439,22 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     });
   };
 
+  getEmptyListPlaceholder = () => {
+    return (
+      <>
+        <div style={{marginBottom: 50, padding: 30}}>
+          <p>Create annotations by opening a dataset from the datasets page.</p>
+          <Link to="/dashboard/datasets">
+            <Button type="primary">Open Datasets Page</Button>
+          </Link>
+        </div>
+        <div>
+          <i className="drawing drawing-empty-list-annotations" />;
+        </div>
+      </>
+    );
+  };
+
   handleOnSearch: SearchProps["onSearch"] = (value, _event) => {
     if (value !== "") {
       this.addTagToSearch(value);
@@ -573,12 +589,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           return null;
         }}
         locale={{
-          emptyText: (
-            <p>
-              Create annotations by opening a dataset from{" "}
-              <Link to="/dashboard/datasets">the datasets page</Link>.
-            </p>
-          ),
+          emptyText: this.getEmptyListPlaceholder(),
         }}
       >
         <Column

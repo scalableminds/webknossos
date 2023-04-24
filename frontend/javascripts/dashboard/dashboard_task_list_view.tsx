@@ -395,7 +395,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       <>
         <p>
           You have no assigned tasks. Request a new task by clicking on the{" "}
-          <strong>Get a New Task</strong> button.
+          <strong>Get a New Task</strong> button above.
         </p>
         {this.props.activeUser.isAdmin && (
           <>
@@ -416,6 +416,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
             </p>
           </>
         )}
+        <i className="drawing drawing-empty-list-tasks" style={{ translate: "25%" }} />
       </>
     );
   }

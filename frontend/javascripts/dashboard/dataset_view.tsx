@@ -12,13 +12,12 @@ import {
   Tooltip,
   Alert,
   Select,
+  Card,
 } from "antd";
 import {
-  CloudUploadOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  RocketOutlined,
   SettingOutlined,
   InfoCircleOutlined,
   HourglassOutlined,
@@ -27,7 +26,6 @@ import {
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
-import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
@@ -49,6 +47,7 @@ import { PricingEnforcedButton } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { MenuProps } from "rc-menu";
 import { ItemType } from "antd/lib/menu/hooks/useItems";
+import Meta from "antd/lib/card/Meta";
 
 type Props = {
   user: APIUser;
@@ -490,41 +489,53 @@ function renderPlaceholder(
   }
 
   const openPublicDatasetCard = (
-    <OptionCard
-      header="Open Demo Dataset"
-      icon={<RocketOutlined />}
-      action={
-        <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
-          <Button>Open Dataset</Button>
-        </a>
-      }
-      height={350}
-    >
-      Have a look at a public dataset to experience WEBKNOSSOS in action.
-    </OptionCard>
+    <Col span={9}>
+      <Card bordered={false} cover={<i className="drawing drawing-empty-list-public-gallery" />}>
+        <Meta
+          title="Open a Demo Dataset"
+          description={
+            <>
+              <p>
+                Check out gallery of public, community datasets to experience WEBKNOSSOS in action.
+              </p>
+              <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
+                <Button style={{ marginTop: 40 }}>Open a Community Dataset</Button>
+              </a>
+            </>
+          }
+        />
+      </Card>
+    </Col>
   );
 
-  const uploadPlaceholder = (
-    <OptionCard
-      header="Import Dataset"
-      icon={<CloudUploadOutlined />}
-      action={
-        <Link to="/datasets/upload">
-          <Button>Open Import Dialog</Button>
-        </Link>
-      }
-      height={350}
-    >
-      WEBKNOSSOS supports a variety of (remote){" "}
-      <a
-        href="https://docs.webknossos.org/webknossos/data_formats.html"
-        target="_blank"
-        rel="noreferrer"
+  const uploadPlaceholderCard = (
+    <Col span={9}>
+      <Card
+        bordered={false}
+        cover={<i className="drawing drawing-empty-list-dataset-upload" />}
       >
-        file formats
-      </a>{" "}
-      and is also able to convert them when necessary.
-    </OptionCard>
+        <Meta
+          title="Upload & Import Dataset"
+          description={
+            <>
+              WEBKNOSSOS supports a variety of (remote){" "}
+              <a
+                href="https://docs.webknossos.org/webknossos/data_formats.html"
+                target="_blank"
+                rel="noreferrer"
+              >
+                file formats
+              </a>{" "}
+              and is also able to convert them when necessary.
+              <Link to="/datasets/upload">
+                <Button type="primary" style={{ marginTop: 40 }}>Open Dataset Upload & Import</Button>
+              </Link>
+              ,
+            </>
+          }
+        />
+      </Card>
+    </Col>
   );
 
   const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
@@ -539,10 +550,10 @@ function renderPlaceholder(
       }}
       align="middle"
     >
-      <Col span={18}>
-        <Row gutter={16} justify="center" align="bottom">
+      <Col span={24}>
+        <Row gutter={32} justify="center" align="bottom">
           {features().isWkorgInstance ? openPublicDatasetCard : null}
-          {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
+          {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholderCard : null}
         </Row>
         <div
           style={{

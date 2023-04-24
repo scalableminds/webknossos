@@ -18,6 +18,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Editing the meta data of segments (e.g., the name) is now undoable. [#6944](https://github.com/scalableminds/webknossos/pull/6944)
 - Added more icons and small redesigns for various pages in line with the new branding. [#6938](https://github.com/scalableminds/webknossos/pull/6938)
 - Added support for viewing neuroglancer precomputed segmentations using "compressed segmentation" compression. [#6947](https://github.com/scalableminds/webknossos/pull/6947)
+- Added more graphics and branding to job notification emails. [#6994](https://github.com/scalableminds/webknossos/pull/6994)
+- Added action button in Team Admin page that links to the User Admin page to edit team members there. [#6958](https://github.com/scalableminds/webknossos/pull/6999)
 
 ### Changed
 - Moved the view mode selection in the toolbar next to the position field. [#6949](https://github.com/scalableminds/webknossos/pull/6949)

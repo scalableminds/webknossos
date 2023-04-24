@@ -259,7 +259,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onMoveWithContextAction = (node: TreeNode) => {
-    const activeComponent:"tree"|"trees"|"group"|null = this.getActiveComponent();
+    const activeComponent: "tree" | "trees" | "group" | null = this.getActiveComponent();
     let allTreesToMove;
     if (activeComponent === "tree") {
       allTreesToMove = [this.props.activeTreeId];

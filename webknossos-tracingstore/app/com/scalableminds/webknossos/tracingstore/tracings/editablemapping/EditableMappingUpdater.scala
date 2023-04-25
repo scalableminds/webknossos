@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -111,7 +112,7 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    userToken)
       _ <- bool2Fox(segmentId1 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition1} returned invalid value zero. Splitting outside of dataset?"
       _ <- bool2Fox(segmentId2 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition2} returned invalid value zero. Splitting outside of dataset?"
-      (graph1, graph2) <- tryo(splitGraph(update.agglomerateId, agglomerateGraph, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
+      (graph1, graph2) <- tryo(splitGraph(update.agglomerateId, agglomerateGraph, update, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
@@ -170,6 +171,7 @@ class EditableMappingUpdater(editableMappingId: String,
 
   private def splitGraph(agglomerateId: Long,
                          agglomerateGraph: AgglomerateGraph,
+                         update: SplitAgglomerateUpdateAction,
                          segmentId1: Long,
                          segmentId2: Long): (AgglomerateGraph, AgglomerateGraph) = {
     val edgesAndAffinitiesMinusOne: Seq[(AgglomerateEdge, Float)] =
@@ -179,7 +181,7 @@ class EditableMappingUpdater(editableMappingId: String,
       }
     if (edgesAndAffinitiesMinusOne.length == agglomerateGraph.edges.length) {
       logger.warn(
-        s"Split action for editable mapping $editableMappingId: Edge to remove ($segmentId1 to $segmentId2 in agglomerate $agglomerateId) already absent. This split becomes a no-op.")
+        s"Split action for editable mapping $editableMappingId: Edge to remove ($segmentId1 at ${update.segmentPosition1} in mag ${update.mag} to $segmentId2 at ${update.segmentPosition2} in mag ${update.mag} in agglomerate $agglomerateId) already absent. This split becomes a no-op.")
       (agglomerateGraph, AgglomerateGraph(Seq(), Seq(), Seq(), Seq()))
     } else {
       val graph1Nodes: Set[Long] =
@@ -269,25 +271,48 @@ class EditableMappingUpdater(editableMappingId: String,
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "Segment as queried by position is not contained in fetched agglomerate graph"
-      mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
-      _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, update.agglomerateId1) ?~> s"Failed to update segment to agglomerate buffer"
-      _ = updateAgglomerateGraph(update.agglomerateId1, mergedGraph)
-      _ = updateAgglomerateGraph(update.agglomerateId2,
-                                 AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
+      mergedGraphOpt = mergeGraph(agglomerateGraph1, agglomerateGraph2, update, segmentId1, segmentId2)
+      _ <- Fox.runOptional(mergedGraphOpt) { mergedGraph =>
+        for {
+          _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, update.agglomerateId1) ?~> s"Failed to update segment to agglomerate buffer"
+          _ = updateAgglomerateGraph(update.agglomerateId1, mergedGraph)
+          _ = updateAgglomerateGraph(update.agglomerateId2,
+                                     AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
+        } yield ()
+      }
     } yield mapping
 
   private def mergeGraph(agglomerateGraph1: AgglomerateGraph,
                          agglomerateGraph2: AgglomerateGraph,
+                         update: MergeAgglomerateUpdateAction,
                          segmentId1: Long,
-                         segmentId2: Long): AgglomerateGraph = {
-    val newEdge = AgglomerateEdge(segmentId1, segmentId2)
-    val newEdgeAffinity = 255.0f
-    AgglomerateGraph(
-      segments = agglomerateGraph1.segments ++ agglomerateGraph2.segments,
-      edges = newEdge +: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
-      affinities = newEdgeAffinity +: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
-      positions = agglomerateGraph1.positions ++ agglomerateGraph2.positions
-    )
+                         segmentId2: Long): Option[AgglomerateGraph] = {
+    val segment1IsValid = agglomerateGraph1.segments.contains(segmentId1)
+    val segment2IsValid = agglomerateGraph2.segments.contains(segmentId2)
+    warnOnInvalidSegmentToMerge(segment1IsValid, segmentId1, update.segmentPosition1, update.mag, update.agglomerateId1)
+    warnOnInvalidSegmentToMerge(segment2IsValid, segmentId2, update.segmentPosition2, update.mag, update.agglomerateId2)
+    if (segment1IsValid && segment2IsValid) {
+      val newEdge = AgglomerateEdge(segmentId1, segmentId2)
+      val newEdgeAffinity = 255.0f
+      Some(
+        AgglomerateGraph(
+          segments = agglomerateGraph1.segments ++ agglomerateGraph2.segments,
+          edges = newEdge +: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
+          affinities = newEdgeAffinity +: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
+          positions = agglomerateGraph1.positions ++ agglomerateGraph2.positions
+        ))
+    } else None
   }
+
+  private def warnOnInvalidSegmentToMerge(isValid: Boolean,
+                                          segmentId: Long,
+                                          position: Vec3Int,
+                                          mag: Vec3Int,
+                                          agglomerateId: Long): Unit =
+    if (!isValid) {
+      logger.warn(
+        s"Merge action for editable mapping $editableMappingId: segment $segmentId as looked up at $position in mag $mag is not present in agglomerate $agglomerateId. This merge becomes a no-op"
+      )
+    }
 
 }

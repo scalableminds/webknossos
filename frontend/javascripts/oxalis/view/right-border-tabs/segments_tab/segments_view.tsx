@@ -281,7 +281,6 @@ export type TreeNode =
       name: string | null | undefined;
       id: number;
       key: string;
-      // timestamp: number;
       children: Array<TreeNode>;
     };
 
@@ -290,7 +289,7 @@ function constructTreeData(
   groupToSegmentsMap: Record<number, Segment[]>,
 ): TreeNode[] {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
-  return groups.map((group) => {
+  return _.sortBy(groups, "groupId").map((group) => {
     const { groupId } = group;
     const segments = groupToSegmentsMap[groupId] || [];
     const treeNode: TreeNode = {
@@ -299,9 +298,8 @@ function constructTreeData(
       key: `group-${groupId}`,
       id: groupId,
       type: "group",
-      // todo: should these be sorted?
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
-        segments.map(
+        _.sortBy(segments, "id").map(
           (segment): TreeNode => ({
             ...segment,
             title: segment.name || "",

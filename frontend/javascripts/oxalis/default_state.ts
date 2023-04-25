@@ -87,6 +87,7 @@ const defaultState: OxalisState = {
       erodeValue: 1,
       dilateValue: 2,
     },
+    renderWatermark: true,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

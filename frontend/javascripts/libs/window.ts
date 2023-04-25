@@ -32,13 +32,13 @@ export const document =
 const dummyLocation = {
   ancestorOrigins: [],
   hash: "",
-  host: "",
+  host: "localhost",
   hostname: "",
   href: "",
   origin: "",
   pathname: "",
   port: "",
-  protocol: "",
+  protocol: "http:",
   search: "",
   reload: () => {},
 

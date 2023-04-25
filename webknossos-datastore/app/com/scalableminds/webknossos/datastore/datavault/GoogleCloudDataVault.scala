@@ -23,7 +23,10 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 
   private lazy val storage: Storage = storageOptions.getService
 
-  private lazy val bucket: String = uri.getHost
+  // gs://bucket-name/object/name  -> getAuthority -> bucket-name
+  // Get bucket name with *getAuthority*. *Authority* is used here because *host* may only contain alphanumeric chars or
+  // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
+  private lazy val bucket: String = uri.getAuthority
 
   override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
     val objName = path.toUri.getPath.tail

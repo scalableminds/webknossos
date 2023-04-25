@@ -970,6 +970,7 @@ export function convertBufferToImage(
   height: number,
   flipHorizontally: boolean = false,
   canvasToMerge: HTMLCanvasElement | null | undefined,
+  drawImageIntoCanvasCallback: ((ctx: CanvasRenderingContext2D) => void) | null | undefined,
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     width = Math.round(width);
@@ -995,7 +996,13 @@ export function convertBufferToImage(
       ctx.drawImage(canvasToMerge, 0, 0);
     }
 
-    canvas.toBlob((blob: Blob | null) => resolve(blob));
+    if (drawImageIntoCanvasCallback) {
+      drawImageIntoCanvasCallback(ctx);
+    }
+    canvas.toBlob((blob: Blob | null) => {
+      canvas.remove();
+      resolve(blob);
+    });
   });
 }
 

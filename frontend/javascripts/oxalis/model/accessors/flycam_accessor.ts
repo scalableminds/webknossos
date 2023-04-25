@@ -615,7 +615,7 @@ function _getActiveResolutionInfo(state: OxalisState) {
       ({ sortedMag }) => sortedMag[0],
       ({ sortedMag }) => sortedMag[1],
       ({ sortedMag }) => sortedMag[2],
-    )[0].mag;
+    )[0]?.mag;
   }
 
   return {

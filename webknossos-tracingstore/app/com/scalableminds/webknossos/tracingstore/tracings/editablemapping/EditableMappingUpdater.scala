@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{DefaultEdge, DefaultUndirectedGraph}
@@ -23,6 +24,7 @@ import scala.jdk.CollectionConverters.asScalaSetConverter
 // this results in only one version increment in the db per update group
 
 class EditableMappingUpdater(editableMappingId: String,
+                             baseMappingName: String,
                              oldVersion: Long,
                              newVersion: Long,
                              remoteFallbackLayer: RemoteFallbackLayer,
@@ -31,7 +33,8 @@ class EditableMappingUpdater(editableMappingId: String,
                              editableMappingService: EditableMappingService,
                              tracingDataStore: TracingDataStore,
                              relyOnAgglomerateIds: Boolean)
-    extends KeyValueStoreImplicits {
+    extends KeyValueStoreImplicits
+    with LazyLogging {
 
   private val segmentToAgglomerateBuffer: mutable.Map[String, Map[Long, Long]] =
     new mutable.HashMap[String, Map[Long, Long]]()
@@ -150,7 +153,7 @@ class EditableMappingUpdater(editableMappingId: String,
         case Some(agglomerateId) => Fox.successful(agglomerateId)
         case None =>
           editableMappingService
-            .getBaseSegmentToAgglomerate(editableMappingId, Set(segmentId), remoteFallbackLayer, userToken)
+            .getBaseSegmentToAgglomerate(baseMappingName, Set(segmentId), remoteFallbackLayer, userToken)
             .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId))
       }
     } yield agglomerateId
@@ -292,7 +295,8 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
-      agglomerateIds <- agglomerateIdsForMergeAction(update, segmentId1, segmentId2)
+      _ = logger.warn(s"merging between positions ${update.segmentPosition1} and ${update.segmentPosition2}")
+      agglomerateIds <- agglomerateIdsForMergeAction(update, segmentId1, segmentId2) ?~> "Failed to look up agglomerate ids for merge action segments"
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateIds._1) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateIds._2) ?~> s"failed to get agglomerate graph for id ${update.agglomerateId2}"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"

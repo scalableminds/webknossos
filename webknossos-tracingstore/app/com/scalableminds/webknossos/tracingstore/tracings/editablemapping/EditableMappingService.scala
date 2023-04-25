@@ -132,13 +132,24 @@ class EditableMappingService @Inject()(
                 remoteFallbackLayer: RemoteFallbackLayer,
                 userToken: Option[String]): Fox[String] =
     for {
-      // TODO also duplicate update actions, and a v0
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
-      editableMappingInfo <- getInfo(editableMappingId, version, remoteFallbackLayer, userToken)
-      newId = generateId
-      _ <- tracingDataStore.editableMappingsInfo.put(newId, 0L, toProtoBytes(editableMappingInfo))
+      editableMappingInfoAndVersion <- getInfoAndActualVersion(editableMappingId,
+                                                               version,
+                                                               remoteFallbackLayer,
+                                                               userToken)
+      newIdAndInfoV0 <- create(editableMappingInfoAndVersion._1.baseMappingName)
+      newId = newIdAndInfoV0._1
+      _ <- tracingDataStore.editableMappingsInfo.put(newId, 0L, toProtoBytes(editableMappingInfoAndVersion._1))
+      _ <- tracingDataStore.editableMappingsInfo.put(newId,
+                                                     editableMappingInfoAndVersion._2,
+                                                     toProtoBytes(editableMappingInfoAndVersion._1))
       _ <- duplicateSegmentToAgglomerate(editableMappingId, newId)
       _ <- duplicateAgglomerateToGraph(editableMappingId, newId)
+      updateActionsWithVersions <- getUpdateActionsWithVersions(editableMappingId, editableMappingInfoAndVersion._2, 0L)
+      _ = logger.info(s"duplicating ${updateActionsWithVersions.length} update action versions")
+      _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
+        tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
+      }
     } yield newId
 
   private def duplicateSegmentToAgglomerate(editableMappingId: String, newId: String): Fox[Unit] = {
@@ -224,6 +235,7 @@ class EditableMappingService @Inject()(
           pendingUpdates <- getPendingUpdates(editableMappingId, closestMaterializedWithVersion.version, desiredVersion)
           updater = new EditableMappingUpdater(
             editableMappingId,
+            closestMaterializedWithVersion.value.baseMappingName,
             closestMaterializedWithVersion.version,
             desiredVersion,
             remoteFallbackLayer,
@@ -258,12 +270,20 @@ class EditableMappingService @Inject()(
       Fox.successful(List.empty)
     } else {
       for {
-        updates <- tracingDataStore.editableMappingUpdates.getMultipleVersions[List[EditableMappingUpdateAction]](
-          editableMappingId,
-          newestVersion = Some(closestMaterializableVersion),
-          oldestVersion = Some(closestMaterializedVersion + 1L))(fromJsonBytes[List[EditableMappingUpdateAction]])
-      } yield updates.reverse.flatten
+        updates <- getUpdateActionsWithVersions(editableMappingId,
+                                                newestVersion = closestMaterializableVersion,
+                                                oldestVersion = closestMaterializedVersion + 1L)
+      } yield updates.map(_._2).reverse.flatten
     }
+
+  private def getUpdateActionsWithVersions(editableMappingId: String,
+                                           newestVersion: Long,
+                                           oldestVersion: Long): Fox[List[(Long, List[EditableMappingUpdateAction])]] =
+    tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple[List[EditableMappingUpdateAction]](
+      editableMappingId,
+      Some(newestVersion),
+      Some(oldestVersion)
+    )(fromJsonBytes[List[EditableMappingUpdateAction]])
 
   def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
                               pos: Vec3Int,
@@ -620,18 +640,21 @@ class EditableMappingService @Inject()(
                         remoteFallbackLayer: RemoteFallbackLayer,
                         userToken: Option[String]): Fox[Unit] =
     for {
-      // TODO batch fetching of update actions
+      // TODO perf optimization: batch fetching of update actions
       targetNewestVersion <- getClosestMaterializableVersionOrZero(targetEditableMappingId, None)
       closestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId,
                                                                 None,
                                                                 remoteFallbackLayer,
                                                                 userToken)
       sourceNewestVersion = closestMaterializedWithVersion._2
-      updateActions <- getPendingUpdates(sourceEditableMappingId, 0L, sourceNewestVersion)
+      updateActionsWithVersions <- getUpdateActionsWithVersions(sourceEditableMappingId, sourceNewestVersion, 0L)
+      updateActionsToApply = updateActionsWithVersions.map(_._2).reverse.flatten
       _ = logger.info(
-        s"merging ${updateActions.length} updates from $sourceEditableMappingId into $targetEditableMappingId")
+        s"merging ${updateActionsToApply.length} updates from $sourceEditableMappingId into $targetEditableMappingId")
+      _ = logger.info(s"src version: $sourceNewestVersion, trgt version: $targetNewestVersion")
       updater = new EditableMappingUpdater(
         targetEditableMappingId,
+        closestMaterializedWithVersion._1.baseMappingName,
         targetNewestVersion,
         targetNewestVersion + sourceNewestVersion,
         remoteFallbackLayer,
@@ -641,8 +664,12 @@ class EditableMappingService @Inject()(
         tracingDataStore,
         relyOnAgglomerateIds = false
       )
-      updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion._1, updateActions)
-      // TODO store updates
+      updatedInfo <- updater.applyUpdatesAndSave(closestMaterializedWithVersion._1, updateActionsToApply)
+      _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
+        tracingDataStore.editableMappingUpdates.put(targetEditableMappingId,
+                                                    updateActionsWithVersion._1 + targetNewestVersion,
+                                                    updateActionsWithVersion._2)
+      }
     } yield ()
 
 }

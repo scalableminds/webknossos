@@ -93,9 +93,9 @@ class EditableMappingUpdater(editableMappingId: String,
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     update match {
       case splitAction: SplitAgglomerateUpdateAction =>
-        applySplitAction(mapping, splitAction) ?~> "failed to apply split action"
+        applySplitAction(mapping, splitAction) ?~> "Failed to apply split action"
       case mergeAction: MergeAgglomerateUpdateAction =>
-        applyMergeAction(mapping, mergeAction) ?~> "failed to apply merge action"
+        applyMergeAction(mapping, mergeAction) ?~> "Failed to apply merge action"
     }
 
   private def applySplitAction(editableMappingInfo: EditableMappingInfo, update: SplitAgglomerateUpdateAction)(
@@ -110,8 +110,12 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
-      _ <- bool2Fox(segmentId1 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition1} returned invalid value zero. Splitting outside of dataset?"
-      _ <- bool2Fox(segmentId2 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition2} returned invalid value zero. Splitting outside of dataset?"
+      _ = if (segmentId1 == 0)
+        logger.warn(
+          s"Split action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition1} in mag ${update.mag} returned invalid value zero. Splitting outside of dataset?")
+      _ = if (segmentId2 == 0)
+        logger.warn(
+          s"Split action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Splitting outside of dataset?")
       (graph1, graph2) <- tryo(splitGraph(update.agglomerateId, agglomerateGraph, update, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
@@ -266,8 +270,12 @@ class EditableMappingUpdater(editableMappingId: String,
                                                                    update.segmentPosition2,
                                                                    update.mag,
                                                                    userToken)
-      _ <- bool2Fox(segmentId1 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition1} returned invalid value zero. Merging outside of dataset?"
-      _ <- bool2Fox(segmentId2 > 0) ?~> s"Looking up segment id at position ${update.segmentPosition2} returned invalid value zero. Merging outside of dataset?"
+      _ = if (segmentId1 == 0)
+        logger.warn(
+          s"Merge action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition1} in mag ${update.mag} returned invalid value zero. Merging outside of dataset?")
+      _ = if (segmentId2 == 0)
+        logger.warn(
+          s"Merge action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Merging outside of dataset?")
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId1) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, update.agglomerateId2) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "Segment as queried by position is not contained in fetched agglomerate graph"

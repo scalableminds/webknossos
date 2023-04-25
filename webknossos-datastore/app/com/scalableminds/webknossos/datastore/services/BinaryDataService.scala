@@ -10,6 +10,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstructi
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
+import net.liftweb.util.Helpers.tryo
+import sttp.monad.syntax.MonadErrorOps
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -59,13 +61,13 @@ class BinaryDataService(val dataBaseDir: Path,
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData = agglomerateServiceOpt.map { agglomerateService =>
+          mappedData <- tryo(agglomerateServiceOpt.map { agglomerateService =>
             convertIfNecessary(
               request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
               data,
               agglomerateService.applyAgglomerate(request)
             )
-          }.getOrElse(data)
+          }.getOrElse(data)) ?~> "Failed to apply agglomerate mapping"
           resultData = convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte)
         } yield (resultData, index)
     }

@@ -82,6 +82,7 @@ class TeamListView extends React.PureComponent<Props, State> {
     users: [],
     searchQuery: "",
     isTeamCreationModalVisible: false,
+    isTeamEditModalVisible: false,
   };
 
   componentDidMount() {
@@ -256,13 +257,22 @@ class TeamListView extends React.PureComponent<Props, State> {
                 render={(__, script: APITeam) => (
                   <span>
                     <div>
-                      <Link
+                      {
+                        <Button 
+                          onClick={() =>
+                          this.setState({
+                            isTeamCreationModalVisible: true,
+                          })
+                        }>
+                          edit team</Button>
+                        /*                       <Link
                         to={"/users/"}
                         title="You can add and remove team members in the User Administration page."
                       >
                         <UserOutlined />
                         Add / Remove Users
-                      </Link>
+                      </Link> */
+                      }
                     </div>
                     <div>
                       <LinkButton onClick={_.partial(this.deleteTeam, script)}>

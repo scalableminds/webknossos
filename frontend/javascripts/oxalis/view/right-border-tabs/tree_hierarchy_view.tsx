@@ -498,7 +498,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               title="Change Tree Group Color"
               isDisabled={isEditingDisabled}
               onSetColor={(color) => {
-                this.handleGroupDropdownMenuVisibility(id, false);
                 if (id === MISSING_GROUP_ID) this.setAllTreesColor(color);
                 else this.setTreeGroupColor(id, color);
               }}
@@ -580,7 +579,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   title="Change Tree Color"
                   isDisabled={isEditingDisabled}
                   onSetColor={(color) => {
-                    this.handleTreeDropdownMenuVisibility(tree.treeId, false);
                     this.props.onSetTreeColor(tree.treeId, color);
                   }}
                   rgb={tree.color}

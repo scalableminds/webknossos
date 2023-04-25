@@ -14,6 +14,7 @@ import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { stringToColor } from "libs/format_utils";
+import EditTeamModalView from "./edit_team_modal_view";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APITeam[] = [];
@@ -25,6 +26,7 @@ type State = {
   users: APIUser[];
   searchQuery: string;
   isTeamCreationModalVisible: boolean;
+  isTeamEditModalVisible: boolean;
 };
 
 export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
@@ -257,22 +259,16 @@ class TeamListView extends React.PureComponent<Props, State> {
                 render={(__, script: APITeam) => (
                   <span>
                     <div>
-                      {
-                        <Button 
-                          onClick={() =>
+                      <LinkButton
+                        onClick={() =>
                           this.setState({
-                            isTeamCreationModalVisible: true,
+                            isTeamEditModalVisible: true,
                           })
-                        }>
-                          edit team</Button>
-                        /*                       <Link
-                        to={"/users/"}
-                        title="You can add and remove team members in the User Administration page."
+                        }
                       >
                         <UserOutlined />
                         Add / Remove Users
-                      </Link> */
-                      }
+                      </LinkButton>
                     </div>
                     <div>
                       <LinkButton onClick={_.partial(this.deleteTeam, script)}>
@@ -293,6 +289,15 @@ class TeamListView extends React.PureComponent<Props, State> {
             onCancel={() =>
               this.setState({
                 isTeamCreationModalVisible: false,
+              })
+            }
+          />
+          <EditTeamModalView
+            //onOk={}
+            isOpen={this.state.isTeamEditModalVisible}
+            onCancel={() =>
+              this.setState({
+                isTeamEditModalVisible: false,
               })
             }
           />

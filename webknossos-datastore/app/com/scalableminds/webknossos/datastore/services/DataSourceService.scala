@@ -232,22 +232,27 @@ class DataSourceService @Inject()(
     }
   }
 
-  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: String): Fox[Unit] =
+  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Fox[Int] =
     for {
       genericDataSource <- dataSource.toUsable
-      dataLayer <- genericDataSource.getDataLayer(dataLayerName)
-      magsOpt = dataLayer match {
-        case layer: N5Layer          => Some(layer.mags)
-        case layer: PrecomputedLayer => Some(layer.mags)
-        case _: SegmentationLayer    => None
-        case _: WKWLayer             => None
-        case layer: ZarrLayer        => Some(layer.mags)
-        case _                       => None
+      dataLayers = dataLayerName match {
+        case Some(ln) => Seq(genericDataSource.getDataLayer(ln))
+        case None     => genericDataSource.dataLayers.map(d => Some(d))
       }
-      _ = magsOpt match {
-        case Some(mags) => mags.map(mag => dataVaultService.clearVaultPath(mag))
-        case None       => ()
-      }
-    } yield ()
+      removedEntriesList = for {
+        dataLayerOpt <- dataLayers
+        dataLayer <- dataLayerOpt
+        magsOpt = dataLayer match {
+          case layer: N5Layer          => Some(layer.mags)
+          case layer: PrecomputedLayer => Some(layer.mags)
+          case layer: ZarrLayer        => Some(layer.mags)
+          case _                       => None
+        }
+        removedEntriesCount = magsOpt match {
+          case Some(mags) => mags.map(mag => dataVaultService.removeVaultFromCache(mag)); mags.length
+          case None       => 0
+        }
+      } yield removedEntriesCount
+    } yield removedEntriesList.sum
 
 }

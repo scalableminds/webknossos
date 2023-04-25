@@ -19,7 +19,7 @@ class DataVaultService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCli
       remotePath <- DataVaultsHolder.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
     } yield remotePath
 
-  def clearVaultPath(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[Unit] =
+  def removeVaultFromCache(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       remoteSource <- remoteSourceDescriptorFor(magLocator)
       _ = DataVaultsHolder.clearVaultPathCache(remoteSource)

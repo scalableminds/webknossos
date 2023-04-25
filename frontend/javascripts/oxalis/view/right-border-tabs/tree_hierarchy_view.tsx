@@ -259,7 +259,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onMoveWithContextAction = (node: TreeNode) => {
-    const activeComponent: "tree" | "trees" | "group" | null = this.getActiveComponent();
+    const activeComponent = this.getLabelForActiveItems();
     let allTreesToMove;
     if (activeComponent === "tree") {
       allTreesToMove = [this.props.activeTreeId];
@@ -415,6 +415,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
     const isEditingDisabled = !this.props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
+    const labelForActiveItems = this.getLabelForActiveItems();
     const createMenu: MenuProps = {
       items: [
         {
@@ -424,13 +425,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           icon: <PlusOutlined />,
           label: "Create new group",
         },
-        this.getActiveComponent() === "tree" || this.getActiveComponent() === "trees"
+        labelForActiveItems === "tree" || labelForActiveItems === "trees"
           ? {
               key: "moveHere",
               onClick: () => this.onMoveWithContextAction(node),
               disabled: isEditingDisabled,
               icon: <ArrowRightOutlined />,
-              label: "Move active " + this.getActiveComponent() + " here",
+              label: `Move active ${labelForActiveItems} here`,
             }
           : null,
         {
@@ -688,13 +689,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP;
   }
 
-  getActiveComponent(): "trees" | "tree" | "group" | null {
+  getLabelForActiveItems(): "trees" | "tree" | "group" | null {
     // Only one type of component can be selected. It is not possible to select multiple groups.
     if (this.props.selectedTrees.length > 0) {
       return "trees";
-    } else if (this.props.activeTreeId) {
+    } else if (this.props.activeTreeId != null) {
       return "tree";
-    } else if (this.props.activeGroupId) {
+    } else if (this.props.activeGroupId != null) {
       return "group";
     }
     return null;

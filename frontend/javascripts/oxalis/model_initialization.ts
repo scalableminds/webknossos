@@ -98,7 +98,6 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
-import { enforceActiveOrganization } from "./model/accessors/organization_accessors";
 import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
@@ -777,7 +776,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 function enforcePricingRestrictionsOnUserConfiguration(
   userConfiguration: UserConfiguration,
 ): UserConfiguration {
-  const activeOrganization = enforceActiveOrganization(Store.getState().activeOrganization);
+  const activeOrganization = Store.getState().activeOrganization;
   if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
     return {
       ...userConfiguration,

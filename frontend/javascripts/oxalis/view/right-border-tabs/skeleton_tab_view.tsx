@@ -14,6 +14,7 @@ import type { Dispatch } from "redux";
 import {
   DownloadOutlined,
   DownOutlined,
+  ExclamationCircleOutlined,
   SearchOutlined,
   UploadOutlined,
   WarningOutlined,
@@ -101,6 +102,7 @@ import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
 
+const { confirm } = Modal;
 const InputGroup = Input.Group;
 const treeTabId = "tree-list";
 
@@ -488,8 +490,18 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       // Group is empty
       this.deleteGroup(id);
     } else if (id === MISSING_GROUP_ID) {
-      // Delete all children of root group
-      this.deleteGroup(id);
+      // Ask whether all children of root group should be deleted
+      // (doesn't need recursive/not-recursive distinction, since
+      // the root group itself cannot be removed).
+      confirm({
+        title: "Do you want to delete all trees and groups?",
+        icon: <ExclamationCircleOutlined />,
+        okType: "danger",
+        okText: "Delete",
+        onOk: () => {
+          this.deleteGroup(id);
+        },
+      });
     } else {
       // Show modal
       this.setState({

@@ -5,6 +5,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
@@ -18,6 +19,7 @@ import {
   Dropdown,
   Empty,
   MenuProps,
+  Modal,
   Popover,
   Select,
   Tooltip,
@@ -91,6 +93,7 @@ import {
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 
+const { confirm } = Modal;
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
 const refreshInterval = 5000;
@@ -784,8 +787,18 @@ class SegmentsView extends React.Component<Props, State> {
       // Group is empty. Delete directly without showing modal.
       this.deleteGroup(id);
     } else if (id === MISSING_GROUP_ID) {
-      // Delete all children of root group
-      this.deleteGroup(id);
+      // Ask whether all children of root group should be deleted
+      // (doesn't need recursive/not-recursive distinction, since
+      // the root group itself cannot be removed).
+      confirm({
+        title: "Do you want to delete all segments and groups?",
+        icon: <ExclamationCircleOutlined />,
+        okText: "Delete",
+        okType: "danger",
+        onOk: () => {
+          this.deleteGroup(id);
+        },
+      });
     } else {
       // Show modal
       this.setState({

@@ -6,15 +6,15 @@ object ChunkUtils extends LazyLogging {
   def computeChunkIndices(arrayShape: Array[Int],
                           arrayChunkSize: Array[Int],
                           selectedShape: Array[Int],
-                          selectedOffset: Array[Int], arrayOffset: Array[Int]): List[Array[Int]] = {
+                          selectedOffset: Array[Int]): List[Array[Int]] = {
     val depth = arrayShape.length
     val start = new Array[Int](depth)
     val to = new Array[Int](depth)
     var numChunks = 1
     for (dim <- 0 until depth) {
       val maxIdx = (arrayShape(dim) - 1) / arrayChunkSize(dim)
-      val startIdx = Math.min(maxIdx, selectedOffset(dim) - arrayOffset(dim) / arrayChunkSize(dim))
-      var toIdx = (selectedOffset(dim) - arrayOffset(dim) + selectedShape(dim) - 1) / arrayChunkSize(dim)
+      val startIdx = Math.min(maxIdx, selectedOffset(dim) / arrayChunkSize(dim))
+      var toIdx = (selectedOffset(dim) + selectedShape(dim) - 1) / arrayChunkSize(dim)
       toIdx = Math.min(toIdx, maxIdx)
       start(dim) = startIdx
       to(dim) = toIdx

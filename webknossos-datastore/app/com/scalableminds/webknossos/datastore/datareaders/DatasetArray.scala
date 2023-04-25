@@ -61,11 +61,12 @@ class DatasetArray(relativePath: DatasetPath,
   @throws[IOException]
   @throws[InvalidRangeException]
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
+    val totalOffset = (offset, header.offset).zipped.map(_ - _)
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,
-      offset, header.offset)
-    if (partialCopyingIsNotNeeded(shape, offset, chunkIndices)) {
+                                                      totalOffset)
+    if (partialCopyingIsNotNeeded(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
@@ -77,7 +78,7 @@ class DatasetArray(relativePath: DatasetPath,
       val copiedFuture = Future.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
-          offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
+          offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
                                                                              flip = header.order != ArrayOrder.C)

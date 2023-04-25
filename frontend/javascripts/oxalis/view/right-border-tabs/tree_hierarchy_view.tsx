@@ -258,27 +258,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
-  setExpansionOfGroupTo = (groupId: number, expanded: boolean) => {
-    const newExpandedGroupIds = Object.assign({}, this.state.expandedGroupIds);
-
-    const collapseAllGroups = (groupTree: TreeNode[]) => {
-      const copyOfGroupTree = _.cloneDeep(groupTree);
-
-      findTreeNode(copyOfGroupTree, groupId, (item) => {
-        if (expanded) {
-          item.expanded = expanded;
-          newExpandedGroupIds[item.id] = expanded;
-        }
-      });
-      return copyOfGroupTree;
-    };
-
-    this.setState((prevState) => ({
-      groupTree: collapseAllGroups(prevState.groupTree),
-      expandedGroupIds: newExpandedGroupIds,
-    }));
-  };
-
   onMoveWithContextAction = (nextParentNode: TreeNode) => {
     const activeComponent = this.getLabelForActiveItems();
     let allTreesToMove;
@@ -299,7 +278,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else if (activeComponent === "group") {
       // TODO move group after #6966 (segment groups) is merged
     }
-    this.setExpansionOfGroupTo(nextParentNode.id, true);
   };
 
   onMoveNode = (

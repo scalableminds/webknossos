@@ -1042,6 +1042,7 @@ class SegmentsView extends React.Component<Props, State> {
                           }}
                         >
                           <Tree
+                            allowDrop={this.allowDrop}
                             onDrop={this.onDrop}
                             defaultExpandAll
                             className="segments-tree"
@@ -1114,12 +1115,19 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   onDrop = (dropInfo: { node: TreeNode | null; dragNode: TreeNode; dropToGap: boolean }) => {
-    const { node, dragNode, dropToGap } = dropInfo;
+    const { node, dragNode } = dropInfo;
 
     // Node is the node onto which dragNode is dropped
     if (node == null || this.props.visibleSegmentationLayer == null) {
       return;
     }
+
+    // dropToGap effectively means that the user dragged the item
+    // so that it should be dragged to the parent of the target node.
+    // However, since a segment cannot be dragged inside of a segment,
+    // dropToGap should be ignored when the target node is a segment.
+    // Otherwise, the node could be dragged to the wrong location.
+    const dropToGap = node.type === "segment" ? false : dropInfo.dropToGap;
 
     const dropTargetGroupId = node.type === "segment" ? node.groupId : node.id;
     let targetGroupId: number | null | undefined = null;
@@ -1170,6 +1178,14 @@ class SegmentsView extends React.Component<Props, State> {
         this.props.visibleSegmentationLayer.name,
       );
     }
+  };
+
+  allowDrop = ({ dropNode, dropPosition }: { dropNode: TreeNode; dropPosition: number }) => {
+    // Don't allow to drag a node inside of a segment, but only
+    // next to it. If dropPosition is 0, the dragging action targets
+    // the child of the hovered element (which should only be allowed
+    // for groups).
+    return "children" in dropNode || dropPosition != 0;
   };
 }
 

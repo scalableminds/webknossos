@@ -34,6 +34,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed misleading email about successful dataset upload, which was in some cases sent even for unusable datasets. [#6977](https://github.com/scalableminds/webknossos/pull/6977)
 - Fixed upload of skeleton annotations with no trees, only bounding boxes, being incorrectly rejected. [#6985](https://github.com/scalableminds/webknossos/pull/6985)
 - Fixed that Google Cloud Storage URLs with bucket names containing underscores could not be parsed. [#6998](https://github.com/scalableminds/webknossos/pull/6998)
+- Fixed regression that caused public datasets to crash when not being logged in. [#7010](https://github.com/scalableminds/webknossos/pull/7010)
 
 ### Removed
 

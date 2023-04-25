@@ -465,10 +465,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "delete",
           disabled: isEditingDisabled,
-          onClick: () => {
-            this.deleteGroup(id);
-            this.handleGroupDropdownMenuVisibility(id, false);
-          },
+          onClick: () => this.deleteGroup(id),
           icon: <DeleteOutlined />,
           label: "Delete group",
         },

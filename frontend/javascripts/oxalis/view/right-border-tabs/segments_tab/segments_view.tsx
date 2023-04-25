@@ -38,7 +38,7 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
+import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
@@ -1152,31 +1152,24 @@ class SegmentsView extends React.Component<Props, State> {
         return;
       }
 
-      // todo: make root handling nicer?
-      const segmentGroupsWithoutDraggedGroup = mapGroups(
-        [
-          {
-            name: "Root",
-            groupId: MISSING_GROUP_ID,
-            children: this.props.segmentGroups,
-          },
-        ],
+      const segmentGroupsWithoutDraggedGroup = mapGroupsWithRoot(
+        this.props.segmentGroups,
         (parentGroup) => ({
           ...parentGroup,
           children: parentGroup.children.filter((subgroup) => subgroup.groupId !== dragNode.id),
         }),
       );
-      const newSegmentGroups = mapGroups(segmentGroupsWithoutDraggedGroup, (parentGroup) => ({
-        ...parentGroup,
-        children:
-          parentGroup.groupId === targetGroupId
-            ? parentGroup.children.concat([movedGroup])
-            : parentGroup.children,
-      }));
-      this.props.onUpdateSegmentGroups(
-        newSegmentGroups[0].children,
-        this.props.visibleSegmentationLayer.name,
+      const newSegmentGroups = mapGroupsWithRoot(
+        segmentGroupsWithoutDraggedGroup,
+        (parentGroup) => ({
+          ...parentGroup,
+          children:
+            parentGroup.groupId === targetGroupId
+              ? parentGroup.children.concat([movedGroup])
+              : parentGroup.children,
+        }),
       );
+      this.props.onUpdateSegmentGroups(newSegmentGroups, this.props.visibleSegmentationLayer.name);
     }
   };
 

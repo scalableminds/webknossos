@@ -16,7 +16,10 @@ import type {
   TreeGroupTypeFlat,
   Node,
 } from "oxalis/store";
-import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  findGroup,
+  MISSING_GROUP_ID,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 export type SkeletonTracingStats = {
   treeCount: number;
@@ -256,4 +259,22 @@ function mapGroupAndChildrenHelper(group: TreeGroup, fn: (g: TreeGroup) => TreeG
 
 export function mapGroups(groups: TreeGroup[], fn: (g: TreeGroup) => TreeGroup): TreeGroup[] {
   return groups.map((group) => mapGroupAndChildrenHelper(group, fn));
+}
+
+export function mapGroupsWithRoot(
+  groups: TreeGroup[],
+  fn: (g: TreeGroup) => TreeGroup,
+): TreeGroup[] {
+  // Add the virtual root group so that the map function can also mutate
+  // the high-level elements (e.g., filtering elements in the first level).
+  return mapGroups(
+    [
+      {
+        name: "Root",
+        groupId: MISSING_GROUP_ID,
+        children: groups,
+      },
+    ],
+    fn,
+  )[0].children; // Read the root group's children again
 }

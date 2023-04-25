@@ -90,6 +90,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           command = JobCommand.convert_to_wkw
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
+            "organization_display_name" -> organization.displayName,
             "dataset_name" -> dataSetName,
             "scale" -> scale,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken

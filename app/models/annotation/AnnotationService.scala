@@ -52,7 +52,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import javax.inject.Inject
@@ -104,7 +104,8 @@ class AnnotationService @Inject()(
     nmlWriter: NmlWriter,
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
-    meshService: MeshService
+    meshService: MeshService,
+    conf: WkConf,
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
@@ -639,6 +640,7 @@ class AnnotationService @Inject()(
                                         scaleOpt,
                                         Some(name + "_data.zip"),
                                         organizationName,
+                                        conf.Http.uri,
                                         datasetName,
                                         Some(user),
                                         taskOpt)
@@ -652,7 +654,7 @@ class AnnotationService @Inject()(
 
     def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Vec3Double]) =
       for {
-        user <- userService.findOneById(annotation._user, useCache = true) ?~> "user.notFound"
+        user <- userService.findOneCached(annotation._user) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
         dataset <- dataSetDAO.findOne(annotation._dataSet)
@@ -917,7 +919,7 @@ class AnnotationService @Inject()(
       Fox.successful(None)
     } else {
       for {
-        user <- Fox.fillOption(userOpt)(userService.findOneById(userId, useCache = true)(GlobalAccessContext))
+        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext))
         userJson <- userService.compactWrites(user)
       } yield Some(userJson)
     }

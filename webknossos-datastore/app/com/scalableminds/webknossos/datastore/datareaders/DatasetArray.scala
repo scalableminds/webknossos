@@ -64,7 +64,7 @@ class DatasetArray(relativePath: DatasetPath,
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,
-                                                      offset)
+      offset, header.offset)
     if (partialCopyingIsNotNeeded(shape, offset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox

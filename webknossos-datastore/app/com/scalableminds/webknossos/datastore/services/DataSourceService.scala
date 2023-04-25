@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.dataformats.n5.N5Layer
 import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedLayer
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWLayer}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrLayer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._

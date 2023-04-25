@@ -49,7 +49,7 @@ case class ZarrHeader(
 
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
 
-  lazy val offset: Array[Int] = Array.fill(datasetShape.length)(0)
+  lazy val voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
 }
 
 object ZarrHeader extends JsonImplicits {

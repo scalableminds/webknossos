@@ -64,7 +64,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] =
     chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
 
-  override def offset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
+  override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map(chunkIndexWithDim => {

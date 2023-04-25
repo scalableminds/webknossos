@@ -61,33 +61,39 @@ class DatasetArray(relativePath: DatasetPath,
   @throws[IOException]
   @throws[InvalidRangeException]
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val totalOffset = (offset, header.offset).zipped.map(_ - _)
-    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
-                                                      axisOrder.permuteIndicesReverse(header.chunkSize),
-                                                      shape,
-                                                      totalOffset)
-    if (partialCopyingIsNotNeeded(shape, totalOffset, chunkIndices)) {
-      for {
-        chunkIndex <- chunkIndices.headOption.toFox
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
-      } yield sourceChunk.getStorage
+    val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _)
+    if (totalOffset.exists(_ < 0)) {
+      // TODO in case of negative total offset, fill response anyway, at least where we can. use fill value elsewhere
+      // Todo: write issue for that.
+      Fox.successful(MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape))
     } else {
-      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
-      val targetInCOrder: MultiArray =
-        MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
-      val copiedFuture = Future.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
+      val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
+                                                        axisOrder.permuteIndicesReverse(header.chunkSize),
+                                                        shape,
+                                                        totalOffset)
+      if (partialCopyingIsNotNeeded(shape, totalOffset, chunkIndices)) {
         for {
+          chunkIndex <- chunkIndices.headOption.toFox
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
-          offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)
-          sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
-                                                                             axisOrder,
-                                                                             flip = header.order != ArrayOrder.C)
-          _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
-        } yield ()
-      })
-      for {
-        _ <- copiedFuture
-      } yield targetBuffer
+        } yield sourceChunk.getStorage
+      } else {
+        val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
+        val targetInCOrder: MultiArray =
+          MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
+        val copiedFuture = Future.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
+          for {
+            sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
+            offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)
+            sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
+                                                                               axisOrder,
+                                                                               flip = header.order != ArrayOrder.C)
+            _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
+          } yield ()
+        })
+        for {
+          _ <- copiedFuture
+        } yield targetBuffer
+      }
     }
   }
 

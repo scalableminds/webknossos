@@ -40,7 +40,7 @@ case class N5Header(
 
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 
-  lazy val offset: Array[Int] = Array.fill(datasetShape.length)(0)
+  lazy val voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
 }
 
 object N5Header extends JsonImplicits {

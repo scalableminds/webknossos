@@ -48,5 +48,5 @@ trait DatasetHeader {
 
   def isSharded = false
 
-  def offset: Array[Int]
+  def voxelOffset: Array[Int]
 }

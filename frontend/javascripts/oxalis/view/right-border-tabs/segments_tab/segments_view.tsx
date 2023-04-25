@@ -6,6 +6,7 @@ import {
   ReloadOutlined,
   SettingOutlined,
   ExclamationCircleOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
@@ -974,6 +975,29 @@ class SegmentsView extends React.Component<Props, State> {
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
+                    this.state.selectedSegmentId != null
+                      ? {
+                          key: "moveHere",
+                          onClick: () => {
+                            if (
+                              this.state.selectedSegmentId == null ||
+                              this.props.visibleSegmentationLayer == null
+                            ) {
+                              // Satisfy TS
+                              return;
+                            }
+                            this.props.updateSegment(
+                              this.state.selectedSegmentId,
+                              { groupId: id },
+                              this.props.visibleSegmentationLayer.name,
+                              true,
+                            );
+                          },
+                          disabled: isEditingDisabled,
+                          icon: <ArrowRightOutlined />,
+                          label: "Move active segment here",
+                        }
+                      : null,
                   ],
                 };
 

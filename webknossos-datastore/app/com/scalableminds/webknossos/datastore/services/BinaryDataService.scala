@@ -11,7 +11,6 @@ import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import net.liftweb.util.Helpers.tryo
-import sttp.monad.syntax.MonadErrorOps
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global

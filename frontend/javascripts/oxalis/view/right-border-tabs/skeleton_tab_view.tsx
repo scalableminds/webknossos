@@ -739,9 +739,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         {
           key: "handleNmlDownload",
           onClick: this.handleNmlDownload,
-          title: "Download selected trees as NML",
+          title: "Download visible trees as NML",
           icon: <DownloadOutlined />,
-          label: "Download Selected Trees",
+          label: "Download Visible Trees",
         },
         {
           key: "importNml",

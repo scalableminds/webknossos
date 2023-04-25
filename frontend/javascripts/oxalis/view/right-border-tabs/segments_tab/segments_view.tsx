@@ -958,7 +958,7 @@ class SegmentsView extends React.Component<Props, State> {
                 const { id, name } = treeItem;
                 const isEditingDisabled = !this.props.allowUpdate;
 
-                const createMenu: MenuProps = {
+                const menu: MenuProps = {
                   items: [
                     {
                       key: "create",
@@ -982,7 +982,7 @@ class SegmentsView extends React.Component<Props, State> {
                 return (
                   <div>
                     <Dropdown
-                      menu={createMenu}
+                      menu={menu}
                       placement="bottom"
                       // AutoDestroy is used to remove the menu from DOM and keep up the performance.
                       // destroyPopupOnHide should also be an option according to the docs, but

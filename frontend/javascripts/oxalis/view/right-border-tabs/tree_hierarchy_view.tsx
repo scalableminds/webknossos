@@ -416,7 +416,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const isEditingDisabled = !this.props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
     const labelForActiveItems = this.getLabelForActiveItems();
-    const createMenu: MenuProps = {
+    const menu: MenuProps = {
       items: [
         {
           key: "create",
@@ -513,7 +513,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return (
       <div>
         <Dropdown
-          menu={createMenu}
+          menu={menu}
           placement="bottom"
           // AutoDestroy is used to remove the menu from DOM and keep up the performance.
           // destroyPopupOnHide should also be an option according to the docs, but

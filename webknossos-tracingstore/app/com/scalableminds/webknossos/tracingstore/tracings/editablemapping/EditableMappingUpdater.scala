@@ -25,6 +25,7 @@ import scala.jdk.CollectionConverters.asScalaSetConverter
 // this results in only one version increment in the db per update group
 
 class EditableMappingUpdater(editableMappingId: String,
+                             baseMappingName: String,
                              oldVersion: Long,
                              newVersion: Long,
                              remoteFallbackLayer: RemoteFallbackLayer,
@@ -160,7 +161,7 @@ class EditableMappingUpdater(editableMappingId: String,
         case Some(agglomerateId) => Fox.successful(agglomerateId)
         case None =>
           editableMappingService
-            .getBaseSegmentToAgglomerate(editableMappingId, Set(segmentId), remoteFallbackLayer, userToken)
+            .getBaseSegmentToAgglomerate(baseMappingName, Set(segmentId), remoteFallbackLayer, userToken)
             .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId))
       }
     } yield agglomerateId
@@ -318,7 +319,7 @@ class EditableMappingUpdater(editableMappingId: String,
       _ = if (segmentId2 == 0)
         logger.warn(
           s"Merge action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Merging outside of dataset?")
-      agglomerateIds <- agglomerateIdsForMergeAction(update, segmentId1, segmentId2)
+      agglomerateIds <- agglomerateIdsForMergeAction(update, segmentId1, segmentId2) ?~> "Failed to look up agglomerate ids for merge action segments"
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateIds._1) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateIds._2) ?~> s"Failed to get agglomerate graph for id ${update.agglomerateId2}"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "Segment as queried by position is not contained in fetched agglomerate graph"

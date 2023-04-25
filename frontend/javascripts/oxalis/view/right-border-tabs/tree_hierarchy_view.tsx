@@ -299,7 +299,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else if (activeComponent === "group") {
       // TODO move group after #6966 (segment groups) is merged
     }
-    // expand group to which the selection has been moved
     this.setExpansionOfGroupTo(nextParentNode.id, true);
   };
 

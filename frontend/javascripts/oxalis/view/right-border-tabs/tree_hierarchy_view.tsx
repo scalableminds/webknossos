@@ -258,7 +258,28 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
-  onMoveWithContextAction = (node: TreeNode) => {
+  setExpansionOfGroupTo = (groupId: number, expanded: boolean) => {
+    const newExpandedGroupIds = Object.assign({}, this.state.expandedGroupIds);
+
+    const collapseAllGroups = (groupTree: TreeNode[]) => {
+      const copyOfGroupTree = _.cloneDeep(groupTree);
+
+      findTreeNode(copyOfGroupTree, groupId, (item) => {
+        if (expanded) {
+          item.expanded = expanded;
+          newExpandedGroupIds[item.id] = expanded;
+        }
+      });
+      return copyOfGroupTree;
+    };
+
+    this.setState((prevState) => ({
+      groupTree: collapseAllGroups(prevState.groupTree),
+      expandedGroupIds: newExpandedGroupIds,
+    }));
+  };
+
+  onMoveWithContextAction = (nextParentNode: TreeNode) => {
     const activeComponent = this.getLabelForActiveItems();
     let allTreesToMove;
     if (activeComponent === "tree") {
@@ -269,7 +290,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     if (allTreesToMove) {
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(
-          node.id === MISSING_GROUP_ID ? null : node.id,
+          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
           // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
           parseInt(treeId, 10),
         ),
@@ -278,6 +299,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else if (activeComponent === "group") {
       // TODO move group after #6966 (segment groups) is merged
     }
+    // expand group to which the selection has been moved
+    this.setExpansionOfGroupTo(nextParentNode.id, true);
   };
 
   onMoveNode = (
@@ -420,7 +443,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       items: [
         {
           key: "create",
-          onClick: () => this.createGroup(id),
+          onClick: () => {
+            this.createGroup(id);
+            this.handleGroupDropdownMenuVisibility(id, false);
+          },
           disabled: isEditingDisabled,
           icon: <PlusOutlined />,
           label: "Create new group",
@@ -428,7 +454,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         labelForActiveItems === "tree" || labelForActiveItems === "trees"
           ? {
               key: "moveHere",
-              onClick: () => this.onMoveWithContextAction(node),
+              onClick: () => {
+                this.onMoveWithContextAction(node);
+                this.handleGroupDropdownMenuVisibility(id, false);
+              },
               disabled: isEditingDisabled,
               icon: <ArrowRightOutlined />,
               label: `Move active ${labelForActiveItems} here`,
@@ -437,7 +466,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "delete",
           disabled: isEditingDisabled,
-          onClick: () => this.deleteGroup(id),
+          onClick: () => {
+            this.deleteGroup(id);
+            this.handleGroupDropdownMenuVisibility(id, false);
+          },
           icon: <DeleteOutlined />,
           label: "Delete group",
         },
@@ -445,7 +477,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           ? {
               key: "collapseSubgroups",
               disabled: !hasExpandedSubgroup,
-              onClick: () => this.setExpansionOfAllSubgroupsTo(id, false),
+              onClick: () => {
+                this.setExpansionOfAllSubgroupsTo(id, false);
+                this.handleGroupDropdownMenuVisibility(id, false);
+              },
               icon: <ShrinkOutlined />,
               label: "Collapse all subgroups",
             }
@@ -454,7 +489,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           ? {
               key: "expandSubgroups",
               disabled: !hasCollapsedSubgroup,
-              onClick: () => this.setExpansionOfAllSubgroupsTo(id, true),
+              onClick: () => {
+                this.setExpansionOfAllSubgroupsTo(id, true);
+                this.handleGroupDropdownMenuVisibility(id, false);
+              },
               icon: <ExpandAltOutlined />,
               label: "Expand all subgroups",
             }
@@ -464,6 +502,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           onClick: () => {
             this.props.onSetActiveGroup(id);
             this.props.onToggleHideInactiveTrees();
+            this.handleGroupDropdownMenuVisibility(id, false);
           },
           icon: <i className="fas fa-eye" />,
           label: "Hide/Show all other trees",
@@ -485,6 +524,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               title="Change Tree Group Color"
               isDisabled={isEditingDisabled}
               onSetColor={(color) => {
+                this.handleGroupDropdownMenuVisibility(id, false);
                 if (id === MISSING_GROUP_ID) this.setAllTreesColor(color);
                 else this.setTreeGroupColor(id, color);
               }}
@@ -566,6 +606,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   title="Change Tree Color"
                   isDisabled={isEditingDisabled}
                   onSetColor={(color) => {
+                    this.handleTreeDropdownMenuVisibility(tree.treeId, false);
                     this.props.onSetTreeColor(tree.treeId, color);
                   }}
                   rgb={tree.color}
@@ -590,7 +631,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             },
             {
               key: "measureSkeleton",
-              onClick: () => this.handleMeasureSkeletonLength(tree.treeId, tree.name),
+              onClick: () => {
+                this.handleMeasureSkeletonLength(tree.treeId, tree.name);
+                this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
               title: "Measure Skeleton Length",
               icon: <i className="fas fa-ruler" />,
               label: "Measure Skeleton Length",

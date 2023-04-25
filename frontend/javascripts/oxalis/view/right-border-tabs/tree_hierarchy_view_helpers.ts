@@ -1,5 +1,6 @@
 import _ from "lodash";
-import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap } from "oxalis/store";
+import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
 export const TYPE_GROUP = "GROUP";
 export const TYPE_TREE = "TREE";
@@ -236,4 +237,28 @@ export function getGroupByIdWithSubgroups(
     groupWithSubgroups.push(treeGroup.groupId);
   });
   return groupWithSubgroups;
+}
+
+export function moveGroupsHelper(
+  treeGroups: TreeGroup[] | SegmentGroup[],
+  groupId: number,
+  targetGroupId: number | null | undefined,
+): TreeGroup[] | SegmentGroup[] {
+  const movedGroup = findGroup(treeGroups, groupId);
+  if (!movedGroup) {
+    throw new Error("Could not find group to move");
+  }
+
+  const treeGroupsWithoutDraggedGroup = mapGroupsWithRoot(treeGroups, (parentGroup) => ({
+    ...parentGroup,
+    children: parentGroup.children.filter((subgroup) => subgroup.groupId !== movedGroup.groupId),
+  }));
+  const newTreeGroups = mapGroupsWithRoot(treeGroupsWithoutDraggedGroup, (parentGroup) => ({
+    ...parentGroup,
+    children:
+      parentGroup.groupId === targetGroupId
+        ? parentGroup.children.concat([movedGroup])
+        : parentGroup.children,
+  }));
+  return newTreeGroups;
 }

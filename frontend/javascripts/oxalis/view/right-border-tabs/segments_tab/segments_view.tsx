@@ -38,7 +38,6 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
@@ -88,7 +87,6 @@ import DeleteGroupModalView from "../delete_group_modal_view";
 import {
   callDeep,
   createGroupToSegmentsMap,
-  findGroup,
   findParentIdForGroupId,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
@@ -1146,30 +1144,11 @@ class SegmentsView extends React.Component<Props, State> {
       );
     } else {
       // A group is being dropped onto/next to a segment or group.
-      const movedGroup = findGroup(this.props.segmentGroups, dragNode.id);
-      if (!movedGroup) {
-        console.error("Could not find group to move");
-        return;
-      }
-
-      const segmentGroupsWithoutDraggedGroup = mapGroupsWithRoot(
-        this.props.segmentGroups,
-        (parentGroup) => ({
-          ...parentGroup,
-          children: parentGroup.children.filter((subgroup) => subgroup.groupId !== dragNode.id),
-        }),
+      api.tracing.moveSegmentGroup(
+        dragNode.id,
+        targetGroupId,
+        this.props.visibleSegmentationLayer.name,
       );
-      const newSegmentGroups = mapGroupsWithRoot(
-        segmentGroupsWithoutDraggedGroup,
-        (parentGroup) => ({
-          ...parentGroup,
-          children:
-            parentGroup.groupId === targetGroupId
-              ? parentGroup.children.concat([movedGroup])
-              : parentGroup.children,
-        }),
-      );
-      this.props.onUpdateSegmentGroups(newSegmentGroups, this.props.visibleSegmentationLayer.name);
     }
   };
 
@@ -1178,7 +1157,7 @@ class SegmentsView extends React.Component<Props, State> {
     // next to it. If dropPosition is 0, the dragging action targets
     // the child of the hovered element (which should only be allowed
     // for groups).
-    return "children" in dropNode || dropPosition != 0;
+    return "children" in dropNode || dropPosition !== 0;
   };
 }
 

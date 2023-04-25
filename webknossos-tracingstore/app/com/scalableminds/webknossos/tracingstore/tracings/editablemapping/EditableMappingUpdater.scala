@@ -146,7 +146,25 @@ class EditableMappingUpdater(editableMappingId: String,
       } yield (agglomerateId1, agglomerateId2)
     }
 
-  private def agglomerateIdForSegmentId(segmentId: Long): Fox[Long] = ??? // TODO
+  private def agglomerateIdForSegmentId(segmentId: Long)(implicit ec: ExecutionContext): Fox[Long] = {
+    val chunkId = segmentId / editableMappingService.defaultSegmentToAgglomerateChunkSize
+    val chunkKey = editableMappingService.segmentToAgglomerateKey(editableMappingId, chunkId)
+    val chunkFromBufferOpt = segmentToAgglomerateBuffer.get(chunkKey)
+    for {
+      chunk <- Fox.fillOption(chunkFromBufferOpt) {
+        editableMappingService
+          .getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version = oldVersion)
+          .map(_.toMap)
+      }
+      agglomerateId <- chunk.get(segmentId) match {
+        case Some(agglomerateId) => Fox.successful(agglomerateId)
+        case None =>
+          editableMappingService
+            .getBaseSegmentToAgglomerate(editableMappingId, Set(segmentId), remoteFallbackLayer, userToken)
+            .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId))
+      }
+    } yield agglomerateId
+  }
 
   private def updateSegmentToAgglomerate(segmentIdsToUpdate: Seq[Long], agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Unit] =
@@ -171,9 +189,9 @@ class EditableMappingUpdater(editableMappingId: String,
       implicit ec: ExecutionContext): Fox[Map[Long, Long]] = {
     val key = editableMappingService.segmentToAgglomerateKey(editableMappingId, chunkId)
     val fromBufferOpt = segmentToAgglomerateBuffer.get(key)
-    fromBufferOpt.map(Fox.successful(_)).getOrElse {
+    Fox.fillOption(fromBufferOpt) {
       editableMappingService
-        .getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version = None)
+        .getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version = oldVersion)
         .map(_.toMap)
     }
   }

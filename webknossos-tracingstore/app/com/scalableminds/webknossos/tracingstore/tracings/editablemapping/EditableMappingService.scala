@@ -303,23 +303,25 @@ class EditableMappingService @Inject()(
                                                    version: Long,
                                                    segmentIds: Set[Long]): Fox[Seq[(Long, Long)]] =
     for {
-      segmentToAgglomerateChunk <- segmentToAgglomerateChunkCache.getOrLoad(
-        (editableMappingId, chunkId, version),
-        _ => getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, Some(version)))
+      segmentToAgglomerateChunk <- getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version)
       filtered = segmentToAgglomerateChunk.filter(pair => segmentIds.contains(pair._1))
     } yield filtered
 
   def getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId: String,
                                                     chunkId: Long,
-                                                    version: Option[Long]): Fox[Seq[(Long, Long)]] =
-    for {
-      chunkBox: Box[Seq[(Long, Long)]] <- getSegmentToAgglomerateChunk(editableMappingId, chunkId, version).futureBox
-      segmentToAgglomerate <- chunkBox match {
-        case Full(chunk) => Fox.successful(chunk)
-        case Empty       => Fox.successful(Seq.empty[(Long, Long)])
-        case f: Failure  => f.toFox
-      }
-    } yield segmentToAgglomerate
+                                                    version: Long): Fox[Seq[(Long, Long)]] =
+    segmentToAgglomerateChunkCache.getOrLoad(
+      (editableMappingId, chunkId, version),
+      _ =>
+        for {
+          chunkBox: Box[Seq[(Long, Long)]] <- getSegmentToAgglomerateChunk(editableMappingId, chunkId, Some(version)).futureBox
+          segmentToAgglomerate <- chunkBox match {
+            case Full(chunk) => Fox.successful(chunk)
+            case Empty       => Fox.successful(Seq.empty[(Long, Long)])
+            case f: Failure  => f.toFox
+          }
+        } yield segmentToAgglomerate
+    )
 
   private def getSegmentToAgglomerateChunk(editableMappingId: String,
                                            agglomerateId: Long,
@@ -344,10 +346,10 @@ class EditableMappingService @Inject()(
                                                                            editableMappingVersion)
       segmentIdsInEditableMapping: Set[Long] = editableMappingForSegmentIds.keySet
       segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
-      baseMappingSubset <- getBaseSegmentToAgglomeate(editableMapping.baseMappingName,
-                                                      segmentIdsInBaseMapping,
-                                                      remoteFallbackLayer,
-                                                      userToken)
+      baseMappingSubset <- getBaseSegmentToAgglomerate(editableMapping.baseMappingName,
+                                                       segmentIdsInBaseMapping,
+                                                       remoteFallbackLayer,
+                                                       userToken)
     } yield editableMappingForSegmentIds ++ baseMappingSubset
 
   def getAgglomerateSkeletonWithFallback(editableMappingId: String,
@@ -405,10 +407,10 @@ class EditableMappingService @Inject()(
     skeleton.toByteArray
   }
 
-  private def getBaseSegmentToAgglomeate(mappingName: String,
-                                         segmentIds: Set[Long],
-                                         remoteFallbackLayer: RemoteFallbackLayer,
-                                         userToken: Option[String]): Fox[Map[Long, Long]] = {
+  def getBaseSegmentToAgglomerate(mappingName: String,
+                                  segmentIds: Set[Long],
+                                  remoteFallbackLayer: RemoteFallbackLayer,
+                                  userToken: Option[String]): Fox[Map[Long, Long]] = {
     val segmentIdsOrdered = segmentIds.toList
     for {
       agglomerateIdsOrdered <- remoteDatastoreClient.getAgglomerateIdsForSegmentIds(remoteFallbackLayer,

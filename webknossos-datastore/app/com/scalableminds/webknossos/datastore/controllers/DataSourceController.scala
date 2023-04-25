@@ -478,12 +478,13 @@ Expects:
                                         urlOrHeaderToken(token, request)) {
         val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount) =
           binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
-        logger.info(
-          s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard handles and $closedAgglomerateFileHandleCount agglomerate file handles.")
         val reloadedDataSource = dataSourceService.dataSourceFromFolder(
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
           organizationName)
         for {
+          clearedVaultCacheEntries <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
+          _ = logger.info(
+            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard handles, $closedAgglomerateFileHandleCount agglomerate file handles and removed $clearedVaultCacheEntries vault cache entries.")
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }

@@ -5,11 +5,11 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetPath}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 import java.io.IOException
 import java.nio.ByteOrder
-
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
@@ -223,7 +223,8 @@ class PrecomputedArray(relativePath: DatasetPath,
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
       indexRaw <- vaultPath.readBytes(Some(minishardIndexRange))
-    } yield parseMinishardIndex(indexRaw)
+      minishardIndex <- tryo(parseMinishardIndex(indexRaw))
+    } yield minishardIndex
   }
 
   private def getChunkRange(chunkId: Long,
@@ -235,16 +236,15 @@ class PrecomputedArray(relativePath: DatasetPath,
     } yield Range.Long(chunkStart, chunkEnd, 1)
 
   override def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Future[(VaultPath, NumericRange[Long])] = {
+      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = getMinishardInfo(chunkIdentifier)
     val shardPath = getPathForShard(minishardInfo._1)
     for {
-      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt)
-        .toFutureOrThrowException("Could not get minishard index")
-      chunkRange: NumericRange.Exclusive[Long] <- Fox
-        .option2Fox(getChunkRange(chunkIdentifier, minishardIndex))
-        .toFutureOrThrowException("Chunk range not found in minishard index")
+      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex
+        .mkString(",")}"
+      chunkRange: NumericRange.Exclusive[Long] <- Fox.option2Fox(getChunkRange(chunkIdentifier, minishardIndex)) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
+        .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
     } yield (shardPath, chunkRange)
   }
 

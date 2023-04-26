@@ -1,13 +1,16 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray, DataType => MADataType}
 
 import java.io.{ByteArrayInputStream, IOException}
 import javax.imageio.stream.MemoryCacheImageInputStream
 import scala.collection.immutable.NumericRange
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Using
 
 object ChunkReader {
@@ -29,18 +32,22 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
   lazy val chunkSize: Int = header.chunkSize.toList.product
 
   @throws[IOException]
-  def read(path: String, chunkShape: Array[Int], range: Option[NumericRange[Long]]): Future[MultiArray] = {
-    val chunkBytesAndShape = readChunkBytesAndShape(path, range)
-    chunkTyper.wrapAndType(chunkBytesAndShape.map(_._1), chunkBytesAndShape.flatMap(_._2).getOrElse(chunkShape))
-  }
+  def read(path: String, chunkShape: Array[Int], range: Option[NumericRange[Long]])(
+      implicit ec: ExecutionContext): Fox[MultiArray] =
+    for {
+      chunkBytesAndShape <- readChunkBytesAndShape(path, range) // TODO handle fallback empty case
+      asTypedMultiArray <- chunkTyper.wrapAndType(chunkBytesAndShape.map(_._1),
+                                                  chunkBytesAndShape.flatMap(_._2).getOrElse(chunkShape))
+    } yield asTypedMultiArray
 
   // Returns bytes (optional, None may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
-  protected def readChunkBytesAndShape(path: String,
-                                       range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] =
-    (vaultPath / path).readBytes(range).map { bytes =>
-      (header.compressorImpl.decompress(bytes), None)
-    }
+  protected def readChunkBytesAndShape(path: String, range: Option[NumericRange[Long]])(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] =
+    for {
+      bytes <- (vaultPath / path).readBytes(range).toFox
+      decompressed <- tryo(header.compressorImpl.decompress(bytes))
+    } yield (decompressed, None)
 }
 
 abstract class ChunkTyper {

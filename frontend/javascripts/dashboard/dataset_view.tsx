@@ -495,9 +495,7 @@ function renderPlaceholder(
           title="Open a Demo Dataset"
           description={
             <>
-              <p>
-                Check out gallery of public, community datasets to experience WEBKNOSSOS in action.
-              </p>
+              <p>Check out a published community dataset to experience WEBKNOSSOS in action.</p>
               <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
                 <Button style={{ marginTop: 40 }}>Open a Community Dataset</Button>
               </a>
@@ -510,10 +508,7 @@ function renderPlaceholder(
 
   const uploadPlaceholderCard = (
     <Col span={9}>
-      <Card
-        bordered={false}
-        cover={<i className="drawing drawing-empty-list-dataset-upload" />}
-      >
+      <Card bordered={false} cover={<i className="drawing drawing-empty-list-dataset-upload" />}>
         <Meta
           title="Upload & Import Dataset"
           description={
@@ -528,7 +523,9 @@ function renderPlaceholder(
               </a>{" "}
               and is also able to convert them when necessary.
               <Link to="/datasets/upload">
-                <Button type="primary" style={{ marginTop: 40 }}>Open Dataset Upload & Import</Button>
+                <Button type="primary" style={{ marginTop: 40 }}>
+                  Open Dataset Upload & Import
+                </Button>
               </Link>
               ,
             </>

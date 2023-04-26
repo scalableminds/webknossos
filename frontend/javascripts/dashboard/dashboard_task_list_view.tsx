@@ -392,32 +392,46 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderPlaceholder() {
     return this.state.isLoading ? null : (
-      <>
-        <p>
-          You have no assigned tasks. Request a new task by clicking on the{" "}
-          <strong>Get a New Task</strong> button above.
-        </p>
-        {this.props.activeUser.isAdmin && (
-          <>
-            <p>
-              Tasks are a powerful way to distribute annotation jobs among groups of users.{" "}
-              <Link to="/tasks">Create new tasks from the admin menu</Link>.
-            </p>
-            <p>
-              To learn more about the task system in WEBKNOSSOS,{" "}
-              <a
-                href="https://docs.webknossos.org/webknossos/tasks.html"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                check out the documentation
-              </a>
-              .
-            </p>
-          </>
-        )}
-        <i className="drawing drawing-empty-list-tasks" style={{ translate: "25%" }} />
-      </>
+      <Row gutter={32} justify="center">
+        <Col span="7">
+          <Card
+            bordered={false}
+            cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "25%" }} />}
+          >
+            <Card.Meta
+              title="Request a New Task"
+              description={
+                <>
+                  <p style={{ marginTop: 20 }}>
+                    You have no tasks assigned to you. Request a new task by clicking on the{" "}
+                    <strong>Get a New Task</strong> button above.
+                  </p>
+                  {this.props.activeUser.isAdmin && (
+                    <>
+                      <p style={{ marginBottom: 30 }}>
+                        Tasks are a powerful way to distribute annotation jobs among groups of users
+                        as part of the WEBKNOSSOS project management.{" "}
+                      </p>
+                      <a
+                        href="https://docs.webknossos.org/webknossos/tasks.html"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        <Button>Learn more</Button>
+                      </a>
+                      <Link to="/tasks">
+                        <Button type="primary" style={{ marginLeft: 20 }}>
+                          Create new Tasks
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </>
+              }
+            />
+          </Card>
+        </Col>
+      </Row>
     );
   }
 

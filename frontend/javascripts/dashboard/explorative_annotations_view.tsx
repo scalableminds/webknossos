@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tooltip, Tag } from "antd";
+import { Spin, Input, Table, Button, Modal, Tooltip, Tag, Row, Col, Card } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -441,17 +441,25 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   getEmptyListPlaceholder = () => {
     return (
-      <>
-        <div style={{marginBottom: 50, padding: 30}}>
-          <p>Create annotations by opening a dataset from the datasets page.</p>
-          <Link to="/dashboard/datasets">
-            <Button type="primary">Open Datasets Page</Button>
-          </Link>
-        </div>
-        <div>
-          <i className="drawing drawing-empty-list-annotations" />;
-        </div>
-      </>
+      <Row gutter={32} justify="center" style={{ padding: 50 }}>
+        <Col span="6">
+          <Card bordered={false} cover={<i className="drawing drawing-empty-list-annotations" />}>
+            <Card.Meta
+              title="Create an Annotation"
+              description={
+                <>
+                  <p>Create your first annotation by opening a dataset from the datasets page.</p>
+                  <Link to="/dashboard/datasets">
+                    <Button type="primary" style={{ marginTop: 30 }}>
+                      Open Datasets Page
+                    </Button>
+                  </Link>
+                </>
+              }
+            />
+          </Card>
+        </Col>
+      </Row>
     );
   };
 
@@ -567,6 +575,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       },
     ];
 
+    if (filteredAndSortedTracings.length === 0) {
+      return this.getEmptyListPlaceholder();
+    }
+
     return (
       <Table
         dataSource={filteredAndSortedTracings}
@@ -587,9 +599,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           // https://github.com/ant-design/ant-design/issues/24022#issuecomment-691842572
           this.currentPageData = currentPageData;
           return null;
-        }}
-        locale={{
-          emptyText: this.getEmptyListPlaceholder(),
         }}
       >
         <Column

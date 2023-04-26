@@ -26,6 +26,8 @@ import Constants from "oxalis/constants";
 import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
 
 const { Panel } = Collapse;
 
@@ -164,6 +166,17 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             }
             value={this.props.userConfiguration.displayScalebars}
             onChange={this.onChangeUser.displayScalebars}
+          />
+          <PricingEnforcedSwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.renderWatermark}>
+                {settingsLabels.renderWatermark}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.renderWatermark}
+            onChange={this.onChangeUser.renderWatermark}
+            requiredPricingPlan={PricingPlanEnum.Team}
+            defaultValue={true}
           />
         </Panel>
       );

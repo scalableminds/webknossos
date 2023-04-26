@@ -13,7 +13,7 @@ import java.nio.ByteOrder
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]

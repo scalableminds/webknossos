@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed rendering issues on some affected systems that led to "black holes". [#7018](https://github.com/scalableminds/webknossos/pull/7018)
+- Fixed importing Neuroglancer Precomputed datasets that have a voxel offset in their header. [#7019](https://github.com/scalableminds/webknossos/pull/7019)
 
 ### Removed
 

@@ -202,7 +202,10 @@ export const getColorForCoords: ShaderModule = {
         offsetInBucket = mod(coords, bucketWidth);
         vec3 offsetInBucketUVW = transDim(offsetInBucket);
         if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
-            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.) {
+            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
+            || isNan(offsetInBucketUVW.x) || isNan(offsetInBucketUVW.y)
+            || isNan(offsetInBucketUVW.z)
+          ) {
           beSafe = true;
         }
       }

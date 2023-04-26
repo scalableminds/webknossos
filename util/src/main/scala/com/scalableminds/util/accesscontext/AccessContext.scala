@@ -25,7 +25,7 @@ case object UnAuthorizedAccessContext extends DBAccessContext
 case object GlobalAccessContext extends DBAccessContext {
   override val globalAccess = true
 
-  override def toStringAnonymous: String = "global"
+  override def toStringAnonymous: String = "Global"
 }
 
 object DBAccessContext {

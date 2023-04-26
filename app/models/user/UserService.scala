@@ -184,6 +184,7 @@ class UserService @Inject()(conf: WkConf,
              lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
+      logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
       Mailer ! Send(defaultMails.activatedMail(user.name, email))
     }
     for {

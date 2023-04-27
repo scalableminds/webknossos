@@ -316,7 +316,7 @@ workflows:
   version: 2
   circleci_build:
     jobs:
-      - wkorg_nightly
+      - wkorg_nightly:
           context:
             - DockerHub
           filters:

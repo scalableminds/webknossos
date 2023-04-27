@@ -181,7 +181,6 @@ CREATE TABLE webknossos.dataStores(
   key VARCHAR(1024) NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
   onlyAllowedOrganization CHAR(24),
   reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT false

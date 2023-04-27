@@ -682,7 +682,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     await updateDatasetTeams(this.props.datasetId, teamIds);
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
-    if (dataset != null && !dataset.dataStore.isConnector && this.didDatasourceChange(dataSource)) {
+    if (dataset != null && this.didDatasourceChange(dataSource)) {
       await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
@@ -868,7 +868,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                         key="SimpleAdvancedDataForm"
                         datasetId={this.props.datasetId}
                         allowRenamingDataset={false}
-                        isReadOnlyDataset={this.state.dataset?.dataStore.isConnector ?? false}
+                        isReadOnlyDataset={false}
                         form={form}
                         activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                         onChange={(activeEditMode) => {

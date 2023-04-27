@@ -24,8 +24,8 @@ const fetchCategorizedDatastores = async (): Promise<{
 }> => {
   const fetchedDatastores = await getDatastores();
   return {
-    own: fetchedDatastores.filter((ds) => !ds.isConnector),
-    wkConnect: fetchedDatastores.filter((ds) => ds.isConnector),
+    own: fetchedDatastores,
+    wkConnect: fetchedDatastores,
   };
 };
 

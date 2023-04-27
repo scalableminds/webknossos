@@ -79,7 +79,6 @@ export type APIDataStore = {
   readonly name: string;
   readonly url: string;
   readonly isScratch: boolean;
-  readonly isConnector: boolean;
   readonly allowsUpload: boolean;
 };
 export type APITracingStore = {

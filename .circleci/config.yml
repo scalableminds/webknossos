@@ -340,7 +340,7 @@ workflows:
               only:
                 - master
   circleci_wkorg_nightly:
-    job:
+    jobs:
       - wkorg_nightly
     triggers:
       - schedule:

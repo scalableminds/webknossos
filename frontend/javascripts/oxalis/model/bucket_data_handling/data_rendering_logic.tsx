@@ -200,6 +200,7 @@ export function calculateTextureSizeAndCountForLayer(
 function buildTextureInformationMap<
   Layer extends {
     elementClass: ElementClass;
+    category: "color" | "segmentation";
   },
 >(
   layers: Array<Layer>,
@@ -238,6 +239,7 @@ function getSmallestCommonBucketCapacity<
 function getRenderSupportedLayerCount<
   Layer extends {
     elementClass: ElementClass;
+    category: "color" | "segmentation";
   },
 >(
   specs: GpuSpecs,
@@ -262,8 +264,15 @@ function getRenderSupportedLayerCount<
     (specs.maxTextureCount - textureCountForSegmentation - lookupTextureCount) /
       maximumTextureCountForLayer,
   );
+
+  // Without any GPU restrictions, WK would be able to render all color layers
+  // plus one segmentation layer. Use that as the upper layer count limit to avoid
+  // compiling too complex shaders.
+  const maximumLayerCount =
+    Array.from(textureInformationPerLayer.keys()).filter((l) => l.category === "color").length +
+    (hasSegmentation ? 1 : 0);
   return {
-    maximumLayerCountToRender,
+    maximumLayerCountToRender: Math.min(maximumLayerCountToRender, maximumLayerCount),
     maximumTextureCountForLayer,
   };
 }
@@ -271,6 +280,7 @@ function getRenderSupportedLayerCount<
 export function computeDataTexturesSetup<
   Layer extends {
     elementClass: ElementClass;
+    category: "color" | "segmentation";
   },
 >(
   specs: GpuSpecs,

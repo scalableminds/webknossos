@@ -22,7 +22,7 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 * Easy Sharing. Every dataset and annotation can be securely shared as a web link with others
 * Fine-grained access permission and and user roles for secure collaboration
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes](./data_formats.md), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect), and image stacks (converted on upload)
+* [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes](./data_formats.md), Neuroglancer Precomputed, N5, and image stacks (converted on upload)
 * [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [3D Mesh Visualization](./mesh_visualization.md)
 * [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)

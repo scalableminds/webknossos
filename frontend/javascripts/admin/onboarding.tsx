@@ -417,7 +417,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 
   async fetchDatastores() {
-    const datastores = (await getDatastores());
+    const datastores = await getDatastores();
     this.setState({
       datastores,
     });

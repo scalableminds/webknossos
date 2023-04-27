@@ -146,7 +146,8 @@ class EditableMappingService @Inject()(
       _ <- duplicateSegmentToAgglomerate(editableMappingId, newId)
       _ <- duplicateAgglomerateToGraph(editableMappingId, newId)
       updateActionsWithVersions <- getUpdateActionsWithVersions(editableMappingId, editableMappingInfoAndVersion._2, 0L)
-      _ = logger.info(s"duplicating ${updateActionsWithVersions.length} update action versions")
+      _ = logger.info(
+        s"duplicating ${updateActionsWithVersions.length} update action versions for mapping $editableMappingId")
       _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
         tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
       }
@@ -211,6 +212,7 @@ class EditableMappingService @Inject()(
       materializedInfo <- materializedInfoCache.getOrLoad(
         (editableMappingId, desiredVersion),
         _ => applyPendingUpdates(editableMappingId, desiredVersion, remoteFallbackLayer, userToken))
+      _ = logger.info(s"loading materialized v$desiredVersion for $editableMappingId")
     } yield (materializedInfo, desiredVersion)
 
   def update(editableMappingId: String,
@@ -640,7 +642,7 @@ class EditableMappingService @Inject()(
                         remoteFallbackLayer: RemoteFallbackLayer,
                         userToken: Option[String]): Fox[Unit] =
     for {
-      // TODO perf optimization: batch fetching of update actions
+      // TODO: perf optimization: batch fetching of update actions
       targetNewestVersion <- getClosestMaterializableVersionOrZero(targetEditableMappingId, None)
       closestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId,
                                                                 None,
@@ -651,7 +653,7 @@ class EditableMappingService @Inject()(
       updateActionsToApply = updateActionsWithVersions.map(_._2).reverse.flatten
       _ = logger.info(
         s"merging ${updateActionsToApply.length} updates from $sourceEditableMappingId into $targetEditableMappingId")
-      _ = logger.info(s"src version: $sourceNewestVersion, trgt version: $targetNewestVersion")
+      _ = logger.info(s"src version: $sourceNewestVersion, target version: $targetNewestVersion")
       updater = new EditableMappingUpdater(
         targetEditableMappingId,
         closestMaterializedWithVersion._1.baseMappingName,
@@ -664,7 +666,7 @@ class EditableMappingService @Inject()(
         tracingDataStore,
         relyOnAgglomerateIds = false
       )
-      updatedInfo <- updater.applyUpdatesAndSave(closestMaterializedWithVersion._1, updateActionsToApply)
+      _ <- updater.applyUpdatesAndSave(closestMaterializedWithVersion._1, updateActionsToApply)
       _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
         tracingDataStore.editableMappingUpdates.put(targetEditableMappingId,
                                                     updateActionsWithVersion._1 + targetNewestVersion,

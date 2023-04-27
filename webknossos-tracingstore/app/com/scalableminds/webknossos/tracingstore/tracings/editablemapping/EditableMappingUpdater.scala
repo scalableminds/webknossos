@@ -24,17 +24,18 @@ import scala.jdk.CollectionConverters.asScalaSetConverter
 // uses mutable maps for the updated keys before flushing them to the db after applying all updates of one group
 // this results in only one version increment in the db per update group
 
-class EditableMappingUpdater(editableMappingId: String,
-                             baseMappingName: String,
-                             oldVersion: Long,
-                             newVersion: Long,
-                             remoteFallbackLayer: RemoteFallbackLayer,
-                             userToken: Option[String],
-                             remoteDatastoreClient: TSRemoteDatastoreClient,
-                             editableMappingService: EditableMappingService,
-                             tracingDataStore: TracingDataStore,
-                             relyOnAgglomerateIds: Boolean)
-    extends KeyValueStoreImplicits
+class EditableMappingUpdater(
+    editableMappingId: String,
+    baseMappingName: String,
+    oldVersion: Long,
+    newVersion: Long,
+    remoteFallbackLayer: RemoteFallbackLayer,
+    userToken: Option[String],
+    remoteDatastoreClient: TSRemoteDatastoreClient,
+    editableMappingService: EditableMappingService,
+    tracingDataStore: TracingDataStore,
+    relyOnAgglomerateIds: Boolean // False during merge. Then, look up all agglomerate ids at positions
+) extends KeyValueStoreImplicits
     with FoxImplicits
     with LazyLogging {
 
@@ -227,8 +228,10 @@ class EditableMappingUpdater(editableMappingId: String,
           (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
       }
     if (edgesAndAffinitiesMinusOne.length == agglomerateGraph.edges.length) {
-      logger.warn(
-        s"Split action for editable mapping $editableMappingId: Edge to remove ($segmentId1 at ${update.segmentPosition1} in mag ${update.mag} to $segmentId2 at ${update.segmentPosition2} in mag ${update.mag} in agglomerate $agglomerateId) already absent. This split becomes a no-op.")
+      if (relyOnAgglomerateIds) {
+        logger.warn(
+          s"Split action for editable mapping $editableMappingId: Edge to remove ($segmentId1 at ${update.segmentPosition1} in mag ${update.mag} to $segmentId2 at ${update.segmentPosition2} in mag ${update.mag} in agglomerate $agglomerateId) already absent. This split becomes a no-op.")
+      }
       (agglomerateGraph, AgglomerateGraph(Seq(), Seq(), Seq(), Seq()))
     } else {
       val graph1Nodes: Set[Long] =
@@ -361,7 +364,7 @@ class EditableMappingUpdater(editableMappingId: String,
                                           position: Vec3Int,
                                           mag: Vec3Int,
                                           agglomerateId: Long): Unit =
-    if (!isValid) {
+    if (!isValid && relyOnAgglomerateIds) {
       logger.warn(
         s"Merge action for editable mapping $editableMappingId: segment $segmentId as looked up at $position in mag $mag is not present in agglomerate $agglomerateId. This merge becomes a no-op"
       )

@@ -291,16 +291,39 @@ jobs:
       - store_artifacts:
           path: frontend/javascripts/test/snapshots/type-check
 
+  wkorg_nightly:
+    docker:
+      - image: scalableminds/puppeteer:master
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            yarn install --frozen-lockfile
+      - run:
+          name: Run screenshot-tests
+          command: |
+            # CircleCI cancels the job after 60 minutes. To ensure that screenshots are still
+            # uploaded as artifacts, we define a timeout of 50 minutes for the screenshot tests.
+            URL=https://master.webknossos.xyz/ \
+            timeout 3000 \
+            yarn test-wkorg-screenshot
+
+      - store_artifacts:
+          path: frontend/javascripts/test/screenshots
+
 workflows:
   version: 2
   circleci_build:
     jobs:
-      - build_test_deploy:
-          context:
-            - DockerHub
-          filters:
-            tags:
-              only: /.*/
+      - wkorg_nightly
+      # - build_test_deploy:
+      #     context:
+      #       - DockerHub
+      #     filters:
+      #       tags:
+      #         only: /.*/
   circleci_nightly:
     jobs:
       - nightly
@@ -308,6 +331,17 @@ workflows:
       - schedule:
           # 02:15 AM UTC
           cron: "15 2 * * *"
+          filters:
+            branches:
+              only:
+                - master
+  circleci_wkorg_nightly:
+    job:
+      - wkorg_nightly
+    triggers:
+      - schedule:
+          # 03:15 AM UTC
+          cron: "15 3 * * *"
           filters:
             branches:
               only:

@@ -820,15 +820,16 @@ function _getLoadChunksTasks(
                   },
                 );
                 const loader = getDracoLoader();
-
+                const jumpTableLength = chunks.length + 1;
                 const jumpTableDataView = new DataView(
                   dracoDataChunksWithJumpTable,
                   0,
-                  4 * chunks.length,
+                  8 * jumpTableLength,
                 );
-                const jumpPositionsForChunks = _.range(0, chunks.length).map((idx) =>
-                  Number(jumpTableDataView.getBigUint64(4 * idx, true)),
+                const jumpPositionsForChunks = _.range(0, jumpTableLength).map((idx) =>
+                  Number(jumpTableDataView.getBigUint64(8 * idx, true)),
                 );
+                console.log("jumpPositionsForChunks", jumpPositionsForChunks);
 
                 for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
                   const chunk = chunks[chunkIdx];
@@ -836,7 +837,7 @@ function _getLoadChunksTasks(
                   // also: move this code into the mesh_v3 module
                   const dracoData = dracoDataChunksWithJumpTable.slice(
                     jumpPositionsForChunks[chunkIdx],
-                    jumpPositionsForChunks[chunkIdx + 1] ?? dracoDataChunksWithJumpTable.byteLength,
+                    jumpPositionsForChunks[chunkIdx + 1],
                   );
                   const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
                   // Compute vertex normals to achieve smooth shading

@@ -407,11 +407,29 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       dataSorted = data.sortBy(d => d._3)
       _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) // Ensure same encoding for all responses
       encoding = data.map(d => d._2).head
-      output = dataSorted
+      jumpTable = dataSorted
         .map(d => d._1.length)
-        .scanLeft((data.length + 1).toLong)((a, b) => a + b)
+        .scanLeft((8 * (data.length + 1)).toLong)((a, b) => a + b)
         .flatMap(l => longToBytes(l))
-        .toArray ++ dataSorted.flatMap(d => d._1)
+        .toArray
+      jumpTableDebug = dataSorted
+        .map(d => d._1.length)
+        .scanLeft((8 * (data.length)).toLong)((a, b) => a + b)
+        .toArray
+      output = jumpTable ++ dataSorted.flatMap(d => d._1)
+
+      _ = logger.warn(
+          s"requests length: ${meshChunkDataRequests.requests.length}\n"
+        )
+      _ = logger.warn(
+          s"dataSorted length: ${dataSorted.length}\n"
+        )
+      _ = logger.warn(
+          s"jumpTable: ${jumpTableDebug.mkString(" ")}\n"
+        )
+      _ = logger.warn(
+          s"jumpTable length: ${jumpTable.length}\n"
+        )
     } yield (output, encoding)
 
   private def positionLiteral(position: Vec3Int) =

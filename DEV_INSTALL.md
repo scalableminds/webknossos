@@ -1,6 +1,6 @@
 ## Development installation
 ### Docker
-This is only recommended for local testing. Docker 17+ and Docker Compose 2.+ are required.
+This is only recommended for local testing. Docker 19.03.0+ and Docker Compose 2.+ are required.
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git

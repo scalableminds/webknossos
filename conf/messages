@@ -111,7 +111,7 @@ dataVault.setup.failed=Failed to set up remote file system
 dataVault.getPath.failed=Failed to get remote path
 
 
-dataSource.notFound=Datasource not found on datastore server
+dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
@@ -182,8 +182,9 @@ annotation.edit.failed=Updating the annotation failed
 annotation.finish.failed=Finishing the annotation failed
 annotation.reset.success=Annotation was successfully reset
 annotation.revert.tasksOnly=Reverting an annotation is only implemented for tasks
-annotation.download.notAllowed=You cannot download this annotation
+annotation.download.notAllowed=You are not allowed to download this annotation
 annotation.download.fetch.notSkeleton=Cannot fetch skeleton annotation: not a skeleton layer
+annotation.download.failed=Failed to download annotation
 annotation.download.multipleSkeletons=Cannot download annotation with multiple skeleton layers
 annotation.download.noLayers=Cannot download annotation that has no layers
 annotation.download.volumeNameForMultiple=Cannot download multiple volume layers if volume name is passed

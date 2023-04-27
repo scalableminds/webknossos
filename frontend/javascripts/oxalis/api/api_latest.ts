@@ -519,7 +519,7 @@ class TracingApi {
   }
 
   /**
-   * Moves one skeleton group to another one (or to the root node when providing null as the second parameter).
+   * Moves one segment group to another one (or to the root node when providing null as the second parameter).
    *
    * @example
    * api.tracing.moveSegmentGroup(

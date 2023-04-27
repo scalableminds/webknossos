@@ -57,6 +57,7 @@ const serverVolumeTracing: ServerVolumeTracing = {
   },
   zoomLevel: 0,
   segments: [],
+  segmentGroups: [],
   editPosition: {
     x: 0,
     y: 0,

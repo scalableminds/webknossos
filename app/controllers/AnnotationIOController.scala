@@ -104,7 +104,7 @@ Expects:
         val parsedFiles =
           annotationUploadService.extractFromFiles(attachedFiles, useZipName = true, overwritingDataSetName)
         val parsedFilesWrapped =
-          annotationUploadService.wrapOrPrefixTrees(parsedFiles.parseResults, shouldCreateGroupForEachFile)
+          annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)
         val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
 
         if (parseResultsFiltered.isEmpty) {
@@ -411,7 +411,7 @@ Expects:
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
-        user <- userService.findOneCached(annotation._user) ?~> "annotation.download.findUser.failed"
+        user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
           fetchedSkeletonLayers ::: fetchedVolumeLayers,

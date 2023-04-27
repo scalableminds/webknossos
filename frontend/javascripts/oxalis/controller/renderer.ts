@@ -22,8 +22,10 @@ function getRenderer(): THREE.WebGLRenderer {
           // were interpolated sometimes. Therefore, antialiasing is disabled for now.
           antialias: false,
         })
-      : {}
+      : { debug: {} }
   ) as THREE.WebGLRenderer;
+
+  renderer.debug.checkShaderErrors = false;
 
   return renderer;
 }

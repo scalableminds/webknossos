@@ -380,6 +380,9 @@ class PlaneMaterialFactory {
         fragmentShader,
       }),
     );
+    this.material.onBeforeCompile = function () {
+      console.log("onBeforeCompile");
+    };
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
     this.material.extensions = {
       // Necessary for anti-aliasing via fwidth in shader

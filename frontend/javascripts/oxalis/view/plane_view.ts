@@ -59,7 +59,7 @@ class PlaneView {
       ISOSURFACE_HOVER_THROTTLING_DELAY,
     );
     this.running = false;
-    const { scene } = getSceneController();
+    const { renderer, scene } = getSceneController();
     // Initialize main THREE.js components
     const cameras: any = {};
 
@@ -85,6 +85,7 @@ class PlaneView {
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
+      renderer.compile(scene, this.cameras[plane]);
     }
 
     this.needsRerender = true;
@@ -118,8 +119,9 @@ class PlaneView {
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
+    const delay = 0;
     if (forceRender || this.needsRerender || window.needsRerender) {
-      window.needsRerender = false;
+      if (performance.now() > delay) window.needsRerender = false;
       const { renderer, scene } = SceneController;
       this.trigger("render");
       const storeState = Store.getState();
@@ -138,11 +140,15 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          renderer.render(scene, this.cameras[plane]);
+          console.log(performance.now(), "Called render");
+          if (performance.now() > delay) {
+            renderer.render(scene, this.cameras[plane]);
+          }
+          console.log(performance.now(), "Finished render");
         }
       }
 
-      this.needsRerender = false;
+      if (performance.now() > delay) this.needsRerender = false;
     }
   }
 

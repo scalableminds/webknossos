@@ -59,6 +59,7 @@ class Plane {
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
+    console.log(performance.now(), "Got shader material");
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     // create crosshair
     const crosshairGeometries = [];

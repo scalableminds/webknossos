@@ -145,6 +145,7 @@ export default class TextureBucketManager {
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
   setActiveBuckets(buckets: Array<DataBucket>): void {
+    console.log(performance.now(), "Called setActiveBuckets");
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
 

@@ -250,7 +250,7 @@ export default class LayerRenderingManager {
             this.textureBucketManager.maximumCapacity,
           );
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-          this.textureBucketManager.setActiveBuckets(buckets);
+          if (performance.now() > 0) this.textureBucketManager.setActiveBuckets(buckets);
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())

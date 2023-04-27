@@ -101,6 +101,9 @@ export const baseDatasetViewConfiguration = {
     minimum: 0,
     maximum: 100,
   },
+  blendMode: {
+    enum: Object.values(BLEND_MODES),
+  },
 };
 export const datasetViewConfiguration = {
   ...baseDatasetViewConfiguration,

@@ -1,5 +1,7 @@
-## Development installation
-### Docker
+# Development installation
+
+## Docker
+
 This is only recommended for local testing. Docker 19.03.0+ and Docker Compose 2.+ are required.
 
 ```bash
@@ -16,7 +18,7 @@ See the wiki for [instructions on updating](https://github.com/scalableminds/web
 
 For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/webknossos/installation.html).
 
-### Dependencies
+## Dependencies
 
 * [Oracle JDK 11 to 14](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 11 to 14](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
@@ -29,7 +31,8 @@ For non-localhost deployments, check out the [installation guide in the document
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 
-### MacOS
+## MacOS
+
 ```bash
 # WEBKNOSSOS needs to be run from x86_64 environment (only applicable for arm64-based Macs)
 arch -x86_64 /bin/zsh
@@ -62,14 +65,11 @@ psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Checkout the WEBKNOSSOS git repository
 git clone git@github.com:scalableminds/webknossos.git
-
-
 ```
 
 Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 environment (Rosetta 2). In case you accidentally started WEBKNOSSOS in an arm64 environment, it is advisable to delete several caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`. Since Postgres and Redis are isolated processes, they can be run either from arm64 or x86_64 environments.
 
-
-### Ubuntu 22.04 LTS
+## Ubuntu 22.04 LTS
 
 ```bash
 sudo apt install -y curl ca-certificates wget
@@ -92,51 +92,63 @@ git clone -b master --depth=1 https://github.com/scalableminds/webknossos.git
 ```
 
 If you already have a different Java version installed, set the default version to Java 11:
-- run `sudo update-alternatives --config java`
-- when prompted, select the desired version
+
+* run `sudo update-alternatives --config java`
+* when prompted, select the desired version
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
-### Manual Installation
+## Manual Installation
 
-##### Java
+### Java
+
 * Install Java JDK 14 (from Oracle or OpenJDK)
 * make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains the path to JDK
 
-##### sbt
-See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
+### sbt
 
-##### PostgreSQL
-* Install PostgreSQL from https://www.postgresql.org/download/
+* See: [http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html)
+
+### PostgreSQL
+
+* Install PostgreSQL from [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
 * PostgreSQL version **10+ is required**
 
-##### Redis
-* Install Redis from https://redis.io/download
+### Redis
 
-##### node.js & yarn
-* Install node from http://nodejs.org/download/
+* Install Redis from [https://redis.io/download](https://redis.io/download)
+
+### node.js & yarn
+
+* Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
 * node version **16+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
-### Run locally
+## Run locally
 
 First, install all frontend dependencies via
+
 ```bash
 yarn install
 ```
+
 Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing WEBKNOSSOS, you can safely ignore this error.
 
 To start WEBKNOSSOS, use
+
 ```bash
 yarn start
 ```
+
 This will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 Make sure that the PostgreSQL and Redis services are running before you start the application.
 
 ## Upgrades
+
 For upgrades, please check the [changelog](CHANGELOG.released.md) & [migration guide](MIGRATIONS.released.md).
 
 ## Tests
+
 ```bash
 # Frontend linting
 yarn run lint

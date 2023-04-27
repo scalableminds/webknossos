@@ -79,7 +79,6 @@ export type APIDataStore = {
   readonly name: string;
   readonly url: string;
   readonly isScratch: boolean;
-  readonly isConnector: boolean;
   readonly allowsUpload: boolean;
 };
 export type APITracingStore = {
@@ -474,38 +473,6 @@ export type APIAnnotationWithTask = APIAnnotationBase & {
 };
 export type APITaskWithAnnotation = APITask & {
   readonly annotation: APIAnnotation;
-};
-type NeuroglancerLayer = {
-  // This is the source URL of the layer, should start with gs://, http:// or https://
-  source: string;
-  type: "image" | "segmentation";
-};
-type NeuroglancerDatasetConfig = Record<
-  string,
-  Record<
-    string,
-    {
-      layers: Record<string, NeuroglancerLayer>;
-      credentials?: Record<string, any>;
-    }
-  >
->;
-type BossDatasetConfig = Record<
-  string,
-  Record<
-    string,
-    {
-      domain: string;
-      collection: string;
-      experiment: string;
-      username: string;
-      password: string;
-    }
-  >
->;
-export type WkConnectDatasetConfig = {
-  neuroglancer?: NeuroglancerDatasetConfig;
-  boss?: BossDatasetConfig;
 };
 export type APITimeTracking = {
   time: string;

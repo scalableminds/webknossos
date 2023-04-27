@@ -52,7 +52,6 @@ import type {
   ExperienceDomainList,
   ServerTracing,
   TracingType,
-  WkConnectDatasetConfig,
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
@@ -1531,19 +1530,6 @@ export function cancelDatasetUpload(
   );
 }
 
-export function addWkConnectDataset(
-  datastoreHost: string,
-  datasetConfig: WkConnectDatasetConfig,
-): Promise<void> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets?token=${token}`, {
-      data: datasetConfig,
-      host: datastoreHost,
-      method: "POST",
-    }),
-  );
-}
-
 type ExplorationResult = {
   dataSource: DatasourceConfiguration | undefined;
   report: string;
@@ -1841,7 +1827,7 @@ export async function getPublication(id: string): Promise<APIPublication> {
 }
 
 // #### Datastores
-export async function getDatastores(): Promise<Array<APIDataStore>> {
+export async function getDatastores(): Promise<APIDataStore[]> {
   const datastores = await Request.receiveJSON("/api/datastores");
   assertResponseLimit(datastores);
   return datastores;

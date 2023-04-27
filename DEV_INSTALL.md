@@ -27,6 +27,8 @@ For non-localhost deployments, check out the [installation guide in the document
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
+* For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
+
 ### MacOS
 ```bash
 # WEBKNOSSOS needs to be run from x86_64 environment (only applicable for arm64-based Macs)
@@ -67,7 +69,7 @@ git clone git@github.com:scalableminds/webknossos.git
 Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 environment (Rosetta 2). In case you accidentally started WEBKNOSSOS in an arm64 environment, it is advisable to delete several caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`. Since Postgres and Redis are isolated processes, they can be run either from arm64 or x86_64 environments.
 
 
-### Ubuntu 20.04 LTS
+### Ubuntu 22.04 LTS
 
 ```bash
 sudo apt install -y curl ca-certificates wget
@@ -75,12 +77,13 @@ sudo apt install -y curl ca-certificates wget
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
 echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
-curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo apt-key add
+curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo -H gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/scalasbt-release.gpg --import
+sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-14-jdk yarn redis-server build-essential libblosc1
+sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-11-jdk yarn redis-server build-essential libblosc1
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -88,7 +91,7 @@ sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres'
 git clone -b master --depth=1 https://github.com/scalableminds/webknossos.git
 ```
 
-If you already have a different Java version installed, set the default version to Java 14:
+If you already have a different Java version installed, set the default version to Java 11:
 - run `sudo update-alternatives --config java`
 - when prompted, select the desired version
 

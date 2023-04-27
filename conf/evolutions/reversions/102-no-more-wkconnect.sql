@@ -4,7 +4,7 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 DROP VIEW webknossos.dataStores_;
 
-ALTER TABLE webknossos.dataStores_ ADD COLUMN isConnector BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE webknossos.dataStores ADD COLUMN isConnector BOOLEAN NOT NULL DEFAULT false;
 
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 

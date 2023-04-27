@@ -216,7 +216,7 @@ class PlaneMaterialFactory {
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
-      blendMode: { value: 1 },
+      blendMode: { value: 1.0 },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -573,9 +573,9 @@ class PlaneMaterialFactory {
         (storeState) => storeState.datasetConfiguration.blendMode,
         (blendMode) => {
           if (blendMode === BLEND_MODES.Additive) {
-            this.uniforms.blendMode.value = 1;
+            this.uniforms.blendMode.value = 1.0;
           } else {
-            this.uniforms.blendMode.value = 0;
+            this.uniforms.blendMode.value = 0.0;
           }
         },
         true,

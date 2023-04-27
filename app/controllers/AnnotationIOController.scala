@@ -341,7 +341,7 @@ Expects:
                                   request.identity,
                                   skeletonVersion,
                                   volumeVersion,
-                                  skipVolumeData.getOrElse(false))
+                                  skipVolumeData.getOrElse(false)) ?~> "annotation.download.failed"
         }
       } yield result
     }
@@ -406,12 +406,12 @@ Expects:
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
             tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData)
-        }
+        } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
-        }
-        user <- userService.findOneCached(annotation._user)
+        } ?~> "annotation.download.fetchSkeletonLayer.failed"
+        user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
           fetchedSkeletonLayers ::: fetchedVolumeLayers,
@@ -427,7 +427,7 @@ Expects:
         )
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
-        _ <- zipper.addFileFromEnumerator(name + ".nml", nmlStream)
+        _ <- zipper.addFileFromEnumerator(name + ".nml", nmlStream) ?~> "annotation.download.zipNml.failed"
         _ = fetchedVolumeLayers.zipWithIndex.map {
           case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>
@@ -444,9 +444,9 @@ Expects:
                                   name: String,
                                   organizationName: String): Fox[TemporaryFile] =
       if (annotation.tracingType == TracingType.skeleton)
-        skeletonToTemporaryFile(dataSet, annotation, organizationName)
+        skeletonToTemporaryFile(dataSet, annotation, organizationName) ?~> "annotation.download.skeletonToFile.failed"
       else
-        volumeOrHybridToTemporaryFile(dataSet, annotation, name, organizationName)
+        volumeOrHybridToTemporaryFile(dataSet, annotation, name, organizationName) ?~> "annotation.download.hybridToFile.failed"
 
     def exportExtensionForAnnotation(annotation: Annotation): String =
       if (annotation.tracingType == TracingType.skeleton)
@@ -462,7 +462,7 @@ Expects:
 
     for {
       annotation <- provider.provideAnnotation(typ, annotationId, issuingUser) ~> NOT_FOUND
-      restrictions <- provider.restrictionsFor(typ, annotationId)
+      restrictions <- provider.restrictionsFor(typ, annotationId) ?~> "annotation.restrictions.unavailable"
       name <- provider.nameFor(annotation) ?~> "annotation.name.impossible"
       fileExtension = exportExtensionForAnnotation(annotation)
       fileName = name + fileExtension
@@ -470,7 +470,7 @@ Expects:
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
-      temporaryFile <- annotationToTemporaryFile(dataSet, annotation, name, organization.name)
+      temporaryFile <- annotationToTemporaryFile(dataSet, annotation, name, organization.name) ?~> "annotation.writeTemporaryFile.failed"
     } yield {
       Ok.sendFile(temporaryFile, inline = false)
         .as(mimeType)

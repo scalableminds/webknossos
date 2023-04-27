@@ -96,7 +96,9 @@ class DSMeshController @Inject()(
                                                       dataLayerName,
                                                       ListMeshChunksRequest(request.body.meshFile, segmentId))
                           .toOption)
-                    chunkInfos = meshChunksForUnmappedSegments.flatten.reduce(_.merge(_))
+                    meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
+                    _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
+                    chunkInfos = meshChunksForUnmappedSegmentsFlat.reduce(_.merge(_))
                   } yield chunkInfos
               }
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST

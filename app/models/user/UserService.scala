@@ -47,7 +47,7 @@ class UserService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  private val userCache: AlfuFoxCache[(ObjectId, DBAccessContext), User] =
+  private val userCache: AlfuFoxCache[(ObjectId, String), User] =
     AlfuFoxCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
@@ -82,12 +82,7 @@ class UserService @Inject()(conf: WkConf,
     } yield ()
 
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
-    userCache.getOrLoad(
-      (userId, ctx),
-      userIdAndAccessContext => {
-        userDAO.findOne(userIdAndAccessContext._1)(userIdAndAccessContext._2)
-      }
-    )
+    userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
 
   def insert(organizationId: ObjectId,
              email: String,
@@ -210,7 +205,7 @@ class UserService @Inject()(conf: WkConf,
   }
 
   private def removeUserFromCache(userId: ObjectId): Unit =
-    userCache.remove(idAndAccessContext => idAndAccessContext._1 == userId)
+    userCache.remove(idAndAccessContextString => idAndAccessContextString._1 == userId)
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
@@ -303,9 +298,9 @@ class UserService @Inject()(conf: WkConf,
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
     } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> "team.admin.notAllowed"
 
-  def isTeamManagerInOrg(user: User,
-                         _organization: ObjectId,
-                         teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
+  private def isTeamManagerInOrg(user: User,
+                                 _organization: ObjectId,
+                                 teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     for {
       teamManagerMemberships <- Fox.fillOption(teamManagerMemberships)(teamManagerMembershipsFor(user._id))
     } yield teamManagerMemberships.nonEmpty && _organization == user._organization

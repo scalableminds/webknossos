@@ -409,27 +409,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       encoding = data.map(d => d._2).head
       jumpTable = dataSorted
         .map(d => d._1.length)
+        // The jump table contains n + 1 elements (that way, for each requested
+        // chunk i , jumpTable[i] and jumpTable[i + 1] define the byte range).
+        // The jumptable contains the offsets in bytes (encoded as Longs).
         .scanLeft((8 * (data.length + 1)).toLong)((a, b) => a + b)
         .flatMap(l => longToBytes(l))
         .toArray
-      jumpTableDebug = dataSorted
-        .map(d => d._1.length)
-        .scanLeft((8 * (data.length)).toLong)((a, b) => a + b)
-        .toArray
       output = jumpTable ++ dataSorted.flatMap(d => d._1)
-
-      _ = logger.warn(
-          s"requests length: ${meshChunkDataRequests.requests.length}\n"
-        )
-      _ = logger.warn(
-          s"dataSorted length: ${dataSorted.length}\n"
-        )
-      _ = logger.warn(
-          s"jumpTable: ${jumpTableDebug.mkString(" ")}\n"
-        )
-      _ = logger.warn(
-          s"jumpTable length: ${jumpTable.length}\n"
-        )
     } yield (output, encoding)
 
   private def positionLiteral(position: Vec3Int) =

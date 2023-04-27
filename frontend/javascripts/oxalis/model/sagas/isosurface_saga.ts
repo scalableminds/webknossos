@@ -821,15 +821,15 @@ function _getLoadChunksTasks(
                 );
                 const loader = getDracoLoader();
                 const jumpTableLength = chunks.length + 1;
+                const byteLengthPerJumpTableEntry = 8;
                 const jumpTableDataView = new DataView(
                   dracoDataChunksWithJumpTable,
                   0,
-                  8 * jumpTableLength,
+                  byteLengthPerJumpTableEntry * jumpTableLength,
                 );
                 const jumpPositionsForChunks = _.range(0, jumpTableLength).map((idx) =>
-                  Number(jumpTableDataView.getBigUint64(8 * idx, true)),
+                  Number(jumpTableDataView.getBigUint64(byteLengthPerJumpTableEntry * idx, true)),
                 );
-                console.log("jumpPositionsForChunks", jumpPositionsForChunks);
 
                 for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
                   const chunk = chunks[chunkIdx];

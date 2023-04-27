@@ -3,7 +3,12 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
+import type {
+  APIDataset,
+  APIMeshFile,
+  APIMessage,
+  APISegmentationLayer,
+} from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
@@ -624,15 +629,6 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
-  const { segmentMeshController } = yield* call(getSceneController);
-  const currentLODIndex = yield* call({
-    context: segmentMeshController.isosurfacesLODRootGroup,
-    fn: segmentMeshController.isosurfacesLODRootGroup.getCurrentLOD,
-  });
-
-  let availableChunksMap: ChunksMap = {};
-  let scale: Vector3 | null = null;
-  let loadingOrder: number[] = [];
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -649,72 +645,20 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  const version = meshFile.formatVersion;
+  let availableChunksMap: ChunksMap = {};
+  let scale: Vector3 | null = null;
+  let loadingOrder: number[] | null = null;
   try {
-    const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
-
-    const editableMapping = yield* select((state) =>
-      getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+    const chunkDescriptors = yield* call(
+      _getChunkLoadingDescriptors,
+      id,
+      dataset,
+      segmentationLayer,
+      meshFile,
     );
-    const tracing = yield* select((state) =>
-      getTracingForSegmentationLayer(state, segmentationLayer),
-    );
-    const mappingName =
-      // isosurfaceExtraInfo.mappingName contains the currently active mapping
-      // (can be the id of an editable mapping). However, we always need to
-      // use the mapping name of the on-disk mapping.
-      editableMapping != null ? editableMapping.baseMappingName : isosurfaceExtraInfo.mappingName;
-
-    if (version < 3) {
-      console.warn(
-        "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
-      );
-    }
-
-    // mappingName only exists for versions >= 3
-    if (meshFile.mappingName != null && meshFile.mappingName !== mappingName) {
-      throw Error(
-        `Trying to use a mesh file that was computed for mapping ${meshFile.mappingName} for a requested mapping of ${mappingName}.`,
-      );
-    }
-
-    if (version >= 3) {
-      const segmentInfo = yield* call(
-        meshV3.getMeshfileChunksForSegment,
-        dataset.dataStore.url,
-        dataset,
-        getBaseSegmentationName(segmentationLayer),
-        meshFileName,
-        id,
-        // The back-end should only receive a non-null mapping name,
-        // if it should perform extra (reverse) look ups to compute a mesh
-        // with a specific mapping from a mesh file that was computed
-        // without a mapping.
-        meshFile.mappingName == null ? mappingName : null,
-        editableMapping != null && tracing ? tracing.tracingId : null,
-      );
-      scale = [
-        segmentInfo.transform[0][0],
-        segmentInfo.transform[1][1],
-        segmentInfo.transform[2][2],
-      ];
-      segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
-        availableChunksMap[lodIndex] = chunks?.chunks;
-        loadingOrder.push(lodIndex);
-      });
-      // Load the chunks closest to the current LOD first.
-      loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
-    } else {
-      availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
-        meshV0.getMeshfileChunksForSegment,
-        dataset.dataStore.url,
-        dataset,
-        getBaseSegmentationName(segmentationLayer),
-        meshFileName,
-        id,
-      );
-      loadingOrder = [NO_LOD_MESH_INDEX];
-    }
+    availableChunksMap = chunkDescriptors.availableChunksMap;
+    scale = chunkDescriptors.scale;
+    loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
     console.warn("Mesh chunk couldn't be loaded due to", exception);
     Toast.warning(messages["tracing.mesh_listing_failed"]);
@@ -723,7 +667,127 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  const loadChunksTasks = _.compact(
+  const loadChunksTasks = _getLoadChunksTasks(
+    dataset,
+    layerName,
+    meshFile,
+    segmentationLayer,
+    id,
+    seedPosition,
+    availableChunksMap,
+    loadingOrder,
+    scale,
+  );
+
+  try {
+    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+  } catch (exception) {
+    console.error(exception);
+    Toast.warning("Some mesh objects could not be loaded.");
+  }
+
+  yield* put(finishedLoadingIsosurfaceAction(layerName, id));
+}
+
+function* _getChunkLoadingDescriptors(
+  id: number,
+  dataset: APIDataset,
+  segmentationLayer: APISegmentationLayer,
+  meshFile: APIMeshFile,
+) {
+  const availableChunksMap: ChunksMap = {};
+  let scale: Vector3 | null = null;
+  let loadingOrder: number[] = [];
+
+  const { segmentMeshController } = getSceneController();
+  const currentLODIndex = yield* call({
+    context: segmentMeshController.isosurfacesLODRootGroup,
+    fn: segmentMeshController.isosurfacesLODRootGroup.getCurrentLOD,
+  });
+  const version = meshFile.formatVersion;
+  const { meshFileName } = meshFile;
+  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
+
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+  );
+  const tracing = yield* select((state) =>
+    getTracingForSegmentationLayer(state, segmentationLayer),
+  );
+  const mappingName =
+    // isosurfaceExtraInfo.mappingName contains the currently active mapping
+    // (can be the id of an editable mapping). However, we always need to
+    // use the mapping name of the on-disk mapping.
+    editableMapping != null ? editableMapping.baseMappingName : isosurfaceExtraInfo.mappingName;
+
+  if (version < 3) {
+    console.warn(
+      "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
+    );
+  }
+
+  // mappingName only exists for versions >= 3
+  if (meshFile.mappingName != null && meshFile.mappingName !== mappingName) {
+    throw Error(
+      `Trying to use a mesh file that was computed for mapping ${meshFile.mappingName} for a requested mapping of ${mappingName}.`,
+    );
+  }
+
+  if (version >= 3) {
+    const segmentInfo = yield* call(
+      meshV3.getMeshfileChunksForSegment,
+      dataset.dataStore.url,
+      dataset,
+      getBaseSegmentationName(segmentationLayer),
+      meshFileName,
+      id,
+      // The back-end should only receive a non-null mapping name,
+      // if it should perform extra (reverse) look ups to compute a mesh
+      // with a specific mapping from a mesh file that was computed
+      // without a mapping.
+      meshFile.mappingName == null ? mappingName : null,
+      editableMapping != null && tracing ? tracing.tracingId : null,
+    );
+    scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
+    segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
+      availableChunksMap[lodIndex] = chunks?.chunks;
+      loadingOrder.push(lodIndex);
+    });
+    // Load the chunks closest to the current LOD first.
+    loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
+  } else {
+    availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
+      meshV0.getMeshfileChunksForSegment,
+      dataset.dataStore.url,
+      dataset,
+      getBaseSegmentationName(segmentationLayer),
+      meshFileName,
+      id,
+    );
+    loadingOrder = [NO_LOD_MESH_INDEX];
+  }
+
+  return {
+    availableChunksMap,
+    scale,
+    loadingOrder,
+  };
+}
+
+function _getLoadChunksTasks(
+  dataset: APIDataset,
+  layerName: string,
+  meshFile: APIMeshFile,
+  segmentationLayer: APISegmentationLayer,
+  id: number,
+  seedPosition: Vector3,
+  availableChunksMap: ChunksMap,
+  loadingOrder: number[],
+  scale: Vector3 | null,
+) {
+  const { segmentMeshController } = getSceneController();
+  const { meshFileName } = meshFile;
+  return _.compact(
     _.flatten(
       loadingOrder.map((lod) => {
         if (availableChunksMap[lod] == null) {
@@ -810,15 +874,6 @@ function* loadPrecomputedMeshForSegmentId(
       }),
     ),
   );
-
-  try {
-    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
-  } catch (exception) {
-    console.error(exception);
-    Toast.warning("Some mesh objects could not be loaded.");
-  }
-
-  yield* put(finishedLoadingIsosurfaceAction(layerName, id));
 }
 
 /*

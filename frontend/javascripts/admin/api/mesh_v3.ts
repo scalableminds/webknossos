@@ -1,4 +1,5 @@
 import Request from "libs/request";
+import _ from "lodash";
 import { Vector3, Vector4 } from "oxalis/constants";
 import { APIDatasetId } from "types/api_flow_types";
 import { doWithToken } from "./token";
@@ -78,18 +79,39 @@ export function getMeshfileChunkData(
   datasetId: APIDatasetId,
   layerName: string,
   batchDescription: MeshChunkDataRequestV3List,
-): Promise<ArrayBuffer> {
+): Promise<ArrayBuffer[]> {
   return doWithToken(async (token) => {
-    const data = await Request.sendJSONReceiveArraybufferWithHeaders(
+    const dracoDataChunksWithJumpTable = await Request.sendJSONReceiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks/data?token=${token}`,
       {
         data: batchDescription,
-        useWebworkerForArrayBuffer: false,
+        // Why was this false before?
+        useWebworkerForArrayBuffer: true,
       },
     );
+    const chunkCount = batchDescription.requests.length;
+    const jumpTableLength = chunkCount + 1;
+    const byteLengthPerJumpTableEntry = 8;
+    const jumpTableDataView = new DataView(
+      dracoDataChunksWithJumpTable,
+      0,
+      byteLengthPerJumpTableEntry * jumpTableLength,
+    );
+    const jumpPositionsForChunks = _.range(0, jumpTableLength).map((idx) =>
+      Number(jumpTableDataView.getBigUint64(byteLengthPerJumpTableEntry * idx, true)),
+    );
 
-    // result needs to be "parsed"
+    const dataEntries = [];
+    for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
+      // Slice creates a copy of the data, but working with TypedArray views causes
+      // issues when transferring the data to a webworker.
+      const dracoData = dracoDataChunksWithJumpTable.slice(
+        jumpPositionsForChunks[chunkIdx],
+        jumpPositionsForChunks[chunkIdx + 1],
+      );
+      dataEntries.push(dracoData);
+    }
 
-    return data;
+    return dataEntries;
   });
 }

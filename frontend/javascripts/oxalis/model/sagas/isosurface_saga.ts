@@ -3,12 +3,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type {
-  APIDataset,
-  APIMeshFile,
-  APIMessage,
-  APISegmentationLayer,
-} from "types/api_flow_types";
+import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
@@ -808,7 +803,7 @@ function _getLoadChunksTasks(
             (chunks) =>
               function* loadChunks(): Saga<void> {
                 // V3
-                const dracoDataChunksWithJumpTable = yield* call(
+                const dataForChunks = yield* call(
                   meshV3.getMeshfileChunkData,
                   dataset.dataStore.url,
                   dataset,
@@ -820,25 +815,10 @@ function _getLoadChunksTasks(
                   },
                 );
                 const loader = getDracoLoader();
-                const jumpTableLength = chunks.length + 1;
-                const byteLengthPerJumpTableEntry = 8;
-                const jumpTableDataView = new DataView(
-                  dracoDataChunksWithJumpTable,
-                  0,
-                  byteLengthPerJumpTableEntry * jumpTableLength,
-                );
-                const jumpPositionsForChunks = _.range(0, jumpTableLength).map((idx) =>
-                  Number(jumpTableDataView.getBigUint64(byteLengthPerJumpTableEntry * idx, true)),
-                );
 
                 for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+                  const dracoData = dataForChunks[chunkIdx];
                   const chunk = chunks[chunkIdx];
-                  // slice copies the data (?). can we create new views instead?
-                  // also: move this code into the mesh_v3 module
-                  const dracoData = dracoDataChunksWithJumpTable.slice(
-                    jumpPositionsForChunks[chunkIdx],
-                    jumpPositionsForChunks[chunkIdx + 1],
-                  );
                   const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
                   // Compute vertex normals to achieve smooth shading
                   geometry.computeVertexNormals();

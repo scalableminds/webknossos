@@ -4,6 +4,8 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 DROP VIEW webknossos.dataStores_;
 
+DELETE FROM webknossos.dataStores WHERE isConnector;
+
 ALTER TABLE webknossos.dataStores_ DROP COLUMN isConnector;
 
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;

@@ -31,7 +31,12 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
-      editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
+      // called here to ensure updates are applied
+      (editableMappingInfo, editableMappingVersion) <- layer.editableMappingService.getInfoAndActualVersion(
+        editableMappingId,
+        requestedVersion = None,
+        remoteFallbackLayer = remoteFallbackLayer,
+        userToken = layer.token)
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -46,10 +51,12 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       _ <- bool2Fox(indices.isEmpty)
       unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      relevantMapping <- layer.editableMappingService.generateCombinedMappingSubset(segmentIds,
-                                                                                    editableMapping,
-                                                                                    remoteFallbackLayer,
-                                                                                    layer.token)
+      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
+                                                                                           editableMappingInfo,
+                                                                                           editableMappingVersion,
+                                                                                           editableMappingId,
+                                                                                           remoteFallbackLayer,
+                                                                                           layer.token)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       layer.elementClass)

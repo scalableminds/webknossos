@@ -904,9 +904,12 @@ function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAct
   segmentMeshController.setIsosurfaceVisibility(id, visibility, layerName);
 }
 
-function* handleIsosurfaceColorChange(action: UpdateSegmentAction): Saga<void> {
+function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
-  if ("color" in action.segment) {
+  if (
+    "color" in action.segment &&
+    segmentMeshController.hasIsosurface(action.segmentId, action.layerName)
+  ) {
     segmentMeshController.setIsosurfaceColor(action.segmentId, action.layerName);
   }
 }
@@ -930,5 +933,5 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
-  yield* takeEvery("UPDATE_SEGMENT", handleIsosurfaceColorChange);
+  yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
 }

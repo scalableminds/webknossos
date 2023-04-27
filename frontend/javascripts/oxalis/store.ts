@@ -337,6 +337,7 @@ export type UserConfiguration = {
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;
+  readonly renderWatermark: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

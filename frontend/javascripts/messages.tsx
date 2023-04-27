@@ -46,6 +46,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
   blendMode: "Blend Mode",
+  renderWatermark: "Logo in Screenshots",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -75,6 +76,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   displayScalebars: "Show a scale in the lower-right corner of each viewport",
   blendMode:
     "Set the blend mode for the dataset. The additive mode (default) adds the data values of all layers. The cover mode only shows the data of the top most layer in the list.",
+  renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",

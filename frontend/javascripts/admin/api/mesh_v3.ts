@@ -62,26 +62,34 @@ export function getMeshfileChunksForSegment(
   });
 }
 
+type MeshChunkDataRequestV3 = {
+  byteOffset: number;
+  byteSize: number;
+};
+
+type MeshChunkDataRequestV3List = {
+  meshFile: String;
+  requests: MeshChunkDataRequestV3[];
+};
+
+// todo: this should send batches now
 export function getMeshfileChunkData(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-  meshFile: string,
-  byteOffset: number,
-  byteSize: number,
+  batchDescription: MeshChunkDataRequestV3List,
 ): Promise<ArrayBuffer> {
   return doWithToken(async (token) => {
     const data = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks/data?token=${token}`,
       {
-        data: {
-          meshFile,
-          byteOffset,
-          byteSize,
-        },
+        data: batchDescription,
         useWebworkerForArrayBuffer: false,
       },
     );
+
+    // result needs to be "parsed"
+
     return data;
   });
 }

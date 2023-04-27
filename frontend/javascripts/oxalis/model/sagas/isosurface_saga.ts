@@ -801,40 +801,67 @@ function _getLoadChunksTasks(
             V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
         ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 
-        const tasks = sortedAvailableChunks.map(
-          (chunk) =>
-            function* loadChunk(): Saga<void> {
-              if ("position" in chunk) {
+        let tasks;
+        if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
+          // V3
+          tasks = _.chunk(sortedAvailableChunks as meshV3.MeshChunk[], 16).map(
+            (chunks) =>
+              function* loadChunks(): Saga<void> {
                 // V3
-                const dracoData = yield* call(
+                const dracoDataChunksWithJumpTable = yield* call(
                   meshV3.getMeshfileChunkData,
                   dataset.dataStore.url,
                   dataset,
                   getBaseSegmentationName(segmentationLayer),
-                  meshFileName,
-                  chunk.byteOffset,
-                  chunk.byteSize,
+                  {
+                    meshFile: meshFileName,
+                    // Only extract the relevant properties
+                    requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
+                  },
                 );
                 const loader = getDracoLoader();
 
-                const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
-                // Compute vertex normals to achieve smooth shading
-                geometry.computeVertexNormals();
-
-                yield* call(
-                  {
-                    context: segmentMeshController,
-                    fn: segmentMeshController.addIsosurfaceFromGeometry,
-                  },
-                  geometry,
-                  id,
-                  chunk.position,
-                  // Apply the scale from the segment info, which includes dataset scale and mag
-                  scale,
-                  lod,
-                  layerName,
+                const jumpTableDataView = new DataView(
+                  dracoDataChunksWithJumpTable,
+                  0,
+                  4 * chunks.length,
                 );
-              } else {
+                const jumpPositionsForChunks = _.range(0, chunks.length).map((idx) =>
+                  Number(jumpTableDataView.getBigUint64(4 * idx, true)),
+                );
+
+                for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+                  const chunk = chunks[chunkIdx];
+                  // slice copies the data (?). can we create new views instead?
+                  // also: move this code into the mesh_v3 module
+                  const dracoData = dracoDataChunksWithJumpTable.slice(
+                    jumpPositionsForChunks[chunkIdx],
+                    jumpPositionsForChunks[chunkIdx + 1] ?? dracoDataChunksWithJumpTable.byteLength,
+                  );
+                  const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+                  // Compute vertex normals to achieve smooth shading
+                  geometry.computeVertexNormals();
+
+                  yield* call(
+                    {
+                      context: segmentMeshController,
+                      fn: segmentMeshController.addIsosurfaceFromGeometry,
+                    },
+                    geometry,
+                    id,
+                    chunk.position,
+                    // Apply the scale from the segment info, which includes dataset scale and mag
+                    scale,
+                    lod,
+                    layerName,
+                  );
+                }
+              },
+          );
+        } else {
+          tasks = (sortedAvailableChunks as Vector3[]).map(
+            (chunk) =>
+              function* loadChunk(): Saga<void> {
                 // V0
                 const stlData = yield* call(
                   meshV0.getMeshfileChunkData,
@@ -867,9 +894,10 @@ function _getLoadChunksTasks(
                   lod,
                   layerName,
                 );
-              }
-            },
-        );
+              },
+          );
+        }
+
         return tasks;
       }),
     ),

@@ -489,7 +489,7 @@ function renderPlaceholder(
   }
 
   const openPublicDatasetCard = (
-    <Col span={9}>
+    <Col span={7}>
       <Card bordered={false} cover={<i className="drawing drawing-empty-list-public-gallery" />}>
         <Meta
           title="Open a Demo Dataset"
@@ -497,7 +497,7 @@ function renderPlaceholder(
             <>
               <p>Check out a published community dataset to experience WEBKNOSSOS in action.</p>
               <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
-                <Button style={{ marginTop: 40 }}>Open a Community Dataset</Button>
+                <Button style={{ marginTop: 30 }}>Open a Community Dataset</Button>
               </a>
             </>
           }
@@ -507,23 +507,25 @@ function renderPlaceholder(
   );
 
   const uploadPlaceholderCard = (
-    <Col span={9}>
+    <Col span={7}>
       <Card bordered={false} cover={<i className="drawing drawing-empty-list-dataset-upload" />}>
         <Meta
           title="Upload & Import Dataset"
           description={
             <>
-              WEBKNOSSOS supports a variety of (remote){" "}
-              <a
-                href="https://docs.webknossos.org/webknossos/data_formats.html"
-                target="_blank"
-                rel="noreferrer"
-              >
-                file formats
-              </a>{" "}
-              and is also able to convert them when necessary.
+              <p>
+                WEBKNOSSOS supports a variety of (remote){" "}
+                <a
+                  href="https://docs.webknossos.org/webknossos/data_formats.html"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  file formats
+                </a>{" "}
+                and is also able to convert them when necessary.
+              </p>
               <Link to="/datasets/upload">
-                <Button type="primary" style={{ marginTop: 40 }}>
+                <Button type="primary" style={{ marginTop: 30 }}>
                   Open Dataset Upload & Import
                 </Button>
               </Link>

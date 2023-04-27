@@ -240,25 +240,25 @@ export function getGroupByIdWithSubgroups(
 }
 
 export function moveGroupsHelper(
-  treeGroups: TreeGroup[] | SegmentGroup[],
+  groups: TreeGroup[] | SegmentGroup[],
   groupId: number,
   targetGroupId: number | null | undefined,
 ): TreeGroup[] | SegmentGroup[] {
-  const movedGroup = findGroup(treeGroups, groupId);
+  const movedGroup = findGroup(groups, groupId);
   if (!movedGroup) {
     throw new Error("Could not find group to move");
   }
 
-  const treeGroupsWithoutDraggedGroup = mapGroupsWithRoot(treeGroups, (parentGroup) => ({
+  const groupsWithoutDraggedGroup = mapGroupsWithRoot(groups, (parentGroup) => ({
     ...parentGroup,
     children: parentGroup.children.filter((subgroup) => subgroup.groupId !== movedGroup.groupId),
   }));
-  const newTreeGroups = mapGroupsWithRoot(treeGroupsWithoutDraggedGroup, (parentGroup) => ({
+  const newGroups = mapGroupsWithRoot(groupsWithoutDraggedGroup, (parentGroup) => ({
     ...parentGroup,
     children:
       parentGroup.groupId === targetGroupId
         ? parentGroup.children.concat([movedGroup])
         : parentGroup.children,
   }));
-  return newTreeGroups;
+  return newGroups;
 }

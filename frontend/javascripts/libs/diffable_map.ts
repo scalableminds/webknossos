@@ -229,7 +229,9 @@ class DiffableMap<K extends number, V> {
     // @ts-expect-error ts-migrate(2322) FIXME: Type '{}' is not assignable to type 'Record<K, V>'... Remove this comment to see the full error message
     return result;
   }
-} // This function should only be used internally by this module.
+}
+
+// This function should only be used internally by this module.
 // It creates a new DiffableMap on the basis of another one, while
 // shallowly copying the internal chunks.
 // When modifying a chunk, that chunk should be manually cloned.
@@ -266,6 +268,9 @@ export function diffDiffableMaps<K extends number, V>(
   const onlyA = [];
   const onlyB = [];
 
+  // Compare the chunks of mapA and mapB by identity. For independent
+  // maps, all chunks will be identified as "different". This will
+  // be fixed later (below this while loop).
   while (mapA.chunks[idx] != null || mapB.chunks[idx] != null) {
     if (mapB.chunks[idx] == null) {
       // mapA has more internal chunks than mapB. Add all to onlyA.

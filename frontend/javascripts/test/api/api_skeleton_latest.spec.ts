@@ -225,12 +225,12 @@ test.serial("getTreeGroups should get all tree groups and set a tree group", (t)
   t.is(state.tracing.skeleton.trees[2].groupId, 3);
   t.is(state.tracing.skeleton.trees[1].groupId, 7);
 });
-test.serial("renameGroup should rename a tree group", (t) => {
+test.serial("renameSkeletonGroup should rename a tree group", (t) => {
   const { api } = t.context;
   Store.dispatch(
     setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
   );
-  api.tracing.renameGroup(7, "renamed");
+  api.tracing.renameSkeletonGroup(7, "renamed");
   const state = Store.getState();
   t.is(state.tracing.skeleton.treeGroups[1].name, "renamed");
 });

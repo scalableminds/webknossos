@@ -161,7 +161,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       prevProps.activeGroupId !== this.props.activeGroupId;
 
     if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
-      await this.setState({
+      this.setState({
         searchFocusOffset: 1,
       });
       this.setState({
@@ -258,8 +258,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
-  onMoveWithContextAction = (nextParentNode: TreeNode) => {
+  onMoveWithContextAction = (targetParentNode: TreeNode) => {
     const activeComponent = this.getLabelForActiveItems();
+    const targetGroupId = targetParentNode.id === MISSING_GROUP_ID ? null : targetParentNode.id;
     let allTreesToMove;
     if (activeComponent === "tree") {
       allTreesToMove = [this.props.activeTreeId];
@@ -269,14 +270,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     if (allTreesToMove) {
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(
-          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+          targetGroupId,
           // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
           parseInt(treeId, 10),
         ),
       );
       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
-    } else if (activeComponent === "group") {
-      // TODO move group after #6966 (segment groups) is merged
+    } else if (activeComponent === "group" && this.props.activeGroupId != null) {
+      api.tracing.moveSkeletonGroup(this.props.activeGroupId, targetGroupId);
     }
   };
 
@@ -290,8 +291,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(
           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-          parseInt(treeId, 10),
+          treeId,
         ),
       );
       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
@@ -416,7 +416,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const isEditingDisabled = !this.props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
     const labelForActiveItems = this.getLabelForActiveItems();
-    const createMenu: MenuProps = {
+    const menu: MenuProps = {
       items: [
         {
           key: "create",
@@ -428,7 +428,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           icon: <PlusOutlined />,
           label: "Create new group",
         },
-        labelForActiveItems === "tree" || labelForActiveItems === "trees"
+        labelForActiveItems != null
           ? {
               key: "moveHere",
               onClick: () => {
@@ -509,11 +509,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     };
 
     // Make sure the displayed name is not empty
-    const displayableName = name.trim() || "<no name>";
+    const displayableName = name.trim() || "<Unnamed Group>";
     return (
       <div>
         <Dropdown
-          menu={createMenu}
+          menu={menu}
           placement="bottom"
           // AutoDestroy is used to remove the menu from DOM and keep up the performance.
           // destroyPopupOnHide should also be an option according to the docs, but

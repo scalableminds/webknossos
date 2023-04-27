@@ -10,6 +10,6 @@ ALTER TABLE webknossos.dataStores_ DROP COLUMN isConnector;
 
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 101;
+UPDATE webknossos.releaseInformation SET schemaVersion = 102;
 
 COMMIT TRANSACTION;

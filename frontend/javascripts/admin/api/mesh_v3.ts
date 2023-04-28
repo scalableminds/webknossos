@@ -84,7 +84,6 @@ export function getMeshfileChunkData(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks/data?token=${token}`,
       {
         data: batchDescription,
-        // Why was this false before?
         useWebworkerForArrayBuffer: true,
       },
     );

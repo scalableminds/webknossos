@@ -78,7 +78,7 @@ export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
-const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
+const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 64;
 
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that a huge amount of chunks is downloaded at full speed,
@@ -640,6 +640,9 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
+  console.time(`Load mesh for ${id}`);
+
+  console.time("get chunk descriptors");
   let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
   let loadingOrder: number[] | null = null;
@@ -661,7 +664,9 @@ function* loadPrecomputedMeshForSegmentId(
     yield* put(removeIsosurfaceAction(layerName, id));
     return;
   }
+  console.timeEnd("get chunk descriptors");
 
+  console.time("load chunks");
   const loadChunksTasks = _getLoadChunksTasks(
     dataset,
     layerName,
@@ -675,11 +680,19 @@ function* loadPrecomputedMeshForSegmentId(
   );
 
   try {
-    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+    yield* call(
+      processTaskWithPool,
+      loadChunksTasks,
+      (window as any).PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT ||
+        PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT,
+    );
   } catch (exception) {
     console.error(exception);
     Toast.warning("Some mesh objects could not be loaded.");
   }
+  console.timeEnd("load chunks");
+
+  console.timeEnd(`Load mesh for ${id}`);
 
   yield* put(finishedLoadingIsosurfaceAction(layerName, id));
 }
@@ -796,10 +809,40 @@ function _getLoadChunksTasks(
             V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
         ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 
+        function chunkDynamically<T>(
+          chunks: T[],
+          threshold: number,
+          measureFn: (el: T) => number,
+        ): Array<T[]> {
+          const batches = [];
+          let currentBatch = [];
+          let currentSize = 0;
+
+          for (let i = 0; i < chunks.length; i++) {
+            currentBatch.push(chunks[i]);
+            currentSize += measureFn(chunks[i]);
+            if (currentSize > threshold || i === chunks.length - 1) {
+              currentSize = 0;
+              batches.push(currentBatch);
+              currentBatch = [];
+            }
+          }
+          return batches;
+        }
+
+        const chunkSize = (window as any).meshChunkSize || 64;
         let tasks;
         if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
           // V3
-          tasks = _.chunk(sortedAvailableChunks as meshV3.MeshChunk[], 16).map(
+          const batches = (window as any).useDynamicChunking
+            ? chunkDynamically(
+                sortedAvailableChunks as meshV3.MeshChunk[],
+                (window as any).meshChunkSize,
+                (chunk) => chunk.byteSize,
+              )
+            : _.chunk(sortedAvailableChunks as meshV3.MeshChunk[], chunkSize);
+
+          tasks = batches.map(
             (chunks) =>
               function* loadChunks(): Saga<void> {
                 // V3
@@ -816,10 +859,14 @@ function _getLoadChunksTasks(
                 );
                 const loader = getDracoLoader();
 
+                let totalSizePerBatch = 0;
                 for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+                  totalSizePerBatch += chunks[chunkIdx].byteSize;
                   const dracoData = dataForChunks[chunkIdx];
                   const chunk = chunks[chunkIdx];
+
                   const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+
                   // Compute vertex normals to achieve smooth shading
                   geometry.computeVertexNormals();
 
@@ -837,6 +884,7 @@ function _getLoadChunksTasks(
                     layerName,
                   );
                 }
+                console.log("totalSizePerBatch", totalSizePerBatch);
               },
           );
         } else {

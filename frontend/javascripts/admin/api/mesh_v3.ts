@@ -73,7 +73,6 @@ type MeshChunkDataRequestV3List = {
   requests: MeshChunkDataRequestV3[];
 };
 
-// todo: this should send batches now
 export function getMeshfileChunkData(
   dataStoreUrl: string,
   datasetId: APIDatasetId,

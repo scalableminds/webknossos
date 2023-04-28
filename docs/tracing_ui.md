@@ -116,6 +116,12 @@ Note, not all control/viewport settings are available in every annotation mode.
 #### Data Rendering
 - `Hardware Utilization`: Adjusts the quality level used for rendering data. Changing this setting influences how many data is downloaded from the server as well as how much pressure is put on the user's graphics card. Tune this value to your network connection and hardware power. After changing the setting, the page has to be refreshed.
 - `Loading Strategy`: You can choose between two different loading strategies. When using "best quality first" it will take a bit longer until you see data, because the highest quality is loaded. Alternatively, "Progressive quality" can be chosen which will improve the quality progressively while loading. As a result, initial data will be visible faster, but it will take more time until the best quality is shown.
+- `Blend Mode`: You can switch between two modes of blending the color layer. The default (Additive) simply sums up all color values of all visible layers. The cover mode renders all color layers on top of each other. Thus the top most layer covers the layers below. This blend mode is especially useful for datasets using multi modality layers. Here is an example for such a dataset by Bosch et al. [1]:
+
+|Additive Blend Mode        | &nbsp;&nbsp;&nbsp;&nbsp;Cover Blend Mode &nbsp; &nbsp;|
+|:-------------------------:|:-------------------------:|
+|![](./images/blend-mode-example-additive-bosch-et-al.png)|![](./images/blend-mode-example-cover-bosch-et-al.png)|
+
 - `4 Bit`: Toggles data download from the server using only 4 bit instead of 8 bit for each voxel. Use this to reduce the amount of necessary internet bandwidth for WEBKNOSSOS. Useful for showcasing data on the go over cellular networks, e.g 4G.
 - `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zoomed in very far).
 - `Render Missing Data Black`: If a dataset does not contain data at a specific position, WEBKNOSSOS can either render these voxels in "black" or it can try to render data from another magnification.
@@ -138,3 +144,7 @@ The status bar at the bottom of the screen serves three functions:
 1. It shows context-sensitive mouse and keyboard control hints. Depending on your selected annotation tool amd any pressed modifier keys (Shift, CMD, CTRL, ALT, etc) it provides useful interaction hints and shortcuts. 
 2. It provides useful information based on your mouse positioning and which objects it hovers over. This includes the current mouse position in the dataset coordinate space, any segment ID that you hover over, and the currently rendered magnification level (MipMap image pyramid) used for displaying any data.
 3. When working with skeletons, the active node and tree IDs are listed. Use the little pencil icon to select/mark a specific ID as active if required. For more on the active node ID, [see the section on skeleton annotations](./skeleton_annotation.md#nodes_and_trees).
+
+
+##### References
+[1] Bosch, C., Ackels, T., Pacureanu, A. et al. Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron microtomography and volume electron microscopy. Nat Commun 13, 2923 (2022). https://doi.org/10.1038/s41467-022-30199-6

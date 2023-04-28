@@ -1,14 +1,14 @@
-import { TeamOutlined } from "@ant-design/icons";
-import { getEditableUsers } from "admin/admin_rest_api";
+import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { Modal, Form, AutoComplete, Input } from "antd";
 import { DefaultOptionType } from "antd/lib/select";
 import { useFetch } from "libs/react_helpers";
 import * as React from "react";
 import { APITeam, APIUser } from "types/api_flow_types";
-const FormItem = Form.Item;
 
-const renderItem = (user: APIUser, team: string | null): DefaultOptionType => ({
-  value: `${user.firstName} ${user.lastName}.${user.id}`, //make unique
+
+const renderTeamMember = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
+  value: `${user.firstName} ${user.lastName}.${user.id}`,
   label: (
     <div
       style={{
@@ -18,7 +18,24 @@ const renderItem = (user: APIUser, team: string | null): DefaultOptionType => ({
     >
       {user.firstName} {user.lastName}
       <span>
-        <TeamOutlined /> {team}
+        <MinusCircleOutlined {/*onClick={removeFrom}*/} /> Remove from {team}
+      </span>
+    </div>
+  ),
+});
+
+const renderUserNotInTeam = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
+  value: `${user.firstName} ${user.lastName}.${user.id}`,
+  label: (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+      }}
+    >
+      {user.firstName} {user.lastName}
+      <span>
+        <PlusOutlined {/*onClick={addTo(user, team)}*/} /> Add to {team}
       </span>
     </div>
   ),
@@ -29,11 +46,7 @@ type Props = {
   onCancel: (...args: Array<any>) => any;
   isOpen: boolean;
   team: APITeam | null;
-};
-type State = {
-  isLoading: boolean;
-  teams: APITeam[];
-  users: APIUser[];
+  selectedUser: APIUser | null;
 };
 
 function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
@@ -46,18 +59,16 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   }; //rename me
   const options = [
     {
-      label: "in the team",
-      options: users.filter(filterFunc).map((user) => renderItem(user, team?.name)),
+      label: "In team",
+      options: users.filter(filterFunc).map((user) => renderTeamMember(user, team)),
     },
     {
-      label: "not in the team",
+      label: "Not in team",
       options: users
         .filter((user) => !filterFunc(user))
-        .map((user) => renderItem(user, team?.name)),
+        .map((user) => renderUserNotInTeam(user, team)),
     },
   ];
-
-  users.map((user) => renderItem(user, team?.name));
   return (
     <>
       <Modal
@@ -90,3 +101,4 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
 
 const EditTeamModalView = EditTeamModalForm;
 export default EditTeamModalView;
+

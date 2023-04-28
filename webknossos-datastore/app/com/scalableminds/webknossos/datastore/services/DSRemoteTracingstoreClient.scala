@@ -77,5 +77,6 @@ class DSRemoteTracingstoreClient @Inject()(
     rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
       .addQueryString("agglomerateId" -> agglomerateId.toString)
       .addQueryStringOptional("token", token)
+      .silent
       .getWithJsonResponse[EditableMappingSegmentListResult]
 }

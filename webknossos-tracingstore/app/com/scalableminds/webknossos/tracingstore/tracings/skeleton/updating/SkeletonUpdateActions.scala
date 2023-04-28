@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
 import play.api.libs.json._
@@ -403,7 +402,7 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
       case Some(groupId) =>
         tracing.treeGroups
           .find(_.groupId == groupId)
-          .map(group => updateTreeGroups(TreeUtils.getAllChildrenGroups(group)))
+          .map(group => updateTreeGroups(GroupUtils.getAllChildrenTreeGroups(group)))
           .getOrElse(tracing)
     }
   }

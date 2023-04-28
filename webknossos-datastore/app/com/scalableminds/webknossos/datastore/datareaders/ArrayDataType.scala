@@ -40,7 +40,7 @@ object ArrayDataType extends ExtendedEnumeration {
       case ArrayDataType.f4 => Float.MinValue
       case ArrayDataType.i8 => Long.MinValue
       case ArrayDataType.u8 => 0
-      case ArrayDataType.i4 => Int.MaxValue
+      case ArrayDataType.i4 => Int.MinValue
       case ArrayDataType.u4 => 0
       case ArrayDataType.i2 => Char.MinValue
       case ArrayDataType.u2 => 0

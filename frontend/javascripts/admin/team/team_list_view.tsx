@@ -26,6 +26,7 @@ type State = {
   searchQuery: string;
   isTeamCreationModalVisible: boolean;
   isTeamEditModalVisible: boolean;
+  selectedTeam: APITeam | null;
 };
 
 export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
@@ -84,6 +85,7 @@ class TeamListView extends React.PureComponent<Props, State> {
     searchQuery: "",
     isTeamCreationModalVisible: false,
     isTeamEditModalVisible: false,
+    selectedTeam: null,
   };
 
   componentDidMount() {
@@ -255,13 +257,14 @@ class TeamListView extends React.PureComponent<Props, State> {
               <Column
                 title="Actions"
                 key="actions"
-                render={(__, script: APITeam) => (
+                render={(__, team: APITeam) => (
                   <span>
                     <div>
                       <LinkButton
                         onClick={() =>
                           this.setState({
                             isTeamEditModalVisible: true,
+                            selectedTeam: team,
                           })
                         }
                       >
@@ -270,7 +273,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                       </LinkButton>
                     </div>
                     <div>
-                      <LinkButton onClick={_.partial(this.deleteTeam, script)}>
+                      <LinkButton onClick={_.partial(this.deleteTeam, team)}>
                         <DeleteOutlined />
                         Delete
                       </LinkButton>
@@ -297,8 +300,10 @@ class TeamListView extends React.PureComponent<Props, State> {
             onCancel={() =>
               this.setState({
                 isTeamEditModalVisible: false,
+                selectedTeam: null,
               })
             }
+            team={this.state.selectedTeam}
           />
         </div>
       </div>

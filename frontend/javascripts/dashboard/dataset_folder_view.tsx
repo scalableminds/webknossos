@@ -9,6 +9,7 @@ import DatasetView from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
+import { useDatasetsInFolderQuery } from "./dataset/queries";
 
 type Props = {
   user: APIUser;
@@ -66,7 +67,12 @@ function DatasetFolderViewInner(props: Props) {
     }
     context.setSelectedFolder(folder);
   };
-
+  const { data: selectedFolderDatasets } = useDatasetsInFolderQuery(
+    context.selectedFolder?.key || null,
+  );
+  const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
+  const datasetCountForDetailsSidebar =
+    context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
   useEffect(() => {
     if (selectedDatasets.length === 0 || !context.datasets) {
       return;
@@ -115,6 +121,7 @@ function DatasetFolderViewInner(props: Props) {
           onSelectFolder={setSelectedFolder}
           selectedDatasets={selectedDatasets}
           context={context}
+          setFolderIdForEditModal={setFolderIdForEditModal}
         />
       </main>
       <div
@@ -128,10 +135,11 @@ function DatasetFolderViewInner(props: Props) {
         <DetailsSidebar
           selectedDatasets={selectedDatasets}
           setSelectedDataset={setSelectedDataset}
-          displayFolderId={context.selectedFolder?.key ?? context.activeFolderId}
-          datasetCount={context.datasets.length}
+          displayFolderId={folderIdForDetailsSidebar}
+          datasetCount={datasetCountForDetailsSidebar}
           setFolderIdForEditModal={setFolderIdForEditModal}
           searchQuery={context.globalSearchQuery}
+          displayedFolderEqualsActiveFolder={context.selectedFolder == null}
         />
       </div>
     </div>

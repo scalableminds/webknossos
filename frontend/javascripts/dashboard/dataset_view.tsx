@@ -56,6 +56,7 @@ type Props = {
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
+  setFolderIdForEditModal: (arg0: string | null) => void;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -163,6 +164,7 @@ function DatasetView(props: Props) {
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
+        setFolderIdForEditModal={props.setFolderIdForEditModal}
       />
     );
   }

@@ -26,6 +26,7 @@ export function DetailsSidebar({
   searchQuery,
   displayFolderId,
   setFolderIdForEditModal,
+  displayedFolderEqualsActiveFolder,
 }: {
   selectedDatasets: APIDatasetCompact[];
   setSelectedDataset: (ds: APIDatasetCompact | null) => void;
@@ -33,6 +34,7 @@ export function DetailsSidebar({
   datasetCount: number;
   searchQuery: string | null;
   setFolderIdForEditModal: (value: string | null) => void;
+  displayedFolderEqualsActiveFolder: boolean;
 }) {
   const context = useDatasetCollectionContext();
   const { data: folder, error } = useFolderQuery(displayFolderId);
@@ -65,6 +67,7 @@ export function DetailsSidebar({
           datasetCount={datasetCount}
           setFolderIdForEditModal={setFolderIdForEditModal}
           error={error}
+          displayedFolderEqualsActiveFolder={displayedFolderEqualsActiveFolder}
         />
       )}
     </div>
@@ -188,14 +191,19 @@ function FolderDetails({
   datasetCount,
   setFolderIdForEditModal,
   error,
+  displayedFolderEqualsActiveFolder,
 }: {
   activeFolderId: string | null;
   folder: Folder | undefined;
   datasetCount: number;
   setFolderIdForEditModal: (id: string | null) => void;
   error: unknown;
+  displayedFolderEqualsActiveFolder: boolean;
 }) {
-  const maybeSelectMsg = getMaybeSelectMessage(datasetCount);
+  let message = getMaybeSelectMessage(datasetCount);
+  if (!displayedFolderEqualsActiveFolder) {
+    message = datasetCount > 0 ? "Double-click the folder to list these datasets." : "";
+  }
   return (
     <>
       {folder ? (
@@ -220,7 +228,7 @@ function FolderDetails({
             <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
               {datasetCount} {pluralize("dataset", datasetCount)}*
             </Tooltip>
-            . {maybeSelectMsg}
+            . {message}
           </p>
           <div className="sidebar-label">Access Permissions</div>
           <FolderTeamTags folder={folder} />

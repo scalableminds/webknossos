@@ -1,4 +1,10 @@
-import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  PlusOutlined,
+  SettingOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Dropdown, MenuProps, Table, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
@@ -50,8 +56,8 @@ type Props = {
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
+  setFolderIdForEditModal: (arg0: string | null) => void;
   selectedDatasets: APIDatasetCompact[];
-  // TODO: Figure out how to get the folder hierarchy from the context and display all folders together with the datasets
   context: DatasetCollectionContextValue;
 };
 type FolderItemWithName = FolderItem & { name: string };
@@ -124,6 +130,7 @@ function ContextMenuContainer(props: ContextMenuProps) {
 // wasn't possible due to react-sortable-tree.
 interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
   index: number;
+  isADataset: boolean;
 }
 export const DraggableDatasetType = "DraggableDatasetRow";
 
@@ -200,6 +207,7 @@ const DraggableDatasetRow = ({
   className,
   style,
   children,
+  isADataset,
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
@@ -208,6 +216,7 @@ const DraggableDatasetRow = ({
   const datasetName = restProps["data-row-key"];
   const [, drag, preview] = useDrag({
     item: { type: DraggableDatasetType, index, datasetName },
+    canDrag: () => isADataset,
   });
   drag(ref);
 
@@ -335,7 +344,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { context, selectedDatasets, onSelectFolder } = this.props;
+    const { context, selectedDatasets, onSelectFolder, setFolderIdForEditModal } = this.props;
     const activeSubfolders: FolderItemWithName[] = context
       .getActiveSubfolders()
       .map((folder) => ({ ...folder, name: folder.title }));
@@ -388,6 +397,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           contextMenuPosition={this.state.contextMenuPosition}
         />
         <FixedExpandableTable
+          childrenColumnName="notUsed"
           dataSource={sortedDataSource}
           rowKey="name"
           components={components}
@@ -409,6 +419,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           onRow={(record: DatasetOrFolder) => {
             const isADataset = isRecordADataset(record);
             return {
+              isADataset: isADataset,
               onDragStart: () => {
                 if (isADataset && !selectedDatasets.includes(record)) {
                   this.props.onSelectDataset(record);
@@ -520,17 +531,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
           }}
         >
           <Column
-            width={100}
+            width={70}
             title="Type"
             key="type"
-            render={(__, datasetOrFolder: DatasetOrFolder) => {
-              const a = isRecordADataset(datasetOrFolder) ? (
-                <FileOutlined style={{ fontSize: "32px" }} />
+            render={(__, datasetOrFolder: DatasetOrFolder) =>
+              isRecordADataset(datasetOrFolder) ? (
+                <FileOutlined style={{ fontSize: "18px" }} />
               ) : (
-                <FolderOpenOutlined style={{ fontSize: "32px" }} />
-              );
-              return a;
-            }}
+                <FolderOpenOutlined style={{ fontSize: "18px" }} />
+              )
+            }
           />
           <Column
             title="Name"
@@ -613,7 +623,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
                   reloadDataset={this.reloadSingleDataset}
                 />
               ) : (
-                "TODO"
+                <Link
+                  onClick={(evt) => {
+                    evt.preventDefault();
+                    setFolderIdForEditModal(datasetOrFolder.key);
+                  }}
+                  to={""}
+                >
+                  <SettingOutlined />
+                  Settings
+                </Link>
               )
             }
           />

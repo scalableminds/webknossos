@@ -15,10 +15,22 @@ class DataVaultService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCli
 
   def vaultPathFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      credentialBox <- credentialFor(magLocator: MagLocator).futureBox
-      remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)
+      remoteSource <- remoteSourceDescriptorFor(magLocator)
       remotePath <- DataVaultsHolder.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
     } yield remotePath
+
+  def removeVaultFromCache(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      remoteSource <- remoteSourceDescriptorFor(magLocator)
+      _ = DataVaultsHolder.clearVaultPathCache(remoteSource)
+    } yield ()
+
+  private def remoteSourceDescriptorFor(magLocator: MagLocator)(
+      implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
+    for {
+      credentialBox <- credentialFor(magLocator: MagLocator).futureBox
+      remoteSource = RemoteSourceDescriptor(magLocator.uri, credentialBox.toOption)
+    } yield remoteSource
 
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {

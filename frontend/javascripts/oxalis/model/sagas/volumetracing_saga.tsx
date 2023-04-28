@@ -74,7 +74,7 @@ import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { UpdateAction, updateSegmentGroups } from "oxalis/model/sagas/update_actions";
 import {
   createSegmentVolumeAction,
   deleteSegmentVolumeAction,
@@ -561,7 +561,13 @@ function* uncachedDiffSegmentLists(
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
-    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name, segment.color);
+    yield createSegmentVolumeAction(
+      segment.id,
+      segment.somePosition,
+      segment.name,
+      segment.color,
+      segment.groupId,
+    );
   }
 
   for (const segmentId of bothSegmentIds) {
@@ -574,6 +580,7 @@ function* uncachedDiffSegmentLists(
         segment.somePosition,
         segment.name,
         segment.color,
+        segment.groupId,
         segment.creationTime,
       );
     }
@@ -598,21 +605,27 @@ export function* diffVolumeTracing(
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
 
-  if (prevVolumeTracing.segments !== volumeTracing.segments) {
-    for (const action of cachedDiffSegmentLists(
-      prevVolumeTracing.segments,
-      volumeTracing.segments,
-    )) {
-      yield action;
+  if (prevVolumeTracing !== volumeTracing) {
+    if (prevVolumeTracing.segments !== volumeTracing.segments) {
+      for (const action of cachedDiffSegmentLists(
+        prevVolumeTracing.segments,
+        volumeTracing.segments,
+      )) {
+        yield action;
+      }
     }
-  }
 
-  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-    yield removeFallbackLayer();
-  }
+    if (prevVolumeTracing.segmentGroups !== volumeTracing.segmentGroups) {
+      yield updateSegmentGroups(volumeTracing.segmentGroups);
+    }
 
-  if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
-    yield updateMappingName(volumeTracing.mappingName, volumeTracing.mappingIsEditable);
+    if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
+      yield removeFallbackLayer();
+    }
+
+    if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
+      yield updateMappingName(volumeTracing.mappingName, volumeTracing.mappingIsEditable);
+    }
   }
 }
 

@@ -439,6 +439,8 @@ class VolumeTracingService @Inject()(
                        indexB: Int,
                        mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
+    val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
+    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                      tracingB.userBoundingBox,
@@ -463,7 +465,8 @@ class VolumeTracingService @Inject()(
           0,
           0)), // should never be empty for volumes
       userBoundingBoxes = userBoundingBoxes,
-      segments = tracingA.segments.toList ::: tracingBSegments.toList
+      segments = tracingA.segments.toList ::: tracingBSegments.toList,
+      segmentGroups = mergedGroups
     )
   }
 

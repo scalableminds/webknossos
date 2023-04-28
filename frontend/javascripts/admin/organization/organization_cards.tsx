@@ -200,7 +200,7 @@ export function PlanDashboardCard({
 
   const storageLabel = (
     <span style={{ display: "inline-block", wordBreak: "break-word", width: 100 }}>
-      {usedStorageLabel}/
+      {usedStorageLabel} /
       <wbr />
       {includedStorageLabel}
     </span>

@@ -27,6 +27,7 @@ export type SetMappingEnabledAction = ReturnType<typeof setMappingEnabledAction>
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
+
 export type SettingAction =
   | UpdateUserSettingAction
   | UpdateDatasetSettingAction

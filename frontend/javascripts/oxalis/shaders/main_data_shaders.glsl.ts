@@ -226,23 +226,25 @@ void main() {
         color_value = abs(color_value - <%= name %>_is_inverted);
         // Catch the case where max == min would causes a NaN value and use black as a fallback color.
         color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        // Marking the color as invalid by setting alpha to -1 if the fallback color has been used.
         color_value = color_value * <%= name %>_alpha * <%= name %>_color;
+        // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
+        // so that it does not cover other colors.
         vec4 layer_color = vec4(color_value, used_fallback == 1.0 ? 0.0 : maybe_filtered_color.a * <%= name %>_alpha);
-        // Additive blendMode == 1 simply adding up all layer colors.
+        // Additive blendMode == 1: Simply adding up all layer colors.
         vec4 additive_color = data_color + layer_color;
-        // Cover blendMode == 0.
-        // Applying alpha blending in merge blend mode.
+        // Cover blendMode == 0: Applying alpha blending to merge the layers where the top most layer has priority.
         // See https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending for details.
         float mixed_alpha_factor = (1.0 - data_color.a) * layer_color.a;
         float mixed_alpha = mixed_alpha_factor + data_color.a;
         vec3 cover_color_rgb = data_color.a * data_color.rgb + mixed_alpha_factor * layer_color.rgb;
         // Catching edge case where mixed_alpha is 0.0 and therefore the cover_color would have nan values.
-        vec4 cover_color = mixed_alpha <= 0.0 ? vec4(0.0) : vec4(cover_color_rgb / mixed_alpha, mixed_alpha);
+        float is_mixed_alpha_zero = float(mixed_alpha == 0.0);
+        vec4 cover_color = vec4(cover_color_rgb / (mixed_alpha + is_mixed_alpha_zero), mixed_alpha);
+        cover_color = mix(cover_color, vec4(0.0), is_mixed_alpha_zero);
         // Do not overwrite data_color if the layer color is only the fallback color.
-        float is_current_color_valid = used_fallback == 1.0 ? 0.0 : 1.0;
+        float is_current_color_valid = float(used_fallback != 1.0);
         cover_color = mix(data_color, cover_color, is_current_color_valid);
-        // choose color depending on blendMode
+        // Choose color depending on blendMode
         data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
       }
     }

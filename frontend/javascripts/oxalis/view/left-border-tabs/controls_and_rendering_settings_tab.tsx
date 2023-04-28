@@ -10,7 +10,7 @@ import {
   SwitchSetting,
   DropdownSetting,
 } from "oxalis/view/components/setting_input_views";
-import { type UserConfiguration, type OxalisState, type DatasetConfiguration } from "oxalis/store";
+import type { UserConfiguration, OxalisState, DatasetConfiguration } from "oxalis/store";
 import { clearCache } from "admin/admin_rest_api";
 import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import {

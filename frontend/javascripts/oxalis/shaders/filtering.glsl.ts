@@ -116,8 +116,12 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       vec4[2] returnValue;
       vec4 color = getMaybeFilteredColor(layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering, supportsPrecomputedBucketAddress);
 
-      color = mix(color, fallbackColor, float(color.a < 0.0));
-      vec4 usedFallbackColor = vec4(color.a < 0.0 ? 1.0: 0.0);
+      vec4 usedFallbackColor = vec4(0.0);
+      if (color.a < 0.0) {
+        // Render gray for not-yet-existing data
+        color = fallbackColor;
+        usedFallbackColor = vec4(1.0);
+      }
       returnValue[0] = color;
       returnValue[1] = usedFallbackColor;
       return returnValue;

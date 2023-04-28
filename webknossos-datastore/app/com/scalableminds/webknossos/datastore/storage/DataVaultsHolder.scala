@@ -32,6 +32,9 @@ object DataVaultsHolder extends LazyLogging {
       vault <- vaultCache.getOrLoad(remoteSourceDescriptor, create)
     } yield new VaultPath(remoteSourceDescriptor.uri, vault)
 
+  def clearVaultPathCache(remoteSourceDescriptor: RemoteSourceDescriptor): Unit =
+    vaultCache.remove(remoteSourceDescriptor)
+
   private def create(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[DataVault] = {
     val scheme = remoteSource.uri.getScheme
     try {

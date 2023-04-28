@@ -5,7 +5,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.VolumeTracing.Segment
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
 import com.scalableminds.webknossos.datastore.geometry._
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
@@ -229,6 +229,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }
           writeVolumeSegmentMetadata(volumeTracing.segments)
+          Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))
         case _ => ()
       }
     }
@@ -250,6 +251,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             writer.writeAttribute("anchorPositionZ", a.z.toString)
           }
           s.color.foreach(_ => writeColor(s.color))
+          s.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
         }
       }
     }
@@ -323,6 +325,15 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("name", t.name)
         writer.writeAttribute("id", t.groupId.toString)
         writeTreeGroupsAsXml(t.children)
+      }
+    }
+
+  def writeSegmentGroupsAsXml(treeGroups: Seq[SegmentGroup])(implicit writer: XMLStreamWriter): Unit =
+    treeGroups.foreach { t =>
+      Xml.withinElementSync("group") {
+        writer.writeAttribute("name", t.name)
+        writer.writeAttribute("id", t.groupId.toString)
+        writeSegmentGroupsAsXml(t.children)
       }
     }
 

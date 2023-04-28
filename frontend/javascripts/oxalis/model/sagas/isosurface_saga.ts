@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import { sleep } from "libs/utils";
+import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
@@ -78,7 +78,8 @@ export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
-const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 64;
+const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 32;
+const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that a huge amount of chunks is downloaded at full speed,
@@ -680,12 +681,7 @@ function* loadPrecomputedMeshForSegmentId(
   );
 
   try {
-    yield* call(
-      processTaskWithPool,
-      loadChunksTasks,
-      (window as any).PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT ||
-        PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT,
-    );
+    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
     console.error(exception);
     Toast.warning("Some mesh objects could not be loaded.");
@@ -809,38 +805,14 @@ function _getLoadChunksTasks(
             V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
         ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 
-        function chunkDynamically<T>(
-          chunks: T[],
-          threshold: number,
-          measureFn: (el: T) => number,
-        ): Array<T[]> {
-          const batches = [];
-          let currentBatch = [];
-          let currentSize = 0;
-
-          for (let i = 0; i < chunks.length; i++) {
-            currentBatch.push(chunks[i]);
-            currentSize += measureFn(chunks[i]);
-            if (currentSize > threshold || i === chunks.length - 1) {
-              currentSize = 0;
-              batches.push(currentBatch);
-              currentBatch = [];
-            }
-          }
-          return batches;
-        }
-
-        const chunkSize = (window as any).meshChunkSize || 64;
         let tasks;
         if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
           // V3
-          const batches = (window as any).useDynamicChunking
-            ? chunkDynamically(
-                sortedAvailableChunks as meshV3.MeshChunk[],
-                (window as any).meshChunkSize,
-                (chunk) => chunk.byteSize,
-              )
-            : _.chunk(sortedAvailableChunks as meshV3.MeshChunk[], chunkSize);
+          const batches = chunkDynamically(
+            sortedAvailableChunks as meshV3.MeshChunk[],
+            MIN_BATCH_SIZE_IN_BYTES,
+            (chunk) => chunk.byteSize,
+          );
 
           tasks = batches.map(
             (chunks) =>

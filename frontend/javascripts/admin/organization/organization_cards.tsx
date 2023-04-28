@@ -198,7 +198,13 @@ export function PlanDashboardCard({
       ? `${(organization.usedStorageBytes / 10 ** 9).toFixed(1)}`
       : `${(organization.usedStorageBytes / 10 ** 12).toFixed(1)}`;
 
-  const storageLabel = `${usedStorageLabel}/${includedStorageLabel}`;
+  const storageLabel = (
+    <span style={{ display: "inline-block", wordBreak: "break-word", width: 100 }}>
+      {usedStorageLabel}/
+      <wbr />
+      {includedStorageLabel}
+    </span>
+  );
 
   const redStrokeColor = "#ff4d4f";
   const greenStrokeColor = "#52c41a";

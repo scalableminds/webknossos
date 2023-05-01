@@ -6,7 +6,6 @@ import { useFetch } from "libs/react_helpers";
 import * as React from "react";
 import { APITeam, APIUser } from "types/api_flow_types";
 
-
 const renderTeamMember = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
   value: `${user.firstName} ${user.lastName}.${user.id}`,
   label: (
@@ -18,7 +17,7 @@ const renderTeamMember = (user: APIUser, team: APITeam | null): DefaultOptionTyp
     >
       {user.firstName} {user.lastName}
       <span>
-        <MinusCircleOutlined {/*onClick={removeFrom}*/} /> Remove from {team}
+        <MinusCircleOutlined /> Remove from {team?.name}
       </span>
     </div>
   ),
@@ -35,7 +34,7 @@ const renderUserNotInTeam = (user: APIUser, team: APITeam | null): DefaultOption
     >
       {user.firstName} {user.lastName}
       <span>
-        <PlusOutlined {/*onClick={addTo(user, team)}*/} /> Add to {team}
+        <PlusOutlined /> Add to {team?.name}
       </span>
     </div>
   ),
@@ -101,4 +100,3 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
 
 const EditTeamModalView = EditTeamModalForm;
 export default EditTeamModalView;
-

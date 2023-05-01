@@ -1,52 +1,16 @@
-import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+// import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import { Modal, Form, AutoComplete, Input } from "antd";
+import { Modal, Form, AutoComplete, Input, Button } from "antd";
 import { DefaultOptionType } from "antd/lib/select";
 import { useFetch } from "libs/react_helpers";
 import * as React from "react";
 import { APITeam, APIUser } from "types/api_flow_types";
-
-
-const renderTeamMember = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
-  value: `${user.firstName} ${user.lastName}.${user.id}`,
-  label: (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-      }}
-    >
-      {user.firstName} {user.lastName}
-      <span>
-        <MinusCircleOutlined {/*onClick={removeFrom}*/} /> Remove from {team}
-      </span>
-    </div>
-  ),
-});
-
-const renderUserNotInTeam = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
-  value: `${user.firstName} ${user.lastName}.${user.id}`,
-  label: (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-      }}
-    >
-      {user.firstName} {user.lastName}
-      <span>
-        <PlusOutlined {/*onClick={addTo(user, team)}*/} /> Add to {team}
-      </span>
-    </div>
-  ),
-});
 
 type Props = {
   //   onOk: (...args: Array<any>) => any;
   onCancel: (...args: Array<any>) => any;
   isOpen: boolean;
   team: APITeam | null;
-  selectedUser: APIUser | null;
 };
 
 function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
@@ -57,6 +21,60 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const filterFunc = (user: APIUser) => {
     return user.teams.map((t) => t.id).includes(team.id);
   }; //rename me
+  const addTo = (user: APIUser, team: APITeam | null) => {
+    const newTeams = [...user.teams, team];
+    const newUser = Object.assign({}, user, {
+      teams: newTeams,
+    });
+    updateUser(newUser).then(
+      (serverUser) => Promise.resolve(serverUser),
+      () => Promise.reject(user),
+    );
+  };
+  const removeFrom = (user: APIUser, team: APITeam | null) => {
+    const newTeams = user.teams.filter((userteam) => team?.id !== userteam.id);
+    const newUser = Object.assign({}, user, {
+      teams: newTeams,
+    });
+    updateUser(newUser).then(
+      (serverUser) => Promise.resolve(serverUser),
+      () => Promise.reject(user),
+    );
+  };
+  const renderTeamMember = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
+    value: `${user.firstName} ${user.lastName}.${user.id}`,
+    label: (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        {user.firstName} {user.lastName}
+        <span>
+          <Button onClick={() => removeFrom(user, team)} /> Remove from {team}
+        </span>
+      </div>
+    ),
+  });
+
+  const renderUserNotInTeam = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
+    value: `${user.firstName} ${user.lastName}.${user.id}`,
+    label: (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        {user.firstName} {user.lastName}
+        <span>
+          <Button onClick={() => addTo(user, team)} /> Add to {team}
+        </span>
+      </div>
+    ),
+  });
+
   const options = [
     {
       label: "In team",
@@ -101,4 +119,3 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
 
 const EditTeamModalView = EditTeamModalForm;
 export default EditTeamModalView;
-

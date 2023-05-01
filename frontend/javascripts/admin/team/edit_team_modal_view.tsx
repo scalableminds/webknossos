@@ -52,7 +52,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
       >
         {user.firstName} {user.lastName}
         <span>
-          <Button onClick={() => removeFrom(user, team)} /> Remove from {team}
+          <Button onClick={() => removeFrom(user, team)} /> Remove from {team?.name}
         </span>
       </div>
     ),
@@ -69,7 +69,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
       >
         {user.firstName} {user.lastName}
         <span>
-          <Button onClick={() => addTo(user, team)} /> Add to {team}
+          <Button onClick={() => addTo(user, team)} /> Add to {team?.name}
         </span>
       </div>
     ),

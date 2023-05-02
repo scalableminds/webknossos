@@ -164,6 +164,13 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
     parseJsonResponse(performRequest)
   }
 
+  def postProtoWithProtoResponse[T <: GeneratedMessage, J <: GeneratedMessage](body: T)(
+      companion: GeneratedMessageCompanion[J]): Fox[J] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
+    parseProtoResponse(performRequest)(companion)
+  }
+
   def getStream: Fox[Source[ByteString, _]] = {
     if (verbose) {
       logger.debug(

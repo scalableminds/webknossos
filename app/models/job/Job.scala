@@ -15,7 +15,7 @@ import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import oxalis.telemetry.SlackNotificationService
-import oxalis.mail.{DefaultMails, Send}
+import oxalis.mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
@@ -261,6 +261,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 class JobService @Inject()(wkConf: WkConf,
                            actorSystem: ActorSystem,
                            userDAO: UserDAO,
+                           mailchimpClient: MailchimpClient,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
                            workerDAO: WorkerDAO,
@@ -320,6 +321,8 @@ class JobService @Inject()(wkConf: WkConf,
         msg
       )
       _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
+      _ = if (jobAfterChange.command == JobCommand.convert_to_wkw)
+        mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
     } yield ()
     ()
   }

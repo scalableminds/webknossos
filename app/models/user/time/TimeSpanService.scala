@@ -168,7 +168,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] =
     for {
       annotation <- annotationOpt.toFox
-      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
+      user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
       task <- annotationService.taskFor(annotation)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"

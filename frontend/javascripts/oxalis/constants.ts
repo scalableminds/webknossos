@@ -72,11 +72,9 @@ export const ArbitraryViewsToName = {
   TDView: "3D",
 };
 export type ArbitraryView = keyof typeof ArbitraryViews;
-export type ArbitraryViewMap<T> = Record<ArbitraryView, T>;
 export type Viewport = OrthoView | typeof ArbitraryViewport;
 export const allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
 export type ViewportMap<T> = Record<Viewport, T>;
-export type ViewportExtents = Readonly<ViewportMap<Vector2>>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
 export const OrthoViewIndices = {
@@ -320,6 +318,8 @@ const Constants = {
     _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
+  SCALEBAR_HEIGHT: 22,
+  SCALEBAR_OFFSET: 10,
 };
 export default Constants;
 

@@ -3,10 +3,9 @@ package com.scalableminds.webknossos.datastore.datareaders.n5
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, ChunkTyper, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.collection.immutable.NumericRange
-import scala.util.Using
 
 object N5ChunkReader {
   def create(vaultPath: VaultPath, header: DatasetHeader): ChunkReader =
@@ -26,23 +25,19 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
 
   override protected def readChunkBytesAndShape(
       path: String,
-      range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] =
-    Using.Manager { use =>
-      def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
-        val is = use(new ByteArrayInputStream(bytes))
-        val os = use(new ByteArrayOutputStream())
-        header.compressorImpl.uncompress(is, os)
-        val output = os.toByteArray
-        val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
-          header.fillValueNumber.byteValue()
-        }
-        paddedBlock
+      range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] = {
+    def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
+      val output = header.compressorImpl.decompress(bytes)
+      val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
+        header.fillValueNumber.byteValue()
       }
+      paddedBlock
+    }
 
-      for {
-        bytes <- (vaultPath / path).readBytes(range)
-        (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
-        paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
-      } yield (paddedChunkBytes, Some(blockHeader.blockSize))
-    }.get
+    for {
+      bytes <- (vaultPath / path).readBytes(range)
+      (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
+      paddedChunkBytes <- tryo(processBytes(data, blockHeader.blockSize.product)).toOption
+    } yield (paddedChunkBytes, Some(blockHeader.blockSize))
+  }
 }

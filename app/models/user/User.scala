@@ -45,7 +45,7 @@ case class User(
     with Identity
     with FoxImplicits {
 
-  def toStringAnonymous: String = s"user ${_id.toString}"
+  def toStringAnonymous: String = s"User ${_id}"
 
   val name: String = firstName + " " + lastName
 

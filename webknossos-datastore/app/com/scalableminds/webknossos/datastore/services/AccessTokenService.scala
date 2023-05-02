@@ -22,13 +22,10 @@ object AccessResourceType extends ExtendedEnumeration {
   val datasource, tracing, webknossos, jobExport = Value
 }
 
-case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
-  def toCacheKey(token: Option[String]) = s"$token#$resourceId#$resourceType#$mode"
-}
-
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
 object UserAccessAnswer { implicit val jsonFormat: OFormat[UserAccessAnswer] = Json.format[UserAccessAnswer] }
 
+case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value)
 object UserAccessRequest {
   implicit val jsonFormat: OFormat[UserAccessRequest] = Json.format[UserAccessRequest]
 
@@ -58,8 +55,8 @@ object UserAccessRequest {
 trait AccessTokenService {
   val remoteWebKnossosClient: RemoteWebKnossosClient
 
-  val AccessExpiration: FiniteDuration = 2.minutes
-  private lazy val accessAnswersCache: AlfuFoxCache[UserAccessRequest, UserAccessAnswer] =
+  private val AccessExpiration: FiniteDuration = 2 minutes
+  private lazy val accessAnswersCache: AlfuFoxCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
     AlfuFoxCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
   def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
@@ -68,7 +65,7 @@ trait AccessTokenService {
       Future.successful(block)
     }
 
-  def validateAccess[A](accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(
+  def validateAccess(accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(
       implicit ec: ExecutionContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
@@ -77,10 +74,11 @@ trait AccessTokenService {
 
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] =
-    accessAnswersCache.getOrLoad(accessRequest, key => remoteWebKnossosClient.requestUserAccess(token, key))
+    accessAnswersCache.getOrLoad((accessRequest, token),
+                                 _ => remoteWebKnossosClient.requestUserAccess(token, accessRequest))
 
-  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer,
-                                              block: => Future[Result]): Future[Result] =
+  private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
+                                           block: => Future[Result]): Future[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block

@@ -55,14 +55,14 @@ export const getRgbaAtXYIndex: ShaderModule = {
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
-        <% if (dataTextureCountPerLayer === 1) { %>
+        <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
             // Don't use if-else when there is only one data texture anyway
 
             return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
         <% } else { %>
           if (textureIdx == 0.0) {
             return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
-          } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
+          } <% _.range(1, textureLayerInfos[name].dataTextureCount).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
             return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
           }
@@ -197,12 +197,15 @@ export const getColorForCoords: ShaderModule = {
       bool beSafe = false;
       {
         renderedMagIdx = outputMagIdx[globalLayerIndex];
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         vec3 offsetInBucketUVW = transDim(offsetInBucket);
         if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
-            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.) {
+            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
+            || isNan(offsetInBucketUVW.x) || isNan(offsetInBucketUVW.y)
+            || isNan(offsetInBucketUVW.z)
+          ) {
           beSafe = true;
         }
       }
@@ -211,7 +214,7 @@ export const getColorForCoords: ShaderModule = {
       if (beSafe || !supportsPrecomputedBucketAddress) {
         for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
           renderedMagIdx = activeMagIdx + i;
-          vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+          vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
           vec3 absoluteBucketPosition = div(coords, bucketWidth);
           offsetInBucket = mod(coords, bucketWidth);
           bucketAddress = lookUpBucket(
@@ -228,7 +231,7 @@ export const getColorForCoords: ShaderModule = {
         // Use mag that was precomputed in vertex shader. Also,
         // lookUpBucket() will use the precomputed address.
         renderedMagIdx = outputMagIdx[globalLayerIndex];
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx));
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
@@ -271,8 +274,8 @@ export const getColorForCoords: ShaderModule = {
          * with the resolution factor. A typical resolution factor is 2.
          */
 
-        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx);
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx));
+        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx, globalLayerIndex);
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx, globalLayerIndex));
         offsetInBucket = mod(coords, bucketWidth);
         vec3 worldBucketPosition = div(coords, bucketWidth);
 

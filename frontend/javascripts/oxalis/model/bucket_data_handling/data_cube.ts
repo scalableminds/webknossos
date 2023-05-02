@@ -8,11 +8,7 @@ import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
-import {
-  getResolutions,
-  ResolutionInfo,
-  getMappingInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -28,6 +24,7 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import Toast from "libs/toast";
 import type { Vector3, Vector4, BoundingBoxType, LabelMasksByBucketAndW } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -351,7 +348,7 @@ class DataCube {
   async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
     label: number,
-    activeCellId?: number | null | undefined,
+    activeSegmentId?: number | null | undefined,
   ): Promise<void> {
     // This function is only provided for the wK front-end api and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized.
@@ -360,7 +357,7 @@ class DataCube {
 
     for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
       promises.push(
-        this._labelVoxelInResolution_DEPRECATED(voxel, label, resolutionIndex, activeCellId),
+        this._labelVoxelInResolution_DEPRECATED(voxel, label, resolutionIndex, activeSegmentId),
       );
     }
 
@@ -372,7 +369,7 @@ class DataCube {
     voxel: Vector3,
     label: number,
     zoomStep: number,
-    activeCellId: number | null | undefined,
+    activeSegmentId: number | null | undefined,
   ): Promise<void> {
     let voxelInCube = true;
 
@@ -388,9 +385,9 @@ class DataCube {
         const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
         let shouldUpdateVoxel = true;
 
-        if (activeCellId != null) {
+        if (activeSegmentId != null) {
           const voxelValue = this.getMappedDataValue(voxel, zoomStep);
-          shouldUpdateVoxel = activeCellId === voxelValue;
+          shouldUpdateVoxel = activeSegmentId === voxelValue;
         }
 
         if (shouldUpdateVoxel) {
@@ -406,7 +403,7 @@ class DataCube {
 
   async floodFill(
     globalSeedVoxel: Vector3,
-    cellIdNumber: number,
+    segmentIdNumber: number,
     dimensionIndices: DimensionMap,
     floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
@@ -460,11 +457,11 @@ class DataCube {
 
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
     const seedBucketData = seedBucket.getOrCreateData();
-    const sourceCellId = seedBucketData[seedVoxelIndex];
+    const sourceSegmentId = seedBucketData[seedVoxelIndex];
 
-    const cellId = castForArrayType(cellIdNumber, seedBucketData);
+    const segmentId = castForArrayType(segmentIdNumber, seedBucketData);
 
-    if (sourceCellId === cellId) {
+    if (sourceSegmentId === segmentId) {
       return {
         bucketsWithLabeledVoxelsMap,
         wasBoundingBoxExceeded: false,
@@ -534,15 +531,15 @@ class DataCube {
       const bucketData = await currentBucket.getDataForMutation();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
 
-      if (bucketData[initialVoxelIndex] !== sourceCellId) {
-        // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
+      if (bucketData[initialVoxelIndex] !== sourceSegmentId) {
+        // Ignoring neighbour buckets whose segmentId at the initial voxel does not match the source cell id.
         continue;
       }
 
       // Add the bucket to the current volume undo batch, if it isn't already part of it.
       currentBucket.startDataMutation();
       // Mark the initial voxel.
-      bucketData[initialVoxelIndex] = cellId;
+      bucketData[initialVoxelIndex] = segmentId;
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
@@ -609,8 +606,8 @@ class DataCube {
             // Label the current neighbour and add it to the neighbourVoxelStackUvw to iterate over its neighbours.
             const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
 
-            if (bucketData[neighbourVoxelIndex] === sourceCellId) {
-              bucketData[neighbourVoxelIndex] = cellId;
+            if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
+              bucketData[neighbourVoxelIndex] = segmentId;
               markUvwInSliceAsLabeled(neighbourVoxelUvw);
               neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
               labeledVoxelCount++;
@@ -727,7 +724,7 @@ class DataCube {
   }
 
   getNextCurrentlyUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
-    const resolutions = getResolutions(Store.getState().dataset);
+    const resolutions = this.resolutionInfo.getDenseResolutions();
     let usableZoomStep = zoomStep;
 
     while (
@@ -745,7 +742,7 @@ class DataCube {
     position: Vector3,
     zoomStep: number,
   ): Promise<number> {
-    const resolutions = getResolutions(Store.getState().dataset);
+    const resolutions = this.resolutionInfo.getDenseResolutions();
     let usableZoomStep = zoomStep;
 
     while (
@@ -820,7 +817,7 @@ class DataCube {
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
-      getResolutions(Store.getState().dataset),
+      this.resolutionInfo.getDenseResolutions(),
       zoomStep,
     );
   }

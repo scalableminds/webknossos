@@ -5,7 +5,8 @@ import { M4x4, V3 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { ResolutionInfo } from "../helpers/resolution_info";
+
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Infinity;

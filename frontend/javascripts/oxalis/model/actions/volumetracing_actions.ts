@@ -1,11 +1,13 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { Segment, SegmentMap } from "oxalis/store";
+import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import { batchActions } from "redux-batched-actions";
+
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 type CreateCellAction = ReturnType<typeof createCellAction>;
@@ -35,12 +37,26 @@ export type ImportVolumeTracingAction = ReturnType<typeof importVolumeTracingAct
 export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
+export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
+export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
+
+export type BatchableUpdateSegmentAction =
+  | UpdateSegmentAction
+  | RemoveSegmentAction
+  | SetSegmentGroupsAction;
+export type BatchUpdateGroupsAndSegmentsAction = {
+  type: "BATCH_UPDATE_GROUPS_AND_SEGMENTS";
+  payload: BatchableUpdateSegmentAction[];
+  meta: {
+    batch: true;
+  };
+};
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -61,6 +77,8 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
+  | RemoveSegmentAction
+  | SetSegmentGroupsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -69,18 +87,22 @@ export type VolumeTracingAction =
   | ComputeQuickSelectForRectAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
-  | ConfirmQuickSelectAction;
+  | ConfirmQuickSelectAction
+  | BatchUpdateGroupsAndSegmentsAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
+  "SET_SEGMENT_GROUPS",
+  "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
   // Note that the following two actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
+  "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -141,17 +163,17 @@ export const finishEditingAction = () =>
     type: "FINISH_EDITING",
   } as const);
 
-export const setActiveCellAction = (cellId: number, somePosition?: Vector3) =>
+export const setActiveCellAction = (segmentId: number, somePosition?: Vector3) =>
   ({
     type: "SET_ACTIVE_CELL",
-    cellId,
+    segmentId,
     somePosition,
   } as const);
 
-export const clickSegmentAction = (cellId: number, somePosition: Vector3) =>
+export const clickSegmentAction = (segmentId: number, somePosition: Vector3) =>
   ({
     type: "CLICK_SEGMENT",
-    cellId,
+    segmentId,
     somePosition,
   } as const);
 
@@ -167,6 +189,7 @@ export const updateSegmentAction = (
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
+  createsNewUndoState: boolean = false,
 ) =>
   ({
     type: "UPDATE_SEGMENT",
@@ -174,6 +197,31 @@ export const updateSegmentAction = (
     segment,
     layerName,
     timestamp,
+    createsNewUndoState,
+  } as const);
+
+export const removeSegmentAction = (
+  segmentId: number,
+  layerName: string,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "REMOVE_SEGMENT",
+    segmentId,
+    layerName,
+    timestamp,
+  } as const);
+
+export const setSegmentGroupsAction = (
+  segmentGroups: Array<SegmentGroup>,
+  layerName: string,
+  calledFromUndoSaga: boolean = false,
+) =>
+  ({
+    type: "SET_SEGMENT_GROUPS",
+    segmentGroups,
+    layerName,
+    calledFromUndoSaga,
   } as const);
 
 export const interpolateSegmentationLayerAction = () =>
@@ -236,10 +284,10 @@ export const importVolumeTracingAction = () =>
     type: "IMPORT_VOLUMETRACING",
   } as const);
 
-export const setLargestSegmentIdAction = (cellId: number) =>
+export const setLargestSegmentIdAction = (segmentId: number) =>
   ({
     type: "SET_LARGEST_SEGMENT_ID",
-    cellId,
+    segmentId,
   } as const);
 
 export const dispatchFloodfillAsync = async (
@@ -285,6 +333,15 @@ export const fineTuneQuickSelectAction = (
     erodeValue,
     dilateValue,
   } as const);
+
+/*
+ * Note that all actions must refer to the same volume layer.
+ */
+export const batchUpdateGroupsAndSegmentsAction = (actions: BatchableUpdateSegmentAction[]) =>
+  batchActions(
+    actions,
+    "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
+  ) as unknown as BatchUpdateGroupsAndSegmentsAction;
 
 export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" } as const);
 

@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateGraph, EditableMappingProto}
+import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
@@ -14,7 +14,6 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMapping,
   EditableMappingService,
   EditableMappingUpdateActionGroup,
   MinCutParameters
@@ -32,6 +31,7 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -189,8 +189,9 @@ class VolumeTracingController @Inject()(
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
-              editableMappingService.duplicate(tracing.mappingName, tracing, tracingId, userToken))
+              editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayer, userToken))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
               tracing,
@@ -297,7 +298,8 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
-            (editableMappingId, editableMapping) <- editableMappingService.create(baseMappingName = tracingMappingName)
+            (editableMappingId, editableMappingInfo) <- editableMappingService.create(
+              baseMappingName = tracingMappingName)
             volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
                                                    isEditable = Some(true),
                                                    actionTimestamp = Some(System.currentTimeMillis()))
@@ -316,7 +318,8 @@ class VolumeTracingController @Inject()(
             )
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
                                                         editableMappingId = editableMappingId,
-                                                        editableMapping = editableMapping)
+                                                        editableMappingInfo = editableMappingInfo,
+                                                        version = Some(0L))
           } yield Ok(infoJson)
         }
       }
@@ -345,8 +348,8 @@ class VolumeTracingController @Inject()(
           afterFind = Instant.now
           mappingName <- tracing.mappingName.toFox
           _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
-          currentVersion <- editableMappingService.newestMaterializableVersion(mappingName)
-          _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update group must contain exactly one update group"
+          currentVersion <- editableMappingService.getClosestMaterializableVersionOrZero(mappingName, None)
+          _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update request must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
           _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
@@ -370,76 +373,26 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def editableMappingInfo(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
+  def editableMappingInfo(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMapping <- editableMappingService.get(mappingName,
-                                                          remoteFallbackLayer,
-                                                          urlOrHeaderToken(token, request))
+            editableMappingInfo <- editableMappingService.getInfo(mappingName,
+                                                                  version,
+                                                                  remoteFallbackLayer,
+                                                                  urlOrHeaderToken(token, request))
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
                                                         editableMappingId = mappingName,
-                                                        editableMapping = editableMapping)
+                                                        editableMappingInfo = editableMappingInfo,
+                                                        version = version)
           } yield Ok(infoJson)
         }
       }
-  }
-
-  def listVersions(mappingId: String): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      versions <- editableMappingService.listVersions(mappingId)
-    } yield Ok(Json.obj("versions" -> versions))
-  }
-
-  // TODO remove
-  def resetMapping(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      tracing <- tracingService.find(tracingId)
-      bytes = Files.readAllBytes(Paths.get("/home/f/Downloads/perfreading/mapping.proto.bin"))
-      editableMappingProto = EditableMappingProto.parseFrom(bytes)
-      editableMapping = EditableMapping.fromProto(editableMappingProto)
-      largestGraph = editableMapping.agglomerateToGraph.maxBy((agglomerateGraphTuple: (Long, AgglomerateGraph)) =>
-        agglomerateGraphTuple._2.edges.length)
-      _ = logger.info(
-        s"Agglomerate with largest editable graph ${largestGraph._1.toString}. ${largestGraph._2.positions(1)}")
-      _ = {
-        var sum = 0
-        editableMapping.agglomerateToGraph.foreach { agglomerateGraphTuple =>
-          sum += agglomerateGraphTuple._2.edges.length;
-          if (agglomerateGraphTuple._2.edges.length > 2) {
-            logger.info(f"agglomerate ${agglomerateGraphTuple._1}: ${agglomerateGraphTuple._2.edges.length}%07d edges")
-          }
-        }
-        logger.info(s"total edges: $sum")
-        logger.info(s"segmentToAgglomerate: ${editableMapping.segmentToAgglomerate.keys.length} items")
-      }
-      newId = editableMappingService.generateId
-      _ <- editableMappingService.save(newId, editableMappingProto)
-      _ <- tracingService.save(tracing.copy(mappingName = Some(newId), mappingIsEditable = Some(true)),
-                               Some(tracingId),
-                               tracing.version)
-    } yield Ok(s"successfully changed mapping id of tracing $tracingId to $newId")
-  }
-
-  def editableMappingProto(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId)
-            mappingName <- tracing.mappingName.toFox
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMapping <- editableMappingService.get(mappingName,
-                                                          remoteFallbackLayer,
-                                                          urlOrHeaderToken(token, request))
-          } yield Ok(toProtoBytes[EditableMappingProto](editableMapping.toProto))
-        }
-      }
-  }
+    }
 
   def editableMappingSegmentIdsForAgglomerate(token: Option[String],
                                               tracingId: String,
@@ -451,13 +404,18 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMapping <- editableMappingService.get(mappingName,
-                                                          remoteFallbackLayer,
-                                                          urlOrHeaderToken(token, request))
-            agglomerateIdIsPresent = editableMapping.agglomerateToGraph.contains(agglomerateId)
-            segmentIds = if (agglomerateIdIsPresent) {
-              editableMapping.agglomerateToGraph(agglomerateId).segments
-            } else List.empty
+            agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
+              .getAgglomerateGraphForId(mappingName,
+                                        agglomerateId,
+                                        remoteFallbackLayer,
+                                        urlOrHeaderToken(token, request))
+              .futureBox
+            segmentIds <- agglomerateGraphBox match {
+              case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
+              case Empty                  => Fox.successful(List.empty)
+              case f: Failure             => f.toFox
+            }
+            agglomerateIdIsPresent = agglomerateGraphBox.isDefined
           } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
         }
       }

@@ -49,12 +49,6 @@ class TSRemoteWebKnossosClient @Inject()(
       .silent
       .post(Json.toJson(tracingUpdatesReport))
 
-  def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
-    rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/reportIsosurfaceRequest")
-      .addQueryString("key" -> tracingStoreKey)
-      .addQueryStringOptional("token", userToken)
-      .post()
-
   def getDataSourceForTracing(tracingId: String): Fox[DataSourceLike] =
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/dataSource")
       .addQueryString("tracingId" -> tracingId)

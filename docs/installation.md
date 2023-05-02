@@ -4,7 +4,7 @@ The easiest way to get started with WEBKNOSSOS is to get an account on [webknoss
 WEBKNOSSOS is open-source, so you can install it on your own server.
 We recommend a server with at least 4 CPU cores, 16 GB RAM, and as much disk space as you require for your datasets.
 
-As prerequisites, you need to install [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) on your server. Docker 17+ and Docker Compose 1.18+ are required.
+As prerequisites, you need to install [Docker](https://docs.docker.com/desktop/install/linux-install/) including [Docker Compose](https://docs.docker.com/compose/reference/) on your server. Docker 23+ is recommended.
 
 This tutorial shows how to install WEBKNOSSOS on a fresh VM, which is available over the public internet and has a domain name (or a subdomain) already configured.
 WEBKNOSSOS will then be available over a secured connection (HTTPS) with automatic certificate management.
@@ -29,7 +29,7 @@ chown -R 1000:1000 binaryData
 # Note that PUBLIC_HOST does not include http:// or https:// prefixes
 # Please look up the latest WEBKNOSSOS version number at https://github.com/scalableminds/webknossos/releases
 DOCKER_TAG=xx.yy.z PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
-docker-compose up webknossos nginx nginx-letsencrypt
+docker compose up webknossos nginx nginx-letsencrypt
 
 # Wait a couple of minutes for WEBKNOSSOS to become available under your domain
 # e.g. https://webknossos.example.com
@@ -37,12 +37,12 @@ docker-compose up webknossos nginx nginx-letsencrypt
 
 # After the initial run, you can start WEBKNOSSOS in the background
 DOCKER_TAG=xx.yy.z PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
-docker-compose up -d webknossos nginx nginx-letsencrypt
+docker compose up -d webknossos nginx nginx-letsencrypt
 
 # Congratulations! Your WEBKNOSSOS is now up and running.
 
 # Stop everything
-docker-compose down
+docker compose down
 ```
 
 **This setup does not support regular backups or monitoring.

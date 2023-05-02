@@ -21,6 +21,12 @@
   height: 100%;
 }
 
+.segments-tree {
+  .ant-tree-treenode {
+    padding: 0 !important;
+  }
+}
+
 .segment-list-item {
   // By default, antd's list items are flex, which
   // causes more trouble than it helps.
@@ -51,11 +57,6 @@
   }
 }
 
-.deemphasized-segment-name {
-  font-style: italic;
-  color: #989898;
-}
-
 #commentList {
   .comment,
   .comment-tree {
@@ -75,6 +76,8 @@
   height: inherit;
   display: flex;
   flex-direction: column;
+  // Scroll behavior is handled by the children of this view.
+  overflow: hidden; // use auto when not using virtualization
 }
 
 #connectome-view {

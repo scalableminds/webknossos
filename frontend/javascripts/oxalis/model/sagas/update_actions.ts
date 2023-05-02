@@ -9,6 +9,7 @@ import type {
   TreeGroup,
   UserBoundingBox,
   UserBoundingBoxToServer,
+  SegmentGroup,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 export type NodeWithTreeId = {
@@ -113,26 +114,8 @@ type UpdateVolumeTracingUpdateAction = {
     zoomLevel: number;
   };
 };
-export type CreateSegmentUpdateAction = {
-  name: "createSegment";
-  value: {
-    id: number;
-    anchorPosition: Vector3 | null | undefined;
-    name: string | null | undefined;
-    color: Vector3 | null;
-    creationTime: number | null | undefined;
-  };
-};
-export type UpdateSegmentUpdateAction = {
-  name: "updateSegment";
-  value: {
-    id: number;
-    anchorPosition: Vector3 | null | undefined;
-    name: string | null | undefined;
-    color: Vector3 | null;
-    creationTime: number | null | undefined;
-  };
-};
+export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
+export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = {
   name: "deleteSegment";
   value: {
@@ -151,12 +134,10 @@ export type UpdateBucketUpdateAction = {
     base64Data: string;
   };
 };
-type UpdateTreeGroupsUpdateAction = {
-  name: "updateTreeGroups";
-  value: {
-    treeGroups: Array<TreeGroup>;
-  };
-};
+type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+
+type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
+
 export type RevertToVersionUpdateAction = {
   name: "revertToVersion";
   value: {
@@ -219,6 +200,7 @@ export type UpdateAction =
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
+  | UpdateSegmentGroupsUpdateAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
@@ -441,8 +423,9 @@ export function createSegmentVolumeAction(
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
   color: Vector3 | null,
+  groupId: number | null | undefined,
   creationTime: number | null | undefined = Date.now(),
-): CreateSegmentUpdateAction {
+) {
   return {
     name: "createSegment",
     value: {
@@ -450,27 +433,30 @@ export function createSegmentVolumeAction(
       anchorPosition,
       name,
       color,
+      groupId,
       creationTime,
     },
-  };
+  } as const;
 }
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
   color: Vector3 | null,
+  groupId: number | null | undefined,
   creationTime: number | null | undefined = Date.now(),
-): UpdateSegmentUpdateAction {
+) {
   return {
     name: "updateSegment",
     value: {
       id,
       anchorPosition,
       name,
-      creationTime,
       color,
+      groupId,
+      creationTime,
     },
-  };
+  } as const;
 }
 export function deleteSegmentVolumeAction(id: number): DeleteSegmentUpdateAction {
   return {
@@ -491,13 +477,23 @@ export function updateBucket(
     }),
   };
 }
-export function updateTreeGroups(treeGroups: Array<TreeGroup>): UpdateTreeGroupsUpdateAction {
+
+export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>) {
+  return {
+    name: "updateSegmentGroups",
+    value: {
+      segmentGroups,
+    },
+  } as const;
+}
+
+export function updateTreeGroups(treeGroups: Array<TreeGroup>) {
   return {
     name: "updateTreeGroups",
     value: {
       treeGroups,
     },
-  };
+  } as const;
 }
 export function revertToVersion(version: number): RevertToVersionUpdateAction {
   return {

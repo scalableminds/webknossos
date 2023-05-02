@@ -10,6 +10,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import window from "libs/window";
 import dummyUser from "test/fixtures/dummy_user";
+import dummyOrga from "test/fixtures/dummy_organization";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -133,6 +134,9 @@ const { default: Store, startSagas } = require("oxalis/store");
 const rootSaga = require("oxalis/model/sagas/root_saga").default;
 const { setStore, setModel } = require("oxalis/singletons");
 const { setupApi } = require("oxalis/api/internal_api");
+const { setActiveOrganizationAction } = mockRequire.reRequire(
+  "oxalis/model/actions/organization_actions",
+);
 
 setModel(Model);
 setStore(Store);
@@ -158,6 +162,7 @@ export function __setupOxalis(
   mode: keyof typeof modelData,
   apiVersion?: number,
 ) {
+  Store.dispatch(setActiveOrganizationAction(dummyOrga));
   UrlManager.initialState = {
     position: [1, 2, 3],
   };

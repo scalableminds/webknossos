@@ -33,6 +33,7 @@ team.inUse.projects=Team is referenced by {0} projects
 organization.create.forbidden=You are not allowed to create a new organization
 organization.create.failed=Failed to create a new organization
 organization.notFound=Organization {0} could not be found
+organization.notFound.wrongHost=Organization {0} could not be found. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates {1} while this instance is {2}.
 organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=This organization name contains illegal characters. Please only use letters and numbers.
 organization.name.alreadyInUse=This name is already claimed by a different organization and not available anymore. Please choose a different name.
@@ -46,7 +47,7 @@ user.notFound=User not found
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.
 user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.
-user.lastAdmin=This user is the last remaining admin in your organzation. You cannot remove admin privileges from this account.
+user.lastAdmin=This user is the last remaining admin in your organization. You cannot remove admin privileges from this account.
 user.lastOwner=Cannot deactivate the organization owner. Please talk to the WEBKNOSSOS team to transfer organization ownership.
 
 user.email.alreadyInUse=This email address is already in use
@@ -67,17 +68,18 @@ oidc.disabled=OIDC is disabled
 oidc.configuration.invalid=OIDC configuration is invalid
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on WEBKNOSSOS to login.
-braintracing.error=We could not atomatically create an account for you on braintracing.org. Please do it on your own.
+braintracing.error=We could not automatically create an account for you on braintracing.org. Please do it on your own.
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
 dataSet=Dataset
 dataSet.notFound=Dataset {0} does not exist or could not be accessed
 dataSet.notFoundConsiderLogin=Dataset {0} does not exist or could not be accessed. You may need to log in.
 dataSet.notFoundForAnnotation=The Dataset for this annotation does not exist or could not be accessed.
-dataSet.noAccess=Could not access DataSet {0}. Does your team have access?
-dataSet.noAccessById=Could not access the corresponding DataSet. This is likely because you are not a member of a team that has access to it.
+dataSet.noAccess=Could not access dataset {0}. Does your team have access?
+dataSet.noAccess.wrongHost=Could not access dataset {0}. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates {1} while this instance is {2}.
+dataSet.noAccessById=Could not access the corresponding dataset. This is likely because you are not a member of a team that has access to it.
 dataSet.notImported=Dataset {0} is not imported
-dataSet.name.invalid.characters=Dataset name is invalid. Please use only letters, digits, dots, underscores, hypens.
+dataSet.name.invalid.characters=Dataset name is invalid. Please use only letters, digits, dots, underscores, hyphens.
 dataSet.name.invalid.startsWithDot=Dataset name is invalid. Please use a name that does not start with a dot.
 dataSet.name.invalid.lessThanThreeCharacters=Dataset name is invalid. Please use at least three characters.
 dataSet.name.alreadyTaken=This name is already being used by a different dataset. Please choose a different name.
@@ -109,7 +111,7 @@ dataVault.setup.failed=Failed to set up remote file system
 dataVault.getPath.failed=Failed to get remote path
 
 
-dataSource.notFound=Datasource not found on datastore server
+dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
@@ -146,6 +148,7 @@ nml.edge.invalid=Invalid edge {0} {1}
 nml.tree.id.invalid=Invalid tree id {0}
 nml.tree.elements.invalid=Invalid {0} in tree {1}
 nml.treegroup.id.invalid=Invalid tree group id {0}
+nml.segmentGroup.id.invalid=Invalid segment group id {0}
 nml.boundingbox.id.invalid=Invalid user bounding box id {0}
 
 project.name.alreadyTaken=The name “{0}” is already being used for a different project. Please choose a different name.
@@ -180,8 +183,9 @@ annotation.edit.failed=Updating the annotation failed
 annotation.finish.failed=Finishing the annotation failed
 annotation.reset.success=Annotation was successfully reset
 annotation.revert.tasksOnly=Reverting an annotation is only implemented for tasks
-annotation.download.notAllowed=You cannot download this annotation
+annotation.download.notAllowed=You are not allowed to download this annotation
 annotation.download.fetch.notSkeleton=Cannot fetch skeleton annotation: not a skeleton layer
+annotation.download.failed=Failed to download annotation
 annotation.download.multipleSkeletons=Cannot download annotation with multiple skeleton layers
 annotation.download.noLayers=Cannot download annotation that has no layers
 annotation.download.volumeNameForMultiple=Cannot download multiple volume layers if volume name is passed

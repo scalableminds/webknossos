@@ -9,8 +9,10 @@ import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+
 const FormItem = Form.Item;
 const { Password } = Input;
+
 type Props = {
   onRegistered: (arg0: boolean) => void;
   confirmLabel?: string;
@@ -21,7 +23,7 @@ type Props = {
   tryAutoLogin?: boolean;
 };
 
-function RegistrationForm(props: Props) {
+function RegistrationFormGeneric(props: Props) {
   const [form] = Form.useForm();
 
   const onFinish = async (formValues: Record<string, any>) => {
@@ -306,4 +308,4 @@ function RegistrationForm(props: Props) {
   );
 }
 
-export default RegistrationForm;
+export default RegistrationFormGeneric;

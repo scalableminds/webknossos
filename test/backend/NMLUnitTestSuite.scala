@@ -23,21 +23,33 @@ class NMLUnitTestSuite extends PlaySpec {
   }
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing)
-    : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] = {
-    val annotationLayers = List(FetchedAnnotationLayer("dummySkeletonTracingId", AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracing), None))
-    val nmlEnumarator =
-      new NmlWriter().toNmlStream(annotationLayers, None, None, None, "testOrganization", "dummy_dataset", None, None)
-    val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
+    : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] = {
+    val annotationLayers = List(
+      FetchedAnnotationLayer("dummySkeletonTracingId",
+                             AnnotationLayer.defaultSkeletonLayerName,
+                             Left(skeletonTracing),
+                             None))
+    val nmlEnumerator =
+      new NmlWriter().toNmlStream(annotationLayers,
+                                  None,
+                                  None,
+                                  None,
+                                  "testOrganization",
+                                  "http://wk.test",
+                                  "dummy_dataset",
+                                  None,
+                                  None)
+    val arrayFuture = Iteratee.flatten(nmlEnumerator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
     NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)
   }
 
   def isParseSuccessful(
-      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)]): Boolean =
+      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])]): Boolean =
     parsedTracing match {
       case Full(tuple) =>
         tuple match {
-          case (Some(_), _, _) => true
+          case (Some(_), _, _, _) => true
           case _                  => false
         }
       case _ => false
@@ -50,7 +62,7 @@ class NMLUnitTestSuite extends PlaySpec {
       writeAndParseTracing(dummyTracing) match {
         case Full(tuple) =>
           tuple match {
-            case (Some(tracing), _, _) =>
+            case (Some(tracing), _, _, _) =>
               assert(tracing == dummyTracing)
             case _ => throw new Exception
           }

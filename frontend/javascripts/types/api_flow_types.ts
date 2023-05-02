@@ -4,6 +4,7 @@ import type {
   CommentType,
   TreeGroup,
   RecommendedConfiguration,
+  SegmentGroup,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -446,18 +447,6 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
   };
 }
 
-export type LocalMeshMetaData = {
-  isVisible?: boolean;
-  isLoaded?: boolean;
-  isLoading?: boolean;
-};
-export type RemoteMeshMetaData = {
-  annotationId: string;
-  position: Vector3;
-  description: string;
-  id: string;
-};
-export type MeshMetaData = LocalMeshMetaData & RemoteMeshMetaData;
 export type AnnotationViewConfiguration = {
   layers: Record<
     string,
@@ -477,7 +466,6 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly user?: APIUserBase;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
-  readonly meshes: Array<MeshMetaData>;
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;
@@ -707,6 +695,7 @@ type ServerSegment = {
   anchorPosition: Point3 | null | undefined;
   creationTime: number | null | undefined;
   color: ColorObject | null;
+  groupId: number | null | undefined;
 };
 export type ServerTracingBase = {
   id: string;
@@ -739,6 +728,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;
+  segmentGroups: Array<SegmentGroup> | null | undefined;
   largestSegmentId: number;
   // `resolutions` will be undefined for legacy annotations
   // which were created before the multi-resolution capabilities

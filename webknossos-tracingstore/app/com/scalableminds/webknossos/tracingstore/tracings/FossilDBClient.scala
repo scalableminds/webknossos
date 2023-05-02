@@ -105,7 +105,7 @@ class FossilDBClient(collection: String,
 
   def getVersion(key: String,
                  version: Option[Long] = None,
-                 mayBeEmpty: Option[Boolean],
+                 mayBeEmpty: Option[Boolean] = None,
                  emptyFallback: Option[Long] = None): Fox[Long] =
     try {
       val reply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))

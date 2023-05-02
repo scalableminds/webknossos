@@ -1,12 +1,15 @@
 const defaultItemsPerBatch = 1000;
 let idCounter = 0;
-const idSymbol = Symbol("id"); // DiffableMap is an immutable key-value data structure which supports fast diffing.
+const idSymbol = Symbol("id");
+
+// DiffableMap is an immutable key-value data structure which supports fast diffing.
 // Updating a DiffableMap returns a new DiffableMap, in which case the Maps are
 // derived from each other ("dependent").
 // Diffing is very fast when the given Maps are dependent, since the separate chunks
 // can be compared shallowly.
 // The insertion order of the DiffableMap is not guaranteed.
-// Stored values may be null. However, `undefined` is equal to "does not exist".
+// Stored values may be null. However, be careful when dealing with `undefined`, as
+// it's interpreted as "does not exist", but can still be listed during enumeration.
 
 class DiffableMap<K extends number, V> {
   chunks: Array<Map<K, V>>;
@@ -226,7 +229,9 @@ class DiffableMap<K extends number, V> {
     // @ts-expect-error ts-migrate(2322) FIXME: Type '{}' is not assignable to type 'Record<K, V>'... Remove this comment to see the full error message
     return result;
   }
-} // This function should only be used internally by this module.
+}
+
+// This function should only be used internally by this module.
 // It creates a new DiffableMap on the basis of another one, while
 // shallowly copying the internal chunks.
 // When modifying a chunk, that chunk should be manually cloned.
@@ -263,6 +268,9 @@ export function diffDiffableMaps<K extends number, V>(
   const onlyA = [];
   const onlyB = [];
 
+  // Compare the chunks of mapA and mapB by identity. For independent
+  // maps, all chunks will be identified as "different". This will
+  // be fixed later (below this while loop).
   while (mapA.chunks[idx] != null || mapB.chunks[idx] != null) {
     if (mapB.chunks[idx] == null) {
       // mapA has more internal chunks than mapB. Add all to onlyA.

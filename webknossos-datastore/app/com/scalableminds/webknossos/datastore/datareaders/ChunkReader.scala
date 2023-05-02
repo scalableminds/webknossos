@@ -2,9 +2,10 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray, DataType => MADataType}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
+import java.io.{ByteArrayInputStream, IOException}
 import javax.imageio.stream.MemoryCacheImageInputStream
 import scala.collection.immutable.NumericRange
 import scala.concurrent.Future
@@ -38,14 +39,10 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
   protected def readChunkBytesAndShape(path: String,
                                        range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] =
-    Using.Manager { use =>
-      (vaultPath / path).readBytes(range).map { bytes =>
-        val is = use(new ByteArrayInputStream(bytes))
-        val os = use(new ByteArrayOutputStream())
-        header.compressorImpl.uncompress(is, os)
-        (os.toByteArray, None)
-      }
-    }.get
+    for {
+      bytes <- (vaultPath / path).readBytes(range)
+      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toOption
+    } yield (decompressed, None)
 }
 
 abstract class ChunkTyper {

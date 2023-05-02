@@ -14,6 +14,7 @@ object NmlResults extends LazyLogging {
     def fileName: String
 
     def description: Option[String] = None
+    def wkUrl: Option[String] = None
 
     def succeeded: Boolean
 
@@ -32,11 +33,13 @@ object NmlResults extends LazyLogging {
   case class NmlParseSuccess(fileName: String,
                              skeletonTracing: Option[SkeletonTracing],
                              volumeLayers: List[UploadedVolumeLayer],
-                             _description: String)
+                             _description: String,
+                             _wkUrl: Option[String])
       extends NmlParseResult {
     def succeeded = true
 
     override def description: Option[String] = Some(_description)
+    override def wkUrl: Option[String] = _wkUrl
 
     override def withName(name: String): NmlParseResult = this.copy(fileName = name)
   }

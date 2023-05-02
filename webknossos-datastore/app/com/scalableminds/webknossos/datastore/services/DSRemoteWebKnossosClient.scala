@@ -16,7 +16,6 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
-import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -54,33 +53,31 @@ class DSRemoteWebKnossosClient @Inject()(
 
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingInterval
 
-  def tick(): Unit = reportStatus(ok = true)
+  def tick(): Unit = reportStatus()
 
-  def reportStatus(ok: Boolean): Fox[_] =
+  private def reportStatus(): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
-      .patch(DataStoreStatus(ok, dataStoreUri, Some(reportUsedStorageEnabled)))
+      .patch(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
 
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def reportUpload(dataSourceId: DataSourceId, dataSetSizeBytes: Long, userToken: Option[String]): Fox[Unit] =
+  def reportUpload(dataSourceId: DataSourceId,
+                   dataSetSizeBytes: Long,
+                   needsConversion: Boolean,
+                   userToken: Option[String]): Fox[Unit] =
     for {
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
+        .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()
     } yield ()
-
-  def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportIsosurfaceRequest")
-      .addQueryString("key" -> dataStoreKey)
-      .addQueryStringOptional("token", userToken)
-      .post()
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/datasources")
@@ -99,17 +96,6 @@ class DSRemoteWebKnossosClient @Inject()(
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)
-
-  def reportUsedStorage(organizationName: String,
-                        datasetName: Option[String],
-                        storageReportEntries: List[DirectoryStorageReport]): Fox[Unit] =
-    for {
-      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportUsedStorage")
-        .addQueryString("key" -> dataStoreKey)
-        .addQueryString("organizationName" -> organizationName)
-        .addQueryStringOptional("datasetName", datasetName)
-        .post(storageReportEntries)
-    } yield ()
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/jobExportProperties")

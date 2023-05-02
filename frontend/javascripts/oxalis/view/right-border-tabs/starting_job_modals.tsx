@@ -13,7 +13,6 @@ import {
   getColorLayers,
   getSegmentationLayers,
   getDataLayers,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getReadableNameByVolumeTracingId,
@@ -27,6 +26,7 @@ import { Model } from "oxalis/singletons";
 import { clamp, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { V3 } from "libs/mjs";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 const { ThinSpace } = Unicode;
 const enum JobNames {

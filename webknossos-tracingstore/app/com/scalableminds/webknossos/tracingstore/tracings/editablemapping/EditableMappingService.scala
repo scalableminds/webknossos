@@ -276,14 +276,25 @@ class EditableMappingService @Inject()(
       } yield updates.map(_._2).reverse.flatten
     }
 
-  private def getUpdateActionsWithVersions(editableMappingId: String,
-                                           newestVersion: Long,
-                                           oldestVersion: Long): Fox[List[(Long, List[EditableMappingUpdateAction])]] =
-    tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple[List[EditableMappingUpdateAction]](
-      editableMappingId,
-      Some(newestVersion),
-      Some(oldestVersion)
-    )(fromJsonBytes[List[EditableMappingUpdateAction]])
+  private def getUpdateActionsWithVersions(
+      editableMappingId: String,
+      newestVersion: Long,
+      oldestVersion: Long): Fox[List[(Long, List[EditableMappingUpdateAction])]] = {
+    val batchRanges = batchRange(oldestVersion, newestVersion, batchSize = 100)
+    for {
+      updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
+        val batchFrom = batchRange._1
+        val batchTo = batchRange._2
+        tracingDataStore.editableMappingUpdates
+          .getMultipleVersionsAsVersionValueTuple[List[EditableMappingUpdateAction]](
+            editableMappingId,
+            Some(batchFrom),
+            Some(batchTo)
+          )(fromJsonBytes[List[EditableMappingUpdateAction]])
+      }
+      flat = updateActionBatches.flatten
+    } yield flat
+  }
 
   def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
                               pos: Vec3Int,
@@ -643,7 +654,6 @@ class EditableMappingService @Inject()(
                         remoteFallbackLayer: RemoteFallbackLayer,
                         userToken: Option[String]): Fox[Unit] =
     for {
-      // TODO: perf optimization: batch fetching of update actions
       targetNewestVersion <- getClosestMaterializableVersionOrZero(targetEditableMappingId, None)
       closestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId,
                                                                 None,
@@ -675,4 +685,10 @@ class EditableMappingService @Inject()(
       }
     } yield ()
 
+  private def batchRange(oldestVersion: Long, newestVersion: Long, batchSize: Long): Seq[(Long, Long)] =
+    (0L to ((newestVersion - oldestVersion) / batchSize)).map { batchIndex =>
+      val batchFrom = batchIndex * batchSize + oldestVersion
+      val batchTo = Math.min(newestVersion, (batchIndex + 1) * batchSize + oldestVersion - 1)
+      (batchFrom, batchTo)
+    }
 }

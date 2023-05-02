@@ -47,7 +47,7 @@ trait DatasetHeader {
   def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize
 
   def isSharded = false
-  
+
   private def parseFillValueFromString(s: String): Number =
     s match {
       case "NaN"       => 0
@@ -55,6 +55,6 @@ trait DatasetHeader {
       case "-Infinity" => ArrayDataType.minValue(resolvedDataType)
       case _           => 0 // Unsupported fill value does not throw exception
     }
-  
+
   def voxelOffset: Array[Int]
 }

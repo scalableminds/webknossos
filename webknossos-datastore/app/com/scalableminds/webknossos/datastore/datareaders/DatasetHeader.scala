@@ -47,4 +47,6 @@ trait DatasetHeader {
   def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize
 
   def isSharded = false
+
+  def voxelOffset: Array[Int]
 }

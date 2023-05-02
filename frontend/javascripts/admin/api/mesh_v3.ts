@@ -88,20 +88,17 @@ export function getMeshfileChunkData(
       },
     );
     const chunkCount = batchDescription.requests.length;
-    const jumpTableLength = chunkCount + 1;
-    const byteLengthPerJumpTableEntry = 8;
-    const jumpTableDataView = new DataView(
-      dracoDataChunksWithJumpTable,
-      0,
-      byteLengthPerJumpTableEntry * jumpTableLength,
-    );
-    const jumpPositionsForChunks = _.range(0, jumpTableLength).map((idx) =>
-      Number(jumpTableDataView.getBigUint64(byteLengthPerJumpTableEntry * idx, true)),
-    );
+    const jumpPositionsForChunks = [];
+    let cumsum = 0;
+    for (const req of batchDescription.requests) {
+      jumpPositionsForChunks.push(cumsum);
+      cumsum += req.byteSize;
+    }
+    jumpPositionsForChunks.push(cumsum);
 
     const dataEntries = [];
     for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
-      // Slice creates a copy of the data, but working with TypedArray views causes
+      // slice() creates a copy of the data, but working with TypedArray Views would cause
       // issues when transferring the data to a webworker.
       const dracoData = dracoDataChunksWithJumpTable.slice(
         jumpPositionsForChunks[chunkIdx],

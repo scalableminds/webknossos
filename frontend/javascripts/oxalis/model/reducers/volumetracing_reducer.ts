@@ -1,6 +1,12 @@
 import update from "immutability-helper";
 import { ContourModeEnum } from "oxalis/constants";
-import type { EditableMapping, OxalisState, SegmentMap, VolumeTracing } from "oxalis/store";
+import type {
+  EditableMapping,
+  OxalisState,
+  SegmentGroup,
+  SegmentMap,
+  VolumeTracing,
+} from "oxalis/store";
 import type {
   VolumeTracingAction,
   UpdateSegmentAction,
@@ -26,6 +32,7 @@ import {
   setLargestSegmentIdReducer,
   updateVolumeTracing,
   setMappingNameReducer,
+  removeMissingGroupsFromSegments,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
@@ -107,6 +114,32 @@ function updateSegments(
   });
 }
 
+function setSegmentGroups(state: OxalisState, layerName: string, newSegmentGroups: SegmentGroup[]) {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type === "NOOP") {
+    return state;
+  }
+
+  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
+    // In case a group is deleted which still has segments attached to it,
+    // adapt the segments so that they belong to the root group. This is
+    // done to avoid that segments get lost in nirvana if the segment groups
+    // were updated inappropriately.
+    const fixedSegments = removeMissingGroupsFromSegments(
+      updateInfo.volumeTracing,
+      newSegmentGroups,
+    );
+    return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
+      segments: fixedSegments,
+      segmentGroups: newSegmentGroups,
+    });
+  }
+
+  // Don't update groups for non-tracings
+  return state;
+}
+
 function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
   const { segments, layerName } = action;
   return updateSegments(state, layerName, (_oldSegments) => segments);
@@ -139,6 +172,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       creationTime: action.timestamp,
       name: null,
       color: null,
+      groupId: null,
       ...oldSegment,
       ...segment,
       somePosition,
@@ -171,6 +205,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
         },
       ]),
     ),
+    segmentGroups: tracing.segmentGroups || [],
     activeCellId: tracing.activeSegmentId ?? 0,
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
@@ -243,6 +278,11 @@ function VolumeTracingReducer(
 
     case "REMOVE_SEGMENT": {
       return handleRemoveSegment(state, action);
+    }
+
+    case "SET_SEGMENT_GROUPS": {
+      const { segmentGroups } = action;
+      return setSegmentGroups(state, action.layerName, segmentGroups);
     }
 
     default: // pass

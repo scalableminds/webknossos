@@ -14,6 +14,7 @@ import type { Dispatch } from "redux";
 import {
   DownloadOutlined,
   DownOutlined,
+  ExclamationCircleOutlined,
   SearchOutlined,
   UploadOutlined,
   WarningOutlined,
@@ -72,6 +73,8 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
+  BatchableUpdateTreeAction,
+  batchUpdateGroupsAndTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -98,34 +101,24 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
+
+const { confirm } = Modal;
 const InputGroup = Input.Group;
 const treeTabId = "tree-list";
+
 type TreeOrTreeGroup = {
   name: string;
   id: number;
   type: string;
 };
 type StateProps = {
-  onShuffleAllTreeColors: () => void;
-  onSortTree: (arg0: boolean) => void;
-  onSelectNextTreeForward: () => void;
-  onSelectNextTreeBackward: () => void;
-  onCreateTree: () => void;
-  onDeleteTree: () => void;
-  onSetTreeGroup: (arg0: number | null | undefined, arg1: number) => void;
-  onChangeTreeName: (arg0: string) => void;
-  onBatchActions: (arg0: Array<Action>, arg1: string) => void;
   annotation: Tracing;
   skeletonTracing: SkeletonTracing | null | undefined;
   userConfiguration: UserConfiguration;
-  onSetActiveTree: (arg0: number) => void;
-  onDeselectActiveTree: () => void;
-  onSetActiveGroup: (arg0: number) => void;
-  onDeselectActiveGroup: () => void;
-  showDropzoneModal: () => void;
   allowUpdate: boolean;
 };
-type Props = StateProps;
+type DispatchProps = ReturnType<typeof mapDispatchToProps>;
+type Props = DispatchProps & StateProps;
 type State = {
   isUploading: boolean;
   isDownloading: boolean;
@@ -156,7 +149,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     const tryParsingFileAsNml = async (file: File) => {
       try {
         const nmlString = await readFileAsText(file);
-        const { trees, treeGroups, userBoundingBoxes, datasetName } = await parseNml(nmlString);
+        const { trees, treeGroups, userBoundingBoxes, datasetName, containedVolumes } =
+          await parseNml(nmlString);
+        if (containedVolumes) {
+          Toast.warning(
+            "The NML file contained volume information which was ignored. Please upload the NML into the dashboard to create a new annotation which also contains the volume data.",
+          );
+        }
         return {
           importActions: wrappedAddTreesAndGroupsAction(
             trees,
@@ -398,7 +397,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     },
   );
 
-  handleChangeTreeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
+  handleChangeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -406,7 +405,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { activeGroupId } = this.props.skeletonTracing;
 
     if (activeGroupId != null) {
-      api.tracing.renameGroup(activeGroupId, evt.target.value);
+      api.tracing.renameSkeletonGroup(activeGroupId, evt.target.value);
     } else {
       this.props.onChangeTreeName(evt.target.value);
     }
@@ -430,6 +429,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       newTreeGroups = [];
     }
 
+    const updateTreeActions: BatchableUpdateTreeAction[] = [];
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       // Remove group
@@ -441,9 +441,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
         // Update all subtrees
         for (const tree of subtrees) {
-          this.props.onSetTreeGroup(
-            parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
-            tree.treeId,
+          updateTreeActions.push(
+            setTreeGroupAction(
+              parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
+              tree.treeId,
+            ),
           );
         }
 
@@ -451,24 +453,24 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       }
 
       // Finds all subtrees of the passed group recursively
-      const findSubtreesRecursively = (group: TreeGroup) => {
+      const findChildrenRecursively = (group: TreeGroup) => {
         const currentSubtrees =
           groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
         // Delete all trees of the current group
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
-        group.children.forEach((subgroup) => findSubtreesRecursively(subgroup));
+        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
       };
 
-      findSubtreesRecursively(item);
+      findChildrenRecursively(item);
     });
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
-      const deleteTreeActions = treeIdsToDelete.map((treeId) => deleteTreeAction(treeId));
-      this.props.onBatchActions(
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-        deleteTreeActions.concat(setTreeGroupsAction(newTreeGroups)),
-        "DELETE_GROUP_AND_TREES",
+      const deleteTreeActions: BatchableUpdateTreeAction[] = treeIdsToDelete.map((treeId) =>
+        deleteTreeAction(treeId),
+      );
+      this.props.onBatchUpdateGroupsAndTreesAction(
+        updateTreeActions.concat(deleteTreeActions, [setTreeGroupsAction(newTreeGroups)]),
       );
     });
   };
@@ -484,15 +486,28 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { trees, treeGroups } = this.props.skeletonTracing;
     const treeGroupToDelete = treeGroups.find((el) => el.groupId === id);
     const groupToTreesMap = createGroupToTreesMap(trees);
-    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id])
+    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id]) {
+      // Group is empty
       this.deleteGroup(id);
-    else if (id === MISSING_GROUP_ID)
-      // case: delete Root group
-      this.deleteGroup(id);
-    else
+    } else if (id === MISSING_GROUP_ID) {
+      // Ask whether all children of root group should be deleted
+      // (doesn't need recursive/not-recursive distinction, since
+      // the root group itself cannot be removed).
+      confirm({
+        title: "Do you want to delete all trees and groups?",
+        icon: <ExclamationCircleOutlined />,
+        okType: "danger",
+        okText: "Delete",
+        onOk: () => {
+          this.deleteGroup(id);
+        },
+      });
+    } else {
+      // Show modal
       this.setState({
         groupToDelete: id,
       });
+    }
   };
 
   handleDelete = () => {
@@ -724,9 +739,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         {
           key: "handleNmlDownload",
           onClick: this.handleNmlDownload,
-          title: "Download selected trees as NML",
+          title: "Download visible trees as NML",
           icon: <DownloadOutlined />,
-          label: "Download Selected Trees",
+          label: "Download Visible Trees",
         },
         {
           key: "importNml",
@@ -778,7 +793,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { skeletonTracing } = this.props;
 
     if (!skeletonTracing) {
-      return null;
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            "This annotation does not contain a skeleton layer. You can add one in the Layers tab in the left sidebar."
+          }
+        />
+      );
     }
 
     const { showSkeletons } = skeletonTracing;
@@ -883,7 +905,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
                   <InputComponent
-                    onChange={this.handleChangeTreeName}
+                    onChange={this.handleChangeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
                     title={
@@ -943,7 +965,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onJustDeleteGroup={() => {
                       this.deleteGroupAndHideModal(groupToDelete, false);
                     }}
-                    onDeleteGroupAndTrees={() => {
+                    onDeleteGroupAndChildren={() => {
                       this.deleteGroupAndHideModal(groupToDelete, true);
                     }}
                   />
@@ -991,6 +1013,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onBatchActions(actions: Array<Action>, actionName: string) {
     dispatch(batchActions(actions, actionName));
+  },
+
+  onBatchUpdateGroupsAndTreesAction(actions: BatchableUpdateTreeAction[]) {
+    dispatch(batchUpdateGroupsAndTreesAction(actions));
   },
 
   onSetTreeGroup(groupId: number | null | undefined, treeId: number) {

@@ -94,6 +94,10 @@ elif [ $cmd == "test-screenshot" ]
 then
   ensureUpToDateTests
   export NODE_PATH="$testBundlePath" && ava $(find "$testBundlePath" -name "*.screenshot.js") "$@"
+elif [ $cmd == "test-wkorg-screenshot" ]
+then
+  ensureUpToDateTests
+  export NODE_PATH="$testBundlePath" && ava $(find "$testBundlePath" -name "*.wkorg_screenshot.js") "$@"
 elif [ $cmd == "prepare" ]
 then
   prepare "$@"

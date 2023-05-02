@@ -329,4 +329,6 @@ export class OxalisModel {
 }
 const model = new OxalisModel(); // export the model as a singleton
 
+export type ModelType = typeof model;
+
 export default model;

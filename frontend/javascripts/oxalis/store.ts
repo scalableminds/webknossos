@@ -161,6 +161,11 @@ export type MutableTreeGroup = {
   groupId: number;
   children: Array<MutableTreeGroup>;
 };
+
+export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
+export type SegmentGroup = TreeGroup;
+export type MutableSegmentGroup = MutableTreeGroup;
+
 export type DataLayerType = APIDataLayer;
 export type Restrictions = APIRestrictions;
 export type AllowedMode = APIAllowedMode;
@@ -208,11 +213,12 @@ export type SkeletonTracing = TracingBase & {
   readonly showSkeletons: boolean;
 };
 export type Segment = {
-  id: number;
-  name: string | null | undefined;
-  somePosition: Vector3 | undefined;
-  creationTime: number | null | undefined;
-  color: Vector3 | null;
+  readonly id: number;
+  readonly name: string | null | undefined;
+  readonly somePosition: Vector3 | undefined;
+  readonly creationTime: number | null | undefined;
+  readonly color: Vector3 | null;
+  readonly groupId: number | null | undefined;
 };
 export type SegmentMap = DiffableMap<number, Segment>;
 
@@ -226,6 +232,7 @@ export type VolumeTracing = TracingBase & {
   // Note that there are also SegmentMaps in `state.localSegmentationData`
   // for non-annotation volume layers.
   readonly segments: SegmentMap;
+  readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
   // lastLabelActions[0] is the most recent one

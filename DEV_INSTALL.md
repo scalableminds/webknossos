@@ -25,6 +25,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Blosc](https://github.com/Blosc/c-blosc)
+* [Brotli](https://github.com/google/brotli)
 * [node.js 16 or 18](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
@@ -41,7 +42,7 @@ arch -x86_64 /bin/zsh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn
+brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc

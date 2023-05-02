@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.datastore.datavault
 
-import com.aayushatharva.brotli4j.Brotli4jLoader
-import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.amazonaws.auth.{
   AWSCredentialsProvider,
   AWSStaticCredentialsProvider,
@@ -13,12 +11,9 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
 import org.apache.commons.io.IOUtils
-import org.apache.commons.io.output.ByteArrayOutputStream
 
-import java.io.{IOException, InputStream}
 import java.net.URI
 import scala.collection.immutable.NumericRange
-import scala.util.control.Breaks.break
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
@@ -34,7 +29,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
     val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
@@ -45,30 +40,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     }
 
     val obj = client.getObject(getObjectRequest)
-
-    val is: InputStream = obj.getObjectContent
     val encoding = obj.getObjectMetadata.getContentEncoding
-    encoding match {
-      case "br" => {
-        Brotli4jLoader.ensureAvailability()
-        val brotliInputStream = new BrotliInputStream(is)
-        val out = new ByteArrayOutputStream
-        var read = brotliInputStream.read
-        try {
-          while (read > -1) {
-            out.write(read)
 
-            read = brotliInputStream.read
-
-          }
-        } catch {
-          case e: IOException =>
-        }
-        out.toByteArray
-      }
-      case _ => IOUtils.toByteArray(is)
-    }
-
+    (IOUtils.toByteArray(obj.getObjectContent), Encoding.fromRfc7231String(encoding))
   }
 }
 

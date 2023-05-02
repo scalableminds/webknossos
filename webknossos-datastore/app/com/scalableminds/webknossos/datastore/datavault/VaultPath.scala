@@ -1,15 +1,48 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.aayushatharva.brotli4j.Brotli4jLoader
+import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.io.ZipIO
 import net.liftweb.util.Helpers.tryo
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
 import scala.collection.immutable.NumericRange
 
 class VaultPath(uri: URI, dataVault: DataVault) {
 
-  def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
-    tryo(dataVault.readBytes(this, range)).toOption.map(ZipIO.tryGunzip)
+  def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] = {
+    val resultOpt = tryo(dataVault.readBytes(this, range)).toOption
+    resultOpt match {
+      case Some((bytes, encoding)) =>
+        encoding match {
+          case Encoding.gzip        => Some(ZipIO.tryGunzip(bytes))
+          case Encoding.brotli      => tryo(decodeBrotli(bytes)).toOption
+          case Encoding.none        => Some(bytes)
+          case Encoding.unsupported => None
+        }
+      case None => None
+
+    }
+  }
+
+  private def decodeBrotli(bytes: Array[Byte]) = {
+    Brotli4jLoader.ensureAvailability()
+    val brotliInputStream = new BrotliInputStream(new ByteArrayInputStream(bytes))
+    val out = new ByteArrayOutputStream
+    var read = brotliInputStream.read
+    try {
+      while (read > -1) {
+        out.write(read)
+
+        read = brotliInputStream.read
+
+      }
+    } catch {
+      case _: IOException =>
+    }
+    out.toByteArray
+  }
 
   def basename: String =
     uri.toString.split("/").last

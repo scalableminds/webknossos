@@ -684,7 +684,7 @@ function* loadPrecomputedMeshForSegmentId(
     yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
     console.error(exception);
-    Toast.warning(`Some mesh objects could not be loaded for segment ${id}.`);
+    Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
   }
   console.timeEnd("load chunks");
 
@@ -832,29 +832,39 @@ function _getLoadChunksTasks(
                 const loader = getDracoLoader();
 
                 let totalSizePerBatch = 0;
+                const errorsWithDetails = [];
                 for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-                  totalSizePerBatch += chunks[chunkIdx].byteSize;
-                  const dracoData = dataForChunks[chunkIdx];
                   const chunk = chunks[chunkIdx];
+                  try {
+                    totalSizePerBatch += chunks[chunkIdx].byteSize;
+                    const dracoData = dataForChunks[chunkIdx];
 
-                  const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+                    const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
 
-                  // Compute vertex normals to achieve smooth shading
-                  geometry.computeVertexNormals();
+                    // Compute vertex normals to achieve smooth shading
+                    geometry.computeVertexNormals();
 
-                  yield* call(
-                    {
-                      context: segmentMeshController,
-                      fn: segmentMeshController.addIsosurfaceFromGeometry,
-                    },
-                    geometry,
-                    id,
-                    chunk.position,
-                    // Apply the scale from the segment info, which includes dataset scale and mag
-                    scale,
-                    lod,
-                    layerName,
-                  );
+                    yield* call(
+                      {
+                        context: segmentMeshController,
+                        fn: segmentMeshController.addIsosurfaceFromGeometry,
+                      },
+                      geometry,
+                      id,
+                      chunk.position,
+                      // Apply the scale from the segment info, which includes dataset scale and mag
+                      scale,
+                      lod,
+                      layerName,
+                    );
+                  } catch (error) {
+                    errorsWithDetails.push({ error, chunk });
+                  }
+                }
+                if (errorsWithDetails.length > 0) {
+                  console.warn("There ware errors while decoding mesh chunks:", errorsWithDetails);
+                  // Use first error as representative
+                  throw errorsWithDetails[0].error;
                 }
                 console.log("totalSizePerBatch", totalSizePerBatch);
               },

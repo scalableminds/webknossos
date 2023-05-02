@@ -382,8 +382,7 @@ function DRACOWorker() {
 
     let dracoGeometry;
     let decodingStatus;
-
-    const geometryType = decoder.GetEncodedGeometryType(decoderBuffer);
+    const geometryType = decoder.GetEncodedGeometryType(array);
 
     if (geometryType === draco.TRIANGULAR_MESH) {
       dracoGeometry = new draco.Mesh();

@@ -6,12 +6,12 @@ let _dracoLoader: CustomDRACOLoader | null;
 class CustomDRACOLoader extends DRACOLoader {
   // Subclass to create a promise-based API and add typing
   decodeDracoFileAsync = (buffer: ArrayBuffer, ...args: any[]): Promise<BufferGeometry> =>
-    new Promise((resolve) => {
+    new Promise((resolve, reject) => {
       if (_dracoLoader == null) {
         throw new Error("DracoLoader not instantiated.");
       }
       // @ts-ignore
-      _dracoLoader.decodeDracoFile(buffer, resolve, ...args);
+      _dracoLoader.parse(buffer, resolve, reject);
     });
 }
 

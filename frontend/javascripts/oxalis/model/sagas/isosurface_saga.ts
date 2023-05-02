@@ -684,7 +684,7 @@ function* loadPrecomputedMeshForSegmentId(
     yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
     console.error(exception);
-    Toast.warning("Some mesh objects could not be loaded.");
+    Toast.warning(`Some mesh objects could not be loaded for segment ${id}.`);
   }
   console.timeEnd("load chunks");
 

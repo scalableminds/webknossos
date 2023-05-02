@@ -36,6 +36,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
         basicRequest
       )
       .readTimeout(readTimeout)
+      .disableAutoDecompression // Decompression is performed by the VaultPath
 
   private def headRequest(uri: URI): Request[Either[String, String], Any] =
     authenticatedRequest().head(Uri(uri))

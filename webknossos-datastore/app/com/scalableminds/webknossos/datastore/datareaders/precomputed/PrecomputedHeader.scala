@@ -55,11 +55,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override def resolvedDataType: ArrayDataType =
     PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(dataType.toLowerCase).get)
 
-  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(
-    precomputedScale.encoding,
-    PrecomputedDataType.fromString(dataType.toLowerCase).get,
-    chunkSize,
-    precomputedScale.compressed_segmentation_block_size)
+  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 
   override def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] =
     chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)

@@ -1,6 +1,6 @@
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import { Modal, AutoComplete, Input } from "antd";
+import { Modal, AutoComplete, Input, Spin } from "antd";
 import { DefaultOptionType } from "antd/lib/select";
 import * as React from "react";
 import { useEffect, useState } from "react";
@@ -15,8 +15,9 @@ type Props = {
 function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const [autoCompleteValue, setAutoCompleteValue] = useState("");
   const onChange = (newValue: string) => setAutoCompleteValue(newValue);
-  const [users, setUsers] = useState<APIUser[]>([]); //encode that its loading TODO
-  const fetchUsers = async () => setUsers(await getEditableUsers());
+  const [users, setUsers] = useState<APIUser[] | null>(null);
+  const fetchUsers = async () => setTimeout(async () => setUsers(await getEditableUsers()), 5000); // TODO delete; only testing purposes
+  //const fetchUsers = async () => setUsers(await getEditableUsers());
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -26,6 +27,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     return user.teams.map((t) => t.id).includes(team.id);
   };
   const updateTeamMembership = async (user: APIUser, newTeams: APITeamMembership[]) => {
+    if (users === null) return;
     const newUser = Object.assign({}, user, {
       teams: newTeams,
     });
@@ -35,7 +37,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
 
   const addTo = async (user: APIUser, team: APITeam | null) => {
     if (team === null) return;
-    const newTeam: APITeamMembership = { id: team.id, name: team.name, isTeamManager: false }; //never make manager?
+    const newTeam: APITeamMembership = { id: team.id, name: team.name, isTeamManager: false }; //TODO never make manager?
     updateTeamMembership(user, [...user.teams, newTeam]);
   };
 
@@ -45,7 +47,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   };
 
   const renderTeamMember = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
-    // TODO make whole span clickable
+    //TODO was unsure whether clicking on the name should also remove team member; same for renderUserNotInTeam
     value: `${user.firstName} ${user.lastName} ${user.email}`,
     label: (
       <div
@@ -55,8 +57,8 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
         }}
       >
         {user.firstName} {user.lastName}
-        <span>
-          <MinusOutlined onClick={() => removeFrom(user, team)} /> Remove from {team?.name}
+        <span onClick={() => removeFrom(user, team)}>
+          <MinusOutlined /> Remove from {team?.name}
         </span>
       </div>
     ),
@@ -72,8 +74,8 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
         }}
       >
         {user.firstName} {user.lastName}
-        <span>
-          <PlusOutlined onClick={() => addTo(user, team)} /> Add to {team?.name}
+        <span onClick={() => addTo(user, team)}>
+          <PlusOutlined /> Add to {team?.name}
         </span>
       </div>
     ),
@@ -82,17 +84,18 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const options = [
     {
       label: "In team",
-      options: users.filter(filterUsersInCurrentTeam).map((user) => renderTeamMember(user, team)),
+      options: users?.filter(filterUsersInCurrentTeam).map((user) => renderTeamMember(user, team)),
     },
     {
       label: "Not in team",
       options: users
-        .filter((user) => !filterUsersInCurrentTeam(user))
+        ?.filter((user) => !filterUsersInCurrentTeam(user))
         .map((user) => renderUserNotInTeam(user, team)),
     },
   ];
-  return (
-    <Modal open={isOpen} onCancel={onCancel} title="Add / Remove Users" className="edit-team-modal">
+
+  const renderModalBody = () => {
+    return (
       <AutoComplete
         style={{ width: "100%" }}
         options={options}
@@ -103,13 +106,19 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
               option!.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
           );
         }}
-        autoFocus
         onSelect={() => setAutoCompleteValue("")}
         value={autoCompleteValue}
         onChange={onChange}
       >
         <Input.Search size="large" placeholder="Search users" />
       </AutoComplete>
+    );
+  };
+  const usersHaveLoaded = users !== null;
+
+  return (
+    <Modal open={isOpen} onCancel={onCancel} title="Add / Remove Users" className="edit-team-modal">
+      <Spin spinning={!usersHaveLoaded}>{usersHaveLoaded ? renderModalBody() : null}</Spin>
     </Modal>
   );
 }

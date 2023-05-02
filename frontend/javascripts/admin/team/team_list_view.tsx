@@ -295,7 +295,6 @@ class TeamListView extends React.PureComponent<Props, State> {
             }
           />
           <EditTeamModalView
-            //onOk={}
             isOpen={this.state.isTeamEditModalVisible}
             onCancel={() =>
               this.setState({

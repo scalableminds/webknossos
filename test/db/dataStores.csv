@@ -1,2 +1,2 @@
-name,url,publicUrl,key,isScratch,isDeleted,isConnector,allowsUpload,onlyAllowedOrganization,reportUsedStorageEnabled
+name,url,publicUrl,key,isScratch,isDeleted,allowsUpload,onlyAllowedOrganization,reportUsedStorageEnabled
 'localhost','http://localhost:9000','http://localhost:9000','something-secure',f,f,f,t,,f

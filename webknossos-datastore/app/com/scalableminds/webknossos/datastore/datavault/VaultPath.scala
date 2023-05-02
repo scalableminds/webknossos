@@ -16,11 +16,11 @@ class VaultPath(uri: URI, dataVault: DataVault) {
     resultOpt match {
       case Some((bytes, encoding)) =>
         encoding match {
-          case Encoding.gzip       => Some(ZipIO.tryGunzip(bytes))
+          case Encoding.gzip       => Some(ZipIO.gunzip(bytes))
           case Encoding.brotli     => tryo(decodeBrotli(bytes)).toOption
           case Encoding.`identity` => Some(bytes)
           case Encoding.unsupported =>
-            throw new UnsupportedOperationException("Vault uses unsupported content encoding.")
+            throw new UnsupportedOperationException(s"Vault uses unsupported content encoding $encoding.")
         }
       case None => None
 
@@ -35,9 +35,7 @@ class VaultPath(uri: URI, dataVault: DataVault) {
     try {
       while (read > -1) {
         out.write(read)
-
         read = brotliInputStream.read
-
       }
     } catch {
       case _: IOException =>

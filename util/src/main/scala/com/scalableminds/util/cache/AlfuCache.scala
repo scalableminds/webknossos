@@ -46,8 +46,6 @@ class AlfuFoxCache[K, V](underlyingAkkaCache: Cache[K, Box[V]]) extends FoxImpli
   }
 
   def clear(): Unit = underlyingAkkaCache.clear()
-
-  def keys: Set[K] = underlyingAkkaCache.keys
 }
 
 object AlfuFoxCache {

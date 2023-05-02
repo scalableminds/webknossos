@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
-import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TimeLogger}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
@@ -70,37 +70,18 @@ class FossilDBClient(collection: String,
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     try {
-      val reply: GetReply = if (collection == "editableMappings") {
-        TimeLogger.logTime("fossildb GET bytes", logger)(
-          blockingStub.get(GetRequest(collection, key, version, mayBeEmpty)))
-      } else {
-        blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
-      }
+      val reply: GetReply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      val bytes = reply.value.toByteArray
-      if (collection == "editableMappings") {
-        logger.info(f"fetched ${bytes.length} bytes from fossildb")
-      }
-      fromByteArray(bytes).map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
+      fromByteArray(reply.value.toByteArray).map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
     } catch {
       case statusRuntimeException: StatusRuntimeException =>
         if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
         else Fox.failure("Could not get from FossilDB: " + statusRuntimeException.getMessage)
-      case e: Exception =>
+      case e: Exception => {
         if (e.getMessage == "No such element") { Fox.empty } else {
           Fox.failure("Could not get from FossilDB: " + e.getMessage)
         }
-    }
-
-  def listVersions(key: String): Fox[Seq[Long]] =
-    try {
-      val before = System.currentTimeMillis()
-      val reply = blockingStub.listVersions(ListVersionsRequest(collection, key))
-      val after = System.currentTimeMillis()
-      logger.info(s"list versions took ${after - before} ms, received ${reply.versions}")
-      Fox.successful(reply.versions)
-    } catch {
-      case e: Exception => Fox.failure("list versions failed: " + e.getMessage)
+      }
     }
 
   def getVersion(key: String,
@@ -109,11 +90,6 @@ class FossilDBClient(collection: String,
                  emptyFallback: Option[Long] = None): Fox[Long] =
     try {
       val reply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
-      val listVersionsReply = blockingStub.listVersions(ListVersionsRequest(collection, key))
-      if (reply.success && listVersionsReply.success) {
-        logger.info(
-          s"got version ${reply.actualVersion} and ${listVersionsReply.versions.headOption} (asked for version $version)")
-      }
       if (reply.success) Fox.successful(reply.actualVersion)
       else {
         if (mayBeEmpty.contains(true) && emptyFallback.isDefined && reply.errorMessage.contains("No such element")) {

@@ -88,10 +88,6 @@ class DSMeshController @Inject()(
                                                                          editableMappingTracingId,
                                                                          request.body.segmentId,
                                                                          urlOrHeaderToken(token, request))
-                    _ = if (segmentIds.isEmpty) {
-                      logger.info(
-                        s"mapping $editableMappingTracingId yielded no segment ids for agglomerate ${request.body.segmentId}")
-                    }
                     meshChunksForUnmappedSegments = segmentIds.map(
                       segmentId =>
                         meshFileService

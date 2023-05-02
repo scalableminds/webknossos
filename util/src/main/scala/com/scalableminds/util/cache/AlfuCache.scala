@@ -39,6 +39,12 @@ class AlfuFoxCache[K, V](underlyingAkkaCache: Cache[K, Box[V]]) extends FoxImpli
 
   def remove(key: K): Unit = underlyingAkkaCache.remove(key)
 
+  def remove(fn: K => Boolean): Int = {
+    val keysToRemove = underlyingAkkaCache.keys.filter(fn(_))
+    keysToRemove.foreach(remove)
+    keysToRemove.size
+  }
+
   def clear(): Unit = underlyingAkkaCache.clear()
 }
 

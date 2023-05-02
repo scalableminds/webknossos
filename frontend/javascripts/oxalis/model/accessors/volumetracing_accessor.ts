@@ -13,6 +13,7 @@ import type {
   HybridTracing,
   LabelAction,
   OxalisState,
+  SegmentGroup,
   SegmentMap,
   Tracing,
   VolumeTracing,
@@ -340,18 +341,24 @@ export function getSegmentsForLayer(state: OxalisState, layerName: string): Segm
   return state.localSegmentationData[layer.name].segments;
 }
 
-export function getVisibleSegments(state: OxalisState): SegmentMap | null | undefined {
+export function getVisibleSegments(state: OxalisState): {
+  segments: SegmentMap | null | undefined;
+  segmentGroups: Array<SegmentGroup>;
+} {
   const layer = getVisibleSegmentationLayer(state);
 
   if (layer == null) {
-    return null;
+    return { segments: null, segmentGroups: [] };
   }
 
   if (layer.tracingId != null) {
-    return getVolumeTracingById(state.tracing, layer.tracingId).segments;
+    const { segments, segmentGroups } = getVolumeTracingById(state.tracing, layer.tracingId);
+    return { segments, segmentGroups };
   }
 
-  return state.localSegmentationData[layer.name].segments;
+  // There aren't any segment groups for view-only layers
+  const { segments } = state.localSegmentationData[layer.name];
+  return { segments, segmentGroups: [] };
 }
 
 export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {

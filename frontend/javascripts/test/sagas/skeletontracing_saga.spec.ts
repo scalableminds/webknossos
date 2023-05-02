@@ -12,6 +12,7 @@ import defaultState from "oxalis/default_state";
 import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 const TIMESTAMP = 1494347146379;
 const DateMock = {
   now: () => TIMESTAMP,
@@ -59,7 +60,7 @@ const skeletonTracing: SkeletonTracing = {
   version: 0,
   trees: {},
   treeGroups: [],
-  activeGroupId: -1,
+  activeGroupId: MISSING_GROUP_ID,
   activeTreeId: 1,
   activeNodeId: null,
   cachedMaxNodeId: 0,
@@ -80,7 +81,7 @@ skeletonTracing.trees[1] = {
   comments: [],
   color: [23, 23, 23],
   isVisible: true,
-  groupId: -1,
+  groupId: MISSING_GROUP_ID,
 };
 const initialState = update(defaultState, {
   tracing: {

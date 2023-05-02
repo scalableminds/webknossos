@@ -47,7 +47,7 @@ class UserService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  private val userCache: AlfuFoxCache[ObjectId, User] =
+  private val userCache: AlfuFoxCache[(ObjectId, String), User] =
     AlfuFoxCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
@@ -56,7 +56,7 @@ class UserService @Inject()(conf: WkConf,
       user <- disambiguateUserFromMultiUser(multiUser)
     } yield user
 
-  def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] =
+  private def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] =
     multiUser._lastLoggedInIdentity match {
       case Some(userId) =>
         for {
@@ -82,7 +82,7 @@ class UserService @Inject()(conf: WkConf,
     } yield ()
 
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
-    userCache.getOrLoad(userId, id => userDAO.findOne(id))
+    userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
 
   def insert(organizationId: ObjectId,
              email: String,
@@ -199,11 +199,14 @@ class UserService @Inject()(conf: WkConf,
                                 lastTaskTypeId)
       _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
-      _ = userCache.remove(user._id)
+      _ = removeUserFromCache(user._id)
       _ <- if (oldEmail == email) Fox.successful(()) else tokenDAO.updateEmail(oldEmail, email)
       updated <- userDAO.findOne(user._id)
     } yield updated
   }
+
+  private def removeUserFromCache(userId: ObjectId): Unit =
+    userCache.remove(idAndAccessContextString => idAndAccessContextString._1 == userId)
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
@@ -217,7 +220,7 @@ class UserService @Inject()(conf: WkConf,
 
   def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
-      userCache.remove(user._id)
+      removeUserFromCache(user._id)
       result
     }
 
@@ -250,12 +253,12 @@ class UserService @Inject()(conf: WkConf,
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
-      userCache.remove(user._id)
+      removeUserFromCache(user._id)
       result
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    userDAO.findOne(ObjectId(loginInfo.providerKey))(GlobalAccessContext).futureBox.map(_.toOption)
+    findOneCached(ObjectId(loginInfo.providerKey))(GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(userId: ObjectId): LoginInfo =
     LoginInfo(CredentialsProvider.ID, userId.id)
@@ -296,9 +299,9 @@ class UserService @Inject()(conf: WkConf,
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
     } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> "team.admin.notAllowed"
 
-  def isTeamManagerInOrg(user: User,
-                         _organization: ObjectId,
-                         teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
+  private def isTeamManagerInOrg(user: User,
+                                 _organization: ObjectId,
+                                 teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     for {
       teamManagerMemberships <- Fox.fillOption(teamManagerMemberships)(teamManagerMembershipsFor(user._id))
     } yield teamManagerMemberships.nonEmpty && _organization == user._organization

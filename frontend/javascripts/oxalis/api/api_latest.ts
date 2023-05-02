@@ -32,7 +32,10 @@ import {
   scaleGlobalPositionWithResolution,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
-import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  callDeep,
+  moveGroupsHelper,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
@@ -53,6 +56,7 @@ import {
   getTree,
   getFlatTreeGroups,
   getTreeGroupsMap,
+  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
@@ -62,6 +66,8 @@ import {
   getRequestedOrVisibleSegmentationLayerEnforced,
   getSegmentColorAsRGBA,
   getVolumeDescriptors,
+  getVolumeTracingById,
+  getVolumeTracingByLayerName,
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -88,6 +94,7 @@ import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
   setActiveCellAction,
+  setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -475,12 +482,12 @@ class TracingApi {
    * Renames the group referenced by the provided id.
    *
    * @example
-   * api.tracing.renameGroup(
+   * api.tracing.renameSkeletonGroup(
    *   3,
    *   "New group name",
    * );
    */
-  renameGroup(groupId: number, newName: string) {
+  renameSkeletonGroup(groupId: number, newName: string) {
     const { tracing } = Store.getState();
     const skeletonTracing = assertSkeleton(tracing);
 
@@ -491,6 +498,47 @@ class TracingApi {
       item.name = newName;
     });
     Store.dispatch(setTreeGroupsAction(newTreeGroups));
+  }
+
+  /**
+   * Moves one skeleton group to another one (or to the root node when providing null as the second parameter).
+   *
+   * @example
+   * api.tracing.moveSkeletonGroup(
+   *   3,
+   *   null, // moves group with id 0 to the root node
+   * );
+   */
+  moveSkeletonGroup(groupId: number, targetGroupId: number | null) {
+    const skeleton = Store.getState().tracing.skeleton;
+    if (!skeleton) {
+      throw new Error("No skeleton tracing found.");
+    }
+    const newTreeGroups = moveGroupsHelper(skeleton.treeGroups, groupId, targetGroupId);
+    Store.dispatch(setTreeGroupsAction(newTreeGroups));
+  }
+
+  /**
+   * Moves one segment group to another one (or to the root node when providing null as the second parameter).
+   *
+   * @example
+   * api.tracing.moveSegmentGroup(
+   *   3,
+   *   null, // moves group with id 0 to the root node
+   *   "volume-layer-id"
+   * );
+   */
+  moveSegmentGroup(groupId: number, targetGroupId: number | undefined | null, layerName: string) {
+    const { segmentGroups } = getVolumeTracingById(Store.getState().tracing, layerName);
+    const newSegmentGroups = moveGroupsHelper(segmentGroups, groupId, targetGroupId);
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, layerName));
+  }
+
+  /**
+   * Deprecated! Use renameSkeletonGroup instead.
+   */
+  renameGroup(groupId: number, newName: string) {
+    this.renameSkeletonGroup(groupId, newName);
   }
 
   /**
@@ -1099,6 +1147,37 @@ class DataApi {
    */
   getSegmentationLayerNames(): Array<string> {
     return this.model.getSegmentationLayers().map((layer) => layer.name);
+  }
+
+  /**
+   * Renames the segment group referenced by the provided id.
+   *
+   * @example
+   * api.data.renameSegmentGroup(
+   *   volumeLayerName, // see getSegmentationLayerNames
+   *   3,
+   *   "New group name",
+   * );
+   */
+  renameSegmentGroup(volumeLayerName: string, groupId: number, newName: string) {
+    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+    if (volumeTracing == null) {
+      throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
+    }
+    const { segmentGroups } = volumeTracing;
+
+    const newSegmentGroups = mapGroups(segmentGroups, (group) => {
+      if (group.groupId === groupId) {
+        return {
+          ...group,
+          name: newName,
+        };
+      } else {
+        return group;
+      }
+    });
+
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
   }
 
   /**

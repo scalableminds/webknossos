@@ -904,6 +904,11 @@ export async function getTracingForAnnotationType(
     ),
   );
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
+
+  if (!process.env.IS_TESTING) {
+    // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
+    console.log("Parsed protobuf tracing:", tracing);
+  }
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
   // Additionally, we assign the typ property (skeleton vs volume).

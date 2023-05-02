@@ -1,31 +1,26 @@
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
-import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
-import type { Browser } from "puppeteer";
-import puppeteer from "puppeteer";
 import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {
+  test,
+  getNewPage,
   screenshotAnnotation,
   screenshotDataset,
   screenshotDatasetWithMapping,
   screenshotDatasetWithMappingLink,
   screenshotSandboxWithMappingLink,
+  setupBeforeEachAndAfterEach,
+  withRetry,
   WK_AUTH_TOKEN,
+  checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
 }
 
-if (process.env.BROWSERSTACK_USERNAME == null || process.env.BROWSERSTACK_ACCESS_KEY == null) {
-  throw new Error(
-    "BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY must be defined as env variables.",
-  );
-}
+checkBrowserstackCredentials();
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -47,60 +42,8 @@ if (!process.env.URL) {
 }
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
-// Ava's recommendation for Typescript types
-// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
-const test: TestInterface<{
-  browser: Browser;
-}> = anyTest as any;
 
-async function getNewPage(browser: Browser) {
-  const page = await browser.newPage();
-  page.setViewport({
-    width: 1920,
-    height: 1080,
-  });
-  page.setExtraHTTPHeaders({
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | undefined' is not assignable to typ... Remove this comment to see the full error message
-    "X-Auth-Token": WK_AUTH_TOKEN,
-  });
-  return page;
-}
-
-test.beforeEach(async (t) => {
-  t.context.browser = await puppeteer.launch({
-    args: [
-      "--headless",
-      "--hide-scrollbars",
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--use-gl=swiftshader",
-    ],
-    dumpio: true,
-  });
-
-  const caps = {
-    browser: "chrome",
-    browser_version: "latest",
-    os: "os x",
-    os_version: "mojave",
-    "browserstack.username": process.env.BROWSERSTACK_USERNAME,
-    "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
-  };
-  t.context.browser = await puppeteer.connect({
-    browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
-      JSON.stringify(caps),
-    )}`,
-  });
-
-  console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
-  global.Headers = Headers;
-  global.fetch = fetch;
-  global.Request = Request;
-  global.Response = Response;
-  // @ts-expect-error ts-migrate(7017) FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
-  global.FetchError = FetchError;
-});
+setupBeforeEachAndAfterEach();
 
 // These datasets are available on our dev instance (e.g., master.webknossos.xyz)
 const datasetNames = [
@@ -165,26 +108,6 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
     interpolation: true,
   },
 };
-
-async function withRetry(
-  retryCount: number,
-  testFn: () => Promise<boolean>,
-  resolveFn: (arg0: boolean) => void,
-) {
-  retryCount = 3;
-  for (let i = 0; i < retryCount; i++) {
-    // eslint-disable-next-line no-await-in-loop
-    const condition = await testFn();
-
-    if (condition || i === retryCount - 1) {
-      // Either the test passed or we executed the last attempt
-      resolveFn(condition);
-      return;
-    }
-
-    console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
-  }
-}
 
 datasetNames.map(async (datasetName) => {
   test.serial(`it should render dataset ${datasetName} correctly`, async (t) => {
@@ -406,6 +329,3 @@ test.serial(
     );
   },
 );
-test.afterEach.always(async (t) => {
-  await t.context.browser.close();
-});

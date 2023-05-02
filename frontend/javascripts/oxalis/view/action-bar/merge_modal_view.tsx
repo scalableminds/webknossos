@@ -59,7 +59,7 @@ type ButtonWithCheckboxState = {
 
 class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWithCheckboxState> {
   state: ButtonWithCheckboxState = {
-    isChecked: true,
+    isChecked: false,
   };
 
   render() {
@@ -218,7 +218,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
   render() {
     const mergeIntoActiveTracingCheckbox = (
       <React.Fragment>
-        Merge into active annotation{" "}
+        Merge trees into active annotation{" "}
         <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened annotation. If not, a new explorative annotation will be created in your account.">
           <InfoCircleOutlined
             style={{

@@ -65,7 +65,7 @@ class BinaryDataController @Inject()(
                                                                                     dataSetName,
                                                                                     dataLayerName) ~> NOT_FOUND
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
-          duration = Instant.now - t
+          duration = Instant.since(t)
           _ = if (duration > (10 seconds))
             logger.info(
               s"Complete data request took $duration ms.\n"

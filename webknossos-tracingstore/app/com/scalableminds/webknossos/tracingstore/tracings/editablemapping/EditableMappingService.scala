@@ -146,8 +146,6 @@ class EditableMappingService @Inject()(
       _ <- duplicateSegmentToAgglomerate(editableMappingId, newId)
       _ <- duplicateAgglomerateToGraph(editableMappingId, newId)
       updateActionsWithVersions <- getUpdateActionsWithVersions(editableMappingId, editableMappingInfoAndVersion._2, 0L)
-      _ = logger.info(
-        s"duplicating ${updateActionsWithVersions.length} update action versions for mapping $editableMappingId")
       _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
         tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
       }
@@ -212,7 +210,6 @@ class EditableMappingService @Inject()(
       materializedInfo <- materializedInfoCache.getOrLoad(
         (editableMappingId, desiredVersion),
         _ => applyPendingUpdates(editableMappingId, desiredVersion, remoteFallbackLayer, userToken))
-      _ = logger.info(s"loading materialized v$desiredVersion for $editableMappingId")
     } yield (materializedInfo, desiredVersion)
 
   def update(editableMappingId: String,
@@ -250,7 +247,8 @@ class EditableMappingService @Inject()(
 
           updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion.value, pendingUpdates)
           _ = logger.debug(
-            s"Applied ${pendingUpdates.length} updates for editable mapping $editableMappingId, saved as v$desiredVersion, took ${Instant.now - before}")
+            s"Applied ${pendingUpdates.length} updates for editable mapping $editableMappingId, saved as v$desiredVersion, took ${Instant
+              .since(before)}")
         } yield updated
     } yield updatedEditableMappingInfo
 
@@ -618,7 +616,7 @@ class EditableMappingService @Inject()(
 
   def merge(editableMappingIds: List[String],
             remoteFallbackLayer: RemoteFallbackLayer,
-            userToken: Option[String]): Fox[String] =
+            userToken: Option[String]): Fox[String] = {
     /*
        - duplicate first editable mapping
        - also duplicate its update actions, and a v0
@@ -630,12 +628,15 @@ class EditableMappingService @Inject()(
            - skip deleting edges that don’t exist
          - also save them, with new linear versioning
      */
+    val before = Instant.now
     for {
       firstMappingId <- editableMappingIds.headOption.toFox
       newMappingId <- duplicate(Some(firstMappingId), version = None, remoteFallbackLayer, userToken)
       _ <- Fox.serialCombined(editableMappingIds.tail)(editableMappingId =>
         mergeInto(newMappingId, editableMappingId, remoteFallbackLayer, userToken))
+      _ = logger.info(s"Merging ${editableMappingIds.length} editable mappings took ${Instant.since(before)}")
     } yield newMappingId
+  }
 
   private def mergeInto(targetEditableMappingId: String,
                         sourceEditableMappingId: String,

@@ -59,7 +59,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
   private def exploreResolutions(baseDir: Path)(
       implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Vec3Int)]] =
-    PathUtils.listDirectories(baseDir, magDirFilter).flatMap { resolutionDirs =>
+    PathUtils.listDirectories(baseDir, silent = false, magDirFilter).flatMap { resolutionDirs =>
       val resolutionHeaders = resolutionDirs.sortBy(magDirSortingKey).map { resolutionDir =>
         val resolution = magFromPath(resolutionDir).get
         WKWHeader(resolutionDir.resolve(FILENAME_HEADER_WKW).toFile).map { header =>
@@ -110,16 +110,16 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       multiplierY = resolution.cubeLength * resolution.resolution.y
       multiplierZ = resolution.cubeLength * resolution.resolution.z
 
-      resolutionDirs <- PathUtils.listDirectories(baseDir, filterGen(""))
+      resolutionDirs <- PathUtils.listDirectories(baseDir, silent = false, filterGen(""))
       resolutionDir <- resolveHead(baseDir, resolutionDirs.sortBy(magDirSortingKey))
 
-      zDirs <- PathUtils.listDirectories(resolutionDir, filterGen("z"))
+      zDirs <- PathUtils.listDirectories(resolutionDir, silent = false, filterGen("z"))
       zHeadDir <- resolveHead(resolutionDir, zDirs)
 
-      yDirs <- PathUtils.listDirectories(zHeadDir, filterGen("y"))
+      yDirs <- PathUtils.listDirectories(zHeadDir, silent = false, filterGen("y"))
       yHeadDir <- resolveHead(zHeadDir, yDirs)
 
-      xFiles <- PathUtils.listFiles(yHeadDir, filterGen("x"))
+      xFiles <- PathUtils.listFiles(yHeadDir, silent = false, filterGen("x"))
       xFile <- xFiles.headOption
 
       (zMin, zMax) = zDirs.foldRight((getIntFromFilePath(zHeadDir), 0))(minMaxValue)

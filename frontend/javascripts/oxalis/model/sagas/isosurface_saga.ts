@@ -641,9 +641,6 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  console.time(`Load mesh for ${id}`);
-
-  console.time("get chunk descriptors");
   let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
   let loadingOrder: number[] | null = null;
@@ -665,9 +662,7 @@ function* loadPrecomputedMeshForSegmentId(
     yield* put(removeIsosurfaceAction(layerName, id));
     return;
   }
-  console.timeEnd("get chunk descriptors");
 
-  console.time("load chunks");
   const loadChunksTasks = _getLoadChunksTasks(
     dataset,
     layerName,
@@ -686,9 +681,6 @@ function* loadPrecomputedMeshForSegmentId(
     console.error(exception);
     Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
   }
-  console.timeEnd("load chunks");
-
-  console.timeEnd(`Load mesh for ${id}`);
 
   yield* put(finishedLoadingIsosurfaceAction(layerName, id));
 }

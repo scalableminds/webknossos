@@ -80,7 +80,7 @@ export function getMeshfileChunkData(
   batchDescription: MeshChunkDataRequestV3List,
 ): Promise<ArrayBuffer[]> {
   return doWithToken(async (token) => {
-    const dracoDataChunksWithJumpTable = await Request.sendJSONReceiveArraybuffer(
+    const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/formatVersion/3/chunks/data?token=${token}`,
       {
         data: batchDescription,
@@ -100,7 +100,7 @@ export function getMeshfileChunkData(
     for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
       // slice() creates a copy of the data, but working with TypedArray Views would cause
       // issues when transferring the data to a webworker.
-      const dracoData = dracoDataChunksWithJumpTable.slice(
+      const dracoData = dracoDataChunks.slice(
         jumpPositionsForChunks[chunkIdx],
         jumpPositionsForChunks[chunkIdx + 1],
       );

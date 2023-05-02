@@ -621,6 +621,7 @@ function* loadPrecomputedMeshForSegmentId(
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
+  id = 355;
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
@@ -800,11 +801,15 @@ function _getLoadChunksTasks(
         let tasks;
         if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
           // V3
-          const batches = chunkDynamically(
-            sortedAvailableChunks as meshV3.MeshChunk[],
-            MIN_BATCH_SIZE_IN_BYTES,
-            (chunk) => chunk.byteSize,
-          );
+          // const batches = chunkDynamically(
+          //   sortedAvailableChunks as meshV3.MeshChunk[],
+          //   MIN_BATCH_SIZE_IN_BYTES,
+          //   (chunk) => chunk.byteSize,
+          // );
+          //
+          const batches = [
+            [{ byteOffset: 3920109208, byteSize: 1818, position: [1024, 5120, 1024] as Vector3 }],
+          ];
 
           tasks = batches.map(
             (chunks) =>

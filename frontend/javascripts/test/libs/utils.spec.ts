@@ -230,25 +230,25 @@ test("chunkIntoTimeWindows 2/2", async (t) => {
   t.deepEqual(chunks, [chunk1, chunk2, chunk3]);
 });
 
-test.only("chunkDynamically (I)", (t) => {
+test("chunkDynamically (I)", (t) => {
   const elements = [5, 7, 10, 234, 10];
   const batches = Utils.chunkDynamically(elements, 10, (el) => el);
   t.deepEqual(batches, [[5, 7], [10, 234], [10]]);
 });
 
-test.only("chunkDynamically (II)", (t) => {
+test("chunkDynamically (II)", (t) => {
   const elements = [5, 7, 10, 234, 10];
   const batches = Utils.chunkDynamically(elements, 100, (el) => el);
   t.deepEqual(batches, [[5, 7, 10, 234], [10]]);
 });
 
-test.only("chunkDynamically (III)", (t) => {
+test("chunkDynamically (III)", (t) => {
   const elements = [5, 7, 10, 234, 10];
   const batches = Utils.chunkDynamically(elements, 1000, (el) => el);
   t.deepEqual(batches, [[5, 7, 10, 234, 10]]);
 });
 
-test.only("chunkDynamically (IV)", (t) => {
+test("chunkDynamically (IV)", (t) => {
   const elements = [5, 7, 10, 234, 10];
   const batches = Utils.chunkDynamically(elements, 1, (el) => el);
   t.deepEqual(batches, [[5], [7], [10], [234], [10]]);

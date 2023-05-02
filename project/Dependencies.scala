@@ -55,6 +55,7 @@ object Dependencies {
   private val jwt = "com.github.jwt-scala" %% "jwt-play-json" % "9.1.1"
   private val googleCloudStorage = "com.google.cloud" % "google-cloud-storage" % "2.13.1"
   private val googleCloudStorageNio = "com.google.cloud" % "google-cloud-nio" % "0.123.28"
+  private val brotli4j = "com.aayushatharva.brotli4j" % "brotli4j" % "1.11.0"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -106,7 +107,8 @@ object Dependencies {
     sttp,
     commonsCompress,
     googleCloudStorage,
-    googleCloudStorageNio
+    googleCloudStorageNio,
+    brotli4j
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

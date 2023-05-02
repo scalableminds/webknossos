@@ -83,7 +83,7 @@ curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-11-jdk yarn redis-server build-essential libblosc1
+sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-11-jdk yarn redis-server build-essential libblosc1 libbrotli1
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"

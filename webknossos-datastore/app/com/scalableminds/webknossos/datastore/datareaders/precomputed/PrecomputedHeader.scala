@@ -21,7 +21,7 @@ case class PrecomputedHeader(`type`: String, data_type: String, num_channels: In
 
 case class PrecomputedScale(key: String,
                             size: Array[Int],
-                            resolution: Array[Int],
+                            resolution: Array[Double],
                             chunk_sizes: Array[Array[Int]],
                             encoding: String,
                             voxel_offset: Option[Array[Int]],

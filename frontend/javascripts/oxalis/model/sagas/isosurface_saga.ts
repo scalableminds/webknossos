@@ -831,12 +831,10 @@ function _getLoadChunksTasks(
                 );
                 const loader = getDracoLoader();
 
-                let totalSizePerBatch = 0;
                 const errorsWithDetails = [];
                 for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
                   const chunk = chunks[chunkIdx];
                   try {
-                    totalSizePerBatch += chunks[chunkIdx].byteSize;
                     const dracoData = dataForChunks[chunkIdx];
 
                     const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
@@ -866,7 +864,6 @@ function _getLoadChunksTasks(
                   // Use first error as representative
                   throw errorsWithDetails[0].error;
                 }
-                console.log("totalSizePerBatch", totalSizePerBatch);
               },
           );
         } else {

@@ -92,8 +92,6 @@ class BinaryDataService(val dataBaseDir: Path,
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
         case Failure(msg, _, _) =>
-          /*logger.warn(
-            s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id} at ${readInstruction.bucket} failed with error: $msg")*/
           Fox.failure(msg)
         case Full(data) =>
           if (data.length == 0) {

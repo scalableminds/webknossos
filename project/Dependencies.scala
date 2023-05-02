@@ -56,6 +56,9 @@ object Dependencies {
   private val googleCloudStorage = "com.google.cloud" % "google-cloud-storage" % "2.13.1"
   private val googleCloudStorageNio = "com.google.cloud" % "google-cloud-nio" % "0.123.28"
   private val brotli4j = "com.aayushatharva.brotli4j" % "brotli4j" % "1.11.0"
+  private val brotli4jLinuxX86 = brotli4j.withName("native-linux-x86_64")
+  private val brotli4cOsXX86 = brotli4j.withName("native-osx-x86_64")
+  private val brotli4cOsXArm = brotli4j.withName("native-osx-aarch64")
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -108,7 +111,10 @@ object Dependencies {
     commonsCompress,
     googleCloudStorage,
     googleCloudStorageNio,
-    brotli4j
+    brotli4j,
+    brotli4jLinuxX86,
+    brotli4cOsXX86,
+    brotli4cOsXArm
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

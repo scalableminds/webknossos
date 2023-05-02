@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.aayushatharva.brotli4j.Brotli4jLoader
+import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.amazonaws.auth.{
   AWSCredentialsProvider,
   AWSStaticCredentialsProvider,
@@ -11,10 +13,12 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
 import org.apache.commons.io.IOUtils
+import org.apache.commons.io.output.ByteArrayOutputStream
 
-import java.io.InputStream
+import java.io.{IOException, InputStream}
 import java.net.URI
 import scala.collection.immutable.NumericRange
+import scala.util.control.Breaks.break
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
@@ -40,9 +44,31 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       case None    => getRequest(bucketName, objectKey)
     }
 
-    val is: InputStream =
-      client.getObject(getObjectRequest).getObjectContent
-    IOUtils.toByteArray(is)
+    val obj = client.getObject(getObjectRequest)
+
+    val is: InputStream = obj.getObjectContent
+    val encoding = obj.getObjectMetadata.getContentEncoding
+    encoding match {
+      case "br" => {
+        Brotli4jLoader.ensureAvailability()
+        val brotliInputStream = new BrotliInputStream(is)
+        val out = new ByteArrayOutputStream
+        var read = brotliInputStream.read
+        try {
+          while (read > -1) {
+            out.write(read)
+
+            read = brotliInputStream.read
+
+          }
+        } catch {
+          case e: IOException =>
+        }
+        out.toByteArray
+      }
+      case _ => IOUtils.toByteArray(is)
+    }
+
   }
 }
 

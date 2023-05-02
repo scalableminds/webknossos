@@ -860,7 +860,7 @@ function _getLoadChunksTasks(
                   }
                 }
                 if (errorsWithDetails.length > 0) {
-                  console.warn("There ware errors while decoding mesh chunks:", errorsWithDetails);
+                  console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
                   // Use first error as representative
                   throw errorsWithDetails[0].error;
                 }

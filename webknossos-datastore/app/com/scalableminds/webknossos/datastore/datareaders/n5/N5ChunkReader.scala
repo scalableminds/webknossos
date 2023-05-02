@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.n5
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, ChunkTyper, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
 
 import scala.collection.immutable.NumericRange
 
@@ -36,7 +37,7 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
     for {
       bytes <- (vaultPath / path).readBytes(range)
       (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
-      paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
+      paddedChunkBytes <- tryo(processBytes(data, blockHeader.blockSize.product)).toOption
     } yield (paddedChunkBytes, Some(blockHeader.blockSize))
   }
 }

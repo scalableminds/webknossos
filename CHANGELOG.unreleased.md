@@ -18,10 +18,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed that changing a segment color could lead to a crash. [#7000](https://github.com/scalableminds/webknossos/pull/7000)
+- The fill_value property of zarr dataset is now used when it is not a number. [#7017](https://github.com/scalableminds/webknossos/pull/7017)
 - Fixed rendering issues on some affected systems that led to "black holes". [#7018](https://github.com/scalableminds/webknossos/pull/7018)
 - Fixed a bug that made downloads of public annotations fail occasionally. [#7025](https://github.com/scalableminds/webknossos/pull/7025)
 - Added a workaround for a WebGL crash which could appear when a dataset contained many segmentation layers. [#6995](https://github.com/scalableminds/webknossos/pull/6995)
 - Fixed layouting of used storage space on the organization page. [#7034](https://github.com/scalableminds/webknossos/pull/7034)
+- Fixed a bug where updating skeleton annotation tree group visibility would break the annotation. [#7037](https://github.com/scalableminds/webknossos/pull/7037)
+- Fixed importing Neuroglancer Precomputed datasets that have a voxel offset in their header. [#7019](https://github.com/scalableminds/webknossos/pull/7019)
 
 ### Removed
 

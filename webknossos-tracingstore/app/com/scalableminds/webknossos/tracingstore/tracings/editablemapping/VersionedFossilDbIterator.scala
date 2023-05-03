@@ -6,21 +6,27 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   VersionedKeyValuePair
 }
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.annotation.tailrec
 
 class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, version: Option[Long] = None)
     extends Iterator[VersionedKeyValuePair[Array[Byte]]]
     with KeyValueStoreImplicits
+    with LazyLogging
     with FoxImplicits {
-  private val batchSize = 64
+  private val batchSize = 6
 
-  private var currentStartKey = prefix
+  private var currentStartAfterKey: Option[String] = None
   private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
   private var nextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
-  private def fetchNext =
-    fossilDbClient.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
+  private def fetchNext = {
+    logger.info(s"fetch next with start-after key $currentStartAfterKey, prefix $prefix")
+    val reply = fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))
+    reply.foreach(pair => logger.info(s"pair.key: ${pair.key}"))
+    reply.toIterator
+  }
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -32,7 +38,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
   private def getNextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] =
     if (currentBatchIterator.hasNext) {
       val keyValuePair = currentBatchIterator.next
-      currentStartKey = keyValuePair.key
+      currentStartAfterKey = Some(keyValuePair.key)
       Some(keyValuePair)
     } else {
       if (!fetchNextAndSave.hasNext) None
@@ -50,7 +56,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
     val nextRes = nextKeyValuePair match {
       case Some(value) => value
       case None        => getNextKeyValuePair.get
-    }
+    } // TODO: ensure we are advancing correctly
     nextKeyValuePair = None
     nextRes
   }

@@ -382,7 +382,7 @@ class VolumeTracingService @Inject()(
     } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
-    volumeDataStore.getMultipleKeys(tracingId, Some(tracingId), limit = Some(1))(toBox).isEmpty
+    volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
   def createIsosurface(tracingId: String,
                        request: WebKnossosIsosurfaceRequest,

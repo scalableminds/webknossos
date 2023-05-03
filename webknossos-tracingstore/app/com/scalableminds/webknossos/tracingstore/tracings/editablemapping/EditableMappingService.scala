@@ -170,7 +170,6 @@ class EditableMappingService @Inject()(
         for {
           chunkId <- chunkIdFromSegmentToAgglomerateKey(keyValuePair.key).toFox
           newKey = segmentToAgglomerateKey(newId, chunkId)
-          _ = logger.info(s"putting segment to agglomerate chunk at $newKey v$newVersion")
           _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(newKey,
                                                                          version = newVersion,
                                                                          keyValuePair.value)
@@ -189,7 +188,6 @@ class EditableMappingService @Inject()(
         for {
           agglomerateId <- agglomerateIdFromAgglomerateGraphKey(keyValuePair.key).toFox
           newKey = agglomerateGraphKey(newId, agglomerateId)
-          _ = logger.info(s"putting agglomerate graph at $newKey v$newVersion")
           _ <- tracingDataStore.editableMappingsAgglomerateToGraph.put(newKey, version = newVersion, keyValuePair.value)
         } yield ()
       }.toList)

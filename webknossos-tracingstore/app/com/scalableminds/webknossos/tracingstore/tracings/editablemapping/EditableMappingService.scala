@@ -280,17 +280,19 @@ class EditableMappingService @Inject()(
       editableMappingId: String,
       newestVersion: Long,
       oldestVersion: Long): Fox[List[(Long, List[EditableMappingUpdateAction])]] = {
-    val batchRanges = batchRange(oldestVersion, newestVersion, batchSize = 100)
+    val batchRanges = batchRangeInclusive(oldestVersion, newestVersion, batchSize = 100)
     for {
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
         val batchFrom = batchRange._1
         val batchTo = batchRange._2
-        tracingDataStore.editableMappingUpdates
-          .getMultipleVersionsAsVersionValueTuple[List[EditableMappingUpdateAction]](
-            editableMappingId,
-            Some(batchFrom),
-            Some(batchTo)
-          )(fromJsonBytes[List[EditableMappingUpdateAction]])
+        for {
+          res <- tracingDataStore.editableMappingUpdates
+            .getMultipleVersionsAsVersionValueTuple[List[EditableMappingUpdateAction]](
+              editableMappingId,
+              Some(batchTo),
+              Some(batchFrom)
+            )(fromJsonBytes[List[EditableMappingUpdateAction]])
+        } yield res
       }
       flat = updateActionBatches.flatten
     } yield flat
@@ -685,10 +687,10 @@ class EditableMappingService @Inject()(
       }
     } yield ()
 
-  private def batchRange(oldestVersion: Long, newestVersion: Long, batchSize: Long): Seq[(Long, Long)] =
-    (0L to ((newestVersion - oldestVersion) / batchSize)).map { batchIndex =>
-      val batchFrom = batchIndex * batchSize + oldestVersion
-      val batchTo = Math.min(newestVersion, (batchIndex + 1) * batchSize + oldestVersion - 1)
+  private def batchRangeInclusive(from: Long, to: Long, batchSize: Long): Seq[(Long, Long)] =
+    (0L to ((to - from) / batchSize)).map { batchIndex =>
+      val batchFrom = batchIndex * batchSize + from
+      val batchTo = Math.min(to, (batchIndex + 1) * batchSize + from - 1)
       (batchFrom, batchTo)
     }
 }

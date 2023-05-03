@@ -141,14 +141,13 @@ class EditableMappingService @Inject()(
       _ = logger.info(s"create new with base mapping name ${editableMappingInfoAndVersion._1.baseMappingName}")
       newIdAndInfoV0 <- create(editableMappingInfoAndVersion._1.baseMappingName)
       newId = newIdAndInfoV0._1
-      _ = logger.info(s"put materialized info at ${newId} v${editableMappingInfoAndVersion._2}...")
-      _ <- tracingDataStore.editableMappingsInfo.put(newId,
-                                                     editableMappingInfoAndVersion._2,
-                                                     toProtoBytes(editableMappingInfoAndVersion._1))
+      newVersion = editableMappingInfoAndVersion._2
+      _ = logger.info(s"put materialized info at ${newId} v${newVersion}...")
+      _ <- tracingDataStore.editableMappingsInfo.put(newId, newVersion, toProtoBytes(editableMappingInfoAndVersion._1))
       _ = logger.info("duplicate segment to agglomerate...")
-      _ <- duplicateSegmentToAgglomerate(editableMappingId, newId)
+      _ <- duplicateSegmentToAgglomerate(editableMappingId, newId, newVersion)
       _ = logger.info("agglomerate to graph...")
-      _ <- duplicateAgglomerateToGraph(editableMappingId, newId)
+      _ <- duplicateAgglomerateToGraph(editableMappingId, newId, newVersion)
       _ = logger.info("duplicate update actions...")
       updateActionsWithVersions <- getUpdateActionsWithVersions(editableMappingId, editableMappingInfoAndVersion._2, 0L)
       _ <- Fox.serialCombined(updateActionsWithVersions) {
@@ -163,7 +162,9 @@ class EditableMappingService @Inject()(
 
   private def duplicateSegmentToAgglomerate(editableMappingId: String, newId: String, newVersion: Long): Fox[Unit] = {
     val iterator =
-      new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsSegmentToAgglomerate, None)
+      new VersionedFossilDbIterator(editableMappingId,
+                                    tracingDataStore.editableMappingsSegmentToAgglomerate,
+                                    Some(newVersion))
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {
@@ -180,7 +181,9 @@ class EditableMappingService @Inject()(
 
   private def duplicateAgglomerateToGraph(editableMappingId: String, newId: String, newVersion: Long): Fox[Unit] = {
     val iterator =
-      new VersionedFossilDbIterator(editableMappingId, tracingDataStore.editableMappingsAgglomerateToGraph, None)
+      new VersionedFossilDbIterator(editableMappingId,
+                                    tracingDataStore.editableMappingsAgglomerateToGraph,
+                                    Some(newVersion))
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {

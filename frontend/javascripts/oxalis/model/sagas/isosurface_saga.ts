@@ -663,6 +663,7 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
+  console.time("_getLoadChunksTasks");
   const loadChunksTasks = _getLoadChunksTasks(
     dataset,
     layerName,
@@ -681,6 +682,7 @@ function* loadPrecomputedMeshForSegmentId(
     console.error(exception);
     Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
   }
+  console.timeEnd("_getLoadChunksTasks");
 
   yield* put(finishedLoadingIsosurfaceAction(layerName, id));
 }

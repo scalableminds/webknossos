@@ -644,6 +644,7 @@ class EditableMappingService @Inject()(
     val before = Instant.now
     for {
       firstMappingId <- editableMappingIds.headOption.toFox
+      _ = logger.info(s"duplicating first editable mapping ${firstMappingId}...")
       newMappingId <- duplicate(Some(firstMappingId), version = None, remoteFallbackLayer, userToken)
       _ <- Fox.serialCombined(editableMappingIds.tail)(editableMappingId =>
         mergeInto(newMappingId, editableMappingId, remoteFallbackLayer, userToken))
@@ -654,14 +655,17 @@ class EditableMappingService @Inject()(
   private def mergeInto(targetEditableMappingId: String,
                         sourceEditableMappingId: String,
                         remoteFallbackLayer: RemoteFallbackLayer,
-                        userToken: Option[String]): Fox[Unit] =
+                        userToken: Option[String]): Fox[Unit] = {
+    logger.info(s"merging editable mapping $sourceEditableMappingId into $targetEditableMappingId...")
     for {
       targetNewestVersion <- getClosestMaterializableVersionOrZero(targetEditableMappingId, None)
+      _ = logger.info("getInfo of source...")
       closestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId,
                                                                 None,
                                                                 remoteFallbackLayer,
                                                                 userToken)
       sourceNewestVersion = closestMaterializedWithVersion._2
+      _ = logger.info("get update actions of source...")
       updateActionsWithVersions <- getUpdateActionsWithVersions(sourceEditableMappingId, sourceNewestVersion, 0L)
       updateActionsToApply = updateActionsWithVersions.map(_._2).reverse.flatten
       _ = logger.info(
@@ -686,6 +690,7 @@ class EditableMappingService @Inject()(
                                                     updateActionsWithVersion._2)
       }
     } yield ()
+  }
 
   private def batchRangeInclusive(from: Long, to: Long, batchSize: Long): Seq[(Long, Long)] =
     (0L to ((to - from) / batchSize)).map { batchIndex =>

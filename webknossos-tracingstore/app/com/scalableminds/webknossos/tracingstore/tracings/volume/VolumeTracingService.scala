@@ -585,7 +585,8 @@ class VolumeTracingService @Inject()(
 
   def dummyTracing: VolumeTracing = ???
 
-  def mergeEditableMappings(tracingsWithIds: List[(VolumeTracing, String)], userToken: Option[String]): Fox[String] =
+  def mergeEditableMappings(tracingsWithIds: List[(VolumeTracing, String)], userToken: Option[String]): Fox[String] = {
+    logger.info(s"called merge editable mappings for ${tracingsWithIds.length} volume tracings...")
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.mappingIsEditable.contains(true))) {
       for {
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
@@ -594,6 +595,7 @@ class VolumeTracingService @Inject()(
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
         editableMappingIds <- Fox.serialCombined(tracingsWithIds)(tracingWithId => tracingWithId._1.mappingName)
         _ <- bool2Fox(editableMappingIds.length == tracingsWithIds.length) ?~> "Not all volume tracings have editable mappings"
+        _ = logger.info(s"going to merge ${editableMappingIds} editable mappings...")
         newEditableMappingId <- editableMappingService.merge(editableMappingIds, remoteFallbackLayer, userToken)
       } yield newEditableMappingId
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.mappingIsEditable.getOrElse(false))) {
@@ -601,4 +603,5 @@ class VolumeTracingService @Inject()(
     } else {
       Fox.failure("Cannot merge tracings with and without editable mappings")
     }
+  }
 }

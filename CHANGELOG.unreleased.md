@@ -17,13 +17,12 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
-- Fixed unintended dependencies between segments of different volume layers which used the same segment id. Now, using the same segment id for segments in different volume layers should work without any problems. [#6960](https://github.com/scalableminds/webknossos/pull/6960)
-- Fixed incorrect initial tab when clicking "Show Annotations" for a user in the user list. Also, the datasets tab was removed from that page as it was the same as the datasets table from the main dashboard. [#6957](https://github.com/scalableminds/webknossos/pull/6957)
-- Fixed that unsaved changes were shown when opening an annotation, although there weren't any. [#6972](https://github.com/scalableminds/webknossos/pull/6972)
-- Fixed misleading email about successful dataset upload, which was in some cases sent even for unusable datasets. [#6977](https://github.com/scalableminds/webknossos/pull/6977)
-- Fixed upload of skeleton annotations with no trees, only bounding boxes, being incorrectly rejected. [#6985](https://github.com/scalableminds/webknossos/pull/6985)
-- Fixed that Google Cloud Storage URLs with bucket names containing underscores could not be parsed. [#6998](https://github.com/scalableminds/webknossos/pull/6998)
-- Fixed regression that caused public datasets to crash when not being logged in. [#7010](https://github.com/scalableminds/webknossos/pull/7010)
+- Fixed that changing a segment color could lead to a crash. [#7000](https://github.com/scalableminds/webknossos/pull/7000)
+- The fill_value property of zarr dataset is now used when it is not a number. [#7017](https://github.com/scalableminds/webknossos/pull/7017)
+- Fixed a bug that made downloads of public annotations fail occasionally. [#7025](https://github.com/scalableminds/webknossos/pull/7025)
+- Fixed layouting of used storage space on the organization page. [#7034](https://github.com/scalableminds/webknossos/pull/7034)
+- Fixed a bug where updating skeleton annotation tree group visibility would break the annotation. [#7037](https://github.com/scalableminds/webknossos/pull/7037)
+- Fixed importing Neuroglancer Precomputed datasets that have a voxel offset in their header. [#7019](https://github.com/scalableminds/webknossos/pull/7019)
 
 ### Removed
 

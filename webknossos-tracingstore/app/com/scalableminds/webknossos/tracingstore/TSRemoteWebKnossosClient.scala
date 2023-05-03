@@ -13,7 +13,6 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.typesafe.scalalogging.LazyLogging
-import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.libs.ws.WSResponse
@@ -47,13 +46,8 @@ class TSRemoteWebKnossosClient @Inject()(
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
+      .silent
       .post(Json.toJson(tracingUpdatesReport))
-
-  def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
-    rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/reportIsosurfaceRequest")
-      .addQueryString("key" -> tracingStoreKey)
-      .addQueryStringOptional("token", userToken)
-      .post()
 
   def getDataSourceForTracing(tracingId: String): Fox[DataSourceLike] =
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/dataSource")
@@ -65,6 +59,7 @@ class TSRemoteWebKnossosClient @Inject()(
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$dataSetName")
       .addQueryString("organizationName" -> organizationName)
       .addQueryString("key" -> tracingStoreKey)
+      .silent
       .getWithJsonResponse[String]
 
   def getDataSourceIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[DataSourceId] =
@@ -84,6 +79,5 @@ class TSRemoteWebKnossosClient @Inject()(
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 
-class TracingStoreAccessTokenService @Inject()(val remoteWebKnossosClient: TSRemoteWebKnossosClient,
-                                               val cache: SyncCacheApi)
+class TracingStoreAccessTokenService @Inject()(val remoteWebKnossosClient: TSRemoteWebKnossosClient)
     extends AccessTokenService

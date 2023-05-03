@@ -329,6 +329,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       for {
         listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
                                                            maxDepth = 2,
+                                                           silent = false,
                                                            filters = p => p.getFileName.toString == FILENAME_HEADER_WKW)
         listingRelative = listing.map(dataSourceDir.normalize().relativize(_))
       } yield {
@@ -358,7 +359,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =
     for {
-      shallowFileList <- PathUtils.listFiles(uploadDir).toFox
+      shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
       excludeFromPrefix = Category.values.map(_.toString).toList
       firstFile = shallowFileList.headOption
       _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
@@ -375,7 +376,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         }.toFox.map(_ => ())
       } else {
         for {
-          deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, maxDepth = 10).toFox
+          deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = 10).toFox
           commonPrefixPreliminary = PathUtils.commonPrefix(deepFileList)
           strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
           commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
@@ -406,7 +407,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def cleanUpOrphanUploads(): Fox[Unit] =
     for {
-      organizationDirs <- PathUtils.listDirectories(dataBaseDir).toFox
+      organizationDirs <- PathUtils.listDirectories(dataBaseDir, silent = false).toFox
       _ <- Fox.serialCombined(organizationDirs)(cleanUpOrphanUploadsForOrga)
     } yield ()
 
@@ -416,7 +417,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       Fox.successful(())
     else {
       for {
-        uploadDirs <- PathUtils.listDirectories(orgaUploadingDir).toFox
+        uploadDirs <- PathUtils.listDirectories(orgaUploadingDir, silent = false).toFox
         _ <- Fox.serialCombined(uploadDirs) { uploadDir =>
           isKnownUpload(uploadDir.getFileName.toString).map {
             case false =>

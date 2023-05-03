@@ -32,7 +32,7 @@ import {
   getActiveTree,
   getActiveGroup,
   findTreeByNodeId,
-  mapGroups,
+  mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import type { Vector3 } from "oxalis/constants";
@@ -95,7 +95,7 @@ function getNearestTreeId(treeId: number, trees: TreeMap): number {
 }
 
 export function getMaximumGroupId(groups: Array<TreeGroup>): number {
-  const maxGroupId = _.max(Array.from(mapGroups(groups, (group) => group.groupId)));
+  const maxGroupId = _.max(Array.from(mapGroupsToGenerator(groups, (group) => group.groupId)));
 
   return maxGroupId != null && maxGroupId >= 0 ? maxGroupId : 0;
 }
@@ -755,7 +755,7 @@ export function toggleTreeGroupReducer(
   });
   if (toggledGroup == null) return state;
   // Assemble a list that contains the toggled groupId and the groupIds of all child groups
-  const affectedGroupIds = new Set(mapGroups([toggledGroup], (group) => group.groupId));
+  const affectedGroupIds = new Set(mapGroupsToGenerator([toggledGroup], (group) => group.groupId));
   // Let's make all trees visible if there is one invisible tree in one of the affected groups
   const shouldBecomeVisible =
     targetVisibility != null
@@ -843,12 +843,12 @@ export function removeMissingGroupsFromTrees(
   treeGroups: Array<TreeGroup>,
 ): TreeMap {
   // Change the groupId of trees for groups that no longer exist
-  const groupIds = Array.from(mapGroups(treeGroups, (group) => group.groupId));
+  const groupIds = new Set(mapGroupsToGenerator(treeGroups, (group) => group.groupId));
   const changedTrees: TreeMap = {};
   Object.keys(skeletonTracing.trees).forEach((treeId) => {
     const tree = skeletonTracing.trees[Number(treeId)];
 
-    if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
+    if (tree.groupId != null && !groupIds.has(tree.groupId)) {
       // @ts-expect-error ts-migrate(7015) FIXME: Element implicitly has an 'any' type because index... Remove this comment to see the full error message
       changedTrees[treeId] = { ...tree, groupId: null };
     }

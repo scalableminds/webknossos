@@ -22,6 +22,14 @@ export default class SegmentMeshController {
     this.addLights();
   }
 
+  hasIsosurface(id: number, layerName: string): boolean {
+    const segments = this.isosurfacesGroupsPerSegmentationId[layerName];
+    if (!segments) {
+      return false;
+    }
+    return segments[id] != null;
+  }
+
   addIsosurfaceFromVertices(
     vertices: Float32Array,
     segmentationId: number,

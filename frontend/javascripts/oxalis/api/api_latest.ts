@@ -2,7 +2,7 @@ import PriorityQueue from "js-priority-queue";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import _ from "lodash";
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -1183,7 +1183,10 @@ class DataApi {
   /**
    * Invalidates all downloaded buckets of the given layer so that they are reloaded.
    */
-  async reloadBuckets(layerName: string): Promise<void> {
+  async reloadBuckets(
+    layerName: string,
+    predicateFn?: (bucket: DataBucket) => boolean,
+  ): Promise<void> {
     await Promise.all(
       Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
@@ -1191,7 +1194,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.collectAllBuckets();
+          dataLayer.cube.collectAllBuckets(predicateFn);
           dataLayer.layerRenderingManager.refresh();
         }
       }),

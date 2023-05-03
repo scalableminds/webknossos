@@ -82,6 +82,7 @@ function proofreadCoarseResolutionIndex(): number {
     : 3;
 }
 function proofreadUsingMeshes(): boolean {
+  return false;
   // @ts-ignore
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }
@@ -309,7 +310,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-
+  // todo
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
@@ -536,8 +537,10 @@ function* handleProofreadMergeOrMinCut(
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-
-  yield* call([api.data, api.data.reloadBuckets], layerName);
+  // const affectedIds = [targetAgglomerateId];
+  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
+    bucket.containedIds.has(targetAgglomerateId),
+  );
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourcePosition),

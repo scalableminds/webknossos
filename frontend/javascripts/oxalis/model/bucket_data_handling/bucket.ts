@@ -121,6 +121,7 @@ export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
 export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
+
 export class DataBucket {
   type: "data" = "data";
   elementClass: ElementClass;
@@ -147,6 +148,7 @@ export class DataBucket {
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  containedIds: Set<number>;
 
   constructor(
     elementClass: ElementClass,
@@ -164,6 +166,7 @@ export class DataBucket {
     this.dirty = false;
     this.accessed = false;
     this.data = null;
+    this.containedIds = new Set();
 
     if (this.cube.isSegmentation) {
       this.throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
@@ -232,6 +235,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.containedIds = new Set();
     this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
@@ -375,6 +379,7 @@ export class DataBucket {
 
   setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
     this.data = newData;
+    this._recomputeIdSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
@@ -589,6 +594,7 @@ export class DataBucket {
         } else {
           this.data = data;
         }
+        this._recomputeIdSet();
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
@@ -597,6 +603,14 @@ export class DataBucket {
 
       default:
         this.unexpectedState();
+    }
+  }
+
+  private _recomputeIdSet() {
+    if (this.cube.isSegmentation) {
+      // console.time("_recomputeIdSet");
+      this.containedIds = new Set(this.data);
+      // console.timeEnd("_recomputeIdSet");
     }
   }
 

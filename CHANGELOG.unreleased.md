@@ -21,7 +21,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed rendering issues on some affected systems that led to "black holes". [#7018](https://github.com/scalableminds/webknossos/pull/7018)
 - Fixed a bug that made downloads of public annotations fail occasionally. [#7025](https://github.com/scalableminds/webknossos/pull/7025)
 - Added a workaround for a WebGL crash which could appear when a dataset contained many segmentation layers. [#6995](https://github.com/scalableminds/webknossos/pull/6995)
+- Fixed layouting of used storage space on the organization page. [#7034](https://github.com/scalableminds/webknossos/pull/7034)
+- Fixed a bug where updating skeleton annotation tree group visibility would break the annotation. [#7037](https://github.com/scalableminds/webknossos/pull/7037)
+
 
 ### Removed
+- Support for [webknososs-connect](https://github.com/scalableminds/webknossos-connect) data store servers has been removed. [#7031](https://github.com/scalableminds/webknossos/pull/7031)
 
 ### Breaking Changes

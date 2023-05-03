@@ -380,30 +380,26 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                       meshChunkDataRequests: MeshChunkDataRequestV3List,
   ): Fox[(Array[Byte], String)] =
     for {
-      data: List[(Array[Byte], String, Int)] <- Fox.combined(
-        meshChunkDataRequests.requests.zipWithIndex
-          .sortBy(requestAndIndex => requestAndIndex._1.byteOffset)
-          .map(requestAndIndex => {
-            val meshChunkDataRequest = requestAndIndex._1
-            val meshFilePath = dataBaseDir
-              .resolve(organizationName)
-              .resolve(dataSetName)
-              .resolve(dataLayerName)
-              .resolve(meshesDir)
-              .resolve(s"${meshChunkDataRequests.meshFile}.$meshFileExtension")
+      data: List[(Array[Byte], String, Int)] <- Fox.serialCombined(
+        meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
+      )(requestAndIndex => {
+        val meshChunkDataRequest = requestAndIndex._1
+        val meshFilePath = dataBaseDir
+          .resolve(organizationName)
+          .resolve(dataSetName)
+          .resolve(dataLayerName)
+          .resolve(meshesDir)
+          .resolve(s"${meshChunkDataRequests.meshFile}.$meshFileExtension")
 
-            executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-              val meshFormat = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
-              val data =
-                cachedMeshFile.reader
-                  .uint8()
-                  .readArrayBlockWithOffset("neuroglancer",
-                                            meshChunkDataRequest.byteSize,
-                                            meshChunkDataRequest.byteOffset)
-              (data, meshFormat, requestAndIndex._2)
-            } ?~> "mesh.file.readData.failed"
-          })
-          .toList)
+        executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
+          val meshFormat = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
+          val data =
+            cachedMeshFile.reader
+              .uint8()
+              .readArrayBlockWithOffset("neuroglancer", meshChunkDataRequest.byteSize, meshChunkDataRequest.byteOffset)
+          (data, meshFormat, requestAndIndex._2)
+        } ?~> "mesh.file.readData.failed"
+      })
       dataSorted = data.sortBy(d => d._3)
       _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) // Ensure same encoding for all responses
       encoding = data.map(d => d._2).head

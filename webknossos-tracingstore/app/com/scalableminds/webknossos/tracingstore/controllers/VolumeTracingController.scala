@@ -182,6 +182,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.webknossos, userToken) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            _ = logger.info(s"Duplicating volume tracing $tracingId...")
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)

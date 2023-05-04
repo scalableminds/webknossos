@@ -20,6 +20,7 @@ import compileShader from "./shader_module_system";
 import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
 
 type Params = {
   globalLayerCount: number;
@@ -151,6 +152,8 @@ ${compileShader(
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
+  getBlendLayersAdditive,
+  getBlendLayersCover,
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentationId : null,
@@ -194,7 +197,7 @@ void main() {
 
       vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
       if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
-        vec4[2] maybe_filtered_color_and_used_fallback =
+        MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
             <%= formatNumberAsGLSLFloat(layerIndex) %>,
             <%= name %>_data_texture_width,
@@ -204,10 +207,8 @@ void main() {
             fallbackGray,
             !<%= name %>_has_transform
           );
-          float used_fallback = maybe_filtered_color_and_used_fallback[1].r;
-          // For uint24 the alpha channel is always 0.0 :/
-          vec4 maybe_filtered_color = maybe_filtered_color_and_used_fallback[0];
-        color_value = maybe_filtered_color_and_used_fallback[0].rgb;
+        bool used_fallback = maybe_filtered_color.used_fallback_color;
+        color_value = maybe_filtered_color.color.rgb;
         <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
           // Workaround for 16-bit color layers
           color_value = vec3(color_value.g * 256.0 + color_value.r);
@@ -228,23 +229,13 @@ void main() {
         color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
         color_value = color_value * <%= name %>_alpha * <%= name %>_color;
         // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
-        // so that it does not cover other colors.
-        vec4 layer_color = vec4(color_value, used_fallback == 1.0 ? 0.0 : maybe_filtered_color.a * <%= name %>_alpha);
-        // Additive blendMode == 1: Simply adding up all layer colors.
-        vec4 additive_color = data_color + layer_color;
-        // Cover blendMode == 0: Applying alpha blending to merge the layers where the top most layer has priority.
-        // See https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending for details.
-        float mixed_alpha_factor = (1.0 - data_color.a) * layer_color.a;
-        float mixed_alpha = mixed_alpha_factor + data_color.a;
-        vec3 cover_color_rgb = data_color.a * data_color.rgb + mixed_alpha_factor * layer_color.rgb;
-        // Catching edge case where mixed_alpha is 0.0 and therefore the cover_color would have nan values.
-        float is_mixed_alpha_zero = float(mixed_alpha == 0.0);
-        vec4 cover_color = vec4(cover_color_rgb / (mixed_alpha + is_mixed_alpha_zero), mixed_alpha);
-        cover_color = mix(cover_color, vec4(0.0), is_mixed_alpha_zero);
-        // Do not overwrite data_color if the layer color is only the fallback color.
-        float is_current_color_valid = float(used_fallback != 1.0);
-        cover_color = mix(data_color, cover_color, is_current_color_valid);
-        // Choose color depending on blendMode
+        // so the fallback color does not cover other colors.
+        vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * <%= name %>_alpha);
+        // Calculating the cover color for the current layer in case blendMode == 1.0.
+        vec4 additive_color = blendLayersAdditive(data_color, layer_color);
+        // Calculating the cover color for the current layer in case blendMode == 0.0.
+        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback);
+        // Choose color depending on blendMode.
         data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
       }
     }

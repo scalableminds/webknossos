@@ -14,6 +14,7 @@ import {
 import { location } from "libs/window";
 import InputComponent from "oxalis/view/components/input_component";
 import Request from "libs/request";
+import Constants from "oxalis/constants";
 import type { OxalisState, MutableTreeMap, TreeGroup } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -107,9 +108,9 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     if (selectedProject != null) {
       const url =
-          `/api/annotations/CompoundProject/${selectedProject}/merge/` +
-          `${this.props.annotationType}/${this.props.annotationId}`;
-        this.createMergedAnnotation(url);
+        `/api/annotations/CompoundProject/${selectedProject}/merge/` +
+        `${this.props.annotationType}/${this.props.annotationId}`;
+      this.createMergedAnnotation(url);
     }
   };
 
@@ -228,7 +229,6 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
             <Form.Item>
               <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
                 <Button
-                  type="primary"
                   disabled={this.state.selectedProject == null}
                   onClick={this.handleImportProject}
                 >
@@ -262,8 +262,10 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
             <Form.Item>
               <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
                 <Button
-                  type="primary"
-                  disabled={this.state.selectedExplorativeAnnotation.length !== 24}
+                  disabled={
+                    this.state.selectedExplorativeAnnotation.length !==
+                    Constants.OBJECT_ID_STRING_LENGTH
+                  }
                   onClick={this.handleImportExplorativeAnnotation}
                 >
                   Import trees here
@@ -274,7 +276,10 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
               <Tooltip title="Creates a new explorative annotation in your account with all merged contents of the current and selected annotations.">
                 <Button
                   type="primary"
-                  disabled={this.state.selectedExplorativeAnnotation.length !== 24}
+                  disabled={
+                    this.state.selectedExplorativeAnnotation.length !==
+                    Constants.OBJECT_ID_STRING_LENGTH
+                  }
                   onClick={this.handleMergeExplorativeAnnotation}
                 >
                   Merge

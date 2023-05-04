@@ -15,7 +15,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
     with KeyValueStoreImplicits
     with LazyLogging
     with FoxImplicits {
-  private val batchSize = 640
+  private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None
   private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext

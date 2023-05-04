@@ -631,27 +631,15 @@ class EditableMappingService @Inject()(
 
   def merge(editableMappingIds: List[String],
             remoteFallbackLayer: RemoteFallbackLayer,
-            userToken: Option[String]): Fox[String] = {
-    /*
-       - duplicate first editable mapping
-       - also duplicate its update actions, and a v0
-       - for all others:
-         - fetch update actions of next one (batched)
-         - apply them one by one on duplicated first one
-           - ignore agglomerate ids in update actions, look up agglomerate ids by positions only (look up segment, map using current mapping)
-           - skip adding edges that already exist
-           - skip deleting edges that don’t exist
-         - also save them, with new linear versioning
-     */
-    val before = Instant.now
+            userToken: Option[String]): Fox[String] =
     for {
       firstMappingId <- editableMappingIds.headOption.toFox
+      before = Instant.now
       newMappingId <- duplicate(Some(firstMappingId), version = None, remoteFallbackLayer, userToken)
       _ <- Fox.serialCombined(editableMappingIds.tail)(editableMappingId =>
         mergeInto(newMappingId, editableMappingId, remoteFallbackLayer, userToken))
       _ = logger.info(s"Merging ${editableMappingIds.length} editable mappings took ${Instant.since(before)}")
     } yield newMappingId
-  }
 
   private def mergeInto(targetEditableMappingId: String,
                         sourceEditableMappingId: String,

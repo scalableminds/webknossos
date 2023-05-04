@@ -23,6 +23,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed layouting of used storage space on the organization page. [#7034](https://github.com/scalableminds/webknossos/pull/7034)
 - Fixed a bug where updating skeleton annotation tree group visibility would break the annotation. [#7037](https://github.com/scalableminds/webknossos/pull/7037)
 - Fixed importing Neuroglancer Precomputed datasets that have a voxel offset in their header. [#7019](https://github.com/scalableminds/webknossos/pull/7019)
+- Fixed an bug where invalid email addresses were not readable in dark mode on the login/signup pages. [#7052](https://github.com/scalableminds/webknossos/pull/7052)
 
 ### Removed
 

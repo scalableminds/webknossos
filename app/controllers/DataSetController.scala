@@ -20,7 +20,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
@@ -42,17 +42,27 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
 }
 
+case class SegmentAnythingEmbeddingParameters(
+    mag: Vec3Int,
+    boundingBox: BoundingBox
+)
+
+object SegmentAnythingEmbeddingParameters {
+  implicit val jsonFormat: Format[SegmentAnythingEmbeddingParameters] = Json.format[SegmentAnythingEmbeddingParameters]
+}
+
 @Api
 class DataSetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   dataSetService: DataSetService,
-                                  dataSetDataLayerDAO: DataSetDataLayerDAO,
                                   dataStoreDAO: DataStoreDAO,
                                   dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
+                                  wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
                                   dataSetDAO: DataSetDAO,
+                                  conf: WkConf,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   exploreRemoteLayerService: ExploreRemoteLayerService,
@@ -518,6 +528,29 @@ Expects:
     ctx.data match {
       case Some(_: User) => Messages("dataSet.notFound", dataSetName)
       case _             => Messages("dataSet.notFoundConsiderLogin", dataSetName)
+    }
+
+  def segmentAnythingEmbedding(organizationName: String,
+                               dataSetName: String,
+                               dataLayerName: String): Action[SegmentAnythingEmbeddingParameters] =
+    sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
+      for {
+        _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
+        _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
+        - <- bool2Fox(request.body.boundingBox.depth == 1) ?~> "segmentAnything.bboxNotFlat"
+        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+          dataSetName) ~> NOT_FOUND
+        dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+        usableDataSource <- dataSource.toUsable ?~> "dataSet.notImported"
+        dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
+        datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
+        data <- datastoreClient.getLayerData(organizationName,
+                                             dataSetName,
+                                             dataLayer.name,
+                                             request.body.boundingBox,
+                                             request.body.mag) ?~> "segmentAnything.getData.failed"
+        embedding <- wKRemoteSegmentAnythingClient.getEmbedding(data) ?~> "segmentAnything.getEmbedding.failed"
+      } yield Ok(embedding)
     }
 
 }

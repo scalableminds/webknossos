@@ -1,6 +1,6 @@
 package models.binary
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
@@ -28,6 +28,12 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryStringOptional("centerZ", center.map(_.z.toString))
       .getWithBytesResponse
   }
+
+  def getLayerData(organizationName: String,
+                   datasetName: String,
+                   layerName: String,
+                   boundingBox: BoundingBox,
+                   mag: Vec3Int): Fox[Array[Byte]] = ???
 
   def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =
     rpc(

@@ -41,7 +41,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
-                               folderService: FolderService,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
                                conf: WkConf)(implicit ec: ExecutionContext)

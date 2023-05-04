@@ -342,7 +342,6 @@ class DataCube {
       }
     }
 
-
     this.buckets = notCollectedBuckets;
     this.bucketIterator = notCollectedBuckets.length;
   }

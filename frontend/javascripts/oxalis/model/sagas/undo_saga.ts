@@ -25,11 +25,14 @@ import {
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   AddBucketToUndoAction,
+  BatchUpdateGroupsAndSegmentsAction,
   cancelQuickSelectAction,
   FinishAnnotationStrokeAction,
   ImportVolumeTracingAction,
   MaybeUnmergedBucketLoadedPromise,
   RemoveSegmentAction,
+  setSegmentGroupsAction,
+  SetSegmentGroupsAction,
   setSegmentsAction,
   UpdateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -42,7 +45,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { UNDO_HISTORY_SIZE } from "oxalis/model/sagas/save_saga_constants";
 import { Model } from "oxalis/singletons";
-import type { SegmentMap, SkeletonTracing, UserBoundingBox } from "oxalis/store";
+import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import { Task } from "redux-saga";
 import { actionChannel, all, call, delay, fork, join, put, take } from "typed-redux-saga";
 
@@ -61,6 +64,7 @@ type VolumeUndoBuckets = Array<UndoBucket>;
 type VolumeAnnotationBatch = {
   buckets: VolumeUndoBuckets;
   segments: SegmentMap;
+  segmentGroups: SegmentGroup[];
   tracingId: string;
 };
 type SkeletonUndoState = {
@@ -90,6 +94,8 @@ type RelevantActionsForUndoRedo = {
   redo?: RedoAction;
   updateSegment?: UpdateSegmentAction;
   removeSegment?: RemoveSegmentAction;
+  setSegmentGroups?: SetSegmentGroupsAction;
+  batchUpdateGroupsAndSegments?: BatchUpdateGroupsAndSegmentsAction;
 };
 
 // This function is needed so that TS is satisfied
@@ -127,12 +133,19 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     return {
       removeSegment: action,
     };
+  } else if (action.type === "SET_SEGMENT_GROUPS") {
+    return {
+      setSegmentGroups: action,
+    };
+  } else if (action.type === "BATCH_UPDATE_GROUPS_AND_SEGMENTS") {
+    return {
+      batchUpdateGroupsAndSegments: action,
+    };
   } else if (UndoRedoRelevantBoundingBoxActions.includes(action.type)) {
     return {
       userBoundingBoxAction: action as any as UserBoundingBoxAction,
     };
   }
-
   if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
     return {
       skeletonUserAction: action as any as SkeletonTracingAction,
@@ -164,6 +177,7 @@ export function* manageUndoStates(): Saga<never> {
       // The "old" segment list that needs to be added to the next volume undo stack
       // entry so that that segment list can be restored upon undo.
       prevSegments: SegmentMap;
+      prevSegmentGroups: SegmentGroup[];
     }
   > = {};
 
@@ -176,18 +190,20 @@ export function* manageUndoStates(): Saga<never> {
   for (const volumeTracing of volumeTracings) {
     volumeInfoById[volumeTracing.tracingId] = {
       currentVolumeUndoBuckets: [],
-      // The SegmentMap is immutable. So, no need to copy. If there's no volume
+      // Segments and SegmentGroups are always handled as immutable. So, no need to copy. If there's no volume
       // tracing, prevSegments can remain empty as it's not needed.
       prevSegments: volumeTracing.segments,
+      prevSegmentGroups: volumeTracing.segmentGroups,
     };
   }
 
   // Helper functions for functionality related to volumeInfoById.
-  function* setPrevSegmentsToCurrent() {
+  function* setPrevSegmentsAndGroupsToCurrent() {
     // Read the current segments map and store it in volumeInfoById for all volume layers.
     const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
     for (const volumeTracing of volumeTracings) {
       volumeInfoById[volumeTracing.tracingId].prevSegments = volumeTracing.segments;
+      volumeInfoById[volumeTracing.tracingId].prevSegmentGroups = volumeTracing.segmentGroups;
     }
   }
   function* areCurrentVolumeUndoBucketsEmpty() {
@@ -209,12 +225,14 @@ export function* manageUndoStates(): Saga<never> {
     ...SkeletonTracingSaveRelevantActions,
     ...UndoRedoRelevantBoundingBoxActions,
     "ADD_BUCKET_TO_UNDO",
+    "SET_SEGMENT_GROUPS",
     "FINISH_ANNOTATION_STROKE",
     "IMPORT_VOLUMETRACING",
     "UPDATE_SEGMENT",
     "REMOVE_SEGMENT",
     "UNDO",
     "REDO",
+    "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
   ]);
   let loopCounter = 0;
 
@@ -238,6 +256,8 @@ export function* manageUndoStates(): Saga<never> {
       redo,
       updateSegment,
       removeSegment,
+      setSegmentGroups,
+      batchUpdateGroupsAndSegments,
     } = unpackRelevantActionForUndo(currentAction);
 
     if (importVolumeTracingAction) {
@@ -267,7 +287,7 @@ export function* manageUndoStates(): Saga<never> {
         // Since the current segments map changed, we need to update our reference to it.
         // Note that we don't need to do this for currentVolumeUndoBuckets, as this
         // was and is empty, anyway (due to the constraint we checked above).
-        yield* call(setPrevSegmentsToCurrent);
+        yield* call(setPrevSegmentsAndGroupsToCurrent);
       }
 
       if (undo.callback != null) {
@@ -292,7 +312,7 @@ export function* manageUndoStates(): Saga<never> {
       );
 
       // See undo branch for an explanation.
-      yield* call(setPrevSegmentsToCurrent);
+      yield* call(setPrevSegmentsAndGroupsToCurrent);
 
       if (redo.callback != null) {
         redo.callback();
@@ -359,11 +379,13 @@ export function* manageUndoStates(): Saga<never> {
           data: {
             buckets: volumeInfo.currentVolumeUndoBuckets,
             segments: volumeInfo.prevSegments,
+            segmentGroups: volumeInfo.prevSegmentGroups,
             tracingId: activeVolumeTracing.tracingId,
           },
         });
-        // The SegmentMap is immutable. So, no need to copy.
+        // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
         volumeInfo.prevSegments = activeVolumeTracing.segments;
+        volumeInfo.prevSegmentGroups = activeVolumeTracing.segmentGroups;
         volumeInfo.currentVolumeUndoBuckets = [];
       } else if (userBoundingBoxAction) {
         const boundingBoxUndoState = getBoundingBoxToUndoState(
@@ -406,11 +428,13 @@ export function* manageUndoStates(): Saga<never> {
               data: {
                 buckets: [],
                 segments: volumeInfo.prevSegments,
+                segmentGroups: volumeInfo.prevSegmentGroups,
                 tracingId: activeVolumeTracing.tracingId,
               },
             });
-            // The SegmentMap is immutable. So, no need to copy.
+            // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
             volumeInfo.prevSegments = activeVolumeTracing.segments;
+            volumeInfo.prevSegmentGroups = activeVolumeTracing.segmentGroups;
           }
         } else {
           // Update most recent undo stack entry in-place.
@@ -423,7 +447,37 @@ export function* manageUndoStates(): Saga<never> {
           if (volumeTracing != null) {
             const volumeInfo = volumeInfoById[volumeTracing.tracingId];
             volumeInfo.prevSegments = volumeTracing.segments;
+            volumeInfo.prevSegmentGroups = volumeTracing.segmentGroups;
           }
+        }
+      } else if (setSegmentGroups || batchUpdateGroupsAndSegments) {
+        if (setSegmentGroups?.calledFromUndoSaga) {
+          // Ignore this action as it was dispatched from within this saga.
+          continue;
+        }
+        shouldClearRedoState = true;
+        const layerName =
+          setSegmentGroups?.layerName || batchUpdateGroupsAndSegments?.payload[0].layerName;
+        if (layerName == null) {
+          throw new Error("Could not find layer name for action.");
+        }
+        const activeVolumeTracing = yield* select((state) =>
+          getVolumeTracingByLayerName(state.tracing, layerName),
+        );
+        if (activeVolumeTracing) {
+          const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
+          undoStack.push({
+            type: "volume",
+            data: {
+              buckets: [],
+              segments: volumeInfo.prevSegments,
+              segmentGroups: volumeInfo.prevSegmentGroups,
+              tracingId: activeVolumeTracing.tracingId,
+            },
+          });
+          // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
+          volumeInfo.prevSegments = activeVolumeTracing.segments;
+          volumeInfo.prevSegmentGroups = activeVolumeTracing.segmentGroups;
         }
       }
 
@@ -758,8 +812,18 @@ function* applyAndGetRevertingVolumeBatch(
   const activeVolumeTracing = yield* select((state) =>
     getVolumeTracingById(state.tracing, volumeAnnotationBatch.tracingId),
   );
-  // The SegmentMap is immutable. So, no need to copy.
+  // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;
+  const currentSegmentGroups = activeVolumeTracing.segmentGroups;
+  // It's important to update the groups first, since the reducer for setSegments would
+  // re-assign the group ids if segments belong to non-existent groups.
+  yield* put(
+    setSegmentGroupsAction(
+      volumeAnnotationBatch.segmentGroups,
+      volumeAnnotationBatch.tracingId,
+      true,
+    ),
+  );
   yield* put(setSegmentsAction(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
   cube.triggerPushQueue();
   return {
@@ -767,6 +831,7 @@ function* applyAndGetRevertingVolumeBatch(
     data: {
       buckets: allCompressedBucketsOfCurrentState,
       segments: currentSegments,
+      segmentGroups: currentSegmentGroups,
       tracingId: volumeAnnotationBatch.tracingId,
     },
   };

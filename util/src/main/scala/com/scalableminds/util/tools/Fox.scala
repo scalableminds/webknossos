@@ -137,6 +137,7 @@ object Fox extends FoxImplicits {
     runNext(l, Nil)
   }
 
+  // run in sequence, drop everything that isn’t full
   def sequenceOfFulls[T](seq: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
     Future.sequence(seq.map(_.futureBox)).map { results =>
       results.foldRight(List.empty[T]) {

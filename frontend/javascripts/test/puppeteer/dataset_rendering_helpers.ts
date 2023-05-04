@@ -1,5 +1,10 @@
 /* eslint no-await-in-loop: 0 */
 import urljoin from "url-join";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
+import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+import type { Browser } from "puppeteer";
+import type { TestInterface } from "ava";
+import anyTest from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
@@ -8,6 +13,7 @@ import { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
+import puppeteer from "puppeteer";
 
 export const { WK_AUTH_TOKEN } = process.env;
 
@@ -92,6 +98,18 @@ async function _screenshotAnnotationHelper(
   }
 
   await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
+  return screenshotTracingView(page);
+}
+
+export async function screenshotDatasetView(
+  page: Page,
+  baseUrl: string,
+  datasetId: APIDatasetId,
+  optionalViewOverride?: string | null | undefined,
+): Promise<Screenshot> {
+  const url = `${baseUrl}/datasets/${datasetId.owningOrganization}/${datasetId.name}`;
+
+  await openDatasetView(page, url, optionalViewOverride);
   return screenshotTracingView(page);
 }
 
@@ -227,6 +245,23 @@ async function openTracingView(
   console.log("Finished rendering annotation view");
 }
 
+async function openDatasetView(
+  page: Page,
+  baseUrl: string,
+  optionalViewOverride?: string | null | undefined,
+) {
+  const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
+  const url = urljoin(baseUrl, `/view${urlSlug}`);
+  console.log(`Opening dataset view at ${url}`);
+  await page.goto(url, {
+    timeout: 0,
+  });
+  await waitForTracingViewLoad(page);
+  console.log("Loaded dataset view");
+  await waitForRenderingFinish(page);
+  console.log("Finished rendering dataset view");
+}
+
 async function openSandboxView(
   page: Page,
   baseUrl: string,
@@ -278,6 +313,95 @@ async function screenshotTracingView(page: Page): Promise<Screenshot> {
       }),
     );
   });
+}
+
+export async function getNewPage(browser: Browser) {
+  const page = await browser.newPage();
+  page.setViewport({
+    width: 1920,
+    height: 1080,
+  });
+  page.setExtraHTTPHeaders({
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | undefined' is not assignable to typ... Remove this comment to see the full error message
+    "X-Auth-Token": WK_AUTH_TOKEN,
+  });
+  return page;
+}
+
+export async function withRetry(
+  retryCount: number,
+  testFn: () => Promise<boolean>,
+  resolveFn: (arg0: boolean) => void,
+) {
+  retryCount = 3;
+  for (let i = 0; i < retryCount; i++) {
+    // eslint-disable-next-line no-await-in-loop
+    const condition = await testFn();
+
+    if (condition || i === retryCount - 1) {
+      // Either the test passed or we executed the last attempt
+      resolveFn(condition);
+      return;
+    }
+
+    console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
+  }
+}
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+export const test: TestInterface<{
+  browser: Browser;
+}> = anyTest as any;
+
+export function setupBeforeEachAndAfterEach() {
+  test.beforeEach(async (t) => {
+    t.context.browser = await puppeteer.launch({
+      args: [
+        "--headless",
+        "--hide-scrollbars",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--use-gl=swiftshader",
+      ],
+      dumpio: true,
+    });
+
+    const caps = {
+      browser: "chrome",
+      browser_version: "latest",
+      os: "os x",
+      os_version: "mojave",
+      "browserstack.username": process.env.BROWSERSTACK_USERNAME,
+      "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
+    };
+    t.context.browser = await puppeteer.connect({
+      browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
+        JSON.stringify(caps),
+      )}`,
+    });
+
+    console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
+    global.Headers = Headers;
+    global.fetch = fetch;
+    global.Request = Request;
+    global.Response = Response;
+    // @ts-expect-error ts-migrate(7017) FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
+    global.FetchError = FetchError;
+  });
+
+  test.afterEach.always(async (t) => {
+    await t.context.browser.close();
+  });
+}
+
+export function checkBrowserstackCredentials() {
+  if (process.env.BROWSERSTACK_USERNAME == null || process.env.BROWSERSTACK_ACCESS_KEY == null) {
+    throw new Error(
+      "BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY must be defined as env variables.",
+    );
+  }
 }
 
 export default {};

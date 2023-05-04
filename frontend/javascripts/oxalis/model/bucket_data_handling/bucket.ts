@@ -614,9 +614,8 @@ export class DataBucket {
   }
 
   private recomputeValueSet() {
-    // console.time("recomputeValueSet");
+    // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
     this.cachedValueSet = new Set(this.data);
-    // console.timeEnd("recomputeValueSet");
   }
 
   containsValue(value: number | BigInt): boolean {

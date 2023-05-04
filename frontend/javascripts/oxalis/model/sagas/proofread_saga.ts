@@ -82,7 +82,6 @@ function proofreadCoarseResolutionIndex(): number {
     : 3;
 }
 function proofreadUsingMeshes(): boolean {
-  return false;
   // @ts-ignore
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }

@@ -330,7 +330,6 @@ class DataCube {
     this.pullQueue.clear();
     this.pullQueue.abortRequests();
 
-    let collectedCount = 0;
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
       // If a bucket is requested, collect it independently of the predicateFn,
@@ -338,13 +337,11 @@ class DataCube {
       // requested state, but will never be filled with data).
       if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
         this.collectBucket(bucket);
-        collectedCount++;
       } else {
         notCollectedBuckets.push(bucket);
       }
     }
 
-    console.log(`collected: ${collectedCount} vs skipped ${notCollectedBuckets.length}`);
 
     this.buckets = notCollectedBuckets;
     this.bucketIterator = notCollectedBuckets.length;

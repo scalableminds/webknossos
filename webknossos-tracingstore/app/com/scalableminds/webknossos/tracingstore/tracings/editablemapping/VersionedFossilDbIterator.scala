@@ -15,22 +15,17 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
     with KeyValueStoreImplicits
     with LazyLogging
     with FoxImplicits {
-  private val batchSize = 6
+  private val batchSize = 640
 
   private var currentStartAfterKey: Option[String] = None
   private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
   private var nextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
-  private def fetchNext = {
-    logger.info(s"fetch next with start-after key $currentStartAfterKey, prefix $prefix")
-    val reply = fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))
-    reply.foreach(pair => logger.info(s"pair.key: ${pair.key}"))
-    reply.toIterator
-  }
+  private def fetchNext =
+    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).toIterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
-    if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
     currentBatchIterator
   }
 
@@ -56,7 +51,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
     val nextRes = nextKeyValuePair match {
       case Some(value) => value
       case None        => getNextKeyValuePair.get
-    } // TODO: ensure we are advancing correctly
+    }
     nextKeyValuePair = None
     nextRes
   }

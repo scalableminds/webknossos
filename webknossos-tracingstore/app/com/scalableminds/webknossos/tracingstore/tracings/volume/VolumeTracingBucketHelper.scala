@@ -228,7 +228,6 @@ class VersionedBucketIterator(prefix: String,
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
-    if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
     currentBatchIterator
   }
 
@@ -259,7 +258,7 @@ class VersionedBucketIterator(prefix: String,
       case Some(bucket) => bucket
       case None         => getNextNonRevertedBucket.get
     }
-    nextBucket = None // TODO we are advancing correctly
+    nextBucket = None
     parseBucketKey(nextRes.key)
       .map(key => {
         val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"

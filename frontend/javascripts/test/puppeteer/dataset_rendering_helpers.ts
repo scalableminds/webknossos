@@ -321,6 +321,10 @@ export async function getNewPage(browser: Browser) {
     width: 1920,
     height: 1080,
   });
+  page.setExtraHTTPHeaders({
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | undefined' is not assignable to typ... Remove this comment to see the full error message
+    "X-Auth-Token": WK_AUTH_TOKEN,
+  });
   return page;
 }
 

@@ -31,7 +31,9 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
     PathUtils
-      .listFiles(layerDir.resolve(agglomerateDir), PathUtils.fileExtensionFilter(agglomerateFileExtension))
+      .listFiles(layerDir.resolve(agglomerateDir),
+                 silent = true,
+                 PathUtils.fileExtensionFilter(agglomerateFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }

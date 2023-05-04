@@ -537,9 +537,8 @@ function* handleProofreadMergeOrMinCut(
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-  // const affectedIds = [targetAgglomerateId];
   yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
-    bucket.containedIds.has(targetAgglomerateId),
+    bucket.containsValue(targetAgglomerateId),
   );
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([

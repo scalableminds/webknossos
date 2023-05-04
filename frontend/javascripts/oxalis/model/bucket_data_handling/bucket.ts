@@ -148,7 +148,11 @@ export class DataBucket {
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
-  containedIds: Set<number>;
+  // Especially, for segmentation buckets, it can be interesting to
+  // know whether a certain ID is contained in this bucket. To
+  // speed up such requests a cached set of the contained values
+  // can be stored in cachedValueSet.
+  cachedValueSet: Set<number | BigInt> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -166,7 +170,6 @@ export class DataBucket {
     this.dirty = false;
     this.accessed = false;
     this.data = null;
-    this.containedIds = new Set();
 
     if (this.cube.isSegmentation) {
       this.throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
@@ -235,7 +238,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
-    this.containedIds = new Set();
+    this.invalidateValueSet();
     this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
@@ -379,7 +382,7 @@ export class DataBucket {
 
   setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
     this.data = newData;
-    this._recomputeIdSet();
+    this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
@@ -594,7 +597,7 @@ export class DataBucket {
         } else {
           this.data = data;
         }
-        this._recomputeIdSet();
+        this.invalidateValueSet();
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
@@ -606,12 +609,21 @@ export class DataBucket {
     }
   }
 
-  private _recomputeIdSet() {
-    if (this.cube.isSegmentation) {
-      // console.time("_recomputeIdSet");
-      this.containedIds = new Set(this.data);
-      // console.timeEnd("_recomputeIdSet");
+  private invalidateValueSet() {
+    this.cachedValueSet = null;
+  }
+
+  private recomputeValueSet() {
+    // console.time("recomputeValueSet");
+    this.cachedValueSet = new Set(this.data);
+    // console.timeEnd("recomputeValueSet");
+  }
+
+  containsValue(value: number | BigInt): boolean {
+    if (this.cachedValueSet == null) {
+      this.recomputeValueSet();
     }
+    return this.cachedValueSet!.has(value);
   }
 
   markAsPushed(): void {

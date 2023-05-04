@@ -1182,6 +1182,10 @@ class DataApi {
 
   /**
    * Invalidates all downloaded buckets of the given layer so that they are reloaded.
+   * If an additional predicate is passed, each bucket is checked to see whether
+   * it should be reloaded. Note that buckets that are in a REQUESTED state (i.e.,
+   * currently being queued or downloaded) will always be reloaded by cancelling and rescheduling
+   * the request.
    */
   async reloadBuckets(
     layerName: string,
@@ -1194,7 +1198,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.collectAllBuckets(predicateFn);
+          dataLayer.cube.collectBucketsIf(predicateFn || (() => true));
           dataLayer.layerRenderingManager.refresh();
         }
       }),

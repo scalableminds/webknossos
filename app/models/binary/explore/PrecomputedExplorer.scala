@@ -30,7 +30,9 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
     for {
       name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
-      boundingBox <- BoundingBox.fromSizeArray(firstScale.size).toFox
+      boundingBox <- BoundingBox
+        .fromTopLeftAndSize(firstScale.voxel_offset.getOrElse(Array(0, 0, 0)), firstScale.size)
+        .toFox
       elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> "Unknown data type"
       smallestResolution = firstScale.resolution
       voxelSize <- Vec3Int.fromArray(smallestResolution).toFox

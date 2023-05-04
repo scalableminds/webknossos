@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [23.05.1](https://github.com/scalableminds/webknossos/releases/tag/23.05.1) - 2023-05-02
+[Commits](https://github.com/scalableminds/webknossos/compare/23.05.0...23.05.1)
+
+### Fixed
+- Fixed rendering issues on some affected systems that led to "black holes". [#7018](https://github.com/scalableminds/webknossos/pull/7018)
+- Added a workaround for a WebGL crash which could appear when a dataset contained many segmentation layers. [#6995](https://github.com/scalableminds/webknossos/pull/6995)
+
 ## [23.05.0](https://github.com/scalableminds/webknossos/releases/tag/23.05.0) - 2023-04-25
 [Commits](https://github.com/scalableminds/webknossos/compare/23.04.2...23.05.0)
 

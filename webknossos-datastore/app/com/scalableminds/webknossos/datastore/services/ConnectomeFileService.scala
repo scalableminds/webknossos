@@ -93,7 +93,9 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
   def exploreConnectomeFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
     PathUtils
-      .listFiles(layerDir.resolve(connectomesDir), PathUtils.fileExtensionFilter(connectomeFileExtension))
+      .listFiles(layerDir.resolve(connectomesDir),
+                 silent = true,
+                 PathUtils.fileExtensionFilter(connectomeFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }

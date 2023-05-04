@@ -33,7 +33,7 @@ trait DatasetHeader {
   lazy val fillValueNumber: Number =
     fill_value match {
       case Right(n) => n
-      case Left(_)  => 0 // parsing fill value from string not currently supported
+      case Left(s)  => parseFillValueFromString(s)
     }
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
@@ -47,4 +47,14 @@ trait DatasetHeader {
   def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize
 
   def isSharded = false
+
+  private def parseFillValueFromString(s: String): Number =
+    s match {
+      case "NaN"       => 0
+      case "Infinity"  => ArrayDataType.maxValue(resolvedDataType)
+      case "-Infinity" => ArrayDataType.minValue(resolvedDataType)
+      case _           => 0 // Unsupported fill value does not throw exception
+    }
+
+  def voxelOffset: Array[Int]
 }

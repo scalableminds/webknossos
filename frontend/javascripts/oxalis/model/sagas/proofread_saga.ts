@@ -310,8 +310,9 @@ function* splitOrMergeOrMinCutAgglomerate(
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-  // todo
-  yield* call([api.data, api.data.reloadBuckets], layerName);
+  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
+    bucket.containsValue(targetAgglomerateId),
+  );
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourceNodePosition),

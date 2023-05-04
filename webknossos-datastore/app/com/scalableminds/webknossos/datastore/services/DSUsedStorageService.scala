@@ -46,14 +46,17 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
     def selectedDatasetFilter(p: Path) = dataSetName.forall(name => p.getFileName.toString == name)
 
     for {
-      datasetDirectories <- PathUtils.listDirectories(organizationDirectory, noSymlinksFilter, selectedDatasetFilter) ?~> "listdir.failed"
+      datasetDirectories <- PathUtils.listDirectories(organizationDirectory,
+                                                      silent = true,
+                                                      noSymlinksFilter,
+                                                      selectedDatasetFilter) ?~> "listdir.failed"
       storageReportsNested <- Fox.serialCombined(datasetDirectories)(d => measureStorageForDataSet(organizationName, d))
     } yield storageReportsNested.flatten
   }
 
   def measureStorageForDataSet(organizationName: String, dataSetDirectory: Path): Fox[List[DirectoryStorageReport]] =
     for {
-      layerDirectory <- PathUtils.listDirectories(dataSetDirectory, noSymlinksFilter) ?~> "listdir.failed"
+      layerDirectory <- PathUtils.listDirectories(dataSetDirectory, silent = true, noSymlinksFilter) ?~> "listdir.failed"
       storageReportsNested <- Fox.serialCombined(layerDirectory)(l =>
         measureStorageForLayerDirectory(organizationName, dataSetDirectory, l))
     } yield storageReportsNested.flatten
@@ -62,7 +65,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
                                       dataSetDirectory: Path,
                                       layerDirectory: Path): Fox[List[DirectoryStorageReport]] =
     for {
-      magOrOtherDirectory <- PathUtils.listDirectories(layerDirectory, noSymlinksFilter) ?~> "listdir.failed"
+      magOrOtherDirectory <- PathUtils.listDirectories(layerDirectory, silent = true, noSymlinksFilter) ?~> "listdir.failed"
       storageReportsNested <- Fox.serialCombined(magOrOtherDirectory)(m =>
         measureStorageForMagOrOtherDirectory(organizationName, dataSetDirectory, layerDirectory, m))
     } yield storageReportsNested

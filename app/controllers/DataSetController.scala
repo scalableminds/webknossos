@@ -549,7 +549,8 @@ Expects:
                                              dataLayer.name,
                                              request.body.boundingBox,
                                              request.body.mag) ?~> "segmentAnything.getData.failed"
-        embedding <- wKRemoteSegmentAnythingClient.getEmbedding(data) ?~> "segmentAnything.getEmbedding.failed"
+        _ = logger.info(s"Sending ${data.length} bytes to SAM server, element clas is ${dataLayer.elementClass}...")
+        embedding <- wKRemoteSegmentAnythingClient.getEmbedding(data, dataLayer.elementClass) ?~> "segmentAnything.getEmbedding.failed"
       } yield Ok(embedding)
     }
 

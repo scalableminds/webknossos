@@ -38,6 +38,7 @@ import { useSelector } from "react-redux";
 import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
 import { DatasetUpdater } from "admin/admin_rest_api";
+import { generateSettingsForFolder } from "dashboard/folders/folder_tree";
 
 const { ThinSpace } = Unicode;
 const { Column } = Table;
@@ -68,28 +69,44 @@ type State = {
   sortedInfo: SorterResult<string>;
   contextMenuPosition: [number, number] | null | undefined;
   datasetsForContextMenu: APIDatasetCompact[];
+  folderForContextMenu: FolderItemWithName | null;
 };
 
 type ContextMenuProps = {
+  datasetCollectionContext: DatasetCollectionContextValue;
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
+  editFolder: () => void;
   datasets: APIDatasetCompact[];
+  folder: FolderItemWithName | null;
   reloadDataset: Props["reloadDataset"];
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
-  const { datasets, reloadDataset, contextMenuPosition, hideContextMenu } = propsWithInputRef;
+  const {
+    datasets,
+    reloadDataset,
+    contextMenuPosition,
+    hideContextMenu,
+    folder,
+    editFolder,
+    datasetCollectionContext,
+  } = propsWithInputRef;
   let menu: MenuProps = { items: [] };
 
   if (contextMenuPosition != null) {
-    // getDatasetActionContextMenu should not be turned into <DatasetActionMenu />
-    // as this breaks antd's styling of the menu within the dropdown.
-    menu = getDatasetActionContextMenu({
-      hideContextMenu,
-      datasets,
-      reloadDataset,
-    });
+    if (datasets.length > 0) {
+      // getDatasetActionContextMenu should not be turned into <DatasetActionMenu />
+      // as this breaks antd's styling of the menu within the dropdown.
+      menu = getDatasetActionContextMenu({
+        hideContextMenu,
+        datasets,
+        reloadDataset,
+      });
+    } else if (folder != null) {
+      menu = generateSettingsForFolder(folder, datasetCollectionContext, editFolder);
+    }
   }
 
   if (inputRef == null || inputRef.current == null) return null;
@@ -245,6 +262,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     prevSearchQuery: "",
     contextMenuPosition: null,
     datasetsForContextMenu: [],
+    folderForContextMenu: null,
   };
   // currentPageData is only used for range selection (and not during
   // rendering). That's why it's not included in this.state (also it
@@ -343,8 +361,34 @@ class DatasetTable extends React.PureComponent<Props, State> {
     );
   };
 
+  editFolder(folder: FolderItemWithName) {
+    const { setFolderIdForEditModal } = this.props;
+    setFolderIdForEditModal(folder.key);
+  }
+
+  getFolderSettingsActions(folder: FolderItemWithName) {
+    const { context } = this.props;
+    const folderTreeContextMenuItems = generateSettingsForFolder(folder, context, () =>
+      this.editFolder(folder),
+    );
+    const settings = folderTreeContextMenuItems.items
+      .filter((item) => !item.disabled)
+      .map((item) => {
+        return (
+          <Link onClick={item.onClick} key={item.key} to="">
+            {item.icon}
+            {item.label}
+          </Link>
+        );
+      });
+    return settings.length > 0 ? (
+      <div className="dataset-table-actions nowrap">{...settings}</div>
+    ) : null;
+  }
+
   render() {
-    const { context, selectedDatasets, onSelectFolder, setFolderIdForEditModal } = this.props;
+    const { folderForContextMenu, datasetsForContextMenu, contextMenuPosition } = this.state;
+    const { context, selectedDatasets, onSelectFolder } = this.props;
     const activeSubfolders: FolderItemWithName[] = context
       .getActiveSubfolders()
       .map((folder) => ({ ...folder, name: folder.title }));
@@ -392,9 +436,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
           hideContextMenu={() => {
             this.setState({ contextMenuPosition: null });
           }}
-          datasets={this.state.datasetsForContextMenu}
+          datasets={datasetsForContextMenu}
+          folder={folderForContextMenu}
           reloadDataset={this.props.reloadDataset}
-          contextMenuPosition={this.state.contextMenuPosition}
+          contextMenuPosition={contextMenuPosition}
+          datasetCollectionContext={context}
+          editFolder={
+            folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => {}
+          }
         />
         <FixedExpandableTable
           childrenColumnName="notUsed"
@@ -426,7 +475,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 }
               },
               onClick: (event) => {
-                debugger;
                 // @ts-expect-error
                 if (event.target?.tagName !== "TD") {
                   // Don't (de)select when another element within the row was clicked
@@ -503,14 +551,21 @@ class DatasetTable extends React.PureComponent<Props, State> {
                   if (selectedDatasets.includes(record)) {
                     this.setState({
                       datasetsForContextMenu: selectedDatasets,
+                      folderForContextMenu: null,
                     });
                   } else {
                     // If dataset is clicked which is not selected, ignore the selected
                     // datasets.
                     this.setState({
                       datasetsForContextMenu: [record],
+                      folderForContextMenu: null,
                     });
                   }
+                } else {
+                  this.setState({
+                    folderForContextMenu: record,
+                    datasetsForContextMenu: [],
+                  });
                 }
               },
               onDoubleClick: () => {
@@ -623,16 +678,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                   reloadDataset={this.reloadSingleDataset}
                 />
               ) : (
-                <Link
-                  onClick={(evt) => {
-                    evt.preventDefault();
-                    setFolderIdForEditModal(datasetOrFolder.key);
-                  }}
-                  to={""}
-                >
-                  <SettingOutlined />
-                  Settings
-                </Link>
+                this.getFolderSettingsActions(datasetOrFolder)
               )
             }
           />

@@ -201,6 +201,55 @@ export function FolderTreeSidebar({
   );
 }
 
+export function generateSettingsForFolder(
+  folder: FolderItem,
+  context: DatasetCollectionContextValue,
+  editFolder: () => void,
+) {
+  const { key: id, isEditable } = folder;
+  function deleteFolder(): void {
+    context.queries.deleteFolderMutation.mutateAsync(id);
+  }
+
+  function createFolder(): void {
+    context.showCreateFolderPrompt(id);
+  }
+
+  return {
+    items: [
+      {
+        key: "create",
+        disabled: !isEditable,
+        onClick: createFolder,
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <PlusOutlined />
+            New Folder
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "edit",
+        disabled: !isEditable,
+        onClick: editFolder,
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <EditOutlined />
+            Edit Folder
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "delete",
+        onClick: deleteFolder,
+        disabled: !isEditable,
+        icon: <DeleteOutlined />,
+        label: <span>Delete Folder</span>,
+      },
+    ],
+  };
+}
+
 function generateTitle(
   context: DatasetCollectionContextValue,
   folder: FolderItem,
@@ -208,53 +257,15 @@ function generateTitle(
 ) {
   const { key: id, title, isEditable } = folder;
 
-  function deleteFolder(): void {
-    context.queries.deleteFolderMutation.mutateAsync(id);
-  }
-
   function editFolder(): void {
     setFolderIdForEditModal(id);
   }
 
-  const createMenu = () => {
-    return {
-      items: [
-        {
-          key: "create",
-          disabled: !folder.isEditable,
-          onClick: () => context.showCreateFolderPrompt(id),
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <PlusOutlined />
-              New Folder
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "edit",
-          disabled: !folder.isEditable,
-          onClick: editFolder,
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <EditOutlined />
-              Edit Folder
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "delete",
-          onClick: deleteFolder,
-          disabled: !folder.isEditable,
-          icon: <DeleteOutlined />,
-          label: <span>Delete Folder</span>,
-        },
-      ],
-    };
-  };
+  const menu = generateSettingsForFolder(folder, context, editFolder);
 
   return (
     <Dropdown
-      menu={createMenu()}
+      menu={menu}
       placement="bottom"
       // AutoDestroy is used to remove the menu from DOM and keep up the performance.
       // destroyPopupOnHide should also be an option according to the docs, but

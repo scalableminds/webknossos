@@ -25,6 +25,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed importing Neuroglancer Precomputed datasets that have a voxel offset in their header. [#7019](https://github.com/scalableminds/webknossos/pull/7019)
 
 ### Removed
-- Support for [webknososs-connect](https://github.com/scalableminds/webknossos-connect) data store servers has been removed. [#7031](https://github.com/scalableminds/webknossos/pull/7031)
+- Support for [webknososs-connect](https://github.com/scalableminds/webknossos-connect) data store servers has been removed. Use the "Add Remote Dataset" functionality instead. [#7031](https://github.com/scalableminds/webknossos/pull/7031)
 
 ### Breaking Changes

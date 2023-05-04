@@ -30,10 +30,20 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   }
 
   def getLayerData(organizationName: String,
-                   datasetName: String,
+                   dataset: DataSet,
                    layerName: String,
                    boundingBox: BoundingBox,
-                   mag: Vec3Int): Fox[Array[Byte]] = ???
+                   mag: Vec3Int): Fox[Array[Byte]] =
+    rpc(
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/data")
+      .addQueryString("mag" -> mag.toMagLiteral())
+      .addQueryString("x" -> boundingBox.topLeft.x.toString)
+      .addQueryString("y" -> boundingBox.topLeft.y.toString)
+      .addQueryString("z" -> boundingBox.topLeft.z.toString)
+      .addQueryString("width" -> boundingBox.width.toString)
+      .addQueryString("height" -> boundingBox.height.toString)
+      .addQueryString("depth" -> boundingBox.depth.toString)
+      .getWithBytesResponse
 
   def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =
     rpc(

@@ -8,5 +8,5 @@ import javax.inject.Inject
 
 class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
   def getEmbedding(imageData: Array[Byte]): Fox[Array[Byte]] =
-    rpc(s"${conf.SegmentAnything.uri}/predictions/sam_vit_l").getWithBytesResponse
+    rpc(s"${conf.SegmentAnything.uri}/predictions/sam_vit_l").postBytesWithBytesResponse(imageData)
 }

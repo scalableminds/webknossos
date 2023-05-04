@@ -232,7 +232,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   }
 
   object SegmentAnything {
-    val uri: String = get[String]("sam.uri")
+    val uri: String = get[String]("segmentAnything.uri")
   }
 
   val children =
@@ -252,7 +252,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       BackendAnalytics,
       Slick,
       Voxelytics,
-      Sam
+      SegmentAnything
     )
 
 }

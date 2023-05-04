@@ -545,7 +545,7 @@ Expects:
         dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
         datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
         data <- datastoreClient.getLayerData(organizationName,
-                                             dataSetName,
+                                             dataset,
                                              dataLayer.name,
                                              request.body.boundingBox,
                                              request.body.mag) ?~> "segmentAnything.getData.failed"

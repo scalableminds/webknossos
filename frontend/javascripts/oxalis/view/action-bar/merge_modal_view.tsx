@@ -78,7 +78,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
   }
 
-  async merge(url: string) {
+  async createMergedAnnotation(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url, {
       method: "POST",
@@ -106,11 +106,10 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedProject } = this.state;
 
     if (selectedProject != null) {
-      const annotation = await getAnnotationCompoundInformation(
-        selectedProject,
-        APIAnnotationTypeEnum.CompoundProject,
-      );
-      this.mergeAnnotationIntoActiveTracing(annotation);
+      const url =
+          `/api/annotations/CompoundProject/${selectedProject}/merge/` +
+          `${this.props.annotationType}/${this.props.annotationId}`;
+        this.createMergedAnnotation(url);
     }
   };
 
@@ -135,7 +134,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
       const url =
         `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
         `${this.props.annotationType}/${this.props.annotationId}`;
-      this.merge(url);
+      this.createMergedAnnotation(url);
     }
   };
 
@@ -227,7 +226,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
               />
             </Form.Item>
             <Form.Item>
-              <Tooltip title="Imports trees and tree groups directly into the currently opened annotation.">
+              <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
                 <Button
                   type="primary"
                   disabled={this.state.selectedProject == null}
@@ -261,7 +260,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
               />
             </Form.Item>
             <Form.Item>
-              <Tooltip title="Imports trees and tree groups directly into the currently opened annotation.">
+              <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
                 <Button
                   type="primary"
                   disabled={this.state.selectedExplorativeAnnotation.length !== 24}

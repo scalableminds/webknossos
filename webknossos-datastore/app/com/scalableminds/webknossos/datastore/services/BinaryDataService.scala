@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
@@ -91,7 +91,14 @@ class BinaryDataService(val dataBaseDir: Path,
           logger.warn(
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
+        case Failure(msg, Full(e: Exception), _) =>
+          logger.debug(
+            s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id} at ${readInstruction.bucket} failed with error: $msg. Stack trace: ${TextUtils
+              .stackTraceAsString(e)}")
+          Fox.failure(msg)
         case Failure(msg, _, _) =>
+          logger.debug(
+            s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id} at ${readInstruction.bucket} failed with error: $msg.")
           Fox.failure(msg)
         case Full(data) =>
           if (data.length == 0) {

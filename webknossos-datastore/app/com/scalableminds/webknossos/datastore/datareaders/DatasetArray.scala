@@ -11,7 +11,7 @@ import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import java.io.IOException
 import java.nio.ByteOrder
-import java.util
+import java.{lang, util}
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
@@ -78,6 +78,7 @@ class DatasetArray(relativePath: DatasetPath,
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
           offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)
+          _ = throw new Exception("Oh my!")
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
                                                                              flip = header.order != ArrayOrder.C)

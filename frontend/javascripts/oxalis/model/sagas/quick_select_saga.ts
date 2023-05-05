@@ -44,7 +44,7 @@ import {
 } from "oxalis/store";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, map3, take2 } from "libs/utils";
-import { APIDataLayer } from "types/api_flow_types";
+import { APIDataLayer, APIDataset } from "types/api_flow_types";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
@@ -72,14 +72,24 @@ const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 
 let _embedding: Float32Array | null = null;
-async function getEmbedding() {
+async function getEmbedding(dataset: APIDataset) {
   if (_embedding == null) {
     _embedding = new Float32Array(
-      // (await fetch("/dist/l4_v2_sample__1152.bin").then((res) => res.arrayBuffer())) as ArrayBuffer,
-      (await fetch("/dist/paper_l4_embedding.bin").then((res) => res.arrayBuffer())) as ArrayBuffer,
+      (await fetch(
+        `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            mag: [1, 1, 1],
+            boundingBox: { topLeft: [2816, 4133, 1728], width: 1024, height: 1024, depth: 1 },
+          }),
+        },
+      ).then((res) => res.arrayBuffer())) as ArrayBuffer,
     );
   }
-  console.log("embedding", _embedding);
   return _embedding;
 }
 
@@ -87,19 +97,16 @@ let session: InferenceSession | null;
 
 async function getSession() {
   if (session == null) {
-    session = await ort.InferenceSession.create("/dist/vit_l_0b3195_decoder_quantized.onnx");
+    session = await ort.InferenceSession.create(
+      "/assets/models/vit_l_0b3195_decoder_quantized.onnx",
+    );
   }
   return session;
 }
 
 async function inferFromEmbedding(embedding: Float32Array, topLeft: Vector3, bottomRight: Vector3) {
-  // const [x, y] = [170, 380];
-  // const [x, y] = [512, 512];
-
-  console.log("topLeft", topLeft);
-  console.log("bottomRight", bottomRight);
   const ort_session = await getSession();
-  const onnx_coord = new Float32Array([topLeft[1], topLeft[0], bottomRight[1], bottomRight[0]]);
+  const onnx_coord = new Float32Array([topLeft[0], topLeft[1], bottomRight[0], bottomRight[1]]);
   const onnx_label = new Float32Array([2, 3]);
   const onnx_mask_input = new Float32Array(256 * 256);
   const onnx_has_mask_input = new Float32Array([0]);
@@ -127,19 +134,6 @@ async function inferFromEmbedding(embedding: Float32Array, topLeft: Vector3, bot
 
   // @ts-ignore
   return new Uint8Array(thresholded_mask);
-  // const previous_image = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  // const new_image_data = new Uint8ClampedArray(1024 * 1024 * 4);
-  // for (var i = 0; i < new_image_data.length; ++i) {
-  //   const e = thresholded_mask[i / 4];
-  //   new_image_data[i] = e * 22 + (1 - e) * previous_image[i] + (e * previous_image[i]) / 2;
-  //   ++i;
-  //   new_image_data[i] = e * 22 + (1 - e) * previous_image[i] + (e * previous_image[i]) / 2;
-  //   ++i;
-  //   new_image_data[i] = e * 100 + (1 - e) * previous_image[i] + (e * previous_image[i]) / 2;
-  //   ++i;
-  //   new_image_data[i] = 255;
-  // }
-  // const mask_image = new ImageData(new_image_data, 1024, 1024);
 }
 
 export default function* listenToQuickSelect(): Saga<void> {
@@ -170,6 +164,7 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+  const dataset = yield* select((state: OxalisState) => state.dataset);
   const activeViewport = yield* select(
     (state: OxalisState) => state.viewModeData.plane.activeViewport,
   );
@@ -308,21 +303,14 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   // thresholdField initially stores the threshold values (uint8), but is
   // later processed to a binary mask.
   //
-  const embedding = yield* call(getEmbedding);
+  const embedding = yield* call(getEmbedding, dataset);
   let thresholdFieldData = yield* call(
     inferFromEmbedding,
     embedding,
     relativeTopLeft,
     relativeBottomRight,
   );
-  const thresholdField = ndarray(thresholdFieldData, size, stride).transpose(1, 0, 2);
-
-  // not 0, 2, 1
-  // not 0, 1, 2
-  // not 2, 0, 1
-  // not 2, 1, 0
-  // not 1, 2, 0
-  // not 1, 0, 2
+  const thresholdField = ndarray(thresholdFieldData, size, stride);
 
   // if (initialDetectDarkSegment) {
   //   thresholdField = darkThresholdField;

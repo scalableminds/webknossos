@@ -29,7 +29,10 @@ module.exports = function (env = {}) {
     }),
     new CopyPlugin({
       // Use copy plugin to copy *.wasm to output folder.
-      patterns: [{ from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" }],
+      patterns: [
+        { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" },
+        { from: "public/models/*.*", to: "models/[name][ext]" },
+      ],
     }),
   ];
 

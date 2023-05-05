@@ -14,6 +14,7 @@ export const tracing: ServerVolumeTracing = {
   },
   userBoundingBoxes: [],
   segments: [],
+  segmentGroups: [],
   createdTimestamp: 1529066010230,
   editPosition: {
     x: 3904,

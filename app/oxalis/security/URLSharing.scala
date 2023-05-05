@@ -5,12 +5,12 @@ import models.user.User
 
 case class SharingTokenContainer(sharingToken: String) extends DBAccessContextPayload {
   def toStringAnonymous: String =
-    s"sharingToken ${sharingToken.take(4)}***"
+    s"Sharing token ${sharingToken.take(4)}***"
 }
 
 case class UserSharingTokenContainer(user: User, sharingToken: Option[String]) extends DBAccessContextPayload {
   def toStringAnonymous: String =
-    s"user ${user._id} with sharingToken ${sharingToken.take(4)}***"
+    s"User ${user._id} with sharing token ${sharingToken.take(4)}***"
 }
 
 object URLSharing {

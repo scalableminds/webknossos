@@ -25,6 +25,8 @@ export type EditableTextLabelProp = {
   width?: string | number;
   isInvalid?: boolean | null | undefined;
   trimValue?: boolean | null | undefined;
+  onRenameStart?: (() => void) | undefined;
+  onRenameEnd?: (() => void) | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -71,6 +73,9 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
         this.setState({
           isEditing: false,
         });
+        if (this.props.onRenameEnd) {
+          this.props.onRenameEnd();
+        }
       }
     };
     if (this.props.trimValue) {
@@ -196,6 +201,9 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                   this.setState({
                     isEditing: true,
                   });
+                  if (this.props.onRenameStart) {
+                    this.props.onRenameStart();
+                  }
                 }}
               />
             </Tooltip>

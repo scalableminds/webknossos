@@ -193,7 +193,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
     val meshFileNames = PathUtils
-      .listFiles(layerDir.resolve(meshesDir), PathUtils.fileExtensionFilter(meshFileExtension))
+      .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(meshFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }

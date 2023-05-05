@@ -104,7 +104,7 @@ Expects:
         val parsedFiles =
           annotationUploadService.extractFromFiles(attachedFiles, useZipName = true, overwritingDataSetName)
         val parsedFilesWrapped =
-          annotationUploadService.wrapOrPrefixTrees(parsedFiles.parseResults, shouldCreateGroupForEachFile)
+          annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)
         val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
 
         if (parseResultsFiltered.isEmpty) {

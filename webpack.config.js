@@ -5,6 +5,7 @@ module.exports = function (env = {}) {
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const TerserPlugin = require("terser-webpack-plugin");
   const browserslistToEsbuild = require("browserslist-to-esbuild");
+  const CopyPlugin = require("copy-webpack-plugin");
 
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
@@ -25,6 +26,10 @@ module.exports = function (env = {}) {
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
+    }),
+    new CopyPlugin({
+      // Use copy plugin to copy *.wasm to output folder.
+      patterns: [{ from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" }],
     }),
   ];
 

@@ -1,4 +1,6 @@
 import _ from "lodash";
+import * as ort from "onnxruntime-web";
+
 import ops from "ndarray-ops";
 import moments from "ndarray-moments";
 import {
@@ -61,12 +63,84 @@ import {
 import Dimensions from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import { InferenceSession } from "onnxruntime-web";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 
 // How large should the center rectangle be.
 // Used to determine the mean intensity.
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
+
+let _embedding: Float32Array | null = null;
+async function getEmbedding() {
+  if (_embedding == null) {
+    _embedding = new Float32Array(
+      // (await fetch("/dist/l4_v2_sample__1152.bin").then((res) => res.arrayBuffer())) as ArrayBuffer,
+      (await fetch("/dist/paper_l4_embedding.bin").then((res) => res.arrayBuffer())) as ArrayBuffer,
+    );
+  }
+  console.log("embedding", _embedding);
+  return _embedding;
+}
+
+let session: InferenceSession | null;
+
+async function getSession() {
+  if (session == null) {
+    session = await ort.InferenceSession.create("/dist/vit_l_0b3195_decoder_quantized.onnx");
+  }
+  return session;
+}
+
+async function inferFromEmbedding(embedding: Float32Array, topLeft: Vector3, bottomRight: Vector3) {
+  // const [x, y] = [170, 380];
+  // const [x, y] = [512, 512];
+
+  console.log("topLeft", topLeft);
+  console.log("bottomRight", bottomRight);
+  const ort_session = await getSession();
+  const onnx_coord = new Float32Array([topLeft[1], topLeft[0], bottomRight[1], bottomRight[0]]);
+  const onnx_label = new Float32Array([2, 3]);
+  const onnx_mask_input = new Float32Array(256 * 256);
+  const onnx_has_mask_input = new Float32Array([0]);
+  const orig_im_size = new Float32Array([1024, 1024]);
+  const ort_inputs = {
+    image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
+    point_coords: new ort.Tensor("float32", onnx_coord, [1, 2, 2]),
+    point_labels: new ort.Tensor("float32", onnx_label, [1, 2]),
+    mask_input: new ort.Tensor("float32", onnx_mask_input, [1, 1, 256, 256]),
+    has_mask_input: new ort.Tensor("float32", onnx_has_mask_input, [1]),
+    orig_im_size: new ort.Tensor("float32", orig_im_size, [2]),
+  };
+  console.log(ort_inputs);
+  const { masks, iou_predictions, low_res_masks } = await ort_session.run(ort_inputs);
+  console.log([masks, iou_predictions, low_res_masks]);
+  // @ts-ignore
+  const best_mask_index = iou_predictions.data.indexOf(Math.max(...iou_predictions.data));
+  const thresholded_mask = masks.data
+    .slice(best_mask_index * 1024 * 1024, (best_mask_index + 1) * 1024 * 1024)
+    // todo use nd array
+    // @ts-ignore
+    .map((e) => e > 0);
+
+  console.log("thresholded_mask", thresholded_mask);
+
+  // @ts-ignore
+  return new Uint8Array(thresholded_mask);
+  // const previous_image = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  // const new_image_data = new Uint8ClampedArray(1024 * 1024 * 4);
+  // for (var i = 0; i < new_image_data.length; ++i) {
+  //   const e = thresholded_mask[i / 4];
+  //   new_image_data[i] = e * 22 + (1 - e) * previous_image[i] + (e * previous_image[i]) / 2;
+  //   ++i;
+  //   new_image_data[i] = e * 22 + (1 - e) * previous_image[i] + (e * previous_image[i]) / 2;
+  //   ++i;
+  //   new_image_data[i] = e * 100 + (1 - e) * previous_image[i] + (e * previous_image[i]) / 2;
+  //   ++i;
+  //   new_image_data[i] = 255;
+  // }
+  // const mask_image = new ImageData(new_image_data, 1024, 1024);
+}
 
 export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
@@ -127,7 +201,21 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     (state) => state.datasetConfiguration.layers[colorLayer.name],
   );
 
-  const { startPosition, endPosition } = action;
+  const embeddingTopLeft = [2816, 4133, 1728] as Vector3;
+  const embeddingBottomRight = [
+    embeddingTopLeft[0] + 1024,
+    embeddingTopLeft[1] + 1024,
+    embeddingTopLeft[2],
+  ] as Vector3;
+
+  let { startPosition, endPosition } = action;
+
+  const relativeTopLeft = V3.sub(startPosition, embeddingTopLeft);
+  const relativeBottomRight = V3.sub(endPosition, embeddingTopLeft);
+
+  startPosition = embeddingTopLeft;
+  endPosition = embeddingBottomRight;
+
   const boundingBoxObj = {
     min: V3.floor(V3.min(startPosition, endPosition)),
     max: V3.floor(
@@ -136,7 +224,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   };
 
   const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
-  const boundingBoxMag1 = new BoundingBox(boundingBoxObj).intersectedWith(layerBBox);
+  const boundingBoxMag1 = new BoundingBox(boundingBoxObj); //.intersectedWith(layerBBox);
 
   // Ensure that the third dimension is inclusive (otherwise, the center of the passed
   // coordinates wouldn't be exactly on the W plane on which the user started this action).
@@ -188,7 +276,12 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     labeledZoomStep,
   );
   const size = boundingBoxTarget.getSize();
+  if (size.some((el) => el !== 1 && el !== 1024)) {
+    throw new Error("Incorrectly sized window");
+  }
+
   const stride = [1, size[0], size[0] * size[1]];
+  console.log("stride", stride);
 
   if (inputDataRaw instanceof BigUint64Array) {
     throw new Error("Color input layer must not be 64-bit.");
@@ -197,49 +290,65 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const inputData = normalizeToUint8(colorLayer, inputDataRaw, layerConfiguration);
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
-  const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
+  // const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
   // Two fields are computed (one for the dark segment scenario, and one for the light segment)
-  const darkThresholdField = getThresholdField(inputNdUvw, centerUV, "dark");
-  const lightThresholdField = getThresholdField(inputNdUvw, centerUV, "light");
+  // const darkThresholdField = getThresholdField(inputNdUvw, centerUV, "dark");
+  // const lightThresholdField = getThresholdField(inputNdUvw, centerUV, "light");
 
   // Copy unthresholded fields so that finetuning is possible
   // without recomputing them. Only necessary if showPreview is true.
-  const unthresholdedDarkCopy =
-    quickSelectConfig.showPreview && copyNdArray(Uint8Array, darkThresholdField);
-  const unthresholdedLightCopy =
-    quickSelectConfig.showPreview && copyNdArray(Uint8Array, lightThresholdField);
+  // const unthresholdedDarkCopy =
+  //   quickSelectConfig.showPreview && copyNdArray(Uint8Array, darkThresholdField);
+  // const unthresholdedLightCopy =
+  //   quickSelectConfig.showPreview && copyNdArray(Uint8Array, lightThresholdField);
 
-  const { initialDetectDarkSegment, darkMaxEffectiveThresh, lightMinEffectiveThresh } =
-    determineThresholds(darkThresholdField, lightThresholdField, inputNdUvw);
+  // const { initialDetectDarkSegment, darkMaxEffectiveThresh, lightMinEffectiveThresh } =
+  //   determineThresholds(darkThresholdField, lightThresholdField, inputNdUvw);
 
   // thresholdField initially stores the threshold values (uint8), but is
   // later processed to a binary mask.
-  let thresholdField;
-  if (initialDetectDarkSegment) {
-    thresholdField = darkThresholdField;
-    // In numpy-style this would be:
-    // thresholdField[:] = thresholdField[:] < darkMaxEffectiveThresh
-    ops.ltseq(thresholdField, darkMaxEffectiveThresh);
-    yield* put(
-      updateUserSettingAction("quickSelect", {
-        ...quickSelectConfig,
-        segmentMode: "dark",
-        threshold: darkMaxEffectiveThresh,
-      }),
-    );
-  } else {
-    thresholdField = lightThresholdField;
-    // In numpy-style this would be:
-    // thresholdField[:] = thresholdField[:] > darkMaxEffectiveThresh
-    ops.gtseq(thresholdField, lightMinEffectiveThresh);
-    yield* put(
-      updateUserSettingAction("quickSelect", {
-        ...quickSelectConfig,
-        segmentMode: "light",
-        threshold: lightMinEffectiveThresh,
-      }),
-    );
-  }
+  //
+  const embedding = yield* call(getEmbedding);
+  let thresholdFieldData = yield* call(
+    inferFromEmbedding,
+    embedding,
+    relativeTopLeft,
+    relativeBottomRight,
+  );
+  const thresholdField = ndarray(thresholdFieldData, size, stride).transpose(1, 0, 2);
+
+  // not 0, 2, 1
+  // not 0, 1, 2
+  // not 2, 0, 1
+  // not 2, 1, 0
+  // not 1, 2, 0
+  // not 1, 0, 2
+
+  // if (initialDetectDarkSegment) {
+  //   thresholdField = darkThresholdField;
+  //   // In numpy-style this would be:
+  //   // thresholdField[:] = thresholdField[:] < darkMaxEffectiveThresh
+  //   ops.ltseq(thresholdField, darkMaxEffectiveThresh);
+  //   yield* put(
+  //     updateUserSettingAction("quickSelect", {
+  //       ...quickSelectConfig,
+  //       segmentMode: "dark",
+  //       threshold: darkMaxEffectiveThresh,
+  //     }),
+  //   );
+  // } else {
+  //   thresholdField = lightThresholdField;
+  //   // In numpy-style this would be:
+  //   // thresholdField[:] = thresholdField[:] > darkMaxEffectiveThresh
+  //   ops.gtseq(thresholdField, lightMinEffectiveThresh);
+  //   yield* put(
+  //     updateUserSettingAction("quickSelect", {
+  //       ...quickSelectConfig,
+  //       segmentMode: "light",
+  //       threshold: lightMinEffectiveThresh,
+  //     }),
+  //   );
+  // }
 
   processBinaryMaskInPlaceAndAttach(thresholdField, quickSelectConfig, quickSelectGeometry);
 
@@ -247,102 +356,102 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     (state: OxalisState) => state.userConfiguration.overwriteMode,
   );
 
-  if (!quickSelectConfig.showPreview) {
-    sendAnalyticsEvent("used_quick_select_without_preview");
-    yield* finalizeQuickSelect(
-      quickSelectGeometry,
-      volumeTracing,
-      activeViewport,
-      labeledResolution,
-      boundingBoxMag1,
-      thirdDim,
-      size,
-      firstDim,
-      secondDim,
-      inputNdUvw,
-      thresholdField,
-      overwriteMode,
-      labeledZoomStep,
-    );
-    return;
-  }
+  // if (!quickSelectConfig.showPreview) {
+  sendAnalyticsEvent("used_quick_select_without_preview");
+  yield* finalizeQuickSelect(
+    quickSelectGeometry,
+    volumeTracing,
+    activeViewport,
+    labeledResolution,
+    boundingBoxMag1,
+    thirdDim,
+    size,
+    firstDim,
+    secondDim,
+    inputNdUvw,
+    thresholdField,
+    overwriteMode,
+    labeledZoomStep,
+  );
+  // return;
+  // }
 
-  // Start an iterative feedback loop when preview mode is active.
+  // // Start an iterative feedback loop when preview mode is active.
 
-  if (!wasPreviewModeToastAlreadyShown) {
-    // Explain how the preview mode works only once. The opened settings panel
-    // should be a good indicator for later usages that the preview mode is active.
-    wasPreviewModeToastAlreadyShown = true;
-    yield* call(
-      [Toast, Toast.info],
-      "The quick select tool is currently in preview mode. Use the settings in the toolbar to refine the selection or confirm/cancel the selection (e.g., with Enter/Escape).",
-      { key: TOAST_KEY, sticky: true },
-    );
-  }
-  yield* put(showQuickSelectSettingsAction(true));
+  // if (!wasPreviewModeToastAlreadyShown) {
+  //   // Explain how the preview mode works only once. The opened settings panel
+  //   // should be a good indicator for later usages that the preview mode is active.
+  //   wasPreviewModeToastAlreadyShown = true;
+  //   yield* call(
+  //     [Toast, Toast.info],
+  //     "The quick select tool is currently in preview mode. Use the settings in the toolbar to refine the selection or confirm/cancel the selection (e.g., with Enter/Escape).",
+  //     { key: TOAST_KEY, sticky: true },
+  //   );
+  // }
+  // yield* put(showQuickSelectSettingsAction(true));
 
-  while (true) {
-    const { finetuneAction, cancel, escape, enter, confirm } = (yield* race({
-      finetuneAction: take("FINE_TUNE_QUICK_SELECT"),
-      cancel: take("CANCEL_QUICK_SELECT"),
-      escape: take("ESCAPE"),
-      enter: take("ENTER"),
-      confirm: take("CONFIRM_QUICK_SELECT"),
-    })) as {
-      finetuneAction: FineTuneQuickSelectAction;
-      cancel: CancelQuickSelectAction;
-      escape: EscapeAction;
-      enter: EnterAction;
-      confirm: ConfirmQuickSelectAction;
-    };
+  // while (true) {
+  //   const { finetuneAction, cancel, escape, enter, confirm } = (yield* race({
+  //     finetuneAction: take("FINE_TUNE_QUICK_SELECT"),
+  //     cancel: take("CANCEL_QUICK_SELECT"),
+  //     escape: take("ESCAPE"),
+  //     enter: take("ENTER"),
+  //     confirm: take("CONFIRM_QUICK_SELECT"),
+  //   })) as {
+  //     finetuneAction: FineTuneQuickSelectAction;
+  //     cancel: CancelQuickSelectAction;
+  //     escape: EscapeAction;
+  //     enter: EnterAction;
+  //     confirm: ConfirmQuickSelectAction;
+  //   };
 
-    if (finetuneAction) {
-      if (!unthresholdedDarkCopy || !unthresholdedLightCopy) {
-        throw new Error("Unthresholded fields are not available");
-      }
-      if (finetuneAction.segmentMode === "dark") {
-        thresholdField = copyNdArray(
-          Uint8Array,
-          unthresholdedDarkCopy,
-        ) as ndarray.NdArray<Uint8Array>;
-        ops.ltseq(thresholdField, finetuneAction.threshold);
-      } else {
-        thresholdField = copyNdArray(
-          Uint8Array,
-          unthresholdedLightCopy,
-        ) as ndarray.NdArray<Uint8Array>;
-        ops.gtseq(thresholdField, finetuneAction.threshold);
-      }
+  //   if (finetuneAction) {
+  //     if (!unthresholdedDarkCopy || !unthresholdedLightCopy) {
+  //       throw new Error("Unthresholded fields are not available");
+  //     }
+  //     if (finetuneAction.segmentMode === "dark") {
+  //       thresholdField = copyNdArray(
+  //         Uint8Array,
+  //         unthresholdedDarkCopy,
+  //       ) as ndarray.NdArray<Uint8Array>;
+  //       ops.ltseq(thresholdField, finetuneAction.threshold);
+  //     } else {
+  //       thresholdField = copyNdArray(
+  //         Uint8Array,
+  //         unthresholdedLightCopy,
+  //       ) as ndarray.NdArray<Uint8Array>;
+  //       ops.gtseq(thresholdField, finetuneAction.threshold);
+  //     }
 
-      processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, quickSelectGeometry);
-    } else if (cancel || escape) {
-      sendAnalyticsEvent("cancelled_quick_select_preview");
-      quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-      yield* call([Toast, Toast.close], TOAST_KEY);
-      return;
-    } else if (confirm || enter) {
-      sendAnalyticsEvent("confirmed_quick_select_preview");
+  //     processBinaryMaskInPlaceAndAttach(thresholdField, finetuneAction, quickSelectGeometry);
+  //   } else if (cancel || escape) {
+  //     sendAnalyticsEvent("cancelled_quick_select_preview");
+  //     quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  //     yield* call([Toast, Toast.close], TOAST_KEY);
+  //     return;
+  //   } else if (confirm || enter) {
+  //     sendAnalyticsEvent("confirmed_quick_select_preview");
 
-      yield* finalizeQuickSelect(
-        quickSelectGeometry,
-        volumeTracing,
-        activeViewport,
-        labeledResolution,
-        boundingBoxMag1,
-        thirdDim,
-        size,
-        firstDim,
-        secondDim,
-        inputNdUvw,
-        thresholdField,
-        overwriteMode,
-        labeledZoomStep,
-      );
-      yield* call([Toast, Toast.close], TOAST_KEY);
-      yield* put(showQuickSelectSettingsAction(true));
-      return;
-    }
-  }
+  //     yield* finalizeQuickSelect(
+  //       quickSelectGeometry,
+  //       volumeTracing,
+  //       activeViewport,
+  //       labeledResolution,
+  //       boundingBoxMag1,
+  //       thirdDim,
+  //       size,
+  //       firstDim,
+  //       secondDim,
+  //       inputNdUvw,
+  //       thresholdField,
+  //       overwriteMode,
+  //       labeledZoomStep,
+  //     );
+  //     yield* call([Toast, Toast.close], TOAST_KEY);
+  //     yield* put(showQuickSelectSettingsAction(true));
+  //     return;
+  //   }
+  // }
 }
 
 function getExtremeValueAtBorders(arr: ndarray.NdArray, mode: "min" | "max") {

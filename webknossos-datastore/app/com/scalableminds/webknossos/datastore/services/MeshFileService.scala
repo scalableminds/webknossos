@@ -380,6 +380,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                       meshChunkDataRequests: MeshChunkDataRequestV3List,
   ): Fox[(Array[Byte], String)] =
     for {
+      // Sort the requests by byte offset to optimize for spinning disk access
       data: List[(Array[Byte], String, Int)] <- Fox.serialCombined(
         meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
       )(requestAndIndex => {
@@ -401,8 +402,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         } ?~> "mesh.file.readData.failed"
       })
       dataSorted = data.sortBy(d => d._3)
-      _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) // Ensure same encoding for all responses
-      encoding = data.map(d => d._2).head
+      _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) ?~> "Different encodings for the same mesh chunk request found."
+      encoding <- data.map(d => d._2).headOption
       output = dataSorted.flatMap(d => d._1).toArray
     } yield (output, encoding)
 

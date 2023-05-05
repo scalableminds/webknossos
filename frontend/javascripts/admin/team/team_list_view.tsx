@@ -51,6 +51,30 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   ));
 }
 
+export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
+  return (
+    user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) ||
+    (user.isAdmin && user.isActive)
+  );
+}
+
+export function renderUsersForTeam(team: APITeam, allUsers: APIUser[] | null) {
+  if (allUsers === null) return;
+  const teamMembers = allUsers.filter((user) => filterTeamMembersOf(team, user));
+  if (teamMembers.length === 0) return messages["team.no_members"];
+
+  return (
+    <ul>
+      {teamMembers.map((teamMember) => (
+        <li>
+          {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
+          {renderTeamRolesForUser(teamMember, team)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
   // used by teams list page
   // does not include dataset managers and team names
@@ -164,28 +188,6 @@ class TeamListView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderUsersForTeam(team: APITeam) {
-    const teamMembers = this.state.users.filter(
-      (user) =>
-        (user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) ||
-          user.isAdmin) &&
-        user.isActive,
-    );
-
-    if (teamMembers.length === 0) return messages["team.no_members"];
-
-    return (
-      <ul>
-        {teamMembers.map((teamMember) => (
-          <li>
-            {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
-            {renderTeamRolesForUser(teamMember, team)}
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
   render() {
     const marginRight = {
       marginRight: 20,
@@ -240,7 +242,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               expandable={{
-                expandedRowRender: (team) => this.renderUsersForTeam(team),
+                expandedRowRender: (team) => renderUsersForTeam(team, this.state.users),
                 rowExpandable: (_team) => true,
               }}
               style={{

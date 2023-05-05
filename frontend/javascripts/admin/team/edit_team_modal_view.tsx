@@ -5,6 +5,7 @@ import { DefaultOptionType } from "antd/lib/select";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import { filterTeamMembersOf, renderUsersForTeam } from "./team_list_view";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
@@ -23,9 +24,6 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   }, []);
 
   if (team === null) return null;
-  const filterUsersInCurrentTeam = (user: APIUser) => {
-    return user.teams.map((t) => t.id).includes(team.id);
-  };
   const updateTeamMembership = async (user: APIUser, newTeams: APITeamMembership[]) => {
     if (users === null) return;
     const newUser = Object.assign({}, user, {
@@ -46,7 +44,18 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     updateTeamMembership(user, newTeams);
   };
 
-  const renderTeamMember = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
+  const renderRemoveSpan = (user: APIUser) => {
+    if (user.isAdmin) {
+      return <span>Admin</span>;
+    }
+    return (
+      <span onClick={() => removeFrom(user, team)}>
+        <MinusOutlined /> Remove from {team?.name}
+      </span>
+    );
+  };
+
+  const renderTeamMember = (user: APIUser): DefaultOptionType => ({
     //TODO was unsure whether clicking on the name should also remove team member; same for renderUserNotInTeam
     value: `${user.firstName} ${user.lastName} ${user.email}`,
     label: (
@@ -57,14 +66,12 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
         }}
       >
         {user.firstName} {user.lastName}
-        <span onClick={() => removeFrom(user, team)}>
-          <MinusOutlined /> Remove from {team?.name}
-        </span>
+        {renderRemoveSpan(user)}
       </div>
     ),
   });
 
-  const renderUserNotInTeam = (user: APIUser, team: APITeam | null): DefaultOptionType => ({
+  const renderUserNotInTeam = (user: APIUser): DefaultOptionType => ({
     value: `${user.firstName} ${user.lastName} ${user.email}`,
     label: (
       <div
@@ -84,40 +91,51 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const options = [
     {
       label: "In team",
-      options: users?.filter(filterUsersInCurrentTeam).map((user) => renderTeamMember(user, team)),
+      options: users
+        ?.filter((user) => filterTeamMembersOf(team, user))
+        .map((user) => renderTeamMember(user)),
     },
     {
       label: "Not in team",
       options: users
-        ?.filter((user) => !filterUsersInCurrentTeam(user))
-        .map((user) => renderUserNotInTeam(user, team)),
+        ?.filter((user) => !filterTeamMembersOf(team, user))
+        .map((user) => renderUserNotInTeam(user)),
     },
   ];
 
   const renderModalBody = () => {
     return (
-      <AutoComplete
-        style={{ width: "100%" }}
-        options={options}
-        filterOption={(inputValue, option) => {
-          return (
-            inputValue === "" ||
-            (typeof option?.value === "string" &&
-              option!.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
-          );
-        }}
-        onSelect={() => setAutoCompleteValue("")}
-        value={autoCompleteValue}
-        onChange={onChange}
-      >
-        <Input.Search size="large" placeholder="Search users" />
-      </AutoComplete>
+      <>
+        <AutoComplete
+          style={{ width: "100%", marginBottom: "16px" }}
+          options={options}
+          filterOption={(inputValue, option) => {
+            return (
+              inputValue === "" ||
+              (typeof option?.value === "string" &&
+                option!.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
+            );
+          }}
+          onSelect={() => setAutoCompleteValue("")}
+          value={autoCompleteValue}
+          onChange={onChange}
+        >
+          <Input.Search size="large" placeholder="Search users" />
+        </AutoComplete>
+        {renderUsersForTeam(team, users)}
+      </>
     );
   };
   const usersHaveLoaded = users !== null;
 
   return (
-    <Modal open={isOpen} onCancel={onCancel} title="Add / Remove Users" className="edit-team-modal">
+    <Modal
+      open={isOpen}
+      onCancel={onCancel}
+      title="Add / Remove Users"
+      className="edit-team-modal"
+      footer={null}
+    >
       <Spin spinning={!usersHaveLoaded}>{usersHaveLoaded ? renderModalBody() : null}</Spin>
     </Modal>
   );

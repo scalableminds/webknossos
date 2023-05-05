@@ -11,7 +11,7 @@ import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import java.io.IOException
 import java.nio.ByteOrder
-import java.{lang, util}
+import java.util
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 

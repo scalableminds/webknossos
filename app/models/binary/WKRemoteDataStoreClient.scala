@@ -32,18 +32,22 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   def getLayerData(organizationName: String,
                    dataset: DataSet,
                    layerName: String,
-                   boundingBox: BoundingBox,
-                   mag: Vec3Int): Fox[Array[Byte]] =
+                   mag1BoundingBox: BoundingBox,
+                   mag: Vec3Int): Fox[Array[Byte]] = {
+    val targetMagBoundingBox = mag1BoundingBox / mag
+    logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
     rpc(
       s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/data")
+      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryString("mag" -> mag.toMagLiteral())
-      .addQueryString("x" -> boundingBox.topLeft.x.toString)
-      .addQueryString("y" -> boundingBox.topLeft.y.toString)
-      .addQueryString("z" -> boundingBox.topLeft.z.toString)
-      .addQueryString("width" -> boundingBox.width.toString)
-      .addQueryString("height" -> boundingBox.height.toString)
-      .addQueryString("depth" -> boundingBox.depth.toString)
+      .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
+      .addQueryString("y" -> mag1BoundingBox.topLeft.y.toString)
+      .addQueryString("z" -> mag1BoundingBox.topLeft.z.toString)
+      .addQueryString("width" -> targetMagBoundingBox.width.toString)
+      .addQueryString("height" -> targetMagBoundingBox.height.toString)
+      .addQueryString("depth" -> targetMagBoundingBox.depth.toString)
       .getWithBytesResponse
+  }
 
   def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =
     rpc(

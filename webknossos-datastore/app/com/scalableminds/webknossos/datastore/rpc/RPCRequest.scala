@@ -258,6 +258,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
       case body: InMemoryBody
           if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains(protobufMimeType) =>
         s"<${body.bytes.length} bytes of protobuf data>"
+      case body: InMemoryBody
+          if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains(octetStreamMimeType) =>
+        s"<${body.bytes.length} bytes of byte data>"
       case body: InMemoryBody =>
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")

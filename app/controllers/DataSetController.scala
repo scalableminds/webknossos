@@ -530,6 +530,7 @@ Expects:
       case _             => Messages("dataSet.notFoundConsiderLogin", dataSetName)
     }
 
+  @ApiOperation(hidden = true, value = "")
   def segmentAnythingEmbedding(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String): Action[SegmentAnythingEmbeddingParameters] =
@@ -544,13 +545,16 @@ Expects:
         usableDataSource <- dataSource.toUsable ?~> "dataSet.notImported"
         dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
         datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
+        targetMaxBbox: BoundingBox = request.body.boundingBox / request.body.mag
+        _ <- bool2Fox(targetMaxBbox.dimensions == Vec3Int(1024, 1024, 1)) ?~> s"Target-mag bbox must be sized 1024×1024×1, got ${targetMaxBbox.dimensions}"
         data <- datastoreClient.getLayerData(organizationName,
                                              dataset,
                                              dataLayer.name,
                                              request.body.boundingBox,
                                              request.body.mag) ?~> "segmentAnything.getData.failed"
-        _ = logger.info(s"Sending ${data.length} bytes to SAM server, element clas is ${dataLayer.elementClass}...")
+        _ = logger.info(s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}...")
         embedding <- wKRemoteSegmentAnythingClient.getEmbedding(data, dataLayer.elementClass) ?~> "segmentAnything.getEmbedding.failed"
+        _ = logger.info(s"Received ${embedding.length} bytes of embedding from SAM server, forwarding to frontend...")
       } yield Ok(embedding)
     }
 

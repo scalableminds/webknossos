@@ -50,8 +50,11 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  def listDirectoryEntries[A](directory: Path, maxDepth: Int, dropCount: Int, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
+  def listDirectoryEntries[A](directory: Path,
+                              maxDepth: Int,
+                              dropCount: Int,
+                              silent: Boolean,
+                              filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -60,36 +63,50 @@ trait PathUtils extends LazyLogging {
     } catch {
       case _: AccessDeniedException =>
         val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath}"
-        logger.warn(errorMsg)
+        if (!silent) {
+          logger.warn(errorMsg)
+        }
         Failure(errorMsg)
       case _: NoSuchFileException =>
         val errorMsg = s"No such directory. Directory: ${directory.toAbsolutePath}"
-        logger.warn(errorMsg)
+        if (!silent) {
+          logger.warn(errorMsg)
+        }
         Failure(errorMsg)
       case ex: Exception =>
         val errorMsg =
           s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
-        logger.warn(ex.getClass.getCanonicalName)
+        if (!silent) {
+          logger.warn(ex.getClass.getCanonicalName)
+        }
         Failure(errorMsg)
     }
 
-  def listDirectories(directory: Path, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+  def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
 
-  def listDirectoriesRecursive(directory: Path, maxDepth: Int, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 0, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+  def listDirectoriesRecursive(directory: Path,
+                               silent: Boolean,
+                               maxDepth: Int,
+                               filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 0, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
 
-  def listFiles(directory: Path, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, filters :+ fileFilter _: _*)(r => Full(r.toList))
+  def listFiles(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
 
-  def listFilesRecursive(directory: Path, maxDepth: Int, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 1, filters :+ fileFilter _: _*)(r => Full(r.toList))
+  def listFilesRecursive(directory: Path,
+                         silent: Boolean,
+                         maxDepth: Int,
+                         filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
 
-  def lazyFileStream[A](directory: Path, filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, 1, 1, filters :+ fileFilter _: _*)(f)
+  def lazyFileStream[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
+      f: Iterator[Path] => Box[A]): Box[A] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(f)
 
-  def lazyFileStreamRecursive[A](directory: Path, filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, Int.MaxValue, 1, filters :+ fileFilter _: _*)(f)
+  def lazyFileStreamRecursive[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
+      f: Iterator[Path] => Box[A]): Box[A] =
+    listDirectoryEntries(directory, Int.MaxValue, 1, silent, filters :+ fileFilter _: _*)(f)
 
   def ensureDirectory(path: Path): Path = {
     if (!Files.exists(path) || !Files.isDirectory(path))

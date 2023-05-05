@@ -9,10 +9,14 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
+import com.scalableminds.webknossos.datastore.dataformats.n5.N5Layer
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedLayer
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrLayer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
@@ -27,6 +31,7 @@ import scala.io.Source
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
+    dataVaultService: DataVaultService,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends IntervalScheduler
@@ -54,7 +59,7 @@ class DataSourceService @Inject()(
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir) match {
+      _ <- PathUtils.listDirectories(dataBaseDir, silent = false) match {
         case Full(organizationDirs) =>
           for {
             _ <- Fox.successful(())
@@ -95,7 +100,7 @@ class DataSourceService @Inject()(
   private def logEmptyDirs(paths: List[Path]): Unit = {
 
     val emptyDirs = paths.flatMap { path =>
-      PathUtils.listDirectories(path) match {
+      PathUtils.listDirectories(path, silent = true) match {
         case Full(Nil) =>
           Some(path)
         case _ => None
@@ -197,7 +202,7 @@ class DataSourceService @Inject()(
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
-    PathUtils.listDirectories(path) match {
+    PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
         val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
         dataSources
@@ -226,5 +231,28 @@ class DataSourceService @Inject()(
       UnusableDataSource(id, "Not imported yet.")
     }
   }
+
+  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Fox[Int] =
+    for {
+      genericDataSource <- dataSource.toUsable
+      dataLayers = dataLayerName match {
+        case Some(ln) => Seq(genericDataSource.getDataLayer(ln))
+        case None     => genericDataSource.dataLayers.map(d => Some(d))
+      }
+      removedEntriesList = for {
+        dataLayerOpt <- dataLayers
+        dataLayer <- dataLayerOpt
+        magsOpt = dataLayer match {
+          case layer: N5Layer          => Some(layer.mags)
+          case layer: PrecomputedLayer => Some(layer.mags)
+          case layer: ZarrLayer        => Some(layer.mags)
+          case _                       => None
+        }
+        removedEntriesCount = magsOpt match {
+          case Some(mags) => mags.map(mag => dataVaultService.removeVaultFromCache(mag)); mags.length
+          case None       => 0
+        }
+      } yield removedEntriesCount
+    } yield removedEntriesList.sum
 
 }

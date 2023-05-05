@@ -88,7 +88,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     ),
   });
 
-  const options = [
+  const options: DefaultOptionType[] = [
     {
       label: "In team",
       options: users
@@ -113,7 +113,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
             return (
               inputValue === "" ||
               (typeof option?.value === "string" &&
-                option!.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
+                option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
             );
           }}
           onSelect={() => setAutoCompleteValue("")}

@@ -64,18 +64,6 @@ class DataSourceController @Inject()(
       }
     }
 
-  def activateErrorLogging(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      {
-        accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationName),
-                                                      urlOrHeaderToken(token, request)) {
-          datasetErrorLoggingService.addDataset(organizationName, dataSetName)
-          Ok(
-            s"Activated error logging for this dataset for the next ${datasetErrorLoggingService.durationToLogAfterActivation}")
-        }
-      }
-    }
-
   @ApiOperation(hidden = true, value = "")
   def triggerInboxCheckBlocking(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {

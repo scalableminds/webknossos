@@ -76,7 +76,10 @@ class DatasetArray(relativePath: DatasetPath,
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
                                                                              flip = header.order != ArrayOrder.C)
-          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder))
+          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)) ?~> formatCopyRangeError(
+            offsetInChunk,
+            sourceChunkInCOrder,
+            targetInCOrder)
         } yield ()
       })
       for {
@@ -84,6 +87,10 @@ class DatasetArray(relativePath: DatasetPath,
       } yield targetBuffer
     }
   }
+
+  private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
+    s"Copying data from dataset chunk failed. Chunk shape: ${sourceChunk.getShape.mkString(",")}, target shape: ${target.getShape
+      .mkString(",")}, offset: ${offsetInChunk.mkString(",")}"
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
@@ -94,7 +101,7 @@ class DatasetArray(relativePath: DatasetPath,
   private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
     if (header.isSharded) {
       for {
-        (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex)
+        (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
         chunkShape = header.chunkSizeAtIndex(chunkIndex)
         multiArray <- chunkReader.read(shardPath.toString, chunkShape, Some(chunkRange))
       } yield multiArray

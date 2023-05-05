@@ -263,7 +263,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
   @throws[IOException]
   override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
-
+    throw new Exception("blosc boom!")
     val di = new DataInputStream(is)
     val header = new Array[Byte](JBlosc.OVERHEAD)
     di.readFully(header)

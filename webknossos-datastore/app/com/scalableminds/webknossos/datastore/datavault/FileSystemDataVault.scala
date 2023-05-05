@@ -21,6 +21,7 @@ class FileSystemDataVault extends DataVault {
         arr
     }
 }
+
 object FileSystemDataVault {
   def create: FileSystemDataVault = new FileSystemDataVault
 }

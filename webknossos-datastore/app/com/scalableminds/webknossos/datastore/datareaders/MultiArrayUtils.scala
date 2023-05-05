@@ -87,7 +87,6 @@ object MultiArrayUtils {
       sourceRanges.add(new Range(sourceFirst, sourceLast - 1))
       targetRanges.add(new Range(targetFirst, targetLast - 1))
     }
-    throw new Exception("exception in copy range!")
     val sourceRangeIterator = source.getRangeIterator(sourceRanges)
     val targetRangeIterator = target.getRangeIterator(targetRanges)
     val elementType = source.getElementType

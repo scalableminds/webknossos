@@ -199,21 +199,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
             reportMutable += s"Found ${layersWithVoxelSizes.length} ${currentExplorer.name} layers at $remotePath."
             Fox.successful(layersWithVoxelSizes)
           case f: Failure =>
-            reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: ${formatFailureForReport(f)}"
+            reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: ${Fox.failureChainAsString(f)}"
             exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
           case Empty =>
             reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: Empty"
             exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
         }
     }
-
-  def formatFailureForReport(failure: Failure): String = {
-    def formatChain(chain: Box[Failure]): String = chain match {
-      case Full(failure) =>
-        " <~ " + failure.msg + formatChain(failure.chain)
-      case _ => ""
-    }
-    failure.msg + formatChain(failure.chain)
-  }
 
 }

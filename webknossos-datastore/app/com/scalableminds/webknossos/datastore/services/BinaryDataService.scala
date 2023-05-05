@@ -94,6 +94,7 @@ class BinaryDataService(val dataBaseDir: Path,
           Fox.failure(e.getMessage)
         case Failure(msg, Full(e: Exception), _) =>
           if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
+            // TODO print chain, and exception stack traces in chain
             logger.debug(
               s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id} at ${readInstruction.bucket} failed with error: $msg. Stack trace: ${TextUtils
                 .stackTraceAsString(e)}")

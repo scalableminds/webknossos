@@ -34,7 +34,7 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
   def read(path: String, chunkShapeFromMetadata: Array[Int], range: Option[NumericRange[Long]])(
       implicit ec: ExecutionContext): Fox[MultiArray] =
     for {
-      chunkBytesAndShapeOpt: Option[(Array[Byte], Option[Array[Int]])] <- tryo(readChunkBytesAndShape(path, range)).toFox ?~> "Where has my exception gone?"
+      chunkBytesAndShapeOpt: Option[(Array[Byte], Option[Array[Int]])] <- tryo(readChunkBytesAndShape(path, range)).toFox
       chunkShape = chunkBytesAndShapeOpt.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed = chunkBytesAndShapeOpt.map(_._1) match {
         case Some(chunkBytes) =>

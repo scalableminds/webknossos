@@ -69,7 +69,7 @@ class DatasetArray(relativePath: DatasetPath,
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetInCOrder: MultiArray =
         MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
-      val copiedFuture = Fox.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
+      val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
           offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)

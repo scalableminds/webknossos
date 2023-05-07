@@ -15,6 +15,7 @@ type Props = {
 
 function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const [autoCompleteValue, setAutoCompleteValue] = useState("");
+  const [dropDownVisible, setDropDownVisible] = useState(false);
   const onChange = (newValue: string) => setAutoCompleteValue(newValue);
   const [users, setUsers] = useState<APIUser[] | null>(null);
   const fetchUsers = async () => setTimeout(async () => setUsers(await getEditableUsers()), 5000); // TODO delete; only testing purposes
@@ -37,11 +38,14 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     if (team === null) return;
     const newTeam: APITeamMembership = { id: team.id, name: team.name, isTeamManager: false }; //TODO never make manager?
     updateTeamMembership(user, [...user.teams, newTeam]);
+    setDropDownVisible(false);
   };
 
   const removeFrom = async (user: APIUser, team: APITeam | null) => {
     const newTeams = user.teams.filter((userteam) => team?.id !== userteam.id);
     updateTeamMembership(user, newTeams);
+    setDropDownVisible(false);
+    setTimeout(() => blur(), 0);
   };
 
   const renderRemoveSpan = (user: APIUser) => {
@@ -56,7 +60,6 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   };
 
   const renderTeamMember = (user: APIUser): DefaultOptionType => ({
-    //TODO was unsure whether clicking on the name should also remove team member; same for renderUserNotInTeam
     value: `${user.firstName} ${user.lastName} ${user.email}`,
     label: (
       <div
@@ -80,7 +83,9 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
           justifyContent: "space-between",
         }}
       >
-        {user.firstName} {user.lastName}
+        <span>
+          {user.firstName} {user.lastName}
+        </span>
         <span onClick={() => addTo(user, team)}>
           <PlusOutlined /> Add to {team?.name}
         </span>
@@ -116,9 +121,15 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
                 option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
             );
           }}
-          onSelect={() => setAutoCompleteValue("")}
+          onSelect={() => {
+            setAutoCompleteValue("");
+          }}
           value={autoCompleteValue}
           onChange={onChange}
+          open={dropDownVisible}
+          onFocus={() => setDropDownVisible(true)}
+          onBlur={() => setDropDownVisible(false)}
+          onSearch={() => setDropDownVisible(true)}
         >
           <Input.Search size="large" placeholder="Search users" />
         </AutoComplete>

@@ -1,6 +1,7 @@
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import { Modal, Input, Spin } from "antd";
+import { Modal, AutoComplete, Input, Spin } from "antd";
+import { DefaultOptionType } from "antd/lib/select";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
@@ -15,7 +16,6 @@ type Props = {
 function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const [autoCompleteValue, setAutoCompleteValue] = useState("");
   const onChange = (newValue: string) => setAutoCompleteValue(newValue);
-  const [open, setOpen] = useState(false);
   const [users, setUsers] = useState<APIUser[] | null>(null);
   const fetchUsers = async () => setTimeout(async () => setUsers(await getEditableUsers()), 5000); // TODO delete; only testing purposes
   //const fetchUsers = async () => setUsers(await getEditableUsers());
@@ -35,7 +35,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
 
   const addTo = async (user: APIUser, team: APITeam | null) => {
     if (team === null) return;
-    const newTeam: APITeamMembership = { id: team.id, name: team.name, isTeamManager: false };
+    const newTeam: APITeamMembership = { id: team.id, name: team.name, isTeamManager: false }; //TODO never make manager?
     updateTeamMembership(user, [...user.teams, newTeam]);
   };
 
@@ -55,78 +55,60 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     );
   };
 
-  const renderTeamMember = (user: APIUser) => {
+  const renderTeamMember = (user: APIUser): DefaultOptionType => ({
     //TODO was unsure whether clicking on the name should also remove team member; same for renderUserNotInTeam
-    return (
+    value: `${user.firstName} ${user.lastName} ${user.email}`,
+    label: (
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-        }}
-        onMouseDown={(e) => {
-          console.log("yes hi");
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
         }}
       >
         {user.firstName} {user.lastName}
         {renderRemoveSpan(user)}
       </div>
-    );
-  };
+    ),
+  });
 
-  const renderUserNotInTeam = (user: APIUser) => {
-    return (
+  const renderUserNotInTeam = (user: APIUser): DefaultOptionType => ({
+    value: `${user.firstName} ${user.lastName} ${user.email}`,
+    label: (
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
         }}
-        onMouseDown={(e) => {
-          console.log("yes hi");
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
-        }}
       >
         {user.firstName} {user.lastName}
-        <span
-          onClick={() => {
-            addTo(user, team);
-          }}
-        >
+        <span onClick={() => addTo(user, team)}>
           <PlusOutlined /> Add to {team?.name}
         </span>
       </div>
-    );
-  };
+    ),
+  });
 
-  const renderOptions = () => {
-    return (
-      <>
-        <div style={{ margin: "16px" }}>
-          In team
-          {users
-            ?.filter((user) => filterTeamMembersOf(team, user))
-            .map((user) => renderTeamMember(user))}
-        </div>
-        <div style={{ margin: "16px" }}>
-          Not in team
-          {users
-            ?.filter((user) => !filterTeamMembersOf(team, user))
-            .map((user) => renderUserNotInTeam(user))}
-        </div>
-      </>
-    );
-  };
+  const options: DefaultOptionType[] = [
+    {
+      label: "In team",
+      options: users
+        ?.filter((user) => filterTeamMembersOf(team, user))
+        .map((user) => renderTeamMember(user)),
+    },
+    {
+      label: "Not in team",
+      options: users
+        ?.filter((user) => !filterTeamMembersOf(team, user))
+        .map((user) => renderUserNotInTeam(user)),
+    },
+  ];
 
   const renderModalBody = () => {
     return (
       <>
-        <Select
+        <AutoComplete
           style={{ width: "100%", marginBottom: "16px" }}
-          dropdownRender={() => renderOptions()}
+          options={options}
           filterOption={(inputValue, option) => {
             return (
               inputValue === "" ||
@@ -137,15 +119,9 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
           onSelect={() => setAutoCompleteValue("")}
           value={autoCompleteValue}
           onChange={onChange}
-          showSearch
-          placeholder="Search for user"
-          showArrow={false}
-          autoFocus
-          open={open}
-          onDropdownVisibleChange={(visible) => setOpen(visible)}
         >
           <Input.Search size="large" placeholder="Search users" />
-        </Select>
+        </AutoComplete>
         {renderUsersForTeam(team, users)}
       </>
     );

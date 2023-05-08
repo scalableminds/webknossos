@@ -1,0 +1,223 @@
+import _ from "lodash";
+import * as ort from "onnxruntime-web";
+import { OrthoView, Vector3 } from "oxalis/constants";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { call } from "typed-redux-saga";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { V3 } from "libs/mjs";
+import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import ndarray from "ndarray";
+import Toast from "libs/toast";
+import { OxalisState } from "oxalis/store";
+import { map3 } from "libs/utils";
+import { APIDataset } from "types/api_flow_types";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import Dimensions from "../dimensions";
+import { InferenceSession } from "onnxruntime-web";
+import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
+
+const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
+type CacheEntry = { embedding: Float32Array; bbox: BoundingBox; mag: Vector3 };
+const MAXIMUM_CACHE_SIZE = 5;
+// Sorted from most recently to least recently used.
+let embeddingCache: Array<CacheEntry> = [];
+
+async function getEmbedding(
+  dataset: APIDataset,
+  boundingBox: BoundingBox,
+  mag: Vector3,
+  activeViewport: OrthoView,
+): Promise<CacheEntry> {
+  const matchingCacheEntry = embeddingCache.find(
+    (entry) => entry.bbox.containsBoundingBox(boundingBox) && V3.equals(entry.mag, mag),
+  );
+  if (matchingCacheEntry) {
+    // Move entry to the front.
+    embeddingCache = [
+      matchingCacheEntry,
+      ...embeddingCache.filter((el) => el != matchingCacheEntry).slice(0, MAXIMUM_CACHE_SIZE - 1),
+    ];
+    console.log("Use", matchingCacheEntry, "from cache.");
+    return matchingCacheEntry;
+  } else {
+    try {
+      const embeddingCenter = V3.round(boundingBox.getCenter());
+      const sizeInMag1 = V3.scale3(EMBEDDING_SIZE, mag);
+      const embeddingTopLeft = V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5));
+      const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
+      const embeddingBoxMag1 = new BoundingBox({
+        min: V3.floor(V3.min(embeddingTopLeft, embeddingBottomRight)),
+        max: V3.floor(
+          V3.add(
+            V3.max(embeddingTopLeft, embeddingBottomRight),
+            Dimensions.transDim([0, 0, 1], activeViewport),
+          ),
+        ),
+      });
+      console.log("Load new embedding for ", embeddingBoxMag1);
+
+      // todo: put in api module
+      const embedding = new Float32Array(
+        (await fetch(
+          `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              mag,
+              boundingBox: embeddingBoxMag1.asServerBoundingBox(),
+            }),
+          },
+        ).then((res) => res.arrayBuffer())) as ArrayBuffer,
+      );
+
+      const newEntry = { embedding, bbox: embeddingBoxMag1, mag };
+      embeddingCache.unshift(newEntry);
+      return newEntry;
+    } catch (exception) {
+      console.error(exception);
+      throw new Error("Could not load embedding. See console for details.");
+    }
+  }
+}
+
+let session: InferenceSession | null;
+
+async function getSession() {
+  if (session == null) {
+    session = await ort.InferenceSession.create(
+      "/assets/models/vit_l_0b3195_decoder_quantized.onnx",
+    );
+  }
+  return session;
+}
+
+async function inferFromEmbedding(
+  embedding: Float32Array,
+  embeddingBoxInTargetMag: BoundingBox,
+  userBoxInTargetMag: BoundingBox,
+) {
+  const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
+  const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
+
+  const ort_session = await getSession();
+  const onnx_coord = new Float32Array([topLeft[0], topLeft[1], bottomRight[0], bottomRight[1]]);
+  const onnx_label = new Float32Array([2, 3]);
+  const onnx_mask_input = new Float32Array(256 * 256);
+  const onnx_has_mask_input = new Float32Array([0]);
+  const orig_im_size = new Float32Array([1024, 1024]);
+  const ort_inputs = {
+    image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
+    point_coords: new ort.Tensor("float32", onnx_coord, [1, 2, 2]),
+    point_labels: new ort.Tensor("float32", onnx_label, [1, 2]),
+    mask_input: new ort.Tensor("float32", onnx_mask_input, [1, 1, 256, 256]),
+    has_mask_input: new ort.Tensor("float32", onnx_has_mask_input, [1]),
+    orig_im_size: new ort.Tensor("float32", orig_im_size, [2]),
+  };
+  console.log(ort_inputs);
+  const { masks, iou_predictions, low_res_masks } = await ort_session.run(ort_inputs);
+  console.log([masks, iou_predictions, low_res_masks]);
+  // @ts-ignore
+  const best_mask_index = iou_predictions.data.indexOf(Math.max(...iou_predictions.data));
+  const thresholded_mask = masks.data
+    .slice(best_mask_index * 1024 * 1024, (best_mask_index + 1) * 1024 * 1024)
+    // todo use nd array
+    // @ts-ignore
+    .map((e) => e > 0);
+
+  // @ts-ignore
+  const thresholdFieldData = new Uint8Array(thresholded_mask);
+
+  const size = embeddingBoxInTargetMag.getSize();
+  const stride = [1, size[0], size[0] * size[1]];
+  console.log("stride", stride);
+  let thresholdField = ndarray(thresholdFieldData, size, stride);
+
+  thresholdField = thresholdField
+    // a.lo(x,y) => a[x:, y:]
+    .lo(topLeft[0], topLeft[1], 0)
+    // a.hi(x,y) => a[:x, :y]
+    .hi(userBoxInTargetMag.getSize()[0], userBoxInTargetMag.getSize()[1], 1);
+  return thresholdField;
+}
+
+export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+  const preparation = yield* call(prepareQuickSelect, action);
+  if (preparation == null) {
+    return;
+  }
+  const {
+    labeledZoomStep,
+    labeledResolution,
+    firstDim,
+    secondDim,
+    thirdDim,
+    activeViewport,
+    quickSelectGeometry,
+    volumeTracing,
+  } = preparation;
+  const { startPosition, endPosition } = action;
+
+  const userBoxMag1 = new BoundingBox({
+    min: V3.floor(V3.min(startPosition, endPosition)),
+    max: V3.floor(
+      V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
+    ),
+  });
+
+  // Ensure that the third dimension is inclusive (otherwise, the center of the passed
+  // coordinates wouldn't be exactly on the W plane on which the user started this action).
+  const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), userBoxMag1.max);
+  quickSelectGeometry.setCoordinates(userBoxMag1.min, inclusiveMaxW);
+
+  console.time("getEmbedding");
+  const dataset = yield* select((state: OxalisState) => state.dataset);
+  const { embedding, bbox: embeddingBoxMag1 } = yield* call(
+    getEmbedding,
+    dataset,
+    userBoxMag1,
+    labeledResolution,
+    activeViewport,
+  );
+  console.timeEnd("getEmbedding");
+
+  const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
+  const userBoxInTargetMag = userBoxMag1.fromMag1ToMag(labeledResolution);
+
+  if (embeddingBoxInTargetMag.getVolume() === 0) {
+    Toast.warning("The drawn rectangular had a width or height of zero.");
+    return;
+  }
+
+  console.time("infer");
+  let thresholdField = yield* call(
+    inferFromEmbedding,
+    embedding,
+    embeddingBoxInTargetMag,
+    userBoxInTargetMag,
+  );
+  console.timeEnd("infer");
+
+  const overwriteMode = yield* select(
+    (state: OxalisState) => state.userConfiguration.overwriteMode,
+  );
+
+  sendAnalyticsEvent("used_quick_select_without_preview");
+  yield* finalizeQuickSelect(
+    quickSelectGeometry,
+    volumeTracing,
+    activeViewport,
+    labeledResolution,
+    userBoxMag1,
+    thirdDim,
+    userBoxInTargetMag.getSize(),
+    firstDim,
+    secondDim,
+    thresholdField,
+    overwriteMode,
+    labeledZoomStep,
+  );
+}

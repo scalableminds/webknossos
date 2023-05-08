@@ -77,33 +77,40 @@ let _hardcodedEmbedding: Float32Array | null = null;
 const useHardcodedEmbedding = false;
 
 async function getEmbedding(dataset: APIDataset, boundingBox: BoundingBox, mag: Vector3) {
-  if (_embedding == null || _hardcodedEmbedding == null) {
-    _embedding = new Float32Array(
-      (await fetch(
-        `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+  try {
+    if (_embedding == null || _hardcodedEmbedding == null) {
+      _embedding = new Float32Array(
+        (await fetch(
+          `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              mag,
+              boundingBox: boundingBox.asServerBoundingBox(),
+            }),
           },
-          body: JSON.stringify({
-            mag,
-            boundingBox: boundingBox.asServerBoundingBox(),
-          }),
-        },
-      ).then((res) => res.arrayBuffer())) as ArrayBuffer,
-    );
+        ).then((res) => res.arrayBuffer())) as ArrayBuffer,
+      );
 
-    _hardcodedEmbedding = new Float32Array(
-      (await fetch("/dist/paper_l4_embedding.bin").then((res) => res.arrayBuffer())) as ArrayBuffer,
-    );
+      // _hardcodedEmbedding = new Float32Array(
+      //   (await fetch("/dist/paper_l4_embedding.bin").then((res) =>
+      //     res.arrayBuffer(),
+      //   )) as ArrayBuffer,
+      // );
+    }
+    console.log("_embedding", _embedding.slice(0, 20));
+    // console.log("_hardcodedEmbedding", _hardcodedEmbedding.slice(0, 20));
+    // if (useHardcodedEmbedding) {
+    //   return _hardcodedEmbedding;
+    // }
+    return _embedding;
+  } catch (exception) {
+    console.error(exception);
+    throw new Error("Could not load embedding. See console for details.");
   }
-  console.log("_embedding", _embedding.slice(0, 20));
-  console.log("_hardcodedEmbedding", _hardcodedEmbedding.slice(0, 20));
-  if (useHardcodedEmbedding) {
-    return _hardcodedEmbedding;
-  }
-  return _embedding;
 }
 
 let session: InferenceSession | null;

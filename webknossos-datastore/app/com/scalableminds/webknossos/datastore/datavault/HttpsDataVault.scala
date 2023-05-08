@@ -20,7 +20,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
   private val readTimeout = 10 minutes
   private lazy val backend = HttpClientSyncBackend(options = SttpBackendOptions.connectionTimeout(connectionTimeout))
 
-  def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
+  private def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
     credential.flatMap { c =>
       c match {
         case h: HttpBasicAuthCredential   => Some(h)
@@ -36,6 +36,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
         basicRequest
       )
       .readTimeout(readTimeout)
+      .disableAutoDecompression // Decompression is performed by the VaultPath
 
   private def headRequest(uri: URI): Request[Either[String, String], Any] =
     authenticatedRequest().head(Uri(uri))
@@ -72,7 +73,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
 
   private def fullResponse(uri: URI): Identity[Response[Either[String, Array[Byte]]]] = getResponse(uri)
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
     val uri = path.toUri
     val response = range match {
       case Some(r) => {
@@ -84,13 +85,14 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
       }
       case None => fullResponse(uri)
     }
+    val encoding = Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse(""))
 
     if (!response.isSuccess) {
       throw new Exception(s"Https read failed for uri $uri: Response was not successful ${response.statusText}")
     }
     response.body match {
       case Left(e)      => throw new Exception(s"Https read failed for uri $uri: $e: Response empty")
-      case Right(bytes) => bytes
+      case Right(bytes) => (bytes, encoding)
     }
   }
 }

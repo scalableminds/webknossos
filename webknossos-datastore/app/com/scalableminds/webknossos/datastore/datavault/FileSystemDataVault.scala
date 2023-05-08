@@ -5,7 +5,7 @@ import java.nio.file.{Files, Path}
 import scala.collection.immutable.NumericRange
 
 class FileSystemDataVault extends DataVault {
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = ???
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = ???
 
   def readBytesLocal(path: Path, range: Option[NumericRange[Long]]): Array[Byte] =
     range match {

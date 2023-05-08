@@ -197,6 +197,11 @@ class BoundingBox {
       max: V3.ceil(this.max),
     });
   }
+
+  asServerBoundingBox() {
+    const size = this.getSize();
+    return { topLeft: this.min, width: size[0], height: size[1], depth: size[2] };
+  }
 }
 
 export default BoundingBox;

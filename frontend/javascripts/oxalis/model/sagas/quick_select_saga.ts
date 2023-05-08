@@ -72,8 +72,12 @@ const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 
 let _embedding: Float32Array | null = null;
-async function getEmbedding(dataset: APIDataset) {
-  if (_embedding == null) {
+let _hardcodedEmbedding: Float32Array | null = null;
+
+const useHardcodedEmbedding = false;
+
+async function getEmbedding(dataset: APIDataset, boundingBox: BoundingBox, mag: Vector3) {
+  if (_embedding == null || _hardcodedEmbedding == null) {
     _embedding = new Float32Array(
       (await fetch(
         `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
@@ -83,12 +87,21 @@ async function getEmbedding(dataset: APIDataset) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            mag: [1, 1, 1],
-            boundingBox: { topLeft: [2816, 4133, 1728], width: 1024, height: 1024, depth: 1 },
+            mag,
+            boundingBox: boundingBox.asServerBoundingBox(),
           }),
         },
       ).then((res) => res.arrayBuffer())) as ArrayBuffer,
     );
+
+    _hardcodedEmbedding = new Float32Array(
+      (await fetch("/dist/paper_l4_embedding.bin").then((res) => res.arrayBuffer())) as ArrayBuffer,
+    );
+  }
+  console.log("_embedding", _embedding.slice(0, 20));
+  console.log("_hardcodedEmbedding", _hardcodedEmbedding.slice(0, 20));
+  if (useHardcodedEmbedding) {
+    return _hardcodedEmbedding;
   }
   return _embedding;
 }
@@ -106,7 +119,9 @@ async function getSession() {
 
 async function inferFromEmbedding(embedding: Float32Array, topLeft: Vector3, bottomRight: Vector3) {
   const ort_session = await getSession();
-  const onnx_coord = new Float32Array([topLeft[0], topLeft[1], bottomRight[0], bottomRight[1]]);
+  const onnx_coord = useHardcodedEmbedding
+    ? new Float32Array([topLeft[1], topLeft[0], bottomRight[1], bottomRight[0]])
+    : new Float32Array([topLeft[0], topLeft[1], bottomRight[0], bottomRight[1]]);
   const onnx_label = new Float32Array([2, 3]);
   const onnx_mask_input = new Float32Array(256 * 256);
   const onnx_has_mask_input = new Float32Array([0]);
@@ -196,7 +211,8 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     (state) => state.datasetConfiguration.layers[colorLayer.name],
   );
 
-  const embeddingTopLeft = [2816, 4133, 1728] as Vector3;
+  // const embeddingTopLeft = [2816, 4133, 1728] as Vector3; daniels DS
+  const embeddingTopLeft = [1032, 1030, 1536] as Vector3;
   const embeddingBottomRight = [
     embeddingTopLeft[0] + 1024,
     embeddingTopLeft[1] + 1024,
@@ -264,12 +280,20 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     return;
   }
 
-  const inputDataRaw = yield* call(
-    [api.data, api.data.getDataForBoundingBox],
-    colorLayer.name,
-    boundingBoxMag1,
-    labeledZoomStep,
-  );
+  // const inputDataRaw = yield* call(
+  //   [api.data, api.data.getDataForBoundingBox],
+  //   colorLayer.name,
+  //   boundingBoxMag1,
+  //   labeledZoomStep,
+  // );
+
+  // const inputFromServer = yield* call(
+  //   [api.data, api.data.downloadRawDataCuboid],
+  //   colorLayer.name,
+  //   embeddingTopLeft,
+  //   embeddingBottomRight,
+  // );
+
   const size = boundingBoxTarget.getSize();
   if (size.some((el) => el !== 1 && el !== 1024)) {
     throw new Error("Incorrectly sized window");
@@ -278,12 +302,12 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   const stride = [1, size[0], size[0] * size[1]];
   console.log("stride", stride);
 
-  if (inputDataRaw instanceof BigUint64Array) {
-    throw new Error("Color input layer must not be 64-bit.");
-  }
+  // if (inputDataRaw instanceof BigUint64Array) {
+  //   throw new Error("Color input layer must not be 64-bit.");
+  // }
 
-  const inputData = normalizeToUint8(colorLayer, inputDataRaw, layerConfiguration);
-  const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
+  // const inputData = normalizeToUint8(colorLayer, inputDataRaw, layerConfiguration);
+  // const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
   // const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
   // Two fields are computed (one for the dark segment scenario, and one for the light segment)
@@ -302,15 +326,24 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
 
   // thresholdField initially stores the threshold values (uint8), but is
   // later processed to a binary mask.
-  //
-  const embedding = yield* call(getEmbedding, dataset);
+
+  console.time("getEmbedding");
+  const embedding = yield* call(getEmbedding, dataset, boundingBoxMag1, [1, 1, 1]);
+  console.timeEnd("getEmbedding");
+
+  console.time("infer");
   let thresholdFieldData = yield* call(
     inferFromEmbedding,
     embedding,
     relativeTopLeft,
     relativeBottomRight,
   );
-  const thresholdField = ndarray(thresholdFieldData, size, stride);
+  console.timeEnd("infer");
+  let thresholdField = ndarray(thresholdFieldData, size, stride);
+
+  if (useHardcodedEmbedding) {
+    thresholdField = thresholdField.transpose(1, 0, 2);
+  }
 
   // if (initialDetectDarkSegment) {
   //   thresholdField = darkThresholdField;
@@ -338,7 +371,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   //   );
   // }
 
-  processBinaryMaskInPlaceAndAttach(thresholdField, quickSelectConfig, quickSelectGeometry);
+  // processBinaryMaskInPlaceAndAttach(thresholdField, quickSelectConfig, quickSelectGeometry);
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,
@@ -356,7 +389,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     size,
     firstDim,
     secondDim,
-    inputNdUvw,
+    // inputNdUvw,
     thresholdField,
     overwriteMode,
     labeledZoomStep,
@@ -575,7 +608,7 @@ function* finalizeQuickSelect(
   size: Vector3,
   firstDim: number,
   secondDim: number,
-  inputNdUvw: ndarray.NdArray<TypedArrayWithoutBigInt>,
+  // inputNdUvw: ndarray.NdArray<TypedArrayWithoutBigInt>,
   output: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
@@ -594,14 +627,17 @@ function* finalizeQuickSelect(
     size[secondDim],
   );
 
-  for (let u = 0; u < inputNdUvw.shape[0]; u++) {
-    for (let v = 0; v < inputNdUvw.shape[1]; v++) {
+  console.time("fill voxel buffer");
+  for (let u = 0; u < size[firstDim]; u++) {
+    for (let v = 0; v < size[secondDim]; v++) {
       if (output.get(u, v, 0) > 0) {
         voxelBuffer2D.setValue(u, v, 1);
       }
     }
   }
+  console.timeEnd("fill voxel buffer");
 
+  console.time("label with voxel buffer");
   yield* call(
     labelWithVoxelBuffer2D,
     voxelBuffer2D,
@@ -610,6 +646,7 @@ function* finalizeQuickSelect(
     labeledZoomStep,
     activeViewport,
   );
+  console.timeEnd("label with voxel buffer");
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(

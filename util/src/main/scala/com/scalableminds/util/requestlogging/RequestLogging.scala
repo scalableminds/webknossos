@@ -60,21 +60,3 @@ trait RequestLogging extends AbstractRequestLogging {
     } yield result
 
 }
-
-trait RateLimitedErrorLogging extends LazyLogging {
-  // Allows to log errors that occur many times only once (per lifetime of the class)
-  // TODO unify with Fox.failureChainAsString
-
-  private val loggedErrorMessages = scala.collection.mutable.Set[String]()
-
-  protected def logError(t: Throwable): Unit =
-    t match {
-      case e: Exception =>
-        if (!loggedErrorMessages.contains(e.getMessage)) {
-          loggedErrorMessages.add(e.getMessage)
-          logger.error(TextUtils.stackTraceAsString(e))
-        }
-      case _ => ()
-    }
-
-}

@@ -18,7 +18,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const [dropDownVisible, setDropDownVisible] = useState(false);
   const onChange = (newValue: string) => setAutoCompleteValue(newValue);
   const [users, setUsers] = useState<APIUser[] | null>(null);
-  const [pendingRequestsCounter, setPendingRequestsCounter] = useState(0);
+  const [isWaitingForRequest, setIsWaitingForRequest] = useState(false);
   const fetchUsers = async () => setTimeout(async () => setUsers(await getEditableUsers()), 2000); //TODO
   useEffect(() => {
     fetchUsers();
@@ -26,7 +26,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
 
   if (team === null) return null;
   const updateTeamMembership = async (user: APIUser, newTeams: APITeamMembership[]) => {
-    setPendingRequestsCounter(1);
+    setIsWaitingForRequest(true);
     setDropDownVisible(false);
     if (users === null) return;
     const newUser = Object.assign({}, user, {
@@ -34,7 +34,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     });
     const serverUser = await updateUser(newUser);
     setUsers(users.map((oldUser) => (oldUser.id === serverUser.id ? serverUser : oldUser)));
-    setTimeout(async () => await setPendingRequestsCounter(0), 2000); //TODO
+    setTimeout(async () => await setIsWaitingForRequest(false), 2000); //TODO
   };
 
   const addTo = async (user: APIUser, team: APITeam | null) => {
@@ -115,7 +115,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const renderModalBody = () => {
     return (
       <>
-        <Spin spinning={pendingRequestsCounter > 0}>
+        <Spin spinning={isWaitingForRequest}>
           <AutoComplete
             style={{ width: "100%", marginBottom: "16px" }}
             options={options}

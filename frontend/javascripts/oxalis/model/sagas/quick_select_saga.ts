@@ -77,7 +77,7 @@ const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 const useHardcodedEmbedding = false;
 
 const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
-type CacheEntry = { embedding: Float32Array; bbox: BoundingBox };
+type CacheEntry = { embedding: Float32Array; bbox: BoundingBox; mag: Vector3 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
 let embeddingCache: Array<CacheEntry> = [];
@@ -88,8 +88,8 @@ async function getEmbedding(
   mag: Vector3,
   activeViewport: OrthoView,
 ): Promise<CacheEntry> {
-  const matchingCacheEntry = embeddingCache.find((entry) =>
-    entry.bbox.containsBoundingBox(boundingBox),
+  const matchingCacheEntry = embeddingCache.find(
+    (entry) => entry.bbox.containsBoundingBox(boundingBox) && V3.equals(entry.mag, mag),
   );
   if (matchingCacheEntry) {
     // Move entry to the front.
@@ -132,7 +132,7 @@ async function getEmbedding(
         ).then((res) => res.arrayBuffer())) as ArrayBuffer,
       );
 
-      const newEntry = { embedding, bbox: embeddingBoxMag1 };
+      const newEntry = { embedding, bbox: embeddingBoxMag1, mag };
       embeddingCache.unshift(newEntry);
       return newEntry;
     } catch (exception) {

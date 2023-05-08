@@ -72,13 +72,13 @@ const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 
 let _embedding: Float32Array | null = null;
-let _hardcodedEmbedding: Float32Array | null = null;
+// let _hardcodedEmbedding: Float32Array | null = null;
 
 const useHardcodedEmbedding = false;
 
 async function getEmbedding(dataset: APIDataset, boundingBox: BoundingBox, mag: Vector3) {
   try {
-    if (_embedding == null || _hardcodedEmbedding == null) {
+    if (_embedding == null) {
       _embedding = new Float32Array(
         (await fetch(
           `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
@@ -183,7 +183,7 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
   );
 });
 
-let wasPreviewModeToastAlreadyShown = false;
+// let wasPreviewModeToastAlreadyShown = false;
 
 function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
   const dataset = yield* select((state: OxalisState) => state.dataset);
@@ -198,7 +198,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     return;
   }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
-  const quickSelectConfig = yield* select((state) => state.userConfiguration.quickSelect);
+  // const quickSelectConfig = yield* select((state) => state.userConfiguration.quickSelect);
 
   const colorLayers = yield* select((state: OxalisState) =>
     getEnabledColorLayers(state.dataset, state.datasetConfiguration),
@@ -214,9 +214,9 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     warnAboutMultipleColorLayers(colorLayer.name);
   }
 
-  const layerConfiguration = yield* select(
-    (state) => state.datasetConfiguration.layers[colorLayer.name],
-  );
+  // const layerConfiguration = yield* select(
+  //   (state) => state.datasetConfiguration.layers[colorLayer.name],
+  // );
 
   // const embeddingTopLeft = [2816, 4133, 1728] as Vector3; daniels DS
   const embeddingTopLeft = [1032, 1030, 1536] as Vector3;
@@ -226,28 +226,33 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     embeddingTopLeft[2],
   ] as Vector3;
 
-  let { startPosition, endPosition } = action;
+  const { startPosition, endPosition } = action;
 
   const relativeTopLeft = V3.sub(startPosition, embeddingTopLeft);
   const relativeBottomRight = V3.sub(endPosition, embeddingTopLeft);
 
-  startPosition = embeddingTopLeft;
-  endPosition = embeddingBottomRight;
-
-  const boundingBoxObj = {
+  const userBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
     max: V3.floor(
       V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
     ),
-  };
+  });
 
-  const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
-  const boundingBoxMag1 = new BoundingBox(boundingBoxObj); //.intersectedWith(layerBBox);
+  // const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
+  const embeddingBoxMag1 = new BoundingBox({
+    min: V3.floor(V3.min(embeddingTopLeft, embeddingBottomRight)),
+    max: V3.floor(
+      V3.add(
+        V3.max(embeddingTopLeft, embeddingBottomRight),
+        Dimensions.transDim([0, 0, 1], activeViewport),
+      ),
+    ),
+  }); //.intersectedWith(layerBBox);
 
   // Ensure that the third dimension is inclusive (otherwise, the center of the passed
   // coordinates wouldn't be exactly on the W plane on which the user started this action).
-  const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
-  quickSelectGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
+  const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), userBoxMag1.max);
+  quickSelectGeometry.setCoordinates(userBoxMag1.min, inclusiveMaxW);
 
   const volumeTracing = yield* select(getActiveSegmentationTracing);
 
@@ -280,9 +285,10 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   );
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
-  const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
+  const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
+  const userBoxInTargetMag = userBoxMag1.fromMag1ToMag(labeledResolution);
 
-  if (boundingBoxTarget.getVolume() === 0) {
+  if (embeddingBoxInTargetMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
     return;
   }
@@ -290,7 +296,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   // const inputDataRaw = yield* call(
   //   [api.data, api.data.getDataForBoundingBox],
   //   colorLayer.name,
-  //   boundingBoxMag1,
+  //   embeddingBoxMag1,
   //   labeledZoomStep,
   // );
 
@@ -301,7 +307,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   //   embeddingBottomRight,
   // );
 
-  const size = boundingBoxTarget.getSize();
+  const size = embeddingBoxInTargetMag.getSize();
   if (size.some((el) => el !== 1 && el !== 1024)) {
     throw new Error("Incorrectly sized window");
   }
@@ -335,7 +341,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   // later processed to a binary mask.
 
   console.time("getEmbedding");
-  const embedding = yield* call(getEmbedding, dataset, boundingBoxMag1, [1, 1, 1]);
+  const embedding = yield* call(getEmbedding, dataset, embeddingBoxMag1, [1, 1, 1]);
   console.timeEnd("getEmbedding");
 
   console.time("infer");
@@ -351,6 +357,12 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   if (useHardcodedEmbedding) {
     thresholdField = thresholdField.transpose(1, 0, 2);
   }
+
+  thresholdField = thresholdField
+    // a.lo(x,y) => a[x:, y:]
+    .lo(relativeTopLeft[0], relativeTopLeft[1], 0)
+    // a.hi(x,y) => a[:x, :y]
+    .hi(userBoxInTargetMag.getSize()[0], userBoxInTargetMag.getSize()[1], 1);
 
   // if (initialDetectDarkSegment) {
   //   thresholdField = darkThresholdField;
@@ -391,9 +403,9 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     volumeTracing,
     activeViewport,
     labeledResolution,
-    boundingBoxMag1,
+    userBoxMag1,
     thirdDim,
-    size,
+    userBoxInTargetMag.getSize(),
     firstDim,
     secondDim,
     // inputNdUvw,
@@ -465,7 +477,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   //       volumeTracing,
   //       activeViewport,
   //       labeledResolution,
-  //       boundingBoxMag1,
+  //       embeddingBoxMag1,
   //       thirdDim,
   //       size,
   //       firstDim,

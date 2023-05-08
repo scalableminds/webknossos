@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.ByteUtils
 
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.reflect.ClassTag
@@ -10,7 +11,7 @@ import scala.reflect.ClassTag
 // For a reference implementation, see also:
 // https://github.com/janelia-flyem/compressedseg
 
-trait CompressedSegmentation[T <: AnyVal] {
+trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
 
   private val kBlockHeaderSize = 2
   val defaultBlockSize: Vec3Int = Vec3Int(8, 8, 8)
@@ -88,16 +89,6 @@ trait CompressedSegmentation[T <: AnyVal] {
     ByteBuffer.wrap(encodedBytes).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(input32)
     val values = decompressChannels(input32, vs, blockSize)
     values.flatMap(v => longToBytes(valueAsLong(v)))
-  }
-
-  private def longToBytes(l: Long): Array[Byte] = {
-    var w = l
-    val result = new Array[Byte](8)
-    for (i <- 7 to 0 by -1) {
-      result(i) = (w & 0xFF).toByte
-      w >>= 8
-    }
-    result.reverse
   }
 }
 

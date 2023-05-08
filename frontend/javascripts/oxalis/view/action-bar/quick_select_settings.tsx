@@ -33,6 +33,7 @@ export function QuickSelectControls() {
       defaultState.userConfiguration.quickSelect;
     dispatch(
       updateUserSettingAction("quickSelect", {
+        useHeuristic: true,
         showPreview: quickSelectConfig.showPreview,
         segmentMode,
         threshold,

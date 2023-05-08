@@ -440,7 +440,7 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 
 function processBinaryMaskInPlaceAndAttach(
   output: ndarray.NdArray<Uint8Array>,
-  quickSelectConfig: Omit<QuickSelectConfig, "showPreview">,
+  quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic">,
   quickSelectGeometry: QuickSelectGeometry,
 ) {
   fillHolesInPlace(output);

@@ -301,6 +301,7 @@ export type PartialDatasetConfiguration = Partial<
 >;
 
 export type QuickSelectConfig = {
+  readonly useHeuristic: boolean;
   readonly showPreview: boolean;
   readonly segmentMode: "dark" | "light";
   readonly threshold: number;

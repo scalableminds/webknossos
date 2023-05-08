@@ -1,6 +1,12 @@
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, MenuProps, Modal, notification } from "antd";
-import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  ShrinkOutlined,
+  ExpandAltOutlined,
+  ArrowRightOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import React from "react";
@@ -155,7 +161,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       prevProps.activeGroupId !== this.props.activeGroupId;
 
     if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
-      await this.setState({
+      this.setState({
         searchFocusOffset: 1,
       });
       this.setState({
@@ -252,19 +258,40 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
+  onMoveWithContextAction = (targetParentNode: TreeNode) => {
+    const activeComponent = this.getLabelForActiveItems();
+    const targetGroupId = targetParentNode.id === MISSING_GROUP_ID ? null : targetParentNode.id;
+    let allTreesToMove;
+    if (activeComponent === "tree") {
+      allTreesToMove = [this.props.activeTreeId];
+    } else if (activeComponent === "trees") {
+      allTreesToMove = this.props.selectedTrees;
+    }
+    if (allTreesToMove) {
+      const moveActions = allTreesToMove.map((treeId) =>
+        setTreeGroupAction(
+          targetGroupId,
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
+          parseInt(treeId, 10),
+        ),
+      );
+      this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
+    } else if (activeComponent === "group" && this.props.activeGroupId != null) {
+      api.tracing.moveSkeletonGroup(this.props.activeGroupId, targetGroupId);
+    }
+  };
+
   onMoveNode = (
     params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
   ) => {
     const { nextParentNode, node, treeData } = params;
-
     if (node.type === TYPE_TREE && nextParentNode) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(
           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-          parseInt(treeId, 10),
+          treeId,
         ),
       );
       this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
@@ -388,15 +415,31 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
     const isEditingDisabled = !this.props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
-    const createMenu: MenuProps = {
+    const labelForActiveItems = this.getLabelForActiveItems();
+    const menu: MenuProps = {
       items: [
         {
           key: "create",
-          onClick: () => this.createGroup(id),
+          onClick: () => {
+            this.createGroup(id);
+            this.handleGroupDropdownMenuVisibility(id, false);
+          },
           disabled: isEditingDisabled,
           icon: <PlusOutlined />,
           label: "Create new group",
         },
+        labelForActiveItems != null
+          ? {
+              key: "moveHere",
+              onClick: () => {
+                this.onMoveWithContextAction(node);
+                this.handleGroupDropdownMenuVisibility(id, false);
+              },
+              disabled: isEditingDisabled,
+              icon: <ArrowRightOutlined />,
+              label: `Move active ${labelForActiveItems} here`,
+            }
+          : null,
         {
           key: "delete",
           disabled: isEditingDisabled,
@@ -408,7 +451,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           ? {
               key: "collapseSubgroups",
               disabled: !hasExpandedSubgroup,
-              onClick: () => this.setExpansionOfAllSubgroupsTo(id, false),
+              onClick: () => {
+                this.setExpansionOfAllSubgroupsTo(id, false);
+                this.handleGroupDropdownMenuVisibility(id, false);
+              },
               icon: <ShrinkOutlined />,
               label: "Collapse all subgroups",
             }
@@ -417,8 +463,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           ? {
               key: "expandSubgroups",
               disabled: !hasCollapsedSubgroup,
-              onClick: () => this.setExpansionOfAllSubgroupsTo(id, true),
-              icon: <ShrinkOutlined />,
+              onClick: () => {
+                this.setExpansionOfAllSubgroupsTo(id, true);
+                this.handleGroupDropdownMenuVisibility(id, false);
+              },
+              icon: <ExpandAltOutlined />,
               label: "Expand all subgroups",
             }
           : null,
@@ -427,6 +476,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           onClick: () => {
             this.props.onSetActiveGroup(id);
             this.props.onToggleHideInactiveTrees();
+            this.handleGroupDropdownMenuVisibility(id, false);
           },
           icon: <i className="fas fa-eye" />,
           label: "Hide/Show all other trees",
@@ -459,11 +509,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     };
 
     // Make sure the displayed name is not empty
-    const displayableName = name.trim() || "<no name>";
+    const displayableName = name.trim() || "<Unnamed Group>";
     return (
       <div>
         <Dropdown
-          menu={createMenu}
+          menu={menu}
           placement="bottom"
           // AutoDestroy is used to remove the menu from DOM and keep up the performance.
           // destroyPopupOnHide should also be an option according to the docs, but
@@ -553,7 +603,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             },
             {
               key: "measureSkeleton",
-              onClick: () => this.handleMeasureSkeletonLength(tree.treeId, tree.name),
+              onClick: () => {
+                this.handleMeasureSkeletonLength(tree.treeId, tree.name);
+                this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
               title: "Measure Skeleton Length",
               icon: <i className="fas fa-ruler" />,
               label: "Measure Skeleton Length",
@@ -650,6 +703,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   canNodeHaveChildren(node: TreeNode) {
     return node.type === TYPE_GROUP;
+  }
+
+  getLabelForActiveItems(): "trees" | "tree" | "group" | null {
+    // Only one type of component can be selected. It is not possible to select multiple groups.
+    if (this.props.selectedTrees.length > 0) {
+      return "trees";
+    } else if (this.props.activeTreeId != null) {
+      return "tree";
+    } else if (this.props.activeGroupId != null) {
+      return "group";
+    }
+    return null;
   }
 
   render() {

@@ -1,9 +1,9 @@
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import { sleep } from "libs/utils";
+import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
@@ -78,7 +78,8 @@ export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
-const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
+const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 32;
+const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that a huge amount of chunks is downloaded at full speed,
@@ -624,15 +625,6 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
-  const { segmentMeshController } = yield* call(getSceneController);
-  const currentLODIndex = yield* call({
-    context: segmentMeshController.isosurfacesLODRootGroup,
-    fn: segmentMeshController.isosurfacesLODRootGroup.getCurrentLOD,
-  });
-
-  let availableChunksMap: ChunksMap = {};
-  let scale: Vector3 | null = null;
-  let loadingOrder: number[] = [];
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -649,72 +641,20 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  const version = meshFile.formatVersion;
+  let availableChunksMap: ChunksMap = {};
+  let scale: Vector3 | null = null;
+  let loadingOrder: number[] | null = null;
   try {
-    const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
-
-    const editableMapping = yield* select((state) =>
-      getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+    const chunkDescriptors = yield* call(
+      _getChunkLoadingDescriptors,
+      id,
+      dataset,
+      segmentationLayer,
+      meshFile,
     );
-    const tracing = yield* select((state) =>
-      getTracingForSegmentationLayer(state, segmentationLayer),
-    );
-    const mappingName =
-      // isosurfaceExtraInfo.mappingName contains the currently active mapping
-      // (can be the id of an editable mapping). However, we always need to
-      // use the mapping name of the on-disk mapping.
-      editableMapping != null ? editableMapping.baseMappingName : isosurfaceExtraInfo.mappingName;
-
-    if (version < 3) {
-      console.warn(
-        "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
-      );
-    }
-
-    // mappingName only exists for versions >= 3
-    if (meshFile.mappingName != null && meshFile.mappingName !== mappingName) {
-      throw Error(
-        `Trying to use a mesh file that was computed for mapping ${meshFile.mappingName} for a requested mapping of ${mappingName}.`,
-      );
-    }
-
-    if (version >= 3) {
-      const segmentInfo = yield* call(
-        meshV3.getMeshfileChunksForSegment,
-        dataset.dataStore.url,
-        dataset,
-        getBaseSegmentationName(segmentationLayer),
-        meshFileName,
-        id,
-        // The back-end should only receive a non-null mapping name,
-        // if it should perform extra (reverse) look ups to compute a mesh
-        // with a specific mapping from a mesh file that was computed
-        // without a mapping.
-        meshFile.mappingName == null ? mappingName : null,
-        editableMapping != null && tracing ? tracing.tracingId : null,
-      );
-      scale = [
-        segmentInfo.transform[0][0],
-        segmentInfo.transform[1][1],
-        segmentInfo.transform[2][2],
-      ];
-      segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
-        availableChunksMap[lodIndex] = chunks?.chunks;
-        loadingOrder.push(lodIndex);
-      });
-      // Load the chunks closest to the current LOD first.
-      loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
-    } else {
-      availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
-        meshV0.getMeshfileChunksForSegment,
-        dataset.dataStore.url,
-        dataset,
-        getBaseSegmentationName(segmentationLayer),
-        meshFileName,
-        id,
-      );
-      loadingOrder = [NO_LOD_MESH_INDEX];
-    }
+    availableChunksMap = chunkDescriptors.availableChunksMap;
+    scale = chunkDescriptors.scale;
+    loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
     console.warn("Mesh chunk couldn't be loaded due to", exception);
     Toast.warning(messages["tracing.mesh_listing_failed"]);
@@ -723,7 +663,127 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  const loadChunksTasks = _.compact(
+  const loadChunksTasks = _getLoadChunksTasks(
+    dataset,
+    layerName,
+    meshFile,
+    segmentationLayer,
+    id,
+    seedPosition,
+    availableChunksMap,
+    loadingOrder,
+    scale,
+  );
+
+  try {
+    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+  } catch (exception) {
+    console.error(exception);
+    Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
+  }
+
+  yield* put(finishedLoadingIsosurfaceAction(layerName, id));
+}
+
+function* _getChunkLoadingDescriptors(
+  id: number,
+  dataset: APIDataset,
+  segmentationLayer: APISegmentationLayer,
+  meshFile: APIMeshFile,
+) {
+  const availableChunksMap: ChunksMap = {};
+  let scale: Vector3 | null = null;
+  let loadingOrder: number[] = [];
+
+  const { segmentMeshController } = getSceneController();
+  const currentLODIndex = yield* call({
+    context: segmentMeshController.isosurfacesLODRootGroup,
+    fn: segmentMeshController.isosurfacesLODRootGroup.getCurrentLOD,
+  });
+  const version = meshFile.formatVersion;
+  const { meshFileName } = meshFile;
+  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, segmentationLayer.name, null);
+
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+  );
+  const tracing = yield* select((state) =>
+    getTracingForSegmentationLayer(state, segmentationLayer),
+  );
+  const mappingName =
+    // isosurfaceExtraInfo.mappingName contains the currently active mapping
+    // (can be the id of an editable mapping). However, we always need to
+    // use the mapping name of the on-disk mapping.
+    editableMapping != null ? editableMapping.baseMappingName : isosurfaceExtraInfo.mappingName;
+
+  if (version < 3) {
+    console.warn(
+      "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
+    );
+  }
+
+  // mappingName only exists for versions >= 3
+  if (meshFile.mappingName != null && meshFile.mappingName !== mappingName) {
+    throw Error(
+      `Trying to use a mesh file that was computed for mapping ${meshFile.mappingName} for a requested mapping of ${mappingName}.`,
+    );
+  }
+
+  if (version >= 3) {
+    const segmentInfo = yield* call(
+      meshV3.getMeshfileChunksForSegment,
+      dataset.dataStore.url,
+      dataset,
+      getBaseSegmentationName(segmentationLayer),
+      meshFileName,
+      id,
+      // The back-end should only receive a non-null mapping name,
+      // if it should perform extra (reverse) look ups to compute a mesh
+      // with a specific mapping from a mesh file that was computed
+      // without a mapping.
+      meshFile.mappingName == null ? mappingName : null,
+      editableMapping != null && tracing ? tracing.tracingId : null,
+    );
+    scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
+    segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
+      availableChunksMap[lodIndex] = chunks?.chunks;
+      loadingOrder.push(lodIndex);
+    });
+    // Load the chunks closest to the current LOD first.
+    loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
+  } else {
+    availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
+      meshV0.getMeshfileChunksForSegment,
+      dataset.dataStore.url,
+      dataset,
+      getBaseSegmentationName(segmentationLayer),
+      meshFileName,
+      id,
+    );
+    loadingOrder = [NO_LOD_MESH_INDEX];
+  }
+
+  return {
+    availableChunksMap,
+    scale,
+    loadingOrder,
+  };
+}
+
+function _getLoadChunksTasks(
+  dataset: APIDataset,
+  layerName: string,
+  meshFile: APIMeshFile,
+  segmentationLayer: APISegmentationLayer,
+  id: number,
+  seedPosition: Vector3,
+  availableChunksMap: ChunksMap,
+  loadingOrder: number[],
+  scale: Vector3 | null,
+) {
+  const { segmentMeshController } = getSceneController();
+  const { meshFileName } = meshFile;
+  return _.compact(
     _.flatten(
       loadingOrder.map((lod) => {
         if (availableChunksMap[lod] == null) {
@@ -737,40 +797,71 @@ function* loadPrecomputedMeshForSegmentId(
             V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
         ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 
-        const tasks = sortedAvailableChunks.map(
-          (chunk) =>
-            function* loadChunk(): Saga<void> {
-              if ("position" in chunk) {
+        let tasks;
+        if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
+          // V3
+          const batches = chunkDynamically(
+            sortedAvailableChunks as meshV3.MeshChunk[],
+            MIN_BATCH_SIZE_IN_BYTES,
+            (chunk) => chunk.byteSize,
+          );
+
+          tasks = batches.map(
+            (chunks) =>
+              function* loadChunks(): Saga<void> {
                 // V3
-                const dracoData = yield* call(
+                const dataForChunks = yield* call(
                   meshV3.getMeshfileChunkData,
                   dataset.dataStore.url,
                   dataset,
                   getBaseSegmentationName(segmentationLayer),
-                  meshFileName,
-                  chunk.byteOffset,
-                  chunk.byteSize,
+                  {
+                    meshFile: meshFileName,
+                    // Only extract the relevant properties
+                    requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
+                  },
                 );
                 const loader = getDracoLoader();
 
-                const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
-                // Compute vertex normals to achieve smooth shading
-                geometry.computeVertexNormals();
+                const errorsWithDetails = [];
+                for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+                  const chunk = chunks[chunkIdx];
+                  try {
+                    const dracoData = dataForChunks[chunkIdx];
 
-                yield* call(
-                  {
-                    context: segmentMeshController,
-                    fn: segmentMeshController.addIsosurfaceFromGeometry,
-                  },
-                  geometry,
-                  id,
-                  chunk.position,
-                  // Apply the scale from the segment info, which includes dataset scale and mag
-                  scale,
-                  lod,
-                  layerName,
-                );
-              } else {
+                    const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+
+                    // Compute vertex normals to achieve smooth shading
+                    geometry.computeVertexNormals();
+
+                    yield* call(
+                      {
+                        context: segmentMeshController,
+                        fn: segmentMeshController.addIsosurfaceFromGeometry,
+                      },
+                      geometry,
+                      id,
+                      chunk.position,
+                      // Apply the scale from the segment info, which includes dataset scale and mag
+                      scale,
+                      lod,
+                      layerName,
+                    );
+                  } catch (error) {
+                    errorsWithDetails.push({ error, chunk });
+                  }
+                }
+                if (errorsWithDetails.length > 0) {
+                  console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
+                  // Use first error as representative
+                  throw errorsWithDetails[0].error;
+                }
+              },
+          );
+        } else {
+          tasks = (sortedAvailableChunks as Vector3[]).map(
+            (chunk) =>
+              function* loadChunk(): Saga<void> {
                 // V0
                 const stlData = yield* call(
                   meshV0.getMeshfileChunkData,
@@ -803,22 +894,14 @@ function* loadPrecomputedMeshForSegmentId(
                   lod,
                   layerName,
                 );
-              }
-            },
-        );
+              },
+          );
+        }
+
         return tasks;
       }),
     ),
   );
-
-  try {
-    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
-  } catch (exception) {
-    console.error(exception);
-    Toast.warning("Some mesh objects could not be loaded.");
-  }
-
-  yield* put(finishedLoadingIsosurfaceAction(layerName, id));
 }
 
 /*
@@ -904,9 +987,12 @@ function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAct
   segmentMeshController.setIsosurfaceVisibility(id, visibility, layerName);
 }
 
-function* handleIsosurfaceColorChange(action: UpdateSegmentAction): Saga<void> {
+function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
-  if ("color" in action.segment) {
+  if (
+    "color" in action.segment &&
+    segmentMeshController.hasIsosurface(action.segmentId, action.layerName)
+  ) {
     segmentMeshController.setIsosurfaceColor(action.segmentId, action.layerName);
   }
 }
@@ -930,5 +1016,5 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
-  yield* takeEvery("UPDATE_SEGMENT", handleIsosurfaceColorChange);
+  yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
 }

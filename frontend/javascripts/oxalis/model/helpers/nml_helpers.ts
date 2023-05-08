@@ -606,6 +606,7 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
 export function parseNml(nmlString: string): Promise<{
   trees: MutableTreeMap;
   treeGroups: Array<TreeGroup>;
+  containedVolumes: boolean;
   userBoundingBoxes: Array<UserBoundingBox>;
   datasetName: string | null | undefined;
 }> {
@@ -614,11 +615,14 @@ export function parseNml(nmlString: string): Promise<{
     const trees: MutableTreeMap = {};
     const treeGroups: Array<TreeGroup> = [];
     const existingNodeIds = new Set();
-    const existingGroupIds = new Set();
+    const existingTreeGroupIds = new Set();
     const existingEdges = new Set();
     let currentTree: MutableTree | null | undefined = null;
-    let currentGroup: TreeGroup | null | undefined = null;
-    const groupIdToParent: Record<number, TreeGroup | null | undefined> = {};
+    let currentTreeGroup: TreeGroup | null | undefined = null;
+    let containedVolumes = false;
+    let isParsingVolumeTag = false;
+
+    const treeGroupIdToParent: Record<number, TreeGroup | null | undefined> = {};
     const nodeIdToTreeId: Record<number, number> = {};
     const userBoundingBoxes: UserBoundingBox[] = [];
     let datasetName: string | null = null;
@@ -747,26 +751,30 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "group": {
+            if (isParsingVolumeTag) {
+              return;
+            }
             const newGroup = {
               groupId: _parseInt(attr, "id"),
               name: _parseEntities(attr, "name"),
               children: [],
             };
-            if (existingGroupIds.has(newGroup.groupId))
+            if (existingTreeGroupIds.has(newGroup.groupId)) {
               throw new NmlParseError(`${messages["nml.duplicate_group_id"]} ${newGroup.groupId}`);
+            }
 
-            if (currentGroup != null) {
-              currentGroup.children.push(newGroup);
+            if (currentTreeGroup != null) {
+              currentTreeGroup.children.push(newGroup);
             } else {
               treeGroups.push(newGroup);
             }
 
-            existingGroupIds.add(newGroup.groupId);
+            existingTreeGroupIds.add(newGroup.groupId);
 
             if (!node.isSelfClosing) {
               // If the xml tag is self-closing, there won't be a separate tagclose event!
-              groupIdToParent[newGroup.groupId] = currentGroup;
-              currentGroup = newGroup;
+              treeGroupIdToParent[newGroup.groupId] = currentTreeGroup;
+              currentTreeGroup = newGroup;
             }
 
             break;
@@ -805,6 +813,11 @@ export function parseNml(nmlString: string): Promise<{
             break;
           }
 
+          case "volume": {
+            isParsingVolumeTag = true;
+            containedVolumes = true;
+          }
+
           default:
             break;
         }
@@ -826,23 +839,31 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "group": {
-            if (currentGroup != null) {
-              currentGroup = groupIdToParent[currentGroup.groupId];
+            if (!isParsingVolumeTag) {
+              if (currentTreeGroup != null) {
+                currentTreeGroup = treeGroupIdToParent[currentTreeGroup.groupId];
+              }
             }
 
             break;
           }
 
           case "groups": {
-            _.forEach(trees, (tree) => {
-              if (tree.groupId != null && !existingGroupIds.has(tree.groupId)) {
-                throw new NmlParseError(
-                  `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
-                );
-              }
-            });
+            if (!isParsingVolumeTag) {
+              _.forEach(trees, (tree) => {
+                if (tree.groupId != null && !existingTreeGroupIds.has(tree.groupId)) {
+                  throw new NmlParseError(
+                    `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
+                  );
+                }
+              });
+            }
 
             break;
+          }
+
+          case "volume": {
+            isParsingVolumeTag = false;
           }
 
           default:
@@ -875,6 +896,7 @@ export function parseNml(nmlString: string): Promise<{
           treeGroups,
           datasetName,
           userBoundingBoxes,
+          containedVolumes,
         });
       })
       .on("error", reject);

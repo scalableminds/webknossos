@@ -120,6 +120,10 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: "Updated the segmentation.",
     icon: <PictureOutlined />,
   }),
+  updateSegmentGroups: (): Description => ({
+    description: "Updated the segment groups.",
+    icon: <EditOutlined />,
+  }),
   updateNode: (action: UpdateNodeUpdateAction): Description => ({
     description: `Updated the node with id ${action.value.id}.`,
     icon: <EditOutlined />,

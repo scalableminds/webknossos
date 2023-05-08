@@ -929,7 +929,7 @@ function ToolSpecificSettings({
     (state: OxalisState) => state.userConfiguration.quickSelect,
   );
   const { useHeuristic: isQuickSelectHeuristic } = quickSelectConfig;
-  const heuristicButtonStyle = isQuickSelectHeuristic ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
+  const heuristicButtonStyle = isQuickSelectHeuristic ? NARROW_BUTTON_STYLE : ACTIVE_BUTTON_STYLE;
   const quickSelectTooltipText = isQuickSelectHeuristic
     ? "The quick select tool is now working without AI. Activate AI for better results."
     : "The quick select tool is now working with AI.";

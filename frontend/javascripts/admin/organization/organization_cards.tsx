@@ -194,9 +194,9 @@ export function PlanDashboardCard({
     organization.includedStorageBytes === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
 
   const usedStorageLabel =
-    organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(organization.usedStorageBytes / 10 ** 9).toFixed(1)}`
-      : `${(organization.usedStorageBytes / 10 ** 12).toFixed(1)}`;
+    organization.pricingPlan === PricingPlanEnum.Basic || organization.usedStorageBytes < 10 ** 11 //=0.1TB
+      ? `${(organization.usedStorageBytes / 10 ** 9).toFixed(1)}GB`
+      : `${(organization.usedStorageBytes / 10 ** 12).toFixed(1)}TB`;
 
   const storageLabel = (
     <span style={{ display: "inline-block", wordBreak: "break-word", width: 100 }}>

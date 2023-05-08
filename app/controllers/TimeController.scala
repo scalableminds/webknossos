@@ -57,7 +57,7 @@ class TimeController @Inject()(userService: UserService,
         userIdValidated <- ObjectId.fromString(userId)
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
-        _ <- bool2Fox(isTeamManagerOrAdmin || user == request.identity) ?~> "user.notAuthorised" ~> FORBIDDEN
+        _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
       } yield Ok(js)
     }

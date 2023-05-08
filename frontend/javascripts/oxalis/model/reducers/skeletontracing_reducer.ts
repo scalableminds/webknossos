@@ -35,7 +35,7 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
-import Constants from "oxalis/constants";
+import Constants, { TreeTypeEnum } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -608,7 +608,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "DELETE_NODE": {
           const { timestamp, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+          return getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT)
             .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {

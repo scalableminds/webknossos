@@ -20,6 +20,7 @@ import {
   findGroup,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { TreeType, TreeTypeEnum } from "oxalis/constants";
 
 export type SkeletonTracingStats = {
   treeCount: number;
@@ -125,18 +126,24 @@ export function getNodeAndTree(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,
   treeId?: number | null | undefined,
+  type?: TreeType | null | undefined,
 ): Maybe<[Tree, Node]> {
   let tree;
 
+  const trees =
+    type != null
+      ? _.filter(skeletonTracing.trees, (tree) => tree.type === type)
+      : skeletonTracing.trees;
+
   if (treeId != null) {
-    tree = skeletonTracing.trees[treeId];
+    tree = trees[treeId];
   } else if (nodeId != null) {
-    tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
+    tree = _.values(trees).find((__) => __.nodes.has(nodeId));
   } else {
     const { activeTreeId } = skeletonTracing;
 
     if (activeTreeId != null) {
-      tree = skeletonTracing.trees[activeTreeId];
+      tree = trees[activeTreeId];
     }
   }
 

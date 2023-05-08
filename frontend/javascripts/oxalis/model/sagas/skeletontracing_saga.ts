@@ -78,6 +78,7 @@ import {
 } from "oxalis/model/actions/connectome_actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import memoizeOne from "memoize-one";
+import { TreeTypeEnum } from "oxalis/constants";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -372,7 +373,7 @@ export function* loadAgglomerateSkeletonWithId(
     );
     yield* put(
       addTreesAndGroupsAction(
-        createMutableTreeMapFromTreeArray(parsedTracing.trees),
+        createMutableTreeMapFromTreeArray(parsedTracing.trees, TreeTypeEnum.AGGLOMERATE),
         parsedTracing.treeGroups,
         (newTreeIds) => {
           usedTreeIds = newTreeIds;

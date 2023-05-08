@@ -35,7 +35,7 @@ import {
   mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
-import type { Vector3 } from "oxalis/constants";
+import { TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -355,6 +355,7 @@ function splitTreeByNodes(
             treeId: activeTree.treeId,
             isVisible: true,
             groupId: activeTree.groupId,
+            type: activeTree.type,
           };
         } else {
           const immutableNewTree = createTree(intermediateState, timestamp).get();
@@ -470,6 +471,7 @@ export function createTree(
   timestamp: number,
   addToActiveGroup: boolean = true,
   name?: string,
+  type: TreeType = TreeTypeEnum.DEFAULT,
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -497,6 +499,7 @@ export function createTree(
       comments: [],
       isVisible: true,
       groupId,
+      type,
     };
     return Maybe.Just(tree);
   });
@@ -811,6 +814,7 @@ function serverBranchPointToMutableBranchPoint(b: ServerBranchPoint): MutableBra
 
 export function createMutableTreeMapFromTreeArray(
   trees: Array<ServerSkeletonTracingTree>,
+  type: TreeType = TreeTypeEnum.DEFAULT,
 ): MutableTreeMap {
   return _.keyBy(
     trees.map(
@@ -830,6 +834,7 @@ export function createMutableTreeMapFromTreeArray(
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
+        type,
       }),
     ),
     "treeId",

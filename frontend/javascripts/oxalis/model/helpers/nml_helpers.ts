@@ -25,7 +25,7 @@ import type {
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
 import * as Utils from "libs/utils";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import { BoundingBoxType, TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
 
@@ -524,6 +524,7 @@ function splitTreeIntoComponents(
       edges: EdgeCollection.loadFromArray(edges),
       isVisible: tree.isVisible,
       groupId: newGroupId,
+      type: tree.type,
     };
     newTrees.push(newTree);
   }
@@ -651,6 +652,7 @@ export function parseNml(nmlString: string): Promise<{
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
+              type: TreeTypeEnum.DEFAULT,
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);

@@ -490,12 +490,11 @@ export const deleteActiveNodeAsUserAction = (
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-function confirmDeletingInitialNode(id) {
+function confirmDeletingInitialNode(treeId?: number) {
   Modal.confirm({
     title: messages["tracing.delete_tree_with_initial_node"],
     onOk: () => {
-      Store.dispatch(deleteTreeAction(id));
+      Store.dispatch(deleteTreeAction(treeId));
     },
   });
 }

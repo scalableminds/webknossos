@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.storage.{DataVaultsHolder, RemoteS
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.credential.CredentialService
 import models.user.User
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}

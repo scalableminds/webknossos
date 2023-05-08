@@ -6,7 +6,6 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
-import java.io.{PrintWriter, StringWriter}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -53,8 +52,8 @@ trait AbstractRequestLogging extends LazyLogging {
 trait RequestLogging extends AbstractRequestLogging {
   // Hint: within webKnossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
-  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[_],
-                                                                             ec: ExecutionContext): Future[Result] =
+  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(
+      implicit request: Request[_]): Future[Result] =
     for {
       result: Result <- block
       _ = logRequestFormatted(request, result, notifier)

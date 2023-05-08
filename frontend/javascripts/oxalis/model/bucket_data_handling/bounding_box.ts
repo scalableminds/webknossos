@@ -65,6 +65,14 @@ class BoundingBox {
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 
+  containsBoundingBox(other: BoundingBox) {
+    return other.equals(this.intersectedWith(other));
+  }
+
+  equals(other: BoundingBox) {
+    return V3.equals(this.min, other.min) && V3.equals(this.max, other.max);
+  }
+
   intersectedWith(other: BoundingBox): BoundingBox {
     const newMin = V3.max(this.min, other.min);
     const uncheckedMax = V3.min(this.max, other.max);

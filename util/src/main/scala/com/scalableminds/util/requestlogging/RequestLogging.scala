@@ -1,7 +1,6 @@
 package com.scalableminds.util.requestlogging
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.TextUtils
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}

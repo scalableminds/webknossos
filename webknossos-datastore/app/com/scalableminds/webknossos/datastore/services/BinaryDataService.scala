@@ -95,8 +95,9 @@ class BinaryDataService(val dataBaseDir: Path,
         case f: Failure =>
           if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
             logger.debug(
-              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id} at ${readInstruction.bucket} failed: ${Fox
+              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
                 .failureChainAsString(f, includeStackTraces = true)}")
+            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
           }
           f.toFox
         case Full(data) =>

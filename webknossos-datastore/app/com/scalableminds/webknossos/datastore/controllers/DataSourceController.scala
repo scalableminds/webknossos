@@ -482,6 +482,7 @@ Expects:
         val reloadedDataSource = dataSourceService.dataSourceFromFolder(
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
           organizationName)
+        datasetErrorLoggingService.clearForDataset(organizationName, dataSetName)
         for {
           clearedVaultCacheEntries <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
           _ = logger.info(

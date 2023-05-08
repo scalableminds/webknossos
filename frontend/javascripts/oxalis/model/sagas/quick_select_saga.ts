@@ -76,8 +76,12 @@ let _embedding: Float32Array | null = null;
 
 const useHardcodedEmbedding = false;
 
+const embeddingCache = [];
+
 async function getEmbedding(dataset: APIDataset, boundingBox: BoundingBox, mag: Vector3) {
   try {
+    // todo: use caching
+    _embedding = null;
     if (_embedding == null) {
       _embedding = new Float32Array(
         (await fetch(
@@ -101,7 +105,6 @@ async function getEmbedding(dataset: APIDataset, boundingBox: BoundingBox, mag: 
       //   )) as ArrayBuffer,
       // );
     }
-    console.log("_embedding", _embedding.slice(0, 20));
     // console.log("_hardcodedEmbedding", _hardcodedEmbedding.slice(0, 20));
     // if (useHardcodedEmbedding) {
     //   return _hardcodedEmbedding;
@@ -219,14 +222,18 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   // );
 
   // const embeddingTopLeft = [2816, 4133, 1728] as Vector3; daniels DS
-  const embeddingTopLeft = [1032, 1030, 1536] as Vector3;
+  // const embeddingTopLeft = [1032, 1030, 1536] as Vector3; // l4_v2_sample
+
+  const { startPosition, endPosition } = action;
+
+  const embeddingCenter = V3.round(V3.scale(V3.add(startPosition, endPosition), 0.5));
+  const embeddingTopLeft = V3.sub(embeddingCenter, [512, 512, 0]);
+
   const embeddingBottomRight = [
     embeddingTopLeft[0] + 1024,
     embeddingTopLeft[1] + 1024,
     embeddingTopLeft[2],
   ] as Vector3;
-
-  const { startPosition, endPosition } = action;
 
   const relativeTopLeft = V3.sub(startPosition, embeddingTopLeft);
   const relativeBottomRight = V3.sub(endPosition, embeddingTopLeft);

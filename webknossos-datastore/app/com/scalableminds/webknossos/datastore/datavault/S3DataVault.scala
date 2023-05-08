@@ -40,7 +40,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     }
 
     val obj = client.getObject(getObjectRequest)
-    val encoding = obj.getObjectMetadata.getContentEncoding
+    val encoding = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
 
     (IOUtils.toByteArray(obj.getObjectContent), Encoding.fromRfc7231String(encoding))
   }

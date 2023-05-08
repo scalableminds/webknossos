@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datavault
 
-import com.scalableminds.util.io.ZipIO
 import net.liftweb.util.Helpers.tryo
 
 import java.net.URI

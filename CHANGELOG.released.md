@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [23.05.2](https://github.com/scalableminds/webknossos/releases/tag/23.05.2) - 2023-05-08
+[Commits](https://github.com/scalableminds/webknossos/compare/23.05.1...23.05.2)
+
+### Fixed
+- Fixed a bug where users could sometimes not access their own time tracking information. [#7055](https://github.com/scalableminds/webknossos/pull/7055)
+
 ## [23.05.1](https://github.com/scalableminds/webknossos/releases/tag/23.05.1) - 2023-05-02
 [Commits](https://github.com/scalableminds/webknossos/compare/23.05.0...23.05.1)
 

@@ -1,4 +1,4 @@
-import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
+import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { Modal, AutoComplete, Input, Spin, Tooltip } from "antd";
 import { DefaultOptionType } from "antd/lib/select";
@@ -58,7 +58,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     }
     return (
       <span onClick={() => removeFrom(user, team)}>
-        <MinusOutlined /> Remove from {team?.name}
+        <MinusCircleOutlined /> Remove from {team?.name}
       </span>
     );
   };
@@ -91,7 +91,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
           {user.firstName} {user.lastName}
         </span>
         <span onClick={() => addTo(user, team)}>
-          <PlusOutlined /> Add to {team?.name}
+          <PlusCircleOutlined /> Add to {team?.name}
         </span>
       </div>
     ),
@@ -111,6 +111,15 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
         .map((user) => renderUserNotInTeam(user)),
     },
   ];
+
+  const renderRemoveInStaticTeamList = (user: APIUser, team: APITeam) => {
+    if (user.isAdmin) return null;
+    return (
+      <Tooltip title="Remove from team">
+        <MinusCircleOutlined onClick={() => removeFrom(user, team)} />
+      </Tooltip>
+    );
+  };
 
   const renderModalBody = () => {
     return (
@@ -139,7 +148,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
           >
             <Input.Search size="large" placeholder="Search users" />
           </AutoComplete>
-          {renderUsersForTeam(team, users)}
+          {renderUsersForTeam(team, users, renderRemoveInStaticTeamList)}
         </Spin>
       </>
     );

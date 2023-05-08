@@ -58,7 +58,11 @@ export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
   );
 }
 
-export function renderUsersForTeam(team: APITeam, allUsers: APIUser[] | null) {
+export function renderUsersForTeam(
+  team: APITeam,
+  allUsers: APIUser[] | null,
+  renderAdditionalContent = Function(),
+) {
   if (allUsers === null) return;
   const teamMembers = allUsers.filter((user) => filterTeamMembersOf(team, user));
   if (teamMembers.length === 0) return messages["team.no_members"];
@@ -69,6 +73,7 @@ export function renderUsersForTeam(team: APITeam, allUsers: APIUser[] | null) {
         <li>
           {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
           {renderTeamRolesForUser(teamMember, team)}
+          {renderAdditionalContent(teamMember, team)}
         </li>
       ))}
     </ul>

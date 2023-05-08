@@ -641,22 +641,23 @@ class EditableMappingService @Inject()(
       _ = logger.info(s"Merging ${editableMappingIds.length} editable mappings took ${Instant.since(before)}")
     } yield newMappingId
 
+  // read as: merge source into target (mutate target)
   private def mergeInto(targetEditableMappingId: String,
                         sourceEditableMappingId: String,
                         remoteFallbackLayer: RemoteFallbackLayer,
                         userToken: Option[String]): Fox[Unit] =
     for {
       targetNewestVersion <- getClosestMaterializableVersionOrZero(targetEditableMappingId, None)
-      closestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId,
-                                                                None,
-                                                                remoteFallbackLayer,
-                                                                userToken)
-      sourceNewestVersion = closestMaterializedWithVersion._2
+      sourceNewestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId,
+                                                                     None,
+                                                                     remoteFallbackLayer,
+                                                                     userToken)
+      sourceNewestVersion = sourceNewestMaterializedWithVersion._2
       updateActionsWithVersions <- getUpdateActionsWithVersions(sourceEditableMappingId, sourceNewestVersion, 0L)
       updateActionsToApply = updateActionsWithVersions.map(_._2).reverse.flatten
       updater = new EditableMappingUpdater(
         targetEditableMappingId,
-        closestMaterializedWithVersion._1.baseMappingName,
+        sourceNewestMaterializedWithVersion._1.baseMappingName,
         targetNewestVersion,
         targetNewestVersion + sourceNewestVersion,
         remoteFallbackLayer,
@@ -666,7 +667,7 @@ class EditableMappingService @Inject()(
         tracingDataStore,
         relyOnAgglomerateIds = false
       )
-      _ <- updater.applyUpdatesAndSave(closestMaterializedWithVersion._1, updateActionsToApply)
+      _ <- updater.applyUpdatesAndSave(sourceNewestMaterializedWithVersion._1, updateActionsToApply)
       _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
         tracingDataStore.editableMappingUpdates.put(targetEditableMappingId,
                                                     updateActionsWithVersion._1 + targetNewestVersion,

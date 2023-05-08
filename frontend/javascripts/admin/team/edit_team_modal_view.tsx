@@ -135,6 +135,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
             onFocus={() => setDropDownVisible(true)}
             onBlur={() => setDropDownVisible(false)}
             onSearch={() => setDropDownVisible(true)}
+            onDropdownVisibleChange={() => setAutoCompleteValue("")}
           >
             <Input.Search size="large" placeholder="Search users" />
           </AutoComplete>

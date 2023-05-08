@@ -8,7 +8,7 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.05.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.05.2...HEAD)
 
 ### Added
 - Added segment groups so that segments can be organized in a hierarchy (similar to skeletons). [#6966](https://github.com/scalableminds/webknossos/pull/6966)

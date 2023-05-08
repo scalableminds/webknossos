@@ -76,6 +76,7 @@ const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 
 const useHardcodedEmbedding = false;
 
+const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
 type CacheEntry = { embedding: Float32Array; bbox: BoundingBox };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
@@ -101,12 +102,9 @@ async function getEmbedding(
   } else {
     try {
       const embeddingCenter = V3.round(boundingBox.getCenter());
-      const embeddingTopLeft = V3.sub(embeddingCenter, [512, 512, 0]);
-      const embeddingBottomRight = [
-        embeddingTopLeft[0] + 1024,
-        embeddingTopLeft[1] + 1024,
-        embeddingTopLeft[2],
-      ] as Vector3;
+      const sizeInMag1 = V3.scale3(EMBEDDING_SIZE, mag);
+      const embeddingTopLeft = V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5));
+      const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
       const embeddingBoxMag1 = new BoundingBox({
         min: V3.floor(V3.min(embeddingTopLeft, embeddingBottomRight)),
         max: V3.floor(
@@ -365,7 +363,7 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
     getEmbedding,
     dataset,
     userBoxMag1,
-    [1, 1, 1],
+    labeledResolution,
     activeViewport,
   );
   console.timeEnd("getEmbedding");
@@ -376,10 +374,6 @@ function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void
   if (embeddingBoxInTargetMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
     return;
-  }
-  const size = embeddingBoxInTargetMag.getSize();
-  if (size.some((el) => el !== 1 && el !== 1024)) {
-    throw new Error("Incorrectly sized window");
   }
 
   console.time("infer");

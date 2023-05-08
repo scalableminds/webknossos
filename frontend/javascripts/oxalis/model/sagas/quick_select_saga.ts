@@ -52,6 +52,7 @@ import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import {
   EnterAction,
   EscapeAction,
+  setBusyBlockingInfoAction,
   setIsQuickSelectActiveAction,
   showQuickSelectSettingsAction,
 } from "../actions/ui_actions";
@@ -215,6 +216,7 @@ export default function* listenToQuickSelect(): Saga<void> {
     "COMPUTE_QUICK_SELECT_FOR_RECT",
     function* guard(action: ComputeQuickSelectForRectAction) {
       try {
+        yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
         yield* put(setIsQuickSelectActiveAction(true));
         yield* call(performQuickSelect, action);
       } catch (ex) {
@@ -222,6 +224,7 @@ export default function* listenToQuickSelect(): Saga<void> {
         ErrorHandling.notify(ex as Error);
         console.error(ex);
       } finally {
+        yield* put(setBusyBlockingInfoAction(false));
         action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
         yield* put(setIsQuickSelectActiveAction(false));
       }

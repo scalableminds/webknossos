@@ -14,7 +14,6 @@ import classnames from "classnames";
 import * as Utils from "libs/utils";
 import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
 import {
   triggerIsosurfaceDownloadAction,
   updateIsosurfaceVisibilityAction,
@@ -154,7 +153,13 @@ type Props = {
   handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
   activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
-  updateSegment: (arg0: number, arg1: Partial<Segment>, arg2: string) => void;
+  updateSegment: (
+    arg0: number,
+    arg1: Partial<Segment>,
+    arg2: string,
+    createsNewUndoState: boolean,
+  ) => void;
+  removeSegment: (arg0: number, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (arg0: number, arg1: Vector3) => void;
@@ -163,17 +168,9 @@ type Props = {
   isosurface: IsosurfaceInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
   currentMeshFile: APIMeshFile | null | undefined;
+  onRenameStart: () => void;
+  onRenameEnd: () => void;
 };
-
-function getSegmentTooltip(segment: Segment) {
-  if (segment.creationTime == null) {
-    return `Segment ${segment.id}`;
-  }
-
-  return `Segment ${segment.id} was registered at ${formatDateInLocalTimeZone(
-    segment.creationTime,
-  )}`;
-}
 
 function _MeshInfoItem(props: {
   segment: Segment;
@@ -191,16 +188,13 @@ function _MeshInfoItem(props: {
   };
 
   const { segment, isSelectedInList, isHovered, isosurface } = props;
-  const deemphasizedStyle = {
-    fontStyle: "italic",
-    color: "#989898",
-  };
 
   if (!isosurface) {
     if (isSelectedInList) {
       return (
         <div
-          style={{ ...deemphasizedStyle, marginLeft: 8 }}
+          className="deemphasized italic"
+          style={{ marginLeft: 8 }}
           onContextMenu={(evt) => {
             evt.preventDefault();
             props.handleSegmentDropdownMenuVisibility(segment.id, true);
@@ -215,16 +209,23 @@ function _MeshInfoItem(props: {
   }
 
   const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-  const textStyle = isVisible ? {} : deemphasizedStyle;
+  const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
     <Tooltip title="Download Mesh">
       <VerticalAlignBottomOutlined
         key="download-button"
-        onClick={() =>
+        onClick={() => {
+          if (!props.visibleSegmentationLayer) {
+            return;
+          }
           Store.dispatch(
-            triggerIsosurfaceDownloadAction(segment.name ? segment.name : "mesh", segment.id),
-          )
-        }
+            triggerIsosurfaceDownloadAction(
+              segment.name ? segment.name : "mesh",
+              segment.id,
+              props.visibleSegmentationLayer.name,
+            ),
+          );
+        }}
       />
     </Tooltip>
   );
@@ -281,10 +282,11 @@ function _MeshInfoItem(props: {
         >
           {toggleVisibilityCheckbox}
           <span
+            className={className}
             onClick={() => {
               props.setPosition(seedPosition);
             }}
-            style={{ ...textStyle, marginLeft: 8 }}
+            style={{ marginLeft: 8 }}
           >
             {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
           </span>
@@ -320,6 +322,7 @@ function _SegmentListItem({
   activeDropdownSegmentId,
   allowUpdate,
   updateSegment,
+  removeSegment,
   onSelectSegment,
   visibleSegmentationLayer,
   loadAdHocMesh,
@@ -328,6 +331,8 @@ function _SegmentListItem({
   setPosition,
   loadPrecomputedMesh,
   currentMeshFile,
+  onRenameStart,
+  onRenameEnd,
 }: Props) {
   const isEditingDisabled = !allowUpdate;
 
@@ -363,20 +368,20 @@ function _SegmentListItem({
         andCloseContextMenu,
       ),
       getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu),
-      /*
-       * Disable the change-color menu if the segment was mapped to another segment, because
-       * changing the color wouldn't do anything as long as the mapping is still active.
-       * This is because the id (A) is mapped to another one (B). So, the user would need
-       * to change the color of B to see the effect for A.
-       */
       {
         key: "changeSegmentColor",
+        /*
+         * Disable the change-color menu if the segment was mapped to another segment, because
+         * changing the color wouldn't do anything as long as the mapping is still active.
+         * This is because the id (A) is mapped to another one (B). So, the user would need
+         * to change the color of B to see the effect for A.
+         */
         disabled: isEditingDisabled || segment.id !== mappedId,
         label: (
           <ChangeColorMenuItemContent
             isDisabled={isEditingDisabled}
             title="Change Segment Color"
-            onSetColor={(color) => {
+            onSetColor={(color, createsNewUndoState) => {
               if (visibleSegmentationLayer == null) {
                 return;
               }
@@ -386,6 +391,7 @@ function _SegmentListItem({
                   color,
                 },
                 visibleSegmentationLayer.name,
+                createsNewUndoState,
               );
             }}
             rgb={Utils.take3(segmentColorRGBA)}
@@ -406,9 +412,22 @@ function _SegmentListItem({
               color: null,
             },
             visibleSegmentationLayer.name,
+            true,
           );
         },
         label: "Reset Segment Color",
+      },
+      {
+        key: "removeSegmentFromList",
+        disabled: isEditingDisabled,
+        onClick: () => {
+          if (isEditingDisabled || visibleSegmentationLayer == null) {
+            return;
+          }
+          removeSegment(segment.id, visibleSegmentationLayer.name);
+          andCloseContextMenu();
+        },
+        label: "Remove Segment From List",
       },
     ],
   });
@@ -417,7 +436,7 @@ function _SegmentListItem({
     if (isJSONMappingEnabled && segment.id !== mappedId)
       return (
         <Tooltip title="Segment ID (Unmapped ID → Mapped ID)">
-          <span className="deemphasized-segment-name">
+          <span className="deemphasized italic">
             {segment.id} → {mappedId}
           </span>
         </Tooltip>
@@ -425,7 +444,7 @@ function _SegmentListItem({
     // Only if segment.name is truthy, render additional info.
     return segment.name ? (
       <Tooltip title="Segment ID">
-        <span className="deemphasized-segment-name">{segment.id}</span>
+        <span className="deemphasized italic">{segment.id}</span>
       </Tooltip>
     ) : null;
   }
@@ -460,56 +479,57 @@ function _SegmentListItem({
         onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
         trigger={["contextMenu"]}
       >
-        <Tooltip title={getSegmentTooltip(segment)}>
-          <div style={{ display: "inline-flex", alignItems: "center" }}>
-            <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
-            <EditableTextLabel
-              value={segment.name || `Segment ${segment.id}`}
-              label="Segment Name"
-              onClick={() => onSelectSegment(segment)}
-              onChange={(name) => {
-                if (visibleSegmentationLayer != null) {
-                  updateSegment(
-                    segment.id,
-                    {
-                      name,
-                    },
-                    visibleSegmentationLayer.name,
-                  );
-                }
-              }}
-              margin="0 5px"
-              disableEditing={!allowUpdate}
+        <div style={{ display: "inline-flex", alignItems: "center" }}>
+          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+          <EditableTextLabel
+            value={segment.name || `Segment ${segment.id}`}
+            label="Segment Name"
+            onClick={() => onSelectSegment(segment)}
+            onRenameStart={onRenameStart}
+            onRenameEnd={onRenameEnd}
+            onChange={(name) => {
+              if (visibleSegmentationLayer != null) {
+                updateSegment(
+                  segment.id,
+                  {
+                    name,
+                  },
+                  visibleSegmentationLayer.name,
+                  true,
+                );
+              }
+            }}
+            margin="0 5px"
+            disableEditing={!allowUpdate}
+          />
+          <Tooltip title="Open context menu (also available via right-click)">
+            <EllipsisOutlined
+              onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
             />
-            <Tooltip title="Open context menu (also available via right-click)">
-              <EllipsisOutlined
-                onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
+          </Tooltip>
+          {/* Show Default Segment Name if another one is already defined*/}
+          {getSegmentIdDetails()}
+          {segment.id === centeredSegmentId ? (
+            <Tooltip title="This segment is currently centered in the data viewports.">
+              <i
+                className="fas fa-crosshairs deemphasized"
+                style={{
+                  marginLeft: 4,
+                }}
               />
             </Tooltip>
-            {/* Show Default Segment Name if another one is already defined*/}
-            {getSegmentIdDetails()}
-            {segment.id === centeredSegmentId ? (
-              <Tooltip title="This segment is currently centered in the data viewports.">
-                <i
-                  className="fas fa-crosshairs deemphasized-segment-name"
-                  style={{
-                    marginLeft: 4,
-                  }}
-                />
-              </Tooltip>
-            ) : null}
-            {segment.id === activeCellId ? (
-              <Tooltip title="The currently active segment id belongs to this segment.">
-                <i
-                  className="fas fa-paint-brush deemphasized-segment-name"
-                  style={{
-                    marginLeft: 4,
-                  }}
-                />
-              </Tooltip>
-            ) : null}
-          </div>
-        </Tooltip>
+          ) : null}
+          {segment.id === activeCellId ? (
+            <Tooltip title="The currently active segment id belongs to this segment.">
+              <i
+                className="fas fa-paint-brush deemphasized"
+                style={{
+                  marginLeft: 4,
+                }}
+              />
+            </Tooltip>
+          ) : null}
+        </div>
       </Dropdown>
 
       <div

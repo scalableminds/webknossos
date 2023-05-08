@@ -96,7 +96,9 @@ class DSMeshController @Inject()(
                                                       dataLayerName,
                                                       ListMeshChunksRequest(request.body.meshFile, segmentId))
                           .toOption)
-                    chunkInfos = meshChunksForUnmappedSegments.flatten.reduce(_.merge(_))
+                    meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
+                    _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
+                    chunkInfos = meshChunksForUnmappedSegmentsFlat.reduce(_.merge(_))
                   } yield chunkInfos
               }
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
@@ -172,8 +174,8 @@ class DSMeshController @Inject()(
                               organizationName: String,
                               dataSetName: String,
                               dataLayerName: String,
-                              formatVersion: Int): Action[MeshChunkDataRequestV3] =
-    Action.async(validateJson[MeshChunkDataRequestV3]) { implicit request =>
+                              formatVersion: Int): Action[MeshChunkDataRequestV3List] =
+    Action.async(validateJson[MeshChunkDataRequestV3List]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {

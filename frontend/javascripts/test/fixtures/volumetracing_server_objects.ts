@@ -14,6 +14,7 @@ export const tracing: ServerVolumeTracing = {
   },
   userBoundingBoxes: [],
   segments: [],
+  segmentGroups: [],
   createdTimestamp: 1529066010230,
   editPosition: {
     x: 3904,
@@ -111,7 +112,6 @@ export const annotation: APIAnnotation = {
   },
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,
-  meshes: [],
   contributors: [],
   othersMayEdit: false,
 };

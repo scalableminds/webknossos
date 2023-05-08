@@ -3,7 +3,7 @@ package models.annotation.nml
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -34,7 +34,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             overwritingDataSetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
-      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] =
+      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -52,6 +52,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
+        val wkUrl = parseWkUrl(parameters \ "experiment")
         val organizationName =
           if (overwritingDataSetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
@@ -87,7 +88,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 None,
                 userBoundingBoxes,
                 organizationName,
-                segments = v.segments
+                segments = v.segments,
+                segmentGroups = v.segmentGroups
               ),
               basePath.getOrElse("") + v.dataZipPath,
               v.name,
@@ -95,7 +97,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           }
 
         val skeletonTracingOpt: Option[SkeletonTracing] =
-          if (treesSplit.isEmpty) None
+          if (treesSplit.isEmpty && userBoundingBoxes.isEmpty) None
           else
             Some(
               SkeletonTracing(
@@ -115,7 +117,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
               )
             )
 
-        (skeletonTracingOpt, volumeLayers, description)
+        (skeletonTracingOpt, volumeLayers, description, wkUrl)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
@@ -146,7 +148,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     } yield TreeGroup(name, id, children)
   }
 
-  private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[NmlVolumeTag] =
+  private def extractVolumes(volumeNodes: NodeSeq)(implicit m: MessagesProvider): immutable.Seq[NmlVolumeTag] =
     volumeNodes.map(
       node => {
         NmlVolumeTag(
@@ -154,10 +156,26 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           getSingleAttributeOpt(node, "fallbackLayer"),
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
-          getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt)
+          getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
+          extractSegmentGroups(node \ "groups").getOrElse(List())
         )
       }
     )
+
+  def extractSegmentGroups(segmentGroupContainerNodes: NodeSeq)(
+      implicit m: MessagesProvider): Box[List[SegmentGroup]] = {
+    val segmentGroupNodes = segmentGroupContainerNodes.flatMap(_ \ "group")
+    segmentGroupNodes.map(parseSegmentGroup).toList.toSingleBox(Messages("nml.element.invalid", "segment groups"))
+  }
+
+  private def parseSegmentGroup(node: XMLNode)(implicit m: MessagesProvider): Box[SegmentGroup] = {
+    val idText = getSingleAttribute(node, "id")
+    for {
+      id <- idText.toIntOpt ?~ Messages("nml.segmentGroup.id.invalid", idText)
+      children <- (node \ "group").map(parseSegmentGroup).toList.toSingleBox("")
+      name = getSingleAttribute(node, "name")
+    } yield SegmentGroup(name, id, children)
+  }
 
   private def parseVolumeSegmentMetadata(segmentNodes: NodeSeq): Seq[Segment] =
     segmentNodes.map(node => {
@@ -173,7 +191,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         anchorPosition = anchorPosition,
         name = getSingleAttributeOpt(node, "name"),
         creationTime = getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt),
-        color = parseColorOpt(node)
+        color = parseColorOpt(node),
+        groupId = getSingleAttribute(node, "groupId").toIntOpt
       )
     })
 
@@ -231,6 +250,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   private def parseDescription(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "description")).getOrElse(DEFAULT_DESCRIPTION)
+
+  private def parseWkUrl(nodes: NodeSeq): Option[String] =
+    nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
   private def parseOrganizationName(nodes: NodeSeq): Option[String] =
     nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization"))

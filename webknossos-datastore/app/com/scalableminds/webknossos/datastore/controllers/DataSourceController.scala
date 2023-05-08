@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
   InboxDataSourceLike,
@@ -14,13 +15,13 @@ import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
-import java.io.File
 
+import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Api(tags = Array("datastore"))
@@ -200,8 +201,10 @@ Expects:
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient
-                .reportUpload(dataSourceId, dataSetSizeBytes, urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+              _ <- remoteWebKnossosClient.reportUpload(dataSourceId,
+                                                       dataSetSizeBytes,
+                                                       request.body.needsConversion.getOrElse(false),
+                                                       urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
             } yield Ok
           }
         } yield result
@@ -382,12 +385,12 @@ Expects:
       dataSetName: String,
       dataLayerName: String,
       mappingName: String
-  ): Action[List[Long]] = Action.async(validateJson[List[Long]]) { implicit request =>
+  ): Action[ListOfLong] = Action.async(validateProto[ListOfLong]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateIds: List[Long] <- agglomerateService
+        agglomerateIds: Seq[Long] <- agglomerateService
           .agglomerateIdsForSegmentIds(
             AgglomerateFileKey(
               organizationName,
@@ -395,10 +398,10 @@ Expects:
               dataLayerName,
               mappingName
             ),
-            request.body
+            request.body.items
           )
           .toFox
-      } yield Ok(Json.toJson(agglomerateIds))
+      } yield Ok(ListOfLong(agglomerateIds).toByteArray)
     }
   }
 
@@ -475,12 +478,13 @@ Expects:
                                         urlOrHeaderToken(token, request)) {
         val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount) =
           binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
-        logger.info(
-          s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard handles and $closedAgglomerateFileHandleCount agglomerate file handles.")
         val reloadedDataSource = dataSourceService.dataSourceFromFolder(
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
           organizationName)
         for {
+          clearedVaultCacheEntries <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
+          _ = logger.info(
+            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard handles, $closedAgglomerateFileHandleCount agglomerate file handles and removed $clearedVaultCacheEntries vault cache entries.")
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }

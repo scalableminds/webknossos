@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Popover } from "antd";
 import * as Utils from "libs/utils";
 import { HexColorInput, HexColorPicker } from "react-colorful";
@@ -47,10 +47,11 @@ export function ChangeColorMenuItemContent({
 }: {
   title: string;
   isDisabled: boolean;
-  onSetColor: (rgb: Vector3) => void;
+  onSetColor: (rgb: Vector3, createsNewUndoState: boolean) => void;
   rgb: Vector3;
   hidePickerIcon?: boolean;
 }) {
+  const isFirstColorChange = useRef(true);
   const color = Utils.rgbToHex(Utils.map3((value) => value * 255, rgb));
   const onChangeColor = (colorStr: string) => {
     if (isDisabled) {
@@ -58,8 +59,14 @@ export function ChangeColorMenuItemContent({
     }
     const colorRgb = Utils.hexToRgb(colorStr);
     const newColor = Utils.map3((component) => component / 255, colorRgb);
-    onSetColor(newColor);
+
+    // Only create a new undo state on the first color change event.
+    // All following color change events should mutate the most recent undo
+    // state so that the undo stack is not filled on each mouse movement.
+    onSetColor(newColor, isFirstColorChange.current);
+    isFirstColorChange.current = false;
   };
+
   const content = isDisabled ? null : (
     <ThrottledColorPicker color={color} onChange={onChangeColor} />
   );

@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import akka.http.caching.scaladsl.Cache
-import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
@@ -14,7 +13,7 @@ import java.io.IOException
 import java.nio.ByteOrder
 import java.util
 import scala.collection.immutable.NumericRange
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class DatasetArray(relativePath: DatasetPath,
                    vaultPath: VaultPath,
@@ -27,10 +26,10 @@ class DatasetArray(relativePath: DatasetPath,
     ChunkReader.create(vaultPath, header)
 
   // cache currently limited to 1 GB per array
-  private lazy val chunkContentsCache: Cache[String, MultiArray] = {
+  private lazy val chunkContentsCache: AlfuFoxCache[String, MultiArray] = {
     val maxSizeBytes = 1000L * 1000 * 1000
     val maxEntries = maxSizeBytes / header.bytesPerChunk
-    AlfuCache(maxEntries.toInt)
+    AlfuFoxCache(maxEntries.toInt)
   }
 
   // @return Byte array in fortran-order with little-endian values
@@ -61,11 +60,12 @@ class DatasetArray(relativePath: DatasetPath,
   @throws[IOException]
   @throws[InvalidRangeException]
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
+    val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _)
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,
-                                                      offset)
-    if (partialCopyingIsNotNeeded(shape, offset, chunkIndices)) {
+                                                      totalOffset)
+    if (partialCopyingIsNotNeeded(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
@@ -74,10 +74,10 @@ class DatasetArray(relativePath: DatasetPath,
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetInCOrder: MultiArray =
         MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
-      val copiedFuture = Future.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
+      val copiedFuture = Fox.sequence(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
-          offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
+          offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
                                                                              flip = header.order != ArrayOrder.C)
@@ -91,12 +91,12 @@ class DatasetArray(relativePath: DatasetPath,
   }
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Future[(VaultPath, NumericRange[Long])] = ???
+      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
     chunkContentsCache.getOrLoad(chunkIndex.mkString(","), _ => readSourceChunkData(chunkIndex))
 
-  private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Future[MultiArray] =
+  private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
     if (header.isSharded) {
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex)
@@ -140,7 +140,7 @@ class DatasetArray(relativePath: DatasetPath,
 
   override def toString: String =
     s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.datasetShape.mkString(
-      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.getName}}"
+      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }
 

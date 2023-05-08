@@ -78,7 +78,7 @@ const persistence = new Persistence<PersistenceState>(
 );
 
 function filterDatasetsForUsersOrganization(datasets: APIDatasetCompact[], user: APIUser) {
-  return features().isDemoInstance
+  return features().isWkorgInstance
     ? datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
 }
@@ -541,7 +541,7 @@ function renderPlaceholder(
     >
       <Col span={18}>
         <Row gutter={16} justify="center" align="bottom">
-          {features().isDemoInstance ? openPublicDatasetCard : null}
+          {features().isWkorgInstance ? openPublicDatasetCard : null}
           {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
         </Row>
         <div

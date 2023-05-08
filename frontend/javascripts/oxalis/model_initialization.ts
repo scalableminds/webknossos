@@ -23,12 +23,11 @@ import {
   getBoundaries,
   getDataLayers,
   getDatasetCenter,
-  getResolutionUnion,
   hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
   getSegmentationLayers,
-  getLayerByNameOrFallbackName,
+  getLayerByName,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -99,6 +98,10 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -177,8 +180,10 @@ export async function initialize(
     dataset,
     initialDatasetSettings,
   );
+  const enforcedInitialUserSettings =
+    enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
   initializeSettings(
-    initialUserSettings,
+    enforcedInitialUserSettings,
     annotationSpecificDatasetSettings,
     initialDatasetSettings,
   );
@@ -397,19 +402,7 @@ function initializeDataset(
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
 
-  ensureMatchingLayerResolutions(mutableDataset);
   Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
-}
-
-export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
-  try {
-    getResolutionUnion(dataset, true);
-  } catch (exception) {
-    console.warn(exception);
-    Toast.error(messages["dataset.resolution_mismatch"], {
-      sticky: true,
-    });
-  }
 }
 
 function initializeSettings(
@@ -562,7 +555,8 @@ function determineDefaultState(
   } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
-  const { dataset, datasetConfiguration } = Store.getState();
+  const { dataset, datasetConfiguration, temporaryConfiguration } = Store.getState();
+  const { viewMode } = temporaryConfiguration;
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
 
@@ -590,14 +584,17 @@ function determineDefaultState(
     zoomStep = urlStateZoomStep;
   }
 
-  let { rotation } = datasetConfiguration;
+  let rotation = undefined;
+  if (viewMode !== "orthogonal") {
+    rotation = datasetConfiguration.rotation;
 
-  if (someTracing != null) {
-    rotation = Utils.point3ToVector3(someTracing.editRotation);
-  }
+    if (someTracing != null) {
+      rotation = Utils.point3ToVector3(someTracing.editRotation);
+    }
 
-  if (urlStateRotation != null) {
-    rotation = urlStateRotation;
+    if (urlStateRotation != null) {
+      rotation = urlStateRotation;
+    }
   }
 
   const stateByLayer = urlStateByLayer ?? {};
@@ -671,7 +668,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 
     try {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-      effectiveLayerName = getLayerByNameOrFallbackName(dataset, layerName).name;
+      effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
       console.error(e);
       Toast.error(
@@ -774,6 +771,19 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
     }
   }
+}
+
+function enforcePricingRestrictionsOnUserConfiguration(
+  userConfiguration: UserConfiguration,
+): UserConfiguration {
+  const activeOrganization = Store.getState().activeOrganization;
+  if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
+    return {
+      ...userConfiguration,
+      renderWatermark: true,
+    };
+  }
+  return userConfiguration;
 }
 
 function applyAnnotationSpecificViewConfiguration(

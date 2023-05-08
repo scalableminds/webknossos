@@ -2,7 +2,7 @@ import PriorityQueue from "js-priority-queue";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import _ from "lodash";
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -32,7 +32,10 @@ import {
   scaleGlobalPositionWithResolution,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
-import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  callDeep,
+  moveGroupsHelper,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
@@ -53,6 +56,7 @@ import {
   getTree,
   getFlatTreeGroups,
   getTreeGroupsMap,
+  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
@@ -62,6 +66,8 @@ import {
   getRequestedOrVisibleSegmentationLayerEnforced,
   getSegmentColorAsRGBA,
   getVolumeDescriptors,
+  getVolumeTracingById,
+  getVolumeTracingByLayerName,
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -72,7 +78,6 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -89,6 +94,7 @@ import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
   setActiveCellAction,
+  setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -152,6 +158,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransforms } from "oxalis/model/actions/dataset_actions";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -475,12 +482,12 @@ class TracingApi {
    * Renames the group referenced by the provided id.
    *
    * @example
-   * api.tracing.renameGroup(
+   * api.tracing.renameSkeletonGroup(
    *   3,
    *   "New group name",
    * );
    */
-  renameGroup(groupId: number, newName: string) {
+  renameSkeletonGroup(groupId: number, newName: string) {
     const { tracing } = Store.getState();
     const skeletonTracing = assertSkeleton(tracing);
 
@@ -491,6 +498,47 @@ class TracingApi {
       item.name = newName;
     });
     Store.dispatch(setTreeGroupsAction(newTreeGroups));
+  }
+
+  /**
+   * Moves one skeleton group to another one (or to the root node when providing null as the second parameter).
+   *
+   * @example
+   * api.tracing.moveSkeletonGroup(
+   *   3,
+   *   null, // moves group with id 0 to the root node
+   * );
+   */
+  moveSkeletonGroup(groupId: number, targetGroupId: number | null) {
+    const skeleton = Store.getState().tracing.skeleton;
+    if (!skeleton) {
+      throw new Error("No skeleton tracing found.");
+    }
+    const newTreeGroups = moveGroupsHelper(skeleton.treeGroups, groupId, targetGroupId);
+    Store.dispatch(setTreeGroupsAction(newTreeGroups));
+  }
+
+  /**
+   * Moves one segment group to another one (or to the root node when providing null as the second parameter).
+   *
+   * @example
+   * api.tracing.moveSegmentGroup(
+   *   3,
+   *   null, // moves group with id 0 to the root node
+   *   "volume-layer-id"
+   * );
+   */
+  moveSegmentGroup(groupId: number, targetGroupId: number | undefined | null, layerName: string) {
+    const { segmentGroups } = getVolumeTracingById(Store.getState().tracing, layerName);
+    const newSegmentGroups = moveGroupsHelper(segmentGroups, groupId, targetGroupId);
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, layerName));
+  }
+
+  /**
+   * Deprecated! Use renameSkeletonGroup instead.
+   */
+  renameGroup(groupId: number, newName: string) {
+    this.renameSkeletonGroup(groupId, newName);
   }
 
   /**
@@ -1102,9 +1150,47 @@ class DataApi {
   }
 
   /**
-   * Invalidates all downloaded buckets of the given layer so that they are reloaded.
+   * Renames the segment group referenced by the provided id.
+   *
+   * @example
+   * api.data.renameSegmentGroup(
+   *   volumeLayerName, // see getSegmentationLayerNames
+   *   3,
+   *   "New group name",
+   * );
    */
-  async reloadBuckets(layerName: string): Promise<void> {
+  renameSegmentGroup(volumeLayerName: string, groupId: number, newName: string) {
+    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+    if (volumeTracing == null) {
+      throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
+    }
+    const { segmentGroups } = volumeTracing;
+
+    const newSegmentGroups = mapGroups(segmentGroups, (group) => {
+      if (group.groupId === groupId) {
+        return {
+          ...group,
+          name: newName,
+        };
+      } else {
+        return group;
+      }
+    });
+
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
+  }
+
+  /**
+   * Invalidates all downloaded buckets of the given layer so that they are reloaded.
+   * If an additional predicate is passed, each bucket is checked to see whether
+   * it should be reloaded. Note that buckets that are in a REQUESTED state (i.e.,
+   * currently being queued or downloaded) will always be reloaded by cancelling and rescheduling
+   * the request.
+   */
+  async reloadBuckets(
+    layerName: string,
+    predicateFn?: (bucket: DataBucket) => boolean,
+  ): Promise<void> {
     await Promise.all(
       Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
@@ -1112,7 +1198,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.collectAllBuckets();
+          dataLayer.cube.collectBucketsIf(predicateFn || (() => true));
           dataLayer.layerRenderingManager.refresh();
         }
       }),
@@ -1313,7 +1399,7 @@ class DataApi {
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
       const resolutionInfo = getResolutionInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+      zoomStep = resolutionInfo.getLowestResolutionIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1373,7 +1459,7 @@ class DataApi {
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+      zoomStep = resolutionInfo.getLowestResolutionIndex();
     }
 
     const resolutions = resolutionInfo.getDenseResolutions();
@@ -2066,6 +2152,8 @@ class DataApi {
           color: rgbColor,
         },
         effectiveLayerName,
+        undefined,
+        true,
       ),
     );
   }

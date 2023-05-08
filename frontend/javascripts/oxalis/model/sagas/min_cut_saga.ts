@@ -12,7 +12,7 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
@@ -21,6 +21,7 @@ import createProgressCallback from "libs/progress_callback";
 import { api } from "oxalis/singletons";
 import window from "libs/window";
 import { APISegmentationLayer } from "types/api_flow_types";
+import { ResolutionInfo } from "../helpers/resolution_info";
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
 // the min-cut is computed.

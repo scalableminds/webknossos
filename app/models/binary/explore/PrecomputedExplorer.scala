@@ -9,28 +9,30 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
 }
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class PrecomputedExplorer extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer Precomputed"
 
-  override def explore(remotePath: Path, credentialId: Option[String]): Fox[List[(PrecomputedLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(PrecomputedLayer, Vec3Double)]] =
     for {
-      infoPath <- Fox.successful(remotePath.resolve(PrecomputedHeader.FILENAME_INFO))
+      infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)
       precomputedHeader <- parseJsonFromPath[PrecomputedHeader](infoPath) ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
       layerAndVoxelSize <- layerFromPrecomputedHeader(precomputedHeader, remotePath, credentialId)
     } yield List(layerAndVoxelSize)
 
   private def layerFromPrecomputedHeader(precomputedHeader: PrecomputedHeader,
-                                         remotePath: Path,
+                                         remotePath: VaultPath,
                                          credentialId: Option[String]): Fox[(PrecomputedLayer, Vec3Double)] =
     for {
-      name <- guessNameFromPath(remotePath)
+      name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
-      boundingBox <- BoundingBox.fromSizeArray(firstScale.size).toFox
+      boundingBox <- BoundingBox
+        .fromTopLeftAndSize(firstScale.voxel_offset.getOrElse(Array(0, 0, 0)), firstScale.size)
+        .toFox
       elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> "Unknown data type"
       smallestResolution = firstScale.resolution
       voxelSize <- Vec3Int.fromArray(smallestResolution).toFox
@@ -53,16 +55,16 @@ class PrecomputedExplorer extends RemoteLayerExplorer {
 
   private def getMagFromScale(scale: PrecomputedScale,
                               minimalResolution: Array[Int],
-                              remotePath: Path,
+                              remotePath: VaultPath,
                               credentialId: Option[String]): Fox[MagLocator] = {
     val normalizedResolution = (scale.resolution, minimalResolution).zipped.map((r, m) => r / m)
     for {
       mag <- Vec3Int.fromList(normalizedResolution.toList)
-      path = remotePath.resolve(scale.key)
+      path = remotePath / scale.key
 
       // Neuroglancer precomputed specification does not specify axis order, but uses x,y,z implicitly.
       // https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#unsharded-chunk-storage
       axisOrder = AxisOrder(0, 1, 2)
-    } yield MagLocator(mag, Some(path.toUri.toString), None, Some(axisOrder), channelIndex = None, credentialId)
+    } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 }

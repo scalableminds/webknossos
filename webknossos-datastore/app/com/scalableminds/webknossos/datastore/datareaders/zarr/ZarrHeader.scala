@@ -48,6 +48,8 @@ case class ZarrHeader(
     ArrayDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
 
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
+
+  lazy val voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
 }
 
 object ZarrHeader extends JsonImplicits {

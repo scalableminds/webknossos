@@ -45,6 +45,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
+  renderWatermark: "Logo in Screenshots",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -72,6 +73,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
   zoom: "Zoom in or out in the data viewports",
   displayScalebars: "Show a scale in the lower-right corner of each viewport",
+  renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",

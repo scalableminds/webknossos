@@ -149,14 +149,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
     }
 
-  private def isNotInterrupted(current: Instant, last: TimeSpan) = {
-    val duration = current - last.lastUpdate
-    if (duration.toMillis < 0) {
-      logger.info(
-        s"Negative timespan duration $duration ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=$this)")
-    }
-    duration < conf.WebKnossos.User.timeTrackingPause
-  }
+  private def isNotInterrupted(current: Instant, last: TimeSpan) =
+    current - last.lastUpdate < conf.WebKnossos.User.timeTrackingPause
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =
     last._annotation.map(_.id) == annotation.map(_.id)
@@ -174,7 +168,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] =
     for {
       annotation <- annotationOpt.toFox
-      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
+      user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
       task <- annotationService.taskFor(annotation)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"

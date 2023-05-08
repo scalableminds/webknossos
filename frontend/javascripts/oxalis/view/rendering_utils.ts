@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import type { OrthoView } from "oxalis/constants";
+import { OUTER_CSS_BORDER, OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
@@ -88,14 +88,25 @@ export function renderToTexture(
   renderer.setRenderTarget(null);
   return buffer;
 }
+
+function getScreenshotLogoImage(): Promise<HTMLImageElement> {
+  const logo = document.createElement("img");
+  logo.src = "/assets/images/logo-screenshot.svg";
+  return new Promise((resolve) => {
+    logo.onload = () => resolve(logo);
+  });
+}
+
 export async function downloadScreenshot() {
-  const { dataset, flycam, temporaryConfiguration } = Store.getState();
+  const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
+  const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
   const baseName = `${datasetName}__${x}_${y}_${z}`;
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
+  const logo = renderWatermark ? await getScreenshotLogoImage() : null;
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
@@ -106,6 +117,26 @@ export async function downloadScreenshot() {
     const buffer = renderToTexture(planeId, null, null, false, clearColor);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
+    const drawImageIntoCanvasCallback =
+      renderWatermark && logo != null
+        ? (ctx: CanvasRenderingContext2D) => {
+            const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
+            const scalebarDistanceToTopBorder =
+              ctx.canvas.height +
+              OUTER_CSS_BORDER -
+              constants.SCALEBAR_OFFSET -
+              constants.SCALEBAR_HEIGHT;
+            const logoHeight = constants.SCALEBAR_HEIGHT;
+            const logoWidth = (logoHeight / logo.height) * logo.width;
+            ctx.drawImage(
+              logo,
+              scalebarDistanceToRightBorder,
+              scalebarDistanceToTopBorder,
+              logoWidth,
+              logoHeight,
+            );
+          }
+        : null;
     const canvas =
       inputCatcherElement != null
         ? await html2canvas(inputCatcherElement as HTMLElement, {
@@ -119,10 +150,20 @@ export async function downloadScreenshot() {
         : null;
 
     // eslint-disable-next-line no-await-in-loop
-    const blob = await convertBufferToImage(buffer, width, height, true, canvas);
+    const blob = await convertBufferToImage(
+      buffer,
+      width,
+      height,
+      true,
+      canvas,
+      drawImageIntoCanvasCallback,
+    );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
       saveAs(blob, `${baseName}__${planeDescriptor}.png`);
     }
+  }
+  if (logo) {
+    logo.remove();
   }
 }

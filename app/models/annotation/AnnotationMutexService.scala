@@ -34,8 +34,9 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
   override protected def tickerInterval: FiniteDuration = 1 hour
 
   override protected def tick(): Unit = {
-    logger.info("Cleaning up expired annotation mutexes...")
-    annotationMutexDAO.deleteExpired()
+    for {
+      deleteCount <- annotationMutexDAO.deleteExpired()
+    } yield logger.info(s"Cleaned up $deleteCount expired annotation mutexes.")
     ()
   }
 
@@ -111,9 +112,7 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
                    """.asUpdate)
     } yield ()
 
-  def deleteExpired(): Fox[Unit] =
-    for {
-      _ <- run(q"DELETE FROM webknossos.annotation_mutexes WHERE expiry < NOW()".asUpdate)
-    } yield ()
+  def deleteExpired(): Fox[Int] =
+    run(q"DELETE FROM webknossos.annotation_mutexes WHERE expiry < NOW()".asUpdate)
 
 }

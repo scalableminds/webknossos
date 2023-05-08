@@ -15,13 +15,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, FileSystemService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
 
 import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
-  override def fileSystemServiceOpt: Option[FileSystemService] = None
+  override def dataVaultServiceOpt: Option[DataVaultService] = None
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] = {
@@ -31,7 +31,12 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
-      editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
+      // called here to ensure updates are applied
+      (editableMappingInfo, editableMappingVersion) <- layer.editableMappingService.getInfoAndActualVersion(
+        editableMappingId,
+        requestedVersion = None,
+        remoteFallbackLayer = remoteFallbackLayer,
+        userToken = layer.token)
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -46,10 +51,12 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       _ <- bool2Fox(indices.isEmpty)
       unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      relevantMapping <- layer.editableMappingService.generateCombinedMappingSubset(segmentIds,
-                                                                                    editableMapping,
-                                                                                    remoteFallbackLayer,
-                                                                                    layer.token)
+      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
+                                                                                           editableMappingInfo,
+                                                                                           editableMappingVersion,
+                                                                                           editableMappingId,
+                                                                                           remoteFallbackLayer,
+                                                                                           layer.token)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       layer.elementClass)
@@ -73,7 +80,7 @@ case class EditableMappingLayer(name: String,
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider(fileSystemServiceOpt: Option[FileSystemService]): BucketProvider =
+  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
   override def mappings: Option[Set[String]] = None

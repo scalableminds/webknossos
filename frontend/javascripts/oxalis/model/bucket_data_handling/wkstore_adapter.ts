@@ -6,7 +6,6 @@ import {
   isSegmentationLayer,
   getByteCountFromLayer,
   getMappingInfo,
-  ResolutionInfo,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
@@ -25,6 +24,7 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const COMPRESSION_WORKER_COUNT = 2;
@@ -108,13 +108,17 @@ export async function requestWithFallback(
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
   const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch, maybeVolumeTracing);
   const missingBucketIndices = getNullIndices(bucketBuffers);
-  // The request will only be retried for
-  // volume annotations with a fallback layer, for buckets that are missing
-  // on the tracing store (buckets that were not annotated)
+
+  // If buckets could not be found on the tracing store (e.g. this happens when the buckets
+  // were not annotated yet), they are instead looked up in the fallback layer
+  // on the tracing store.
+  // This retry mechanism is only active for volume tracings with fallback layers without
+  // editable mappings (aka proofreading).
   const retry =
     missingBucketIndices.length > 0 &&
     maybeVolumeTracing != null &&
-    maybeVolumeTracing.fallbackLayer != null;
+    maybeVolumeTracing.fallbackLayer != null &&
+    !maybeVolumeTracing.mappingIsEditable;
 
   if (!retry) {
     return bucketBuffers;

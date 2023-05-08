@@ -5,11 +5,7 @@ import type { ElementClass } from "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  bucketPositionToGlobalAddress,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
@@ -125,6 +121,7 @@ export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
 export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
+
 export class DataBucket {
   type: "data" = "data";
   elementClass: ElementClass;
@@ -151,6 +148,11 @@ export class DataBucket {
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  // Especially, for segmentation buckets, it can be interesting to
+  // know whether a certain ID is contained in this bucket. To
+  // speed up such requests a cached set of the contained values
+  // can be stored in cachedValueSet.
+  cachedValueSet: Set<number | BigInt> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -236,6 +238,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.invalidateValueSet();
     this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
@@ -379,6 +382,7 @@ export class DataBucket {
 
   setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
     this.data = newData;
+    this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
@@ -593,6 +597,7 @@ export class DataBucket {
         } else {
           this.data = data;
         }
+        this.invalidateValueSet();
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
@@ -602,6 +607,22 @@ export class DataBucket {
       default:
         this.unexpectedState();
     }
+  }
+
+  private invalidateValueSet() {
+    this.cachedValueSet = null;
+  }
+
+  private recomputeValueSet() {
+    // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+    this.cachedValueSet = new Set(this.data);
+  }
+
+  containsValue(value: number | BigInt): boolean {
+    if (this.cachedValueSet == null) {
+      this.recomputeValueSet();
+    }
+    return this.cachedValueSet!.has(value);
   }
 
   markAsPushed(): void {
@@ -623,37 +644,6 @@ export class DataBucket {
 
   getTracingId(): string {
     return this.cube.layerName;
-  }
-
-  getFallbackBucket(): Bucket {
-    if (this._fallbackBucket != null) {
-      return this._fallbackBucket;
-    }
-
-    const zoomStep = this.zoomedAddress[3];
-    const fallbackZoomStep = zoomStep + 1;
-    const resolutions = getResolutions(Store.getState().dataset);
-
-    if (fallbackZoomStep >= resolutions.length) {
-      this._fallbackBucket = NULL_BUCKET;
-      return NULL_BUCKET;
-    }
-
-    const fallbackBucketAddress = zoomedAddressToAnotherZoomStep(
-      this.zoomedAddress,
-      resolutions,
-      fallbackZoomStep,
-    );
-    const fallbackBucket = this.cube.getOrCreateBucket(fallbackBucketAddress);
-    this._fallbackBucket = fallbackBucket;
-
-    if (fallbackBucket.type !== "null") {
-      fallbackBucket.once("bucketCollected", () => {
-        this._fallbackBucket = null;
-      });
-    }
-
-    return fallbackBucket;
   }
 
   merge(fetchedData: BucketDataArray): void {

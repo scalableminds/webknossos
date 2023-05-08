@@ -8,28 +8,26 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.05.1...HEAD)
 
 ### Added
-- Added support for datasets where layers are transformed individually (with an affine matrix). Transformations can be specified via datasource-properties.json or via JS API (will be ephemeral, then). [#6748](https://github.com/scalableminds/webknossos/pull/6748)
-- Added list of all respective team members to the administration page for teams. [#6915](https://github.com/scalableminds/webknossos/pull/6915)
-- Added email notifications for WK worker jobs. [#6918](https://github.com/scalableminds/webknossos/pull/6918)
-- Added support for viewing sharded neuroglancer precomputed datasets. [#6920](https://github.com/scalableminds/webknossos/pull/6920)
-- Added support for uploading zip64 files. [#6939](https://github.com/scalableminds/webknossos/pull/6939)
+- Added segment groups so that segments can be organized in a hierarchy (similar to skeletons). [#6966](https://github.com/scalableminds/webknossos/pull/6966)
+- In addition to drag and drop, the selected tree(s) in the Skeleton tab can also be moved into another group by right-clicking the target group and selecting "Move selected tree(s) here". [#7005](https://github.com/scalableminds/webknossos/pull/7005)
 
 ### Changed
-- Interpolation during rendering is now more performance intensive, since the rendering approach was changed. Therefore, interpolation is disabled by default. On the flip side, the rendered quality is often higher than it used to be. [#6748](https://github.com/scalableminds/webknossos/pull/6748)
-- Updated the styling of the "welcome" screen for new users to be in line with the new branding. [#6904](https://github.com/scalableminds/webknossos/pull/6904)
-- Improved Terms-of-Service modal (e.g., allow to switch organization even when modal was blocking the remaining usage of WEBKNOSSOS). [#6930](https://github.com/scalableminds/webknossos/pull/6930)
-- Uploads are now blocked when the organization’s storage quota is exceeded. [#6893](https://github.com/scalableminds/webknossos/pull/6893)
+- Loading of precomputed meshes got significantly faster (especially when using a mesh file for an oversegmentation with an applied agglomerate mapping). [#7001](https://github.com/scalableminds/webknossos/pull/7001)
+- Improved speed of proofreading by only reloading affected areas after a split or merge. [#7050](https://github.com/scalableminds/webknossos/pull/7050)
 
 ### Fixed
-- Fixed an issue with text hints not being visible on the logout page for dark mode users. [#6916](https://github.com/scalableminds/webknossos/pull/6916)
-- Fixed creating task types with a selected preferred mode. [#6928](https://github.com/scalableminds/webknossos/pull/6928)
-- Fixed support for rendering of negative floats. [#6895](https://github.com/scalableminds/webknossos/pull/6895)
-- Fixed caching issues with webworkers. [#6932](https://github.com/scalableminds/webknossos/pull/6932)
-- Fixed download button for annotations which was disabled in some cases. [#6931](https://github.com/scalableminds/webknossos/pull/6931)
-- Fixed antd deprecation warning for Dropdown menus. [#6898](https://github.com/scalableminds/webknossos/pull/6898)
+- Fixed that changing a segment color could lead to a crash. [#7000](https://github.com/scalableminds/webknossos/pull/7000)
+- The fill_value property of zarr dataset is now used when it is not a number. [#7017](https://github.com/scalableminds/webknossos/pull/7017)
+- Fixed a bug that made downloads of public annotations fail occasionally. [#7025](https://github.com/scalableminds/webknossos/pull/7025)
+- Fixed layouting of used storage space on the organization page. [#7034](https://github.com/scalableminds/webknossos/pull/7034)
+- Fixed a bug where updating skeleton annotation tree group visibility would break the annotation. [#7037](https://github.com/scalableminds/webknossos/pull/7037)
+- Fixed importing Neuroglancer Precomputed datasets that have a voxel offset in their header. [#7019](https://github.com/scalableminds/webknossos/pull/7019)
+- Fixed an bug where invalid email addresses were not readable in dark mode on the login/signup pages. [#7052](https://github.com/scalableminds/webknossos/pull/7052)
+- Fixed a bug where users could sometimes not access their own time tracking information. [#7055](https://github.com/scalableminds/webknossos/pull/7055)
+
 ### Removed
 
 ### Breaking Changes

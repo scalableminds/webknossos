@@ -1,12 +1,25 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
-import TWEEN from "tween.js";
-import _ from "lodash";
+import app from "app";
 import Maybe from "data.maybe";
-import type { APIDataLayer, MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
+import * as Utils from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import type { BoundingBoxType, OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
+import constants, {
+  OrthoViews,
+  OrthoViewValuesWithoutTDView,
+  TDViewDisplayModeEnum,
+} from "oxalis/constants";
+import { getRenderer } from "oxalis/controller/renderer";
+import { setSceneController } from "oxalis/controller/scene_controller_provider";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import Cube from "oxalis/geometries/cube";
+import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import Plane from "oxalis/geometries/plane";
+import Skeleton from "oxalis/geometries/skeleton";
 import {
   getBoundaries,
   getDataLayers,
@@ -14,35 +27,19 @@ import {
   getLayerNameToIsDisabled,
   getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getActiveMagIndicesForLayers } from "oxalis/model/accessors/flycam_accessor";
-import { getRenderer } from "oxalis/controller/renderer";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getVoxelPerNM } from "oxalis/model/scaleinfo";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
-import Cube from "oxalis/geometries/cube";
-import Dimensions from "oxalis/model/dimensions";
-import { Model } from "oxalis/singletons";
-import Plane from "oxalis/geometries/plane";
-import Skeleton from "oxalis/geometries/skeleton";
-import type { UserBoundingBox, OxalisState, SkeletonTracing } from "oxalis/store";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import app from "app";
-import type { BoundingBoxType, OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
-import constants, {
-  OrthoViewValuesWithoutTDView,
-  OrthoViews,
-  TDViewDisplayModeEnum,
-} from "oxalis/constants";
-import window from "libs/window";
-import { setSceneController } from "oxalis/controller/scene_controller_provider";
-import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
-import { mergeVertices } from "libs/BufferGeometryUtils";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
+import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
+import Dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { Model } from "oxalis/singletons";
+import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
+import Store from "oxalis/store";
+import type { APIDataLayer } from "types/api_flow_types";
+import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
@@ -80,11 +77,7 @@ class SceneController {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'meshesRootGroup' has no initializer and ... Remove this comment to see the full error message
   meshesRootGroup: THREE.Object3D;
   stlMeshes: Record<string, THREE.Mesh> = {};
-  // isosurfacesRootGroup holds lights and one group per segmentation id.
-  // Each group can hold multiple meshes.
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isosurfacesRootGroup' has no initializer... Remove this comment to see the full error message
-  isosurfacesRootGroup: THREE.Group;
-  isosurfacesGroupsPerSegmentationId: Record<number, THREE.Group> = {};
+  segmentMeshController: SegmentMeshController;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -99,6 +92,7 @@ class SceneController {
       [OrthoViews.TDView]: true,
     };
     this.planeShift = [0, 0, 0];
+    this.segmentMeshController = new SegmentMeshController();
   }
 
   initialize() {
@@ -113,17 +107,16 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
-    this.isosurfacesRootGroup = new THREE.Group();
+
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
-    this.scene.add(this.isosurfacesRootGroup);
+    this.scene.add(this.segmentMeshController.isosurfacesLODRootGroup);
     this.scene.add(this.meshesRootGroup);
     this.rootGroup.add(new THREE.DirectionalLight());
-    this.addLights();
     this.setupDebuggingMethods();
   }
 
@@ -205,164 +198,12 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): THREE.Group {
-    return this.isosurfacesGroupsPerSegmentationId[cellId];
-  }
-
-  getColorObjectForSegment(cellId: number) {
-    const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), cellId);
-    const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
-    return color;
-  }
-
-  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry) {
-    const color = this.getColorObjectForSegment(cellId);
-    const meshMaterial = new THREE.MeshLambertMaterial({
-      color,
-    });
-    meshMaterial.side = THREE.FrontSide;
-    meshMaterial.transparent = true;
-
-    const mesh = new THREE.Mesh(geometry, meshMaterial);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    const tweenAnimation = new TWEEN.Tween({
-      opacity: 0,
-    });
-    tweenAnimation
-      .to(
-        {
-          opacity: 1,
-        },
-        500,
-      )
-      .onUpdate(function onUpdate() {
-        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
-        meshMaterial.opacity = this.opacity;
-        app.vent.trigger("rerender");
-      })
-      .start();
-    return mesh;
-  }
-
-  addSTL(meshMetaData: MeshMetaData, geometry: THREE.BufferGeometry): void {
-    const { id, position } = meshMetaData;
-
-    if (this.stlMeshes[id] != null) {
-      console.warn(`Mesh with id ${id} has already been added to the scene.`);
-      return;
-    }
-
-    geometry.computeVertexNormals();
-
-    const meshNumber = _.size(this.stlMeshes);
-
-    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry);
-    this.meshesRootGroup.add(mesh);
-    this.stlMeshes[id] = mesh;
-    this.updateMeshPostion(id, position);
-  }
-
-  addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
-    let bufferGeometry = new THREE.BufferGeometry();
-    bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-
-    bufferGeometry = mergeVertices(bufferGeometry);
-    bufferGeometry.computeVertexNormals();
-
-    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
-  }
-
-  addIsosurfaceFromGeometry(
-    geometry: THREE.BufferGeometry,
-    segmentationId: number,
-    offset: Vector3 | null = null,
-    scale: Vector3 | null = null,
-  ): void {
-    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
-      const newGroup = new THREE.Group();
-      this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
-      this.isosurfacesRootGroup.add(newGroup);
-      // @ts-ignore
-      newGroup.cellId = segmentationId;
-      if (scale != null) {
-        newGroup.scale.copy(new THREE.Vector3(...scale));
-      }
-    }
-    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry);
-    if (offset) {
-      mesh.translateX(offset[0]);
-      mesh.translateY(offset[1]);
-      mesh.translateZ(offset[2]);
-    }
-
-    this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
-  }
-
-  removeIsosurfaceById(segmentationId: number): void {
-    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
-      return;
-    }
-
-    const group = this.isosurfacesGroupsPerSegmentationId[segmentationId];
-    this.isosurfacesRootGroup.remove(group);
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Group'.
-    this.isosurfacesGroupsPerSegmentationId[segmentationId] = null;
-  }
-
-  addLights(): void {
-    // Note that the PlaneView also attaches a directional light directly to the TD camera,
-    // so that the light moves along the cam.
-    const AMBIENT_INTENSITY = 30;
-    const DIRECTIONAL_INTENSITY = 5;
-    const POINT_INTENSITY = 5;
-
-    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
-
-    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight.position.x = 1;
-    directionalLight.position.y = 1;
-    directionalLight.position.z = 1;
-    directionalLight.position.normalize();
-
-    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight2.position.x = -1;
-    directionalLight2.position.y = -1;
-    directionalLight2.position.z = -1;
-    directionalLight2.position.normalize();
-
-    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
-    pointLight.position.x = 0;
-    pointLight.position.y = -25;
-    pointLight.position.z = 10;
-
-    this.isosurfacesRootGroup.add(ambientLight);
-    this.isosurfacesRootGroup.add(directionalLight);
-    this.isosurfacesRootGroup.add(directionalLight2);
-    this.isosurfacesRootGroup.add(pointLight);
-  }
-
   removeSTL(id: string): void {
     this.meshesRootGroup.remove(this.stlMeshes[id]);
   }
 
   setMeshVisibility(id: string, visibility: boolean): void {
     this.stlMeshes[id].visible = visibility;
-  }
-
-  setIsosurfaceVisibility(id: number, visibility: boolean): void {
-    this.isosurfacesGroupsPerSegmentationId[id].visible = visibility;
-  }
-
-  setIsosurfaceColor(id: number): void {
-    const color = this.getColorObjectForSegment(id);
-    const group = this.isosurfacesGroupsPerSegmentationId[id];
-    if (group) {
-      for (const child of group.children) {
-        // @ts-ignore
-        child.material.color = color;
-      }
-    }
   }
 
   updateMeshPostion(id: string, position: Vector3): void {
@@ -487,7 +328,7 @@ class SceneController {
 
     this.taskBoundingBox?.updateForCam(id);
 
-    this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
+    this.segmentMeshController.isosurfacesLODRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
     const originalPosition = getPosition(Store.getState().flycam);
@@ -678,8 +519,8 @@ class SceneController {
 
     this.taskBoundingBox?.setVisibility(false);
 
-    if (this.isosurfacesRootGroup != null) {
-      this.isosurfacesRootGroup.visible = false;
+    if (this.segmentMeshController.isosurfacesLODRootGroup != null) {
+      this.segmentMeshController.isosurfacesLODRootGroup.visible = false;
     }
   }
 
@@ -734,7 +575,8 @@ export function initializeSceneController() {
   setSceneController(controller);
   controller.initialize();
   Store.dispatch(sceneControllerReadyAction());
-} // Please use scene_controller_provider to get a reference to SceneController. This avoids
-// problems with circular dependencies.
+}
 
+// Please use scene_controller_provider to get a reference to SceneController. This avoids
+// problems with circular dependencies.
 export default {};

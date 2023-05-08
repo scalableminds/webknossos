@@ -2,11 +2,11 @@ package models.annotation
 
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
-
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParser, NmlResults}
@@ -38,8 +38,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
                      isTaskUpload: Boolean,
                      basePath: Option[String] = None)(implicit m: MessagesProvider): NmlParseResult =
     NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath) match {
-      case Full((skeletonTracing, uploadedVolumeLayers, description)) =>
-        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description)
+      case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
+        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
@@ -67,23 +67,25 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     MultiNmlParseResult(parseResults, otherFiles)
   }
 
-  def wrapOrPrefixTrees(parseResults: List[NmlParseResult],
-                        shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
+  def wrapOrPrefixGroups(parseResults: List[NmlParseResult],
+                         shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
     if (shouldCreateGroupForEachFile)
-      wrapTreesInGroups(parseResults)
+      wrapInGroups(parseResults)
     else
-      addPrefixesToTreeNames(parseResults)
+      addPrefixesToGroupItemNames(parseResults)
 
-  private def addPrefixesToTreeNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+  private def addPrefixesToGroupItemNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
     def renameTrees(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val prefix = name.replaceAll("\\.[^.]*$", "") + "_"
       tracing.copy(trees = tracing.trees.map(tree => tree.copy(name = prefix + tree.name)))
     }
 
+    // Segments are not renamed in this case. Segment ids are adjusted in the separate merge step.
+
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
-          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), uploadedVolumeLayers, description)
+        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description, wkUrl) =>
+          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), uploadedVolumeLayers, description, wkUrl)
         case r => r
       }
     } else {
@@ -91,21 +93,40 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     }
   }
 
-  private def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
-    def getMaximumGroupId(treeGroups: Seq[TreeGroup]): Int =
+  private def wrapInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+    def getMaximumTreeGroupId(treeGroups: Seq[TreeGroup]): Int =
       if (treeGroups.isEmpty) 0
-      else Math.max(treeGroups.map(_.groupId).max, getMaximumGroupId(treeGroups.flatMap(_.children)))
+      else Math.max(treeGroups.map(_.groupId).max, getMaximumTreeGroupId(treeGroups.flatMap(_.children)))
+
+    def getMaximumSegmentGroupId(segmentGroups: Seq[SegmentGroup]): Int =
+      if (segmentGroups.isEmpty) 0
+      else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
-      val unusedGroupId = getMaximumGroupId(tracing.treeGroups) + 1
+      val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
       val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
       val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups))
       tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 
+    def wrapSegmentsInGroup(name: String, tracing: VolumeTracing): VolumeTracing = {
+      val unusedGroupId = getMaximumSegmentGroupId(tracing.segmentGroups) + 1
+      val newSegments =
+        tracing.segments.map(segment => segment.copy(groupId = Some(segment.groupId.getOrElse(unusedGroupId))))
+      val newSegmentGroups = Seq(SegmentGroup(name, unusedGroupId, tracing.segmentGroups))
+      tracing.copy(segments = newSegments, segmentGroups = newSegmentGroups)
+    }
+
+    def wrapVolumeLayers(name: String, volumeLayers: List[UploadedVolumeLayer]): List[UploadedVolumeLayer] =
+      volumeLayers.map(v => v.copy(tracing = wrapSegmentsInGroup(name, v.tracing)))
+
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
-        NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), uploadedVolumeLayers, description)
+      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description, wkUrl) =>
+        NmlParseSuccess(name,
+                        Some(wrapTreesInGroup(name, skeletonTracing)),
+                        wrapVolumeLayers(name, uploadedVolumeLayers),
+                        description,
+                        wkUrl)
       case r => r
     }
   }

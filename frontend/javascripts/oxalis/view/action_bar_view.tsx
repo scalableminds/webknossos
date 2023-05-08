@@ -90,7 +90,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createTracing = async (dataset: APIDataset) => {
+  createAnnotation = async (dataset: APIDataset) => {
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
     const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
@@ -131,7 +131,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           marginLeft: 12,
         }}
         type="primary"
-        onClick={() => this.createTracing(this.props.dataset)}
+        onClick={() => this.createAnnotation(this.props.dataset)}
       >
         Create Annotation
       </ButtonWithAuthentication>
@@ -173,8 +173,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
         <AddNewLayoutModal

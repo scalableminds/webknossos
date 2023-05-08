@@ -303,7 +303,7 @@ export default function sampleVoxelMapToResolution(
 export function applyVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
-  cellId: number,
+  segmentId: number,
   get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
   numberOfSlicesToApply: number,
   thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
@@ -357,7 +357,7 @@ export function applyVoxelMap(
 
       bucket.applyVoxelMap(
         voxelMap,
-        cellId,
+        segmentId,
         get3DAddress,
         sliceCount,
         thirdDimensionIndex,

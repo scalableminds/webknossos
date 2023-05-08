@@ -64,6 +64,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       }}
     />
   ) : null;
+
   return (
     <div style={style || DEFAULT_STYLE}>
       {iframeWarning}

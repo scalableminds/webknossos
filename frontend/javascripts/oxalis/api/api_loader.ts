@@ -62,4 +62,6 @@ class Api {
   }
 }
 
+export type ApiType = Api;
+
 export default Api;

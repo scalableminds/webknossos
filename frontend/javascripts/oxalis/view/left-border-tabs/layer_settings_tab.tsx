@@ -53,13 +53,10 @@ import {
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
-  getResolutions,
   getTransformsForLayerOrNull,
+  getWidestResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getActiveMagIndicesForLayers,
-  getMaxZoomValueForResolution,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -129,7 +126,6 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
-  activeMagIndicesForLayers: { [layerName: string]: number };
 };
 
 type State = {
@@ -829,7 +825,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const volumeTargetResolutions =
       fallbackLayerInfo != null
         ? fallbackLayerInfo.resolutions
-        : getResolutions(this.props.dataset);
+        : // This is only a heuristic. At some point, user configuration
+          // might make sense here.
+          getWidestResolutions(this.props.dataset);
 
     const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
 
@@ -1084,7 +1082,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             <Button
               onClick={this.addSkeletonAnnotationLayer}
               style={{
-                width: 235,
                 marginTop: 10,
               }}
             >
@@ -1132,7 +1129,6 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
-  activeMagIndicesForLayers: getActiveMagIndicesForLayers(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

@@ -5,21 +5,21 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetPath}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 import java.io.IOException
 import java.nio.ByteOrder
-
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
   def open(magPath: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
 
-    val basePath = magPath.getParent.asInstanceOf[VaultPath]
+    val basePath = magPath.parent
     val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
     val headerBytes = (basePath / headerPath).readBytes()
     if (headerBytes.isEmpty)
@@ -34,18 +34,16 @@ object PrecomputedArray extends LazyLogging {
           throw new Exception("Validating json as precomputed metadata failed: " + JsError.toJson(errors).toString())
       }
 
-    val key = magPath.getFileName
+    val key = magPath.basename
 
     val scaleHeader: PrecomputedScaleHeader = PrecomputedScaleHeader(
-      rootHeader
-        .getScale(key.toString)
-        .getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),
+      rootHeader.getScale(key).getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),
       rootHeader)
     if (scaleHeader.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
       throw new IllegalArgumentException(
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
-    val datasetPath = new DatasetPath(key.toString)
+    val datasetPath = new DatasetPath(key)
     new PrecomputedArray(datasetPath,
                          basePath,
                          scaleHeader,
@@ -225,7 +223,8 @@ class PrecomputedArray(relativePath: DatasetPath,
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
       indexRaw <- vaultPath.readBytes(Some(minishardIndexRange))
-    } yield parseMinishardIndex(indexRaw)
+      minishardIndex <- tryo(parseMinishardIndex(indexRaw))
+    } yield minishardIndex
   }
 
   private def getChunkRange(chunkId: Long,
@@ -237,16 +236,15 @@ class PrecomputedArray(relativePath: DatasetPath,
     } yield Range.Long(chunkStart, chunkEnd, 1)
 
   override def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Future[(VaultPath, NumericRange[Long])] = {
+      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = getMinishardInfo(chunkIdentifier)
     val shardPath = getPathForShard(minishardInfo._1)
     for {
-      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt)
-        .toFutureOrThrowException("Could not get minishard index")
-      chunkRange: NumericRange.Exclusive[Long] <- Fox
-        .option2Fox(getChunkRange(chunkIdentifier, minishardIndex))
-        .toFutureOrThrowException("Chunk range not found in minishard index")
+      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex
+        .mkString(",")}"
+      chunkRange: NumericRange.Exclusive[Long] <- Fox.option2Fox(getChunkRange(chunkIdentifier, minishardIndex)) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
+        .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
     } yield (shardPath, chunkRange)
   }
 

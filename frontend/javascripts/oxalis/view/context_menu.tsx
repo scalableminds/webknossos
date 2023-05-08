@@ -44,7 +44,7 @@ import {
 import {
   deleteEdgeAction,
   mergeTreesAction,
-  deleteNodeAction,
+  deleteNodeAsUserAction,
   setActiveNodeAction,
   createTreeAction,
   setTreeVisibilityAction,
@@ -1287,7 +1287,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   deleteNode(nodeId: number, treeId: number) {
-    dispatch(deleteNodeAction(nodeId, treeId));
+    dispatch(deleteNodeAsUserAction(Store.getState(), nodeId, treeId));
   },
 
   createBranchPoint(nodeId: number, treeId: number) {

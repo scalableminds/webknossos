@@ -4,11 +4,18 @@ import type { ServerSkeletonTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
-  getActiveNode,
+  getNodeAndTree,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
-import type { OxalisState, SkeletonTracing, TreeGroup, MutableTreeMap } from "oxalis/store";
+import type {
+  OxalisState,
+  SkeletonTracing,
+  Tree,
+  TreeGroup,
+  MutableTreeMap,
+  Node,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -461,22 +468,22 @@ export const setMergerModeEnabledAction = (active: boolean) =>
 
 // The following actions have the prefix "AsUser" which means that they
 // offer some additional logic which is sensible from a user-centered point of view.
-// For example, the deleteActiveNodeAsUserAction also initiates the deletion of a tree,
+// For example, the deleteNodeAsUserAction also initiates the deletion of a tree,
 // when the current tree is empty.
-export const deleteActiveNodeAsUserAction = (
+export const deleteNodeAsUserAction = (
   state: OxalisState,
+  nodeId?: number,
+  treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  return getActiveNode(skeletonTracing)
-    .map((activeNode): DeleteNodeAction | NoAction | DeleteTreeAction => {
-      const nodeId = activeNode.id;
-
-      if (state.task != null && nodeId === 1) {
+  return getNodeAndTree(skeletonTracing, nodeId, treeId)
+    .map(([tree, node]): DeleteNodeAction | NoAction | DeleteTreeAction => {
+      if (state.task != null && node.id === 1) {
         // Let the user confirm the deletion of the initial node (node with id 1) of a task
         Modal.confirm({
           title: messages["tracing.delete_initial_node"],
           onOk: () => {
-            Store.dispatch(deleteNodeAction(nodeId));
+            Store.dispatch(deleteNodeAction(node.id, tree.treeId));
           },
         });
         // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
@@ -484,9 +491,9 @@ export const deleteActiveNodeAsUserAction = (
         return noAction();
       }
 
-      return deleteNodeAction(nodeId);
+      return deleteNodeAction(node.id, tree.treeId);
     }) // If the tree is empty, it will be deleted
-    .getOrElse(deleteTreeAction());
+    .getOrElse(deleteTreeAction(treeId));
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task

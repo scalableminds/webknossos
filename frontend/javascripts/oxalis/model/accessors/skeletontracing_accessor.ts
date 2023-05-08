@@ -132,7 +132,7 @@ export function getNodeAndTree(
 
   const trees =
     type != null
-      ? _.filter(skeletonTracing.trees, (tree) => tree.type === type)
+      ? _.pickBy(skeletonTracing.trees, (tree) => tree.type === type)
       : skeletonTracing.trees;
 
   if (treeId != null) {

@@ -245,7 +245,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     (state: OxalisState) => state.userConfiguration.overwriteMode,
   );
 
-  sendAnalyticsEvent("used_quick_select_without_preview");
+  sendAnalyticsEvent("used_quick_select_with_ai");
   yield* finalizeQuickSelect(
     quickSelectGeometry,
     volumeTracing,

@@ -43,7 +43,7 @@ async function getEmbedding(
   } else {
     try {
       const embeddingCenter = V3.round(boundingBox.getCenter());
-      const sizeInMag1 = V3.scale3(EMBEDDING_SIZE, mag);
+      const sizeInMag1 = V3.scale3(Dimensions.transDim(EMBEDDING_SIZE, activeViewport), mag);
       const embeddingTopLeft = V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5));
       const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
       const embeddingBoxMag1 = new BoundingBox({
@@ -57,7 +57,7 @@ async function getEmbedding(
       });
       console.log("Load new embedding for ", embeddingBoxMag1);
 
-      // todo: put in api module
+      // todo: put in api module and use request module
       const embedding = new Float32Array(
         (await fetch(
           `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
@@ -99,12 +99,19 @@ async function inferFromEmbedding(
   embedding: Float32Array,
   embeddingBoxInTargetMag: BoundingBox,
   userBoxInTargetMag: BoundingBox,
+  activeViewport: OrthoView,
 ) {
+  const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
 
   const ort_session = await getSession();
-  const onnx_coord = new Float32Array([topLeft[0], topLeft[1], bottomRight[0], bottomRight[1]]);
+  const onnx_coord = new Float32Array([
+    topLeft[firstDim],
+    topLeft[secondDim],
+    bottomRight[firstDim],
+    bottomRight[secondDim],
+  ]);
   const onnx_label = new Float32Array([2, 3]);
   const onnx_mask_input = new Float32Array(256 * 256);
   const onnx_has_mask_input = new Float32Array([0]);
@@ -132,15 +139,22 @@ async function inferFromEmbedding(
   const thresholdFieldData = new Uint8Array(thresholded_mask);
 
   const size = embeddingBoxInTargetMag.getSize();
-  const stride = [1, size[0], size[0] * size[1]];
-  console.log("stride", stride);
-  let thresholdField = ndarray(thresholdFieldData, size, stride);
+  const userSizeInTargetMag = userBoxInTargetMag.getSize();
+  // Somewhere between the front-end, the back-end and the embedding
+  // server, there seems to be a different linearization of 2D the image
+  // data which is why the code here deals with the XZ plane as a special
+  // case.
+  const stride =
+    activeViewport === "PLANE_XZ"
+      ? [size[1], size[0], size[0] * size[1] * size[2]]
+      : [size[2], size[0], size[0] * size[1] * size[2]];
 
+  let thresholdField = ndarray(thresholdFieldData, size, stride);
   thresholdField = thresholdField
     // a.lo(x,y) => a[x:, y:]
-    .lo(topLeft[0], topLeft[1], 0)
+    .lo(topLeft[firstDim], topLeft[secondDim], 0)
     // a.hi(x,y) => a[:x, :y]
-    .hi(userBoxInTargetMag.getSize()[0], userBoxInTargetMag.getSize()[1], 1);
+    .hi(userSizeInTargetMag[firstDim], userSizeInTargetMag[secondDim], 1);
   return thresholdField;
 }
 
@@ -198,6 +212,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     embedding,
     embeddingBoxInTargetMag,
     userBoxInTargetMag,
+    activeViewport,
   );
   console.timeEnd("infer");
 

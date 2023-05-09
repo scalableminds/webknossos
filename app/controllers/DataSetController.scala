@@ -538,7 +538,7 @@ Expects:
       for {
         _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
         _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
-        - <- bool2Fox(request.body.boundingBox.depth == 1) ?~> "segmentAnything.bboxNotFlat"
+        // - <- bool2Fox(request.body.boundingBox.depth == 1) ?~> "segmentAnything.bboxNotFlat"
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
         dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
@@ -546,7 +546,7 @@ Expects:
         dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
         datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
         targetMaxBbox: BoundingBox = request.body.boundingBox / request.body.mag
-        _ <- bool2Fox(targetMaxBbox.dimensions == Vec3Int(1024, 1024, 1)) ?~> s"Target-mag bbox must be sized 1024×1024×1, got ${targetMaxBbox.dimensions}"
+        // _ <- bool2Fox(targetMaxBbox.dimensions == Vec3Int(1024, 1024, 1)) ?~> s"Target-mag bbox must be sized 1024×1024×1, got ${targetMaxBbox.dimensions}"
         data <- datastoreClient.getLayerData(organizationName,
                                              dataset,
                                              dataLayer.name,

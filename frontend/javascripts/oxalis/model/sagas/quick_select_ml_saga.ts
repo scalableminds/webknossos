@@ -110,20 +110,17 @@ async function inferFromEmbedding(
     point_labels: new ort.Tensor("float32", onnxLabel, [1, 2]),
     mask_input: new ort.Tensor("float32", onnxMaskInput, [1, 1, 256, 256]),
     has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
-    origImSize: new ort.Tensor("float32", origImSize, [2]),
+    orig_im_size: new ort.Tensor("float32", origImSize, [2]),
   };
-  const { masks, iou_predictions, low_res_masks } = await ortSession.run(ortInputs);
+  const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
 
   // @ts-ignore
-  const best_mask_index = iou_predictions.data.indexOf(Math.max(...iou_predictions.data));
-  const thresholded_mask = masks.data
-    .slice(best_mask_index * 1024 * 1024, (best_mask_index + 1) * 1024 * 1024)
-    // todo use nd array
-    // @ts-ignore
-    .map((e) => e > 0);
-
-  // @ts-ignore
-  const thresholdFieldData = new Uint8Array(thresholded_mask);
+  const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
+  const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
+  const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
+  for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
+    maskData[idx] = masks.data[idx + startOffset] > 0 ? 1 : 0;
+  }
 
   const size = embeddingBoxInTargetMag.getSize();
   const userSizeInTargetMag = userBoxInTargetMag.getSize();
@@ -136,13 +133,13 @@ async function inferFromEmbedding(
       ? [size[1], size[0], size[0] * size[1] * size[2]]
       : [size[2], size[0], size[0] * size[1] * size[2]];
 
-  let thresholdField = ndarray(thresholdFieldData, size, stride);
-  thresholdField = thresholdField
+  let mask = ndarray(maskData, size, stride);
+  mask = mask
     // a.lo(x,y) => a[x:, y:]
     .lo(topLeft[firstDim], topLeft[secondDim], 0)
     // a.hi(x,y) => a[:x, :y]
     .hi(userSizeInTargetMag[firstDim], userSizeInTargetMag[secondDim], 1);
-  return thresholdField;
+  return mask;
 }
 
 export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
@@ -235,7 +232,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   }
 
   console.time("infer");
-  let thresholdField = yield* call(
+  let mask = yield* call(
     inferFromEmbedding,
     embedding,
     embeddingBoxInTargetMag,
@@ -259,7 +256,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     userBoxInTargetMag.getSize(),
     firstDim,
     secondDim,
-    thresholdField,
+    mask,
     overwriteMode,
     labeledZoomStep,
   );

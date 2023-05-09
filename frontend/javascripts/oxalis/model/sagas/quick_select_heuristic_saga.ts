@@ -26,6 +26,7 @@ import {
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
+  MaybePrefetchEmbeddingAction,
   registerLabelPointAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -71,7 +72,9 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 
 let wasPreviewModeToastAlreadyShown = false;
 
-export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Saga<{
+export function* prepareQuickSelect(
+  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
+): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
   secondDim: DimensionIndices;
@@ -79,18 +82,19 @@ export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Sa
   colorLayer: APIDataLayer;
   quickSelectConfig: QuickSelectConfig;
   activeViewport: OrthoViewWithoutTD;
-  quickSelectGeometry: QuickSelectGeometry;
   labeledResolution: Vector3;
   volumeTracing: VolumeTracing;
 } | null> {
   const activeViewport = yield* select(
     (state: OxalisState) => state.viewModeData.plane.activeViewport,
   );
-  const { quickSelectGeometry } = action;
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");
-    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+    if ("quickSelectGeometry" in action) {
+      const { quickSelectGeometry } = action;
+      quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+    }
     return null;
   }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
@@ -149,7 +153,6 @@ export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Sa
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    quickSelectGeometry,
     labeledResolution,
     volumeTracing,
   };
@@ -168,11 +171,10 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    quickSelectGeometry,
     labeledResolution,
     volumeTracing,
   } = preparation;
-  const { startPosition, endPosition } = action;
+  const { startPosition, endPosition, quickSelectGeometry } = action;
 
   const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
   const boundingBoxMag1 = new BoundingBox({

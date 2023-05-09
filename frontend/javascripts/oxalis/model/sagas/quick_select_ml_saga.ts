@@ -5,7 +5,10 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
-import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  ComputeQuickSelectForRectAction,
+  MaybePrefetchEmbeddingAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import ndarray from "ndarray";
 import Toast from "libs/toast";
@@ -18,17 +21,17 @@ import { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
 const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
-type CacheEntry = { embedding: Float32Array; bbox: BoundingBox; mag: Vector3 };
+type CacheEntry = { embeddingPromise: Promise<Float32Array>; bbox: BoundingBox; mag: Vector3 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
 let embeddingCache: Array<CacheEntry> = [];
 
-async function getEmbedding(
+function getEmbedding(
   dataset: APIDataset,
   boundingBox: BoundingBox,
   mag: Vector3,
   activeViewport: OrthoView,
-): Promise<CacheEntry> {
+): CacheEntry {
   const matchingCacheEntry = embeddingCache.find(
     (entry) => entry.bbox.containsBoundingBox(boundingBox) && V3.equals(entry.mag, mag),
   );
@@ -57,9 +60,9 @@ async function getEmbedding(
       });
       console.log("Load new embedding for ", embeddingBoxMag1);
 
-      const embedding = await getSamEmbedding(dataset, mag, embeddingBoxMag1);
+      const embeddingPromise = getSamEmbedding(dataset, mag, embeddingBoxMag1);
 
-      const newEntry = { embedding, bbox: embeddingBoxMag1, mag };
+      const newEntry = { embeddingPromise, bbox: embeddingBoxMag1, mag };
       embeddingCache.unshift(newEntry);
       return newEntry;
     } catch (exception) {
@@ -143,6 +146,41 @@ async function inferFromEmbedding(
   return thresholdField;
 }
 
+export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
+  const preparation = yield* call(prepareQuickSelect, action);
+  if (preparation == null) {
+    return;
+  }
+  const { labeledResolution, activeViewport } = preparation;
+  const { startPosition } = action;
+  const PREFETCH_WINDOW_SIZE = [100, 100, 0] as Vector3;
+  const endPosition = V3.add(
+    startPosition,
+    Dimensions.transDim(PREFETCH_WINDOW_SIZE, activeViewport),
+  );
+
+  const userBoxMag1 = new BoundingBox({
+    min: V3.floor(V3.min(startPosition, endPosition)),
+    max: V3.floor(
+      V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
+    ),
+  });
+
+  console.time("getEmbedding via prefetching");
+  const dataset = yield* select((state: OxalisState) => state.dataset);
+  const { embeddingPromise } = yield* call(
+    getEmbedding,
+    dataset,
+    userBoxMag1,
+    labeledResolution,
+    activeViewport,
+  );
+  // Await the promise here so that the saga finishes once the embedding was loaded
+  // (this simplifies debugging and benchmarking).
+  yield* call(() => embeddingPromise);
+  console.timeEnd("getEmbedding via prefetching");
+}
+
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
   const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {
@@ -155,10 +193,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     secondDim,
     thirdDim,
     activeViewport,
-    quickSelectGeometry,
     volumeTracing,
   } = preparation;
-  const { startPosition, endPosition } = action;
+  const { startPosition, endPosition, quickSelectGeometry } = action;
 
   const userBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
@@ -174,13 +211,14 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
   console.time("getEmbedding");
   const dataset = yield* select((state: OxalisState) => state.dataset);
-  const { embedding, bbox: embeddingBoxMag1 } = yield* call(
+  const { embeddingPromise, bbox: embeddingBoxMag1 } = yield* call(
     getEmbedding,
     dataset,
     userBoxMag1,
     labeledResolution,
     activeViewport,
   );
+  const embedding = yield* call(() => embeddingPromise);
   console.timeEnd("getEmbedding");
 
   const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);

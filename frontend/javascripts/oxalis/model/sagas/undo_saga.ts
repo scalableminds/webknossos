@@ -98,12 +98,6 @@ type RelevantActionsForUndoRedo = {
   batchUpdateGroupsAndSegments?: BatchUpdateGroupsAndSegmentsAction;
 };
 
-// This function is needed so that TS is satisfied
-// with how a mere promise is awaited within a saga.
-function unpackPromise<T>(p: Promise<T>): Promise<T> {
-  return p;
-}
-
 function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo {
   if (action.type === "ADD_BUCKET_TO_UNDO") {
     return {
@@ -786,10 +780,7 @@ function* applyAndGetRevertingVolumeBatch(
     let newPendingOperations = volumeUndoBucket.pendingOperations;
 
     if (compressedBackendDataPromise != null) {
-      const compressedBackendData = (yield* call(
-        unpackPromise,
-        compressedBackendDataPromise,
-      )) as Uint8Array;
+      const compressedBackendData = yield* call(() => compressedBackendDataPromise);
       let decompressedBackendData;
       [decompressedBucketData, decompressedBackendData] = yield* all([
         call(decompressToTypedArray, bucket, compressedBucketData),

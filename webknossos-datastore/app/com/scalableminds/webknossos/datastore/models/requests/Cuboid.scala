@@ -22,7 +22,7 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     width == bucketLength && height == bucketLength && depth == bucketLength && topLeft == topLeft.toBucket.topLeft
 
   /**
-    * Returns all buckets that are withing the cuboid spanned by top-left and bottom-right
+    * Returns all buckets that are within the cuboid spanned by top-left and bottom-right
     */
   def allBucketsInCuboid: Seq[BucketPosition] = {
     val minBucket = topLeft.toBucket

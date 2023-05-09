@@ -12,7 +12,7 @@ import Toast from "libs/toast";
 import { OxalisState } from "oxalis/store";
 import { map3 } from "libs/utils";
 import { APIDataset } from "types/api_flow_types";
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
 import { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
@@ -57,22 +57,7 @@ async function getEmbedding(
       });
       console.log("Load new embedding for ", embeddingBoxMag1);
 
-      // todo: put in api module and use request module
-      const embedding = new Float32Array(
-        (await fetch(
-          `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              mag,
-              boundingBox: embeddingBoxMag1.asServerBoundingBox(),
-            }),
-          },
-        ).then((res) => res.arrayBuffer())) as ArrayBuffer,
-      );
+      const embedding = await getSamEmbedding(dataset, mag, embeddingBoxMag1);
 
       const newEntry = { embedding, bbox: embeddingBoxMag1, mag };
       embeddingCache.unshift(newEntry);

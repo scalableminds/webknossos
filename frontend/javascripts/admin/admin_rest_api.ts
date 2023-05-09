@@ -93,6 +93,7 @@ import window, { location } from "libs/window";
 import { SaveQueueType } from "oxalis/model/actions/save_actions";
 import { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -2354,6 +2355,22 @@ export async function getEdgesForAgglomerateMinCut(
       },
     ),
   );
+}
+
+// ### Smart Select
+
+export async function getSamEmbedding(
+  dataset: APIDataset,
+  mag: Vector3,
+  embeddingBoxMag1: BoundingBox,
+): Promise<Float32Array> {
+  const buffer = await Request.sendJSONReceiveArraybuffer(
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
+    {
+      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
+    },
+  );
+  return new Float32Array(buffer);
 }
 
 // ### Short links

@@ -108,7 +108,7 @@ class BinaryDataController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
         request = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,

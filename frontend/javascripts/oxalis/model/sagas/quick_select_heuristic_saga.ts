@@ -433,17 +433,17 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 }
 
 function processBinaryMaskInPlaceAndAttach(
-  output: ndarray.NdArray<Uint8Array>,
+  mask: ndarray.NdArray<Uint8Array>,
   quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic">,
   quickSelectGeometry: QuickSelectGeometry,
 ) {
-  fillHolesInPlace(output);
-  morphology.close(output, quickSelectConfig.closeValue);
-  morphology.erode(output, quickSelectConfig.erodeValue);
-  morphology.dilate(output, quickSelectConfig.dilateValue);
+  fillHolesInPlace(mask);
+  morphology.close(mask, quickSelectConfig.closeValue);
+  morphology.erode(mask, quickSelectConfig.erodeValue);
+  morphology.dilate(mask, quickSelectConfig.dilateValue);
 
-  const outputRGBA = maskToRGBA(output);
-  quickSelectGeometry.attachTextureMask(outputRGBA, output.shape[0], output.shape[1]);
+  const maskRGBA = maskToRGBA(mask);
+  quickSelectGeometry.attachTextureMask(maskRGBA, mask.shape[0], mask.shape[1]);
 }
 
 function normalizeToUint8(
@@ -494,7 +494,7 @@ export function* finalizeQuickSelect(
   size: Vector3,
   firstDim: number,
   secondDim: number,
-  output: ndarray.NdArray<TypedArrayWithoutBigInt>,
+  mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ) {
@@ -515,7 +515,7 @@ export function* finalizeQuickSelect(
   console.time("fill voxel buffer");
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
-      if (output.get(u, v, 0) > 0) {
+      if (mask.get(u, v, 0) > 0) {
         voxelBuffer2D.setValue(u, v, 1);
       }
     }
@@ -545,15 +545,15 @@ export function* finalizeQuickSelect(
   );
 }
 
-function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {
+function maskToRGBA(mask: ndarray.NdArray<Uint8Array>) {
   // Create an RGBA mask from the single-channel input, since this is needed
   // to create a texture for the rectangle preview.
   const channelCount = 4;
-  const outputRGBA = new Uint8Array(output.size * channelCount);
+  const maskRGBA = new Uint8Array(mask.size * channelCount);
   let idx = 0;
 
-  const max = ops.sup(output);
-  const min = ops.inf(output);
+  const max = ops.sup(mask);
+  const min = ops.inf(mask);
 
   const normalize =
     max === min
@@ -561,23 +561,23 @@ function maskToRGBA(output: ndarray.NdArray<Uint8Array>) {
         (val: number) => (val > 0 ? 255 : 0)
       : (val: number) => (255 * (val - min)) / (max - min);
 
-  for (let v = 0; v < output.shape[1]; v++) {
-    for (let u = 0; u < output.shape[0]; u++) {
-      let val = normalize(output.get(u, v, 0));
-      if (u === 0 || v === 0 || u === output.shape[0] - 1 || v === output.shape[1] - 1) {
+  for (let v = 0; v < mask.shape[1]; v++) {
+    for (let u = 0; u < mask.shape[0]; u++) {
+      let val = normalize(mask.get(u, v, 0));
+      if (u === 0 || v === 0 || u === mask.shape[0] - 1 || v === mask.shape[1] - 1) {
         // Make border pixels always visible so that the user can recognize the
         // preview state better. These pixels are only painted in the preview texture
         // and won't be annotated when confirming the preview.
         val = 255;
       }
-      outputRGBA[idx] = val;
-      outputRGBA[idx + 1] = val;
-      outputRGBA[idx + 2] = val;
-      outputRGBA[idx + 3] = val;
+      maskRGBA[idx] = val;
+      maskRGBA[idx + 1] = val;
+      maskRGBA[idx + 2] = val;
+      maskRGBA[idx + 3] = val;
       idx += channelCount;
     }
   }
-  return outputRGBA;
+  return maskRGBA;
 }
 
 type PriorityItem = {

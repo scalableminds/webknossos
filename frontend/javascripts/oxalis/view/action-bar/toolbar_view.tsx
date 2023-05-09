@@ -1,14 +1,4 @@
-import {
-  Radio,
-  Tooltip,
-  Badge,
-  Space,
-  Popover,
-  RadioChangeEvent,
-  Dropdown,
-  MenuProps,
-  Switch,
-} from "antd";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -1003,7 +993,7 @@ function ToolSpecificSettings({
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
           >
-            <i className="fas fa-magic"></i>AI
+            <i className="fas fa-magic" /> AI
           </ButtonComponent>
 
           {isQuickSelectHeuristic && <QuickSelectSettingsPopover />}

@@ -36,7 +36,7 @@ async function getEmbedding(
     // Move entry to the front.
     embeddingCache = [
       matchingCacheEntry,
-      ...embeddingCache.filter((el) => el != matchingCacheEntry).slice(0, MAXIMUM_CACHE_SIZE - 1),
+      ...embeddingCache.filter((el) => el !== matchingCacheEntry).slice(0, MAXIMUM_CACHE_SIZE - 1),
     ];
     console.log("Use", matchingCacheEntry, "from cache.");
     return matchingCacheEntry;
@@ -86,7 +86,7 @@ async function inferFromEmbedding(
   userBoxInTargetMag: BoundingBox,
   activeViewport: OrthoView,
 ) {
-  const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
+  const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
 

@@ -4,7 +4,6 @@ import moments from "ndarray-moments";
 import {
   ContourModeEnum,
   OrthoView,
-  OrthoViews,
   OrthoViewWithoutTD,
   OverwriteMode,
   TypedArrayWithoutBigInt,
@@ -12,10 +11,9 @@ import {
   Vector3,
 } from "oxalis/constants";
 import PriorityQueue from "js-priority-queue";
-import ErrorHandling from "libs/error_handling";
 
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery, race, take } from "typed-redux-saga";
+import { call, put, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2, V3 } from "libs/mjs";
 import {
@@ -48,12 +46,7 @@ import { APIDataLayer } from "types/api_flow_types";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import {
-  EnterAction,
-  EscapeAction,
-  setIsQuickSelectActiveAction,
-  showQuickSelectSettingsAction,
-} from "../actions/ui_actions";
+import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
 import {
   getEnabledColorLayers,
   getLayerBoundingBox,
@@ -63,7 +56,6 @@ import {
 import Dimensions, { DimensionIndices } from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
-import { ResolutionInfo } from "../helpers/resolution_info";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 

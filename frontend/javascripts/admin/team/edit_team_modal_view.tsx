@@ -19,7 +19,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const onChange = (newValue: string) => setAutoCompleteValue(newValue);
   const [users, setUsers] = useState<APIUser[] | null>(null);
   const [isWaitingForRequest, setIsWaitingForRequest] = useState(false);
-  const fetchUsers = async () => setTimeout(async () => setUsers(await getEditableUsers()), 2000); //TODO
+  const fetchUsers = async () => setUsers(await getEditableUsers());
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -34,7 +34,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     });
     const serverUser = await updateUser(newUser);
     setUsers(users.map((oldUser) => (oldUser.id === serverUser.id ? serverUser : oldUser)));
-    setTimeout(async () => await setIsWaitingForRequest(false), 2000); //TODO
+    setIsWaitingForRequest(false);
   };
 
   const addTo = async (user: APIUser, team: APITeam | null) => {

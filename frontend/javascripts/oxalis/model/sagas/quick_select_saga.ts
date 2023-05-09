@@ -5,6 +5,7 @@ import { Saga, select } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery } from "typed-redux-saga";
 import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
 import Toast from "libs/toast";
+import features from "features";
 
 import { setBusyBlockingInfoAction, setIsQuickSelectActiveAction } from "../actions/ui_actions";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
@@ -22,7 +23,7 @@ export default function* listenToQuickSelect(): Saga<void> {
         );
 
         yield* put(setIsQuickSelectActiveAction(true));
-        if (useHeuristic) {
+        if (useHeuristic || !features().isWkorgInstance) {
           yield* call(performQuickSelectHeuristic, action);
         } else {
           yield* call(performQuickSelectML, action);

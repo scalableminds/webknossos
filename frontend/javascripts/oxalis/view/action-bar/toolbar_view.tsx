@@ -928,11 +928,14 @@ function ToolSpecificSettings({
   const quickSelectConfig = useSelector(
     (state: OxalisState) => state.userConfiguration.quickSelect,
   );
-  const { useHeuristic: isQuickSelectHeuristic } = quickSelectConfig;
+  const isAISelectAvailable = features().isWkorgInstance;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
   const heuristicButtonStyle = isQuickSelectHeuristic ? NARROW_BUTTON_STYLE : ACTIVE_BUTTON_STYLE;
-  const quickSelectTooltipText = isQuickSelectHeuristic
-    ? "The quick select tool is now working without AI. Activate AI for better results."
-    : "The quick select tool is now working with AI.";
+  const quickSelectTooltipText = isAISelectAvailable
+    ? isQuickSelectHeuristic
+      ? "The quick select tool is now working without AI. Activate AI for better results."
+      : "The quick select tool is now working with AI."
+    : "The quick select tool with AI is only available on webknossos.org";
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {
@@ -997,6 +1000,7 @@ function ToolSpecificSettings({
               marginLeft: 12,
             }}
             onClick={toggleQuickSelectStrategy}
+            disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
           >
             <i className="fas fa-magic"></i>AI

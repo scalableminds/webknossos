@@ -26,8 +26,13 @@ const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
 let embeddingCache: Array<CacheEntry> = [];
 
+function removeEmbeddingPromiseFromCache(embeddingPromise: Promise<Float32Array>) {
+  embeddingCache = embeddingCache.filter((entry) => entry.embeddingPromise !== embeddingPromise);
+}
+
 function getEmbedding(
   dataset: APIDataset,
+  layerName: string,
   boundingBox: BoundingBox,
   mag: Vector3,
   activeViewport: OrthoView,
@@ -44,31 +49,26 @@ function getEmbedding(
     console.log("Use", matchingCacheEntry, "from cache.");
     return matchingCacheEntry;
   } else {
-    try {
-      const embeddingCenter = V3.round(boundingBox.getCenter());
-      const sizeInMag1 = V3.scale3(Dimensions.transDim(EMBEDDING_SIZE, activeViewport), mag);
-      const embeddingTopLeft = V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5));
-      const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
-      const embeddingBoxMag1 = new BoundingBox({
-        min: V3.floor(V3.min(embeddingTopLeft, embeddingBottomRight)),
-        max: V3.floor(
-          V3.add(
-            V3.max(embeddingTopLeft, embeddingBottomRight),
-            Dimensions.transDim([0, 0, 1], activeViewport),
-          ),
+    const embeddingCenter = V3.round(boundingBox.getCenter());
+    const sizeInMag1 = V3.scale3(Dimensions.transDim(EMBEDDING_SIZE, activeViewport), mag);
+    const embeddingTopLeft = V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5));
+    const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
+    const embeddingBoxMag1 = new BoundingBox({
+      min: V3.floor(V3.min(embeddingTopLeft, embeddingBottomRight)),
+      max: V3.floor(
+        V3.add(
+          V3.max(embeddingTopLeft, embeddingBottomRight),
+          Dimensions.transDim([0, 0, 1], activeViewport),
         ),
-      });
-      console.log("Load new embedding for ", embeddingBoxMag1);
+      ),
+    });
+    console.log("Load new embedding for ", embeddingBoxMag1);
 
-      const embeddingPromise = getSamEmbedding(dataset, mag, embeddingBoxMag1);
+    const embeddingPromise = getSamEmbedding(dataset, layerName, mag, embeddingBoxMag1);
 
-      const newEntry = { embeddingPromise, bbox: embeddingBoxMag1, mag };
-      embeddingCache.unshift(newEntry);
-      return newEntry;
-    } catch (exception) {
-      console.error(exception);
-      throw new Error("Could not load embedding. See console for details.");
-    }
+    const newEntry = { embeddingPromise, bbox: embeddingBoxMag1, mag };
+    embeddingCache.unshift(newEntry);
+    return newEntry;
   }
 }
 
@@ -143,11 +143,11 @@ async function inferFromEmbedding(
 }
 
 export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
-  const preparation = yield* call(prepareQuickSelect, action);
+  const preparation = yield* call(prepareQuickSelect, action, true);
   if (preparation == null) {
     return;
   }
-  const { labeledResolution, activeViewport } = preparation;
+  const { labeledResolution, activeViewport, colorLayer } = preparation;
   const { startPosition } = action;
   const PREFETCH_WINDOW_SIZE = [100, 100, 0] as Vector3;
   const endPosition = V3.add(
@@ -169,6 +169,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   const { embeddingPromise } = yield* call(
     getEmbedding,
     dataset,
+    colorLayer.name,
     userBoxMag1,
     labeledResolution,
     activeViewport,
@@ -177,14 +178,19 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   // a noop.
   yield* call(getSession);
 
-  // Await the promise here so that the saga finishes once the embedding was loaded
-  // (this simplifies debugging and time measurement).
-  yield* call(() => embeddingPromise);
+  try {
+    // Await the promise here so that the saga finishes once the embedding was loaded
+    // (this simplifies debugging and time measurement).
+    yield* call(() => embeddingPromise);
+  } catch (exception) {
+    console.error(exception);
+    // Don't notify user because we are only prefetching.
+  }
   console.timeEnd("prefetch session and embedding");
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
-  const preparation = yield* call(prepareQuickSelect, action);
+  const preparation = yield* call(prepareQuickSelect, action, true);
   if (preparation == null) {
     return;
   }
@@ -196,6 +202,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     thirdDim,
     activeViewport,
     volumeTracing,
+    colorLayer,
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
 
@@ -213,14 +220,23 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
   console.time("getEmbedding");
   const dataset = yield* select((state: OxalisState) => state.dataset);
+
   const { embeddingPromise, bbox: embeddingBoxMag1 } = yield* call(
     getEmbedding,
     dataset,
+    colorLayer.name,
     userBoxMag1,
     labeledResolution,
     activeViewport,
   );
-  const embedding = yield* call(() => embeddingPromise);
+  let embedding;
+  try {
+    embedding = yield* call(() => embeddingPromise);
+  } catch (exception) {
+    console.error(exception);
+    removeEmbeddingPromiseFromCache(embeddingPromise);
+    throw new Error("Could not load embedding. See console for details.");
+  }
   console.timeEnd("getEmbedding");
 
   const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);

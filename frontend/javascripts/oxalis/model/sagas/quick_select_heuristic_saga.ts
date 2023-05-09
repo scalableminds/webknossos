@@ -74,6 +74,7 @@ let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
   action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
+  requireUint8?: boolean,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
@@ -100,11 +101,17 @@ export function* prepareQuickSelect(
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const quickSelectConfig = yield* select((state) => state.userConfiguration.quickSelect);
 
-  const colorLayers = yield* select((state: OxalisState) =>
+  const colorLayers = (yield* select((state: OxalisState) =>
     getEnabledColorLayers(state.dataset, state.datasetConfiguration),
-  );
+  )).filter((layer) => (requireUint8 ? layer.elementClass === "uint8" : true));
   if (colorLayers.length === 0) {
-    Toast.warning("No color layer available to use for quick select feature");
+    if (requireUint8) {
+      Toast.warning(
+        "The AI quick select tool currently only works for uint8 color layers. Please disable the AI mode for now.",
+      );
+    } else {
+      Toast.warning("No color layer available to use for quick select feature");
+    }
     return null;
   }
 

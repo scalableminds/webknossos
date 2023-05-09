@@ -2361,11 +2361,12 @@ export async function getEdgesForAgglomerateMinCut(
 
 export async function getSamEmbedding(
   dataset: APIDataset,
+  layerName: string,
   mag: Vector3,
   embeddingBoxMag1: BoundingBox,
 ): Promise<Float32Array> {
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/color/segmentAnythingEmbedding`,
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding`,
     {
       data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
     },

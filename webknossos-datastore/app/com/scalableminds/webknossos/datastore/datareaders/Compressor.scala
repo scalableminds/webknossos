@@ -329,3 +329,16 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
 
   override def compress(input: Array[Byte]): Array[Byte] = ???
 }
+
+class ChainedCompressor(compressors: Seq[Compressor]) extends Compressor {
+  override def getId: String = "chainedcompressor"
+
+  override def toString: String = s"compressor=$getId${compressors.map(_.toString).mkString("/nextCompressor->")}"
+
+  override def compress(input: Array[Byte]): Array[Byte] =
+    compressors.foldLeft(input)((bytes, c) => c.compress(bytes))
+
+  override def decompress(input: Array[Byte]): Array[Byte] =
+    compressors.foldRight(input)((c, bytes) => c.decompress(bytes))
+
+}

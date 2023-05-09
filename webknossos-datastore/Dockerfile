@@ -1,6 +1,6 @@
 FROM eclipse-temurin:11
 RUN apt-get update \
-  && apt-get -y install libblosc1 \
+  && apt-get -y install libblosc1 libbrotli1 \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos-datastore \

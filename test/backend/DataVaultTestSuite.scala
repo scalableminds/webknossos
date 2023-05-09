@@ -3,7 +3,13 @@ package backend
 import org.scalatestplus.play.PlaySpec
 
 import java.net.URI
-import com.scalableminds.webknossos.datastore.datavault.{DataVault, GoogleCloudDataVault, HttpsDataVault, VaultPath}
+import com.scalableminds.webknossos.datastore.datavault.{
+  DataVault,
+  Encoding,
+  GoogleCloudDataVault,
+  HttpsDataVault,
+  VaultPath
+}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
 
 import scala.collection.immutable.NumericRange
@@ -67,7 +73,7 @@ class DataVaultTestSuite extends PlaySpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = ???
+        override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = ???
       }
 
       "Uri has no trailing slash" should {

@@ -93,28 +93,27 @@ async function inferFromEmbedding(
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
 
-  const ort_session = await getSession();
-  const onnx_coord = new Float32Array([
+  const ortSession = await getSession();
+  const onnxCoord = new Float32Array([
     topLeft[firstDim],
     topLeft[secondDim],
     bottomRight[firstDim],
     bottomRight[secondDim],
   ]);
-  const onnx_label = new Float32Array([2, 3]);
-  const onnx_mask_input = new Float32Array(256 * 256);
-  const onnx_has_mask_input = new Float32Array([0]);
-  const orig_im_size = new Float32Array([1024, 1024]);
-  const ort_inputs = {
+  const onnxLabel = new Float32Array([2, 3]);
+  const onnxMaskInput = new Float32Array(256 * 256);
+  const onnxHasMaskInput = new Float32Array([0]);
+  const origImSize = new Float32Array([1024, 1024]);
+  const ortInputs = {
     image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
-    point_coords: new ort.Tensor("float32", onnx_coord, [1, 2, 2]),
-    point_labels: new ort.Tensor("float32", onnx_label, [1, 2]),
-    mask_input: new ort.Tensor("float32", onnx_mask_input, [1, 1, 256, 256]),
-    has_mask_input: new ort.Tensor("float32", onnx_has_mask_input, [1]),
-    orig_im_size: new ort.Tensor("float32", orig_im_size, [2]),
+    point_coords: new ort.Tensor("float32", onnxCoord, [1, 2, 2]),
+    point_labels: new ort.Tensor("float32", onnxLabel, [1, 2]),
+    mask_input: new ort.Tensor("float32", onnxMaskInput, [1, 1, 256, 256]),
+    has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
+    origImSize: new ort.Tensor("float32", origImSize, [2]),
   };
-  console.log(ort_inputs);
-  const { masks, iou_predictions, low_res_masks } = await ort_session.run(ort_inputs);
-  console.log([masks, iou_predictions, low_res_masks]);
+  const { masks, iou_predictions, low_res_masks } = await ortSession.run(ortInputs);
+
   // @ts-ignore
   const best_mask_index = iou_predictions.data.indexOf(Math.max(...iou_predictions.data));
   const thresholded_mask = masks.data

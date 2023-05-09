@@ -607,7 +607,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             FROM webknossos.voxelytics_chunks c
             JOIN webknossos.voxelytics_tasks t ON t._id = c._task
             JOIN (${chunksWithStateQ(staleTimeout)}) cs ON cs._id = c._id
-            WHERE t._run IN ${SqlToken.tupleFromList(runIds)}
+            WHERE t._run IN ${SqlToken.tupleFromList(runIds)} AND t.name = $taskName
             GROUP BY c.executionId, t._id
           ) c
           GROUP BY c.executionId

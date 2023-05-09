@@ -16,7 +16,7 @@ import performQuickSelectML, { prefetchEmbedding } from "./quick_select_ml_saga"
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
-  return useHeuristic || !features().isWkorgInstance;
+  return useHeuristic || !features().segmentAnythingEnabled;
 }
 
 export default function* listenToQuickSelect(): Saga<void> {

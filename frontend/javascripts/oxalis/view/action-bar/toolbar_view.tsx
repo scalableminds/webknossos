@@ -918,7 +918,7 @@ function ToolSpecificSettings({
   const quickSelectConfig = useSelector(
     (state: OxalisState) => state.userConfiguration.quickSelect,
   );
-  const isAISelectAvailable = features().isWkorgInstance;
+  const isAISelectAvailable = features().segmentAnythingEnabled;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
   const heuristicButtonStyle = isQuickSelectHeuristic ? NARROW_BUTTON_STYLE : ACTIVE_BUTTON_STYLE;
   const quickSelectTooltipText = isAISelectAvailable

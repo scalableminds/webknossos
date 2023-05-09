@@ -605,6 +605,7 @@ export type APIFeatureToggles = {
   readonly defaultToLegacyBindings: boolean;
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
+  readonly segmentAnythingEnabled?: boolean;
 };
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;

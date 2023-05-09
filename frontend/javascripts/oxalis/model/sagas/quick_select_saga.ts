@@ -2,7 +2,7 @@ import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
 import { Saga, select } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery } from "typed-redux-saga";
+import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
   ComputeQuickSelectForRectAction,
   MaybePrefetchEmbeddingAction,
@@ -44,7 +44,7 @@ export default function* listenToQuickSelect(): Saga<void> {
     },
   );
 
-  yield* takeEvery(
+  yield* takeLatest(
     "MAYBE_PREFETCH_EMBEDDING",
     function* guard(action: MaybePrefetchEmbeddingAction) {
       const useHeuristic = yield* call(shouldUseHeuristic);

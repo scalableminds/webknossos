@@ -72,13 +72,13 @@ function getEmbedding(
   }
 }
 
-let session: InferenceSession | null;
+let session: Promise<InferenceSession> | null;
 
 async function getSession() {
   if (session == null) {
-    session = await ort.InferenceSession.create(
-      "/assets/models/vit_l_0b3195_decoder_quantized.onnx",
-    );
+    console.time("getSession");
+    session = ort.InferenceSession.create("/assets/models/vit_l_0b3195_decoder_quantized.onnx");
+    console.timeEnd("getSession");
   }
   return session;
 }
@@ -166,8 +166,10 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     ),
   });
 
-  console.time("getEmbedding via prefetching");
+  console.time("prefetch session and embedding");
   const dataset = yield* select((state: OxalisState) => state.dataset);
+  // Won't block, because the return value is not a promise (but contains
+  // a promise instead)
   const { embeddingPromise } = yield* call(
     getEmbedding,
     dataset,
@@ -175,10 +177,14 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     labeledResolution,
     activeViewport,
   );
+  // Also prefetch session (will block). After the first time, it's basically
+  // a noop.
+  yield* call(getSession);
+
   // Await the promise here so that the saga finishes once the embedding was loaded
-  // (this simplifies debugging and benchmarking).
+  // (this simplifies debugging and time measurement).
   yield* call(() => embeddingPromise);
-  console.timeEnd("getEmbedding via prefetching");
+  console.timeEnd("prefetch session and embedding");
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {

@@ -2,7 +2,7 @@ FROM eclipse-temurin:11
 ARG VERSION_NODE="16.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
-  && apt-get -y install libblosc1 postgresql-client git nodejs \
+  && apt-get -y install libblosc1 libbrotli1 postgresql-client git nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos

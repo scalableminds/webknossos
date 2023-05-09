@@ -964,6 +964,33 @@ export function chunkIntoTimeWindows<T>(
   );
 }
 
+// chunkDynamically takes an array of input elements and splits these
+// into batches. Instead of using a constant batch size, the elements
+// of a batch are measured with a measureFn. Then, each batch is filled
+// until the provided minThreshold is exceeded.
+// Note that the threshold will be exceeded for each batch
+// (except for the last batch which may contain less).
+export function chunkDynamically<T>(
+  elements: T[],
+  minThreshold: number,
+  measureFn: (el: T) => number,
+): Array<T[]> {
+  const batches = [];
+  let currentBatch = [];
+  let currentSize = 0;
+
+  for (let i = 0; i < elements.length; i++) {
+    currentBatch.push(elements[i]);
+    currentSize += measureFn(elements[i]);
+    if (currentSize > minThreshold || i === elements.length - 1) {
+      currentSize = 0;
+      batches.push(currentBatch);
+      currentBatch = [];
+    }
+  }
+  return batches;
+}
+
 export function convertBufferToImage(
   buffer: Uint8Array,
   width: number,

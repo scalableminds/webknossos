@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.CachedHdf5Utils.executeWithCachedHdf5
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
@@ -38,9 +38,13 @@ case class MeshChunkDataRequestV0(
 )
 
 case class MeshChunkDataRequestV3(
-    meshFile: String,
     byteOffset: Long,
     byteSize: Int
+)
+
+case class MeshChunkDataRequestV3List(
+    meshFile: String,
+    requests: Seq[MeshChunkDataRequestV3]
 )
 
 object MeshChunkDataRequestV0 {
@@ -49,6 +53,10 @@ object MeshChunkDataRequestV0 {
 
 object MeshChunkDataRequestV3 {
   implicit val jsonFormat: OFormat[MeshChunkDataRequestV3] = Json.format[MeshChunkDataRequestV3]
+}
+
+object MeshChunkDataRequestV3List {
+  implicit val jsonFormat: OFormat[MeshChunkDataRequestV3List] = Json.format[MeshChunkDataRequestV3List]
 }
 
 case class MeshFileInfo(
@@ -166,7 +174,8 @@ object WebknossosSegmentInfo {
 
 class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with LazyLogging {
+    with LazyLogging
+    with ByteUtils {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val meshesDir = "meshes"
@@ -368,24 +377,35 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def readMeshChunkV3(organizationName: String,
                       dataSetName: String,
                       dataLayerName: String,
-                      meshChunkDataRequest: MeshChunkDataRequestV3,
-  ): Fox[(Array[Byte], String)] = {
-    val meshFilePath = dataBaseDir
-      .resolve(organizationName)
-      .resolve(dataSetName)
-      .resolve(dataLayerName)
-      .resolve(meshesDir)
-      .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
+                      meshChunkDataRequests: MeshChunkDataRequestV3List,
+  ): Fox[(Array[Byte], String)] =
+    for {
+      // Sort the requests by byte offset to optimize for spinning disk access
+      data: List[(Array[Byte], String, Int)] <- Fox.serialCombined(
+        meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
+      )(requestAndIndex => {
+        val meshChunkDataRequest = requestAndIndex._1
+        val meshFilePath = dataBaseDir
+          .resolve(organizationName)
+          .resolve(dataSetName)
+          .resolve(dataLayerName)
+          .resolve(meshesDir)
+          .resolve(s"${meshChunkDataRequests.meshFile}.$meshFileExtension")
 
-    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-      val meshFormat = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
-      val data =
-        cachedMeshFile.reader
-          .uint8()
-          .readArrayBlockWithOffset("neuroglancer", meshChunkDataRequest.byteSize, meshChunkDataRequest.byteOffset)
-      (data, meshFormat)
-    } ?~> "mesh.file.readData.failed"
-  }
+        executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
+          val meshFormat = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
+          val data =
+            cachedMeshFile.reader
+              .uint8()
+              .readArrayBlockWithOffset("neuroglancer", meshChunkDataRequest.byteSize, meshChunkDataRequest.byteOffset)
+          (data, meshFormat, requestAndIndex._2)
+        } ?~> "mesh.file.readData.failed"
+      })
+      dataSorted = data.sortBy(d => d._3)
+      _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) ?~> "Different encodings for the same mesh chunk request found."
+      encoding <- data.map(d => d._2).headOption
+      output = dataSorted.flatMap(d => d._1).toArray
+    } yield (output, encoding)
 
   private def positionLiteral(position: Vec3Int) =
     s"${position.x}_${position.y}_${position.z}"

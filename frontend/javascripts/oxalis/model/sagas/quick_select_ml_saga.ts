@@ -33,12 +33,12 @@ function removeEmbeddingPromiseFromCache(embeddingPromise: Promise<Float32Array>
 function getEmbedding(
   dataset: APIDataset,
   layerName: string,
-  boundingBox: BoundingBox,
+  userBoxMag1: BoundingBox,
   mag: Vector3,
   activeViewport: OrthoView,
 ): CacheEntry {
   const matchingCacheEntry = embeddingCache.find(
-    (entry) => entry.bbox.containsBoundingBox(boundingBox) && V3.equals(entry.mag, mag),
+    (entry) => entry.bbox.containsBoundingBox(userBoxMag1) && V3.equals(entry.mag, mag),
   );
   if (matchingCacheEntry) {
     // Move entry to the front.
@@ -49,16 +49,16 @@ function getEmbedding(
     console.log("Use", matchingCacheEntry, "from cache.");
     return matchingCacheEntry;
   } else {
-    const embeddingCenter = V3.round(boundingBox.getCenter());
+    const embeddingCenter = V3.round(userBoxMag1.getCenter());
     const sizeInMag1 = V3.scale3(Dimensions.transDim(EMBEDDING_SIZE, activeViewport), mag);
-    const embeddingTopLeft = V3.floor(V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5)));
+    const embeddingTopLeft = V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5));
     const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
     const embeddingBoxMag1 = new BoundingBox({
       min: embeddingTopLeft,
       max: V3.add(embeddingBottomRight, Dimensions.transDim([0, 0, 1], activeViewport)),
     });
 
-    if (!embeddingBoxMag1.containsBoundingBox(boundingBox)) {
+    if (!embeddingBoxMag1.containsBoundingBox(userBoxMag1)) {
       // This is unlikely as the embedding size of 1024**2 is quite large.
       // The UX can certainly be optimized in case users run into problem
       // more often.
@@ -169,7 +169,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   const userBoxMag1 = new BoundingBox({
     min: V3.floor(startPosition),
     max: V3.floor(V3.add(endPosition, Dimensions.transDim([0, 0, 1], activeViewport))),
-  });
+  }).alignWithMag(labeledResolution);
 
   const dataset = yield* select((state: OxalisState) => state.dataset);
 
@@ -219,7 +219,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     max: V3.floor(
       V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
     ),
-  });
+  }).alignWithMag(labeledResolution);
 
   // Ensure that the third dimension is inclusive (otherwise, the center of the passed
   // coordinates wouldn't be exactly on the W plane on which the user started this action).

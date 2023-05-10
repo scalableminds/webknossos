@@ -1375,14 +1375,18 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
   return datasets;
 }
 
-export function getDataset(
+export async function getDataset(
   datasetId: APIDatasetId,
   sharingToken?: string | null | undefined,
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(
+  const ds = await Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
   );
+
+  // ds.dataSource.dataLayers = [ds.dataSource.dataLayers[1], ds.dataSource.dataLayers[0]];
+
+  return ds;
 }
 
 export type DatasetUpdater = {

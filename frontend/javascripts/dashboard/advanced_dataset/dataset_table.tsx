@@ -1,10 +1,4 @@
-import {
-  FileOutlined,
-  FolderOpenOutlined,
-  PlusOutlined,
-  SettingOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Dropdown, MenuProps, Table, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";

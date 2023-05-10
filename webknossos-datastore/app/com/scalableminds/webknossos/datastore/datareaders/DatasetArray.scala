@@ -26,16 +26,17 @@ class DatasetArray(relativePath: DatasetPath,
   protected val chunkReader: ChunkReader =
     ChunkReader.create(vaultPath, header)
 
-  // cache currently limited to 1 GB per array
+  // Measure item weight in kilobytes because the weigher can only return int, not long
   private lazy val chunkContentsCache: AlfuCache[String, MultiArray] = {
     val maxSizeKiloBytes = 1000 * 1000
-    AlfuCache(maxSizeKiloBytes, weighFn = Some((_: String, array: Box[MultiArray]) => multiArrayBoxCacheWeight(array)))
+    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
   }
 
-  def multiArrayBoxCacheWeight(arrayBox: Box[MultiArray]): Int =
+  private def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
     arrayBox match {
-      case Full(array) => (array.getSizeBytes / 1000L).toInt
-      case _           => 0
+      case Full(array) =>
+        (array.getSizeBytes / 1000L).toInt
+      case _ => 0
     }
 
   // @return Byte array in fortran-order with little-endian values

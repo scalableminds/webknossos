@@ -1,6 +1,6 @@
 package com.scalableminds.util.cache
 
-import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, Weigher}
+import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, RemovalCause, RemovalListener, Weigher}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Box, Failure}
 
@@ -46,10 +46,15 @@ object AlfuCache {
                   timeToLive: FiniteDuration = 2 hours,
                   timeToIdle: FiniteDuration = 1 hour,
                   weighFn: Option[(K, Box[V]) => Int] = None,
-  ): AlfuCache[K, V] = {
+                  onRemovalFn: Option[(K, Box[V]) => Unit] = None): AlfuCache[K, V] = {
     val weigher = weighFn.map { weigh =>
       new CacheItemWeigher(weigh)
     }.getOrElse(Weigher.singletonWeigher[K, Box[V]])
+
+    def addEvictionListener(builder: Caffeine[K, Box[V]]): Caffeine[K, Box[V]] =
+      onRemovalFn.map { removalFn =>
+        builder.evictionListener(new CacheRemovalListener(removalFn)).asInstanceOf[Caffeine[K, Box[V]]]
+      }.getOrElse(builder)
 
     val builder =
       Caffeine
@@ -59,9 +64,11 @@ object AlfuCache {
         .maximumWeight(maxCapacity)
         .expireAfterWrite(timeToLive.toMillis, TimeUnit.MILLISECONDS)
         .expireAfterAccess(timeToIdle.toMillis, TimeUnit.MILLISECONDS)
-        .weigher(weigher)
 
-    new AlfuCache(builder.buildAsync[K, Box[V]]())
+    val builderWithMoreOptions =
+      addEvictionListener(builder).weigher(weigher)
+
+    new AlfuCache(builderWithMoreOptions.buildAsync[K, Box[V]]())
   }
 
   private def toJavaMappingFunction[K, V](loadValue: K => Future[V]): BiFunction[K, Executor, CompletableFuture[V]] =
@@ -71,4 +78,8 @@ object AlfuCache {
 
 class CacheItemWeigher[K, V](fn: (K, V) => Int) extends Weigher[K, V] {
   override def weigh(key: K, value: V): Int = fn(key, value)
+}
+
+class CacheRemovalListener[K, V](fn: (K, V) => Unit) extends RemovalListener[K, V] {
+  override def onRemoval(key: K, value: V, cause: RemovalCause): Unit = fn(key, value)
 }

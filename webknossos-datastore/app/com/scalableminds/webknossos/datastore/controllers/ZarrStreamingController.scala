@@ -110,15 +110,6 @@ class ZarrStreamingController @Inject()(
 
   private def convertLayerToZarrLayer(layer: DataLayer): ZarrLayer =
     layer match {
-      case d: DataLayer =>
-        ZarrDataLayer(
-          d.name,
-          d.category,
-          d.boundingBox,
-          d.elementClass,
-          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
-          numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
-        )
       case s: SegmentationLayer =>
         ZarrSegmentationLayer(
           s.name,
@@ -128,6 +119,15 @@ class ZarrStreamingController @Inject()(
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
+        )
+      case d: DataLayer =>
+        ZarrDataLayer(
+          d.name,
+          d.category,
+          d.boundingBox,
+          d.elementClass,
+          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
         )
     }
 

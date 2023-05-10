@@ -103,8 +103,8 @@ class FossilDBClient(collection: String,
     }
 
   def getMultipleKeys[T](
-      key: String,
-      prefix: Option[String] = None,
+      startAfterKey: Option[String],
+      prefix: Option[String],
       version: Option[Long] = None,
       limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
     def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
@@ -115,7 +115,7 @@ class FossilDBClient(collection: String,
       boxTuples.flatten
     }
 
-    val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, key, prefix, version, limit))
+    val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, startAfterKey, prefix, version, limit))
     if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
     val parsedValues: List[Box[T]] = reply.values.map { v =>
       fromByteArray(v.toByteArray)

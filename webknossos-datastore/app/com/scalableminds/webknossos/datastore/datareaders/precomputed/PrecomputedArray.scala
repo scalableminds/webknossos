@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetPath}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -122,6 +123,16 @@ class PrecomputedArray(relativePath: DatasetPath,
     Range.Long(0, end, 1)
   }
 
+  private def decodeMinishardIndex(bytes: Array[Byte]) =
+    header.precomputedScale.sharding match {
+      case Some(shardingSpec: ShardingSpecification) =>
+        shardingSpec.minishard_index_encoding match {
+          case "gzip" => ZipIO.gunzip(bytes)
+          case _      => bytes
+        }
+      case _ => bytes
+    }
+
   private def getShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     shardIndexCache.getOrLoad(shardPath, readShardIndex)
 
@@ -166,8 +177,8 @@ class PrecomputedArray(relativePath: DatasetPath,
     Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
   }
 
-  private def parseMinishardIndex(bytes: Array[Byte]): Seq[(Long, Long, Long)] = {
-    // Because readBytes already decodes gzip, we don't need to decompress here
+  private def parseMinishardIndex(input: Array[Byte]): Seq[(Long, Long, Long)] = {
+    val bytes = decodeMinishardIndex(input)
     /*
      From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
      The decoded "minishard index" is a binary string of 24*n bytes, specifying a contiguous C-order array of [3, n]

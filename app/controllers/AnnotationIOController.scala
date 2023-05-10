@@ -365,13 +365,14 @@ Expects:
       } yield result
     }
 
-  // TODO: select versions per layer
   private def downloadExplorational(annotationId: String,
                                     typ: String,
                                     issuingUser: Option[User],
                                     skeletonVersion: Option[Long],
                                     volumeVersion: Option[Long],
                                     skipVolumeData: Boolean)(implicit ctx: DBAccessContext) = {
+
+    // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
     def skeletonToTemporaryFile(dataSet: DataSet,
                                 annotation: Annotation,

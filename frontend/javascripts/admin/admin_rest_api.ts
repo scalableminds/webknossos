@@ -2369,6 +2369,7 @@ export async function getSamEmbedding(
     `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding`,
     {
       data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
+      showErrorToast: false,
     },
   );
   return new Float32Array(buffer);

@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - In addition to drag and drop, the selected tree(s) in the Skeleton tab can also be moved into another group by right-clicking the target group and selecting "Move selected tree(s) here". [#7005](https://github.com/scalableminds/webknossos/pull/7005)
 - Added support for remote datasets encoded with [brotli](https://datatracker.ietf.org/doc/html/rfc7932). [#7041](https://github.com/scalableminds/webknossos/pull/7041)
 - Teams can be edited more straight-forwardly in a popup in the team edit page. [#7043](https://github.com/scalableminds/webknossos/pull/7043)
+- Added support to download layers of a dataset as (OME) TIFF files in the download modal when viewing a dataset. [#7068](https://github.com/scalableminds/webknossos/pull/7068)
 - Annotations with Editable Mappings (a.k.a Supervoxel Proofreading) can now be merged. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
 
 ### Changed

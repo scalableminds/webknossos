@@ -15,7 +15,7 @@ class BoundingBox {
   constructor(boundingBox: BoundingBoxType | null | undefined, maxRestriction?: Vector3) {
     this.boundingBox = boundingBox;
     // Min is including
-    this.min = [0, 0, 0];
+    this.min = [-Infinity, -Infinity, -Infinity];
     // Max is excluding
     this.max = maxRestriction != null ? _.clone(maxRestriction) : [Infinity, Infinity, Infinity];
 
@@ -29,8 +29,8 @@ class BoundingBox {
 
   getBoxForZoomStep = _.memoize((resolution: Vector3): BoundingBoxType => {
     // No `map` for performance reasons
-    const min = [0, 0, 0];
-    const max = [0, 0, 0];
+    const min = [0, 0, 0] as Vector3;
+    const max = [0, 0, 0] as Vector3;
 
     for (let i = 0; i < 3; i++) {
       const divisor = constants.BUCKET_WIDTH * resolution[i];
@@ -39,9 +39,7 @@ class BoundingBox {
     }
 
     return {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max,
     };
   });

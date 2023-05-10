@@ -80,9 +80,7 @@ let session: Promise<InferenceSession> | null;
 
 async function getSession() {
   if (session == null) {
-    console.time("getSession");
     session = ort.InferenceSession.create("/assets/models/vit_l_0b3195_decoder_quantized.onnx");
-    console.timeEnd("getSession");
   }
   return session;
 }
@@ -173,7 +171,6 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     max: V3.floor(V3.add(endPosition, Dimensions.transDim([0, 0, 1], activeViewport))),
   });
 
-  console.time("prefetch session and embedding");
   const dataset = yield* select((state: OxalisState) => state.dataset);
 
   try {
@@ -198,7 +195,6 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     console.error(exception);
     // Don't notify user because we are only prefetching.
   }
-  console.timeEnd("prefetch session and embedding");
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
@@ -230,7 +226,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), userBoxMag1.max);
   quickSelectGeometry.setCoordinates(userBoxMag1.min, inclusiveMaxW);
 
-  console.time("getEmbedding");
   const dataset = yield* select((state: OxalisState) => state.dataset);
 
   const { embeddingPromise, bbox: embeddingBoxMag1 } = yield* call(
@@ -249,7 +244,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     removeEmbeddingPromiseFromCache(embeddingPromise);
     throw new Error("Could not load embedding. See console for details.");
   }
-  console.timeEnd("getEmbedding");
 
   const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
   const userBoxInTargetMag = userBoxMag1.fromMag1ToMag(labeledResolution);
@@ -259,7 +253,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     return;
   }
 
-  console.time("infer");
   let mask = yield* call(
     inferFromEmbedding,
     embedding,
@@ -271,7 +264,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     Toast.error("Could not infer mask. See console for details.");
     return;
   }
-  console.timeEnd("infer");
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,

@@ -519,7 +519,6 @@ export function* finalizeQuickSelect(
     size[secondDim],
   );
 
-  console.time("fill voxel buffer");
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
       if (mask.get(u, v, 0) > 0) {
@@ -527,9 +526,7 @@ export function* finalizeQuickSelect(
       }
     }
   }
-  console.timeEnd("fill voxel buffer");
 
-  console.time("label with voxel buffer");
   yield* call(
     labelWithVoxelBuffer2D,
     voxelBuffer2D,
@@ -538,7 +535,6 @@ export function* finalizeQuickSelect(
     labeledZoomStep,
     activeViewport,
   );
-  console.timeEnd("label with voxel buffer");
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(

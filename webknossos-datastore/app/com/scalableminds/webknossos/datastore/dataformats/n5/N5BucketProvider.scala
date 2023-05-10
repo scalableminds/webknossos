@@ -18,7 +18,7 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
-    val offset = Vec3Int(bucket.voxelXInMag, bucket.voxelYInMag, bucket.voxelZInMag)
+    val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
     n5Array.readBytesXYZ(shape, offset)
   }
 

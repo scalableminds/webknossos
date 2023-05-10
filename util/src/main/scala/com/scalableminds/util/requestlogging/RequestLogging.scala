@@ -41,7 +41,7 @@ trait AbstractRequestLogging extends LazyLogging {
     val start = Instant.now
     for {
       result: Result <- block
-      executionTime = Instant.now - start
+      executionTime = Instant.since(start)
       _ = if (executionTime > durationThreshold) logTimeFormatted(executionTime, request, result)
     } yield result
   }

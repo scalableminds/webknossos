@@ -20,7 +20,7 @@ case class VoxelPosition(
   def toBucket: BucketPosition =
     BucketPosition(mag1X, mag1Y, mag1Z, mag)
 
-  def move(dx: Int, dy: Int, dz: Int) =
+  def move(dx: Int, dy: Int, dz: Int): VoxelPosition =
     VoxelPosition(mag1X + dx, mag1Y + dy, mag1Z + dz, mag)
 
   override def toString = s"($mag1X, $mag1Y, $mag1Z) / $mag"

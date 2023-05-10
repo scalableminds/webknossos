@@ -44,7 +44,7 @@ function getEmbedding(
     // Move entry to the front.
     embeddingCache = [
       matchingCacheEntry,
-      ...embeddingCache.filter((el) => el !== matchingCacheEntry).slice(0, MAXIMUM_CACHE_SIZE - 1),
+      ...embeddingCache.filter((el) => el !== matchingCacheEntry),
     ];
     console.log("Use", matchingCacheEntry, "from cache.");
     return matchingCacheEntry;
@@ -70,7 +70,8 @@ function getEmbedding(
     const embeddingPromise = getSamEmbedding(dataset, layerName, mag, embeddingBoxMag1);
 
     const newEntry = { embeddingPromise, bbox: embeddingBoxMag1, mag };
-    embeddingCache.unshift(newEntry);
+    embeddingCache = [newEntry, ...embeddingCache.slice(0, MAXIMUM_CACHE_SIZE - 1)];
+
     return newEntry;
   }
 }

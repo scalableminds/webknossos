@@ -23,7 +23,7 @@ trait TracingService[T <: GeneratedMessage]
     with ColorGenerator
     with BoundingBoxMerger {
 
-  val handledGroupCacheExpiry: FiniteDuration = 5 minutes
+  private val handledGroupCacheExpiry: FiniteDuration = 5 minutes
 
   def tracingType: TracingType
 

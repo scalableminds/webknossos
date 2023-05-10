@@ -1,12 +1,13 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Box, Full}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import java.io.IOException
@@ -26,11 +27,16 @@ class DatasetArray(relativePath: DatasetPath,
     ChunkReader.create(vaultPath, header)
 
   // cache currently limited to 1 GB per array
-  private lazy val chunkContentsCache: AlfuFoxCache[String, MultiArray] = {
-    val maxSizeBytes = 1000L * 1000 * 1000
-    val maxEntries = maxSizeBytes / header.bytesPerChunk
-    AlfuFoxCache(maxEntries.toInt)
+  private lazy val chunkContentsCache: AlfuCache[String, MultiArray] = {
+    val maxSizeKiloBytes = 1000 * 1000
+    AlfuCache(maxSizeKiloBytes, weighFn = Some((_: String, array: Box[MultiArray]) => multiArrayBoxCacheWeight(array)))
   }
+
+  def multiArrayBoxCacheWeight(arrayBox: Box[MultiArray]): Int =
+    arrayBox match {
+      case Full(array) => (array.getSizeBytes / 1000L).toInt
+      case _           => 0
+    }
 
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]

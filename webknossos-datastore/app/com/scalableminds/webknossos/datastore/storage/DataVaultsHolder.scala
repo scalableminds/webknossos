@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
@@ -21,8 +21,8 @@ object DataVaultsHolder extends LazyLogging {
   val schemeHttp: String = "http"
   val schemeGS: String = "gs"
 
-  private val vaultCache: AlfuFoxCache[RemoteSourceDescriptor, DataVault] =
-    AlfuFoxCache(maxEntries = 100)
+  private val vaultCache: AlfuCache[RemoteSourceDescriptor, DataVault] =
+    AlfuCache(maxCapacity = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)

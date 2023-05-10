@@ -397,7 +397,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
     let dataSourceSortedByRank: Array<DatasetOrFolder> = useLruRank
       ? _.sortBy(filteredDataSource, ["lastUsedByUser", "created"]).reverse()
       : filteredDataSource;
-    dataSourceSortedByRank = dataSourceSortedByRank.concat(activeSubfolders);
+    const isSearchQueryLongEnough = this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
+    if (!isSearchQueryLongEnough) {
+      dataSourceSortedByRank = dataSourceSortedByRank.concat(activeSubfolders);
+    }
     // Create a map from dataset to its rank
     const datasetToRankMap: Map<DatasetOrFolder, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
@@ -405,7 +408,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const sortedDataSource =
       // Sort using the dice coefficient if the table is not sorted by another key
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
-      this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH && sortedInfo.columnKey == null
+      isSearchQueryLongEnough && sortedInfo.columnKey == null
         ? _.chain([...filteredDataSource, ...activeSubfolders])
             .map((datasetOrFolder) => {
               const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
@@ -423,12 +426,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
             .value()
         : dataSourceSortedByRank;
 
-    const selectedRowKeys =
-      selectedDatasets.length > 0
-        ? selectedDatasets.map((ds) => ds.name)
-        : context.selectedFolder
-        ? [context.selectedFolder?.title]
-        : [];
+    let selectedRowKeys: string[] = [];
+    if (selectedDatasets.length > 0) {
+      selectedRowKeys = selectedDatasets.map((ds) => ds.name);
+    } else if (context.selectedFolder) {
+      selectedRowKeys = [context.selectedFolder?.title];
+    }
 
     return (
       <DndProvider backend={HTML5Backend}>

@@ -55,12 +55,7 @@ function getEmbedding(
     const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
     const embeddingBoxMag1 = new BoundingBox({
       min: V3.floor(V3.min(embeddingTopLeft, embeddingBottomRight)),
-      max: V3.floor(
-        V3.add(
-          V3.max(embeddingTopLeft, embeddingBottomRight),
-          Dimensions.transDim([0, 0, 1], activeViewport),
-        ),
-      ),
+      max: V3.floor(V3.add(embeddingBottomRight, Dimensions.transDim([0, 0, 1], activeViewport))),
     });
     console.log("Load new embedding for ", embeddingBoxMag1);
 
@@ -157,9 +152,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
 
   const userBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
-    max: V3.floor(
-      V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
-    ),
+    max: V3.floor(V3.add(endPosition, Dimensions.transDim([0, 0, 1], activeViewport))),
   });
 
   console.time("prefetch session and embedding");

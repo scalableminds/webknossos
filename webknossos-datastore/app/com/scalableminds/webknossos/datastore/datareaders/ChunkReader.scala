@@ -39,9 +39,9 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed <- chunkBytesAndShapeBox.map(_._1) match {
         case Full(chunkBytes) =>
-          Fox.successful(chunkTyper.wrapAndType(chunkBytes, chunkShape))
+          tryo(chunkTyper.wrapAndType(chunkBytes, chunkShape)).toFox ?~> "chunk.wrapAndType.failed"
         case Empty =>
-          Fox.successful(chunkTyper.createFromFillValue(chunkShape))
+          tryo(chunkTyper.createFromFillValue(chunkShape)).toFox ?~> "chunk.createFromFillValue.failed"
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }

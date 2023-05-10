@@ -238,9 +238,10 @@ const DraggableDatasetRow = ({
   drag(ref);
 
   const fileIcon = DragPreviewProvider.getProvider().getIcon(theme);
+  const styleWithMaybeMoveCursor = isADataset ? { ...style, cursor: "move" } : style;
 
   return (
-    <tr ref={ref} className={className} style={{ cursor: "move", ...style }} {...restProps}>
+    <tr ref={ref} className={className} style={styleWithMaybeMoveCursor} {...restProps}>
       <DragPreviewImage connect={preview} src={fileIcon} />
       {children}
     </tr>

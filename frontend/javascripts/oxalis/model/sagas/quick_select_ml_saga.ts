@@ -88,7 +88,14 @@ async function inferFromEmbedding(
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
 
-  const ortSession = await getSession();
+  let ortSession;
+  try {
+    ortSession = await getSession();
+  } catch (exception) {
+    console.error(exception);
+    return null;
+  }
+
   const onnxCoord = new Float32Array([
     topLeft[firstDim],
     topLeft[secondDim],
@@ -169,11 +176,12 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     labeledResolution,
     activeViewport,
   );
-  // Also prefetch session (will block). After the first time, it's basically
-  // a noop.
-  yield* call(getSession);
 
   try {
+    // Also prefetch session (will block). After the first time, it's basically
+    // a noop.
+    yield* call(getSession);
+
     // Await the promise here so that the saga finishes once the embedding was loaded
     // (this simplifies debugging and time measurement).
     yield embeddingPromise;
@@ -250,6 +258,10 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     userBoxInTargetMag,
     activeViewport,
   );
+  if (!mask) {
+    Toast.error("Could not infer mask. See console for details.");
+    return;
+  }
   console.timeEnd("infer");
 
   const overwriteMode = yield* select(

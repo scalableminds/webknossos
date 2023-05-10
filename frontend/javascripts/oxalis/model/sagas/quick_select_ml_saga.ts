@@ -57,6 +57,14 @@ function getEmbedding(
       min: embeddingTopLeft,
       max: V3.add(embeddingBottomRight, Dimensions.transDim([0, 0, 1], activeViewport)),
     });
+
+    if (!embeddingBoxMag1.containsBoundingBox(boundingBox)) {
+      // This is unlikely as the embedding size of 1024**2 is quite large.
+      // The UX can certainly be optimized in case users run into problem
+      // more often.
+      throw new Error("Selected bounding box is too large for AI selection.");
+    }
+
     console.log("Load new embedding for ", embeddingBoxMag1);
 
     const embeddingPromise = getSamEmbedding(dataset, layerName, mag, embeddingBoxMag1);
@@ -166,18 +174,18 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
 
   console.time("prefetch session and embedding");
   const dataset = yield* select((state: OxalisState) => state.dataset);
-  // Won't block, because the return value is not a promise (but contains
-  // a promise instead)
-  const { embeddingPromise } = yield* call(
-    getEmbedding,
-    dataset,
-    colorLayer.name,
-    userBoxMag1,
-    labeledResolution,
-    activeViewport,
-  );
 
   try {
+    // Won't block, because the return value is not a promise (but contains
+    // a promise instead)
+    const { embeddingPromise } = yield* call(
+      getEmbedding,
+      dataset,
+      colorLayer.name,
+      userBoxMag1,
+      labeledResolution,
+      activeViewport,
+    );
     // Also prefetch session (will block). After the first time, it's basically
     // a noop.
     yield* call(getSession);

@@ -442,7 +442,7 @@ class JobService @Inject()(wkConf: WkConf,
   def assertTiffExportBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
       parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.export.tiff.invalidBoundingBox"
-      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), true) ?~> "job.export.tiff.invalidMag"
+      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.export.tiff.invalidMag"
       boundingBoxInMag = parsedBoundingBox / parsedMag
       _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
       _ <- bool2Fox(boundingBoxInMag.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"

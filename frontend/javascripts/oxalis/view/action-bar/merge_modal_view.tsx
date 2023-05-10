@@ -1,5 +1,4 @@
-import { Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Alert, Modal, Button, Select, Form, Spin, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
@@ -15,6 +14,7 @@ import {
 import { location } from "libs/window";
 import InputComponent from "oxalis/view/components/input_component";
 import Request from "libs/request";
+import Constants from "oxalis/constants";
 import type { OxalisState, MutableTreeMap, TreeGroup } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -48,45 +48,6 @@ type MergeModalViewState = {
   isUploading: boolean;
   isFetchingData: boolean;
 };
-type ButtonWithCheckboxProps = {
-  checkboxContent: React.ReactElement<React.ComponentProps<any>, any>;
-  button: React.ReactElement<React.ComponentProps<any>, any>;
-  onButtonClick: (arg0: React.SyntheticEvent, arg1: boolean) => Promise<void> | void;
-};
-type ButtonWithCheckboxState = {
-  isChecked: boolean;
-};
-
-class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWithCheckboxState> {
-  state: ButtonWithCheckboxState = {
-    isChecked: true,
-  };
-
-  render() {
-    return (
-      <React.Fragment>
-        <Form.Item>
-          <Checkbox
-            onChange={(event) =>
-              this.setState({
-                isChecked: event.target.checked,
-              })
-            }
-            checked={this.state.isChecked}
-          >
-            {this.props.checkboxContent}
-          </Checkbox>
-        </Form.Item>
-        <Form.Item>
-          {React.cloneElement(this.props.button, {
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
-            onClick: (evt) => this.props.onButtonClick(evt, this.state.isChecked),
-          })}
-        </Form.Item>
-      </React.Fragment>
-    );
-  }
-}
 
 class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
   state: MergeModalViewState = {
@@ -118,7 +79,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
   }
 
-  async merge(url: string) {
+  async createMergedAnnotation(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url, {
       method: "POST",
@@ -141,40 +102,50 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
   };
 
-  handleMergeProject = async (event: React.SyntheticEvent, isLocalMerge: boolean) => {
+  handleMergeProject = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const { selectedProject } = this.state;
 
     if (selectedProject != null) {
-      if (isLocalMerge) {
-        const annotation = await getAnnotationCompoundInformation(
-          selectedProject,
-          APIAnnotationTypeEnum.CompoundProject,
-        );
-        this.mergeAnnotationIntoActiveTracing(annotation);
-      } else {
-        const url =
-          `/api/annotations/CompoundProject/${selectedProject}/merge/` +
-          `${this.props.annotationType}/${this.props.annotationId}`;
-        this.merge(url);
-      }
+      const url =
+        `/api/annotations/CompoundProject/${selectedProject}/merge/` +
+        `${this.props.annotationType}/${this.props.annotationId}`;
+      this.createMergedAnnotation(url);
     }
   };
 
-  handleMergeExplorativeAnnotation = async (event: React.SyntheticEvent, isLocalMerge: boolean) => {
+  handleImportProject = async (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    const { selectedProject } = this.state;
+
+    if (selectedProject != null) {
+      const annotation = await getAnnotationCompoundInformation(
+        selectedProject,
+        APIAnnotationTypeEnum.CompoundProject,
+      );
+      this.mergeAnnotationIntoActiveTracing(annotation);
+    }
+  };
+
+  handleMergeExplorativeAnnotation = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      if (isLocalMerge) {
-        const annotation = await getAnnotationInformation(selectedExplorativeAnnotation);
-        this.mergeAnnotationIntoActiveTracing(annotation);
-      } else {
-        const url =
-          `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-          `${this.props.annotationType}/${this.props.annotationId}`;
-        this.merge(url);
-      }
+      const url =
+        `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
+        `${this.props.annotationType}/${this.props.annotationId}`;
+      this.createMergedAnnotation(url);
+    }
+  };
+
+  handleImportExplorativeAnnotation = async (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    const { selectedExplorativeAnnotation } = this.state;
+
+    if (selectedExplorativeAnnotation != null) {
+      const annotation = await getAnnotationInformation(selectedExplorativeAnnotation);
+      this.mergeAnnotationIntoActiveTracing(annotation);
     }
   };
 
@@ -216,25 +187,13 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
   }
 
   render() {
-    const mergeIntoActiveTracingCheckbox = (
-      <React.Fragment>
-        Merge into active annotation{" "}
-        <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened annotation. If not, a new explorative annotation will be created in your account.">
-          <InfoCircleOutlined
-            style={{
-              color: "gray",
-            }}
-          />
-        </Tooltip>
-      </React.Fragment>
-    );
     return (
       <Modal
         title="Merge"
         open={this.props.isOpen}
         onCancel={this.props.onOk}
         className="merge-modal"
-        width={800}
+        width={700}
         footer={null}
       >
         <Spin spinning={this.state.isUploading}>
@@ -267,17 +226,27 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 }))}
               />
             </Form.Item>
-
-            <ButtonWithCheckbox
-              checkboxContent={mergeIntoActiveTracingCheckbox}
-              button={
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '"default"' is not assignable to type 'SizeTy... Remove this comment to see the full error message
-                <Button type="primary" size="default" disabled={this.state.selectedProject == null}>
+            <Form.Item>
+              <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
+                <Button
+                  disabled={this.state.selectedProject == null}
+                  onClick={this.handleImportProject}
+                >
+                  Import trees here
+                </Button>
+              </Tooltip>
+            </Form.Item>
+            <Form.Item>
+              <Tooltip title="Creates a new explorative annotation in your account with all merged contents of the current and selected annotations.">
+                <Button
+                  type="primary"
+                  disabled={this.state.selectedProject == null}
+                  onClick={this.handleMergeProject}
+                >
                   Merge
                 </Button>
-              }
-              onButtonClick={this.handleMergeProject}
-            />
+              </Tooltip>
+            </Form.Item>
           </Form>
 
           <Form layout="inline">
@@ -290,20 +259,33 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeExplorativeAnnotation}
               />
             </Form.Item>
-            <ButtonWithCheckbox
-              checkboxContent={mergeIntoActiveTracingCheckbox}
-              button={
+            <Form.Item>
+              <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
+                <Button
+                  disabled={
+                    this.state.selectedExplorativeAnnotation.length !==
+                    Constants.OBJECT_ID_STRING_LENGTH
+                  }
+                  onClick={this.handleImportExplorativeAnnotation}
+                >
+                  Import trees here
+                </Button>
+              </Tooltip>
+            </Form.Item>
+            <Form.Item>
+              <Tooltip title="Creates a new explorative annotation in your account with all merged contents of the current and selected annotations.">
                 <Button
                   type="primary"
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '"default"' is not assignable to type 'SizeTy... Remove this comment to see the full error message
-                  size="default"
-                  disabled={this.state.selectedExplorativeAnnotation.length !== 24}
+                  disabled={
+                    this.state.selectedExplorativeAnnotation.length !==
+                    Constants.OBJECT_ID_STRING_LENGTH
+                  }
+                  onClick={this.handleMergeExplorativeAnnotation}
                 >
                   Merge
                 </Button>
-              }
-              onButtonClick={this.handleMergeExplorativeAnnotation}
-            />
+              </Tooltip>
+            </Form.Item>
           </Form>
         </Spin>
       </Modal>

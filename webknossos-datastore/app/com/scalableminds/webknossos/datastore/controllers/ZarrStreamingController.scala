@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -20,10 +19,10 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services._
 import io.swagger.annotations._
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Api(tags = Array("datastore", "zarr-streaming"))
 class ZarrStreamingController @Inject()(
@@ -111,7 +110,7 @@ class ZarrStreamingController @Inject()(
 
   private def convertLayerToZarrLayer(layer: DataLayer): ZarrLayer =
     layer match {
-      case d: WKWDataLayer =>
+      case d: DataLayer =>
         ZarrDataLayer(
           d.name,
           d.category,
@@ -120,7 +119,7 @@ class ZarrStreamingController @Inject()(
           d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
         )
-      case s: WKWSegmentationLayer =>
+      case s: SegmentationLayer =>
         ZarrSegmentationLayer(
           s.name,
           s.boundingBox,
@@ -129,25 +128,6 @@ class ZarrStreamingController @Inject()(
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
-        )
-      case z: ZarrDataLayer =>
-        ZarrDataLayer(
-          z.name,
-          z.category,
-          z.boundingBox,
-          z.elementClass,
-          z.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
-          numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1)
-        )
-      case zs: ZarrSegmentationLayer =>
-        ZarrSegmentationLayer(
-          zs.name,
-          zs.boundingBox,
-          zs.elementClass,
-          zs.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
-          mappings = zs.mappings,
-          largestSegmentId = zs.largestSegmentId,
-          numChannels = Some(if (zs.elementClass == ElementClass.uint24) 3 else 1)
         )
     }
 
@@ -446,17 +426,14 @@ class ZarrStreamingController @Inject()(
                     organizationName: String,
                     dataSetName: String,
                     dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      urlOrHeaderToken(token, request)) {
-      zGroup(organizationName, dataSetName)
+    accessTokenService.validateAccessForSyncBlock(
+      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      urlOrHeaderToken(token, request)) {
+      Ok(zGroupJson)
     }
   }
 
-  private def zGroup(
-      organizationName: String,
-      dataSetName: String,
-  ): Fox[Result] =
-    Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
+  private def zGroupJson: JsValue = Json.toJson(NgffGroupHeader(zarr_format = 2))
 
   def zGroupPrivateLink(token: Option[String], accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
@@ -471,7 +448,7 @@ class ZarrStreamingController @Inject()(
               .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
               .map(Ok(_))
           case None =>
-            zGroup(annotationSource.organizationName, annotationSource.dataSetName)
+            Fox.successful(Ok(zGroupJson))
         }
       } yield result
     }

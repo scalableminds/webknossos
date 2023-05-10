@@ -780,7 +780,7 @@ function* applyAndGetRevertingVolumeBatch(
     let newPendingOperations = volumeUndoBucket.pendingOperations;
 
     if (compressedBackendDataPromise != null) {
-      const compressedBackendData = yield* call(() => compressedBackendDataPromise);
+      const compressedBackendData = yield compressedBackendDataPromise;
       let decompressedBackendData;
       [decompressedBucketData, decompressedBackendData] = yield* all([
         call(decompressToTypedArray, bucket, compressedBucketData),

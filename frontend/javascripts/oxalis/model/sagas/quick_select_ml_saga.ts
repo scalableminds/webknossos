@@ -112,6 +112,8 @@ async function inferFromEmbedding(
   // @ts-ignore
   const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
+  // Fill the mask data with a for loop (slicing/mapping would incur additional
+  // data copies).
   const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
   for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
     maskData[idx] = masks.data[idx + startOffset] > 0 ? 1 : 0;
@@ -174,7 +176,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   try {
     // Await the promise here so that the saga finishes once the embedding was loaded
     // (this simplifies debugging and time measurement).
-    yield* call(() => embeddingPromise);
+    yield embeddingPromise;
   } catch (exception) {
     console.error(exception);
     // Don't notify user because we are only prefetching.
@@ -224,7 +226,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   );
   let embedding;
   try {
-    embedding = yield* call(() => embeddingPromise);
+    embedding = yield embeddingPromise;
   } catch (exception) {
     console.error(exception);
     removeEmbeddingPromiseFromCache(embeddingPromise);

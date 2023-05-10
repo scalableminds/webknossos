@@ -535,27 +535,27 @@ Expects:
                                dataSetName: String,
                                dataLayerName: String): Action[SegmentAnythingEmbeddingParameters] =
     sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
-      for {
-        _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
-        _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
-        // - <- bool2Fox(request.body.boundingBox.depth == 1) ?~> "segmentAnything.bboxNotFlat"
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
-          dataSetName) ~> NOT_FOUND
-        dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-        usableDataSource <- dataSource.toUsable ?~> "dataSet.notImported"
-        dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
-        datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
-        targetMaxBbox: BoundingBox = request.body.boundingBox / request.body.mag
-        // _ <- bool2Fox(targetMaxBbox.dimensions == Vec3Int(1024, 1024, 1)) ?~> s"Target-mag bbox must be sized 1024×1024×1, got ${targetMaxBbox.dimensions}"
-        data <- datastoreClient.getLayerData(organizationName,
-                                             dataset,
-                                             dataLayer.name,
-                                             request.body.boundingBox,
-                                             request.body.mag) ?~> "segmentAnything.getData.failed"
-        _ = logger.info(s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}...")
-        embedding <- wKRemoteSegmentAnythingClient.getEmbedding(data, dataLayer.elementClass) ?~> "segmentAnything.getEmbedding.failed"
-        _ = logger.info(s"Received ${embedding.length} bytes of embedding from SAM server, forwarding to frontend...")
-      } yield Ok(embedding)
+      log() {
+        for {
+          _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
+          _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
+          dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+            dataSetName) ~> NOT_FOUND
+          dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+          usableDataSource <- dataSource.toUsable ?~> "dataSet.notImported"
+          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
+          datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
+          targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
+          _ <- bool2Fox(targetMagBbox.dimensions.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.dimensions}"
+          data <- datastoreClient.getLayerData(organizationName,
+                                               dataset,
+                                               dataLayer.name,
+                                               request.body.boundingBox,
+                                               request.body.mag) ?~> "segmentAnything.getData.failed"
+          _ = logger.debug(s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}...")
+          embedding <- wKRemoteSegmentAnythingClient.getEmbedding(data, dataLayer.elementClass) ?~> "segmentAnything.getEmbedding.failed"
+        } yield Ok(embedding)
+      }
     }
 
 }

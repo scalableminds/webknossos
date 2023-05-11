@@ -130,6 +130,7 @@ async function inferFromEmbedding(
           bottomRight[firstDim],
           bottomRight[secondDim],
         ]);
+  // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
   const onnxLabel = new Float32Array([2, 3]);
   const onnxMaskInput = new Float32Array(256 * 256);
   const onnxHasMaskInput = new Float32Array([0]);
@@ -142,8 +143,9 @@ async function inferFromEmbedding(
     has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
     orig_im_size: new ort.Tensor("float32", origImSize, [2]),
   };
-  const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
 
+  // Use intersection-over-union estimates to pick the best mask.
+  const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
   // @ts-ignore
   const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);

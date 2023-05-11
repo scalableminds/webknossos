@@ -51,11 +51,14 @@ function getEmbedding(
   } else {
     const embeddingCenter = V3.round(userBoxMag1.getCenter());
     const sizeInMag1 = V3.scale3(Dimensions.transDim(EMBEDDING_SIZE, activeViewport), mag);
-    const embeddingTopLeft = V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5));
+    const embeddingTopLeft = V3.alignWithMag(
+      V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5)),
+      mag,
+    );
     const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
     const embeddingBoxMag1 = new BoundingBox({
       min: embeddingTopLeft,
-      max: V3.add(embeddingBottomRight, Dimensions.transDim([0, 0, 1], activeViewport)),
+      max: V3.add(embeddingBottomRight, Dimensions.transDim([0, 0, mag[2]], activeViewport)),
     });
 
     if (!embeddingBoxMag1.containsBoundingBox(userBoxMag1)) {
@@ -66,6 +69,7 @@ function getEmbedding(
     }
 
     console.log("Load new embedding for ", embeddingBoxMag1);
+    console.log("embeddingBoxMag1.getSize()", embeddingBoxMag1.getSize());
 
     const embeddingPromise = getSamEmbedding(dataset, layerName, mag, embeddingBoxMag1);
 
@@ -136,7 +140,7 @@ async function inferFromEmbedding(
   const size = embeddingBoxInTargetMag.getSize();
   const userSizeInTargetMag = userBoxInTargetMag.getSize();
   // Somewhere between the front-end, the back-end and the embedding
-  // server, there seems to be a different linearization of 2D the image
+  // server, there seems to be a different linearization of the 2D image
   // data which is why the code here deals with the XZ plane as a special
   // case.
   const stride =
@@ -166,9 +170,11 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     Dimensions.transDim(PREFETCH_WINDOW_SIZE, activeViewport),
   );
 
-  const userBoxMag1 = new BoundingBox({
+  const alignedUserBoxMag1 = new BoundingBox({
     min: V3.floor(startPosition),
-    max: V3.floor(V3.add(endPosition, Dimensions.transDim([0, 0, 1], activeViewport))),
+    max: V3.floor(
+      V3.add(endPosition, Dimensions.transDim([0, 0, labeledResolution[2]], activeViewport)),
+    ),
   }).alignWithMag(labeledResolution);
 
   const dataset = yield* select((state: OxalisState) => state.dataset);
@@ -180,7 +186,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
       getEmbedding,
       dataset,
       colorLayer.name,
-      userBoxMag1,
+      alignedUserBoxMag1,
       labeledResolution,
       activeViewport,
     );
@@ -214,25 +220,28 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
 
-  const userBoxMag1 = new BoundingBox({
+  const unalignedUserBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
     max: V3.floor(
       V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
     ),
-  }).alignWithMag(labeledResolution);
-
+  });
   // Ensure that the third dimension is inclusive (otherwise, the center of the passed
   // coordinates wouldn't be exactly on the W plane on which the user started this action).
-  const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), userBoxMag1.max);
-  quickSelectGeometry.setCoordinates(userBoxMag1.min, inclusiveMaxW);
+  const inclusiveMaxW = map3(
+    (el, idx) => (idx === thirdDim ? el - 1 : el),
+    unalignedUserBoxMag1.max,
+  );
+  quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
 
+  const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution);
   const dataset = yield* select((state: OxalisState) => state.dataset);
 
   const { embeddingPromise, bbox: embeddingBoxMag1 } = yield* call(
     getEmbedding,
     dataset,
     colorLayer.name,
-    userBoxMag1,
+    alignedUserBoxMag1,
     labeledResolution,
     activeViewport,
   );
@@ -246,7 +255,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   }
 
   const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
-  const userBoxInTargetMag = userBoxMag1.fromMag1ToMag(labeledResolution);
+  console.log("embeddingBoxMag1.getSize()", embeddingBoxMag1.getSize());
+  console.log("embeddingBoxInTargetMag.getSize()", embeddingBoxInTargetMag.getSize());
+  const userBoxInTargetMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
 
   if (embeddingBoxInTargetMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
@@ -275,7 +286,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     volumeTracing,
     activeViewport,
     labeledResolution,
-    userBoxMag1,
+    alignedUserBoxMag1,
     thirdDim,
     userBoxInTargetMag.getSize(),
     firstDim,

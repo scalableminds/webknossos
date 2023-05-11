@@ -6,25 +6,26 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   VersionedKeyValuePair
 }
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.annotation.tailrec
 
 class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, version: Option[Long] = None)
     extends Iterator[VersionedKeyValuePair[Array[Byte]]]
     with KeyValueStoreImplicits
+    with LazyLogging
     with FoxImplicits {
   private val batchSize = 64
 
-  private var currentStartKey = prefix
+  private var currentStartAfterKey: Option[String] = None
   private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
   private var nextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext =
-    fossilDbClient.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
+    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).toIterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
-    if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
     currentBatchIterator
   }
 
@@ -32,7 +33,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
   private def getNextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] =
     if (currentBatchIterator.hasNext) {
       val keyValuePair = currentBatchIterator.next
-      currentStartKey = keyValuePair.key
+      currentStartAfterKey = Some(keyValuePair.key)
       Some(keyValuePair)
     } else {
       if (!fetchNextAndSave.hasNext) None

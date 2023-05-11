@@ -20,7 +20,8 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 object VolumeTracingDownsampling {
-  def magsForVolumeTracingByLayerName(dataSource: DataSourceLike, fallbackLayerName: Option[String]): List[Vec3Int] = {
+  private def magsForVolumeTracingByLayerName(dataSource: DataSourceLike,
+                                              fallbackLayerName: Option[String]): List[Vec3Int] = {
     val fallbackLayer: Option[DataLayerLike] =
       fallbackLayerName.flatMap(name => dataSource.dataLayers.find(_.name == name))
     magsForVolumeTracing(dataSource, fallbackLayer)
@@ -97,7 +98,7 @@ trait VolumeTracingDownsampling
                                               dataLayer: VolumeTracingLayer,
                                               sourceMag: Vec3Int): Unit = {
     val data: List[VersionedKeyValuePair[Array[Byte]]] =
-      tracingDataStore.volumeData.getMultipleKeys(tracingId, Some(tracingId))
+      tracingDataStore.volumeData.getMultipleKeys(None, Some(tracingId))
     data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
       val bucketPositionOpt = parseBucketKey(keyValuePair.key).map(_._2)
       bucketPositionOpt.foreach { bucketPosition =>
@@ -219,7 +220,7 @@ trait VolumeTracingDownsampling
       magsToCreate = requiredMags.filter(_.maxDim > sourceMag.maxDim)
     } yield magsToCreate
 
-  protected def getRequiredMags(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
+  private def getRequiredMags(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSourceForTracing(oldTracingId)
       magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)

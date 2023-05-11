@@ -9,13 +9,16 @@ import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, TracingDataStore}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
 
 class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
-    with ProtoGeometryImplicits {
+    with ProtoGeometryImplicits
+    with VolumeBucketCompression
+    with LazyLogging {
   private val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex
 
   def updateFromBucket(tracingId: String,
@@ -24,7 +27,10 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                        updateGroupVersion: Long,
                        elementClass: ElementClass)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      segmentIds <- collectSegmentIds(bucketBytes, elementClass)
+      bucketBytesDecompressed <- tryo(
+        decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
+      segmentIds <- collectSegmentIds(bucketBytesDecompressed, elementClass)
+      _ = logger.info(s"Bucket at $bucketPosition contains segment ids $segmentIds")
     } yield ()
 
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClass)(
@@ -32,7 +38,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     for {
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield
-      unsignedIntArray.toSet.map { u: UnsignedInteger =>
+      unsignedIntArray.toSet.filter(!_.isZero).map { u: UnsignedInteger =>
         u.toPositiveLong
       }
 

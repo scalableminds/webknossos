@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
@@ -10,6 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer
 }
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
@@ -181,7 +183,8 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 

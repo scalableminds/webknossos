@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
+import com.scalableminds.util.cache.AlfuCache
+
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import com.scalableminds.webknossos.datastore.datareaders.{
@@ -9,13 +11,17 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   DatasetHeader,
   DatasetPath
 }
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 object ZarrArray extends LazyLogging {
   @throws[IOException]
-  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): ZarrArray = {
+  def open(path: VaultPath,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray]): ZarrArray = {
     val rootPath = new DatasetPath("")
     val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
     val headerBytes = (path / headerPath.storeKey).readBytes()
@@ -34,7 +40,12 @@ object ZarrArray extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this Zarr Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
     }
-    new ZarrArray(rootPath, path, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
+    new ZarrArray(rootPath,
+                  path,
+                  header,
+                  axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+                  channelIndex,
+                  sharedChunkContentsCache)
   }
 
 }
@@ -43,8 +54,9 @@ class ZarrArray(relativePath: DatasetPath,
                 vaultPath: VaultPath,
                 header: DatasetHeader,
                 axisOrder: AxisOrder,
-                channelIndex: Option[Int])
-    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex)
+                channelIndex: Option[Int],
+                sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex, sharedChunkContentsCache)
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =

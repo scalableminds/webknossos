@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -9,7 +10,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Box, Failure, Full}
+import ucar.ma2.{Array => MultiArray}
 import net.liftweb.util.Helpers.tryo
 
 import java.nio.file.Path
@@ -30,6 +32,20 @@ class BinaryDataService(val dataBaseDir: Path,
 
   private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
+
+  private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
+    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
+    val maxSizeKiloBytes = 1000 * 1000
+
+    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
+      arrayBox match {
+        case Full(array) =>
+          (array.getSizeBytes / 1000L).toInt
+        case _ => 0
+      }
+
+    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
+  }
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
@@ -84,7 +100,7 @@ class BinaryDataService(val dataBaseDir: Path,
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       val bucketProvider = bucketProviderCache.getOrLoadAndPut(request.dataLayer)(dataLayer =>
-        dataLayer.bucketProvider(dataVaultServiceOpt))
+        dataLayer.bucketProvider(dataVaultServiceOpt, sharedChunkContentsCache))
       bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))

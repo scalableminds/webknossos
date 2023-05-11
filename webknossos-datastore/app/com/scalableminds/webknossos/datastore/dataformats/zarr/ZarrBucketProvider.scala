@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
@@ -12,6 +13,7 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
@@ -29,7 +31,9 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 
 }
 
-class ZarrBucketProvider(layer: ZarrLayer, val dataVaultServiceOpt: Option[DataVaultService])
+class ZarrBucketProvider(layer: ZarrLayer,
+                         val dataVaultServiceOpt: Option[DataVaultService],
+                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -48,8 +52,10 @@ class ZarrBucketProvider(layer: ZarrLayer, val dataVaultServiceOpt: Option[DataV
               magPath: VaultPath <- if (zarrMag.isRemote) {
                 dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
+              chunkContentsCache <- sharedChunkContentsCache
               cubeHandle <- tryo(onError = e => logError(e))(
-                ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))
+                ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache))
+                .map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

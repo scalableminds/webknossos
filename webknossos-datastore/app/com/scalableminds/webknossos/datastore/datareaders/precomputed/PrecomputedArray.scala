@@ -15,6 +15,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
+import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
@@ -57,8 +58,9 @@ class PrecomputedArray(relativePath: DatasetPath,
                        vaultPath: VaultPath,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
-                       channelIndex: Option[Int])
-    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex)
+                       channelIndex: Option[Int],
+                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex, sharedChunkContentsCache)
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =

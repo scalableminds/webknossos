@@ -20,24 +20,12 @@ class DatasetArray(relativePath: DatasetPath,
                    vaultPath: VaultPath,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
-                   channelIndex: Option[Int])
+                   channelIndex: Option[Int],
+                   sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends LazyLogging {
 
   protected val chunkReader: ChunkReader =
     ChunkReader.create(vaultPath, header)
-
-  // Measure item weight in kilobytes because the weigher can only return int, not long
-  private lazy val chunkContentsCache: AlfuCache[String, MultiArray] = {
-    val maxSizeKiloBytes = 1000 * 1000
-    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
-  }
-
-  private def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
-    arrayBox match {
-      case Full(array) =>
-        (array.getSizeBytes / 1000L).toInt
-      case _ => 0
-    }
 
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
@@ -101,7 +89,7 @@ class DatasetArray(relativePath: DatasetPath,
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
-    chunkContentsCache.getOrLoad(chunkIndex.mkString(","), _ => readSourceChunkData(chunkIndex))
+    sharedChunkContentsCache.getOrLoad(chunkIndex.mkString(","), _ => readSourceChunkData(chunkIndex))
 
   private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
     if (header.isSharded) {

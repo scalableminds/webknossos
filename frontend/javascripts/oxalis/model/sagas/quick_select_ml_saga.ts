@@ -21,7 +21,11 @@ import { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
 const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
-type CacheEntry = { embeddingPromise: Promise<Float32Array>; bbox: BoundingBox; mag: Vector3 };
+type CacheEntry = {
+  embeddingPromise: Promise<Float32Array>;
+  embeddingBoxMag1: BoundingBox;
+  mag: Vector3;
+};
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
 let embeddingCache: Array<CacheEntry> = [];
@@ -38,7 +42,7 @@ function getEmbedding(
   activeViewport: OrthoView,
 ): CacheEntry {
   const matchingCacheEntry = embeddingCache.find(
-    (entry) => entry.bbox.containsBoundingBox(userBoxMag1) && V3.equals(entry.mag, mag),
+    (entry) => entry.embeddingBoxMag1.containsBoundingBox(userBoxMag1) && V3.equals(entry.mag, mag),
   );
   if (matchingCacheEntry) {
     // Move entry to the front.
@@ -63,7 +67,7 @@ function getEmbedding(
 
     if (!embeddingBoxMag1.containsBoundingBox(userBoxMag1)) {
       // This is unlikely as the embedding size of 1024**2 is quite large.
-      // The UX can certainly be optimized in case users run into problem
+      // The UX can certainly be optimized in case users run into this problem
       // more often.
       throw new Error("Selected bounding box is too large for AI selection.");
     }
@@ -73,7 +77,7 @@ function getEmbedding(
 
     const embeddingPromise = getSamEmbedding(dataset, layerName, mag, embeddingBoxMag1);
 
-    const newEntry = { embeddingPromise, bbox: embeddingBoxMag1, mag };
+    const newEntry = { embeddingPromise, embeddingBoxMag1, mag };
     embeddingCache = [newEntry, ...embeddingCache.slice(0, MAXIMUM_CACHE_SIZE - 1)];
 
     return newEntry;
@@ -107,12 +111,20 @@ async function inferFromEmbedding(
     return null;
   }
 
-  const onnxCoord = new Float32Array([
-    topLeft[firstDim],
-    topLeft[secondDim],
-    bottomRight[firstDim],
-    bottomRight[secondDim],
-  ]);
+  const onnxCoord =
+    activeViewport === "PLANE_YZ"
+      ? new Float32Array([
+          topLeft[secondDim],
+          topLeft[firstDim],
+          bottomRight[secondDim],
+          bottomRight[firstDim],
+        ])
+      : new Float32Array([
+          topLeft[firstDim],
+          topLeft[secondDim],
+          bottomRight[firstDim],
+          bottomRight[secondDim],
+        ]);
   const onnxLabel = new Float32Array([2, 3]);
   const onnxMaskInput = new Float32Array(256 * 256);
   const onnxHasMaskInput = new Float32Array([0]);
@@ -237,7 +249,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution);
   const dataset = yield* select((state: OxalisState) => state.dataset);
 
-  const { embeddingPromise, bbox: embeddingBoxMag1 } = yield* call(
+  const { embeddingPromise, embeddingBoxMag1 } = yield* call(
     getEmbedding,
     dataset,
     colorLayer.name,

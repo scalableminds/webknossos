@@ -187,7 +187,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     max: V3.floor(
       V3.add(endPosition, Dimensions.transDim([0, 0, labeledResolution[2]], activeViewport)),
     ),
-  }).alignWithMag(labeledResolution);
+  }).alignWithMag(labeledResolution, "floor");
 
   const dataset = yield* select((state: OxalisState) => state.dataset);
 
@@ -246,7 +246,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   );
   quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
 
-  const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution);
+  const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
   const dataset = yield* select((state: OxalisState) => state.dataset);
 
   const { embeddingPromise, embeddingBoxMag1 } = yield* call(

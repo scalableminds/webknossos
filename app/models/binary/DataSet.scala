@@ -671,8 +671,12 @@ class DataSetDataLayerDAO @Inject()(
 
   def findAllForDataSet(dataSetId: ObjectId): Fox[List[DataLayer]] =
     for {
-      rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
+      rows <- run(q"""SELECT _dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings,
+                          defaultViewConfiguration, adminViewConfiguration
+                      FROM webknossos.dataset_layers
+                      WHERE _dataset = $dataSetId
+                      ORDER BY name""".as[DatasetLayersRow])
+      rowsParsed <- Fox.combined(rows.toList.map(parseRow(_, dataSetId)))
     } yield rowsParsed
 
   private def insertLayerQuery(dataSetId: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =

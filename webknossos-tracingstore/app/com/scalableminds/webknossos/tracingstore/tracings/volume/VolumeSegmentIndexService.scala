@@ -30,9 +30,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     for {
       bucketBytesDecompressed <- tryo(
         decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
-      segmentIds <- collectSegmentIds(bucketBytesDecompressed, elementClass)
-      previousSegmentIds <- collectSegmentIds(previousBucketBytes, elementClass)
-      _ = logger.info(s"Bucket at $bucketPosition contains segment ids $segmentIds, previous $previousSegmentIds")
+      segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
+      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytes, elementClass)
+      additions = segmentIds.diff(previousSegmentIds)
+      removals = previousSegmentIds.diff(segmentIds)
+      _ = if (additions.nonEmpty || removals.nonEmpty) {
+        logger.info(s"Mag${bucketPosition.mag.toMagLiteral(true)} bucket additions: $additions and removals $removals")
+      }
     } yield ()
 
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClass)(

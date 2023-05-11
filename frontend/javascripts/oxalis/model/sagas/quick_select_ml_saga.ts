@@ -62,10 +62,12 @@ function getEmbedding(
       V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5)),
       mag,
     );
+    // Effectively, zero the first and second dimension in the mag.
+    const depthSummand = V3.scale3(mag, Dimensions.transDim([0, 0, 1], activeViewport));
     const embeddingBottomRight = V3.add(embeddingTopLeft, sizeInMag1);
     const embeddingBoxMag1 = new BoundingBox({
       min: embeddingTopLeft,
-      max: V3.add(embeddingBottomRight, Dimensions.transDim([0, 0, mag[2]], activeViewport)),
+      max: V3.add(embeddingBottomRight, depthSummand),
     });
 
     if (!embeddingBoxMag1.containsBoundingBox(userBoxMag1)) {
@@ -185,11 +187,11 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     Dimensions.transDim(PREFETCH_WINDOW_SIZE, activeViewport),
   );
 
+  // Effectively, zero the first and second dimension in the mag.
+  const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
   const alignedUserBoxMag1 = new BoundingBox({
     min: V3.floor(startPosition),
-    max: V3.floor(
-      V3.add(endPosition, Dimensions.transDim([0, 0, labeledResolution[2]], activeViewport)),
-    ),
+    max: V3.floor(V3.add(endPosition, depthSummand)),
   }).alignWithMag(labeledResolution, "floor");
 
   const dataset = yield* select((state: OxalisState) => state.dataset);
@@ -235,14 +237,11 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
 
+  // Effectively, zero the first and second dimension in the mag.
+  const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
   const unalignedUserBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
-    max: V3.floor(
-      V3.add(
-        V3.max(startPosition, endPosition),
-        Dimensions.transDim([0, 0, labeledResolution[2]], activeViewport),
-      ),
-    ),
+    max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
   });
   // Ensure that the third dimension is inclusive (otherwise, the center of the passed
   // coordinates wouldn't be exactly on the W plane on which the user started this action).

@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossos
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataHelper
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, FallbackDataHelper}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
@@ -44,6 +44,7 @@ class VolumeTracingService @Inject()(
     implicit val volumeDataCache: TemporaryVolumeDataStore,
     val handledGroupIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
+    editableMappingService: EditableMappingService,
     val temporaryTracingIdStore: TracingStoreRedisStore,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
@@ -387,7 +388,7 @@ class VolumeTracingService @Inject()(
     } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
-    volumeDataStore.getMultipleKeys(tracingId, Some(tracingId), limit = Some(1))(toBox).isEmpty
+    volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
   def createIsosurface(tracingId: String,
                        request: WebKnossosIsosurfaceRequest,
@@ -425,7 +426,9 @@ class VolumeTracingService @Inject()(
       } else None
     } yield bucketPosOpt
 
-  def merge(tracings: Seq[VolumeTracing], mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
+  def merge(tracings: Seq[VolumeTracing],
+            mergedVolumeStats: MergedVolumeStats,
+            newEditableMappingIdOpt: Option[String]): VolumeTracing = {
     def mergeTwoWithStats(tracingAWithIndex: (VolumeTracing, Int),
                           tracingBWithIndex: (VolumeTracing, Int)): (VolumeTracing, Int) =
       (mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats),
@@ -437,6 +440,7 @@ class VolumeTracingService @Inject()(
       .copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
+        mappingName = newEditableMappingIdOpt
       )
   }
 
@@ -587,4 +591,20 @@ class VolumeTracingService @Inject()(
 
   def dummyTracing: VolumeTracing = ???
 
+  def mergeEditableMappings(tracingsWithIds: List[(VolumeTracing, String)], userToken: Option[String]): Fox[String] =
+    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.mappingIsEditable.contains(true))) {
+      for {
+        remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
+          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
+        remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
+        _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
+        editableMappingIds <- Fox.serialCombined(tracingsWithIds)(tracingWithId => tracingWithId._1.mappingName)
+        _ <- bool2Fox(editableMappingIds.length == tracingsWithIds.length) ?~> "Not all volume tracings have editable mappings"
+        newEditableMappingId <- editableMappingService.merge(editableMappingIds, remoteFallbackLayer, userToken)
+      } yield newEditableMappingId
+    } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.mappingIsEditable.getOrElse(false))) {
+      Fox.empty
+    } else {
+      Fox.failure("Cannot merge tracings with and without editable mappings")
+    }
 }

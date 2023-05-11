@@ -11,8 +11,6 @@ import {
   isLayerVisible,
   getLayerByName,
   getResolutionInfo,
-  getColorLayers,
-  getSegmentationLayers,
   invertAndTranspose,
   getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";

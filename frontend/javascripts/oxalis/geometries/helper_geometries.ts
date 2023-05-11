@@ -133,12 +133,17 @@ export class QuickSelectGeometry {
   }
 
   setCoordinates(startPosition: Vector3, endPosition: Vector3) {
-    const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
-    const extentXYZ = V3.abs(V3.sub(endPosition, startPosition));
     const { activeViewport } = Store.getState().viewModeData.plane;
+    // Add a depth to the endPosition so that the extent of the geometry
+    // will have a depth of 1 and the centerPosition will be at 0.5.
+    const endPositionWithDepth = V3.add(
+      endPosition,
+      Dimensions.transDim([0, 0, 1], activeViewport),
+    );
+
+    const centerPosition = V3.scale(V3.add(startPosition, endPositionWithDepth), 0.5);
+    const extentXYZ = V3.abs(V3.sub(endPositionWithDepth, startPosition));
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
-    // Set the depth-component of the rectangle to 1
-    extentUVW[2] = 1;
 
     this.rectangle.position.set(...centerPosition);
     this.rectangle.scale.set(...extentUVW);

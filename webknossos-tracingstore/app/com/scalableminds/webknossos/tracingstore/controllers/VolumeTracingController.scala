@@ -217,7 +217,11 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId)
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
             zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-            largestSegmentId <- tracingService.importVolumeData(tracingId, tracing, zipFile, currentVersion)
+            largestSegmentId <- tracingService.importVolumeData(tracingId,
+                                                                tracing,
+                                                                zipFile,
+                                                                currentVersion,
+                                                                urlOrHeaderToken(token, request))
           } yield Ok(Json.toJson(largestSegmentId))
         }
       }
@@ -313,7 +317,8 @@ class VolumeTracingController @Inject()(
                                                None,
                                                None,
                                                None),
-              tracing.version
+              tracing.version,
+              urlOrHeaderToken(token, request)
             )
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
                                                         editableMappingId = editableMappingId,

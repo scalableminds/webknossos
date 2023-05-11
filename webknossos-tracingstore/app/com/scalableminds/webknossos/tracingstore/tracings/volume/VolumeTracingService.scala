@@ -88,7 +88,8 @@ class VolumeTracingService @Inject()(
 
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup[VolumeTracing],
-                        previousVersion: Long): Fox[Unit] =
+                        previousVersion: Long,
+                        userToken: Option[String]): Fox[Unit] =
     for {
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
@@ -97,7 +98,8 @@ class VolumeTracingService @Inject()(
               case a: UpdateBucketVolumeAction =>
                 if (tracing.getMappingIsEditable) {
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
-                } else updateBucket(tracingId, tracing, a, updateGroup.version) ?~> "Failed to save volume data."
+                } else
+                  updateBucket(tracingId, tracing, a, updateGroup.version, userToken) ?~> "Failed to save volume data."
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   tracing.copy(
@@ -129,14 +131,21 @@ class VolumeTracingService @Inject()(
   private def updateBucket(tracingId: String,
                            volumeTracing: VolumeTracing,
                            action: UpdateBucketVolumeAction,
-                           updateGroupVersion: Long): Fox[VolumeTracing] =
+                           updateGroupVersion: Long,
+                           userToken: Option[String]): Fox[VolumeTracing] =
     for {
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
       bucketPosition = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
-      _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucketPosition, action.data, updateGroupVersion)
+      dataLayer = volumeTracingLayer(tracingId,
+                                     volumeTracing,
+                                     includeFallbackDataIfAvailable = true,
+                                     userToken = userToken)
+      _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion)
+      previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L))
       _ <- volumeSegmentIndexService.updateFromBucket(tracingId,
                                                       bucketPosition,
                                                       action.data,
+                                                      previousBucketBytes,
                                                       updateGroupVersion,
                                                       volumeTracing.elementClass)
     } yield volumeTracing
@@ -547,7 +556,11 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Long] =
+  def importVolumeData(tracingId: String,
+                       tracing: VolumeTracing,
+                       zipFile: File,
+                       currentVersion: Int,
+                       userToken: Option[String]): Fox[Long] =
     if (currentVersion != tracing.version)
       Fox.failure("version.mismatch")
     else {
@@ -584,7 +597,7 @@ class VolumeTracingService @Inject()(
             None,
             None,
             None)
-          _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
+          _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }
     }

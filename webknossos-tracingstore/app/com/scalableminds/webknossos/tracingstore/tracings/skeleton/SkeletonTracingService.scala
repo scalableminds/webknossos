@@ -45,7 +45,8 @@ class SkeletonTracingService @Inject()(
 
   def handleUpdateGroup(tracingId: String,
                         updateActionGroup: UpdateActionGroup[SkeletonTracing],
-                        previousVersion: Long): Fox[_] =
+                        previousVersion: Long,
+                        userToken: Option[String]): Fox[_] =
     tracingDataStore.skeletonUpdates.put(
       tracingId,
       updateActionGroup.version,

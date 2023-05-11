@@ -41,6 +41,9 @@ function getEmbedding(
   mag: Vector3,
   activeViewport: OrthoView,
 ): CacheEntry {
+  if (userBoxMag1.getVolume() === 0) {
+    throw new Error("User bounding box should not have empty volume.");
+  }
   const matchingCacheEntry = embeddingCache.find(
     (entry) => entry.embeddingBoxMag1.containsBoundingBox(userBoxMag1) && V3.equals(entry.mag, mag),
   );
@@ -235,7 +238,10 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const unalignedUserBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
     max: V3.floor(
-      V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
+      V3.add(
+        V3.max(startPosition, endPosition),
+        Dimensions.transDim([0, 0, labeledResolution[2]], activeViewport),
+      ),
     ),
   });
   // Ensure that the third dimension is inclusive (otherwise, the center of the passed

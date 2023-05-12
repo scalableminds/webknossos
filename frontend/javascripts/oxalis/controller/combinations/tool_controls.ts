@@ -663,7 +663,6 @@ export class QuickSelectTool {
         Store.dispatch(confirmQuickSelectAction());
         quickSelectGeometry.detachTextureMask();
 
-        console.log("leftMouseDown. set to drawing");
         Store.dispatch(setQuickSelectStateAction("drawing"));
 
         const state = Store.getState();
@@ -687,7 +686,6 @@ export class QuickSelectTool {
         isDragging = false;
         // Identity equality is enough, since we want to catch the case
         // in which the user didn't move the mouse at all
-        console.log("leftmouseup. state", Store.getState().uiInformation.quickSelectState);
         if (
           startPos === currentPos ||
           Store.getState().uiInformation.quickSelectState === "inactive"
@@ -695,7 +693,6 @@ export class QuickSelectTool {
           // clear rectangle because user didn't drag
           return;
         }
-        console.log("leftmouseup. compute");
         if (startPos != null && currentPos != null) {
           Store.dispatch(
             computeQuickSelectForRectAction(startPos, currentPos, quickSelectGeometry),
@@ -708,7 +705,6 @@ export class QuickSelectTool {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
-        console.log("move. state", Store.getState().uiInformation.quickSelectState);
         if (
           !isDragging ||
           startPos == null ||

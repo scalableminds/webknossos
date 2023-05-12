@@ -67,7 +67,6 @@ export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
     ["SET_TOOL", "CYCLE_TOOL"],
     function* guard(action: CycleToolAction | SetToolAction) {
-      console.log("action", action);
       const isQuickSelectTool = yield* select(
         (state) => state.uiInformation.activeTool === AnnotationToolEnum.QUICK_SELECT,
       );

@@ -77,8 +77,7 @@ function getEmbedding(
       throw new Error("Selected bounding box is too large for AI selection.");
     }
 
-    console.log("Load new embedding for ", embeddingBoxMag1);
-    console.log("embeddingBoxMag1.getSize()", embeddingBoxMag1.getSize());
+    console.debug("Load new embedding for ", embeddingBoxMag1);
 
     const embeddingPromise = getSamEmbedding(dataset, layerName, mag, embeddingBoxMag1);
 

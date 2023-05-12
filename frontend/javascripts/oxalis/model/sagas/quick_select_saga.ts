@@ -10,12 +10,7 @@ import {
 import Toast from "libs/toast";
 import features from "features";
 
-import {
-  CycleToolAction,
-  setBusyBlockingInfoAction,
-  setQuickSelectStateAction,
-  SetToolAction,
-} from "../actions/ui_actions";
+import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
 import performQuickSelectML, {
   getInferenceSession,
@@ -64,19 +59,16 @@ export default function* listenToQuickSelect(): Saga<void> {
     },
   );
 
-  yield* takeEvery(
-    ["SET_TOOL", "CYCLE_TOOL"],
-    function* guard(action: CycleToolAction | SetToolAction) {
-      const isQuickSelectTool = yield* select(
-        (state) => state.uiInformation.activeTool === AnnotationToolEnum.QUICK_SELECT,
-      );
-      if (isQuickSelectTool && features().segmentAnythingEnabled) {
-        // Retrieve the inference session to prefetch it as soon as the tool
-        // is selected. If the session is cached, this is basically a noop.
-        yield* call(getInferenceSession);
-      }
-    },
-  );
+  yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], function* guard() {
+    const isQuickSelectTool = yield* select(
+      (state) => state.uiInformation.activeTool === AnnotationToolEnum.QUICK_SELECT,
+    );
+    if (isQuickSelectTool && features().segmentAnythingEnabled) {
+      // Retrieve the inference session to prefetch it as soon as the tool
+      // is selected. If the session is cached, this is basically a noop.
+      yield* call(getInferenceSession);
+    }
+  });
 
   yield* takeEvery("ESCAPE", function* handler() {
     if (yield* select((state) => state.uiInformation.quickSelectState === "drawing")) {

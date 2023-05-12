@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Failure, Full}
 import ucar.ma2.{Array => MultiArray}
 import net.liftweb.util.Helpers.tryo
 
@@ -21,7 +21,8 @@ class BinaryDataService(val dataBaseDir: Path,
                         maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         dataVaultServiceOpt: Option[DataVaultService],
-                        val applicationHealthService: Option[ApplicationHealthService])
+                        val applicationHealthService: Option[ApplicationHealthService],
+                        sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
@@ -32,20 +33,6 @@ class BinaryDataService(val dataBaseDir: Path,
 
   private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
-
-  private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
-    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
-    val maxSizeKiloBytes = 1000 * 1000
-
-    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
-      arrayBox match {
-        case Full(array) =>
-          (array.getSizeBytes / 1000L).toInt
-        case _ => 0
-      }
-
-    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
-  }
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
@@ -18,6 +19,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext
+import ucar.ma2.{Array => MultiArray}
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
@@ -100,7 +102,9 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider = volumeBucketProvider
+  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+    volumeBucketProvider
 
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
 

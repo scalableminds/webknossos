@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -14,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   SegmentationLayer
 }
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
 
@@ -80,7 +82,8 @@ case class EditableMappingLayer(name: String,
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider =
+  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
   override def mappings: Option[Set[String]] = None

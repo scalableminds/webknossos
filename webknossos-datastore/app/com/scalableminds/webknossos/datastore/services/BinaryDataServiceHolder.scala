@@ -1,8 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.cache.AlfuCache
+
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import net.liftweb.common.{Box, Full}
+import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
 
@@ -18,12 +22,27 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         applicationHealthService: ApplicationHealthService,
                                         dataVaultService: DataVaultService) {
 
+  private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
+    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
+    val maxSizeKiloBytes = 1000 * 1000
+
+    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
+      arrayBox match {
+        case Full(array) =>
+          (array.getSizeBytes / 1000L).toInt
+        case _ => 0
+      }
+
+    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
+  }
+
   val binaryDataService: BinaryDataService = new BinaryDataService(
     Paths.get(config.Datastore.baseFolder),
     config.Datastore.Cache.DataCube.maxEntries,
     Some(agglomerateService),
     Some(dataVaultService),
-    Some(applicationHealthService)
+    Some(applicationHealthService),
+    Some(sharedChunkContentsCache)
   )
 
 }

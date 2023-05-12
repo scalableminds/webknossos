@@ -7,7 +7,6 @@ import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Full}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import java.io.IOException
@@ -88,8 +87,11 @@ class DatasetArray(relativePath: DatasetPath,
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
 
+  private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
+    s"${vaultPath}____chunk_${chunkIndex.mkString(",")}"
+
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
-    sharedChunkContentsCache.getOrLoad(chunkIndex.mkString(","), _ => readSourceChunkData(chunkIndex))
+    sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex), _ => readSourceChunkData(chunkIndex))
 
   private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
     if (header.isSharded) {

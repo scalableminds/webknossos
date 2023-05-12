@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.precomputed
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
@@ -14,6 +15,7 @@ import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
+import ucar.ma2.{Array => MultiArray}
 
 class PrecomputedCubeHandle(precomputedArray: PrecomputedArray)
     extends DataCubeHandle
@@ -32,7 +34,9 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray)
 
 }
 
-class PrecomputedBucketProvider(layer: PrecomputedLayer, val dataVaultServiceOpt: Option[DataVaultService])
+class PrecomputedBucketProvider(layer: PrecomputedLayer,
+                                val dataVaultServiceOpt: Option[DataVaultService],
+                                sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -51,8 +55,10 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer, val dataVaultServiceOpt
               magPath: VaultPath <- if (precomputedMag.isRemote) {
                 dataVaultService.vaultPathFor(precomputedMag)
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
+              chunkContentsCache <- sharedChunkContentsCache
               cubeHandle <- tryo(onError = e => logError(e))(
-                PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))
+                PrecomputedArray
+                  .open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex, chunkContentsCache))
                 .map(new PrecomputedCubeHandle(_))
             } yield cubeHandle
           case None => Empty

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.n5
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
@@ -12,6 +13,7 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
@@ -29,7 +31,9 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging wit
 
 }
 
-class N5BucketProvider(layer: N5Layer, val dataVaultServiceOpt: Option[DataVaultService])
+class N5BucketProvider(layer: N5Layer,
+                       val dataVaultServiceOpt: Option[DataVaultService],
+                       sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging
     with RateLimitedErrorLogging {
@@ -48,8 +52,9 @@ class N5BucketProvider(layer: N5Layer, val dataVaultServiceOpt: Option[DataVault
               magPath: VaultPath <- if (n5Mag.isRemote) {
                 dataVaultService.vaultPathFor(n5Mag)
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
-              cubeHandle <- tryo(onError = e => logError(e))(N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex))
-                .map(new N5CubeHandle(_))
+              chunkContentsCache <- sharedChunkContentsCache
+              cubeHandle <- tryo(onError = e => logError(e))(
+                N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex, chunkContentsCache)).map(new N5CubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

@@ -19,7 +19,10 @@ import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
-  def open(magPath: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): PrecomputedArray = {
+  def open(magPath: VaultPath,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray]): PrecomputedArray = {
 
     val basePath = magPath.parent
     val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
@@ -50,7 +53,8 @@ object PrecomputedArray extends LazyLogging {
                          basePath,
                          scaleHeader,
                          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-                         channelIndex)
+                         channelIndex,
+                         sharedChunkContentsCache)
   }
 }
 

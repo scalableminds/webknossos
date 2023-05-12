@@ -18,7 +18,10 @@ import java.nio.charset.StandardCharsets
 
 object N5Array extends LazyLogging {
   @throws[IOException]
-  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): N5Array = {
+  def open(path: VaultPath,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray]): N5Array = {
     val rootPath = new DatasetPath("")
     val headerPath = rootPath.resolve(N5Header.FILENAME_ATTRIBUTES_JSON)
     val headerBytes = (path / headerPath.storeKey).readBytes()
@@ -37,7 +40,12 @@ object N5Array extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this N5 Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
     }
-    new N5Array(rootPath, path, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
+    new N5Array(rootPath,
+                path,
+                header,
+                axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+                channelIndex,
+                sharedChunkContentsCache)
   }
 }
 

@@ -37,9 +37,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.udpate.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ = if (additions.nonEmpty || removals.nonEmpty) {
+      /*_ = if (additions.nonEmpty || removals.nonEmpty) {
         logger.info(s"Mag${bucketPosition.mag.toMagLiteral(true)} bucket additions: $additions and removals $removals")
-      }
+      }*/
       _ <- Fox.serialCombined(removals.toList)(segmentId =>
         removeBucketFromSegmentIndex(tracingId, segmentId, bucketPosition, updateGroupVersion)) ?~> "volumeSegmentIndex.udpate.removeBucket.failed"
       _ <- Fox.serialCombined(additions.toList)(segmentId =>
@@ -62,11 +62,12 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       previousBucketList: ListOfVec3IntProto <- getSegmentToBucketIndexWithEmptyFallback(tracingId,
                                                                                          segmentId,
                                                                                          bucketPosition.mag,
-                                                                                         Some(updateGroupVersion - 1L))
+                                                                                         Some(updateGroupVersion))
       bucketPositionProto = bucketPositionVec3IntProto(bucketPosition)
       newBucketList = ListOfVec3IntProto(previousBucketList.values.filterNot(_ == bucketPositionProto))
-      _ = logger.info(
-        s"Removing bucket ${bucketPositionVec3IntProto(bucketPosition)} from segment $segmentId, new mag-${bucketPosition.mag} list: $newBucketList")
+      /*_ = logger.info(
+        s"Removing bucket ${vec3IntFromProto(bucketPositionVec3IntProto(bucketPosition))} from segment $segmentId, new mag-${bucketPosition.mag
+          .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}")*/
       _ <- updateSegmentToBucketIndex(tracingId, segmentId, bucketPosition.mag, newBucketList, updateGroupVersion)
     } yield ()
 
@@ -78,10 +79,12 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       previousBucketList <- getSegmentToBucketIndexWithEmptyFallback(tracingId,
                                                                      segmentId,
                                                                      bucketPosition.mag,
-                                                                     Some(updateGroupVersion - 1L))
-      newBucketList = ListOfVec3IntProto(bucketPositionVec3IntProto(bucketPosition) +: previousBucketList.values)
-      _ = logger.info(
-        s"Adding bucket ${bucketPositionVec3IntProto(bucketPosition)} to segment $segmentId, new mag-${bucketPosition.mag} list: $newBucketList")
+                                                                     Some(updateGroupVersion))
+      newBucketList = ListOfVec3IntProto(
+        (bucketPositionVec3IntProto(bucketPosition) +: previousBucketList.values).distinct)
+      /*_ = logger.info(
+        s"Adding bucket ${vec3IntFromProto(bucketPositionVec3IntProto(bucketPosition))} to segment $segmentId, new mag-${bucketPosition.mag
+          .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}")*/
       _ <- updateSegmentToBucketIndex(tracingId, segmentId, bucketPosition.mag, newBucketList, updateGroupVersion)
     } yield ()
 

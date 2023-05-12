@@ -53,7 +53,7 @@ function getEmbedding(
       matchingCacheEntry,
       ...embeddingCache.filter((el) => el !== matchingCacheEntry),
     ];
-    console.log("Use", matchingCacheEntry, "from cache.");
+    console.debug("Use", matchingCacheEntry, "from cache.");
     return matchingCacheEntry;
   } else {
     const embeddingCenter = V3.round(userBoxMag1.getCenter());
@@ -274,8 +274,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   }
 
   const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
-  console.log("embeddingBoxMag1.getSize()", embeddingBoxMag1.getSize());
-  console.log("embeddingBoxInTargetMag.getSize()", embeddingBoxInTargetMag.getSize());
   const userBoxInTargetMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
 
   if (embeddingBoxInTargetMag.getVolume() === 0) {

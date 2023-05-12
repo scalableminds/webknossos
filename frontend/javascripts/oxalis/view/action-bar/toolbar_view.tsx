@@ -1010,7 +1010,7 @@ function ToolSpecificSettings({
         <ButtonComponent
           title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
           onClick={handleClearProofreading}
-          className="narrow"
+          className="narrow without-icon-margin"
           style={{ marginLeft: 12 }}
         >
           <ClearOutlined />
@@ -1022,9 +1022,10 @@ function ToolSpecificSettings({
 
 function QuickSelectSettingsPopover() {
   const dispatch = useDispatch();
-  const { isQuickSelectActive, areQuickSelectSettingsOpen } = useSelector(
+  const { quickSelectState, areQuickSelectSettingsOpen } = useSelector(
     (state: OxalisState) => state.uiInformation,
   );
+  const isQuickSelectActive = quickSelectState === "active";
   return (
     <Popover
       trigger="click"
@@ -1038,7 +1039,7 @@ function QuickSelectSettingsPopover() {
       <ButtonComponent
         title="Configure Quick Select"
         tooltipPlacement="right"
-        className="narrow"
+        className="narrow without-icon-margin"
         type={isQuickSelectActive ? "primary" : "default"}
         style={{ marginLeft: 12, marginRight: 12 }}
       >

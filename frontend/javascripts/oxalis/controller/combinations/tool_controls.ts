@@ -48,6 +48,7 @@ import {
 } from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
+import { setQuickSelectStateAction } from "oxalis/model/actions/ui_actions";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -662,6 +663,9 @@ export class QuickSelectTool {
         Store.dispatch(confirmQuickSelectAction());
         quickSelectGeometry.detachTextureMask();
 
+        console.log("leftMouseDown. set to drawing");
+        Store.dispatch(setQuickSelectStateAction("drawing"));
+
         const state = Store.getState();
         quickSelectGeometry.rotateToViewport();
 
@@ -683,10 +687,15 @@ export class QuickSelectTool {
         isDragging = false;
         // Identity equality is enough, since we want to catch the case
         // in which the user didn't move the mouse at all
-        if (startPos === currentPos) {
+        console.log("leftmouseup. state", Store.getState().uiInformation.quickSelectState);
+        if (
+          startPos === currentPos ||
+          Store.getState().uiInformation.quickSelectState === "inactive"
+        ) {
           // clear rectangle because user didn't drag
           return;
         }
+        console.log("leftmouseup. compute");
         if (startPos != null && currentPos != null) {
           Store.dispatch(
             computeQuickSelectForRectAction(startPos, currentPos, quickSelectGeometry),
@@ -699,7 +708,12 @@ export class QuickSelectTool {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
-        if (!isDragging || startPos == null) {
+        console.log("move. state", Store.getState().uiInformation.quickSelectState);
+        if (
+          !isDragging ||
+          startPos == null ||
+          Store.getState().uiInformation.quickSelectState === "inactive"
+        ) {
           return;
         }
         const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));

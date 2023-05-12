@@ -497,7 +497,9 @@ function* maybeInterpretUndoAsDiscardUiAction() {
   // can be such a case.
   // In that case, we re-interpret the undo action accordingly.
   // The return value of this function signals whether undo was re-interpreted.
-  const isQuickSelectActive = yield* select((state) => state.uiInformation.isQuickSelectActive);
+  const isQuickSelectActive = yield* select(
+    (state) => state.uiInformation.quickSelectState === "active",
+  );
   if (!isQuickSelectActive) {
     return false;
   }

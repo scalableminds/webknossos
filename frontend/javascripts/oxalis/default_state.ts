@@ -238,7 +238,7 @@ const defaultState: OxalisState = {
     busyBlockingInfo: {
       isBusy: false,
     },
-    isQuickSelectActive: false,
+    quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
   },
   localSegmentationData: {},

@@ -13,7 +13,7 @@ import features from "features";
 import {
   CycleToolAction,
   setBusyBlockingInfoAction,
-  setIsQuickSelectActiveAction,
+  setQuickSelectStateAction,
   SetToolAction,
 } from "../actions/ui_actions";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
@@ -22,6 +22,7 @@ import performQuickSelectML, {
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
 import { AnnotationToolEnum } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -35,7 +36,7 @@ export default function* listenToQuickSelect(): Saga<void> {
       try {
         yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
 
-        yield* put(setIsQuickSelectActiveAction(true));
+        yield* put(setQuickSelectStateAction("active"));
         if (yield* call(shouldUseHeuristic)) {
           yield* call(performQuickSelectHeuristic, action);
         } else {
@@ -48,7 +49,7 @@ export default function* listenToQuickSelect(): Saga<void> {
       } finally {
         yield* put(setBusyBlockingInfoAction(false));
         action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-        yield* put(setIsQuickSelectActiveAction(false));
+        yield* put(setQuickSelectStateAction("inactive"));
       }
     },
   );
@@ -77,4 +78,15 @@ export default function* listenToQuickSelect(): Saga<void> {
       }
     },
   );
+
+  yield* takeEvery("ESCAPE", function* handler() {
+    if (yield* select((state) => state.uiInformation.quickSelectState === "drawing")) {
+      // The user hit escape and the quick select mode should be canceled.
+      // Escaping the preview mode is handled within the quick select sagas that support
+      // preview mode (currently only the non-ml variant).
+      yield* put(setQuickSelectStateAction("inactive"));
+      const quickSelectGeometry = yield* call(() => getSceneController().quickSelectGeometry);
+      quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+    }
+  });
 }

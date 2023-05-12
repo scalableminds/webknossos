@@ -10,9 +10,18 @@ import {
 import Toast from "libs/toast";
 import features from "features";
 
-import { setBusyBlockingInfoAction, setIsQuickSelectActiveAction } from "../actions/ui_actions";
+import {
+  CycleToolAction,
+  setBusyBlockingInfoAction,
+  setIsQuickSelectActiveAction,
+  SetToolAction,
+} from "../actions/ui_actions";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
-import performQuickSelectML, { prefetchEmbedding } from "./quick_select_ml_saga";
+import performQuickSelectML, {
+  getInferenceSession,
+  prefetchEmbedding,
+} from "./quick_select_ml_saga";
+import { AnnotationToolEnum } from "oxalis/constants";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -50,6 +59,21 @@ export default function* listenToQuickSelect(): Saga<void> {
       const useHeuristic = yield* call(shouldUseHeuristic);
       if (!useHeuristic) {
         yield* call(prefetchEmbedding, action);
+      }
+    },
+  );
+
+  yield* takeEvery(
+    ["SET_TOOL", "CYCLE_TOOL"],
+    function* guard(action: CycleToolAction | SetToolAction) {
+      console.log("action", action);
+      const isQuickSelectTool = yield* select(
+        (state) => state.uiInformation.activeTool === AnnotationToolEnum.QUICK_SELECT,
+      );
+      if (isQuickSelectTool && features().segmentAnythingEnabled) {
+        // Retrieve the inference session to prefetch it as soon as the tool
+        // is selected. If the session is cached, this is basically a noop.
+        yield* call(getInferenceSession);
       }
     },
   );

@@ -91,7 +91,7 @@ function getEmbedding(
 
 let session: Promise<InferenceSession> | null;
 
-async function getSession() {
+export async function getInferenceSession() {
   if (session == null) {
     session = ort.InferenceSession.create("/assets/models/vit_l_0b3195_decoder_quantized.onnx");
   }
@@ -110,7 +110,7 @@ async function inferFromEmbedding(
 
   let ortSession;
   try {
-    ortSession = await getSession();
+    ortSession = await getInferenceSession();
   } catch (exception) {
     console.error(exception);
     return null;
@@ -211,7 +211,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
     );
     // Also prefetch session (will block). After the first time, it's basically
     // a noop.
-    yield* call(getSession);
+    yield* call(getInferenceSession);
 
     // Await the promise here so that the saga finishes once the embedding was loaded
     // (this simplifies debugging and time measurement).

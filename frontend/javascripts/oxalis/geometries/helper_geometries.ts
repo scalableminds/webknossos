@@ -135,16 +135,20 @@ export class QuickSelectGeometry {
   setCoordinates(startPosition: Vector3, endPosition: Vector3) {
     const { activeViewport } = Store.getState().viewModeData.plane;
     // Add a depth to the endPosition so that the extent of the geometry
-    // will have a depth of 1 and the centerPosition will be at 0.5.
+    // will have a depth of 1. Note that the extent is only used to scale
+    // the geometry. Since it is a plane, a depth scale factor of > 1 won't
+    // extrude it.
     const endPositionWithDepth = V3.add(
       endPosition,
       Dimensions.transDim([0, 0, 1], activeViewport),
     );
 
-    const centerPosition = V3.scale(V3.add(startPosition, endPositionWithDepth), 0.5);
+    const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
     const extentXYZ = V3.abs(V3.sub(endPositionWithDepth, startPosition));
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
 
+    // Note that the third dimension's value will be adapted again
+    // in adaptVisibilityForRendering.
     this.rectangle.position.set(...centerPosition);
     this.rectangle.scale.set(...extentUVW);
     this.rectangle.geometry.computeBoundingSphere();
@@ -170,6 +174,17 @@ export class QuickSelectGeometry {
     this.meshGroup.visible =
       Math.trunc(flycamPosition[thirdDim]) ===
       Math.trunc(this.rectangle.position.toArray()[thirdDim]);
+
+    if (this.meshGroup.visible) {
+      // If the group is visible, adapt the position's third dimension to
+      // be exactly at the third dimension of the flycam. Otherwise,
+      // the geometry might be invisible when the current position is
+      // fractional.
+      const pos = this.rectangle.position.toArray();
+      pos[thirdDim] = flycamPosition[thirdDim];
+      this.rectangle.position.set(...pos);
+      this.centerMarker.position.set(...pos);
+    }
   }
 
   getMeshGroup() {

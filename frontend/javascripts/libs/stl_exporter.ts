@@ -7,6 +7,7 @@ import * as THREE from "three";
 // - the `parse` method was adapted to emit multiple ArrayBuffers
 //   to avoid that one large ArrayBuffer has to be allocated (which can
 //   fail if not too much consecutive memory is available).
+//   (see https://github.com/scalableminds/webknossos/pull/7074.)
 
 class ChunkedDataView {
   views: DataView[];

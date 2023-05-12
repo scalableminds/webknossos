@@ -190,9 +190,9 @@ export function PlanDashboardCard({
   const includedStorageLabel =
     organization.includedStorageBytes === Number.POSITIVE_INFINITY
       ? "∞"
-      : formatCountToDataAmountUnit(organization.includedStorageBytes);
+      : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
 
-  const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes);
+  const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
 
   const storageLabel = (
     <span style={{ display: "inline-block", wordBreak: "break-word", width: 100 }}>

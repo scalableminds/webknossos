@@ -105,8 +105,8 @@ export function formatScale(scaleArr: Vector3 | null | undefined, roundTo: numbe
   }
 }
 
-export function formatNumberToUnit(number: number, unitMap: Map<number, string>): string {
-  const closestFactor = findClosestToUnitFactor(number, unitMap);
+export function formatNumberToUnit(number: number, unitMap: Map<number, string>, preferShorterDecimals:boolean = false, decimalPrecision:number = 1): string {
+  const closestFactor = findClosestToUnitFactor(number, unitMap, preferShorterDecimals, decimalPrecision);
   const unit = unitMap.get(closestFactor);
 
   if (unit == null) {
@@ -116,7 +116,7 @@ export function formatNumberToUnit(number: number, unitMap: Map<number, string>)
   const valueInUnit = number / closestFactor;
 
   if (valueInUnit !== Math.floor(valueInUnit)) {
-    return `${valueInUnit.toFixed(1)}${ThinSpace}${unit}`;
+    return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${unit}`;
   }
 
   return `${valueInUnit}${ThinSpace}${unit}`;
@@ -141,24 +141,23 @@ const byteFactorToUnit = new Map([
   [1e9, "GB"],
   [1e12, "TB"],
 ]);
-export function formatCountToDataAmountUnit(count: number): string {
-  return formatNumberToUnit(count, byteFactorToUnit);
+export function formatCountToDataAmountUnit(count: number, preferShorterDecimals:boolean = false, decimalPrecision:number = 1): string {
+  return formatNumberToUnit(count, byteFactorToUnit, preferShorterDecimals, decimalPrecision);
 }
 
 const getSortedFactors = _.memoize((unitMap: Map<number, string>) =>
   Array.from(unitMap.keys()).sort((a, b) => a - b),
 );
 
-export function findClosestToUnitFactor(number: number, unitMap: Map<number, string>): number {
+export function findClosestToUnitFactor(number: number, unitMap: Map<number, string>, preferShorterDecimals: boolean = false, decimalPrecision:number = 1): number {
   const sortedFactors = getSortedFactors(unitMap);
   let closestFactor = sortedFactors[0];
 
   for (const factor of sortedFactors) {
-    if (number >= factor) {
+    if (number >= factor * (preferShorterDecimals ? 0.95*10**(-decimalPrecision) : 1)) { // TODO dont hardcode nachkommastellen
       closestFactor = factor;
     }
   }
-
   return closestFactor;
 }
 export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {

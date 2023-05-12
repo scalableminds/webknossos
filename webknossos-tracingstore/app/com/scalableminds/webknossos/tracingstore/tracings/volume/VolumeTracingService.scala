@@ -141,13 +141,13 @@ class VolumeTracingService @Inject()(
                                      includeFallbackDataIfAvailable = true,
                                      userToken = userToken)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion)
-      previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L))
+      previousBucketBytesBox <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
       _ <- volumeSegmentIndexService.updateFromBucket(tracingId,
                                                       bucketPosition,
                                                       action.data,
-                                                      previousBucketBytes,
+                                                      previousBucketBytesBox,
                                                       updateGroupVersion,
-                                                      volumeTracing.elementClass)
+                                                      volumeTracing.elementClass) ?~> "volumeSegmentIndex.update.failed"
     } yield volumeTracing
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =

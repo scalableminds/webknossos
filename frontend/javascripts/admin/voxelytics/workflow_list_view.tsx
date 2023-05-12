@@ -9,7 +9,7 @@ import {
   VoxelyticsWorkflowListing,
 } from "types/api_flow_types";
 import { usePolling } from "libs/react_hooks";
-import { formatDateMedium } from "libs/format_utils";
+import { formatBytes, formatDateMedium, formatNumber } from "libs/format_utils";
 import Toast from "libs/toast";
 import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
 
@@ -180,6 +180,25 @@ export default function WorkflowListView() {
             key: "progress",
             width: 200,
             render: renderProgress,
+          },
+          {
+            title: "File Size",
+            key: "fileSize",
+            width: 200,
+            render: (run: RenderRunInfo) => (
+              <Tooltip
+                overlay={
+                  <>
+                    {formatBytes(run.taskCounts.fileSize)} •{" "}
+                    {formatNumber(run.taskCounts.inodeCount)} inodes
+                  </>
+                }
+              >
+                {formatBytes(run.taskCounts.fileSize)}
+              </Tooltip>
+            ),
+            sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
+              a.taskCounts.fileSize - b.taskCounts.fileSize,
           },
           {
             title: "Begin",

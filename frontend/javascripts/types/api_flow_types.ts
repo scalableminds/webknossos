@@ -959,6 +959,8 @@ type ChunkOrTaskCounts = {
   skipped: number;
   complete: number;
   cancelled: number;
+  fileSize: number;
+  inodeCount: number;
 };
 
 export type VoxelyticsChunkStatistics = {

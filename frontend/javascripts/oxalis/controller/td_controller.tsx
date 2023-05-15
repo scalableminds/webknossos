@@ -205,7 +205,7 @@ class TDController extends React.PureComponent<Props> {
         event: MouseEvent,
       ) => {
         // Avoid isosurface hit test when rotating or moving the 3d view for performance reasons
-        if (this.props.planeView == null || event.buttons != 0) {
+        if (this.props.planeView == null || event.buttons !== 0) {
           return;
         }
 

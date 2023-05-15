@@ -15,10 +15,12 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - In addition to drag and drop, the selected tree(s) in the Skeleton tab can also be moved into another group by right-clicking the target group and selecting "Move selected tree(s) here". [#7005](https://github.com/scalableminds/webknossos/pull/7005)
 - Added support for remote datasets encoded with [brotli](https://datatracker.ietf.org/doc/html/rfc7932). [#7041](https://github.com/scalableminds/webknossos/pull/7041)
 - Teams can be edited more straight-forwardly in a popup in the team edit page. [#7043](https://github.com/scalableminds/webknossos/pull/7043)
+- Annotations with Editable Mappings (a.k.a Supervoxel Proofreading) can now be merged. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
 
 ### Changed
 - Loading of precomputed meshes got significantly faster (especially when using a mesh file for an oversegmentation with an applied agglomerate mapping). [#7001](https://github.com/scalableminds/webknossos/pull/7001)
 - Improved speed of proofreading by only reloading affected areas after a split or merge. [#7050](https://github.com/scalableminds/webknossos/pull/7050)
+- The minimum length of layer names in datasets was set from 3 to 1, enabling single-character names for layers. [#7064](https://github.com/scalableminds/webknossos/pull/7064)
 
 ### Fixed
 - Fixed that changing a segment color could lead to a crash. [#7000](https://github.com/scalableminds/webknossos/pull/7000)
@@ -32,6 +34,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where users could sometimes not access their own time tracking information. [#7055](https://github.com/scalableminds/webknossos/pull/7055)
 - Fixed a bug in the wallTime calculation of the Voxelytics reports. [#7059](https://github.com/scalableminds/webknossos/pull/7059) 
 - Fixed a bug where thumbnails and raw data requests with non-bucket-aligned positions would show data at slightly wrong positions. [#7058](https://github.com/scalableminds/webknossos/pull/7058)
+- Fixed rare rendering bug for datasets with multiple layers and differing magnifications. [#7066](https://github.com/scalableminds/webknossos/pull/7066)
+- Fixed a bug where duplicating annotations with Editable Mappings could lead to a server-side endless loop. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
 - Fixed the datasource-properties.json route for zarr-streaminge export of datasets that are not wkw/zarr.  [#7065](https://github.com/scalableminds/webknossos/pull/7065)
 
 ### Removed

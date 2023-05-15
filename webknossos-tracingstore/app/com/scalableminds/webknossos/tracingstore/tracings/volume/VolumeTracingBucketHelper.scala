@@ -12,11 +12,12 @@ import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common.{Empty, Failure, Full}
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 trait VolumeBucketReversionHelper {
-  def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
+  private def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
 
   def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
 }
@@ -24,8 +25,8 @@ trait VolumeBucketReversionHelper {
 trait VolumeBucketCompression extends LazyLogging {
 
   private val lz4factory = LZ4Factory.fastestInstance
-  val compressor: LZ4Compressor = lz4factory.fastCompressor
-  val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
+  private val compressor: LZ4Compressor = lz4factory.fastCompressor
+  private val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
 
   def compressVolumeBucket(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
     if (data.length == expectedUncompressedBucketSize) {
@@ -218,23 +219,23 @@ class VersionedBucketIterator(prefix: String,
     with VolumeBucketReversionHelper {
   private val batchSize = 64
 
-  private var currentStartKey = prefix
+  private var currentStartAfterKey: Option[String] = None
   private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
   private var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
+    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).toIterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
-    if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
     currentBatchIterator
   }
 
-  def getNextNonRevertedBucket: Option[VersionedKeyValuePair[Array[Byte]]] =
+  @tailrec
+  private def getNextNonRevertedBucket: Option[VersionedKeyValuePair[Array[Byte]]] =
     if (currentBatchIterator.hasNext) {
       val bucket = currentBatchIterator.next
-      currentStartKey = bucket.key
+      currentStartAfterKey = Some(bucket.key)
       if (isRevertedBucket(bucket)) {
         getNextNonRevertedBucket
       } else {
@@ -273,7 +274,7 @@ class BucketIterator(prefix: String,
                      expectedUncompressedBucketSize: Int,
                      version: Option[Long] = None)
     extends Iterator[(BucketPosition, Array[Byte])] {
-  val versionedBucketIterator =
+  private val versionedBucketIterator =
     new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version)
 
   override def next: (BucketPosition, Array[Byte]) = {

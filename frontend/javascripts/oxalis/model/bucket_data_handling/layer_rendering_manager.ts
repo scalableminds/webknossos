@@ -11,8 +11,6 @@ import {
   isLayerVisible,
   getLayerByName,
   getResolutionInfo,
-  getColorLayers,
-  getSegmentationLayers,
   invertAndTranspose,
   getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -103,8 +101,9 @@ export function getGlobalLayerIndexForLayerName(
 ): number {
   const sanitizer = optSanitizer || _.identity;
   const dataset = Store.getState().dataset;
-  const allLayers = [...getColorLayers(dataset), ...getSegmentationLayers(dataset)];
-  const layerIndex = allLayers.findIndex((layer) => sanitizer(layer.name) === layerName);
+  const layerIndex = dataset.dataSource.dataLayers.findIndex(
+    (layer) => sanitizer(layer.name) === layerName,
+  );
 
   return layerIndex;
 }

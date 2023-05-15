@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIOrganization, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -193,7 +193,26 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
   );
 }
 
-class DatasetInfoTabView extends React.PureComponent<Props, State> {
+export function OwningOrganizationRow({ organizationName }: { organizationName: string }) {
+  return (
+    //activeUser?.organization === selectedDataset.owningOrganization && (
+    <Tooltip title="Owning organization" placement="left">
+      <tr>
+        <td
+          style={{
+            paddingRight: 6,
+            fontSize: 16,
+          }}
+        >
+          <i className="fas fa-building" />
+        </td>
+        <td>{organizationName}</td>
+      </tr>
+    </Tooltip>
+  );
+}
+
+export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     showJobsDetailsModal: null,
   };
@@ -527,6 +546,12 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
+  maybePrintOrganization() {
+    const { activeUser } = this.props;
+    //TODO check orga is different
+    return <OwningOrganizationRow organizationName={activeUser ? activeUser.organization : ""} />;
+  }
+
   maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
     const { owner, contributors } = this.props.tracing;
@@ -637,6 +662,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           {this.getTracingName()}
           {this.getDatasetName()}
           {this.maybePrintOwnerAndContributors()}
+          {this.maybePrintOrganization()}
         </div>
 
         <div className="info-tab-block">

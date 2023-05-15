@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
-import { mergeVertices } from "libs/BufferGeometryUtils";
+import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
 import Store from "oxalis/store";
@@ -73,6 +73,7 @@ import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { mergeGeometries } from "libs/BufferGeometryUtils";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -824,33 +825,53 @@ function _getLoadChunksTasks(
                 const loader = getDracoLoader();
 
                 const errorsWithDetails = [];
-                for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-                  const chunk = chunks[chunkIdx];
-                  try {
-                    const dracoData = dataForChunks[chunkIdx];
 
-                    const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+                const chunksWithData = chunks.map((chunk, idx) => ({
+                  ...chunk,
+                  data: dataForChunks[idx],
+                }));
+                // Group chunks by position and merge meshes in the same chunk to keep the number
+                // of objects in the scene low for better performance. Ideally, more mesh geometries
+                // would be merged, but the meshes in different chunks need to be translated differently.
+                const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
+                for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
+                  // All chunks in chunksForPosition have the same position
+                  const position = chunksForPosition[0].position;
 
-                    // Compute vertex normals to achieve smooth shading
-                    geometry.computeVertexNormals();
-
-                    yield* call(
-                      {
-                        context: segmentMeshController,
-                        fn: segmentMeshController.addIsosurfaceFromGeometry,
-                      },
-                      geometry,
-                      id,
-                      chunk.position,
-                      // Apply the scale from the segment info, which includes dataset scale and mag
-                      scale,
-                      lod,
-                      layerName,
-                    );
-                  } catch (error) {
-                    errorsWithDetails.push({ error, chunk });
+                  const bufferGeometries = [];
+                  for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
+                    const chunk = chunksForPosition[chunkIdx];
+                    try {
+                      const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
+                      bufferGeometries.push(bufferGeometry);
+                    } catch (error) {
+                      errorsWithDetails.push({ error, chunk });
+                    }
                   }
+
+                  const geometry = mergeBufferGeometries(bufferGeometries);
+
+                  // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
+                  if (geometry == null) continue;
+
+                  // Compute vertex normals to achieve smooth shading
+                  geometry.computeVertexNormals();
+
+                  yield* call(
+                    {
+                      context: segmentMeshController,
+                      fn: segmentMeshController.addIsosurfaceFromGeometry,
+                    },
+                    geometry,
+                    id,
+                    position,
+                    // Apply the scale from the segment info, which includes dataset scale and mag
+                    scale,
+                    lod,
+                    layerName,
+                  );
                 }
+
                 if (errorsWithDetails.length > 0) {
                   console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
                   // Use first error as representative

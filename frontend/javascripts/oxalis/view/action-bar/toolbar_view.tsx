@@ -125,7 +125,7 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
-const handleToggleAutomaticReload = (value: boolean) => {
+const handleToggleAutomaticMeshRendering = (value: boolean) => {
   Store.dispatch(updateUserSettingAction("autoRenderMeshInProofreading", value));
 };
 
@@ -925,7 +925,7 @@ function ToolSpecificSettings({
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
   const dispatch = useDispatch();
   const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
-  const reloadMeshes = useSelector(
+  const autoRenderMeshes = useSelector(
     (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
   );
   return (
@@ -993,9 +993,9 @@ function ToolSpecificSettings({
             <ClearOutlined />
           </ButtonComponent>
           <Switch
-            title="Enable/Disable automatic reloading of meshes"
-            checked={reloadMeshes}
-            onChange={() => handleToggleAutomaticReload(!reloadMeshes)}
+            title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
+            checked={autoRenderMeshes}
+            onChange={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
           />
         </>
       ) : null}

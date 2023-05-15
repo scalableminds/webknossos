@@ -191,6 +191,8 @@ export default function WorkflowListView() {
                   <>
                     {formatCountToDataAmountUnit(run.taskCounts.fileSize)} •{" "}
                     {formatNumber(run.taskCounts.inodeCount)} inodes
+                    <br />
+                    Note: manual changes on disk are not reflected here
                   </>
                 }
               >

@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._
@@ -22,7 +23,7 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreRedisStore
 }
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Enumerator
@@ -86,6 +87,19 @@ class VolumeTracingService @Inject()(
 
   override def currentVersion(tracing: VolumeTracing): Long = tracing.version
 
+  override protected def updateSegmentIndex(tracingId: String,
+                                            bucketPosition: BucketPosition,
+                                            bucketBytes: Array[Byte],
+                                            previousBucketBytesBox: Box[Array[Byte]],
+                                            updateGroupVersion: Long,
+                                            elementClass: ElementClassProto): Fox[Unit] =
+    volumeSegmentIndexService.updateFromBucket(tracingId,
+                                               bucketPosition,
+                                               bucketBytes,
+                                               previousBucketBytesBox,
+                                               updateGroupVersion,
+                                               elementClass) ?~> "volumeSegmentIndex.update.failed"
+
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup[VolumeTracing],
                         previousVersion: Long,
@@ -142,12 +156,12 @@ class VolumeTracingService @Inject()(
                                      userToken = userToken)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion)
       previousBucketBytesBox <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
-      _ <- volumeSegmentIndexService.updateFromBucket(tracingId,
-                                                      bucketPosition,
-                                                      action.data,
-                                                      previousBucketBytesBox,
-                                                      updateGroupVersion,
-                                                      volumeTracing.elementClass) ?~> "volumeSegmentIndex.update.failed"
+      _ <- updateSegmentIndex(tracingId,
+                              bucketPosition,
+                              action.data,
+                              previousBucketBytesBox,
+                              updateGroupVersion,
+                              volumeTracing.elementClass)
     } yield volumeTracing
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
@@ -337,7 +351,15 @@ class VolumeTracingService @Inject()(
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
           if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
-            saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
+            for {
+              _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
+              _ <- updateSegmentIndex(destinationId,
+                                      bucketPosition,
+                                      bucketData,
+                                      Empty,
+                                      destinationTracing.version,
+                                      sourceTracing.elementClass)
+            } yield ()
           } else Fox.successful(())
       }.toList)
     } yield ()
@@ -621,5 +643,4 @@ class VolumeTracingService @Inject()(
       Fox.failure("Cannot merge tracings with and without editable mappings")
     }
 
-  def recomputeSegmentIndex(tracingId: String, tracing: VolumeTracing): Fox[Unit] = ??? // TODO
 }

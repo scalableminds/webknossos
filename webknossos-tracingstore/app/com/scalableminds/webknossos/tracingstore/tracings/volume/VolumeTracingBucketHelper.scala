@@ -162,19 +162,19 @@ trait VolumeTracingBucketHelper
     } yield unmappedDataOrEmpty
   }
 
-  def saveBucket(dataLayer: VolumeTracingLayer,
-                 bucket: BucketPosition,
-                 data: Array[Byte],
-                 version: Long,
-                 toCache: Boolean = false): Fox[Unit] =
+  protected def saveBucket(dataLayer: VolumeTracingLayer,
+                           bucket: BucketPosition,
+                           data: Array[Byte],
+                           version: Long,
+                           toCache: Boolean = false): Fox[Unit] =
     saveBucket(dataLayer.name, dataLayer.elementClass, bucket, data, version, toCache)
 
-  def saveBucket(tracingId: String,
-                 elementClass: ElementClass.Value,
-                 bucket: BucketPosition,
-                 data: Array[Byte],
-                 version: Long,
-                 toCache: Boolean): Fox[Unit] = {
+  protected def saveBucket(tracingId: String,
+                           elementClass: ElementClass.Value,
+                           bucket: BucketPosition,
+                           data: Array[Byte],
+                           version: Long,
+                           toCache: Boolean): Fox[Unit] = {
     val key = buildBucketKey(tracingId, bucket)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
     if (toCache) {

@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -11,8 +12,10 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore,
   VersionedKeyValuePair
 }
+import net.liftweb.common.Empty
 import com.scalableminds.webknossos.datastore.geometry.{Vec3IntProto => ProtoPoint3D}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import net.liftweb.common.Box
 import play.api.libs.json.{Format, Json}
 
 import scala.collection.mutable
@@ -52,16 +55,24 @@ trait VolumeTracingDownsampling
 
   val tracingDataStore: TracingDataStore
   val tracingStoreWkRpcClient: TSRemoteWebKnossosClient
-  def saveBucket(dataLayer: VolumeTracingLayer,
-                 bucket: BucketPosition,
-                 data: Array[Byte],
-                 version: Long,
-                 toCache: Boolean = false): Fox[Unit]
+  protected def saveBucket(dataLayer: VolumeTracingLayer,
+                           bucket: BucketPosition,
+                           data: Array[Byte],
+                           version: Long,
+                           toCache: Boolean = false): Fox[Unit]
 
-  def downsampleWithLayer(tracingId: String,
-                          oldTracingId: String,
-                          tracing: VolumeTracing,
-                          dataLayer: VolumeTracingLayer)(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
+  protected def updateSegmentIndex(tracingId: String,
+                                   bucketPosition: BucketPosition,
+                                   bucketBytes: Array[Byte],
+                                   previousBucketBytesBox: Box[Array[Byte]],
+                                   updateGroupVersion: Long,
+                                   elementClass: ElementClassProto): Fox[Unit]
+
+  protected def downsampleWithLayer(
+      tracingId: String,
+      oldTracingId: String,
+      tracing: VolumeTracing,
+      dataLayer: VolumeTracingLayer)(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
@@ -87,7 +98,15 @@ trait VolumeTracingDownsampling
         requiredMag
       }
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
-        saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
+        for {
+          _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
+          _ <- updateSegmentIndex(tracingId,
+                                  bucketPosition,
+                                  bucketDataMapMutable(bucketPosition),
+                                  Empty,
+                                  tracing.version,
+                                  tracing.elementClass)
+        } yield ()
       }
       _ = logger.debug(s"Downsampled mags $magsToCreate from $sourceMag for volume tracing $tracingId.")
     } yield sourceMag :: magsToCreate

@@ -36,6 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where thumbnails and raw data requests with non-bucket-aligned positions would show data at slightly wrong positions. [#7058](https://github.com/scalableminds/webknossos/pull/7058)
 - Fixed rare rendering bug for datasets with multiple layers and differing magnifications. [#7066](https://github.com/scalableminds/webknossos/pull/7066)
 - Fixed a bug where duplicating annotations with Editable Mappings could lead to a server-side endless loop. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
+- Fixed the datasource-properties.json route for zarr-streaminge export of datasets that are not wkw/zarr.  [#7065](https://github.com/scalableminds/webknossos/pull/7065)
 
 ### Removed
 

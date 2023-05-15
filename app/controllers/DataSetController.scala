@@ -171,7 +171,7 @@ class DataSetController @Inject()(userService: UserService,
             reportMutable += "Error when exploring as layer set: Resulted in zero layers."
             None
           case f: Failure =>
-            reportMutable += s"Error when exploring as layer set: ${exploreRemoteLayerService.formatFailureForReport(f)}"
+            reportMutable += s"Error when exploring as layer set: ${Fox.failureChainAsString(f)}"
             None
           case Empty =>
             reportMutable += "Error when exploring as layer set: Empty"

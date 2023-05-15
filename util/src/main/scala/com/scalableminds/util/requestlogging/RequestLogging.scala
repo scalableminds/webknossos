@@ -5,7 +5,6 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
-import java.io.{PrintWriter, StringWriter}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,7 +41,7 @@ trait AbstractRequestLogging extends LazyLogging {
     val start = Instant.now
     for {
       result: Result <- block
-      executionTime = Instant.now - start
+      executionTime = Instant.since(start)
       _ = if (executionTime > durationThreshold) logTimeFormatted(executionTime, request, result)
     } yield result
   }
@@ -58,24 +57,5 @@ trait RequestLogging extends AbstractRequestLogging {
       result: Result <- block
       _ = logRequestFormatted(request, result, notifier)
     } yield result
-
-}
-
-trait RateLimitedErrorLogging extends LazyLogging {
-  // Allows to log errors that occur many times only once (per lifetime of the class)
-
-  private val loggedErrorMessages = scala.collection.mutable.Set[String]()
-
-  protected def logError(t: Throwable): Unit =
-    t match {
-      case e: Exception =>
-        if (!loggedErrorMessages.contains(e.getMessage)) {
-          loggedErrorMessages.add(e.getMessage)
-          val sw = new StringWriter
-          e.printStackTrace(new PrintWriter(sw))
-          logger.error(sw.toString)
-        }
-      case _ => ()
-    }
 
 }

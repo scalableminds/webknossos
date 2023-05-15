@@ -4,7 +4,7 @@ import { Button, Card, message } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { VoxelyticsArtifactConfig } from "types/api_flow_types";
 import { getVoxelyticsArtifactChecksums } from "admin/admin_rest_api";
-import { formatBytes } from "libs/format_utils";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
 
 function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
@@ -128,7 +128,7 @@ function ArtifactsView({
       <>
         <span>{artifactName}</span>
         <span style={{ fontSize: "10px", marginLeft: 10 }}>
-          \\ version {artifact.version}, {formatBytes(artifact.fileSize)},{" "}
+          \\ version {artifact.version}, {formatCountToDataAmountUnit(artifact.fileSize)},{" "}
           {artifact.inodeCount.toLocaleString()} inodes
         </span>
       </>

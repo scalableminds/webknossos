@@ -152,9 +152,10 @@ const getSortedFactors = _.memoize((unitMap: Map<number, string>) =>
 export function findClosestToUnitFactor(number: number, unitMap: Map<number, string>, preferShorterDecimals: boolean = false, decimalPrecision:number = 1): number {
   const sortedFactors = getSortedFactors(unitMap);
   let closestFactor = sortedFactors[0];
+  const minumumToRoundUpToOne = 0.95;
 
   for (const factor of sortedFactors) {
-    if (number >= factor * (preferShorterDecimals ? 0.95*10**(-decimalPrecision) : 1)) { // TODO dont hardcode nachkommastellen
+    if (number >= factor * (preferShorterDecimals ? minumumToRoundUpToOne*10**(-decimalPrecision) : 1)) {
       closestFactor = factor;
     }
   }

@@ -105,8 +105,18 @@ export function formatScale(scaleArr: Vector3 | null | undefined, roundTo: numbe
   }
 }
 
-export function formatNumberToUnit(number: number, unitMap: Map<number, string>, preferShorterDecimals:boolean = false, decimalPrecision:number = 1): string {
-  const closestFactor = findClosestToUnitFactor(number, unitMap, preferShorterDecimals, decimalPrecision);
+export function formatNumberToUnit(
+  number: number,
+  unitMap: Map<number, string>,
+  preferShorterDecimals: boolean = false,
+  decimalPrecision: number = 1,
+): string {
+  const closestFactor = findClosestToUnitFactor(
+    number,
+    unitMap,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
   const unit = unitMap.get(closestFactor);
 
   if (unit == null) {
@@ -141,7 +151,11 @@ const byteFactorToUnit = new Map([
   [1e9, "GB"],
   [1e12, "TB"],
 ]);
-export function formatCountToDataAmountUnit(count: number, preferShorterDecimals:boolean = false, decimalPrecision:number = 1): string {
+export function formatCountToDataAmountUnit(
+  count: number,
+  preferShorterDecimals: boolean = false,
+  decimalPrecision: number = 1,
+): string {
   return formatNumberToUnit(count, byteFactorToUnit, preferShorterDecimals, decimalPrecision);
 }
 
@@ -149,13 +163,21 @@ const getSortedFactors = _.memoize((unitMap: Map<number, string>) =>
   Array.from(unitMap.keys()).sort((a, b) => a - b),
 );
 
-export function findClosestToUnitFactor(number: number, unitMap: Map<number, string>, preferShorterDecimals: boolean = false, decimalPrecision:number = 1): number {
+export function findClosestToUnitFactor(
+  number: number,
+  unitMap: Map<number, string>,
+  preferShorterDecimals: boolean = false,
+  decimalPrecision: number = 1,
+): number {
   const sortedFactors = getSortedFactors(unitMap);
   let closestFactor = sortedFactors[0];
   const minumumToRoundUpToOne = 0.95;
 
   for (const factor of sortedFactors) {
-    if (number >= factor * (preferShorterDecimals ? minumumToRoundUpToOne*10**(-decimalPrecision) : 1)) {
+    if (
+      number >=
+      factor * (preferShorterDecimals ? minumumToRoundUpToOne * 10 ** -decimalPrecision : 1)
+    ) {
       closestFactor = factor;
     }
   }

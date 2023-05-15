@@ -173,7 +173,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
              new WebknossosZarrExplorer,
              new N5ArrayExplorer,
              new N5MultiscalesExplorer,
-             new PrecomputedExplorer)
+             new PrecomputedExplorer,
+          new ZarrV3ArrayExplorer)
       )
     } yield layersWithVoxelSizes
 

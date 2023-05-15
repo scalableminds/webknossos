@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.dataformats.zarr.v3.ZarrV3DataLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
@@ -18,7 +19,7 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, zarr, n5, neuroglancerPrecomputed, tracing = Value
+  val wkw, zarr, zarrV3, n5, neuroglancerPrecomputed, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -214,6 +215,7 @@ object DataLayer {
           case (DataFormat.`neuroglancerPrecomputed`, Category.segmentation) =>
             json.validate[PrecomputedSegmentationLayer]
           case (DataFormat.`neuroglancerPrecomputed`, _) => json.validate[PrecomputedDataLayer]
+          case (DataFormat.zarrV3, _)                    => json.validate[ZarrV3DataLayer]
           case _                                         => json.validate[WKWDataLayer]
         }
       } yield {
@@ -230,6 +232,7 @@ object DataLayer {
         case l: N5SegmentationLayer          => N5SegmentationLayer.jsonFormat.writes(l)
         case l: PrecomputedDataLayer         => PrecomputedDataLayer.jsonFormat.writes(l)
         case l: PrecomputedSegmentationLayer => PrecomputedSegmentationLayer.jsonFormat.writes(l)
+        case l: ZarrV3DataLayer              => ZarrV3DataLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat

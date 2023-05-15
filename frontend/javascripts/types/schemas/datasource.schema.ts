@@ -215,6 +215,56 @@ export default {
       },
       required: ["dataFormat", "mags"],
     },
+    "types::DataLayerZarrV3Partial": {
+      title: "DataLayerZarrV3",
+      type: "object",
+      properties: {
+        dataFormat: {
+          const: "zarrV3",
+        },
+        boundingBox: {
+          $ref: "#/definitions/types::BoundingBox",
+        },
+        numChannels: {
+          type: "number",
+        },
+        mags: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mag: {
+                anyOf: [
+                  {
+                    type: "number",
+                  },
+                  {
+                    $ref: "#/definitions/types::Vector3",
+                  },
+                ],
+              },
+              path: {
+                type: "string",
+              },
+              credentials: {
+                type: "object",
+                properties: {
+                  user: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["user", "password"],
+              },
+              axisOrder: {
+                type: "object",
+                additionalProperties: { type: "number" },
+              },
+            },
+            required: ["mag"],
+          },
+        },
+      },
+      required: ["dataFormat", "mags"],
+    },
     "types::DataLayer": {
       title: "DataLayer",
       allOf: [

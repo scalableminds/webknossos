@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayDataType, zarr3}
-import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.{ArrayDataType, i1}
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 
 object ZarrV3DataType extends ExtendedEnumeration {
   type ZarrV3DataType = Value

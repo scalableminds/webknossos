@@ -1,4 +1,14 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
+import {
+  Radio,
+  Tooltip,
+  Badge,
+  Space,
+  Popover,
+  RadioChangeEvent,
+  Dropdown,
+  MenuProps,
+  Switch,
+} from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -113,6 +123,10 @@ function toggleOverwriteMode(overwriteMode: OverwriteMode) {
 
 const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
+};
+
+const handleToggleAutomaticReload = (value: boolean) => {
+  Store.dispatch(updateUserSettingAction("autoRenderMeshInProofreading", value));
 };
 
 const handleSetTool = (event: RadioChangeEvent) => {
@@ -911,7 +925,9 @@ function ToolSpecificSettings({
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
   const dispatch = useDispatch();
   const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
-
+  const reloadMeshes = useSelector(
+    (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
   return (
     <>
       {showCreateTreeButton ? (
@@ -967,14 +983,21 @@ function ToolSpecificSettings({
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
 
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? (
-        <ButtonComponent
-          title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
-          onClick={handleClearProofreading}
-          className="narrow"
-          style={{ marginLeft: 12 }}
-        >
-          <ClearOutlined />
-        </ButtonComponent>
+        <>
+          <ButtonComponent
+            title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
+            onClick={handleClearProofreading}
+            className="narrow"
+            style={{ marginInline: 12 }}
+          >
+            <ClearOutlined />
+          </ButtonComponent>
+          <Switch
+            title="Enable/Disable automatic reloading of meshes"
+            checked={reloadMeshes}
+            onChange={() => handleToggleAutomaticReload(!reloadMeshes)}
+          />
+        </>
       ) : null}
     </>
   );

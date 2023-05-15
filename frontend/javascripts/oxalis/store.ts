@@ -311,6 +311,7 @@ export type QuickSelectConfig = {
 
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
+  readonly autoRenderMeshInProofreading: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceArbitrary: number;

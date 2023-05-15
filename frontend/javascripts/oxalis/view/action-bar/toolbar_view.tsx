@@ -923,11 +923,6 @@ function ToolSpecificSettings({
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
-  const dispatch = useDispatch();
-  const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
-  const autoRenderMeshes = useSelector(
-    (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
-  );
   return (
     <>
       {showCreateTreeButton ? (
@@ -982,23 +977,7 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? (
-        <>
-          <ButtonComponent
-            title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
-            onClick={handleClearProofreading}
-            className="narrow"
-            style={{ marginInline: 12 }}
-          >
-            <ClearOutlined />
-          </ButtonComponent>
-          <Switch
-            title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
-            checked={autoRenderMeshes}
-            onChange={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
-          />
-        </>
-      ) : null}
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
     </>
   );
 }
@@ -1060,5 +1039,30 @@ function FillModeSwitch() {
         3D
       </RadioButtonWithTooltip>
     </Radio.Group>
+  );
+}
+
+function ProofReadingComponents() {
+  const dispatch = useDispatch();
+  const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
+  const autoRenderMeshes = useSelector(
+    (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
+  return (
+    <>
+      <ButtonComponent
+        title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
+        onClick={handleClearProofreading}
+        className="narrow"
+        style={{ marginInline: 12 }}
+      >
+        <ClearOutlined />
+      </ButtonComponent>
+      <Switch
+        title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
+        checked={autoRenderMeshes}
+        onChange={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
+      />
+    </>
   );
 }

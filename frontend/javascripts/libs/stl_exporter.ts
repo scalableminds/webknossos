@@ -6,7 +6,7 @@ import * as THREE from "three";
 // - the `exportToStl` function was added as a wrapper
 // - the `parse` method was adapted to emit multiple ArrayBuffers
 //   to avoid that one large ArrayBuffer has to be allocated (which can
-//   fail if not too much consecutive memory is available).
+//   fail if not enough consecutive memory is available).
 //   (see https://github.com/scalableminds/webknossos/pull/7074.)
 
 class ChunkedDataView {
@@ -62,7 +62,11 @@ class STLExporter {
     const output = new ChunkedDataView(emptyHeaderSize + 4);
     output.incrementOffset(emptyHeaderSize);
 
-    const bytesPerTriangle = 2 + 3 * 4 * 4; // 50
+    // Per triangle, the following bytes are written:
+    // - 1 Uint16 (2 B) for the attribute byte count
+    // - 3 Float32 (3 * 4 B) for the triangle normal
+    // - 3 vertices à 3 Float32 (3 * 3 * 4 B)
+    const bytesPerTriangle = 2 + 3 * 4 + 3 * 3 * 4; //  50
     const maximumBatchSizeInMiB = 50;
     const maximumBatchSizeInB = 2 ** 20 * maximumBatchSizeInMiB;
     const maximumTriangleCountPerBatch = Math.ceil(maximumBatchSizeInB / bytesPerTriangle);
@@ -136,6 +140,7 @@ class STLExporter {
       writeVertex(vC);
 
       if (binary === true) {
+        // Set attribute byte count to 0
         output.currentDataView.setUint16(output.offset, 0, true);
         output.incrementOffset(2);
       } else {

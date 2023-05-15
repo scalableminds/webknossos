@@ -65,7 +65,13 @@ export type DataLayer = {
       mappings: Array<string>;
     }
 ) &
-  (DataLayerWKWPartial | DataLayerZarrPartial | DataLayerN5Partial | DataLayerPrecomputedPartial | DataLayerZarrV3Partial);
+  (
+    | DataLayerWKWPartial
+    | DataLayerZarrPartial
+    | DataLayerN5Partial
+    | DataLayerPrecomputedPartial
+    | DataLayerZarrV3Partial
+  );
 export type DatasourceConfiguration = {
   id: {
     name: string;

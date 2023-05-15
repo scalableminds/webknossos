@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
+import com.scalableminds.webknossos.datastore.datareaders.codecs.CodecSpecification
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.ZarrV3DataType.{ZarrV3DataType, raw}
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayOrder,
@@ -132,21 +133,6 @@ object ChunkKeyEncoding extends JsonImplicits {
   }
 }
 
-case class CodecSpecification(
-    name: String,
-    configuration: Option[Map[String, String]] // TODO: Replace with specific codecs
-)
-
-object CodecSpecification extends JsonImplicits {
-  implicit object CodecSpecificationFormat extends Format[CodecSpecification] {
-    override def reads(json: JsValue): JsResult[CodecSpecification] =
-      Json.using[WithDefaultValues].reads[CodecSpecification].reads(json)
-
-    override def writes(obj: CodecSpecification): JsValue =
-      Json.writes[CodecSpecification].writes(obj)
-  }
-}
-
 case class StorageTransformerSpecification(
     name: String,
     configuration: Option[Map[String, String]] // Should be specified once storage transformers are implemented
@@ -186,7 +172,7 @@ object ZarrArrayHeader extends JsonImplicits {
           chunk_key_encoding,
           fill_value,
           attributes = None,
-          codecs = None,
+          codecs = None, // TODO
           storage_transformers = None,
           Some(dimension_names)
         )

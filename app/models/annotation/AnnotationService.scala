@@ -919,7 +919,7 @@ class AnnotationService @Inject()(
       Fox.successful(None)
     } else {
       for {
-        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext))
+        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext)) ?~> "user.notFound"
         userJson <- userService.compactWrites(user)
       } yield Some(userJson)
     }

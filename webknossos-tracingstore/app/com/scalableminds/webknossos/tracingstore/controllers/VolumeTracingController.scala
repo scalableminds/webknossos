@@ -209,6 +209,22 @@ class VolumeTracingController @Inject()(
     }
   }
 
+  def recomputeSegmentIndex(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          val userToken = urlOrHeaderToken(token, request)
+          accessTokenService.validateAccess(UserAccessRequest.webknossos, userToken) {
+            for {
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              _ = logger.info(s"Recomputing segment index for volume tracing $tracingId...")
+              _ <- tracingService.recomputeSegmentIndex(tracingId, tracing)
+            } yield Ok
+          }
+        }
+      }
+  }
+
   def importVolumeData(token: Option[String], tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {

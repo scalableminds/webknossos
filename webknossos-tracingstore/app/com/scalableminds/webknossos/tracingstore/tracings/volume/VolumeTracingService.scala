@@ -620,4 +620,6 @@ class VolumeTracingService @Inject()(
     } else {
       Fox.failure("Cannot merge tracings with and without editable mappings")
     }
+
+  def recomputeSegmentIndex(tracingId: String, tracing: VolumeTracing): Fox[Unit] = ??? // TODO
 }

@@ -66,7 +66,7 @@ import type {
   APIDatasetCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
+import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
@@ -2364,9 +2364,16 @@ export async function getSamEmbedding(
   layerName: string,
   mag: Vector3,
   embeddingBoxMag1: BoundingBox,
+  intensityRange?: Vector2 | null,
 ): Promise<Float32Array> {
+  const params = new URLSearchParams();
+  if (intensityRange != null) {
+    params.append("intensityMin", `${intensityRange[0]}`);
+    params.append("intensityMax", `${intensityRange[1]}`);
+  }
+
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding`,
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
     {
       data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
       showErrorToast: false,

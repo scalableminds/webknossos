@@ -421,4 +421,13 @@ class VolumeTracingController @Inject()(
       }
   }
 
+  def getSegmentVolume(token: Option[String], tracingId: String, mag: String, segmentId: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          _ <- Fox.successful(logger.info(s"computing segment volume for segment $segmentId"))
+        } yield Ok(Json.toJson(5L))
+      }
+    }
+
 }

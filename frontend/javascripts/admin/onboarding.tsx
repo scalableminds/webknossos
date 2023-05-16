@@ -306,7 +306,7 @@ export class InviteUsersModal extends React.Component<
 
   render() {
     const isInvitesDisabled =
-      this.props.currentUserCount + this.extractEmailAddresses().length >=
+      this.props.currentUserCount + this.extractEmailAddresses().length >
       this.props.maxUserCountPerOrganization;
 
     return (

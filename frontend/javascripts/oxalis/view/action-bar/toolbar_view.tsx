@@ -1060,8 +1060,9 @@ function ProofReadingComponents() {
         <ClearOutlined />
       </ButtonComponent>
       <ButtonComponent
+        className="without-icon-margin"
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
-        style={{ ...buttonStyle }}
+        style={{ ...buttonStyle, opacity: autoRenderMeshes ? 1 : 0.5 }}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
       >
         <i className="fas fa-dice-d20" />

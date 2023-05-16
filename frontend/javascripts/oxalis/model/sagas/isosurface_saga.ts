@@ -945,15 +945,21 @@ function* downloadIsosurfaceCellById(
     return;
   }
 
-  const stl = exportToStl(geometry);
-  // Encode isosurface and cell id property
-  const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
-  isosurfaceMarker.forEach((marker, index) => {
-    stl.setUint8(index, marker);
-  });
-  stl.setUint32(segmentIdIndex, segmentId, true);
-  const blob = new Blob([stl]);
-  yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
+  try {
+    const stlDataViews = exportToStl(geometry);
+    // Encode isosurface and cell id property
+    const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
+    isosurfaceMarker.forEach((marker, index) => {
+      stlDataViews[0].setUint8(index, marker);
+    });
+    stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
+    const blob = new Blob(stlDataViews);
+    yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
+  } catch (exception) {
+    ErrorHandling.notify(exception as Error);
+    console.error(exception);
+    Toast.error("Could not export to STL. See console for details");
+  }
 }
 
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {

@@ -18,6 +18,7 @@ import {
 import { useSearchParams, usePolling } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { OxalisState } from "oxalis/store";
+import TabTitle from "oxalis/view/components/tab_title_component";
 import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import TaskListView from "./task_list_view";
@@ -421,6 +422,7 @@ export default function WorkflowView() {
 
   return (
     <div className="container voxelytics-view">
+      <TabTitle title={`${collapsedReport.workflow.name} | WEBKNOSSOS`} />
       <TaskListView
         report={collapsedReport}
         tasksWithHierarchy={tasksWithHierarchy}

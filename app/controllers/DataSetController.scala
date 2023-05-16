@@ -5,7 +5,12 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataLayerLike, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayer,
+  DataLayerLike,
+  ElementClass,
+  GenericDataSource
+}
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
@@ -555,6 +560,8 @@ Expects:
                                                request.body.boundingBox,
                                                request.body.mag) ?~> "segmentAnything.getData.failed"
           _ = logger.debug(s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}...")
+          _ <- bool2Fox(
+            !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
           embedding <- wKRemoteSegmentAnythingClient.getEmbedding(
             data,
             dataLayer.elementClass,

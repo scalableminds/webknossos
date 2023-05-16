@@ -47,7 +47,7 @@ object ZarrV3Array extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this Zarr Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
     }
-    new ZarrV3Array(rootPath, path, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
+    new ZarrV3Array(rootPath, path, header, axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)), channelIndex)
   }
 
 }

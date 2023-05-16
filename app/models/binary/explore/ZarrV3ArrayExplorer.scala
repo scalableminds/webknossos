@@ -22,7 +22,7 @@ class ZarrV3ArrayExplorer extends RemoteLayerExplorer {
       zarrHeader <- parseJsonFromPath[ZarrArrayHeader](zarrayPath) ?~> s"failed to read zarr v3 header at $zarrayPath"
       _ <- bool2Fox(zarrHeader.isValid) ~> "Zarr header is not compliant"
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
-      guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
+      guessedAxisOrder = AxisOrder.asCxyzFromRank(zarrHeader.rank)
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       magLocator = MagLocator(Vec3Int.ones,
                               Some(remotePath.toUri.toString),

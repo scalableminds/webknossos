@@ -44,7 +44,7 @@ case class ZarrArrayHeader(
 
   override def dataType: String = data_type.left.getOrElse("extension")
 
-  override lazy val order: ArrayOrder = getOrder
+  override lazy val order: ArrayOrder = ArrayOrder.C // getOrder
 
   def zarrV3DataType: ZarrV3DataType = ZarrV3DataType.fromString(dataType).getOrElse(raw)
 

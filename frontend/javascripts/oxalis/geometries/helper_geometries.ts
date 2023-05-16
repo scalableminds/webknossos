@@ -5,6 +5,7 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -88,9 +89,9 @@ export class QuickSelectGeometry {
       opacity: 0.5,
     });
     this.rectangle = new THREE.Mesh(geometry, material);
-    this.rectangle.visible = false;
 
-    const centerGeometry = new THREE.PlaneGeometry(2, 2);
+    const baseWidth = getBaseVoxel(Store.getState().dataset.dataSource.scale);
+    const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: this.centerMarkerColor,
       side: THREE.DoubleSide,
@@ -98,11 +99,11 @@ export class QuickSelectGeometry {
       opacity: 0.9,
     });
     this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
-    this.centerMarker.visible = false;
 
     this.meshGroup = new THREE.Group();
     this.meshGroup.add(this.rectangle);
     this.meshGroup.add(this.centerMarker);
+    this.meshGroup.visible = false;
 
     this.reset();
   }
@@ -112,8 +113,13 @@ export class QuickSelectGeometry {
     this.centerMarker.material.color = this.centerMarkerColor;
   }
 
+  setCenterMarkerVisibility(visible: boolean) {
+    this.centerMarker.visible = visible;
+  }
+
   rotateToViewport() {
     const { activeViewport } = Store.getState().viewModeData.plane;
+    const { scale } = Store.getState().dataset.dataSource;
     const rotation = rotations[activeViewport];
     if (!rotation) {
       return;
@@ -121,6 +127,11 @@ export class QuickSelectGeometry {
 
     this.rectangle.setRotationFromEuler(rotation);
     this.centerMarker.setRotationFromEuler(rotation);
+    this.centerMarker.scale.copy(
+      new THREE.Vector3(
+        ...Dimensions.transDim(scale.map((el) => 1 / el) as Vector3, activeViewport),
+      ),
+    );
   }
 
   setColor(color: THREE.Color) {
@@ -157,13 +168,7 @@ export class QuickSelectGeometry {
 
     // Hide the objects if the rectangle has size zero, so whenever
     // the quick select tool is not currently used to draw a rectangle.
-    if (V3.isEqual(endPosition, startPosition)) {
-      this.centerMarker.visible = false;
-      this.rectangle.visible = false;
-    } else {
-      this.centerMarker.visible = true;
-      this.rectangle.visible = true;
-    }
+    this.meshGroup.visible = !V3.isEqual(endPosition, startPosition);
 
     app.vent.trigger("rerender");
   }

@@ -667,6 +667,12 @@ export class QuickSelectTool {
 
         const state = Store.getState();
         quickSelectGeometry.rotateToViewport();
+        // Only show the center marker when using the heuristic
+        // approach since the center will be used as a seed for the "floodfill".
+        // For the ML-based approach, the center marker doesn't have any relevance.
+        quickSelectGeometry.setCenterMarkerVisibility(
+          Store.getState().userConfiguration.quickSelect.useHeuristic,
+        );
 
         const volumeTracing = getActiveSegmentationTracing(state);
         if (!volumeTracing) {

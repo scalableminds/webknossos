@@ -120,6 +120,10 @@ async function inferFromEmbedding(
     return null;
   }
 
+  // Somewhere between the front-end, the back-end and the embedding
+  // server, there seems to be a different linearization of the 2D image
+  // data which is why the code here deals with the YZ plane as a special
+  // case.
   const onnxCoord =
     activeViewport === "PLANE_YZ"
       ? new Float32Array([

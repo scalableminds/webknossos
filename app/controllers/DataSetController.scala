@@ -539,8 +539,8 @@ Expects:
   def segmentAnythingEmbedding(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String,
-                               intensityMin: Option[Double],
-                               intensityMax: Option[Double]): Action[SegmentAnythingEmbeddingParameters] =
+                               intensityMin: Option[Float],
+                               intensityMax: Option[Float]): Action[SegmentAnythingEmbeddingParameters] =
     sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
       log() {
         for {

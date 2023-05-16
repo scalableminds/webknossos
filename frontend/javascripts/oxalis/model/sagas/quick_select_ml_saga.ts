@@ -176,7 +176,7 @@ async function inferFromEmbedding(
 }
 
 export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
-  const preparation = yield* call(prepareQuickSelect, action, true);
+  const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {
     return;
   }
@@ -222,7 +222,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
-  const preparation = yield* call(prepareQuickSelect, action, true);
+  const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {
     return;
   }

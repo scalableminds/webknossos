@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import utils.WkConf
 
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 import javax.inject.Inject
 
 class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
@@ -17,15 +17,13 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
     val buffer = ByteBuffer.allocate(metadataLengthInBytes + imageData.length)
     buffer.put(ElementClass.encodeAsByte(elementClass))
     buffer.put(if (intensityMin.isDefined && intensityMax.isDefined) 1.toByte else 0.toByte)
-    buffer.putFloat(intensityMin.getOrElse(0.0f))
-    buffer.putFloat(intensityMax.getOrElse(0.0f))
-    val array = buffer.array()
-    System.arraycopy(imageData, 0, array, metadataLengthInBytes, imageData.length)
+    buffer.order(ByteOrder.LITTLE_ENDIAN).putFloat(intensityMin.getOrElse(0.0f))
+    buffer.order(ByteOrder.LITTLE_ENDIAN).putFloat(intensityMax.getOrElse(0.0f))
+    val imageWithMetadata = buffer.array()
+    System.arraycopy(imageData, 0, imageWithMetadata, metadataLengthInBytes, imageData.length)
     rpc(s"${conf.SegmentAnything.uri}/predictions/sam_vit_l")
       .addQueryString("elementClass" -> elementClass.toString)
-      .addQueryStringOptional("intensityMinFloat64Base64", intensityMin.map(_.toString))
-      .addQueryStringOptional("intensityMinFloat64Base64", intensityMax.map(_.toString))
-      .postBytesWithBytesResponse(imageData)
+      .postBytesWithBytesResponse(imageWithMetadata)
   }
 
 }

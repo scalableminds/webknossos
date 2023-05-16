@@ -559,7 +559,8 @@ Expects:
                                                dataLayer.name,
                                                request.body.boundingBox,
                                                request.body.mag) ?~> "segmentAnything.getData.failed"
-          _ = logger.debug(s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}...")
+          _ = logger.debug(
+            s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(
             !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
           embedding <- wKRemoteSegmentAnythingClient.getEmbedding(
@@ -567,6 +568,8 @@ Expects:
             dataLayer.elementClass,
             intensityMin,
             intensityMax) ?~> "segmentAnything.getEmbedding.failed"
+          _ = logger.debug(
+            s"Received ${embedding.length} bytes of embedding from SAM server, forwarding to front-end...")
         } yield Ok(embedding)
       }
     }

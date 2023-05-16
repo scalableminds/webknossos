@@ -51,7 +51,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   private def visibleRunsQ(currentUser: User, allowUnlisted: Boolean) = {
     val organizationId = currentUser._organization
     val readAccessQ =
-      if (currentUser.isAdmin || allowUnlisted) q"${true}"
+      if (currentUser.isAdmin || currentUser.isDatasetManager || allowUnlisted) q"${true}"
       else q"(__r._user = ${currentUser._id})"
     q"""SELECT __r.*
         FROM webknossos.voxelytics_runs __r

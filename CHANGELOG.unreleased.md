@@ -38,6 +38,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed rare rendering bug for datasets with multiple layers and differing magnifications. [#7066](https://github.com/scalableminds/webknossos/pull/7066)
 - Fixed a bug where duplicating annotations with Editable Mappings could lead to a server-side endless loop. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
 - Fixed the datasource-properties.json route for zarr-streaminge export of datasets that are not wkw/zarr.  [#7065](https://github.com/scalableminds/webknossos/pull/7065)
+- Fixed an issue where you could no longer invite users to your organization even though you had space left. [#7078](https://github.com/scalableminds/webknossos/pull/7078)
+- Fixed displayed units of used storage in the organization's overview page. [#7057](https://github.com/scalableminds/webknossos/pull/7057)
 
 ### Removed
 

@@ -25,6 +25,7 @@ type CacheEntry = {
   embeddingPromise: Promise<Float32Array>;
   embeddingBoxMag1: BoundingBox;
   mag: Vector3;
+  layerName: string;
 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
@@ -46,7 +47,10 @@ function getEmbedding(
     throw new Error("User bounding box should not have empty volume.");
   }
   const matchingCacheEntry = embeddingCache.find(
-    (entry) => entry.embeddingBoxMag1.containsBoundingBox(userBoxMag1) && V3.equals(entry.mag, mag),
+    (entry) =>
+      entry.embeddingBoxMag1.containsBoundingBox(userBoxMag1) &&
+      V3.equals(entry.mag, mag) &&
+      entry.layerName === layerName,
   );
   if (matchingCacheEntry) {
     // Move entry to the front.
@@ -86,7 +90,7 @@ function getEmbedding(
       intensityRange,
     );
 
-    const newEntry = { embeddingPromise, embeddingBoxMag1, mag };
+    const newEntry = { embeddingPromise, embeddingBoxMag1, mag, layerName };
     embeddingCache = [newEntry, ...embeddingCache.slice(0, MAXIMUM_CACHE_SIZE - 1)];
 
     return newEntry;

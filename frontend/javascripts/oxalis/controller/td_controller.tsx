@@ -197,10 +197,15 @@ class TDController extends React.PureComponent<Props> {
         // Fix the rotation target of the TrackballControls
         this.setTargetAndFixPosition();
       },
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'delta' implicitly has an 'any' type.
-      pinch: (delta) => this.zoomTDView(delta, true),
-      mouseMove: (_delta: Point2, position: Point2) => {
-        if (this.props.planeView == null) {
+      pinch: (delta: number) => this.zoomTDView(delta, true),
+      mouseMove: (
+        _delta: Point2,
+        position: Point2,
+        _id: string | null | undefined,
+        event: MouseEvent,
+      ) => {
+        // Avoid isosurface hit test when rotating or moving the 3d view for performance reasons
+        if (this.props.planeView == null || event.buttons !== 0) {
           return;
         }
 

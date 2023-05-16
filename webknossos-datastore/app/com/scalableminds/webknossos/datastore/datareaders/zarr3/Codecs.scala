@@ -2,13 +2,15 @@ package com.scalableminds.webknossos.datastore.datareaders.codecs
 
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
+  BoolCompressionSetting,
+  CompressionSetting,
   GzipCompressor,
   IntCompressionSetting,
   MultiArrayUtils,
   StringCompressionSetting
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import play.api.libs.json.{Format, JsResult, JsValue, Json}
+import play.api.libs.json.{Format, JsResult, JsValue, Json, OFormat}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}
 trait Codec {
@@ -64,10 +66,10 @@ class TransposeCodec(order: String) extends ArrayToArrayCodec {
   override def name: String = "transpose"
 }
 
-class BloscCodec(cname: String, clevel: Int, shuffle: String, typesize: Option[Int], blocksize: Int)
+class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesize: Option[Int], blocksize: Int)
     extends BytesToBytesCodec {
 
-  def getCompressorSettings = Map(
+  private def getCompressorSettings = Map(
     BloscCompressor.keyCname -> StringCompressionSetting(cname),
     BloscCompressor.keyClevel -> IntCompressionSetting(clevel),
     BloscCompressor.keyShuffle -> IntCompressionSetting(shuffleToInt),
@@ -75,10 +77,15 @@ class BloscCodec(cname: String, clevel: Int, shuffle: String, typesize: Option[I
     BloscCompressor.keyTypesize -> IntCompressionSetting(typesize.getOrElse(0))
   )
 
-  def shuffleToInt = shuffle match {
-    case "noshuffle"  => 0
-    case "shuffle"    => 1
-    case "bitshuffle" => 2
+  private def shuffleToInt = shuffle match {
+    case StringCompressionSetting(s) =>
+      s match {
+        case "noshuffle"  => 0
+        case "shuffle"    => 1
+        case "bitshuffle" => 2
+      }
+    case IntCompressionSetting(x)  => x
+    case BoolCompressionSetting(_) => ???
   }
 
   lazy val compressor = new BloscCompressor(getCompressorSettings)
@@ -102,6 +109,42 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
 
 sealed trait CodecSpecification
 
+final case class EndianCodecSpecification(endian: String) extends CodecSpecification
+
+object EndianCodecSpecification {
+  implicit val EndianCodecSpecificationFormat: OFormat[EndianCodecSpecification] = Json.format[EndianCodecSpecification]
+}
+final case class TransposeCodecSpecification(order: String) extends CodecSpecification // Should also support other parameters
+
+object TransposeCodecSpecification {
+  implicit val TransposeCodecSpecificationFormat: OFormat[TransposeCodecSpecification] =
+    Json.format[TransposeCodecSpecification]
+}
+final case class BloscCodecSpecification(cname: String,
+                                         clevel: Int,
+                                         shuffle: CompressionSetting,
+                                         typesize: Option[Int],
+                                         blocksize: Int)
+    extends CodecSpecification
+
+object BloscCodecSpecification {
+  implicit val BloscCodecSpecificationFormat: OFormat[BloscCodecSpecification] = Json.format[BloscCodecSpecification]
+}
+/* Sharding not supported for now
+final case class ShardingCodecSpecification(chunk_shape: Array[Int], codecs: Seq[CodecSpecification])
+    extends CodecSpecification
+
+object ShardingCodecSpecification {
+  implicit val ShardingCodecSpecificationReads = Json.reads[ShardingCodecSpecification]
+  implicit val ShardingCodecSpecificationWrites = Json.writes[ShardingCodecSpecification]
+  implicit val ShardingCodecSpecificationFormat = Json.format[ShardingCodecSpecification]
+}
+ */
+final case class GzipCodecSpecification(level: Int) extends CodecSpecification
+object GzipCodecSpecification {
+  implicit val GzipCodecSpecificationFormat: OFormat[GzipCodecSpecification] = Json.format[GzipCodecSpecification]
+}
+
 object CodecSpecification extends JsonImplicits {
   implicit object CodecSpecificationFormat extends Format[CodecSpecification] {
     override def reads(json: JsValue): JsResult[CodecSpecification] =
@@ -111,16 +154,3 @@ object CodecSpecification extends JsonImplicits {
       Json.writes[CodecSpecification].writes(obj)
   }
 }
-
-final case class EndianCodecSpecification(name: String, endian: String) extends CodecSpecification
-final case class TransposeCodecSpecification(name: String, order: String) extends CodecSpecification // Should also support other parameters
-final case class BloscCodecSpecification(name: String,
-                                         cname: String,
-                                         clevel: Int,
-                                         shuffle: String,
-                                         typesize: Option[Int],
-                                         blocksize: Int)
-    extends CodecSpecification
-final case class ShardingCodecSpecification(name: String, chunk_shape: Array[Int], codecs: Seq[CodecSpecification])
-    extends CodecSpecification
-final case class GzipCodecSpecification(name: String, level: Int) extends CodecSpecification

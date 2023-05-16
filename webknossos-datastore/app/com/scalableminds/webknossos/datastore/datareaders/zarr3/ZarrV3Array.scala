@@ -1,5 +1,17 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.webknossos.datastore.datareaders.codecs.{
+  BloscCodec,
+  BloscCodecSpecification,
+  Codec,
+  CodecSpecification,
+  EndianCodec,
+  EndianCodecSpecification,
+  GzipCodec,
+  GzipCodecSpecification,
+  TransposeCodec,
+  TransposeCodecSpecification
+}
 import com.scalableminds.webknossos.datastore.datareaders.{
   AxisOrder,
   ChunkReader,
@@ -51,6 +63,19 @@ class ZarrV3Array(relativePath: DatasetPath,
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
     s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
 
+  lazy val codecs: Seq[Codec] = initializeCodecs(specificHeader.codecs)
+
+  private def specificHeader: ZarrArrayHeader = header.asInstanceOf[ZarrArrayHeader]
+
+  private def initializeCodecs(codecSpecs: Seq[CodecSpecification]) =
+    codecSpecs.map {
+      case EndianCodecSpecification(endian)   => new EndianCodec(endian)
+      case TransposeCodecSpecification(order) => new TransposeCodec(order)
+      case BloscCodecSpecification(cname, clevel, shuffle, typesize, blocksize) =>
+        new BloscCodec(cname, clevel, shuffle, typesize, blocksize)
+      case GzipCodecSpecification(level) => new GzipCodec(level)
+    }
+
   override protected val chunkReader: ChunkReader =
-    ChunkReader.create(vaultPath, header)
+    ZarrV3ChunkReader.create(vaultPath, specificHeader, this)
 }

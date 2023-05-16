@@ -349,6 +349,9 @@ export default {
             {
               $ref: "#/definitions/types::DataLayerPrecomputedPartial",
             },
+            {
+              $ref: "#/definitions/types::DataLayerZarrV3Partial",
+            },
           ],
         },
       ],

@@ -3,7 +3,13 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.codecs.CodecSpecification
+import com.scalableminds.webknossos.datastore.datareaders.codecs.{
+  BloscCodecSpecification,
+  CodecSpecification,
+  EndianCodecSpecification,
+  GzipCodecSpecification,
+  TransposeCodecSpecification
+}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.ZarrV3DataType.{ZarrV3DataType, raw}
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayOrder,
@@ -15,7 +21,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import play.api.libs.json.Json.WithDefaultValues
-import play.api.libs.json.{Format, JsResult, JsSuccess, JsValue, Json}
+import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json}
 
 case class ZarrArrayHeader(
     zarr_format: Int, // must be 3
@@ -26,7 +32,7 @@ case class ZarrArrayHeader(
     chunk_key_encoding: ChunkKeyEncoding,
     fill_value: Either[String, Number], // Boolean not supported
     attributes: Option[Map[String, String]],
-    codecs: Option[Seq[CodecSpecification]],
+    codecs: Seq[CodecSpecification],
     storage_transformers: Option[Seq[StorageTransformerSpecification]],
     dimension_names: Option[Array[String]]
 ) extends DatasetHeader {
@@ -38,13 +44,13 @@ case class ZarrArrayHeader(
 
   override def dataType: String = data_type.left.getOrElse("extension")
 
-  override def order: ArrayOrder = ArrayOrder.C // todo: Transpose Codec
+  override lazy val order: ArrayOrder = getOrder
 
   def zarrV3DataType: ZarrV3DataType = ZarrV3DataType.fromString(dataType).getOrElse(raw)
 
   override def resolvedDataType: ArrayDataType = ZarrV3DataType.toArrayDataType(zarrV3DataType)
 
-  override def compressorImpl: Compressor = new NullCompressor // todo: Codecs
+  override def compressorImpl: Compressor = new NullCompressor // Not used, since specific chunk reader is used
 
   override def voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
 
@@ -58,6 +64,14 @@ case class ZarrArrayHeader(
       case Right(ecgs) => ???
 
     }
+
+  // Todo: rework this.
+  private def getOrder: ArrayOrder.Value = {
+    val transposeCodecs: Option[CodecSpecification] = codecs.find(c => c.isInstanceOf[TransposeCodecSpecification])
+    transposeCodecs
+      .map(c => if (c.asInstanceOf[TransposeCodecSpecification].order == "F") { ArrayOrder.F } else { ArrayOrder.C })
+      .getOrElse(ArrayOrder.C)
+  }
 
   private def getDimensionSeparator =
     DimensionSeparator.fromString(chunk_key_encoding.getSeparator).getOrElse(DimensionSeparator.SLASH)
@@ -161,6 +175,7 @@ object ZarrArrayHeader extends JsonImplicits {
         chunk_grid <- json("chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- json("chunk_key_encoding").validate[ChunkKeyEncoding]
         fill_value <- json("fill_value").validate[Either[String, Number]]
+        codecs = readCodecs(json("codecs"))
         dimension_names <- json("dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
       } yield
         ZarrArrayHeader(
@@ -172,11 +187,32 @@ object ZarrArrayHeader extends JsonImplicits {
           chunk_key_encoding,
           fill_value,
           attributes = None,
-          codecs = None, // TODO
+          codecs,
           storage_transformers = None,
           Some(dimension_names)
         )
     //Json.using[WithDefaultValues].reads[ZarrArrayHeader].reads(json)
+
+    private def readCodecs(value: JsValue): Seq[CodecSpecification] = {
+      val rawCodecSpecs: Seq[JsValue] = value match {
+        case JsArray(arr) => arr
+        case _            => Seq()
+      }
+      val codecSpecs = rawCodecSpecs.map(c => {
+        for {
+          spec: CodecSpecification <- c("name") match {
+            case JsString("endian")    => c("configuration").validate[EndianCodecSpecification]
+            case JsString("transpose") => c("configuration").validate[TransposeCodecSpecification]
+            case JsString("gzip")      => c("configuration").validate[GzipCodecSpecification]
+            case JsString("blosc")     => c("configuration").validate[BloscCodecSpecification]
+            case JsString(name)        => throw new UnsupportedOperationException(s"Codec $name is not supported.")
+            case _                     => throw new IllegalArgumentException()
+          }
+        } yield spec
+      })
+      codecSpecs.flatMap(possibleCodecSpec =>
+        possibleCodecSpec.map((s: CodecSpecification) => Seq(s)).getOrElse(Seq[CodecSpecification]()))
+    }
 
     override def writes(zarrArrayHeader: ZarrArrayHeader): JsValue =
       //Json.writes[ZarrArrayHeader].writes(zarrArrayHeader)
@@ -191,7 +227,7 @@ object ZarrArrayHeader extends JsonImplicits {
         //"chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
         "fill_value" -> zarrArrayHeader.fill_value,
         //"attributes" -> zarrArrayHeader.attributes.getOrElse(Map("" -> "")),
-        //"codecs" -> zarrArrayHeader.codecs,
+        "codecs" -> zarrArrayHeader.codecs,
         //"storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names
       )

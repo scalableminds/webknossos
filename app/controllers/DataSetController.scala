@@ -533,7 +533,9 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   def segmentAnythingEmbedding(organizationName: String,
                                dataSetName: String,
-                               dataLayerName: String): Action[SegmentAnythingEmbeddingParameters] =
+                               dataLayerName: String,
+                               intensityMin: Option[Double],
+                               intensityMax: Option[Double]): Action[SegmentAnythingEmbeddingParameters] =
     sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
       log() {
         for {
@@ -553,7 +555,11 @@ Expects:
                                                request.body.boundingBox,
                                                request.body.mag) ?~> "segmentAnything.getData.failed"
           _ = logger.debug(s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}...")
-          embedding <- wKRemoteSegmentAnythingClient.getEmbedding(data, dataLayer.elementClass) ?~> "segmentAnything.getEmbedding.failed"
+          embedding <- wKRemoteSegmentAnythingClient.getEmbedding(
+            data,
+            dataLayer.elementClass,
+            intensityMin,
+            intensityMax) ?~> "segmentAnything.getEmbedding.failed"
         } yield Ok(embedding)
       }
     }

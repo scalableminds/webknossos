@@ -103,15 +103,9 @@ export function* prepareQuickSelect(
 
   const colorLayers = (yield* select((state: OxalisState) =>
     getEnabledColorLayers(state.dataset, state.datasetConfiguration),
-  )).filter((layer) => (requireUint8 ? layer.elementClass === "uint8" : true));
+  ));
   if (colorLayers.length === 0) {
-    if (requireUint8) {
-      Toast.warning(
-        "The AI quick select tool currently only works for uint8 color layers. Please disable the AI mode for now.",
-      );
-    } else {
-      Toast.warning("No color layer available to use for quick select feature");
-    }
+    Toast.warning("No color layer available to use for quick select feature");
     return null;
   }
 

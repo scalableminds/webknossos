@@ -34,7 +34,7 @@ export function CardContainer({
 }
 export const layerNameRules = [
   {
-    min: 3,
+    min: 1,
   },
   // Note that these rules are also checked by the backend
   {
@@ -57,6 +57,7 @@ export const getDatasetNameRules = (
     required: true,
     message: messages["dataset.import.required.name"],
   },
+  { min: 3, message: messages["dataset.name_length"] },
   ...layerNameRules,
   {
     validator: async (_rule: any, value: string) => {

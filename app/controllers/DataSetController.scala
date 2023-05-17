@@ -5,7 +5,12 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataLayerLike, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayer,
+  DataLayerLike,
+  ElementClass,
+  GenericDataSource
+}
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
@@ -20,7 +25,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
@@ -42,17 +47,27 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
 }
 
+case class SegmentAnythingEmbeddingParameters(
+    mag: Vec3Int,
+    boundingBox: BoundingBox
+)
+
+object SegmentAnythingEmbeddingParameters {
+  implicit val jsonFormat: Format[SegmentAnythingEmbeddingParameters] = Json.format[SegmentAnythingEmbeddingParameters]
+}
+
 @Api
 class DataSetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   dataSetService: DataSetService,
-                                  dataSetDataLayerDAO: DataSetDataLayerDAO,
                                   dataStoreDAO: DataStoreDAO,
                                   dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
+                                  wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
                                   dataSetDAO: DataSetDAO,
+                                  conf: WkConf,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   exploreRemoteLayerService: ExploreRemoteLayerService,
@@ -161,7 +176,7 @@ class DataSetController @Inject()(userService: UserService,
             reportMutable += "Error when exploring as layer set: Resulted in zero layers."
             None
           case f: Failure =>
-            reportMutable += s"Error when exploring as layer set: ${exploreRemoteLayerService.formatFailureForReport(f)}"
+            reportMutable += s"Error when exploring as layer set: ${Fox.failureChainAsString(f)}"
             None
           case Empty =>
             reportMutable += "Error when exploring as layer set: Empty"
@@ -518,6 +533,45 @@ Expects:
     ctx.data match {
       case Some(_: User) => Messages("dataSet.notFound", dataSetName)
       case _             => Messages("dataSet.notFoundConsiderLogin", dataSetName)
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def segmentAnythingEmbedding(organizationName: String,
+                               dataSetName: String,
+                               dataLayerName: String,
+                               intensityMin: Option[Float],
+                               intensityMax: Option[Float]): Action[SegmentAnythingEmbeddingParameters] =
+    sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
+      log() {
+        for {
+          _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
+          _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
+          dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+            dataSetName) ~> NOT_FOUND
+          dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+          usableDataSource <- dataSource.toUsable ?~> "dataSet.notImported"
+          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
+          datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
+          targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
+          _ <- bool2Fox(targetMagBbox.dimensions.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.dimensions}"
+          data <- datastoreClient.getLayerData(organizationName,
+                                               dataset,
+                                               dataLayer.name,
+                                               request.body.boundingBox,
+                                               request.body.mag) ?~> "segmentAnything.getData.failed"
+          _ = logger.debug(
+            s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
+          _ <- bool2Fox(
+            !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
+          embedding <- wKRemoteSegmentAnythingClient.getEmbedding(
+            data,
+            dataLayer.elementClass,
+            intensityMin,
+            intensityMax) ?~> "segmentAnything.getEmbedding.failed"
+          _ = logger.debug(
+            s"Received ${embedding.length} bytes of embedding from SAM server, forwarding to front-end...")
+        } yield Ok(embedding)
+      }
     }
 
 }

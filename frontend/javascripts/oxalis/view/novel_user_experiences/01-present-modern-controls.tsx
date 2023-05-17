@@ -35,7 +35,7 @@ export default function PresentModernControls() {
   };
 
   return (
-    <Modal maskClosable={false} visible onCancel={closeModal} width={800} footer={null}>
+    <Modal maskClosable={false} open onCancel={closeModal} width={800} footer={null}>
       <h1>Say Hello to the Context Menu</h1>
       <p>
         WEBKNOSSOS now provides an easy-to-use context menu that allows performing even complex

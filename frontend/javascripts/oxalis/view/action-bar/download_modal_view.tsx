@@ -506,7 +506,7 @@ function _DownloadModalView({
               >
                 {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
                 {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
-                {messages["download.data_is_ready_for_download"]({ typeName })}
+                {messages["annotation.download"]}
               </Text>
             </Row>
             <Divider

@@ -134,9 +134,6 @@ A reload is necessary to return to a valid state.`,
   "download.export_as_tiff": _.template(
     "Export this <%- typeName %> as TIFF image(s). This may take a few moments depending on the size of your configured export.",
   ),
-  "download.data_is_ready_for_download": _.template(
-    "The following <%- typeName %> data is available for download immediately.",
-  ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
     "You just enabled the option to render missing data black. All layers will now be reloaded.",
@@ -349,6 +346,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
   "annotation.shared_teams_edited_failed":
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
+  "annotation.download": "The following annotation data is available for download immediately.",
   "annotation.export_no_worker":
     "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",

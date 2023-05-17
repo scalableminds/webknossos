@@ -181,26 +181,6 @@ async function copyToClipboard(code: string) {
   Toast.success("Snippet copied to clipboard.");
 }
 
-export function MoreInfoHint() {
-  return (
-    <Hint
-      style={{
-        margin: "0px 12px 0px 12px",
-      }}
-    >
-      For more information on how to work with annotation files visit the{" "}
-      <a
-        href="https://docs.webknossos.org/webknossos/tooling.html"
-        target="_blank"
-        rel="noreferrer"
-      >
-        user documentation
-      </a>
-      .
-    </Hint>
-  );
-}
-
 export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
@@ -228,12 +208,12 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
 function getPythonAnnotationDownloadSnippet(authToken: string | null, tracing: HybridTracing) {
   return `import webknossos as wk
 
-  with wk.webknossos_context(
-      token="${authToken || "<insert token here>"}",
-      url="${window.location.origin}"
-  ):
-      annotation = wk.Annotation.download("${tracing.annotationId}")
-  `;
+with wk.webknossos_context(
+    token="${authToken || "<insert token here>"}",
+    url="${window.location.origin}"
+):
+    annotation = wk.Annotation.download("${tracing.annotationId}")
+`;
 }
 
 function getPythonDatasetDownloadSnippet(authToken: string | null, dataset: APIDataset) {
@@ -394,7 +374,7 @@ function _DownloadModalView({
             type="warning"
           >
             {activeUser != null
-              ? messages["annotation.python_do_not_share"]
+              ? messages["download.python_do_not_share"]({ typeName })
               : messages["annotation.register_for_token"]}
           </Text>
         </Row>
@@ -414,6 +394,25 @@ function _DownloadModalView({
   const handleKeepWindowOpenChecked = (e: any) => {
     setKeepWindowOpen(e.target.checked);
   };
+
+  const typeDependentFileName = isAnnotation ? "annotation files" : "datasets";
+  const moreInfoHint = (
+    <Hint
+      style={{
+        margin: "0px 12px 0px 12px",
+      }}
+    >
+      For more information on how to work with {typeDependentFileName} visit the{" "}
+      <a
+        href="https://docs.webknossos.org/webknossos/tooling.html"
+        target="_blank"
+        rel="noreferrer"
+      >
+        user documentation
+      </a>
+      .
+    </Hint>
+  );
 
   const workerInfo = (
     <Row>
@@ -507,7 +506,7 @@ function _DownloadModalView({
               >
                 {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
                 {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
-                {messages["annotation.download"]}
+                {messages["download.data_is_ready_for_download"]({ typeName })}
               </Text>
             </Row>
             <Divider
@@ -573,7 +572,7 @@ function _DownloadModalView({
                 margin: "18px 0",
               }}
             />
-            <MoreInfoHint />
+            {moreInfoHint}
           </TabPane>
         ) : null}
         <TabPane tab="TIFF Export" key="export">
@@ -583,7 +582,7 @@ function _DownloadModalView({
                 margin: "0 6px 12px",
               }}
             >
-              {messages["annotation.export"]}
+              {messages["download.export_as_tiff"]({ typeName })}
             </Text>
           </Row>
           {activeTabKey === "export" && !features().jobsEnabled ? (
@@ -695,7 +694,7 @@ function _DownloadModalView({
               margin: "18px 0",
             }}
           />
-          <MoreInfoHint />
+          {moreInfoHint}
           <Checkbox
             style={{ position: "absolute", bottom: -62 }}
             checked={keepWindowOpen}
@@ -717,7 +716,7 @@ function _DownloadModalView({
               <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
                 WEBKNOSSOS Python API
               </a>
-              . To download and use this annotation in your Python project, simply copy and paste
+              . To download and use this {typeName} in your Python project, simply copy and paste
               the code snippets to your script.
             </Text>
           </Row>
@@ -738,7 +737,7 @@ function _DownloadModalView({
               margin: "18px 0",
             }}
           />
-          <MoreInfoHint />
+          {moreInfoHint}
         </TabPane>
       </Tabs>
     </Modal>

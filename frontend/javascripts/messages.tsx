@@ -128,6 +128,15 @@ A reload is necessary to return to a valid state.`,
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
+  "download.python_do_not_share": _.template(
+    "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
+  ),
+  "download.export_as_tiff": _.template(
+    "Export this <%- typeName %> as TIFF image(s). This may take a few moments depending on the size of your configured export.",
+  ),
+  "download.data_is_ready_for_download": _.template(
+    "The following <%- typeName %> data is available for download immediately.",
+  ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
     "You just enabled the option to render missing data black. All layers will now be reloaded.",
@@ -340,13 +349,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
   "annotation.shared_teams_edited_failed":
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
-  "annotation.download": "The following annotation data is available for download immediately.",
-  "annotation.export":
-    "Export this annotation as TIFF image(s). This may take a few moments depending on the size of your configured export.",
   "annotation.export_no_worker":
     "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
-  "annotation.python_do_not_share":
-    "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":

@@ -310,7 +310,7 @@ jobs:
             yarn test-wkorg-screenshot
 
       - store_artifacts:
-          path: frontend/javascripts/test/screenshots
+          path: frontend/javascripts/test/screenshots-wkorg
 
 workflows:
   version: 2

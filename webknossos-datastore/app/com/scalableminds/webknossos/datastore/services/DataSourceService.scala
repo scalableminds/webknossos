@@ -48,7 +48,7 @@ class DataSourceService @Inject()(
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
-  var inboxCheckVerboseCounter = 0
+  private var inboxCheckVerboseCounter = 0
 
   def tick(): Unit = {
     checkInbox(verbose = inboxCheckVerboseCounter == 0)

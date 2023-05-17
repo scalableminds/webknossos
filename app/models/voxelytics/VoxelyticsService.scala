@@ -57,7 +57,13 @@ object WorkflowEntry {
   implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
 }
 
-case class TaskCounts(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long)
+case class TaskCounts(total: Long,
+                      failed: Long,
+                      skipped: Long,
+                      complete: Long,
+                      cancelled: Long,
+                      fileSize: Long,
+                      inodeCount: Long)
 
 object TaskCounts {
   implicit val jsonFormat: OFormat[TaskCounts] = Json.format[TaskCounts]

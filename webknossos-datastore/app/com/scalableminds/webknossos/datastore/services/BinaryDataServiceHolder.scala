@@ -16,14 +16,16 @@ import javax.inject.Inject
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         agglomerateService: AgglomerateService,
                                         applicationHealthService: ApplicationHealthService,
-                                        dataVaultService: DataVaultService) {
+                                        dataVaultService: DataVaultService,
+                                        datasetErrorLoggingService: DatasetErrorLoggingService) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
     Paths.get(config.Datastore.baseFolder),
     config.Datastore.Cache.DataCube.maxEntries,
     Some(agglomerateService),
     Some(dataVaultService),
-    Some(applicationHealthService)
+    Some(applicationHealthService),
+    Some(datasetErrorLoggingService)
   )
 
 }

@@ -139,7 +139,7 @@ export function RestrictResolutionSlider({
           {resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
         </div>
         <Slider
-          tooltipVisible={false}
+          tooltip={{ open: false }}
           onChange={(value) => setResolutionIndices(value)}
           range
           step={1}

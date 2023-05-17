@@ -15,7 +15,7 @@ class BoundingBox {
   constructor(boundingBox: BoundingBoxType | null | undefined, maxRestriction?: Vector3) {
     this.boundingBox = boundingBox;
     // Min is including
-    this.min = [0, 0, 0];
+    this.min = [-Infinity, -Infinity, -Infinity];
     // Max is excluding
     this.max = maxRestriction != null ? _.clone(maxRestriction) : [Infinity, Infinity, Infinity];
 
@@ -29,8 +29,8 @@ class BoundingBox {
 
   getBoxForZoomStep = _.memoize((resolution: Vector3): BoundingBoxType => {
     // No `map` for performance reasons
-    const min = [0, 0, 0];
-    const max = [0, 0, 0];
+    const min = [0, 0, 0] as Vector3;
+    const max = [0, 0, 0] as Vector3;
 
     for (let i = 0; i < 3; i++) {
       const divisor = constants.BUCKET_WIDTH * resolution[i];
@@ -39,9 +39,7 @@ class BoundingBox {
     }
 
     return {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max,
     };
   });
@@ -63,6 +61,14 @@ class BoundingBox {
     const [x, y, z] = vec3;
     const { min, max } = this;
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
+  }
+
+  containsBoundingBox(other: BoundingBox) {
+    return other.equals(this.intersectedWith(other));
+  }
+
+  equals(other: BoundingBox) {
+    return V3.equals(this.min, other.min) && V3.equals(this.max, other.max);
   }
 
   intersectedWith(other: BoundingBox): BoundingBox {
@@ -155,23 +161,21 @@ class BoundingBox {
     });
   }
 
-  alignWithMag(mag: Vector3, ceil: boolean = false): BoundingBox {
+  alignWithMag(mag: Vector3, strategy: "shrink" | "grow" | "ceil" | "floor"): BoundingBox {
     /*
      * Rounds the bounding box, so that both min and max are divisible by mag.
-     * :argument ceil: If true, the bounding box is enlarged when necessary. If false, it's shrinked when necessary.
+     * The strategy parameter controls how the coordinates are rounded:
+     * - shrink: ceils `min` and floors `max`
+     * - grow: floors `min` and ceils `max`
+     * - ceil: ceils `min` and `max`
+     * - floor: floors `min` and `max`
      */
     const align = (point: Vector3, round_fn: (vec: Vector3) => Vector3) =>
       V3.scale3(round_fn(V3.divide3(point, mag)), mag);
 
-    if (ceil) {
-      const min = align(this.min, V3.floor);
-      const max = align(this.max, V3.ceil);
-      return new BoundingBox({ min, max });
-    } else {
-      const min = align(this.min, V3.ceil);
-      const max = align(this.max, V3.floor);
-      return new BoundingBox({ min, max });
-    }
+    const min = align(this.min, strategy === "ceil" || strategy === "shrink" ? V3.ceil : V3.floor);
+    const max = align(this.max, strategy === "floor" || strategy === "shrink" ? V3.floor : V3.ceil);
+    return new BoundingBox({ min, max });
   }
 
   /*
@@ -196,6 +200,11 @@ class BoundingBox {
       min: V3.floor(this.min),
       max: V3.ceil(this.max),
     });
+  }
+
+  asServerBoundingBox() {
+    const size = this.getSize();
+    return { topLeft: this.min, width: size[0], height: size[1], depth: size[2] };
   }
 }
 

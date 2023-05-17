@@ -80,6 +80,7 @@ const defaultState: OxalisState = {
     interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
     quickSelect: {
+      useHeuristic: false,
       showPreview: false,
       segmentMode: "light",
       threshold: 128,
@@ -237,7 +238,7 @@ const defaultState: OxalisState = {
     busyBlockingInfo: {
       isBusy: false,
     },
-    isQuickSelectActive: false,
+    quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
   },
   localSegmentationData: {},

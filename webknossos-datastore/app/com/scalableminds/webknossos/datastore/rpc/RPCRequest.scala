@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.datastore.rpc
 
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -101,16 +99,6 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
     parseJsonResponse(performRequest)
   }
 
-  def postFileWithJsonResponse[T: Reads](file: File): Fox[T] = {
-    request = request.withBody(file).withMethod("POST")
-    parseJsonResponse(performRequest)
-  }
-
-  def postWithProtoResponse[T <: GeneratedMessage](file: File)(companion: GeneratedMessageCompanion[T]): Fox[T] = {
-    request = request.withBody(file).withMethod("POST")
-    parseProtoResponse(performRequest)(companion)
-  }
-
   def post[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
@@ -140,9 +128,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
     parseJsonResponse(performRequest)
   }
 
-  def postBytesWithJsonResponse[U: Reads](body: Array[Byte]): Fox[U] = {
+  def postBytesWithBytesResponse(body: Array[Byte]): Fox[Array[Byte]] = {
     request = request.withBody(body).withMethod("POST")
-    parseJsonResponse(performRequest)
+    extractBytesResponse(performRequest)
   }
 
   def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](body: J = Json.obj())(
@@ -169,21 +157,6 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
-  }
-
-  def getStream: Fox[Source[ByteString, _]] = {
-    if (verbose) {
-      logger.debug(
-        s"Sending WS request to $url (ID: $id). " +
-          s"RequestBody: '$requestBodyPreview'")
-    }
-    request.withMethod("GET").stream().map(response => Full(response.bodyAsSource)).recover {
-      case e =>
-        val errorMsg = s"Error sending WS request to $url (ID: $id): " +
-          s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
-        logger.error(errorMsg)
-        Failure(errorMsg)
-    }
   }
 
   private def performRequest: Fox[WSResponse] = {
@@ -285,6 +258,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
       case body: InMemoryBody
           if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains(protobufMimeType) =>
         s"<${body.bytes.length} bytes of protobuf data>"
+      case body: InMemoryBody
+          if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains(octetStreamMimeType) =>
+        s"<${body.bytes.length} bytes of byte data>"
       case body: InMemoryBody =>
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")

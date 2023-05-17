@@ -104,6 +104,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
+    val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
   }
 
   object Datastore {
@@ -230,6 +231,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val children = List(Loki)
   }
 
+  object SegmentAnything {
+    val uri: String = get[String]("segmentAnything.uri")
+  }
+
   val children =
     List(
       Http,
@@ -246,7 +251,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       GoogleAnalytics,
       BackendAnalytics,
       Slick,
-      Voxelytics
+      Voxelytics,
+      SegmentAnything
     )
 
 }

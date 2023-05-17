@@ -420,7 +420,7 @@ function StartingJobModal(props: StartingJobModalProps) {
     .map((layer) => getReadableNameOfVolumeLayer(layer, tracing) || layer.name);
 
   return (
-    <Modal title={title} onCancel={handleClose} visible width={700} footer={null}>
+    <Modal title={title} onCancel={handleClose} open width={700} footer={null}>
       {description}
       <br />
       {jobNameToImagePath[jobName] != null ? (

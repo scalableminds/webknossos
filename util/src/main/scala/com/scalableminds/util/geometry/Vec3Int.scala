@@ -66,6 +66,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   def alignWithGridFloor(gridCellSize: Vec3Int): Vec3Int =
     this / gridCellSize * gridCellSize
+
+  def sorted: Vec3Int = Vec3Int.fromList(toList.sorted).get
+
 }
 
 object Vec3Int {

@@ -182,6 +182,7 @@ trait MimeTypes {
   val zipMimeType: String = "application/zip"
   val jsonMimeType: String = "application/json"
   val formUrlEncodedMimeType: String = "application/x-www-form-urlencoded"
+  val octetStreamMimeType: String = "application/octet-stream"
 }
 
 trait JsonResults extends JsonResultAttribues {

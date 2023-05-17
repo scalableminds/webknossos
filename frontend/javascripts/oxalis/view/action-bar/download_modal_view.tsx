@@ -39,7 +39,7 @@ import {
   computeBoundingBoxFromBoundingBoxObject,
   computeShapeFromBoundingBox,
 } from "libs/utils";
-import { formatBytes, formatScale } from "libs/format_utils";
+import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 const CheckboxGroup = Checkbox.Group;
@@ -152,7 +152,7 @@ function estimateFileSize(
   const shape = computeShapeFromBoundingBox(boundingBox);
   const volume =
     Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
-  return formatBytes(
+  return formatCountToDataAmountUnit(
     volume *
       getByteCountFromLayer(selectedLayer) *
       (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1),

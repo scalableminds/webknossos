@@ -306,7 +306,7 @@ export class InviteUsersModal extends React.Component<
 
   render() {
     const isInvitesDisabled =
-      this.props.currentUserCount + this.extractEmailAddresses().length >=
+      this.props.currentUserCount + this.extractEmailAddresses().length >
       this.props.maxUserCountPerOrganization;
 
     return (
@@ -530,7 +530,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         </Modal>
       )}
       {this.state.datasetNameToImport != null && (
-        <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
+        <Modal open width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
           <DatasetSettingsView
             isEditingMode={false}
             datasetId={{

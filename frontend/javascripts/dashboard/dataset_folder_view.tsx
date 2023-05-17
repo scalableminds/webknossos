@@ -13,6 +13,7 @@ import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
 import features, { getDemoDatasetUrl } from "features";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { useFolderHierarchyQuery } from "./dataset/queries";
 
 type Props = {
   user: APIUser;
@@ -30,6 +31,7 @@ function DatasetFolderViewInner(props: Props) {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
+  const { data: hierarchy } = useFolderHierarchyQuery();
 
   const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
     if (!ds) {
@@ -139,7 +141,7 @@ function DatasetFolderViewInner(props: Props) {
 
     return (
       <React.Fragment>
-        <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>;
+        <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
         <Row
           justify="center"
           style={{
@@ -155,7 +157,7 @@ function DatasetFolderViewInner(props: Props) {
     );
   };
 
-  if (context.datasets.length === 0) {
+  if (hierarchy != null && hierarchy.flatItems.length === 1 && context.datasets.length === 0) {
     return renderNoDatasetsPlaceHolder();
   }
 

@@ -4,11 +4,15 @@ import { APIDatasetCompact, APIUser } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-
-import DatasetView from "./dataset_view";
+import { Button, Card, Col, Row } from "antd";
+import { Link } from "react-router-dom";
+import * as Utils from "libs/utils";
+import DatasetView, { DatasetAddButton, DatasetRefreshButton } from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
+import features, { getDemoDatasetUrl } from "features";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 
 type Props = {
   user: APIUser;
@@ -69,6 +73,91 @@ function DatasetFolderViewInner(props: Props) {
       ),
     );
   }, [context.datasets]);
+
+  const renderNoDatasetsPlaceHolder = () => {
+    const openPublicDatasetCard = (
+      <Col span={7}>
+        <Card bordered={false} cover={<i className="drawing drawing-empty-list-public-gallery" />}>
+          <Card.Meta
+            title="Open a Demo Dataset"
+            description={
+              <>
+                <p>Check out a published community dataset to experience WEBKNOSSOS in action.</p>
+                <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
+                  <Button style={{ marginTop: 30 }}>Open a Community Dataset</Button>
+                </a>
+              </>
+            }
+          />
+        </Card>
+      </Col>
+    );
+
+    const uploadPlaceholderCard = (
+      <Col span={7}>
+        <Card bordered={false} cover={<i className="drawing drawing-empty-list-dataset-upload" />}>
+          <Card.Meta
+            title="Upload & Import Dataset"
+            description={
+              <>
+                <p>
+                  WEBKNOSSOS supports a variety of (remote){" "}
+                  <a
+                    href="https://docs.webknossos.org/webknossos/data_formats.html"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    file formats
+                  </a>{" "}
+                  and is also able to convert them when necessary.
+                </p>
+                <Link to="/datasets/upload">
+                  <Button type="primary" style={{ marginTop: 30 }}>
+                    Open Dataset Upload & Import
+                  </Button>
+                </Link>
+                ,
+              </>
+            }
+          />
+        </Card>
+      </Col>
+    );
+
+    const adminHeader =
+      Utils.isUserAdminOrDatasetManager(props.user) || Utils.isUserTeamManager(props.user) ? (
+        <div
+          className="pull-right"
+          style={{
+            display: "flex",
+          }}
+        >
+          <DatasetRefreshButton context={context} />
+          <DatasetAddButton context={context} />
+        </div>
+      ) : null;
+
+    return (
+      <React.Fragment>
+        <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>;
+        <Row
+          justify="center"
+          style={{
+            padding: "20px 50px 70px",
+          }}
+          align="middle"
+          gutter={32}
+        >
+          {features().isWkorgInstance ? openPublicDatasetCard : null}
+          {Utils.isUserAdminOrDatasetManager(props.user) ? uploadPlaceholderCard : null}
+        </Row>
+      </React.Fragment>
+    );
+  };
+
+  if (context.datasets.length === 0) {
+    return renderNoDatasetsPlaceHolder();
+  }
 
   return (
     <div

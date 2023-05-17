@@ -238,10 +238,10 @@ function getPythonAnnotationDownloadSnippet(authToken: string | null, tracing: H
 
 function getPythonDatasetDownloadSnippet(authToken: string | null, dataset: APIDataset) {
   const nonDefaultHost = !document.location.host.endsWith("webknossos.org");
-  const indention = "\n        ";
+  const indentation = "\n        ";
   const contextUrlAddendum = nonDefaultHost ? `, url="${window.location.origin}"` : "";
   const maybeUrlParameter = nonDefaultHost
-    ? `${indention}webknossos_url="${window.location.origin}"`
+    ? `${indentation}webknossos_url="${window.location.origin}"`
     : "";
 
   return `import webknossos as wk

@@ -8,14 +8,7 @@ import {
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
-import type {
-  OxalisState,
-  SkeletonTracing,
-  Tree,
-  TreeGroup,
-  MutableTreeMap,
-  Node,
-} from "oxalis/store";
+import type { OxalisState, SkeletonTracing, TreeGroup, MutableTreeMap } from "oxalis/store";
 import Store from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -24,12 +17,12 @@ import { batchActions } from "redux-batched-actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
-type DeleteNodeAction = ReturnType<typeof deleteNodeAction>;
+export type DeleteNodeAction = ReturnType<typeof deleteNodeAction>;
 export type DeleteEdgeAction = ReturnType<typeof deleteEdgeAction>;
 type SetActiveNodeAction = ReturnType<typeof setActiveNodeAction>;
 type CenterActiveNodeAction = ReturnType<typeof centerActiveNodeAction>;
 type SetNodeRadiusAction = ReturnType<typeof setNodeRadiusAction>;
-type SetNodePositionAction = ReturnType<typeof setNodePositionAction>;
+export type SetNodePositionAction = ReturnType<typeof setNodePositionAction>;
 type CreateBranchPointAction = ReturnType<typeof createBranchPointAction>;
 type DeleteBranchPointAction = ReturnType<typeof deleteBranchPointAction>;
 type DeleteBranchpointByIdAction = ReturnType<typeof deleteBranchpointByIdAction>;

@@ -32,10 +32,11 @@ import {
   getSkeletonTracing,
   findTreeByNodeId,
   getTree,
+  getTreesWithType,
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
-import Constants, { TreeTypeEnum } from "oxalis/constants";
+import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -552,7 +553,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       switch (action.type) {
         case "CREATE_NODE": {
           const { position, rotation, viewport, resolution, treeId, timestamp } = action;
-          return getOrCreateTree(state, skeletonTracing, treeId, timestamp)
+          return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
                 state,
@@ -642,9 +643,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           if (sourceNodeId === targetNodeId) {
             return state;
           }
-
-          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
-          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
+          const isProofreadingActive =
+            state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+          const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
+          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId, null, treeType);
+          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId, null, treeType);
           return sourceTreeMaybe
             .chain(([sourceTree, sourceNode]) =>
               targetTreeMaybe.chain(([targetTree, targetNode]) =>
@@ -670,7 +673,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "SET_NODE_POSITION": {
           const { position, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+          return getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT)
             .map(([tree, node]) => {
               const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
               const newDiffableMap = diffableMap.set(
@@ -892,7 +895,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "MERGE_TREES": {
           const { sourceNodeId, targetNodeId } = action;
-          return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId)
+          const isProofreadingActive =
+            state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+          const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
+          const trees = getTreesWithType(skeletonTracing, treeType);
+          return mergeTrees(trees, sourceNodeId, targetNodeId)
             .map(([trees, newActiveTreeId, newActiveNodeId]) =>
               update(state, {
                 tracing: {

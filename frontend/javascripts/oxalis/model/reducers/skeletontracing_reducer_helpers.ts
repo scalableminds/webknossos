@@ -358,7 +358,13 @@ function splitTreeByNodes(
             type: activeTree.type,
           };
         } else {
-          const immutableNewTree = createTree(intermediateState, timestamp).get();
+          const immutableNewTree = createTree(
+            intermediateState,
+            timestamp,
+            true,
+            undefined,
+            activeTree.type,
+          ).get();
           // Cast to mutable tree type since we want to mutably do the split
           // in this reducer for performance reasons.
           newTree = immutableNewTree as any as Tree;
@@ -509,8 +515,9 @@ export function getOrCreateTree(
   skeletonTracing: SkeletonTracing,
   treeId: number | null | undefined,
   timestamp: number,
+  type?: TreeType | null | undefined,
 ): Maybe<Tree> {
-  return getTree(skeletonTracing, treeId).orElse(() => {
+  return getTree(skeletonTracing, treeId, type).orElse(() => {
     // Only create a new tree if there are no trees
     // Specifically, this means that no new tree is created just because
     // the activeTreeId is temporarily null
@@ -634,11 +641,10 @@ export function deleteTree(
   return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
 }
 export function mergeTrees(
-  skeletonTracing: SkeletonTracing,
+  trees: TreeMap,
   sourceNodeId: number,
   targetNodeId: number,
 ): Maybe<[TreeMap, number, number]> {
-  const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId);
   const targetTree = findTreeByNodeId(trees, targetNodeId); // should be activeTree
 

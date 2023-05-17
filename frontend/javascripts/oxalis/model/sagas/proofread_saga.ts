@@ -1,13 +1,16 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { takeEvery, put, call, all } from "typed-redux-saga";
 import { select, take } from "oxalis/model/sagas/effect-generators";
-import { AnnotationToolEnum, MappingStatusEnum, Vector3 } from "oxalis/constants";
+import { AnnotationToolEnum, MappingStatusEnum, TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 import {
+  type CreateNodeAction,
+  type DeleteNodeAction,
   deleteEdgeAction,
-  DeleteEdgeAction,
-  MergeTreesAction,
+  type DeleteEdgeAction,
+  type MergeTreesAction,
   setTreeNameAction,
+  type SetNodePositionAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   initializeEditableMappingAction,
@@ -22,6 +25,7 @@ import type {
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
+  getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -72,6 +76,10 @@ export default function* proofreadRootSaga(): Saga<void> {
     ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
     handleProofreadMergeOrMinCut,
   );
+  yield* takeEvery(
+    ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
+    checkForAgglomerateSkeletonModification,
+  );
 }
 
 function proofreadCoarseResolutionIndex(): number {
@@ -119,6 +127,26 @@ function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3
   }
 
   coarselyLoadedSegmentIds.push(segmentId);
+}
+
+function* checkForAgglomerateSkeletonModification(
+  action: CreateNodeAction | DeleteNodeAction | SetNodePositionAction,
+): Saga<void> {
+  let nodeId, treeId;
+
+  if (action.type === "CREATE_NODE") {
+    ({ treeId } = action);
+  } else {
+    ({ nodeId, treeId } = action);
+  }
+
+  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+
+  getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE).map((_) => {
+    Toast.error(
+      "Agglomerate skeletons cannot be modified, except using the proofreading tool to add or delete edges.",
+    );
+  });
 }
 
 function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
@@ -195,16 +223,36 @@ function* splitOrMergeOrMinCutAgglomerate(
   if (volumeTracing == null) return;
   const { tracingId: volumeTracingId } = volumeTracing;
 
-  if (activeTool !== AnnotationToolEnum.PROOFREAD) {
-    // Warn the user if an editable mapping is active and an agglomerate skeleton edge was added/deleted,
-    // but the proofreading mode was not active
-    if (volumeTracing.mappingIsEditable) {
-      Toast.warning(
-        "In order to edit the active mapping by deleting or adding edges, the proofreading tool needs to be active." +
-          " If you want your last action to edit the active mapping, undo it (Ctrl + Z), activate the proofreading tool and then manually redo the action.",
-        { timeout: 12000 },
-      );
-    }
+  const { sourceNodeId, targetNodeId } = action;
+
+  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+
+  const { trees } = skeletonTracing;
+  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
+  const targetTree = findTreeByNodeId(trees, targetNodeId);
+
+  if (sourceTree == null || targetTree == null) {
+    return;
+  }
+
+  const isModifyingOnlyAgglomerateSkeletons =
+    sourceTree.type === TreeTypeEnum.AGGLOMERATE && targetTree.type === TreeTypeEnum.AGGLOMERATE;
+  const isModifyingAnyAgglomerateSkeletons =
+    sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
+  const isProofreadingToolActive = activeTool === AnnotationToolEnum.PROOFREAD;
+
+  if (isProofreadingToolActive && !isModifyingOnlyAgglomerateSkeletons) {
+    Toast.error(
+      "Only agglomerate skeletons can be modified using the proofreading tool to edit the active mapping.",
+      { timeout: 12000 },
+    );
+    return;
+  } else if (!isProofreadingToolActive && isModifyingAnyAgglomerateSkeletons) {
+    Toast.error(
+      "In order to edit the active mapping by deleting or adding edges of agglomerate skeletons, the proofreading tool needs to be active." +
+        " If you want to edit the active mapping, activate the proofreading tool and then redo the action.",
+      { timeout: 12000 },
+    );
     return;
   }
 
@@ -218,18 +266,6 @@ function* splitOrMergeOrMinCutAgglomerate(
     return;
   }
   const { layerName, agglomerateFileMag, getDataValue } = preparation;
-  const { sourceNodeId, targetNodeId } = action;
-
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
-
-  const { trees } = skeletonTracing;
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
-  const targetTree = findTreeByNodeId(trees, targetNodeId);
-
-  if (sourceTree == null || targetTree == null) {
-    yield* put(setBusyBlockingInfoAction(false));
-    return;
-  }
 
   const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
   const targetNodePosition = targetTree.nodes.get(targetNodeId).position;

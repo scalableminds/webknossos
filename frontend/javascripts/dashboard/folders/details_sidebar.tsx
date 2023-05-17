@@ -202,7 +202,7 @@ function FolderDetails({
 }) {
   let message = getMaybeSelectMessage(datasetCount);
   if (!displayedFolderEqualsActiveFolder) {
-    message = datasetCount > 0 ? "Double-click the folder to list these datasets." : "";
+    message = datasetCount > 0 ? `Double-click the folder to list these {pluralize("dataset", datasetCount)}.` : "";
   }
   return (
     <>

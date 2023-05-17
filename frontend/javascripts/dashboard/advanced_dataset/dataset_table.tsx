@@ -99,7 +99,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         reloadDataset,
       });
     } else if (folder != null) {
-      menu = generateSettingsForFolder(folder, datasetCollectionContext, editFolder);
+      menu = generateSettingsForFolder(folder, datasetCollectionContext, editFolder, true);
     }
   }
 
@@ -363,8 +363,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
   getFolderSettingsActions(folder: FolderItemWithName) {
     const { context } = this.props;
-    const folderTreeContextMenuItems = generateSettingsForFolder(folder, context, () =>
-      this.editFolder(folder),
+    const folderTreeContextMenuItems = generateSettingsForFolder(
+      folder,
+      context,
+      () => this.editFolder(folder),
+      true,
     );
     const settings = folderTreeContextMenuItems.items
       .filter((item) => !item.disabled)
@@ -425,7 +428,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     if (selectedDatasets.length > 0) {
       selectedRowKeys = selectedDatasets.map((ds) => ds.name);
     } else if (context.selectedFolder) {
-      selectedRowKeys = [context.selectedFolder?.title];
+      selectedRowKeys = [context.selectedFolder?.key];
     }
 
     return (
@@ -446,7 +449,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
         <FixedExpandableTable
           childrenColumnName="notUsed"
           dataSource={sortedDataSource}
-          rowKey="name"
+          rowKey={(record: DatasetOrFolder) =>
+            isRecordADataset(record) ? record.name : record.key
+          }
           components={components}
           pagination={{
             defaultPageSize: 50,

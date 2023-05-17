@@ -135,7 +135,7 @@ function DatasetFolderViewInner(props: Props) {
         <DetailsSidebar
           selectedDatasets={selectedDatasets}
           setSelectedDataset={setSelectedDataset}
-          displayFolderId={folderIdForDetailsSidebar}
+          folderId={folderIdForDetailsSidebar}
           datasetCount={datasetCountForDetailsSidebar}
           setFolderIdForEditModal={setFolderIdForEditModal}
           searchQuery={context.globalSearchQuery}

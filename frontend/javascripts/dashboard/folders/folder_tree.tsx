@@ -205,6 +205,7 @@ export function generateSettingsForFolder(
   folder: FolderItem,
   context: DatasetCollectionContextValue,
   editFolder: () => void,
+  isSubfolder: boolean = false,
 ) {
   const { key: id, isEditable } = folder;
   function deleteFolder(): void {
@@ -215,6 +216,7 @@ export function generateSettingsForFolder(
     context.showCreateFolderPrompt(id);
   }
 
+  const newFolderText = isSubfolder ? "New Subfolder" : "New Folder";
   return {
     items: [
       {
@@ -224,7 +226,7 @@ export function generateSettingsForFolder(
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             <PlusOutlined />
-            New Folder
+            {newFolderText}
           </PricingEnforcedSpan>
         ),
       },

@@ -185,7 +185,7 @@ export default function DatasetCollectionContextProvider({
   };
 
   const getActiveSubfolders = () => {
-    return folderHierarchyQuery.data?.itemById[activeFolderId ?? ""].children || [];
+    return folderHierarchyQuery.data?.itemById[activeFolderId ?? ""]?.children || [];
   };
 
   const isLoading =

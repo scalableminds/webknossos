@@ -1,6 +1,6 @@
 package models.binary
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
@@ -26,6 +26,26 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryStringOptional("centerX", center.map(_.x.toString))
       .addQueryStringOptional("centerY", center.map(_.y.toString))
       .addQueryStringOptional("centerZ", center.map(_.z.toString))
+      .getWithBytesResponse
+  }
+
+  def getLayerData(organizationName: String,
+                   dataset: DataSet,
+                   layerName: String,
+                   mag1BoundingBox: BoundingBox,
+                   mag: Vec3Int): Fox[Array[Byte]] = {
+    val targetMagBoundingBox = mag1BoundingBox / mag
+    logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
+    rpc(
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/data")
+      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryString("mag" -> mag.toMagLiteral())
+      .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
+      .addQueryString("y" -> mag1BoundingBox.topLeft.y.toString)
+      .addQueryString("z" -> mag1BoundingBox.topLeft.z.toString)
+      .addQueryString("width" -> targetMagBoundingBox.width.toString)
+      .addQueryString("height" -> targetMagBoundingBox.height.toString)
+      .addQueryString("depth" -> targetMagBoundingBox.depth.toString)
       .getWithBytesResponse
   }
 

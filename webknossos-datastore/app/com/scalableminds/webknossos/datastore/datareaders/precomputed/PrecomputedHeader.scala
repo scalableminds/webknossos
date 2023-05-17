@@ -21,7 +21,7 @@ case class PrecomputedHeader(`type`: String, data_type: String, num_channels: In
 
 case class PrecomputedScale(key: String,
                             size: Array[Int],
-                            resolution: Array[Int],
+                            resolution: Array[Double],
                             chunk_sizes: Array[Array[Int]],
                             encoding: String,
                             voxel_offset: Option[Array[Int]],
@@ -55,16 +55,12 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override def resolvedDataType: ArrayDataType =
     PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(dataType.toLowerCase).get)
 
-  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(
-    precomputedScale.encoding,
-    PrecomputedDataType.fromString(dataType.toLowerCase).get,
-    chunkSize,
-    precomputedScale.compressed_segmentation_block_size)
+  lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 
   override def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] =
     chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
 
-  lazy val voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
+  override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map(chunkIndexWithDim => {

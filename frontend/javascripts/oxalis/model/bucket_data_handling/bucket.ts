@@ -121,6 +121,7 @@ export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
 export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
+
 export class DataBucket {
   type: "data" = "data";
   elementClass: ElementClass;
@@ -147,6 +148,11 @@ export class DataBucket {
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  // Especially, for segmentation buckets, it can be interesting to
+  // know whether a certain ID is contained in this bucket. To
+  // speed up such requests a cached set of the contained values
+  // can be stored in cachedValueSet.
+  cachedValueSet: Set<number | BigInt> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -232,6 +238,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.invalidateValueSet();
     this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
@@ -375,6 +382,7 @@ export class DataBucket {
 
   setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
     this.data = newData;
+    this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
@@ -589,6 +597,7 @@ export class DataBucket {
         } else {
           this.data = data;
         }
+        this.invalidateValueSet();
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
@@ -598,6 +607,22 @@ export class DataBucket {
       default:
         this.unexpectedState();
     }
+  }
+
+  private invalidateValueSet() {
+    this.cachedValueSet = null;
+  }
+
+  private recomputeValueSet() {
+    // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+    this.cachedValueSet = new Set(this.data);
+  }
+
+  containsValue(value: number | BigInt): boolean {
+    if (this.cachedValueSet == null) {
+      this.recomputeValueSet();
+    }
+    return this.cachedValueSet!.has(value);
   }
 
   markAsPushed(): void {

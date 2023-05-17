@@ -159,7 +159,9 @@ class SkeletonTracingService @Inject()(
     save(finalTracing, None, finalTracing.version)
   }
 
-  def merge(tracings: Seq[SkeletonTracing], mergedVolumeStats: MergedVolumeStats): SkeletonTracing =
+  def merge(tracings: Seq[SkeletonTracing],
+            mergedVolumeStats: MergedVolumeStats,
+            newEditableMappingIdOpt: Option[String]): SkeletonTracing =
     tracings
       .reduceLeft(mergeTwo)
       .copy(
@@ -238,4 +240,7 @@ class SkeletonTracingService @Inject()(
     }
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
+
+  def mergeEditableMappings(tracingsWithIds: List[(SkeletonTracing, String)], userToken: Option[String]): Fox[String] =
+    Fox.empty
 }

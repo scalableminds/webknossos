@@ -1,10 +1,14 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, ChunkTyper, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
 
 import scala.collection.immutable.NumericRange
+import scala.concurrent.ExecutionContext
 
 object N5ChunkReader {
   def create(vaultPath: VaultPath, header: DatasetHeader): ChunkReader =
@@ -20,11 +24,10 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
     extends ChunkReader(header, vaultPath, typedChunkReader)
     with LazyLogging {
 
-  val dataExtractor: N5DataExtractor = new N5DataExtractor
+  private val dataExtractor: N5DataExtractor = new N5DataExtractor
 
-  override protected def readChunkBytesAndShape(
-      path: String,
-      range: Option[NumericRange[Long]]): Option[(Array[Byte], Option[Array[Int]])] = {
+  override protected def readChunkBytesAndShape(path: String, range: Option[NumericRange[Long]])(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] = {
     def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
       val output = header.compressorImpl.decompress(bytes)
       val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
@@ -34,9 +37,12 @@ class N5ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReade
     }
 
     for {
-      bytes <- (vaultPath / path).readBytes(range)
-      (blockHeader, data) = dataExtractor.readBytesAndHeader(bytes)
-      paddedChunkBytes = processBytes(data, blockHeader.blockSize.product)
+      bytes <- (vaultPath / path).readBytes(range) match {
+        case Some(bytes) => Fox.successful(bytes)
+        case None        => Fox.empty
+      }
+      (blockHeader, data) <- tryo(dataExtractor.readBytesAndHeader(bytes)).toFox
+      paddedChunkBytes <- tryo(processBytes(data, blockHeader.blockSize.product)).toFox ?~> "chunk.decompress.failed"
     } yield (paddedChunkBytes, Some(blockHeader.blockSize))
   }
 }

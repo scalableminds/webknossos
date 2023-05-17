@@ -323,15 +323,27 @@ class DataCube {
   }
 
   collectAllBuckets(): void {
+    this.collectBucketsIf(() => true);
+  }
+
+  collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
     this.pullQueue.clear();
     this.pullQueue.abortRequests();
 
+    const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
-      this.collectBucket(bucket);
+      // If a bucket is requested, collect it independently of the predicateFn,
+      // because the pullQueue was already cleared (meaning the bucket is in a
+      // requested state, but will never be filled with data).
+      if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
+        this.collectBucket(bucket);
+      } else {
+        notCollectedBuckets.push(bucket);
+      }
     }
 
-    this.buckets = [];
-    this.bucketIterator = 0;
+    this.buckets = notCollectedBuckets;
+    this.bucketIterator = notCollectedBuckets.length;
   }
 
   collectBucket(bucket: DataBucket): void {

@@ -48,7 +48,7 @@ class DataSourceService @Inject()(
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
-  var inboxCheckVerboseCounter = 0
+  private var inboxCheckVerboseCounter = 0
 
   def tick(): Unit = {
     checkInbox(verbose = inboxCheckVerboseCounter == 0)
@@ -59,7 +59,7 @@ class DataSourceService @Inject()(
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir) match {
+      _ <- PathUtils.listDirectories(dataBaseDir, silent = false) match {
         case Full(organizationDirs) =>
           for {
             _ <- Fox.successful(())
@@ -100,7 +100,7 @@ class DataSourceService @Inject()(
   private def logEmptyDirs(paths: List[Path]): Unit = {
 
     val emptyDirs = paths.flatMap { path =>
-      PathUtils.listDirectories(path) match {
+      PathUtils.listDirectories(path, silent = true) match {
         case Full(Nil) =>
           Some(path)
         case _ => None
@@ -202,7 +202,7 @@ class DataSourceService @Inject()(
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
-    PathUtils.listDirectories(path) match {
+    PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
         val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
         dataSources

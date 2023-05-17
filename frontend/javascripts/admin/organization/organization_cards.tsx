@@ -22,6 +22,7 @@ import {
   teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 
 export function TeamAndPowerPlanUpgradeCards({
   teamUpgradeCallback,
@@ -186,17 +187,12 @@ export function PlanDashboardCard({
   const maxUsersCountLabel =
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
 
-  let includedStorageLabel =
-    organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(organization.includedStorageBytes / 10 ** 9).toFixed(0)}GB`
-      : `${(organization.includedStorageBytes / 10 ** 12).toFixed(0)}TB`;
-  includedStorageLabel =
-    organization.includedStorageBytes === Number.POSITIVE_INFINITY ? "∞" : includedStorageLabel;
+  const includedStorageLabel =
+    organization.includedStorageBytes === Number.POSITIVE_INFINITY
+      ? "∞"
+      : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
 
-  const usedStorageLabel =
-    organization.pricingPlan === PricingPlanEnum.Basic
-      ? `${(organization.usedStorageBytes / 10 ** 9).toFixed(1)}`
-      : `${(organization.usedStorageBytes / 10 ** 12).toFixed(1)}`;
+  const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
 
   const storageLabel = (
     <span style={{ display: "inline-block", wordBreak: "break-word", width: 100 }}>

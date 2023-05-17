@@ -332,7 +332,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     .paddedWithSignedMargins(
       transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
     )
-    .alignWithMag(labeledResolution, true)
+    .alignWithMag(labeledResolution, "grow")
     .rounded();
   const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
 

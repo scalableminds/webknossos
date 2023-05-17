@@ -19,7 +19,8 @@ class BinaryDataService(val dataBaseDir: Path,
                         maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         dataVaultServiceOpt: Option[DataVaultService],
-                        val applicationHealthService: Option[ApplicationHealthService])
+                        val applicationHealthService: Option[ApplicationHealthService],
+                        datasetErrorLoggingService: Option[DatasetErrorLoggingService])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
@@ -91,13 +92,20 @@ class BinaryDataService(val dataBaseDir: Path,
           logger.warn(
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
+        case f: Failure =>
+          if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
+            logger.debug(
+              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
+                .failureChainAsString(f, includeStackTraces = true)}")
+            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
+          }
+          f.toFox
         case Full(data) =>
           if (data.length == 0) {
             val msg =
               s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
             logger.warn(msg)
             Fox.failure(msg)
-
           } else Fox.successful(data)
         case other => other.toFox
       }

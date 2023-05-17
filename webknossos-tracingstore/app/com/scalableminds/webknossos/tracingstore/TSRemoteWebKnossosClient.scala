@@ -46,6 +46,7 @@ class TSRemoteWebKnossosClient @Inject()(
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
+      .silent
       .post(Json.toJson(tracingUpdatesReport))
 
   def getDataSourceForTracing(tracingId: String): Fox[DataSourceLike] =
@@ -58,6 +59,7 @@ class TSRemoteWebKnossosClient @Inject()(
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$dataSetName")
       .addQueryString("organizationName" -> organizationName)
       .addQueryString("key" -> tracingStoreKey)
+      .silent
       .getWithJsonResponse[String]
 
   def getDataSourceIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[DataSourceId] =

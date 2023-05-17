@@ -137,6 +137,7 @@ object Fox extends FoxImplicits {
     runNext(l, Nil)
   }
 
+  // run in sequence, drop everything that isn’t full
   def sequenceOfFulls[T](seq: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
     Future.sequence(seq.map(_.futureBox)).map { results =>
       results.foldRight(List.empty[T]) {
@@ -219,6 +220,22 @@ object Fox extends FoxImplicits {
       }
     t =>
       runNext(functions, t)
+  }
+
+  def failureChainAsString(failure: Failure, includeStackTraces: Boolean = false): String = {
+    def formatStackTrace(failure: Failure) =
+      failure.exception match {
+        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
+        case _                                     => ""
+      }
+
+    def formatChain(chain: Box[Failure]): String = chain match {
+      case Full(failure) =>
+        " <~ " + failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
+      case _ => ""
+    }
+
+    failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
   }
 }
 

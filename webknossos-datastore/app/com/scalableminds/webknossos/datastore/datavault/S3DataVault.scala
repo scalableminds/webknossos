@@ -12,7 +12,6 @@ import com.amazonaws.services.s3.model.GetObjectRequest
 import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
 import org.apache.commons.io.IOUtils
 
-import java.io.InputStream
 import java.net.URI
 import scala.collection.immutable.NumericRange
 
@@ -30,7 +29,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
     val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
@@ -40,9 +39,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       case None    => getRequest(bucketName, objectKey)
     }
 
-    val is: InputStream =
-      client.getObject(getObjectRequest).getObjectContent
-    IOUtils.toByteArray(is)
+    val obj = client.getObject(getObjectRequest)
+    val encoding = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
+
+    (IOUtils.toByteArray(obj.getObjectContent), Encoding.fromRfc7231String(encoding))
   }
 }
 

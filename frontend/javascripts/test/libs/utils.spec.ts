@@ -1,5 +1,6 @@
 import * as Utils from "libs/utils";
 import test from "ava";
+
 test("filterWithSearchQueryOR: simple case", (t) => {
   const collection = [
     {
@@ -227,4 +228,28 @@ test("chunkIntoTimeWindows 2/2", async (t) => {
   const chunks = Utils.chunkIntoTimeWindows(collection, (el) => el.time, 9);
   t.is(chunks.length, 3);
   t.deepEqual(chunks, [chunk1, chunk2, chunk3]);
+});
+
+test("chunkDynamically (I)", (t) => {
+  const elements = [5, 7, 10, 234, 10];
+  const batches = Utils.chunkDynamically(elements, 10, (el) => el);
+  t.deepEqual(batches, [[5, 7], [10, 234], [10]]);
+});
+
+test("chunkDynamically (II)", (t) => {
+  const elements = [5, 7, 10, 234, 10];
+  const batches = Utils.chunkDynamically(elements, 100, (el) => el);
+  t.deepEqual(batches, [[5, 7, 10, 234], [10]]);
+});
+
+test("chunkDynamically (III)", (t) => {
+  const elements = [5, 7, 10, 234, 10];
+  const batches = Utils.chunkDynamically(elements, 1000, (el) => el);
+  t.deepEqual(batches, [[5, 7, 10, 234, 10]]);
+});
+
+test("chunkDynamically (IV)", (t) => {
+  const elements = [5, 7, 10, 234, 10];
+  const batches = Utils.chunkDynamically(elements, 1, (el) => el);
+  t.deepEqual(batches, [[5], [7], [10], [234], [10]]);
 });

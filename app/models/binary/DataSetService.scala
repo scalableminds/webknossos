@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
-import models.folder.{FolderDAO, FolderService}
+import models.folder.FolderDAO
 
 import javax.inject.Inject
 import models.job.WorkerDAO
@@ -41,7 +41,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
-                               folderService: FolderService,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
                                conf: WkConf)(implicit ec: ExecutionContext)
@@ -66,7 +65,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }
 
-  def createDataSet(
+  private def createDataSet(
       dataStore: DataStore,
       owningOrganization: String,
       dataSource: InboxDataSource,
@@ -256,7 +255,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore <- dataStoreFor(dataSet)
     } yield new WKRemoteDataStoreClient(dataStore, rpc)
 
-  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Instant] =
+  private def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Instant] =
     userOpt match {
       case Some(user) =>
         (for {

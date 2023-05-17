@@ -148,11 +148,12 @@ function DatasetView(props: Props) {
     setSearchQuery(value);
   }
 
-  function renderTable(filteredDatasets: APIDatasetCompact[]) {
+  function renderTable(filteredDatasets: APIDatasetCompact[], subfolders: FolderItem[]) {
     return (
       <DatasetTable
         context={props.context}
         datasets={filteredDatasets}
+        subfolders={subfolders}
         onSelectDataset={props.onSelectDataset}
         selectedDatasets={props.selectedDatasets}
         searchQuery={searchQuery || ""}
@@ -289,12 +290,16 @@ function DatasetView(props: Props) {
   );
 
   const datasets = context.datasets;
+  const subfolders = context.getActiveSubfolders();
   const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
 
-  const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
+  const isEmpty =
+    datasets.length === 0 &&
+    datasetFilteringMode !== "onlyShowUnreported" &&
+    subfolders.length === 0;
   const content = isEmpty
     ? renderPlaceholder(context, user, searchQuery)
-    : renderTable(filteredDatasets);
+    : renderTable(filteredDatasets, subfolders);
 
   return (
     <div>

@@ -47,6 +47,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where some volume annotations could not be duplicated or used as tasks. [#7085](https://github.com/scalableminds/webknossos/pull/7085)
 
 ### Removed
-- Support for [webknososs-connect](https://github.com/scalableminds/webknossos-connect) data store servers has been removed. [#7031](https://github.com/scalableminds/webknossos/pull/7031)
+- Support for [webknososs-connect](https://github.com/scalableminds/webknossos-connect) data store servers has been removed. Use the "Add Remote Dataset" functionality instead. [#7031](https://github.com/scalableminds/webknossos/pull/7031)
 
 ### Breaking Changes

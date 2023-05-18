@@ -94,9 +94,11 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         )}{" "}
         {selectedDataset.displayName || selectedDataset.name}
       </h4>
-      {activeUser?.organization !== selectedDataset.owningOrganization ? (
+      {
+        /*activeUser?.organization !== selectedDataset.owningOrganization ? (*/
         <OwningOrganizationRow organizationName={selectedDataset.owningOrganization} />
-      ) : null}
+        /*) : null*/
+      }
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>

@@ -33,6 +33,7 @@ import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_a
 import { mayUserEditDataset } from "libs/utils";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
+import { grey } from "@ant-design/colors";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -200,11 +201,10 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
       <tr>
         <td
           style={{
-            paddingRight: 6,
-            fontSize: 16,
+            paddingRight: 4,
           }}
         >
-          <i className="fas fa-building" />
+          <i className="fas fa-building fa-xl" />
         </td>
         <td>{organizationName}</td>
       </tr>
@@ -662,7 +662,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           {this.getTracingName()}
           {this.getDatasetName()}
           {this.maybePrintOwnerAndContributors()}
-          {this.maybePrintOrganization()}
         </div>
 
         <div className="info-tab-block">
@@ -672,6 +671,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <tbody>
+              {this.maybePrintOrganization()}
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
               {resolutionInfo}

@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser, APIOrganization } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -33,7 +33,7 @@ import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_a
 import { mayUserEditDataset } from "libs/utils";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
-import { getOrganization } from "admin/admin_rest_api";
+import { getAnnotationInformation, getOrganization } from "admin/admin_rest_api";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -231,8 +231,15 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    const owningOrga = await getOrganization(this.props.dataset.owningOrganization);
+    let owningOrga: APIOrganization;
+    if (this.props.isDatasetViewMode) {
+      owningOrga = await getOrganization(this.props.dataset.owningOrganization);
+    } else {
+      const annotation = await getAnnotationInformation(this.props.tracing.annotationId);
+      owningOrga = await getOrganization(annotation.organization);
+    }
     setTimeout(
+      // TODO Delete me
       () =>
         this.setState({
           owningOrganizationDisplayName: owningOrga.displayName,
@@ -565,7 +572,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   maybePrintOrganization = () => {
     const { activeUser, dataset } = this.props;
-    if (activeUser?.organization !== dataset.owningOrganization) return; // TODO invert
+    const datasetOrAnnotationOwningOrganization = this.props.isDatasetViewMode
+      ? dataset.owningOrganization
+      : this.props.tracing.annotationId;
+    if (activeUser?.organization === datasetOrAnnotationOwningOrganization) return; // TODO invert
     return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
   };
 

@@ -352,16 +352,10 @@ function AdditionalSkeletonModesButtons() {
 
   const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
 
-  // The z-index is needed so that the blue border of an active button does override the border color of the neighboring non active button.
-  const activeButtonStyle = {
-    ...NARROW_BUTTON_STYLE,
-    borderColor: "var(--ant-primary)",
-    zIndex: 1,
-  };
   const newNodeNewTreeModeButtonStyle = isNewNodeNewTreeModeOn
-    ? activeButtonStyle
+    ? ACTIVE_BUTTON_STYLE
     : NARROW_BUTTON_STYLE;
-  const mergerModeButtonStyle = isMergerModeEnabled ? activeButtonStyle : NARROW_BUTTON_STYLE;
+  const mergerModeButtonStyle = isMergerModeEnabled ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
   return (
     <React.Fragment>
       <ButtonComponent
@@ -923,6 +917,27 @@ function ToolSpecificSettings({
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
+  const dispatch = useDispatch();
+  const quickSelectConfig = useSelector(
+    (state: OxalisState) => state.userConfiguration.quickSelect,
+  );
+  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+  const heuristicButtonStyle = isQuickSelectHeuristic ? NARROW_BUTTON_STYLE : ACTIVE_BUTTON_STYLE;
+  const quickSelectTooltipText = isAISelectAvailable
+    ? isQuickSelectHeuristic
+      ? "The quick select tool is now working without AI. Activate AI for better results."
+      : "The quick select tool is now working with AI."
+    : "The quick select tool with AI is only available on webknossos.org";
+  const toggleQuickSelectStrategy = () => {
+    dispatch(
+      updateUserSettingAction("quickSelect", {
+        ...quickSelectConfig,
+        useHeuristic: !quickSelectConfig.useHeuristic,
+      }),
+    );
+  };
+
   return (
     <>
       {showCreateTreeButton ? (
@@ -969,7 +984,24 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
-      {adaptedActiveTool === "QUICK_SELECT" && <QuickSelectSettingsPopover />}
+      {adaptedActiveTool === "QUICK_SELECT" && (
+        <>
+          <ButtonComponent
+            style={{
+              ...heuristicButtonStyle,
+              opacity: isQuickSelectHeuristic ? 0.5 : 1,
+              marginLeft: 12,
+            }}
+            onClick={toggleQuickSelectStrategy}
+            disabled={!isAISelectAvailable}
+            title={quickSelectTooltipText}
+          >
+            <i className="fas fa-magic" /> AI
+          </ButtonComponent>
+
+          {isQuickSelectHeuristic && <QuickSelectSettingsPopover />}
+        </>
+      )}
 
       {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
         <VolumeInterpolationButton />
@@ -984,9 +1016,10 @@ function ToolSpecificSettings({
 
 function QuickSelectSettingsPopover() {
   const dispatch = useDispatch();
-  const { isQuickSelectActive, areQuickSelectSettingsOpen } = useSelector(
+  const { quickSelectState, areQuickSelectSettingsOpen } = useSelector(
     (state: OxalisState) => state.uiInformation,
   );
+  const isQuickSelectActive = quickSelectState === "active";
   return (
     <Popover
       trigger="click"
@@ -1000,7 +1033,7 @@ function QuickSelectSettingsPopover() {
       <ButtonComponent
         title="Configure Quick Select"
         tooltipPlacement="right"
-        className="narrow"
+        className="narrow without-icon-margin"
         type={isQuickSelectActive ? "primary" : "default"}
         style={{ marginLeft: 12, marginRight: 12 }}
       >
@@ -1054,8 +1087,8 @@ function ProofReadingComponents() {
       <ButtonComponent
         title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
-        className="narrow"
-        style={{ marginInline: 12 }}
+        className="narrow without-icon-margin"
+        style={{ marginLeft: 12 }}
       >
         <ClearOutlined />
       </ButtonComponent>

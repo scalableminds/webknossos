@@ -21,7 +21,7 @@ const OPTIONS_WITH_DISABLED = [
 
 export function QuickSelectControls() {
   const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.isQuickSelectActive,
+    (state: OxalisState) => state.uiInformation.quickSelectState === "active",
   );
   const quickSelectConfig = useSelector(
     (state: OxalisState) => state.userConfiguration.quickSelect,
@@ -33,6 +33,7 @@ export function QuickSelectControls() {
       defaultState.userConfiguration.quickSelect;
     dispatch(
       updateUserSettingAction("quickSelect", {
+        useHeuristic: true,
         showPreview: quickSelectConfig.showPreview,
         segmentMode,
         threshold,

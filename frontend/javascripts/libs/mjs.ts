@@ -350,6 +350,15 @@ const V3 = {
   isEqual(a: Vector3, b: Vector3) {
     return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
   },
+
+  alignWithMag(a: Vector3, mag: Vector3, ceil: boolean = false) {
+    const roundFn = ceil ? Math.ceil : Math.floor;
+    return [
+      roundFn(a[0] / mag[0]) * mag[0],
+      roundFn(a[1] / mag[1]) * mag[1],
+      roundFn(a[2] / mag[2]) * mag[2],
+    ] as Vector3;
+  },
 };
 
 const V4 = {

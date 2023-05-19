@@ -324,3 +324,8 @@ folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location
 folder.noWriteAccess=No write access in this folder
+
+segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOSSOS instance.
+segmentAnything.noUri=No Uri for SAM server configured.
+segmentAnything.getData.failed=Failed to get image data to send to SAM server.
+segmentAnything.getEmbedding.failed=Failed to get image embedding from SAM server.

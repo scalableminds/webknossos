@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -33,7 +33,7 @@ import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_a
 import { mayUserEditDataset } from "libs/utils";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
-import { grey } from "@ant-design/colors";
+import { getOrganization } from "admin/admin_rest_api";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -56,6 +56,7 @@ type DispatchProps = {
 type Props = StateProps & DispatchProps;
 type State = {
   showJobsDetailsModal: StartableJobsEnum | null | undefined;
+  owningOrganizationDisplayName: string | null;
 };
 const shortcuts = [
   {
@@ -194,9 +195,8 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
   );
 }
 
-export function OwningOrganizationRow({ organizationName }: { organizationName: string }) {
+export function OwningOrganizationRow({ organizationName }: { organizationName: string | null }) {
   return (
-    //activeUser?.organization === selectedDataset.owningOrganization && (
     <Tooltip title="Owning organization" placement="left">
       <tr>
         <td
@@ -206,7 +206,7 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
         >
           <i className="fas fa-building fa-xl" />
         </td>
-        <td>{organizationName}</td>
+        <td>{organizationName === null ? <i>loading...</i> : organizationName}</td>
       </tr>
     </Tooltip>
   );
@@ -215,6 +215,7 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     showJobsDetailsModal: null,
+    owningOrganizationDisplayName: null,
   };
 
   setAnnotationName = (newName: string) => {
@@ -224,6 +225,22 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   setAnnotationDescription = (newDescription: string) => {
     this.props.setAnnotationDescription(newDescription);
   };
+
+  componentDidMount(): void {
+    this.fetchData();
+  }
+
+  async fetchData(): Promise<void> {
+    const owningOrga = await getOrganization(this.props.dataset.owningOrganization);
+    setTimeout(
+      () =>
+        this.setState({
+          owningOrganizationDisplayName: owningOrga.displayName,
+        }),
+      2000,
+    );
+    console.log(this.state.owningOrganizationDisplayName);
+  }
 
   getTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
@@ -546,11 +563,11 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  maybePrintOrganization() {
-    const { activeUser } = this.props;
-    //TODO check orga is different
-    return <OwningOrganizationRow organizationName={activeUser ? activeUser.organization : ""} />;
-  }
+  maybePrintOrganization = () => {
+    const { activeUser, dataset } = this.props;
+    if (activeUser?.organization !== dataset.owningOrganization) return; // TODO invert
+    return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
+  };
 
   maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;

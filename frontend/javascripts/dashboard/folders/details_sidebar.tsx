@@ -8,19 +8,20 @@ import {
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { pluralize } from "libs/utils";
-import _ from "lodash";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
-import { APIDatasetCompact, APIOrganization, Folder } from "types/api_flow_types";
+import { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
+import { useFetch } from "libs/react_helpers";
+import { getOrganization } from "admin/admin_rest_api";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -83,6 +84,25 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const owningOrganizationDisplayName = useFetch(
+    async () => {
+      const owningOrga = await getOrganization(selectedDataset.owningOrganization);
+      return owningOrga.displayName;
+    },
+    null,
+    [],
+  );
+
+  const renderOrganization = () => {
+    if (activeUser?.organization !== selectedDataset.owningOrganization) return; //TODO invert
+    return (
+      <table>
+        <tbody>
+          <OwningOrganizationRow organizationName={owningOrganizationDisplayName} />
+        </tbody>
+      </table>
+    );
+  };
 
   return (
     <>
@@ -94,11 +114,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         )}{" "}
         {selectedDataset.displayName || selectedDataset.name}
       </h4>
-      {
-        /*activeUser?.organization !== selectedDataset.owningOrganization ? (*/
-        <OwningOrganizationRow organizationName={selectedDataset.owningOrganization} />
-        /*) : null*/
-      }
+      {renderOrganization()}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>

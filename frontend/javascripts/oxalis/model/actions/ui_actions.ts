@@ -1,5 +1,5 @@
 import type { AnnotationTool } from "oxalis/constants";
-import type { BorderOpenStatus, Theme } from "oxalis/store";
+import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
@@ -17,7 +17,7 @@ type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
-export type SetIsQuickSelectActiveAction = ReturnType<typeof setIsQuickSelectActiveAction>;
+export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
 
 export type UiAction =
@@ -37,7 +37,7 @@ export type UiAction =
   | SetBusyBlockingInfoAction
   | EnterAction
   | EscapeAction
-  | SetIsQuickSelectActiveAction
+  | SetQuickSelectStateAction
   | ShowQuickSelectSettingsAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
@@ -121,12 +121,13 @@ export const escapeAction = () =>
   ({
     type: "ESCAPE",
   } as const);
-export const setIsQuickSelectActiveAction = (isActive: boolean) =>
+export const setQuickSelectStateAction = (
+  state: OxalisState["uiInformation"]["quickSelectState"],
+) =>
   ({
-    type: "SET_IS_QUICK_SELECT_ACTIVE",
-    isActive,
+    type: "SET_QUICK_SELECT_STATE",
+    state,
   } as const);
-
 export const showQuickSelectSettingsAction = (isOpen: boolean) =>
   ({
     type: "SET_ARE_QUICK_SELECT_SETTINGS_OPEN",

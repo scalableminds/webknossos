@@ -82,7 +82,7 @@ export default function EnterLargestSegmentIdModal({
   const maxValue = 2 ** getBitDepth(segmentationLayer);
 
   return (
-    <Modal visible title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
+    <Modal open title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
       <p>
         No largest segment ID was configured for this segmentation layer. This means that WEBKNOSSOS
         does not know which segment ID would be safe to use for annotating new segments (because it

@@ -571,7 +571,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   maybePrintOrganization = () => {
-    const { activeUser, dataset } = this.props;
+    const { activeUser, dataset } = this.props; // TODO can I use activeOrganization?
     const datasetOrAnnotationOwningOrganization = this.props.isDatasetViewMode
       ? dataset.owningOrganization
       : this.props.tracing.annotationId;

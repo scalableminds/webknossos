@@ -8,6 +8,7 @@ import {
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { pluralize } from "libs/utils";
+import _ from "lodash";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,

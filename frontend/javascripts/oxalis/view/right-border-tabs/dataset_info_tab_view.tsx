@@ -575,7 +575,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const datasetOrAnnotationOwningOrganization = this.props.isDatasetViewMode
       ? dataset.owningOrganization
       : this.props.tracing.annotationId;
-    if (activeUser?.organization === datasetOrAnnotationOwningOrganization) return; // TODO invert
+    if (activeUser?.organization !== datasetOrAnnotationOwningOrganization) return; // TODO invert
     return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
   };
 

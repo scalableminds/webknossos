@@ -70,6 +70,7 @@ const skeletonTracing: SkeletonTracing = {
     list: [],
     activeIndex: -1,
   },
+  showSkeletons: true,
 };
 skeletonTracing.trees[1] = {
   treeId: 1,

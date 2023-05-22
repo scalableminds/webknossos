@@ -42,6 +42,7 @@ export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
+export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
@@ -85,6 +86,7 @@ export type VolumeTracingAction =
   | SetMappingIsEditableAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
+  | MaybePrefetchEmbeddingAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
@@ -316,6 +318,12 @@ export const computeQuickSelectForRectAction = (
     startPosition,
     endPosition,
     quickSelectGeometry,
+  } as const);
+
+export const maybePrefetchEmbeddingAction = (startPosition: Vector3) =>
+  ({
+    type: "MAYBE_PREFETCH_EMBEDDING",
+    startPosition,
   } as const);
 
 export const fineTuneQuickSelectAction = (

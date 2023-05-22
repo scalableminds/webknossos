@@ -50,6 +50,7 @@ const defaultState: OxalisState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
+    autoRenderMeshInProofreading: true,
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,
@@ -80,6 +81,7 @@ const defaultState: OxalisState = {
     interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
     quickSelect: {
+      useHeuristic: false,
       showPreview: false,
       segmentMode: "light",
       threshold: 128,
@@ -237,7 +239,7 @@ const defaultState: OxalisState = {
     busyBlockingInfo: {
       isBusy: false,
     },
-    isQuickSelectActive: false,
+    quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
   },
   localSegmentationData: {},

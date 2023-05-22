@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
-import { mergeVertices } from "libs/BufferGeometryUtils";
+import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/deferred";
 
 import Store from "oxalis/store";
@@ -824,33 +824,53 @@ function _getLoadChunksTasks(
                 const loader = getDracoLoader();
 
                 const errorsWithDetails = [];
-                for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-                  const chunk = chunks[chunkIdx];
-                  try {
-                    const dracoData = dataForChunks[chunkIdx];
 
-                    const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+                const chunksWithData = chunks.map((chunk, idx) => ({
+                  ...chunk,
+                  data: dataForChunks[idx],
+                }));
+                // Group chunks by position and merge meshes in the same chunk to keep the number
+                // of objects in the scene low for better performance. Ideally, more mesh geometries
+                // would be merged, but the meshes in different chunks need to be translated differently.
+                const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
+                for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
+                  // All chunks in chunksForPosition have the same position
+                  const position = chunksForPosition[0].position;
 
-                    // Compute vertex normals to achieve smooth shading
-                    geometry.computeVertexNormals();
-
-                    yield* call(
-                      {
-                        context: segmentMeshController,
-                        fn: segmentMeshController.addIsosurfaceFromGeometry,
-                      },
-                      geometry,
-                      id,
-                      chunk.position,
-                      // Apply the scale from the segment info, which includes dataset scale and mag
-                      scale,
-                      lod,
-                      layerName,
-                    );
-                  } catch (error) {
-                    errorsWithDetails.push({ error, chunk });
+                  const bufferGeometries = [];
+                  for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
+                    const chunk = chunksForPosition[chunkIdx];
+                    try {
+                      const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
+                      bufferGeometries.push(bufferGeometry);
+                    } catch (error) {
+                      errorsWithDetails.push({ error, chunk });
+                    }
                   }
+
+                  const geometry = mergeBufferGeometries(bufferGeometries);
+
+                  // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
+                  if (geometry == null) continue;
+
+                  // Compute vertex normals to achieve smooth shading
+                  geometry.computeVertexNormals();
+
+                  yield* call(
+                    {
+                      context: segmentMeshController,
+                      fn: segmentMeshController.addIsosurfaceFromGeometry,
+                    },
+                    geometry,
+                    id,
+                    position,
+                    // Apply the scale from the segment info, which includes dataset scale and mag
+                    scale,
+                    lod,
+                    layerName,
+                  );
                 }
+
                 if (errorsWithDetails.length > 0) {
                   console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
                   // Use first error as representative
@@ -925,15 +945,21 @@ function* downloadIsosurfaceCellById(
     return;
   }
 
-  const stl = exportToStl(geometry);
-  // Encode isosurface and cell id property
-  const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
-  isosurfaceMarker.forEach((marker, index) => {
-    stl.setUint8(index, marker);
-  });
-  stl.setUint32(segmentIdIndex, segmentId, true);
-  const blob = new Blob([stl]);
-  yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
+  try {
+    const stlDataViews = exportToStl(geometry);
+    // Encode isosurface and cell id property
+    const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
+    isosurfaceMarker.forEach((marker, index) => {
+      stlDataViews[0].setUint8(index, marker);
+    });
+    stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
+    const blob = new Blob(stlDataViews);
+    yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
+  } catch (exception) {
+    ErrorHandling.notify(exception as Error);
+    console.error(exception);
+    Toast.error("Could not export to STL. See console for details");
+  }
 }
 
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {

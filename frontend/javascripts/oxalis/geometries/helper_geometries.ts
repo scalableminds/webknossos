@@ -103,7 +103,21 @@ export class QuickSelectGeometry {
     this.meshGroup = new THREE.Group();
     this.meshGroup.add(this.rectangle);
     this.meshGroup.add(this.centerMarker);
+
+    // There are three `visible` properties that are used for different
+    // purposes:
+    // - The mesh group visibility effectively controls both the actual
+    //   rectangle and the center marker geometry. It is set in
+    //   adaptVisibilityForRendering.
+    // - The visibility property of the rectangle marks whether
+    //   the rectangle does have a size > 0.
+    // - The visibility of the center marker is set depending on
+    //   whether the quick-select tool is used with or without
+    //   the heuristic approach (only in that case, the center
+    //   has a meaning).
     this.meshGroup.visible = false;
+    this.rectangle.visible = false;
+    this.centerMarker.visible = false;
 
     this.reset();
   }
@@ -168,7 +182,7 @@ export class QuickSelectGeometry {
 
     // Hide the objects if the rectangle has size zero, so whenever
     // the quick select tool is not currently used to draw a rectangle.
-    this.meshGroup.visible = !V3.isEqual(endPosition, startPosition);
+    this.rectangle.visible = !V3.isEqual(endPosition, startPosition);
 
     app.vent.trigger("rerender");
   }
@@ -177,8 +191,9 @@ export class QuickSelectGeometry {
     // Only show this geometry when the current viewport is exactly at the
     // right position (third dimension).
     this.meshGroup.visible =
+      this.rectangle.visible &&
       Math.trunc(flycamPosition[thirdDim]) ===
-      Math.trunc(this.rectangle.position.toArray()[thirdDim]);
+        Math.trunc(this.rectangle.position.toArray()[thirdDim]);
 
     if (this.meshGroup.visible) {
       // If the group is visible, adapt the position's third dimension to

@@ -46,6 +46,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed displayed units of used storage in the organization's overview page. [#7057](https://github.com/scalableminds/webknossos/pull/7057)
 - Fixed a rendering bug that could occur when a dataset layer has missing mags (e.g., the first mag is 8-8-8). [#7082](https://github.com/scalableminds/webknossos/pull/7082)
 - Fixed a bug where some volume annotations could not be duplicated or used as tasks. [#7085](https://github.com/scalableminds/webknossos/pull/7085)
+- Fixed a superfluous rectangular geometry rendered at 0,0,0. [#7088](https://github.com/scalableminds/webknossos/pull/7088)
 
 ### Removed
 

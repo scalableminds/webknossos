@@ -19,6 +19,7 @@ export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
+type ShowBrushSizePopoverAction = ReturnType<typeof showBrushSizePopover>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -38,7 +39,8 @@ export type UiAction =
   | EnterAction
   | EscapeAction
   | SetQuickSelectStateAction
-  | ShowQuickSelectSettingsAction;
+  | ShowQuickSelectSettingsAction
+  | ShowBrushSizePopoverAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -133,3 +135,8 @@ export const showQuickSelectSettingsAction = (isOpen: boolean) =>
     type: "SET_ARE_QUICK_SELECT_SETTINGS_OPEN",
     isOpen,
   } as const);
+export const showBrushSizePopover = (isOpen: boolean) =>
+({
+  type: "SET_IS_BRUSH_SIZE_POPOVER_OPEN",
+  isOpen,
+} as const);

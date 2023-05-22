@@ -497,6 +497,7 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
+  readonly isBrushSizePopoverOpen: boolean;
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

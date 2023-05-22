@@ -241,6 +241,7 @@ const defaultState: OxalisState = {
     },
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
+    isBrushSizePopoverOpen: true, //TODO
   },
   localSegmentationData: {},
 };

@@ -1,14 +1,4 @@
-import {
-  Radio,
-  Tooltip,
-  Badge,
-  Space,
-  Popover,
-  RadioChangeEvent,
-  Dropdown,
-  MenuProps,
-  Button,
-} from "antd";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -38,7 +28,11 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import {
+  setToolAction,
+  showBrushSizePopover,
+  showQuickSelectSettingsAction,
+} from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
@@ -540,8 +534,12 @@ function CreateTreeButton() {
 }
 
 function ChangeBrushSizeButton() {
+  const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  const mediumBrushSize = calculateMediumBrushSize(maximumBrushSize);
+  const minimumBrushSize = userSettings.brushSize.minimum;
+  const isOpen = useSelector((state: OxalisState) => state.uiInformation.isBrushSizePopoverOpen);
   return (
     <Tooltip title="Change the brush size">
       <Popover
@@ -561,20 +559,20 @@ function ChangeBrushSizeButton() {
             <LogSliderSetting
               label=""
               roundTo={0}
-              min={userSettings.brushSize.minimum}
+              min={minimumBrushSize}
               max={maximumBrushSize}
               precision={0}
               spans={[0, 16, 8]}
               value={brushSize}
               onChange={handleUpdateBrushSize}
             />
-            <table style={{ width: "100%" }}>
-              <tbody style={{ textAlign: "center" }}>
+            <table style={{ width: "100%", tableLayout: "fixed" }}>
+              <tbody style={{ textAlign: "center", lineHeight: "80%" }}>
                 <tr>
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(userSettings.brushSize.minimum)}
+                      onClick={() => handleUpdateBrushSize(minimumBrushSize)}
                     >
                       <i className="fas fa-circle fa-xs" />
                     </ButtonComponent>
@@ -582,11 +580,7 @@ function ChangeBrushSizeButton() {
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() =>
-                        handleUpdateBrushSize(
-                          (userSettings.brushSize.minimum + maximumBrushSize) / 2,
-                        )
-                      }
+                      onClick={() => handleUpdateBrushSize(mediumBrushSize)}
                     >
                       <i className="fas fa-circle fa-sm" />
                     </ButtonComponent>
@@ -605,14 +599,22 @@ function ChangeBrushSizeButton() {
                   <td>Medium</td>
                   <td>Large</td>
                 </tr>
+                <tr>
+                  <td>({minimumBrushSize}vx)</td>
+                  <td>({mediumBrushSize}vx)</td>
+                  <td>({maximumBrushSize}vx)</td>
+                </tr>
               </tbody>
             </table>
           </div>
         }
-        trigger="click"
+        open={isOpen}
         placement="bottom"
         style={{
           cursor: "pointer",
+        }}
+        onOpenChange={(open: boolean) => {
+          dispatch(showBrushSizePopover(open));
         }}
       >
         <ButtonComponent
@@ -633,6 +635,10 @@ function ChangeBrushSizeButton() {
       </Popover>
     </Tooltip>
   );
+}
+
+function calculateMediumBrushSize(maximumBrushSize: number) {
+  return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
 export default function ToolbarView() {

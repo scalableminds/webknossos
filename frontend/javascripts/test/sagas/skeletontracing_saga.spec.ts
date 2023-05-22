@@ -18,7 +18,8 @@ import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import * as SkeletonTracingActionsModule from "oxalis/model/actions/skeletontracing_actions";
+import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import * as OriginalSaveActions from "oxalis/model/actions/save_actions";
 import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { TreeTypeEnum } from "oxalis/constants";
 import { Action } from "oxalis/model/actions/actions";
@@ -40,10 +41,12 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
 });
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
 const { setupSavingForTracingType } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
-const SkeletonTracingActions: typeof SkeletonTracingActionsModule = mockRequire.reRequire(
+const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
-const { pushSaveQueueTransaction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
+const { pushSaveQueueTransaction }: typeof OriginalSaveActions = mockRequire.reRequire(
+  "oxalis/model/actions/save_actions",
+);
 const SkeletonTracingReducer: typeof OriginalSkeletonTracingReducer = mockRequire.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
@@ -76,7 +79,7 @@ const skeletonTracing: SkeletonTracing = {
   version: 0,
   trees: {},
   treeGroups: [],
-  activeGroupId: MISSING_GROUP_ID,
+  activeGroupId: null,
   activeTreeId: 1,
   activeNodeId: null,
   cachedMaxNodeId: 0,
@@ -185,7 +188,11 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   saga.next(newState.flycam);
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.true(withoutUpdateTracing(items).length > 0);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "skeleton")));
+  expectValueDeepEqual(
+    t,
+    saga.next(items),
+    put(pushSaveQueueTransaction(items, "skeleton", serverSkeletonTracing.id)),
+  );
 });
 test("SkeletonTracingSaga should emit createNode update actions", (t) => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);

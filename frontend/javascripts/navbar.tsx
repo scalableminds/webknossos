@@ -185,7 +185,7 @@ function getCollapsibleMenuTitle(
   );
 }
 
-function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser): SubMenuType {
+function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   const isAdmin = Utils.isUserAdmin(activeUser);
   const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
@@ -239,6 +239,10 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser): SubMe
       key: "/workflows",
       label: <Link to="/workflows">Voxelytics</Link>,
     });
+
+  if (adminstrationSubMenuItems.length === 0) {
+    return null;
+  }
 
   return {
     key: "adminMenu",

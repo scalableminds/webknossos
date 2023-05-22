@@ -53,7 +53,7 @@ const initialSkeletonTracing: SkeletonTracing = {
   version: 0,
   trees: {},
   treeGroups: [],
-  activeGroupId: MISSING_GROUP_ID,
+  activeGroupId: null,
   activeTreeId: 1,
   activeNodeId: null,
   cachedMaxNodeId: 0,

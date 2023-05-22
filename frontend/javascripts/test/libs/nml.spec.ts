@@ -16,6 +16,7 @@ import { TreeTypeEnum } from "oxalis/constants";
 import * as SkeletonTracingActionsModule from "oxalis/model/actions/skeletontracing_actions";
 import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 
 const TIMESTAMP = 123456789;
 const buildInfo = {
@@ -142,7 +143,7 @@ const initialSkeletonTracing: SkeletonTracing = {
   ],
   activeTreeId: 1,
   activeNodeId: 1,
-  activeGroupId: MISSING_GROUP_ID,
+  activeGroupId: null,
   boundingBox: {
     min: [0, 0, 0],
     max: [500, 500, 500],
@@ -168,6 +169,7 @@ const initialSkeletonTracing: SkeletonTracing = {
 
 const initialState: OxalisState = _.extend({}, defaultState, {
   tracing: {
+    name: "",
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,
@@ -177,7 +179,9 @@ const initialState: OxalisState = _.extend({}, defaultState, {
     },
     skeleton: initialSkeletonTracing,
     annotationType: "Explorational",
+    annotationId: "annotationId",
   },
+  task: TASK_ANNOTATION.task,
   activeUser: {
     firstName: "SCM",
     lastName: "Boy",
@@ -369,7 +373,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
   });
 });
 test("Serialized nml should be correctly named", async (t) => {
-  t.is(getNmlName(initialState), "Test Dataset__1__sboy__tionId.nml");
+  t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");
 
   const stateWithoutTask = _.omit(initialState, "task");
 

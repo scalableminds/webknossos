@@ -1,6 +1,11 @@
-// @ts-nocheck
 import "test/sagas/skeletontracing_saga.mock.js";
-import type { SaveQueueEntry, SkeletonTracing } from "oxalis/store";
+import type {
+  Flycam,
+  HybridTracing,
+  OxalisState,
+  SaveQueueEntry,
+  SkeletonTracing,
+} from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -13,6 +18,13 @@ import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import * as SkeletonTracingActionsModule from "oxalis/model/actions/skeletontracing_actions";
+import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import { TreeTypeEnum } from "oxalis/constants";
+import { Action } from "oxalis/model/actions/actions";
+import { ServerSkeletonTracing } from "types/api_flow_types";
+import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 const TIMESTAMP = 1494347146379;
 const DateMock = {
   now: () => TIMESTAMP,
@@ -29,16 +41,21 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
 });
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
 const { setupSavingForTracingType } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
-const SkeletonTracingActions = mockRequire.reRequire(
+const SkeletonTracingActions: typeof SkeletonTracingActionsModule = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
 const { pushSaveQueueTransaction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
-const SkeletonTracingReducer = mockRequire.reRequire(
+const SkeletonTracingReducer: typeof OriginalSkeletonTracingReducer = mockRequire.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
 const { put } = mockRequire.reRequire("redux-saga/effects");
 
-function testDiffing(prevTracing, nextTracing, prevFlycam, flycam) {
+function testDiffing(
+  prevTracing: HybridTracing,
+  nextTracing: HybridTracing,
+  prevFlycam: Flycam,
+  flycam: Flycam,
+) {
   return withoutUpdateTracing(
     Array.from(diffSkeletonTracing(prevTracing.skeleton, nextTracing.skeleton, prevFlycam, flycam)),
   );
@@ -46,7 +63,7 @@ function testDiffing(prevTracing, nextTracing, prevFlycam, flycam) {
 
 function compactSaveQueueWithUpdateActions(
   queue: Array<SaveQueueEntry>,
-  tracing,
+  tracing: SkeletonTracing,
 ): Array<SaveQueueEntry> {
   return compactSaveQueue(
     queue.map((batch) => ({ ...batch, actions: compactUpdateActions(batch.actions, tracing) })),
@@ -72,6 +89,26 @@ const skeletonTracing: SkeletonTracing = {
   },
   showSkeletons: true,
 };
+const serverSkeletonTracing: ServerSkeletonTracing = {
+  ...skeletonTracing,
+  id: skeletonTracing.tracingId,
+  editPosition: {
+    x: 0,
+    y: 0,
+    z: 0,
+  },
+  editRotation: {
+    x: 0,
+    y: 0,
+    z: 0,
+  },
+  zoomLevel: 2,
+  userBoundingBoxes: [],
+  typ: "Skeleton",
+  activeNodeId: undefined,
+  boundingBox: undefined,
+  trees: [],
+};
 skeletonTracing.trees[1] = {
   treeId: 1,
   name: "TestTree",
@@ -83,6 +120,7 @@ skeletonTracing.trees[1] = {
   color: [23, 23, 23],
   isVisible: true,
   groupId: MISSING_GROUP_ID,
+  type: TreeTypeEnum.DEFAULT,
 };
 const initialState = update(defaultState, {
   tracing: {
@@ -99,6 +137,7 @@ const initialState = update(defaultState, {
     },
   },
 });
+
 const createNodeAction = SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 1, 0], 0, 1.2);
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
@@ -112,7 +151,7 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
 );
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
   const saga = setupSavingForTracingType(
-    SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
+    SkeletonTracingActions.initializeSkeletonTracingAction(serverSkeletonTracing),
   );
   saga.next(); // forking pushSaveQueueAsync
 
@@ -132,7 +171,7 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) =
 test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
   const saga = setupSavingForTracingType(
-    SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
+    SkeletonTracingActions.initializeSkeletonTracingAction(serverSkeletonTracing),
   );
   saga.next(); // forking pushSaveQueueAsync
 
@@ -157,12 +196,16 @@ test("SkeletonTracingSaga should emit createNode update actions", (t) => {
     initialState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "createNode");
-  t.is(updateActions[0].value.id, 1);
-  t.is(updateActions[0].value.treeId, 1);
+  t.like(updateActions[0], {
+    name: "createNode",
+    value: {
+      id: 1,
+      treeId: 1,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit createNode and createEdge update actions", (t) => {
-  const newState = ChainReducer(initialState)
+  const newState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
@@ -172,19 +215,31 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
     initialState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "createNode");
-  t.is(updateActions[0].value.id, 1);
-  t.is(updateActions[0].value.treeId, 1);
-  t.is(updateActions[1].name, "createNode");
-  t.is(updateActions[1].value.id, 2);
-  t.is(updateActions[1].value.treeId, 1);
-  t.is(updateActions[2].name, "createEdge");
-  t.is(updateActions[2].value.treeId, 1);
-  t.is(updateActions[2].value.source, 1);
-  t.is(updateActions[2].value.target, 2);
+  t.like(updateActions[0], {
+    name: "createNode",
+    value: {
+      id: 1,
+      treeId: 1,
+    },
+  });
+  t.like(updateActions[1], {
+    name: "createNode",
+    value: {
+      id: 2,
+      treeId: 1,
+    },
+  });
+  t.deepEqual(updateActions[2], {
+    name: "createEdge",
+    value: {
+      treeId: 1,
+      source: 1,
+      target: 2,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit createNode and createTree update actions", (t) => {
-  const newState = ChainReducer(initialState)
+  const newState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -195,18 +250,25 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
     initialState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "createTree");
-  t.is(updateActions[0].value.id, 2);
-  t.is(updateActions[1].name, "createNode");
-  t.is(updateActions[1].value.id, 2);
-  t.is(updateActions[1].value.treeId, 2);
-  t.is(updateActions[2].name, "createNode");
-  t.is(updateActions[2].value.id, 1);
-  t.is(updateActions[2].value.treeId, 1);
+  t.like(updateActions[0], { name: "createTree", value: { id: 2 } });
+  t.like(updateActions[1], {
+    name: "createNode",
+    value: {
+      id: 2,
+      treeId: 2,
+    },
+  });
+  t.like(updateActions[2], {
+    name: "createNode",
+    value: {
+      id: 1,
+      treeId: 1,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -218,18 +280,29 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "deleteNode");
-  t.is(updateActions[0].value.nodeId, 2);
-  t.is(updateActions[0].value.treeId, 2);
-  t.is(updateActions[1].name, "deleteTree");
-  t.is(updateActions[1].value.id, 2);
-  t.is(updateActions[2].name, "createNode");
-  t.is(updateActions[2].value.id, 2);
-  t.is(updateActions[2].value.treeId, 1);
-  t.is(updateActions[3].name, "createEdge");
-  t.is(updateActions[3].value.treeId, 1);
-  t.is(updateActions[3].value.source, 2);
-  t.is(updateActions[3].value.target, 1);
+  t.deepEqual(updateActions[0], {
+    name: "deleteNode",
+    value: {
+      nodeId: 2,
+      treeId: 2,
+    },
+  });
+  t.deepEqual(updateActions[1], { name: "deleteTree", value: { id: 2 } });
+  t.like(updateActions[2], {
+    name: "createNode",
+    value: {
+      id: 2,
+      treeId: 1,
+    },
+  });
+  t.deepEqual(updateActions[3], {
+    name: "createEdge",
+    value: {
+      treeId: 1,
+      source: 2,
+      target: 1,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -240,12 +313,16 @@ test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "deleteNode");
-  t.is(updateActions[0].value.nodeId, 1);
-  t.is(updateActions[0].value.treeId, 1);
+  t.deepEqual(updateActions[0], {
+    name: "deleteNode",
+    value: {
+      nodeId: 1,
+      treeId: 1,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
@@ -256,13 +333,21 @@ test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "deleteNode");
-  t.is(updateActions[0].value.nodeId, 2);
-  t.is(updateActions[0].value.treeId, 1);
-  t.is(updateActions[1].name, "deleteEdge");
-  t.is(updateActions[1].value.treeId, 1);
-  t.is(updateActions[1].value.source, 1);
-  t.is(updateActions[1].value.target, 2);
+  t.deepEqual(updateActions[0], {
+    name: "deleteNode",
+    value: {
+      nodeId: 2,
+      treeId: 1,
+    },
+  });
+  t.deepEqual(updateActions[1], {
+    name: "deleteEdge",
+    value: {
+      treeId: 1,
+      source: 1,
+      target: 2,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createTreeAction);
@@ -273,8 +358,7 @@ test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "deleteTree");
-  t.is(updateActions[0].value.id, 2);
+  t.like(updateActions[0], { name: "deleteTree", value: { id: 2 } });
 });
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -285,13 +369,17 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "updateNode");
-  t.is(updateActions[0].value.id, 1);
-  t.is(updateActions[0].value.radius, 12);
-  t.is(updateActions[0].value.treeId, 1);
+  t.like(updateActions[0], {
+    name: "updateNode",
+    value: {
+      id: 1,
+      treeId: 1,
+      radius: 12,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit an updateNode update action 2", (t) => {
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, setNodeRadiusAction)
     .unpack();
@@ -313,17 +401,21 @@ test("SkeletonTracingSaga should emit an updateTree update actions (comments)", 
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "updateTree");
-  t.is(updateActions[0].value.id, 1);
-  t.deepEqual(updateActions[0].value.comments, [
-    {
-      nodeId: 1,
-      content: "Hallo",
+  t.like(updateActions[0], {
+    name: "updateTree",
+    value: {
+      id: 1,
+      comments: [
+        {
+          nodeId: 1,
+          content: "Hallo",
+        },
+      ],
     },
-  ]);
+  });
 });
 test("SkeletonTracingSaga shouldn't emit an updateTree update actions (comments)", (t) => {
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createCommentAction)
     .unpack();
@@ -345,19 +437,23 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "updateTree");
-  t.is(updateActions[0].value.id, 1);
-  t.deepEqual(updateActions[0].value.branchPoints, [
-    {
-      nodeId: 1,
-      timestamp: 12345678,
+  t.like(updateActions[0], {
+    name: "updateTree",
+    value: {
+      id: 1,
+      branchPoints: [
+        {
+          nodeId: 1,
+          timestamp: 12345678,
+        },
+      ],
     },
-  ]);
+  });
 });
 test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
   // create a node in first tree, then create a second tree with three nodes and merge them
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -384,9 +480,13 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
       id: 1,
     },
   });
-  t.is(updateActions[2].name, "createNode");
-  t.is(updateActions[2].value.id, 1);
-  t.is(updateActions[2].value.treeId, 2);
+  t.like(updateActions[2], {
+    name: "createNode",
+    value: {
+      id: 1,
+      treeId: 2,
+    },
+  });
   t.deepEqual(updateActions[3], {
     name: "createEdge",
     value: {
@@ -399,7 +499,7 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
 test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
   // create a node in first tree, then create a second tree with three nodes and merge them
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -415,16 +515,32 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  t.is(updateActions[0].name, "createTree");
-  t.is(updateActions[0].value.id, 3);
-  t.is(updateActions[1].name, "createNode");
-  t.is(updateActions[1].value.id, 2);
-  t.is(updateActions[1].value.treeId, 3);
-  t.is(updateActions[2].name, "createTree");
-  t.is(updateActions[2].value.id, 4);
-  t.is(updateActions[3].name, "createNode");
-  t.is(updateActions[3].value.id, 4);
-  t.is(updateActions[3].value.treeId, 4);
+  t.like(updateActions[0], {
+    name: "createTree",
+    value: {
+      id: 3,
+    },
+  });
+  t.like(updateActions[1], {
+    name: "createNode",
+    value: {
+      id: 2,
+      treeId: 3,
+    },
+  });
+  t.like(updateActions[2], {
+    name: "createTree",
+    value: {
+      id: 4,
+    },
+  });
+  t.like(updateActions[3], {
+    name: "createNode",
+    value: {
+      id: 4,
+      treeId: 4,
+    },
+  });
   t.deepEqual(updateActions[4], {
     name: "deleteNode",
     value: {
@@ -474,7 +590,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
 test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
   // Create three nodes in the first tree, then create a second tree with one node and merge them
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -489,7 +605,10 @@ test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState.tracing),
+  );
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   // This should result in a moved treeComponent of size three
   t.deepEqual(simplifiedFirstBatch[0], {
@@ -522,7 +641,7 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
   // In this test multiple diffs are performed and concatenated before compactUpdateActions is invoked
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 5);
   // Create three nodes in the first tree, then create a second tree with one node
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -536,7 +655,7 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
     testDiffing(testState.tracing, newState1.tracing, testState.flycam, newState1.flycam),
   );
   // Merge the two trees (b), then create another tree and node (c)
-  const newState2 = ChainReducer(newState1)
+  const newState2 = ChainReducer<OxalisState, Action>(newState1)
     .apply(SkeletonTracingReducer, mergeTreesAction)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -546,16 +665,27 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
   );
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState2.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState2.tracing),
+  );
   // This should result in one created node and its edge (a)
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
-  t.is(simplifiedFirstBatch[0].name, "createNode");
-  t.is(simplifiedFirstBatch[0].value.id, 5);
-  t.is(simplifiedFirstBatch[0].value.treeId, 2);
-  t.is(simplifiedFirstBatch[1].name, "createEdge");
-  t.is(simplifiedFirstBatch[1].value.treeId, 2);
-  t.is(simplifiedFirstBatch[1].value.source, 4);
-  t.is(simplifiedFirstBatch[1].value.target, 5);
+  t.like(simplifiedFirstBatch[0], {
+    name: "createNode",
+    value: {
+      id: 5,
+      treeId: 2,
+    },
+  });
+  t.like(simplifiedFirstBatch[1], {
+    name: "createEdge",
+    value: {
+      treeId: 2,
+      source: 4,
+      target: 5,
+    },
+  });
   t.is(simplifiedFirstBatch.length, 2);
   const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
   // a moved tree component of size three (b)
@@ -593,7 +723,7 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
   const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(6, 1);
   // Create three nodes in the first tree, then create a second tree with one node
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -612,7 +742,7 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
     ),
   );
   // Create another tree and two nodes (b)
-  const newState = ChainReducer(stateAfterFirstMerge)
+  const newState = ChainReducer<OxalisState, Action>(stateAfterFirstMerge)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -637,7 +767,10 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   );
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState.tracing),
+  );
   // This should result in a moved treeComponent of size one (a)
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
@@ -701,7 +834,7 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
 test("compactUpdateActions should detect a tree split (1/3)", (t) => {
   const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
   // Create four nodes
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -716,11 +849,18 @@ test("compactUpdateActions should detect a tree split (1/3)", (t) => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState.tracing),
+  );
   // This should result in a new tree
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
-  t.is(simplifiedFirstBatch[0].name, "createTree");
-  t.is(simplifiedFirstBatch[0].value.id, 2);
+  t.like(simplifiedFirstBatch[0], {
+    name: "createTree",
+    value: {
+      id: 2,
+    },
+  });
   // a treeComponent of size two that is moved to the new tree
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
@@ -748,7 +888,7 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
   const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(2);
   // Create four nodes, then set node 2 as active and create another three nodes
   // Node 2 now has three neighbors
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -767,11 +907,18 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState.tracing),
+  );
   // This should result in two new trees and two moved treeComponents of size three and two
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
-  t.is(simplifiedFirstBatch[0].name, "createTree");
-  t.is(simplifiedFirstBatch[0].value.id, 2);
+  t.like(simplifiedFirstBatch[0], {
+    name: "createTree",
+    value: {
+      id: 2,
+    },
+  });
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
     value: {
@@ -780,8 +927,12 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
       nodeIds: [3, 4],
     },
   });
-  t.is(simplifiedFirstBatch[2].name, "createTree");
-  t.is(simplifiedFirstBatch[2].value.id, 3);
+  t.like(simplifiedFirstBatch[2], {
+    name: "createTree",
+    value: {
+      id: 3,
+    },
+  });
   t.deepEqual(simplifiedFirstBatch[3], {
     name: "moveTreeComponent",
     value: {
@@ -808,7 +959,7 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
   const deleteOtherMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(4);
   // Create six nodes
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -828,11 +979,18 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
     testDiffing(newState1.tracing, newState2.tracing, newState1.flycam, newState2.flycam),
   );
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState2.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState2.tracing),
+  );
   // This should result in the creation of a new tree (a)
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
-  t.is(simplifiedFirstBatch[0].name, "createTree");
-  t.is(simplifiedFirstBatch[0].value.id, 2);
+  t.like(simplifiedFirstBatch[0], {
+    name: "createTree",
+    value: {
+      id: 2,
+    },
+  });
   // a treeComponent of size four that is moved to the new tree (a)
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
@@ -855,8 +1013,12 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   t.is(simplifiedFirstBatch.length, 5);
   // the creation of a new tree (b)
   const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
-  t.is(simplifiedSecondBatch[0].name, "createTree");
-  t.is(simplifiedSecondBatch[0].value.id, 3);
+  t.like(simplifiedSecondBatch[0], {
+    name: "createTree",
+    value: {
+      id: 3,
+    },
+  });
   // a treeComponent of size two that is moved to the new tree (b)
   t.deepEqual(simplifiedSecondBatch[1], {
     name: "moveTreeComponent",
@@ -887,11 +1049,11 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   // it could however exist in the future and this test makes sure things won't break then
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
   // Create three nodes in the first tree, then create a second tree with one node and merge them
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
   // Create the tree that is merged to and merge the trees at the same time
-  const newState = ChainReducer(testState)
+  const newState = ChainReducer<OxalisState, Action>(testState)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, mergeTreesAction)
@@ -904,7 +1066,10 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState.tracing),
+  );
   // The deleteTree optimization in compactUpdateActions (that is unrelated to this test)
   // will remove the first deleteNode update action as the first tree is deleted because of the merge,
   // therefore remove it here as well
@@ -913,14 +1078,16 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   t.deepEqual(simplifiedUpdateActions, saveQueue);
 });
 test("compactUpdateActions should detect a deleted tree", (t) => {
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
   // Delete the tree
-  const newState = ChainReducer(testState).apply(SkeletonTracingReducer, deleteTreeAction).unpack();
+  const newState = ChainReducer<OxalisState, Action>(testState)
+    .apply(SkeletonTracingReducer, deleteTreeAction)
+    .unpack();
   const updateActions = testDiffing(
     testState.tracing,
     newState.tracing,
@@ -928,7 +1095,10 @@ test("compactUpdateActions should detect a deleted tree", (t) => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState.tracing),
+  );
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
     name: "deleteTree",
@@ -939,14 +1109,14 @@ test("compactUpdateActions should detect a deleted tree", (t) => {
   t.is(simplifiedFirstBatch.length, 1);
 });
 test("compactUpdateActions should not detect a deleted tree if there is no deleted tree", (t) => {
-  const testState = ChainReducer(initialState)
+  const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
   // Delete almost all nodes from the tree
-  const newState = ChainReducer(testState)
+  const newState = ChainReducer<OxalisState, Action>(testState)
     .apply(SkeletonTracingReducer, deleteNodeAction)
     .apply(SkeletonTracingReducer, deleteNodeAction)
     .unpack();
@@ -957,7 +1127,10 @@ test("compactUpdateActions should not detect a deleted tree if there is no delet
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
+    saveQueue,
+    enforceSkeletonTracing(newState.tracing),
+  );
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
     name: "deleteNode",

@@ -1,4 +1,14 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
+import {
+  Radio,
+  Tooltip,
+  Badge,
+  Space,
+  Popover,
+  RadioChangeEvent,
+  Dropdown,
+  MenuProps,
+  Button,
+} from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -558,6 +568,45 @@ function ChangeBrushSizeButton() {
               value={brushSize}
               onChange={handleUpdateBrushSize}
             />
+            <table style={{ width: "100%" }}>
+              <tbody style={{ textAlign: "center" }}>
+                <tr>
+                  <td>
+                    <ButtonComponent
+                      className="without-icon-margin"
+                      onClick={() => handleUpdateBrushSize(userSettings.brushSize.minimum)}
+                    >
+                      <i className="fas fa-circle fa-xs" />
+                    </ButtonComponent>
+                  </td>
+                  <td>
+                    <ButtonComponent
+                      className="without-icon-margin"
+                      onClick={() =>
+                        handleUpdateBrushSize(
+                          (userSettings.brushSize.minimum + maximumBrushSize) / 2,
+                        )
+                      }
+                    >
+                      <i className="fas fa-circle fa-sm" />
+                    </ButtonComponent>
+                  </td>
+                  <td>
+                    <ButtonComponent
+                      className="without-icon-margin"
+                      onClick={() => handleUpdateBrushSize(maximumBrushSize)}
+                    >
+                      <i className="fas fa-circle fa-lg" />
+                    </ButtonComponent>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Small</td>
+                  <td>Medium</td>
+                  <td>Large</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         }
         trigger="click"

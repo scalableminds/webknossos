@@ -89,6 +89,8 @@ function proofreadUsingMeshes(): boolean {
 let coarselyLoadedSegmentIds: number[] = [];
 
 function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
+  if ((yield* select((state) => state.userConfiguration.autoRenderMeshInProofreading)) === false)
+    return;
   const currentMeshFile = yield* select(
     (state) => state.localSegmentationData[layerName].currentMeshFile,
   );

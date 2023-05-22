@@ -3,13 +3,6 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.codecs.{
-  BloscCodecSpecification,
-  CodecSpecification,
-  EndianCodecSpecification,
-  GzipCodecSpecification,
-  TransposeCodecSpecification
-}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.ZarrV3DataType.{ZarrV3DataType, raw}
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayOrder,
@@ -53,17 +46,23 @@ case class ZarrArrayHeader(
 
   override def voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
 
+  override def isSharded: Boolean =
+    codecs.exists {
+      case _: ShardingCodecSpecification => true
+      case _                             => false
+    }
+
   def isValid: Boolean = zarr_format == 3 && node_type == "array"
 
   def elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 
-  private def getChunkSize =
+  private def getChunkSize: Array[Int] =
     chunk_grid match {
       case Left(cgs) => cgs.configuration.chunk_shape
       case Right(_)  => ???
     }
 
-  // Todo: rework this, doesn't work for arbitrary transforms, does not work for sharding.
+  // TODO: rework this, doesn't work for arbitrary transforms, does not work for sharding.
   private def getOrder: ArrayOrder.Value = {
     val transposeCodecs: Option[CodecSpecification] = codecs.find(c => c.isInstanceOf[TransposeCodecSpecification])
     transposeCodecs
@@ -172,13 +171,14 @@ object ZarrArrayHeader extends JsonImplicits {
       }
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
-          spec: CodecSpecification <- c("name") match {
-            case JsString("endian")    => c("configuration").validate[EndianCodecSpecification]
-            case JsString("transpose") => c("configuration").validate[TransposeCodecSpecification]
-            case JsString("gzip")      => c("configuration").validate[GzipCodecSpecification]
-            case JsString("blosc")     => c("configuration").validate[BloscCodecSpecification]
-            case JsString(name)        => throw new UnsupportedOperationException(s"Codec $name is not supported.")
-            case _                     => throw new IllegalArgumentException()
+          spec: CodecSpecification <- c("name") match { // TODO No row strings
+            case JsString("endian")           => c("configuration").validate[EndianCodecSpecification]
+            case JsString("transpose")        => c("configuration").validate[TransposeCodecSpecification]
+            case JsString("gzip")             => c("configuration").validate[GzipCodecSpecification]
+            case JsString("blosc")            => c("configuration").validate[BloscCodecSpecification]
+            case JsString("sharding_indexed") => c("configuration").validate[ShardingCodecSpecification]
+            case JsString(name)               => throw new UnsupportedOperationException(s"Codec $name is not supported.")
+            case _                            => throw new IllegalArgumentException()
           }
         } yield spec
       })

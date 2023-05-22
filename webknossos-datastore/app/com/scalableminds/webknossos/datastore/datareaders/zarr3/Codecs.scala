@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.datareaders.codecs
+package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
@@ -107,6 +107,15 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
   override def name: String = "gzip" // TODO: Move names to object?
 }
 
+class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecSpecification]) extends ArrayToBytesCodec {
+
+  override def encode(array: MultiArray): Array[Byte] = ???
+
+  override def decode(bytes: Array[Byte]): MultiArray = ???
+
+  override def name: String = "sharding_indexed"
+}
+
 sealed trait CodecSpecification
 
 final case class EndianCodecSpecification(endian: String) extends CodecSpecification
@@ -130,16 +139,7 @@ final case class BloscCodecSpecification(cname: String,
 object BloscCodecSpecification {
   implicit val BloscCodecSpecificationFormat: OFormat[BloscCodecSpecification] = Json.format[BloscCodecSpecification]
 }
-/* Sharding not supported for now
-final case class ShardingCodecSpecification(chunk_shape: Array[Int], codecs: Seq[CodecSpecification])
-    extends CodecSpecification
 
-object ShardingCodecSpecification {
-  implicit val ShardingCodecSpecificationReads = Json.reads[ShardingCodecSpecification]
-  implicit val ShardingCodecSpecificationWrites = Json.writes[ShardingCodecSpecification]
-  implicit val ShardingCodecSpecificationFormat = Json.format[ShardingCodecSpecification]
-}
- */
 final case class GzipCodecSpecification(level: Int) extends CodecSpecification
 object GzipCodecSpecification {
   implicit val GzipCodecSpecificationFormat: OFormat[GzipCodecSpecification] = Json.format[GzipCodecSpecification]
@@ -153,4 +153,12 @@ object CodecSpecification extends JsonImplicits {
     override def writes(obj: CodecSpecification): JsValue =
       Json.writes[CodecSpecification].writes(obj)
   }
+}
+
+final case class ShardingCodecSpecification(chunk_shape: Array[Int], codecs: Seq[CodecSpecification])
+    extends CodecSpecification
+
+object ShardingCodecSpecification {
+  implicit val ShardingCodecSpecificationFormat: OFormat[ShardingCodecSpecification] =
+    Json.format[ShardingCodecSpecification]
 }

@@ -12,7 +12,18 @@ import scala.collection.immutable.NumericRange
 class VaultPath(uri: URI, dataVault: DataVault) {
 
   def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] = {
-    val resultOpt = tryo(dataVault.readBytes(this, range)).toOption
+    val resultOpt: Option[(Array[Byte], Encoding.Value)] = tryo(
+      dataVault.readBytes(this, RangeSpecifier.fromRangeOpt(range))).toOption
+    decodeResultOpt(resultOpt)
+  }
+
+  def readLastBytes(byteCount: Long): Option[Array[Byte]] = {
+    val resultOpt
+      : Option[(Array[Byte], Encoding.Value)] = tryo(dataVault.readBytes(this, SuffixLength(byteCount))).toOption
+    decodeResultOpt(resultOpt)
+  }
+
+  private def decodeResultOpt(resultOpt: Option[(Array[Byte], Encoding.Value)]) =
     resultOpt match {
       case Some((bytes, encoding)) =>
         encoding match {
@@ -23,9 +34,7 @@ class VaultPath(uri: URI, dataVault: DataVault) {
             throw new UnsupportedOperationException(s"Vault uses unsupported content encoding $encoding.")
         }
       case None => None
-
     }
-  }
 
   private def decodeBrotli(bytes: Array[Byte]) = {
     Brotli4jLoader.ensureAvailability()

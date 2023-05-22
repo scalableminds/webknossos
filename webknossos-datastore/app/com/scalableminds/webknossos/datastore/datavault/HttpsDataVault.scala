@@ -61,6 +61,9 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
   private def getRangeRequest(uri: URI, range: NumericRange[Long]): Request[Either[String, Array[Byte]], Any] =
     getDataRequest(uri).header("Range", s"bytes=${range.start}-${range.end - 1}").response(asByteArray)
 
+  private def getSuffixRangeRequest(uri: URI, length: Long): Request[Either[String, Array[Byte]], Any] =
+    getDataRequest(uri).header("Range", s"bytes=-$length").response(asByteArray)
+
   private def getResponse(uri: URI): Identity[Response[Either[String, Array[Byte]]]] = {
     val request: Request[Either[String, Array[Byte]], Any] = getDataRequest(uri)
     backend.send(request)
@@ -71,19 +74,31 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
     backend.send(request)
   }
 
+  private def getResponseForSuffixRangeRequest(uri: URI, length: Long) = {
+    val request = getSuffixRangeRequest(uri, length)
+    backend.send(request)
+  }
+
   private def fullResponse(uri: URI): Identity[Response[Either[String, Array[Byte]]]] = getResponse(uri)
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
+  private def ensureRangeRequestsSupported(uri: URI): Unit = {
+    val headerInfos = getHeaderInformation(uri)
+    if (!headerInfos._1) {
+      throw new UnsupportedOperationException(s"Range requests not supported for ${uri.toString}")
+    }
+  }
+
+  override def readBytes(path: VaultPath, range: RangeSpecifier): (Array[Byte], Encoding.Value) = {
     val uri = path.toUri
     val response = range match {
-      case Some(r) => {
-        val headerInfos = getHeaderInformation(uri)
-        if (!headerInfos._1) {
-          throw new UnsupportedOperationException(s"Range requests not supported for ${uri.toString}")
-        }
+      case StartEnd(r) =>
+        ensureRangeRequestsSupported(uri)
         getResponseForRangeRequest(uri, r)
-      }
-      case None => fullResponse(uri)
+
+      case SuffixLength(length) =>
+        ensureRangeRequestsSupported(uri)
+        getResponseForSuffixRangeRequest(uri, length)
+      case Complete() => fullResponse(uri)
     }
     val encoding = Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse(""))
 

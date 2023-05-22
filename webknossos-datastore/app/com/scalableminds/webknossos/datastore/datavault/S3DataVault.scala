@@ -29,14 +29,15 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
+  override def readBytes(path: VaultPath, range: RangeSpecifier): (Array[Byte], Encoding.Value) = {
     val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
     }
     val getObjectRequest = range match {
-      case Some(r) => getRangeRequest(bucketName, objectKey, r)
-      case None    => getRequest(bucketName, objectKey)
+      case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
+      case SuffixLength(_) => throw new Exception("S3 Data Vault does not support range requests by suffix length")
+      case Complete()      => getRequest(bucketName, objectKey)
     }
 
     val obj = client.getObject(getObjectRequest)

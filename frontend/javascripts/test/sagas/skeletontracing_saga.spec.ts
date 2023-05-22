@@ -23,7 +23,6 @@ import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracin
 import { TreeTypeEnum } from "oxalis/constants";
 import { Action } from "oxalis/model/actions/actions";
 import { ServerSkeletonTracing } from "types/api_flow_types";
-import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 const TIMESTAMP = 1494347146379;
 const DateMock = {

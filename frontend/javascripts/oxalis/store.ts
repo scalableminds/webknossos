@@ -301,6 +301,7 @@ export type PartialDatasetConfiguration = Partial<
 >;
 
 export type QuickSelectConfig = {
+  readonly useHeuristic: boolean;
   readonly showPreview: boolean;
   readonly segmentMode: "dark" | "light";
   readonly threshold: number;
@@ -311,6 +312,7 @@ export type QuickSelectConfig = {
 
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
+  readonly autoRenderMeshInProofreading: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceArbitrary: number;
@@ -490,7 +492,10 @@ type UiInformation = {
   readonly borderOpenStatus: BorderOpenStatus;
   readonly theme: Theme;
   readonly busyBlockingInfo: BusyBlockingInfo;
-  readonly isQuickSelectActive: boolean;
+  readonly quickSelectState:
+    | "inactive"
+    | "drawing" // the user is currently drawing a bounding box
+    | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
 };
 type BaseIsosurfaceInformation = {

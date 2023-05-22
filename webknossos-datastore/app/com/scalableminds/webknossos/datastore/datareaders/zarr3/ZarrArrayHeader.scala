@@ -20,8 +20,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import play.api.libs.json.Json.WithDefaultValues
-import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json}
+import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 case class ZarrArrayHeader(
     zarr_format: Int, // must be 3
@@ -60,12 +59,11 @@ case class ZarrArrayHeader(
 
   private def getChunkSize =
     chunk_grid match {
-      case Left(cgs)   => cgs.configuration.chunk_shape
-      case Right(ecgs) => ???
-
+      case Left(cgs) => cgs.configuration.chunk_shape
+      case Right(_)  => ???
     }
 
-  // Todo: rework this.
+  // Todo: rework this, doesn't work for arbitrary transforms, does not work for sharding.
   private def getOrder: ArrayOrder.Value = {
     val transposeCodecs: Option[CodecSpecification] = codecs.find(c => c.isInstanceOf[TransposeCodecSpecification])
     transposeCodecs
@@ -82,13 +80,8 @@ case class ChunkGridConfiguration(
 )
 
 object ChunkGridConfiguration extends JsonImplicits {
-  implicit object ChunkGridConfigurationFormat extends Format[ChunkGridConfiguration] {
-    override def reads(json: JsValue): JsResult[ChunkGridConfiguration] =
-      Json.using[WithDefaultValues].reads[ChunkGridConfiguration].reads(json)
-
-    override def writes(obj: ChunkGridConfiguration): JsValue =
-      Json.writes[ChunkGridConfiguration].writes(obj)
-  }
+  implicit val chunkGridConfigurationFormat: OFormat[ChunkGridConfiguration] =
+    Json.format[ChunkGridConfiguration]
 }
 
 case class ChunkGridSpecification(
@@ -97,13 +90,8 @@ case class ChunkGridSpecification(
 )
 
 object ChunkGridSpecification extends JsonImplicits {
-  implicit object ChunkGridSpecificationFormat extends Format[ChunkGridSpecification] {
-    override def reads(json: JsValue): JsResult[ChunkGridSpecification] =
-      Json.using[WithDefaultValues].reads[ChunkGridSpecification].reads(json)
-
-    override def writes(obj: ChunkGridSpecification): JsValue =
-      Json.writes[ChunkGridSpecification].writes(obj)
-  }
+  implicit val chunkGridSpecificationFormat: OFormat[ChunkGridSpecification] =
+    Json.format[ChunkGridSpecification]
 }
 
 case class ChunkKeyEncodingConfiguration(
@@ -111,13 +99,8 @@ case class ChunkKeyEncodingConfiguration(
 )
 
 object ChunkKeyEncodingConfiguration extends JsonImplicits {
-  implicit object ChunkKeyEncodingConfigurationFormat extends Format[ChunkKeyEncodingConfiguration] {
-    override def reads(json: JsValue): JsResult[ChunkKeyEncodingConfiguration] =
-      Json.using[WithDefaultValues].reads[ChunkKeyEncodingConfiguration].reads(json)
-
-    override def writes(obj: ChunkKeyEncodingConfiguration): JsValue =
-      Json.writes[ChunkKeyEncodingConfiguration].writes(obj)
-  }
+  implicit val chunkKeyEncodingConfigurationFormat: OFormat[ChunkKeyEncodingConfiguration] =
+    Json.format[ChunkKeyEncodingConfiguration]
 }
 
 case class ChunkKeyEncoding(
@@ -138,13 +121,8 @@ case class ChunkKeyEncoding(
 }
 
 object ChunkKeyEncoding extends JsonImplicits {
-  implicit object ChunkKeyEncodingFormat extends Format[ChunkKeyEncoding] {
-    override def reads(json: JsValue): JsResult[ChunkKeyEncoding] =
-      Json.using[WithDefaultValues].reads[ChunkKeyEncoding].reads(json)
-
-    override def writes(obj: ChunkKeyEncoding): JsValue =
-      Json.writes[ChunkKeyEncoding].writes(obj)
-  }
+  implicit val chunkKeyEncodingFormat: OFormat[ChunkKeyEncoding] =
+    Json.format[ChunkKeyEncoding]
 }
 
 case class StorageTransformerSpecification(
@@ -153,13 +131,8 @@ case class StorageTransformerSpecification(
 )
 
 object StorageTransformerSpecification extends JsonImplicits {
-  implicit object StorageTransformerSpecificationFormat extends Format[StorageTransformerSpecification] {
-    override def reads(json: JsValue): JsResult[StorageTransformerSpecification] =
-      Json.using[WithDefaultValues].reads[StorageTransformerSpecification].reads(json)
-
-    override def writes(obj: StorageTransformerSpecification): JsValue =
-      Json.writes[StorageTransformerSpecification].writes(obj)
-  }
+  implicit val storageTransformerSpecificationFormat: OFormat[StorageTransformerSpecification] =
+    Json.format[StorageTransformerSpecification]
 }
 
 object ZarrArrayHeader extends JsonImplicits {
@@ -191,7 +164,6 @@ object ZarrArrayHeader extends JsonImplicits {
           storage_transformers = None,
           Some(dimension_names)
         )
-    //Json.using[WithDefaultValues].reads[ZarrArrayHeader].reads(json)
 
     private def readCodecs(value: JsValue): Seq[CodecSpecification] = {
       val rawCodecSpecs: Seq[JsValue] = value match {
@@ -215,7 +187,6 @@ object ZarrArrayHeader extends JsonImplicits {
     }
 
     override def writes(zarrArrayHeader: ZarrArrayHeader): JsValue =
-      //Json.writes[ZarrArrayHeader].writes(zarrArrayHeader)
       Json.obj(
         "zarr_format" -> zarrArrayHeader.zarr_format,
         "node_type" -> zarrArrayHeader.node_type,
@@ -224,11 +195,11 @@ object ZarrArrayHeader extends JsonImplicits {
           .toJsFieldJsValueWrapper((zarrArrayHeader.data_type.left.getOrElse("extension"))), // Extension not supported for now
         //"chunk_grid" -> zarrArrayHeader.chunk_grid.left
         //  .getOrElse(ChunkGridSpecification("regular", ChunkGridConfiguration(Array(1, 1, 1)))), //TODO
-        //"chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
+        "chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
         "fill_value" -> zarrArrayHeader.fill_value,
-        //"attributes" -> zarrArrayHeader.attributes.getOrElse(Map("" -> "")),
+        "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(Map("" -> ""))),
         "codecs" -> zarrArrayHeader.codecs,
-        //"storage_transformers" -> zarrArrayHeader.storage_transformers,
+        "storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names
       )
   }

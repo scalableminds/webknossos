@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved speed of proofreading by only reloading affected areas after a split or merge. [#7050](https://github.com/scalableminds/webknossos/pull/7050)
 - The minimum length of layer names in datasets was set from 3 to 1, enabling single-character names for layers. [#7064](https://github.com/scalableminds/webknossos/pull/7064)
 - Improved performance for large meshes, especially when loaded from a precomputed oversegmentation mesh file. [#7077](https://github.com/scalableminds/webknossos/pull/7077)
+- Slight increased the spacing and width of some VX reports elements. [#7094](https://github.com/scalableminds/webknossos/pull/7094)
 
 ### Fixed
 - Fixed that changing a segment color could lead to a crash. [#7000](https://github.com/scalableminds/webknossos/pull/7000)

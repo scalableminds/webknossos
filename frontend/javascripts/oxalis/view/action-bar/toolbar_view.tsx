@@ -121,6 +121,10 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
+const handleToggleAutomaticMeshRendering = (value: boolean) => {
+  Store.dispatch(updateUserSettingAction("autoRenderMeshInProofreading", value));
+};
+
 const handleSetTool = (event: RadioChangeEvent) => {
   const value = event.target.value as AnnotationTool;
   Store.dispatch(setToolAction(value));
@@ -914,7 +918,6 @@ function ToolSpecificSettings({
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
   const dispatch = useDispatch();
-  const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
   const quickSelectConfig = useSelector(
     (state: OxalisState) => state.userConfiguration.quickSelect,
   );
@@ -1006,16 +1009,7 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? (
-        <ButtonComponent
-          title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
-          onClick={handleClearProofreading}
-          className="narrow without-icon-margin"
-          style={{ marginLeft: 12 }}
-        >
-          <ClearOutlined />
-        </ButtonComponent>
-      ) : null}
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
     </>
   );
 }
@@ -1078,5 +1072,34 @@ function FillModeSwitch() {
         3D
       </RadioButtonWithTooltip>
     </Radio.Group>
+  );
+}
+
+function ProofReadingComponents() {
+  const dispatch = useDispatch();
+  const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
+  const autoRenderMeshes = useSelector(
+    (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
+  const buttonStyle = autoRenderMeshes ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
+  return (
+    <>
+      <ButtonComponent
+        title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
+        onClick={handleClearProofreading}
+        className="narrow without-icon-margin"
+        style={{ marginLeft: 12 }}
+      >
+        <ClearOutlined />
+      </ButtonComponent>
+      <ButtonComponent
+        className="without-icon-margin"
+        title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
+        style={{ ...buttonStyle, opacity: autoRenderMeshes ? 1 : 0.5 }}
+        onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
+      >
+        <i className="fas fa-dice-d20" />
+      </ButtonComponent>
+    </>
   );
 }

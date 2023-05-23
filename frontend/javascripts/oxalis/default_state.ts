@@ -50,6 +50,7 @@ const defaultState: OxalisState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
+    autoRenderMeshInProofreading: true,
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,

@@ -24,7 +24,7 @@ case class ZarrArrayHeader(
     chunk_key_encoding: ChunkKeyEncoding,
     fill_value: Either[String, Number], // Boolean not supported
     attributes: Option[Map[String, String]],
-    codecs: Seq[CodecSpecification],
+    codecs: Seq[CodecConfiguration],
     storage_transformers: Option[Seq[StorageTransformerSpecification]],
     dimension_names: Option[Array[String]]
 ) extends DatasetHeader {
@@ -48,7 +48,7 @@ case class ZarrArrayHeader(
 
   override def isSharded: Boolean =
     codecs.exists {
-      case _: ShardingCodecSpecification => true
+      case _: ShardingCodecConfiguration => true
       case _                             => false
     }
 
@@ -56,19 +56,25 @@ case class ZarrArrayHeader(
 
   def elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 
-  private def getChunkSize: Array[Int] =
-    chunk_grid match {
-      case Left(cgs) => cgs.configuration.chunk_shape
-      case Right(_)  => ???
-    }
-
-  // TODO: rework this, doesn't work for arbitrary transforms, does not work for sharding.
-  private def getOrder: ArrayOrder.Value = {
-    val transposeCodecs: Option[CodecSpecification] = codecs.find(c => c.isInstanceOf[TransposeCodecSpecification])
-    transposeCodecs
-      .map(c => if (c.asInstanceOf[TransposeCodecSpecification].order == "F") { ArrayOrder.F } else { ArrayOrder.C })
-      .getOrElse(ArrayOrder.C)
+  def outerChunkSize: Array[Int] = chunk_grid match {
+    case Left(cgs) => cgs.configuration.chunk_shape
+    case Right(_)  => ???
   }
+
+  private def getChunkSize: Array[Int] = {
+    val shardingCodecInnerChunkSize = codecs.flatMap {
+      case ShardingCodecConfiguration(chunk_shape, _) => Some(chunk_shape)
+      case _                                          => None
+    }.headOption
+    shardingCodecInnerChunkSize.getOrElse(outerChunkSize)
+  }
+
+  // TODO: rework this, doesn't work for arbitrary transforms (only F and default C)
+  private def getOrder: ArrayOrder.Value =
+    CodecTreeExplorer.find {
+      case TransposeCodecConfiguration(order) => order == "F"
+      case _                                  => false
+    }(codecs).map(_ => ArrayOrder.F).getOrElse(ArrayOrder.C)
 
   private def getDimensionSeparator =
     DimensionSeparator.fromString(chunk_key_encoding.getSeparator).getOrElse(DimensionSeparator.SLASH)
@@ -164,26 +170,32 @@ object ZarrArrayHeader extends JsonImplicits {
           Some(dimension_names)
         )
 
-    private def readCodecs(value: JsValue): Seq[CodecSpecification] = {
+    private def readShardingCodecConfiguration(config: JsValue): JsResult[ShardingCodecConfiguration] =
+      for {
+        chunk_shape <- config("chunk_shape").validate[Array[Int]]
+        codecs = readCodecs(config("codecs"))
+      } yield ShardingCodecConfiguration(chunk_shape, codecs)
+
+    private def readCodecs(value: JsValue): Seq[CodecConfiguration] = {
       val rawCodecSpecs: Seq[JsValue] = value match {
         case JsArray(arr) => arr
         case _            => Seq()
       }
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
-          spec: CodecSpecification <- c("name") match { // TODO No row strings
-            case JsString("endian")           => c("configuration").validate[EndianCodecSpecification]
-            case JsString("transpose")        => c("configuration").validate[TransposeCodecSpecification]
-            case JsString("gzip")             => c("configuration").validate[GzipCodecSpecification]
-            case JsString("blosc")            => c("configuration").validate[BloscCodecSpecification]
-            case JsString("sharding_indexed") => c("configuration").validate[ShardingCodecSpecification]
+          spec: CodecConfiguration <- c("name") match { // TODO No raw strings
+            case JsString("endian")           => c("configuration").validate[EndianCodecConfiguration]
+            case JsString("transpose")        => c("configuration").validate[TransposeCodecConfiguration]
+            case JsString("gzip")             => c("configuration").validate[GzipCodecConfiguration]
+            case JsString("blosc")            => c("configuration").validate[BloscCodecConfiguration]
+            case JsString("sharding_indexed") => readShardingCodecConfiguration(c("configuration"))
             case JsString(name)               => throw new UnsupportedOperationException(s"Codec $name is not supported.")
             case _                            => throw new IllegalArgumentException()
           }
         } yield spec
       })
       codecSpecs.flatMap(possibleCodecSpec =>
-        possibleCodecSpec.map((s: CodecSpecification) => Seq(s)).getOrElse(Seq[CodecSpecification]()))
+        possibleCodecSpec.map((s: CodecConfiguration) => Seq(s)).getOrElse(Seq[CodecConfiguration]()))
     }
 
     override def writes(zarrArrayHeader: ZarrArrayHeader): JsValue =

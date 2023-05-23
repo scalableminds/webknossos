@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{
   AxisOrder,
   ChunkReader,
+  ChunkUtils,
   DatasetArray,
   DatasetHeader,
   DatasetPath
@@ -15,7 +16,6 @@ import play.api.libs.json.{JsError, JsSuccess, Json}
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import scala.annotation.tailrec
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
@@ -52,20 +52,18 @@ class ZarrV3Array(relativePath: DatasetPath,
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
     s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
 
-  lazy val codecs: Seq[Codec] = initializeCodecs(specificHeader.codecs)
-  var shardingCodec: Option[ShardingCodec] = None
+  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec]) = initializeCodecs(specificHeader.codecs)
 
   private def specificHeader: ZarrArrayHeader = header.asInstanceOf[ZarrArrayHeader]
 
-  @tailrec
-  private def initializeCodecs(codecSpecs: Seq[CodecSpecification]): Seq[Codec] = {
+  private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {
-      case EndianCodecSpecification(endian)   => new EndianCodec(endian)
-      case TransposeCodecSpecification(order) => new TransposeCodec(order)
-      case BloscCodecSpecification(cname, clevel, shuffle, typesize, blocksize) =>
+      case EndianCodecConfiguration(endian)   => new EndianCodec(endian)
+      case TransposeCodecConfiguration(order) => new TransposeCodec(order)
+      case BloscCodecConfiguration(cname, clevel, shuffle, typesize, blocksize) =>
         new BloscCodec(cname, clevel, shuffle, typesize, blocksize)
-      case GzipCodecSpecification(level)                   => new GzipCodec(level)
-      case ShardingCodecSpecification(chunk_shape, codecs) => new ShardingCodec(chunk_shape, codecs)
+      case GzipCodecConfiguration(level)                   => new GzipCodec(level)
+      case ShardingCodecConfiguration(chunk_shape, codecs) => new ShardingCodec(chunk_shape, codecs)
     }
     val shardingCodecOpt: Option[ShardingCodec] = outerCodecs.flatMap {
       case codec: ShardingCodec => Some(codec)
@@ -74,8 +72,8 @@ class ZarrV3Array(relativePath: DatasetPath,
 
     shardingCodecOpt match {
       case Some(shardingCodec: ShardingCodec) =>
-        this.shardingCodec = Some(shardingCodec); initializeCodecs(shardingCodec.codecs)
-      case None => outerCodecs
+        (Some(shardingCodec), initializeCodecs(shardingCodec.codecs)._2)
+      case None => (None, outerCodecs)
     }
   }
 
@@ -85,16 +83,25 @@ class ZarrV3Array(relativePath: DatasetPath,
   private val shardIndexCache: AlfuFoxCache[VaultPath, Array[Byte]] =
     AlfuFoxCache()
 
-  private def shardShape = header.chunkSize // Only valid for one hierarchy of sharding codecs
-  private def innerChunkShape = shardingCodec.map(s => s.chunk_shape).getOrElse(Array(1, 1, 1))
-  private def indexShape = (shardShape, innerChunkShape).zipped.map(_ / _)
+  private def shardShape =
+    specificHeader.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
+  private def innerChunkShape =
+    header.chunkSize // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
+  private def indexShape =
+    (shardShape, innerChunkShape).zipped.map(_ / _) // Describes how many chunks are in a shard, i.e. in the index
 
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard
 
-  private def getChunkIndexInIndex(chunkIndex: Array[Int]) =
-    indexShape.tails.zipWithIndex.map { case (shape, i) => shape.product * chunkIndex(i) }.sum * shardIndexEntryLength
+  private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]) = {
+    val startingCoords = (shardCoordinates, indexShape).zipped.map(_ * _)
+    indexShape.tails.toList
+      .dropRight(1)
+      .zipWithIndex
+      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - startingCoords(i)) }
+      .sum
+  }
 
   private def readShardIndex(shardPath: VaultPath) = shardPath.readLastBytes(getShardIndexSize)
 
@@ -105,15 +112,23 @@ class ZarrV3Array(relativePath: DatasetPath,
         (BigInt(bytes.take(8).reverse).toLong, BigInt(bytes.slice(8, 16).reverse).toLong)
       })
       .toSeq
+
+  private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
+    ChunkUtils.computeChunkIndices(
+      axisOrder.permuteIndicesReverse(header.datasetShape),
+      axisOrder.permuteIndicesReverse(specificHeader.outerChunkSize),
+      header.chunkSize,
+      (chunkIndex, header.chunkSize).zipped.map(_ * _)
+    )
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = {
-    val shardFilename = getChunkFilename(chunkIndex)
-    val shardPath = vaultPath / shardFilename
+      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
     for {
+      shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
+      shardFilename = getChunkFilename(shardCoordinates)
+      shardPath = vaultPath / shardFilename
       shardIndex <- shardIndexCache.getOrLoad(shardPath, readShardIndex)
-      chunkIndexInIndex = getChunkIndexInIndex(chunkIndex) // TODO: Does this work?
-      (chunkOffset, chunkLength) = parseShardIndex(shardIndex)(chunkIndexInIndex)
+      chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
+      (chunkOffset, chunkLength) = parseShardIndex(shardIndex)(chunkIndexInShardIndex)
       range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
     } yield (shardPath, range)
-  }
 }

@@ -52,7 +52,10 @@ class EndianCodec(val endian: String) extends ArrayToBytesCodec {
 }
 
 class TransposeCodec(order: String) extends ArrayToArrayCodec {
+
+  // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/v1.0.html
   // encode, decode currently not implemented because the flipping is done by the header
+
   override def encode(array: MultiArray): MultiArray = ???
 
   override def decode(array: MultiArray): MultiArray = ???
@@ -60,6 +63,8 @@ class TransposeCodec(order: String) extends ArrayToArrayCodec {
 
 class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesize: Option[Int], blocksize: Int)
     extends BytesToBytesCodec {
+
+  // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/v1.0.html
 
   private def getCompressorSettings = Map(
     BloscCompressor.keyCname -> StringCompressionSetting(cname),
@@ -88,6 +93,8 @@ class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesi
 
 class GzipCodec(level: Int) extends BytesToBytesCodec {
 
+  // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/v1.0.html
+
   lazy val compressor = new GzipCompressor(Map("level" -> IntCompressionSetting(level)))
 
   override def encode(bytes: Array[Byte]): Array[Byte] = compressor.compress(bytes)
@@ -96,6 +103,8 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
 }
 
 class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecConfiguration]) extends ArrayToBytesCodec {
+
+  // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
   // encode, decode not implemented as sharding is done in ZarrV3Array
   override def encode(array: MultiArray): Array[Byte] = ???
 

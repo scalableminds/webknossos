@@ -30,6 +30,7 @@ case class ZarrArrayHeader(
 ) extends DatasetHeader {
 
   override def datasetShape: Array[Int] = shape
+
   override def chunkSize: Array[Int] = getChunkSize
 
   override def dimension_separator: DimensionSeparator = getDimensionSeparator
@@ -153,6 +154,7 @@ object ZarrArrayHeader extends JsonImplicits {
         chunk_grid <- json("chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- json("chunk_key_encoding").validate[ChunkKeyEncoding]
         fill_value <- json("fill_value").validate[Either[String, Number]]
+        attributes = json("attributes").validate[Map[String, String]].asOpt
         codecs = readCodecs(json("codecs"))
         dimension_names <- json("dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
       } yield
@@ -164,9 +166,9 @@ object ZarrArrayHeader extends JsonImplicits {
           Left(chunk_grid),
           chunk_key_encoding,
           fill_value,
-          attributes = None,
+          attributes,
           codecs,
-          storage_transformers = None,
+          storage_transformers = None, // No storage transformers are currently defined
           Some(dimension_names)
         )
 
@@ -205,9 +207,11 @@ object ZarrArrayHeader extends JsonImplicits {
         "node_type" -> zarrArrayHeader.node_type,
         "shape" -> zarrArrayHeader.shape,
         "data_type" -> Json
-          .toJsFieldJsValueWrapper((zarrArrayHeader.data_type.left.getOrElse("extension"))), // Extension not supported for now
-        //"chunk_grid" -> zarrArrayHeader.chunk_grid.left
-        //  .getOrElse(ChunkGridSpecification("regular", ChunkGridConfiguration(Array(1, 1, 1)))), //TODO
+          .toJsFieldJsValueWrapper(zarrArrayHeader.data_type.left.getOrElse("extension")), // Extension not supported for now
+        "chunk_grid" -> Json.toJsFieldJsValueWrapper(
+          zarrArrayHeader.chunk_grid.left.getOrElse(ChunkGridSpecification(
+            "regular",
+            ChunkGridConfiguration(Array(1, 1, 1))))), // Extension not supported for now
         "chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
         "fill_value" -> zarrArrayHeader.fill_value,
         "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(Map("" -> ""))),

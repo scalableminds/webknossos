@@ -24,9 +24,10 @@ object ExtensionDataType extends JsonImplicits {
     Json.format[ExtensionDataType]
 }
 
+// This needs to replaced with concrete extensions (as with codecs)
 case class ExtensionChunkGridSpecification(
     name: String,
-    configuration: Option[Map[String, String]] // TODO
+    configuration: Option[Map[String, String]]
 )
 
 object ExtensionChunkGridSpecification extends JsonImplicits {

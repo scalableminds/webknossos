@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Teams can be edited more straight-forwardly in a popup in the team edit page. [#7043](https://github.com/scalableminds/webknossos/pull/7043)
 - Annotations with Editable Mappings (a.k.a Supervoxel Proofreading) can now be merged. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
 - The file size and inodes of artifacts are now aggregated and shown in the Voxelytics workflow list. [#7071](https://github.com/scalableminds/webknossos/pull/7071)
+- It is possible to disable the automatic loading of meshes during proofreading. [##7076](https://github.com/scalableminds/webknossos/pull/7076)
 - When viewing a public dataset by another organization, the organization is shown next to the dataset list, and when viewing the dataself or an annotation. [#7087](https://github.com/scalableminds/webknossos/pull/7087)
 
 ### Changed
@@ -46,6 +47,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed displayed units of used storage in the organization's overview page. [#7057](https://github.com/scalableminds/webknossos/pull/7057)
 - Fixed a rendering bug that could occur when a dataset layer has missing mags (e.g., the first mag is 8-8-8). [#7082](https://github.com/scalableminds/webknossos/pull/7082)
 - Fixed a bug where some volume annotations could not be duplicated or used as tasks. [#7085](https://github.com/scalableminds/webknossos/pull/7085)
+- Fixed a superfluous rectangular geometry rendered at 0,0,0. [#7088](https://github.com/scalableminds/webknossos/pull/7088)
 
 ### Removed
 

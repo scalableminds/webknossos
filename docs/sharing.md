@@ -1,4 +1,5 @@
 # Collaboration & Sharing
+
 WEBKNOSSOS is built for working collaboratively and sharing your work with colleagues, collaborators, and the scientific community.
 Anything in WEBKNOSSOS can be shared: the raw datasets, any skeleton or volume annotations, or complex segmentations.
 
@@ -10,36 +11,37 @@ When speaking about collaboration and sharing, we imagine three scenarios suppor
 
 Since WEBKNOSSOS is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate WEBKNOSSOS in your existing communication workflows, e.g.:
 
-- send collaborators an *email* containing a link to specific, interesting data locations or annotations
-- include a link in a *publication* so readers can have direct access to the data to see for themselves
-- share a link through *Slack*, *MS Teams*, or any other messenger service
-- include it in any *lab journal* and *blog* posts
-- link it in a *forum* post
+- send collaborators an _email_ containing a link to specific, interesting data locations or annotations
+- include a link in a _publication_ so readers can have direct access to the data to see for themselves
+- share a link through _Slack_, _MS Teams_, or any other messenger service
+- include it in any _lab journal_ and _blog_ posts
+- link it in a _forum_ post
 
 In many ways, sharing by web link works similarly to products like Google Drive or Dropbox.
 
 WEBKNOSSOS sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
 
-![Video: Include links to your datasets directly in a publication](https://www.youtube.com/watch?v=hcm8Jx22DG8)
+![type:video](https://www.youtube.com/watch?v=hcm8Jx22DG8)
 
 ## Dataset Sharing
 
- Dataset sharing allows outside users to view your datasets and segmentation layers within WEBKNOSSOS.
- Shared resources can be accessed through a direct URL or can be featured. 
- [Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
+Dataset sharing allows outside users to view your datasets and segmentation layers within WEBKNOSSOS.
+Shared resources can be accessed through a direct URL or can be featured.
+[Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
 
- The easiest way to obtain this sharing link is by clicking the `Share` button in the toolbar at the top of the screen next to the position/coordinate section (*Share icon*). 
- The sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current WEBKNOSSOS state so that any recipient can take off from the same situation.
+The easiest way to obtain this sharing link is by clicking the `Share` button in the toolbar at the top of the screen next to the position/coordinate section (_Share icon_).
+The sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current WEBKNOSSOS state so that any recipient can take off from the same situation.
 
- Sharing a dataset is useful for multiple scenarios: 
- 
- - You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@webknossos.org)) to create these short links.
- - You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
- - You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
+Sharing a dataset is useful for multiple scenarios:
 
- WEBKNOSSOS shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
+- You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@webknossos.org)) to create these short links.
+- You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
+- You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
+
+WEBKNOSSOS shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
 
 ### Private and Internal Sharing
+
 A privately shared dataset can only be accessed by outside users using the correct URL.
 A unique authentification token is part of the URL, so anyone with this URL has access permission for viewing the dataset.
 The dataset is NOT featured publicly anywhere else on your WEBKNOSSOS instance.
@@ -48,19 +50,19 @@ Private sharing is useful for giving outside users (reviewers, editors, journali
 
 To share a dataset privately, follow these steps:
 
-1. Navigate to your user dashboard and `Datasets`. 
+1. Navigate to your user dashboard and `Datasets`.
 2. Select the dataset that you want to share and click on `Settings`.
-3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it. 
+3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it.
 
 ![Configure the Dataset Sharing](images/dataset_general.jpeg)
 
 To revoke a sharing link in the future, click the `Revoke` button on the right-hand side of the link.
 
-
-  **Do not enable the `Make dataset publicly accessible` checkbox otherwise, anyone with a link can access this dataset without needing to log in/authenticate.
-  Public access rights are not required for private sharing.**
+**Do not enable the `Make dataset publicly accessible` checkbox otherwise, anyone with a link can access this dataset without needing to log in/authenticate.
+Public access rights are not required for private sharing.**
 
 ### Public Sharing
+
 Public sharing provides access to your dataset to the general public.
 Anyone can access the shared dataset and view it on your WEBKNOSSOS instance without the need for an account.
 
@@ -71,7 +73,7 @@ Outside users can explore your data from the comfort of their browser without ne
 
 To share a dataset publicly, follow these steps:
 
-1. Navigate to your user dashboard and `Datasets`. 
+1. Navigate to your user dashboard and `Datasets`.
 2. Select the dataset that you want to share and click on `Settings`.
 3. Under the `Sharing & Permissions` tab, scroll down to the checkbox `Make dataset publicly accessible` and enable it.
 4. Copy the sharing link and distribute it to your colleagues through email, social media, messengers, etc.
@@ -79,15 +81,15 @@ To share a dataset publicly, follow these steps:
 
 ![The Metadata tab overview](images/metadata_tab.jpeg)
 
-  **We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.**
-
+**We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.**
 
 ## Annotation Sharing
+
 Besides sharing just a dataset for viewing, WEBKNOSSOS can also share complete annotations, e.g., a large-scale skeleton reconstruction.
 Sharing works for both skeletons and volume annotations.
 
-
 ### Annotation Permissions
+
 There are three options to control who can see an annotation if they know the annotation URL:
 
 1. `Private`: Only you and your team manager have access to the annotation.
@@ -109,6 +111,7 @@ However, note that you should coordinate the collaboration because parallel chan
 To avoid possible conflicts in such cases the annotation will be locked to a single user at a time. In case the annotation is locked by someone else WEBKNOSSOS will tell you the name of the person currently editing so you can coordinate with this person.
 
 ### Link Sharing
+
 Annotations can be shared via a link. People, who obtain the link, must have access to the annotation according to the permissions above to view the annotation.
 
 `Public` annotations do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website.
@@ -138,11 +141,12 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 ![Get the Annotation Sharing Link](images/sharing_modal_link.jpeg)
 
 #### Sharing Link Format
+
 By default, WEBKNOSSOS shortens the web links for ease of use. You can switch to full-length links in the link-sharing UI.
 
-As mentioned above, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes. 
-Anyone who opens a link will have the same WEBKNOSSOS experience that was captured when copying the link. 
-Alternatively, the link can be crafted manually or programmatically to direct users to specific locations in a dataset. 
+As mentioned above, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes.
+Anyone who opens a link will have the same WEBKNOSSOS experience that was captured when copying the link.
+Alternatively, the link can be crafted manually or programmatically to direct users to specific locations in a dataset.
 
 The information is JSON-encoded in the URL fragment and has the following format (flow type definition):
 
@@ -154,52 +158,52 @@ The information is JSON-encoded in the URL fragment and has the following format
   type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
   type Vector3 = [number, number, number];
 
-  type BaseMeshUrlDescriptor = {|
-    +segmentId: number,
-    +seedPosition: Vector3,
-  |};
-  type AdHocMeshUrlDescriptor = {|
-    ...BaseMeshUrlDescriptor,
-    +isPrecomputed: false,
-    mappingName: ?string,
-    mappingType: ?MappingType,
-  |};
-  type PrecomputedMeshUrlDescriptor = {|
-    ...BaseMeshUrlDescriptor,
-    +isPrecomputed: true,
-    meshFileName: string,
-  |};
-  type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
+type BaseMeshUrlDescriptor = {|
++segmentId: number,
++seedPosition: Vector3,
+|};
+type AdHocMeshUrlDescriptor = {|
+...BaseMeshUrlDescriptor,
++isPrecomputed: false,
+mappingName: ?string,
+mappingType: ?MappingType,
+|};
+type PrecomputedMeshUrlDescriptor = {|
+...BaseMeshUrlDescriptor,
++isPrecomputed: true,
+meshFileName: string,
+|};
+type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
 
-  type UrlStateByLayer = {
-    [layerName: string]: {
-      meshInfo?: {
-        meshFileName: ?string,
-        meshes: Array<MeshUrlDescriptor>,
-      },
-      mappingInfo?: {
-        mappingName: string,
-        mappingType: MappingType,
-        agglomerateIdsToImport?: Array<number>,
-      },
-      connectomeInfo?: {
-        connectomeName: string,
-        agglomerateIdsToImport?: Array<number>,
-      },
-      isDisabled?: boolean,
-    },
-  };
+type UrlStateByLayer = {
+[layerName: string]: {
+meshInfo?: {
+meshFileName: ?string,
+meshes: Array<MeshUrlDescriptor>,
+},
+mappingInfo?: {
+mappingName: string,
+mappingType: MappingType,
+agglomerateIdsToImport?: Array<number>,
+},
+connectomeInfo?: {
+connectomeName: string,
+agglomerateIdsToImport?: Array<number>,
+},
+isDisabled?: boolean,
+},
+};
 
-  type UrlManagerState = {|
-    position?: Vector3,
-    mode?: ViewMode,
-    zoomStep?: number,
-    activeNode?: number,
-    rotation?: Vector3,
-    stateByLayer?: UrlStateByLayer,
-  |};
+type UrlManagerState = {|
+position?: Vector3,
+mode?: ViewMode,
+zoomStep?: number,
+activeNode?: number,
+rotation?: Vector3,
+stateByLayer?: UrlStateByLayer,
+|};
 
-  ```
+```
 </details>
 
 
@@ -217,13 +221,14 @@ To share an annotation with a certain team, follow these steps:
 
 ![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
 
-Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.  
+Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
 
 To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Yes, allow editing" from the sharing UI.
 
-Note that while WEBKNOSSOS allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once. 
-WEBKNOSSOS does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies. 
+Note that while WEBKNOSSOS allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once.
+WEBKNOSSOS does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies.
 Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
 
 !!! info
-    In addition to the integrated Sharing features, you can also [download annotations](./export.md) and send them via email to collaborators.
+  In addition to the integrated Sharing features, you can also [download annotations](./export.md) and send them via email to collaborators.
+```

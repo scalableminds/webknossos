@@ -565,7 +565,7 @@ export type APIBuildInfo = {
     commitDate: string;
     ciTag: string;
     ciBuild: string;
-    gitTag: string;
+    gitTag?: string;
     datastoreApiVersion: string;
   };
   "webknossos-wrap": {
@@ -589,6 +589,9 @@ export type APIBuildInfo = {
     gitTag: string;
     datastoreApiVersion: string;
   };
+  schemaVersion: number;
+  localDataStoreEnabled: boolean;
+  localTracingStoreEnabled: boolean;
 };
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;

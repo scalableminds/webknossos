@@ -20,6 +20,8 @@ import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import * as OriginalSaveActions from "oxalis/model/actions/save_actions";
+import * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";
+import * as OriginalSkeletonTracingSaga from "oxalis/model/sagas/skeletontracing_saga";
 import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { TreeTypeEnum } from "oxalis/constants";
 import { Action } from "oxalis/model/actions/actions";
@@ -39,8 +41,12 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
-const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
-const { setupSavingForTracingType } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
+const { diffSkeletonTracing }: typeof OriginalSkeletonTracingSaga = mockRequire.reRequire(
+  "oxalis/model/sagas/skeletontracing_saga",
+);
+const { setupSavingForTracingType }: typeof OriginalSaveSaga = mockRequire.reRequire(
+  "oxalis/model/sagas/save_saga",
+);
 const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
@@ -59,7 +65,14 @@ function testDiffing(
   flycam: Flycam,
 ) {
   return withoutUpdateTracing(
-    Array.from(diffSkeletonTracing(prevTracing.skeleton, nextTracing.skeleton, prevFlycam, flycam)),
+    Array.from(
+      diffSkeletonTracing(
+        enforceSkeletonTracing(prevTracing),
+        enforceSkeletonTracing(nextTracing),
+        prevFlycam,
+        flycam,
+      ),
+    ),
   );
 }
 

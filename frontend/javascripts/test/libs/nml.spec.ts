@@ -10,22 +10,21 @@ import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_hel
 import mock from "mock-require";
 import test, { ExecutionContext } from "ava";
 import { TreeTypeEnum } from "oxalis/constants";
-import * as SkeletonTracingActionsModule from "oxalis/model/actions/skeletontracing_actions";
+import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
 import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
+import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
 
 const TIMESTAMP = 123456789;
-const buildInfo = {
-  webknossos: {
-    commitHash: "fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17",
-  },
-};
-const { serializeToNml, getNmlName, parseNml } = mock.reRequire("oxalis/model/helpers/nml_helpers");
+const { serializeToNml, getNmlName, parseNml }: typeof OriginalNmlHelpers = mock.reRequire(
+  "oxalis/model/helpers/nml_helpers",
+);
 const SkeletonTracingReducer: typeof OriginalSkeletonTracingReducer = mock.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
-const SkeletonTracingActions: typeof SkeletonTracingActionsModule = mock.reRequire(
+const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mock.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
 
@@ -194,8 +193,8 @@ async function testThatParserThrowsWithState(
   const nmlWithInvalidContent = serializeToNml(
     invalidState,
     invalidState.tracing,
-    invalidState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(invalidState.tracing),
+    BUILD_INFO,
   );
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidContent), key);
 }
@@ -225,8 +224,8 @@ test("NML serializing and parsing should yield the same state", async (t) => {
   const serializedNml = serializeToNml(
     initialState,
     initialState.tracing,
-    initialState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(initialState.tracing),
+    BUILD_INFO,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   t.deepEqual(initialSkeletonTracing.trees, trees);
@@ -251,7 +250,12 @@ test("NML serializing and parsing should yield the same state even when using sp
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+  );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   t.deepEqual(skeletonTracing.trees, trees);
@@ -276,7 +280,12 @@ test("NML serializing and parsing should yield the same state even when using mu
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+  );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   t.deepEqual(skeletonTracing.trees, trees);
@@ -296,7 +305,12 @@ test("NML Serializer should only serialize visible trees", async (t) => {
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+  );
   const { trees } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   // Tree 1 should not be exported as it is not visible
@@ -318,7 +332,12 @@ test("NML Serializer should only serialize groups with visible trees", async (t)
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+  );
   const { treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   // Group 1 (and group 3 and 4 which are children of group 1) should not be exported as they do not contain a visible tree
@@ -329,8 +348,8 @@ test("NML serializer should produce correct NMLs", (t) => {
   const serializedNml = serializeToNml(
     initialState,
     initialState.tracing,
-    initialState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(initialState.tracing),
+    BUILD_INFO,
   );
   t.snapshot(serializedNml, {
     id: "nml",
@@ -358,7 +377,12 @@ test("NML serializer should escape special characters and multilines", (t) => {
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+  );
   // Explicitly check for the encoded characters
   t.true(
     serializedNml.indexOf(
@@ -372,7 +396,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
 test("Serialized nml should be correctly named", async (t) => {
   t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");
 
-  const stateWithoutTask = _.omit(initialState, "task");
+  const stateWithoutTask = { ...initialState, task: null };
 
   t.is(getNmlName(stateWithoutTask), "Test Dataset__explorational__sboy__tionId.nml");
 });
@@ -695,8 +719,8 @@ test("NML Parser should split up disconnected trees", async (t) => {
   const nmlWithDisconnectedTree = serializeToNml(
     disconnectedTreeState,
     disconnectedTreeState.tracing,
-    disconnectedTreeState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(disconnectedTreeState.tracing),
+    BUILD_INFO,
   );
   const { trees: parsedTrees, treeGroups: parsedTreeGroups } = await parseNml(
     nmlWithDisconnectedTree,

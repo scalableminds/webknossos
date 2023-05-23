@@ -13,7 +13,7 @@ import type { OxalisState, SkeletonTracing, Node } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import * as SkeletonTracingActionsModule from "oxalis/model/actions/skeletontracing_actions";
+import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
@@ -32,7 +32,7 @@ mock("libs/window", {
 const SkeletonTracingReducer: typeof OriginalSkeletonTracingReducer = mock.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
-const SkeletonTracingActions: typeof SkeletonTracingActionsModule = mock.reRequire(
+const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mock.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
 

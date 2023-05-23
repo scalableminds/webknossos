@@ -95,11 +95,11 @@ class ZarrV3Array(relativePath: DatasetPath,
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]) = {
-    val startingCoords = (shardCoordinates, indexShape).zipped.map(_ * _)
+    val shardOffset = (shardCoordinates, indexShape).zipped.map(_ * _)
     indexShape.tails.toList
       .dropRight(1)
       .zipWithIndex
-      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - startingCoords(i)) }
+      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - shardOffset(i)) }
       .sum
   }
 

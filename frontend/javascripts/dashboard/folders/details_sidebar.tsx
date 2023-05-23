@@ -23,6 +23,7 @@ import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { useFetch } from "libs/react_helpers";
 import { getOrganization } from "admin/admin_rest_api";
+import { UseQueryResult, useQuery } from "@tanstack/react-query";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -85,21 +86,25 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const owningOrganizationDisplayName = useFetch(
-    async () => {
-      const owningOrga = await getOrganization(selectedDataset.owningOrganization);
-      return owningOrga.displayName;
+  const { data: owningOrganization } = useQuery(
+    ["organizations", selectedDataset.owningOrganization],
+    () => getOrganization(selectedDataset.owningOrganization),
+    {
+      refetchOnWindowFocus: false,
     },
-    null,
-    [],
   );
+  const owningOrganizationDisplayName = owningOrganization?.displayName;
 
   const renderOrganization = () => {
     if (activeUser?.organization !== selectedDataset.owningOrganization) return; //TODO invert
     return (
       <table>
         <tbody>
-          <OwningOrganizationRow organizationName={owningOrganizationDisplayName} />
+          <OwningOrganizationRow
+            organizationName={
+              owningOrganizationDisplayName != null ? owningOrganizationDisplayName : ""
+            }
+          />
         </tbody>
       </table>
     );

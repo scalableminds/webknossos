@@ -197,7 +197,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
 
 export function OwningOrganizationRow({ organizationName }: { organizationName: string | null }) {
   return (
-    <Tooltip title="Owning organization" placement="left">
+    <Tooltip title="Organization" placement="left">
       <tr>
         <td
           style={{
@@ -571,11 +571,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   maybePrintOrganization = () => {
-    const { activeUser, dataset } = this.props; // TODO can I use activeOrganization?
-    const datasetOrAnnotationOwningOrganization = this.props.isDatasetViewMode
-      ? dataset.owningOrganization
-      : this.props.tracing.annotationId;
-    if (activeUser?.organization !== datasetOrAnnotationOwningOrganization) return; // TODO invert
+    const { activeUser, dataset } = this.props;
+    const owningOrganization = dataset.owningOrganization;
+    if (activeUser?.organization !== owningOrganization) return; // TODO invert
     return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
   };
 

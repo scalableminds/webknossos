@@ -21,9 +21,8 @@ import { useDatasetCollectionContext } from "../dataset/dataset_collection_conte
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
-import { useFetch } from "libs/react_helpers";
 import { getOrganization } from "admin/admin_rest_api";
-import { UseQueryResult, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 export function DetailsSidebar({
   selectedDatasets,

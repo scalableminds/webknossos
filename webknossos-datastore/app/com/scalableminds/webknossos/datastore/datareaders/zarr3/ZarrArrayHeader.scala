@@ -38,7 +38,7 @@ case class ZarrArrayHeader(
 
   override lazy val order: ArrayOrder = getOrder
 
-  def zarrV3DataType: ZarrV3DataType = ZarrV3DataType.fromString(dataType).getOrElse(raw)
+  private def zarrV3DataType: ZarrV3DataType = ZarrV3DataType.fromString(dataType).getOrElse(raw)
 
   override def resolvedDataType: ArrayDataType = ZarrV3DataType.toArrayDataType(zarrV3DataType)
 
@@ -181,16 +181,17 @@ object ZarrArrayHeader extends JsonImplicits {
         case JsArray(arr) => arr
         case _            => Seq()
       }
+      val configurationKey = "configuration"
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
-          spec: CodecConfiguration <- c("name") match { // TODO No raw strings
-            case JsString("endian")           => c("configuration").validate[EndianCodecConfiguration]
-            case JsString("transpose")        => c("configuration").validate[TransposeCodecConfiguration]
-            case JsString("gzip")             => c("configuration").validate[GzipCodecConfiguration]
-            case JsString("blosc")            => c("configuration").validate[BloscCodecConfiguration]
-            case JsString("sharding_indexed") => readShardingCodecConfiguration(c("configuration"))
-            case JsString(name)               => throw new UnsupportedOperationException(s"Codec $name is not supported.")
-            case _                            => throw new IllegalArgumentException()
+          spec: CodecConfiguration <- c("name") match {
+            case JsString(EndianCodecConfiguration.name)    => c(configurationKey).validate[EndianCodecConfiguration]
+            case JsString(TransposeCodecConfiguration.name) => c(configurationKey).validate[TransposeCodecConfiguration]
+            case JsString(GzipCodecConfiguration.name)      => c(configurationKey).validate[GzipCodecConfiguration]
+            case JsString(BloscCodecConfiguration.name)     => c(configurationKey).validate[BloscCodecConfiguration]
+            case JsString(ShardingCodecConfiguration.name)  => readShardingCodecConfiguration(c(configurationKey))
+            case JsString(name)                             => throw new UnsupportedOperationException(s"Codec $name is not supported.")
+            case _                                          => throw new IllegalArgumentException()
           }
         } yield spec
       })

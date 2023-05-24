@@ -58,7 +58,7 @@ WEBKNOSSOS will launch the main annotation screen allowing you to navigate your 
 Depending on the current tool - selectable in the top bar - various actions can be performed.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
 The first tool is the _Move_ tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
-With the _SKeleton_ tool, a left mouse click can be used to place markers in the data, called nodes.
+With the _Skeleton_ tool, a left mouse click can be used to place markers in the data, called nodes.
 Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
 The _Brush_ and _Trace_ tools allow to "paint" voxels to create volumetric annotations.
 For a full rundown on the other annotations tools, such as _Eraser_, _Segment Picker_, _Fill_ please refer to documentation on [skeleton](./skeleton_annotation.md) and [volume](./volume_annotation.md) annotations.

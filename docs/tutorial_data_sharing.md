@@ -17,7 +17,7 @@ Copy the link to your dataset, and share it with your colleagues via your prefer
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-data-sharing/03_copying_link_and_viewing_DS.mp4){: autoplay loop muted}
 
-## Dataset Organization Teams And Access Permissions
+## Dataset Organization, Teams, And Access Permissions
 
 To organize your project, create a new folder and add the corresponding datasets. Folders can help with organizing and structuring datasets as you grow, as well as control access rights to the datasets.
 

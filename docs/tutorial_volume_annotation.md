@@ -26,13 +26,21 @@ Create a new segment by selecting a new segment ID. Use the trace tool to draw m
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/03_new_segments_lasso.mp4){: autoplay loop muted}
 
 ## Smart Annotation Tools
+Now, let’s explore the smart tools of WEBKNOSSOS. Choose the quick-select tool and turn on the AI option. Draw a rectangle around the cell you want to segment. Create and annotate new segments by pressing the keyboard shortcut “C”.
 
-Now, let’s explore the smart tools of WEBKNOSSOS. Choose the quick-select tool and draw a rectangle around the cell you want to segment. Scroll to the next slice and repeat.
+![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/04_new_AI_quick_select.mp4){: autoplay loop muted}
 
-Annotating a nucleus with the quick-select tool.
-Next, jump a few more slices in the Z direction. Annotate your cell again. Click the “interpolation” tool and congratulations! WEBKNOSSOS just segmented each slice in between the two and saved you time. Repeat this super fast workflow as much as you need.
+Quick tip: When dealing with long and complex shapes, try drawing multiple rectangles on different areas. The annotations will merge and your complex shape will be segmented in no time.
+
+![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/04_new_tip_long_cell.mp4){: autoplay loop muted}
+
+Now, annotate a new segment. Click the “interpolation” tool and congratulations! WEBKNOSSOS just segmented each slice in between the two and saved you time.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/05_interpolating.mp4){: autoplay loop muted}
+
+Repeat this super fast workflow as much as you need. The combination of these two tools enables highly efficient 3D annotation.
+
+![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/05_new_interpolation.mp4){: autoplay loop muted}
 
 ## 3D Meshes
 
@@ -50,7 +58,6 @@ WEBKNOSSOS works with a layer system, similar to Photoshop. You will usually hav
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/08_layer_system_01.mp4){: autoplay loop muted}
 
-Turning on a color layer, changing the opacity, and adjusting the contrast with the histogram.
 Then, you will find the segmentation layers for volume and skeleton annotations. You can toggle the visibility and set the opacity of the annotations as needed. Once a volume annotation layer is active, you can start annotating.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/09_toggling_visibility.mp4){: autoplay loop muted}

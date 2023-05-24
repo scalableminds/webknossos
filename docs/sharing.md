@@ -158,52 +158,52 @@ The information is JSON-encoded in the URL fragment and has the following format
   type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
   type Vector3 = [number, number, number];
 
-type BaseMeshUrlDescriptor = {|
-+segmentId: number,
-+seedPosition: Vector3,
-|};
-type AdHocMeshUrlDescriptor = {|
-...BaseMeshUrlDescriptor,
-+isPrecomputed: false,
-mappingName: ?string,
-mappingType: ?MappingType,
-|};
-type PrecomputedMeshUrlDescriptor = {|
-...BaseMeshUrlDescriptor,
-+isPrecomputed: true,
-meshFileName: string,
-|};
-type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
+  type BaseMeshUrlDescriptor = {|
+    +segmentId: number,
+    +seedPosition: Vector3,
+  |};
+  type AdHocMeshUrlDescriptor = {|
+    ...BaseMeshUrlDescriptor,
+    +isPrecomputed: false,
+    mappingName: ?string,
+    mappingType: ?MappingType,
+  |};
+  type PrecomputedMeshUrlDescriptor = {|
+    ...BaseMeshUrlDescriptor,
+    +isPrecomputed: true,
+    meshFileName: string,
+  |};
+  type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
 
-type UrlStateByLayer = {
-[layerName: string]: {
-meshInfo?: {
-meshFileName: ?string,
-meshes: Array<MeshUrlDescriptor>,
-},
-mappingInfo?: {
-mappingName: string,
-mappingType: MappingType,
-agglomerateIdsToImport?: Array<number>,
-},
-connectomeInfo?: {
-connectomeName: string,
-agglomerateIdsToImport?: Array<number>,
-},
-isDisabled?: boolean,
-},
-};
+  type UrlStateByLayer = {
+    [layerName: string]: {
+      meshInfo?: {
+        meshFileName: ?string,
+        meshes: Array<MeshUrlDescriptor>,
+      },
+      mappingInfo?: {
+        mappingName: string,
+        mappingType: MappingType,
+        agglomerateIdsToImport?: Array<number>,
+      },
+      connectomeInfo?: {
+        connectomeName: string,
+        agglomerateIdsToImport?: Array<number>,
+      },
+      isDisabled?: boolean,
+    },
+  };
 
-type UrlManagerState = {|
-position?: Vector3,
-mode?: ViewMode,
-zoomStep?: number,
-activeNode?: number,
-rotation?: Vector3,
-stateByLayer?: UrlStateByLayer,
-|};
+  type UrlManagerState = {|
+    position?: Vector3,
+    mode?: ViewMode,
+    zoomStep?: number,
+    activeNode?: number,
+    rotation?: Vector3,
+    stateByLayer?: UrlStateByLayer,
+  |};
 
-```
+  ```
 </details>
 
 

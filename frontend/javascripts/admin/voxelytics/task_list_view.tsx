@@ -604,7 +604,7 @@ export default function TaskListView({
           <Search
             placeholder="Filter workflows"
             onSearch={handleOnSearch}
-            style={{ width: 350 }}
+            style={{ minWidth: 150 }}
             allowClear
           />
           <div style={{ flex: 1 }} />
@@ -620,7 +620,7 @@ export default function TaskListView({
                   : addUrlParam(history.location, "runId", value),
               )
             }
-            style={{ maxWidth: 300 }}
+            style={{ maxWidth: "70%" }}
           >
             <Select.Option value="">Consolidated</Select.Option>
             {report.runs.map((run) => (

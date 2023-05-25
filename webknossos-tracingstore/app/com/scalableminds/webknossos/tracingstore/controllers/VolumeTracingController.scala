@@ -95,7 +95,7 @@ class VolumeTracingController @Inject()(
           val tracings: List[Option[VolumeTracing]] = request.body
           val mergedTracing =
             tracingService
-              .merge(tracings.flatten, MergedVolumeStats.empty)
+              .merge(tracings.flatten, MergedVolumeStats.empty, Empty)
               // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
               .copy(segments = List.empty)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
@@ -182,14 +182,16 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.webknossos, userToken) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            _ = logger.info(s"Duplicating volume tracing $tracingId...")
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            remoteFallbackLayerOpt <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+              tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
             newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
-              editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayer, userToken))
+              editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayerOpt, userToken))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
               tracing,

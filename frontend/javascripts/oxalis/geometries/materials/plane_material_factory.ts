@@ -425,15 +425,20 @@ class PlaneMaterialFactory {
           let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(Store.getState().dataset, layerName);
-            const activeMag = getResolutionInfo(layer.resolutions).getResolutionByIndex(
-              activeMagIndex,
-            );
+            const resolutionInfo = getResolutionInfo(layer.resolutions);
+            // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
+            // to determine a representative mag.
+            const suitableMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(activeMagIndex);
+            const suitableMag =
+              suitableMagIndex != null
+                ? resolutionInfo.getResolutionByIndex(suitableMagIndex)
+                : null;
 
             const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
-            if (!hasTransform && activeMag) {
+            if (!hasTransform && suitableMag) {
               representativeMagForVertexAlignment = V3.min(
                 representativeMagForVertexAlignment,
-                activeMag,
+                suitableMag,
               );
             }
           }

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.google.auth.oauth2.ServiceAccountCredentials
-import com.google.cloud.storage.{BlobId, Storage, StorageOptions}
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 
 import java.io.ByteArrayInputStream
@@ -28,9 +28,11 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): Array[Byte] = {
+  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
     val objName = path.toUri.getPath.tail
     val blobId = BlobId.of(bucket, objName)
+    val blobInfo = BlobInfo.newBuilder(blobId).setContentType("text/plain").build
+    val encoding = Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
     range match {
       case Some(r) => {
         val blobReader = storage.reader(blobId)
@@ -41,9 +43,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
         val arr = new Array[Byte](r.length)
         bb.position(0)
         bb.get(arr)
-        arr
+        (arr, encoding)
       }
-      case None => storage.readAllBytes(bucket, objName)
+      case None => (storage.readAllBytes(bucket, objName), encoding)
     }
 
   }

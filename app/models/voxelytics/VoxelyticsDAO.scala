@@ -51,7 +51,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   private def visibleRunsQ(currentUser: User, allowUnlisted: Boolean) = {
     val organizationId = currentUser._organization
     val readAccessQ =
-      if (currentUser.isAdmin || allowUnlisted) q"${true}"
+      if (currentUser.isAdmin || currentUser.isDatasetManager || allowUnlisted) q"${true}"
       else q"(__r._user = ${currentUser._id})"
     q"""SELECT __r.*
         FROM webknossos.voxelytics_runs __r
@@ -397,7 +397,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         VoxelyticsRunState.STALE)} THEN 1 ELSE 0 END) AS failed,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
-          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
+          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled,
+          SUM(COALESCE(running_tasks.fileSize, 0)) AS fileSize,
+          SUM(COALESCE(running_tasks.inodeCount, 0)) AS inodeCount
         FROM webknossos.voxelytics_workflows w
         JOIN ( -- Aggregating the task states of workflow runs (including skipped and pending)
           SELECT DISTINCT ON (workflow_hash, taskName) r.workflow_hash workflow_hash, t.name taskName, ts.state state
@@ -407,22 +409,39 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           ORDER BY workflow_hash, taskName, ts.beginTime DESC
         ) any_tasks ON any_tasks.workflow_hash = w.hash
         LEFT JOIN ( -- Aggregating the task states of workflow runs (excluding skipped and pending)
-          SELECT DISTINCT ON (workflow_hash, taskName) r.workflow_hash workflow_hash, t.name taskName, ts.state state
+          SELECT
+            DISTINCT ON (workflow_hash, taskName)
+            r.workflow_hash workflow_hash,
+            t.name taskName,
+            ts.state state,
+            COALESCE(ta.fileSize, 0) fileSize,
+            COALESCE(ta.inodeCount, 0) inodeCount
           FROM webknossos.voxelytics_tasks t
           JOIN (${visibleRunsQ(currentUser, allowUnlisted = false)}) r ON t._run = r._id
           JOIN task_states ts ON ts._id = t._id
+          LEFT JOIN (
+            SELECT a._task _task, SUM(a.fileSize) fileSize, SUM(a.inodeCount) inodeCount
+            FROM webknossos.voxelytics_artifacts a
+            GROUP BY a._task
+          ) ta ON ta._task = t._id
           WHERE ts.state NOT IN ${SqlToken.tupleFromValues(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING)}
           ORDER BY workflow_hash, taskName, ts.beginTime DESC
         ) running_tasks ON running_tasks.workflow_hash = w.hash AND running_tasks.taskName = any_tasks.taskName
         WHERE w.hash IN ${SqlToken.tupleFromList(workflowHashes)} AND w._organization = $organizationId
         GROUP BY w.hash
-        """.as[(String, Long, Long, Long, Long, Long)])
+        """.as[(String, Long, Long, Long, Long, Long, Long, Long)])
     } yield
       r.toList
         .map(
           row =>
             (row._1,
-             TaskCounts(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6)))
+             TaskCounts(total = row._2,
+                        failed = row._3,
+                        skipped = row._4,
+                        complete = row._5,
+                        cancelled = row._6,
+                        fileSize = row._7,
+                        inodeCount = row._8)))
         .toMap
   }
 
@@ -446,7 +465,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           COALESCE(tasks.failed, 0) AS tasksFailed,
           COALESCE(tasks.skipped, 0) AS tasksSkipped,
           COALESCE(tasks.complete, 0) AS tasksComplete,
-          COALESCE(tasks.cancelled, 0) AS tasksCancelled
+          COALESCE(tasks.cancelled, 0) AS tasksCancelled,
+          COALESCE(tasks.fileSize, 0) AS fileSize,
+          COALESCE(tasks.inodeCount, 0) AS inodeCount
         FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) r
         JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id
         LEFT JOIN (
@@ -457,9 +478,16 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           .tupleFromValues(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE)} THEN 1 ELSE 0 END) AS failed,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
-            SUM(CASE WHEN ts.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled
+            SUM(CASE WHEN ts.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled,
+            SUM(COALESCE(ta.fileSize, 0)) AS fileSize,
+            SUM(COALESCE(ta.inodeCount, 0)) AS inodeCount
           FROM webknossos.voxelytics_tasks AS t
           JOIN (${tasksWithStateQ(staleTimeout)}) ts ON ts._id = t._id
+          LEFT JOIN (
+            SELECT a._task _task, SUM(a.fileSize) fileSize, SUM(a.inodeCount) inodeCount
+            FROM webknossos.voxelytics_artifacts a
+            GROUP BY a._task
+          ) ta ON ta._task = t._id
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
         WHERE r._organization = $organizationId
@@ -472,6 +500,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 String,
                 Option[Instant],
                 Option[Instant],
+                Long,
+                Long,
                 Long,
                 Long,
                 Long,
@@ -498,7 +528,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                   failed = row._11,
                   skipped = row._12,
                   complete = row._13,
-                  cancelled = row._14
+                  cancelled = row._14,
+                  fileSize = row._15,
+                  inodeCount = row._16
                 )
             )))
     } yield results
@@ -607,7 +639,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             FROM webknossos.voxelytics_chunks c
             JOIN webknossos.voxelytics_tasks t ON t._id = c._task
             JOIN (${chunksWithStateQ(staleTimeout)}) cs ON cs._id = c._id
-            WHERE t._run IN ${SqlToken.tupleFromList(runIds)}
+            WHERE t._run IN ${SqlToken.tupleFromList(runIds)} AND t.name = $taskName
             GROUP BY c.executionId, t._id
           ) c
           GROUP BY c.executionId

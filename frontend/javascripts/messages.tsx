@@ -320,6 +320,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.folder": "Please define a target folder for this dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
+  "dataset.name_length": "Dataset name must be at least 3 characters",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":

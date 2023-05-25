@@ -89,6 +89,8 @@ function proofreadUsingMeshes(): boolean {
 let coarselyLoadedSegmentIds: number[] = [];
 
 function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
+  if ((yield* select((state) => state.userConfiguration.autoRenderMeshInProofreading)) === false)
+    return;
   const currentMeshFile = yield* select(
     (state) => state.localSegmentationData[layerName].currentMeshFile,
   );
@@ -309,8 +311,9 @@ function* splitOrMergeOrMinCutAgglomerate(
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-
-  yield* call([api.data, api.data.reloadBuckets], layerName);
+  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
+    bucket.containsValue(targetAgglomerateId),
+  );
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourceNodePosition),
@@ -536,8 +539,9 @@ function* handleProofreadMergeOrMinCut(
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-
-  yield* call([api.data, api.data.reloadBuckets], layerName);
+  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
+    bucket.containsValue(targetAgglomerateId),
+  );
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourcePosition),

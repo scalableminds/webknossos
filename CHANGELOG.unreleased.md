@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added segment groups so that segments can be organized in a hierarchy (similar to skeletons). [#6966](https://github.com/scalableminds/webknossos/pull/6966)
+- Added a new "cover" blend mode which renders the visible layers on top of each other. The new blend mode can be selected in the Data Rendering settings in the settings tab of the left side bar. [#6936](https://github.com/scalableminds/webknossos/pull/6936)
 - In addition to drag and drop, the selected tree(s) in the Skeleton tab can also be moved into another group by right-clicking the target group and selecting "Move selected tree(s) here". [#7005](https://github.com/scalableminds/webknossos/pull/7005)
 - Added a machine-learning based quick select mode. Activate it via the "AI" button in the toolbar after selecting the quick-select tool. [#7051](https://github.com/scalableminds/webknossos/pull/7051)
 - Added support for remote datasets encoded with [brotli](https://datatracker.ietf.org/doc/html/rfc7932). [#7041](https://github.com/scalableminds/webknossos/pull/7041)

@@ -185,40 +185,42 @@ function getCollapsibleMenuTitle(
   );
 }
 
-function getAdministrationSubMenu(
-  collapse: boolean,
-  isAdmin: boolean,
-  organization: string,
-): SubMenuType {
-  const adminstrationSubMenuItems = [
-    { key: "/users", label: <Link to="/users">Users</Link> },
-    { key: "/teams", label: <Link to="/teams">Teams</Link> },
-    {
-      key: "/projects",
-      label: (
-        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-          <Link to="/projects">Projects</Link>
-        </PricingEnforcedSpan>
-      ),
-    },
-    {
-      key: "/tasks",
-      label: (
-        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-          <Link to="/tasks">Tasks</Link>
-        </PricingEnforcedSpan>
-      ),
-    },
-    {
-      key: "/taskTypes",
-      label: (
-        <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-          <Link to="/taskTypes">Task Types</Link>
-        </PricingEnforcedSpan>
-      ),
-    },
-    { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
-  ];
+function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
+  const isAdmin = Utils.isUserAdmin(activeUser);
+  const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
+  const organization = activeUser.organization;
+
+  const adminstrationSubMenuItems = isAdminOrTeamManager
+    ? [
+        { key: "/users", label: <Link to="/users">Users</Link> },
+        { key: "/teams", label: <Link to="/teams">Teams</Link> },
+        {
+          key: "/projects",
+          label: (
+            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+              <Link to="/projects">Projects</Link>
+            </PricingEnforcedSpan>
+          ),
+        },
+        {
+          key: "/tasks",
+          label: (
+            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+              <Link to="/tasks">Tasks</Link>
+            </PricingEnforcedSpan>
+          ),
+        },
+        {
+          key: "/taskTypes",
+          label: (
+            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+              <Link to="/taskTypes">Task Types</Link>
+            </PricingEnforcedSpan>
+          ),
+        },
+        { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+      ]
+    : [];
 
   if (features().jobsEnabled)
     adminstrationSubMenuItems.push({
@@ -237,6 +239,10 @@ function getAdministrationSubMenu(
       key: "/workflows",
       label: <Link to="/workflows">Voxelytics</Link>,
     });
+
+  if (adminstrationSubMenuItems.length === 0) {
+    return null;
+  }
 
   return {
     key: "adminMenu",
@@ -302,7 +308,7 @@ function getHelpSubMenu(
   version: string | null,
   polledVersion: string | null,
   isAuthenticated: boolean,
-  isAdminOrTeamManager: boolean,
+  isAdminOrManager: boolean,
   collapse: boolean,
   openHelpModal: MenuClickEventHandler,
 ) {
@@ -320,7 +326,7 @@ function getHelpSubMenu(
         </a>
       ),
     },
-    (!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
+    (!features().discussionBoardRequiresAdmin || isAdminOrManager) &&
     features().discussionBoard !== false
       ? {
           key: "discussion-board",
@@ -746,9 +752,7 @@ function Navbar({
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
 
-  const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
-  const isAdminOrTeamManager =
-    activeUser != null ? Utils.isUserAdminOrTeamManager(activeUser) : false;
+  const isAdminOrManager = activeUser != null ? Utils.isUserAdminOrManager(activeUser) : false;
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
@@ -773,11 +777,11 @@ function Navbar({
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
 
-    if (isAdminOrTeamManager && activeUser != null) {
-      menuItems.push(
-        getAdministrationSubMenu(collapseAllNavItems, isAdmin, activeUser.organization),
-      );
-      menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
+    if (isAdminOrManager && activeUser != null) {
+      menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
+      if (Utils.isUserAdminOrTeamManager(activeUser)) {
+        menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
+      }
     } else {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
@@ -810,7 +814,7 @@ function Navbar({
       version,
       polledVersion,
       _isAuthenticated,
-      isAdminOrTeamManager,
+      isAdminOrManager,
       collapseAllNavItems,
       () => setIsHelpModalOpen(true),
     ),

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { DropTargetMonitor, useDrop } from "react-dnd";
+import { ConnectDropTarget, DropTargetMonitor, useDrop } from "react-dnd";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
   DatasetCollectionContextValue,
@@ -282,18 +282,28 @@ function generateTitle(
     </Dropdown>
   );
 }
-
-function FolderItemAsDropTarget(props: {
-  folderId: string;
-  children: React.ReactNode;
-  className?: string;
-  isEditable: boolean;
-}) {
+export function useDatasetDrop(
+  folderId: string,
+  canDrop: boolean,
+): [
+  {
+    canDrop: boolean;
+    isOver: boolean;
+  },
+  ConnectDropTarget,
+] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
-  const { folderId, className, isEditable, ...restProps } = props;
-
-  const [collectedProps, drop] = useDrop({
+  const [collectedProps, drop] = useDrop<
+    DragObjectWithType & {
+      datasetName: string;
+    },
+    void,
+    {
+      canDrop: boolean;
+      isOver: boolean;
+    }
+  >({
     accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
       if (selectedDatasets.length > 1) {
@@ -349,12 +359,24 @@ function FolderItemAsDropTarget(props: {
         }
       }
     },
-    canDrop: () => isEditable,
+    canDrop: () => canDrop,
     collect: (monitor: DropTargetMonitor) => ({
       canDrop: monitor.canDrop(),
       isOver: monitor.isOver(),
     }),
   });
+  return [collectedProps, drop];
+}
+
+function FolderItemAsDropTarget(props: {
+  folderId: string;
+  children: React.ReactNode;
+  className?: string;
+  isEditable: boolean;
+}) {
+  const { folderId, className, isEditable, ...restProps } = props;
+  const [collectedProps, drop] = useDatasetDrop(folderId, isEditable);
+
   const { canDrop, isOver } = collectedProps;
   return (
     <div

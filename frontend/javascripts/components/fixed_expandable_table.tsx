@@ -21,7 +21,7 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
 
   render() {
     const { expandedRows } = this.state;
-    const { children, className, ...restProps } = this.props;
+    const { children, className, expandable, ...restProps } = this.props;
     // Don't use React.Children.map here, since this adds .$ prefixes
     // to the keys. However, the keys are needed when managing the sorters
     // of the table.
@@ -36,19 +36,23 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
           fixed: columnFixed,
         });
       });
+    const expandableProp = {
+      ...expandable,
+      expandedRowKeys: expandedRows,
+      onExpandedRowsChange: (selectedRows: readonly React.Key[]) => {
+        this.setState({
+          expandedRows: selectedRows as string[],
+        });
+      },
+    };
     return (
       <Table
         {...restProps}
-        expandedRowKeys={expandedRows}
+        expandable={expandableProp}
         scroll={{
           x: "max-content",
         }}
         className={`large-table ${className}`}
-        onExpandedRowsChange={(selectedRows: Array<string | number>) => {
-          this.setState({
-            expandedRows: selectedRows as string[],
-          });
-        }}
       >
         {columnsWithAdjustedFixedProp}
       </Table>

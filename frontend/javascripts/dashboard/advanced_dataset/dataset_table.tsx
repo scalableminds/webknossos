@@ -32,7 +32,8 @@ import { useSelector } from "react-redux";
 import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
 import { DatasetUpdater } from "admin/admin_rest_api";
-import { generateSettingsForFolder } from "dashboard/folders/folder_tree";
+import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
+import classNames from "classnames";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -145,6 +146,7 @@ function ContextMenuContainer(props: ContextMenuProps) {
 interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
   index: number;
   isADataset: boolean;
+  rowKey: string;
 }
 export const DraggableDatasetType = "DraggableDatasetRow";
 
@@ -222,23 +224,34 @@ const DraggableDatasetRow = ({
   style,
   children,
   isADataset,
+  rowKey,
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
   const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
   // @ts-ignore
+
   const datasetName = restProps["data-row-key"];
   const [, drag, preview] = useDrag({
     item: { type: DraggableDatasetType, index, datasetName },
     canDrag: () => isADataset,
   });
-  drag(ref);
+  const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
 
+  const { canDrop, isOver } = collectedProps;
+  console.log("canDrop", canDrop, "isOver", isOver);
+  drop(drag(ref));
   const fileIcon = DragPreviewProvider.getProvider().getIcon(theme);
-  const styleWithMaybeMoveCursor = isADataset ? { ...style, cursor: "move" } : style;
-
+  const styleWithMaybeMoveCursor = isADataset
+    ? { ...style, cursor: "move" }
+    : { ...style, cursor: "not-allowed !important" };
   return (
-    <tr ref={ref} className={className} style={styleWithMaybeMoveCursor} {...restProps}>
+    <tr
+      ref={ref}
+      className={classNames(className, { "highlight-folder-sidebar": canDrop && isOver })}
+      style={styleWithMaybeMoveCursor}
+      {...restProps}
+    >
       <DragPreviewImage connect={preview} src={fileIcon} />
       {children}
     </tr>
@@ -258,6 +271,10 @@ class DatasetRenderer {
     this.data = data;
     this.datasetTable = datasetTable;
   }
+  getRowKey() {
+    return this.data.name;
+  }
+
   renderTypeColumn() {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
@@ -315,6 +332,9 @@ class FolderRenderer {
   constructor(data: FolderItemWithName, datasetTable: DatasetTable) {
     this.data = data;
     this.datasetTable = datasetTable;
+  }
+  getRowKey() {
+    return this.data.key;
   }
   renderTypeColumn() {
     return <FolderOpenOutlined style={{ fontSize: "18px" }} />;
@@ -509,7 +529,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             .reverse()
             .value()
         : dataSourceSortedByRank;
-    const sortedDataSourceRenderer: RowRenderer[] = sortedDataSource.map((record) =>
+    const sortedDataSourceRenderers: RowRenderer[] = sortedDataSource.map((record) =>
       isRecordADataset(record)
         ? new DatasetRenderer(record, this)
         : new FolderRenderer(record, this),
@@ -538,11 +558,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           }
         />
         <FixedExpandableTable
-          childrenColumnName="notUsed"
-          dataSource={sortedDataSourceRenderer}
-          rowKey={(record: RowRenderer) =>
-            isRecordADataset(record.data) ? record.data.name : record.data.key
-          }
+          expandable={{ childrenColumnName: "notUsed" }}
+          dataSource={sortedDataSourceRenderers}
+          rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
           components={components}
           pagination={{
             defaultPageSize: 50,
@@ -563,6 +581,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             const { data } = record;
             const isADataset = isRecordADataset(data);
             return {
+              rowKey: record.getRowKey(),
               isADataset: isADataset,
               onDragStart: () => {
                 if (isADataset && !selectedDatasets.includes(data)) {

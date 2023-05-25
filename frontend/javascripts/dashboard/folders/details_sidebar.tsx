@@ -206,7 +206,10 @@ function FolderDetails({
   if (!displayedFolderEqualsActiveFolder) {
     message =
       datasetCount > 0
-        ? `Double-click the folder to list these ${pluralize("dataset", datasetCount)}.`
+        ? `Double-click the folder to list ${pluralize("this", datasetCount, "these")} ${pluralize(
+            "dataset",
+            datasetCount,
+          )}.`
         : "";
   }
   return (

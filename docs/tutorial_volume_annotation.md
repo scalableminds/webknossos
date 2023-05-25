@@ -34,7 +34,7 @@ Quick tip: When dealing with long and complex shapes, try drawing multiple recta
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/04_new_tip_long_cell.mp4){: autoplay loop muted}
 
-Now, annotate a new segment. Click the “interpolation” tool and congratulations! WEBKNOSSOS just segmented each slice in between the two and saved you time.
+Now, annotate a segment on a new slice. Skip a few sections forward and annotate again. To interpolate the two sections, click the “interpolation” tool. All the slices in between the two original ones have now been automatically annotated by WEBKNOSSOS.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/05_interpolating.mp4){: autoplay loop muted}
 

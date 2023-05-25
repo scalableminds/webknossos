@@ -242,17 +242,21 @@ function* splitOrMergeOrMinCutAgglomerate(
   const isProofreadingToolActive = activeTool === AnnotationToolEnum.PROOFREAD;
 
   if (isProofreadingToolActive && !isModifyingOnlyAgglomerateSkeletons) {
-    Toast.error(
+    Toast.warning(
       "Only agglomerate skeletons can be modified using the proofreading tool to edit the active mapping.",
       { timeout: 12000 },
     );
     return;
   } else if (!isProofreadingToolActive && isModifyingAnyAgglomerateSkeletons) {
-    Toast.error(
+    Toast.warning(
       "In order to edit the active mapping by deleting or adding edges of agglomerate skeletons, the proofreading tool needs to be active." +
         " If you want to edit the active mapping, activate the proofreading tool and then redo the action.",
       { timeout: 12000 },
     );
+    return;
+  }
+
+  if (!isProofreadingToolActive) {
     return;
   }
 

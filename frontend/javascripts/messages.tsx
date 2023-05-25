@@ -400,6 +400,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "nml.expected_attribute_missing":
     "Attribute with the following name was expected, but is missing or empty:",
   "nml.invalid_timestamp": "Attribute with the following name was expected to be a unix timestamp:",
+  "nml.invalid_tree_type":
+    "Attribute with the following name was expected to be a valid tree type:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":

@@ -241,7 +241,7 @@ export const enum MappingStatusEnum {
   ENABLED = "ENABLED",
 }
 export type MappingStatus = keyof typeof MappingStatusEnum;
-export const enum TreeTypeEnum {
+export enum TreeTypeEnum {
   DEFAULT = "DEFAULT",
   AGGLOMERATE = "AGGLOMERATE",
 }

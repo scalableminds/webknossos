@@ -95,7 +95,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   const owningOrganizationDisplayName = owningOrganization?.displayName;
 
   const renderOrganization = () => {
-    if (activeUser?.organization !== selectedDataset.owningOrganization) return; //TODO invert
+    if (activeUser?.organization === selectedDataset.owningOrganization) return;
     return (
       <table>
         <tbody>

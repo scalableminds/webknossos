@@ -22,7 +22,7 @@ import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ViewMode } from "oxalis/constants";
-import Constants from "oxalis/constants";
+import Constants, { BLEND_MODES } from "oxalis/constants";
 import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
@@ -308,6 +308,21 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               {
                 value: "PROGRESSIVE_QUALITY",
                 label: "Progressive quality",
+              },
+            ]}
+          />
+          <DropdownSetting
+            label={<Tooltip title={settingsTooltips.blendMode}>{settingsLabels.blendMode}</Tooltip>}
+            value={this.props.datasetConfiguration.blendMode}
+            onChange={this.onChangeDataset.blendMode}
+            options={[
+              {
+                value: BLEND_MODES.Additive,
+                label: "Additive",
+              },
+              {
+                value: BLEND_MODES.Cover,
+                label: "Cover",
               },
             ]}
           />

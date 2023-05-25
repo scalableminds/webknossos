@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a machine-learning based quick select mode. Activate it via the "AI" button in the toolbar after selecting the quick-select tool. [#7051](https://github.com/scalableminds/webknossos/pull/7051)
 - Added support for remote datasets encoded with [brotli](https://datatracker.ietf.org/doc/html/rfc7932). [#7041](https://github.com/scalableminds/webknossos/pull/7041)
 - Teams can be edited more straight-forwardly in a popup in the team edit page. [#7043](https://github.com/scalableminds/webknossos/pull/7043)
+- Added support to download layers of a dataset as (OME) TIFF files in the download modal when viewing a dataset. [#7068](https://github.com/scalableminds/webknossos/pull/7068)
 - Annotations with Editable Mappings (a.k.a Supervoxel Proofreading) can now be merged. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
 - The file size and inodes of artifacts are now aggregated and shown in the Voxelytics workflow list. [#7071](https://github.com/scalableminds/webknossos/pull/7071)
 - It is possible to disable the automatic loading of meshes during proofreading. [##7076](https://github.com/scalableminds/webknossos/pull/7076)

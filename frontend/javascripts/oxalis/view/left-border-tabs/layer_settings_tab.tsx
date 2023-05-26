@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Row, Switch, Tooltip } from "antd";
+import { Button, Col, Divider, Popover, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -10,6 +10,7 @@ import {
   VerticalAlignMiddleOutlined,
   LockOutlined,
   UnlockOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -414,6 +415,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       allReadableLayerNames,
       readableName,
     );
+    const getOverflowLayerActions = () => {
+      return (
+        <div className="flex-item">
+          {isAnnotationLayer && !isOnlyAnnotationLayer
+            ? this.getDeleteAnnotationLayerButton(readableName, layer)
+            : null}
+        </div>
+      );
+    };
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -590,9 +600,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </div>
           <div className="flex-item">{this.getReloadDataButton(layerName)}</div>
           <div className="flex-item">
-            {isAnnotationLayer && !isOnlyAnnotationLayer
-              ? this.getDeleteAnnotationLayerButton(readableName, layer)
-              : null}
+            <Popover content={getOverflowLayerActions()} trigger="click" placement="right">
+              <MoreOutlined />
+            </Popover>
           </div>
         </div>
       </div>

@@ -136,7 +136,7 @@ export const showQuickSelectSettingsAction = (isOpen: boolean) =>
     isOpen,
   } as const);
 export const showBrushSizePopover = (isOpen: boolean) =>
-({
-  type: "SET_IS_BRUSH_SIZE_POPOVER_OPEN",
-  isOpen,
-} as const);
+  ({
+    type: "SET_IS_BRUSH_SIZE_POPOVER_OPEN",
+    isOpen,
+  } as const);

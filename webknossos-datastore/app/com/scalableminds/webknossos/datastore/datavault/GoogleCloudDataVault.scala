@@ -44,8 +44,15 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
         bb.get(arr)
         (arr, encoding)
       }
-      case SuffixLength(_) =>
-        throw new Exception("Google Cloud Data Vault does not support range requests by suffix length")
+      case SuffixLength(l) =>
+        val blobReader = storage.reader(blobId)
+        blobReader.seek(-l)
+        val bb = ByteBuffer.allocateDirect(l.toInt)
+        blobReader.read(bb)
+        val arr = new Array[Byte](l.toInt)
+        bb.position(0)
+        bb.get(arr)
+        (arr, encoding)
       case Complete() => (storage.readAllBytes(bucket, objName), encoding)
     }
 

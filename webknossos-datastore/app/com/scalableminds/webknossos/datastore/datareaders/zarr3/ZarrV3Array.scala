@@ -19,7 +19,6 @@ import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-// TODO: Copied from zarr array, maybe extract something
 object ZarrV3Array extends LazyLogging {
   @throws[IOException]
   def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): ZarrV3Array = {

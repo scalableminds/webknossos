@@ -537,9 +537,9 @@ function CreateTreeButton() {
 function ChangeBrushSizeButton() {
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
-  const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
-  const mediumBrushSize = calculateMediumBrushSize(maximumBrushSize);
-  const minimumBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
+  const maximumButtonBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  const mediumButtonBrushSize = calculateMediumBrushSize(maximumButtonBrushSize);
+  const minimumButtonBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
   const isOpen = useSelector((state: OxalisState) => state.uiInformation.isBrushSizePopoverOpen);
   return (
     <Tooltip title="Change the brush size">
@@ -561,7 +561,7 @@ function ChangeBrushSizeButton() {
               label=""
               roundTo={0}
               min={userSettings.brushSize.minimum}
-              max={maximumBrushSize}
+              max={maximumButtonBrushSize}
               precision={0}
               spans={[0, 16, 8]}
               value={brushSize}
@@ -573,7 +573,7 @@ function ChangeBrushSizeButton() {
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(minimumBrushSize)}
+                      onClick={() => handleUpdateBrushSize(minimumButtonBrushSize)}
                     >
                       <i className="fas fa-circle fa-xs" />
                     </ButtonComponent>
@@ -581,7 +581,7 @@ function ChangeBrushSizeButton() {
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(mediumBrushSize)}
+                      onClick={() => handleUpdateBrushSize(mediumButtonBrushSize)}
                     >
                       <i className="fas fa-circle fa-sm" />
                     </ButtonComponent>
@@ -589,7 +589,7 @@ function ChangeBrushSizeButton() {
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(maximumBrushSize)}
+                      onClick={() => handleUpdateBrushSize(maximumButtonBrushSize)}
                     >
                       <i className="fas fa-circle fa-lg" />
                     </ButtonComponent>
@@ -601,14 +601,15 @@ function ChangeBrushSizeButton() {
                   <td>Large</td>
                 </tr>
                 <tr>
-                  <td>({minimumBrushSize}vx)</td>
-                  <td>({mediumBrushSize}vx)</td>
-                  <td>({maximumBrushSize}vx)</td>
+                  <td>({minimumButtonBrushSize}vx)</td>
+                  <td>({mediumButtonBrushSize}vx)</td>
+                  <td>({maximumButtonBrushSize}vx)</td>
                 </tr>
               </tbody>
             </table>
           </div>
         }
+        trigger="click"
         open={isOpen}
         placement="bottom"
         style={{

@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -538,7 +539,7 @@ function ChangeBrushSizeButton() {
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
   const mediumBrushSize = calculateMediumBrushSize(maximumBrushSize);
-  const minimumBrushSize = userSettings.brushSize.minimum;
+  const minimumBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
   const isOpen = useSelector((state: OxalisState) => state.uiInformation.isBrushSizePopoverOpen);
   return (
     <Tooltip title="Change the brush size">
@@ -559,7 +560,7 @@ function ChangeBrushSizeButton() {
             <LogSliderSetting
               label=""
               roundTo={0}
-              min={minimumBrushSize}
+              min={userSettings.brushSize.minimum}
               max={maximumBrushSize}
               precision={0}
               spans={[0, 16, 8]}
@@ -615,6 +616,7 @@ function ChangeBrushSizeButton() {
         }}
         onOpenChange={(open: boolean) => {
           dispatch(showBrushSizePopover(open));
+          MoveHandlers.setMousePosition(null); // must be called here because mouse position is not set outside of the plane views
         }}
       >
         <ButtonComponent

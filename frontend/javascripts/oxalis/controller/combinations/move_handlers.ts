@@ -2,7 +2,7 @@ import Store from "oxalis/store";
 import type { Point2, Vector3, OrthoView } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
-import { getInputCatcherRect, calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { getInputCatcherRect, calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import {
   movePlaneFlycamOrthoAction,
@@ -15,9 +15,22 @@ import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actio
 import _ from "lodash";
 
 export function setMousePosition(position: Point2 | null | undefined): void {
-  if (position != null) {
-    Store.dispatch(setMousePositionAction([position.x, position.y]));
-  } else {
+  console.log("setMousePos");
+  if(Store.getState().uiInformation.isBrushSizePopoverOpen){
+    const position = getViewportExtents(Store.getState());
+          const activeViewPort = Store.getState().viewModeData.plane.activeViewport;
+          console.log(position[activeViewPort]); //TODO delete
+          Store.dispatch(
+            setMousePositionAction([
+              position[activeViewPort][0] / 2,
+              position[activeViewPort][1] / 2,
+            ]),
+          ); 
+  }
+  else if (position != null) {
+      Store.dispatch(setMousePositionAction([position.x, position.y]));
+    }
+  else {
     Store.dispatch(setMousePositionAction(null));
   }
 }

@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The file size and inodes of artifacts are now aggregated and shown in the Voxelytics workflow list. [#7071](https://github.com/scalableminds/webknossos/pull/7071)
 - It is possible to disable the automatic loading of meshes during proofreading. [#7076](https://github.com/scalableminds/webknossos/pull/7076)
 - Add ability to view [zarr v3](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html) datasets. [#7079](https://github.com/scalableminds/webknossos/pull/7079)
+- When viewing a public dataset by another organization, the organization is shown next to the dataset list, and when viewing the dataself or an annotation. [#7087](https://github.com/scalableminds/webknossos/pull/7087)
 
 ### Changed
 - Loading of precomputed meshes got significantly faster (especially when using a mesh file for an oversegmentation with an applied agglomerate mapping). [#7001](https://github.com/scalableminds/webknossos/pull/7001)

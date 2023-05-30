@@ -2,10 +2,7 @@ import Store from "oxalis/store";
 import type { Point2, Vector3, OrthoView } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
-import {
-  getInputCatcherRect,
-  calculateGlobalPos,
-} from "oxalis/model/accessors/view_mode_accessor";
+import { getInputCatcherRect, calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import {
   movePlaneFlycamOrthoAction,

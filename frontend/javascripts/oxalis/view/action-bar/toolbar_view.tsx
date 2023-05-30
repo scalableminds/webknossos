@@ -542,7 +542,6 @@ function ChangeBrushSizeButton() {
   const centerBrushInViewport = () => {
     const position = getViewportExtents(Store.getState());
     const activeViewPort = Store.getState().viewModeData.plane.activeViewport;
-    console.log(position[activeViewPort]); //TODO delete
     dispatch(
       setMousePositionAction([position[activeViewPort][0] / 2, position[activeViewPort][1] / 2]),
     );

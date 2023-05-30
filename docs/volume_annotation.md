@@ -3,7 +3,7 @@
 In addition to [skeleton annotations](./skeleton_annotation.md), WEBKNOSSOS also supports volume/segmentation annotations.
 With this type of annotation, you can label groups of voxels with efficient drawing tools.
 
-![type:video](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=372s)
+![youtube-video](https://www.youtube.com/embed/jsz0tc3tuKI?start=372)
 
 ### Tools
 
@@ -84,7 +84,7 @@ Now, you can click the "Interpolate" button (or use the shortcut V) to interpola
 
 Note that it is recommended to proofread the interpolated slices afterward since the interpolation is a heuristic.
 
-![type:video](https://www.youtube.com/watch?v=QqU72vHRR2I)
+![youtube-video](https://www.youtube.com/embed/QqU72vHRR2I)
 
 ### Volume Extrusion
 
@@ -98,7 +98,7 @@ With WEBKNOSSOS it is possible to apply a precomputed agglomeration file to re-m
 
 This feature works well with automated machine learning segmentation workflows. We typically produce several agglomeration results based on different prediction and size thresholds leading to several possible segmentations based on one initial over-segmentation. We load these ID maps into WEBKNOSSOS to quickly review these results in an interactive session.
 
-![type:video](https://www.youtube.com/watch?v=ZmUqyIoA9Gw)
+![youtube-video](https://www.youtube.com/embed/ZmUqyIoA9Gw)
 
 Mapping files are automatically identified by WEBKNOSSOS when being placed in a `mappings` folder within the [segmentation folder](./data_formats.md#wkw-folder-structure). All available mappings can be activated from a dropdown under each `Segmentation` layer. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and WEBKNOSSOS will update accordingly.
 

@@ -19,7 +19,7 @@ Read more about the organization of datasets [here](./datasets.md#dataset-organi
 ![Dashboard for Team Managers or Admins with access to dataset settings and additional administration actions.](./images/dashboard_datasets.jpeg)
 ![Dashboard for Regular Users](./images/dashboard_regular_user.jpeg)
 
-![type:video](https://www.youtube.com/watch?v=naPL1jfCdOc)
+![youtube-video](https://www.youtube.com/embed/naPL1jfCdOc)
 
 ## Tasks
 

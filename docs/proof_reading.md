@@ -52,7 +52,7 @@ To use the `Merger Mode`:
 
 Note, the `Merger Mode` is a rather light-way tool. WEBKNOSSOS will not directly apply your changes to the underlying segmentation. Rather the `Merger Mode` corrections are applied in real-time based on the currently available skeleton annotations. Disabling the `Merger Mode` will reveal the previous state of the segmentation. Enabling the merge mode will re-apply your corrections.
 
-![type:video](https://www.youtube.com/watch?v=Sq4AuWanK14)
+![youtube-video](https://www.youtube.com/embed/Sq4AuWanK14)
 
 After finishing the proofreading, a [long-running job](./jobs.md) can be started to apply the merging of segments into a new dataset with the same layers. The job can be started by clicking the "Materialize" button next to the merger mode button in the toolbar.
 

@@ -52,7 +52,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   buttonContainer.setAttribute(
     "style",
     `position: absolute;
-        top: 0;
+        top: 40px;
         left: 300px;
         z-index: 10000000;`,
   );

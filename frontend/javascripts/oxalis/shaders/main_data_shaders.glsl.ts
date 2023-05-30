@@ -139,6 +139,7 @@ flat in float outputAddress[<%= globalLayerCount %>];
 in vec4 worldCoord;
 in vec4 modelCoord;
 in mat4 savedModelMatrix;
+in vec3 tpsOffset;
 
 ${compileShader(
   inverse,
@@ -155,6 +156,7 @@ ${compileShader(
   hasSegmentation ? getSegmentationId : null,
   hasSegmentation ? getCrossHairOverlay : null,
 )}
+
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
@@ -192,6 +194,11 @@ void main() {
       // Get grayscale value for <%= name %>
 
       vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
+
+      <% if (layerIndex == 0) { %>
+        transformedCoordUVW += tpsOffset;
+      <% } %>
+
       if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
         color_value =
           getMaybeFilteredColorOrFallback(
@@ -291,6 +298,8 @@ out vec4 worldCoord;
 out vec4 modelCoord;
 out vec2 vUv;
 out mat4 savedModelMatrix;
+out vec3 tpsOffset;
+
 flat out vec2 index;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
@@ -319,7 +328,70 @@ ${compileShader(
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
+float REGULARIZATION = 1.;
+
+const int CPS_LENGTH = 14;
+vec3 W[CPS_LENGTH];
+vec3 a[4];
+vec3 cps[CPS_LENGTH];
+
+void initializeArrays() {
+  W[0] = vec3(-3.570536441762251e-05, -2.1423218650573356e-05, 0.0);
+  W[1] = vec3(-1.5032159095028805e-05, -9.019295457017324e-06, 0.0);
+  W[2] = vec3(-1.6057710422028018e-05, -9.634626253216924e-06, 0.0);
+  W[3] = vec3(-1.4685191091827508e-05, -8.811114655096458e-06, -0.0);
+  W[4] = vec3(4.396751848178888e-06, 2.638051108908873e-06, -0.0);
+  W[5] = vec3(7.708367317832793e-05, 4.6250203906995183e-05, 0.0);
+  W[6] = vec3(-1.685011391842421e-05, -1.0110068351054556e-05, -0.0);
+  W[7] = vec3(-1.6549693176532887e-05, -9.929815905919773e-06, 0.0);
+  W[8] = vec3(1.1536713388616895e-05, 6.922028033170149e-06, 0.0);
+  W[9] = vec3(5.931500801912847e-06, 3.5589004811477156e-06, 0.0);
+  W[10] = vec3(8.755098823972997e-06, 5.253059294383795e-06, -0.0);
+  W[11] = vec3(6.685883450827453e-06, 4.011530070496469e-06, -0.0);
+  W[12] = vec3(8.67898391772404e-06, 5.207390350634762e-06, 0.0);
+  W[13] = vec3(-8.188373288097116e-06, -4.913023972858552e-06, 0.0);
+  cps[0] = vec3(353.0, 291.0, 700.0);
+  cps[1] = vec3(1413.0, 288.0, 700.0);
+  cps[2] = vec3(289.0, 775.0, 700.0);
+  cps[3] = vec3(1362.0, 828.0, 700.0);
+  cps[4] = vec3(738.0, 507.0, 700.0);
+  cps[5] = vec3(734.0, 481.0, 700.0);
+  cps[6] = vec3(650.0, 513.0, 0.0);
+  cps[7] = vec3(900.0, 556.0, 0.0);
+  cps[8] = vec3(353.0, 291.0, 0.0);
+  cps[9] = vec3(1413.0, 288.0, 0.0);
+  cps[10] = vec3(289.0, 775.0, 0.0);
+  cps[11] = vec3(1362.0, 828.0, 0.0);
+  cps[12] = vec3(788.0, 537.0, 0.0);
+  cps[13] = vec3(784.0, 511.0, 0.0);
+  a[0] = vec3(237.508216934741, 142.5049301608445, 0.0);
+  a[1] = vec3(0.004886158153397415, 0.0029316948920384838, -0.0);
+  a[2] = vec3(0.0023104499996710152, 0.001386269999802626, -0.0);
+  a[3] = vec3(-0.01115148884113997, -0.006690893304683978, -0.0);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void main() {
+  initializeArrays();
+
   vUv = uv;
   modelCoord = vec4(position, 1.0);
   savedModelMatrix = modelMatrix;
@@ -393,6 +465,36 @@ void main() {
   }
 
   vec3 worldCoordUVW = getWorldCoordUVW();
+
+  float x = transWorldCoord.x;
+  float y = transWorldCoord.y;
+  float z = 100. * worldCoordUVW.z;
+
+  // transform the coord
+
+  vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
+  vec3 bending_part = vec3(0.0);
+
+  for (int cpIdx = 0; cpIdx < CPS_LENGTH; cpIdx++) {
+    // Calculate distance to each control point
+    float el = sqrt(
+      pow(x - cps[cpIdx].x, 2.0) +
+      pow(y - cps[cpIdx].y, 2.0) +
+      pow(z - cps[cpIdx].z, 2.0)
+    );
+
+    if (el != 0.0) {
+      el = pow(el, 2.0) * log2(pow(el, 2.0)) / log2(2.718281828459045);
+    } else {
+      el = REGULARIZATION;
+    }
+    bending_part += el * W[cpIdx];
+  }
+
+  tpsOffset = linear_part + bending_part;
+  tpsOffset.z /= 100.;
+  // tpsOffset = bending_part;
+
 
   // Offset the bucket calculation for the current vertex by a voxel to ensure
   // that the provoking vertex (the one that is used by the flat varyings in

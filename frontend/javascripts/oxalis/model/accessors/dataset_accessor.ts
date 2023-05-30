@@ -685,8 +685,24 @@ function _getTransformsForLayerOrNull(layer: APIDataLayer): Matrix4x4 | null {
   return nestedToFlatMatrix(nestedMatrix);
 }
 
+// inverted matrix of the inverted TPS:
+const mat = [
+  0.9912353168462398, -0.0031351870171087847, -42.298953744454636, -90.00926033846974,
+  -0.005112731839693669, 0.9981711409066866, -18.821073754097736, -94.3119467086129,
+  1.0807035492009403e-18, -0.0, 1.0, -9.84579953002015e-17, 0.0, -0.0, -0.0, 1.0,
+] as Matrix4x4;
+
 export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);
 export function getTransformsForLayer(layer: APIDataLayer): Matrix4x4 {
+  return Identity4x4;
+  // if (getTransformsForLayerOrNull(layer)) {
+  //   return mat;
+  // }
+  if (layer.name === "color_1") {
+    return mat;
+  }
+
+  return Identity4x4;
   return getTransformsForLayerOrNull(layer) || Identity4x4;
 }
 

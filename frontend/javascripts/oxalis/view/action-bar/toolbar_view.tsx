@@ -4,12 +4,12 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   interpolateSegmentationLayerAction,
   createCellAction,
+  setMousePositionAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   createTreeAction,
@@ -29,11 +29,7 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import {
-  setToolAction,
-  showBrushSizePopover,
-  showQuickSelectSettingsAction,
-} from "oxalis/model/actions/ui_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
@@ -63,6 +59,7 @@ import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_acti
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
+import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -537,10 +534,20 @@ function CreateTreeButton() {
 function ChangeBrushSizeButton() {
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
+  const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
   const maximumButtonBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
   const mediumButtonBrushSize = calculateMediumBrushSize(maximumButtonBrushSize);
   const minimumButtonBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
-  const isOpen = useSelector((state: OxalisState) => state.uiInformation.isBrushSizePopoverOpen);
+
+  const centerBrushInViewport = () => {
+    const position = getViewportExtents(Store.getState());
+    const activeViewPort = Store.getState().viewModeData.plane.activeViewport;
+    console.log(position[activeViewPort]); //TODO delete
+    dispatch(
+      setMousePositionAction([position[activeViewPort][0] / 2, position[activeViewPort][1] / 2]),
+    );
+  };
+
   return (
     <Tooltip title="Change the brush size">
       <Popover
@@ -549,6 +556,7 @@ function ChangeBrushSizeButton() {
             style={{
               width: 230,
             }}
+            onMouseEnter={() => centerBrushInViewport()}
           >
             <div
               style={{
@@ -610,14 +618,15 @@ function ChangeBrushSizeButton() {
           </div>
         }
         trigger="click"
-        open={isOpen}
+        open={isBrushSizePopoverOpen}
         placement="bottom"
         style={{
           cursor: "pointer",
         }}
         onOpenChange={(open: boolean) => {
-          dispatch(showBrushSizePopover(open));
-          MoveHandlers.setMousePosition(null); // must be called here because mouse position is not set outside of the plane views
+          setIsBrushSizePopoverOpen(open);
+          if (open) centerBrushInViewport();
+          else dispatch(setMousePositionAction(null));
         }}
       >
         <ButtonComponent

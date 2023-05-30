@@ -120,12 +120,6 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_IS_BRUSH_SIZE_POPOVER_OPEN": {
-      return updateKey(state, "uiInformation", {
-        isBrushSizePopoverOpen: action.isOpen,
-      });
-    }
-
     default:
       return state;
   }

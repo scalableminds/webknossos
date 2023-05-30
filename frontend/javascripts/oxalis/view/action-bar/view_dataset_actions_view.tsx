@@ -15,8 +15,8 @@ import {
   setShareModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import Store, { OxalisState } from "oxalis/store";
-import PythonClientModalView from "./python_client_modal_view";
 import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import DownloadModalView from "./download_modal_view";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -40,7 +40,9 @@ export default function ViewDatasetActionsView(props: Props) {
     />
   );
   const pythonClientModal = (
-    <PythonClientModalView
+    <DownloadModalView
+      isAnnotation={false}
+      initialTab="export"
       isOpen={isPythonClientModalOpen}
       onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
     />

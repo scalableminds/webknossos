@@ -12,19 +12,25 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added segment groups so that segments can be organized in a hierarchy (similar to skeletons). [#6966](https://github.com/scalableminds/webknossos/pull/6966)
+- Added a new "cover" blend mode which renders the visible layers on top of each other. The new blend mode can be selected in the Data Rendering settings in the settings tab of the left side bar. [#6936](https://github.com/scalableminds/webknossos/pull/6936)
 - In addition to drag and drop, the selected tree(s) in the Skeleton tab can also be moved into another group by right-clicking the target group and selecting "Move selected tree(s) here". [#7005](https://github.com/scalableminds/webknossos/pull/7005)
 - Added a machine-learning based quick select mode. Activate it via the "AI" button in the toolbar after selecting the quick-select tool. [#7051](https://github.com/scalableminds/webknossos/pull/7051)
 - Added support for remote datasets encoded with [brotli](https://datatracker.ietf.org/doc/html/rfc7932). [#7041](https://github.com/scalableminds/webknossos/pull/7041)
 - Teams can be edited more straight-forwardly in a popup in the team edit page. [#7043](https://github.com/scalableminds/webknossos/pull/7043)
+- Added support to download layers of a dataset as (OME) TIFF files in the download modal when viewing a dataset. [#7068](https://github.com/scalableminds/webknossos/pull/7068)
 - Annotations with Editable Mappings (a.k.a Supervoxel Proofreading) can now be merged. [#7026](https://github.com/scalableminds/webknossos/pull/7026)
 - The file size and inodes of artifacts are now aggregated and shown in the Voxelytics workflow list. [#7071](https://github.com/scalableminds/webknossos/pull/7071)
+- It is possible to disable the automatic loading of meshes during proofreading. [##7076](https://github.com/scalableminds/webknossos/pull/7076)
+- When viewing a public dataset by another organization, the organization is shown next to the dataset list, and when viewing the dataself or an annotation. [#7087](https://github.com/scalableminds/webknossos/pull/7087)
 - Added new graphics and restyled empty dashboards. [#7008](https://github.com/scalableminds/webknossos/pull/7008)
 
 ### Changed
 - Loading of precomputed meshes got significantly faster (especially when using a mesh file for an oversegmentation with an applied agglomerate mapping). [#7001](https://github.com/scalableminds/webknossos/pull/7001)
 - Improved speed of proofreading by only reloading affected areas after a split or merge. [#7050](https://github.com/scalableminds/webknossos/pull/7050)
 - The minimum length of layer names in datasets was set from 3 to 1, enabling single-character names for layers. [#7064](https://github.com/scalableminds/webknossos/pull/7064)
+- All dataset managers are now allowed to see all voxelytics workflow reports created in their organization. Previously, only admins could see all workflow reports, with other users seeing only their own. [#7080](https://github.com/scalableminds/webknossos/pull/7080)
 - Improved performance for large meshes, especially when loaded from a precomputed oversegmentation mesh file. [#7077](https://github.com/scalableminds/webknossos/pull/7077)
+- Slight increased the spacing and width of some VX reports elements. [#7094](https://github.com/scalableminds/webknossos/pull/7094)
 
 ### Fixed
 - Fixed that changing a segment color could lead to a crash. [#7000](https://github.com/scalableminds/webknossos/pull/7000)
@@ -46,6 +52,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed displayed units of used storage in the organization's overview page. [#7057](https://github.com/scalableminds/webknossos/pull/7057)
 - Fixed a rendering bug that could occur when a dataset layer has missing mags (e.g., the first mag is 8-8-8). [#7082](https://github.com/scalableminds/webknossos/pull/7082)
 - Fixed a bug where some volume annotations could not be duplicated or used as tasks. [#7085](https://github.com/scalableminds/webknossos/pull/7085)
+- Fixed a superfluous rectangular geometry rendered at 0,0,0. [#7088](https://github.com/scalableminds/webknossos/pull/7088)
 
 ### Removed
 

@@ -34,6 +34,7 @@ import { mayUserEditDataset } from "libs/utils";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
+import Title from "antd/lib/typography/Title";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -153,7 +154,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
       <tr>
         <td
           style={{
-            paddingRight: 4,
+            paddingRight: 20,
             paddingTop: 10,
             verticalAlign: "top",
           }}
@@ -183,7 +184,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       <tr>
         <td
           style={{
-            paddingRight: 4,
+            paddingRight: 20,
             verticalAlign: "top",
           }}
         >
@@ -201,7 +202,7 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
       <tr>
         <td
           style={{
-            paddingRight: 4,
+            paddingRight: 20,
           }}
         >
           <i className="fas fa-building fa-xl" />
@@ -257,9 +258,21 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     return this.props.isDatasetViewMode ? (
       <div
         style={{
-          marginBottom: 25,
+          marginTop: 40,
         }}
       >
+        <Title level={5}>Keyboard Shortcuts</Title>
+        <p>
+          Find the complete list of shortcuts in the{" "}
+          <a
+            target="_blank"
+            href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
+            rel="noopener noreferrer"
+          >
+            documentation
+          </a>
+          .
+        </p>
         <table className="shortcut-table">
           <tbody>
             {shortcuts.map((shortcut) => (
@@ -276,35 +289,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             ))}
           </tbody>
         </table>
-        <a
-          target="_blank"
-          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
-          rel="noopener noreferrer"
-          style={{
-            fontSize: 14,
-          }}
-        >
-          More shortcuts…
-        </a>
       </div>
-    ) : null;
-  }
-
-  getOrganizationLogo() {
-    if (!this.props.dataset.logoUrl) {
-      return null;
-    }
-
-    return this.props.isDatasetViewMode ? (
-      <img
-        style={{
-          maxHeight: 250,
-          maxWidth: "100%",
-          objectFit: "contain",
-        }}
-        src={this.props.dataset.logoUrl}
-        alt={`${this.props.dataset.owningOrganization} Logo`}
-      />
     ) : null;
   }
 
@@ -437,7 +422,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               wordWrap: "break-word",
             }}
           >
-            <strong>{displayName || datasetName}</strong>
+            <Title level={5} style={{ display: "inline-block" }}>
+              {displayName || datasetName}
+            </Title>
             {getEditSettingsIcon()}
           </p>
           {datasetDescription ? (
@@ -671,7 +658,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </Tooltip>
       ) : null;
     return (
-      <div className="flex-overflow padded-tab-content">
+      <div
+        className="flex-overflow padded-tab-content"
+        style={{ paddingLeft: 20, paddingRight: 20 }}
+      >
         <div className="info-tab-block">
           {this.getTracingName()}
           {this.getDatasetName()}
@@ -702,7 +692,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts()}
-        {this.getOrganizationLogo()}
       </div>
     );
   }

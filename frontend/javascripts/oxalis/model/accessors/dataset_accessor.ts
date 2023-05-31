@@ -694,15 +694,6 @@ const mat = [
 
 export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);
 export function getTransformsForLayer(layer: APIDataLayer): Matrix4x4 {
-  return Identity4x4;
-  // if (getTransformsForLayerOrNull(layer)) {
-  //   return mat;
-  // }
-  if (layer.name === "color_1") {
-    return mat;
-  }
-
-  return Identity4x4;
   return getTransformsForLayerOrNull(layer) || Identity4x4;
 }
 

@@ -84,7 +84,7 @@ In addition to the general layer properties mentioned above, `color` and `segmen
 - `Pattern Opacity`: Adjust the visibility of the texture/pattern on each segment. To make segments easier to distinguish and more unique, a pattern is applied to each in addition to its base color. 0% hides the pattern. 100% makes the pattern very prominent. Great for increasing the visual contrast between segments.
 - `ID Mapping`: WEBKNOSSOS supports applying pre-computed agglomerations/groupings of segmentation IDs for a given segmentation layer. This is a very powerful feature to explore and compare different segmentation strategies for a given segmentation layer. Mappings need to be pre-computed and stored together with a dataset for WEBKNOSSOS to download and apply. [Read more about this here](./volume_annotation.md#mappings--on-demand-agglomeration).
 
-![type:video](https://www.youtube.com/watch?v=JZLKB9GfMgQ)
+![youtube-video](https://www.youtube.com/embed/JZLKB9GfMgQ)
 
 #### Skeleton Annotation Layer
 

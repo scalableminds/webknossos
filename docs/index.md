@@ -7,7 +7,7 @@ Powerful [user](./users.md) and [task](./tasks.md) management features automatic
 There are a lot of productivity improvements to make the human part as efficient as possible.
 WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) alongside a paper publication.
 
-![type:video](https://www.youtube.com/watch?v=jsz0tc3tuKI)
+![youtube-video](https://www.youtube.com/embed/jsz0tc3tuKI)
 
 ## Getting Started
 

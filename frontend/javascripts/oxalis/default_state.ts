@@ -50,6 +50,7 @@ const defaultState: OxalisState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
+    autoRenderMeshInProofreading: true,
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,
@@ -132,7 +133,6 @@ const defaultState: OxalisState = {
       name: "localhost",
       url: "http://localhost:9000",
       isScratch: false,
-      isConnector: false,
       allowsUpload: true,
     },
     owningOrganization: "Connectomics department",

@@ -133,7 +133,6 @@ const defaultState: OxalisState = {
       name: "localhost",
       url: "http://localhost:9000",
       isScratch: false,
-      isConnector: false,
       allowsUpload: true,
     },
     owningOrganization: "Connectomics department",

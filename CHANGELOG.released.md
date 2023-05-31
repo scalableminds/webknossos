@@ -55,11 +55,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where some volume annotations could not be duplicated or used as tasks. [#7085](https://github.com/scalableminds/webknossos/pull/7085)
 - Fixed a superfluous rectangular geometry rendered at 0,0,0. [#7088](https://github.com/scalableminds/webknossos/pull/7088)
 
-### Removed
-
-### Breaking Changes
-
-
 ## [23.05.2](https://github.com/scalableminds/webknossos/releases/tag/23.05.2) - 2023-05-08
 [Commits](https://github.com/scalableminds/webknossos/compare/23.05.1...23.05.2)
 

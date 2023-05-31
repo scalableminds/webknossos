@@ -22,6 +22,7 @@ import {
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
   hideBrushAction,
+  maybePrefetchEmbeddingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -47,6 +48,7 @@ import {
 } from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
+import { setQuickSelectStateAction } from "oxalis/model/actions/ui_actions";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -661,8 +663,16 @@ export class QuickSelectTool {
         Store.dispatch(confirmQuickSelectAction());
         quickSelectGeometry.detachTextureMask();
 
+        Store.dispatch(setQuickSelectStateAction("drawing"));
+
         const state = Store.getState();
         quickSelectGeometry.rotateToViewport();
+        // Only show the center marker when using the heuristic
+        // approach since the center will be used as a seed for the "floodfill".
+        // For the ML-based approach, the center marker doesn't have any relevance.
+        quickSelectGeometry.setCenterMarkerVisibility(
+          Store.getState().userConfiguration.quickSelect.useHeuristic,
+        );
 
         const volumeTracing = getActiveSegmentationTracing(state);
         if (!volumeTracing) {
@@ -675,12 +685,17 @@ export class QuickSelectTool {
         startPos = V3.floor(calculateGlobalPos(state, pos));
         currentPos = startPos;
         isDragging = true;
+
+        Store.dispatch(maybePrefetchEmbeddingAction(startPos));
       },
       leftMouseUp: () => {
         isDragging = false;
         // Identity equality is enough, since we want to catch the case
         // in which the user didn't move the mouse at all
-        if (startPos === currentPos) {
+        if (
+          startPos === currentPos ||
+          Store.getState().uiInformation.quickSelectState === "inactive"
+        ) {
           // clear rectangle because user didn't drag
           return;
         }
@@ -696,7 +711,11 @@ export class QuickSelectTool {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
-        if (!isDragging || startPos == null) {
+        if (
+          !isDragging ||
+          startPos == null ||
+          Store.getState().uiInformation.quickSelectState === "inactive"
+        ) {
           return;
         }
         const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));

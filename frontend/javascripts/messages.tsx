@@ -45,6 +45,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
+  blendMode: "Blend Mode",
   renderWatermark: "Logo in Screenshots",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
@@ -73,6 +74,8 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
   zoom: "Zoom in or out in the data viewports",
   displayScalebars: "Show a scale in the lower-right corner of each viewport",
+  blendMode:
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
@@ -128,6 +131,12 @@ A reload is necessary to return to a valid state.`,
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
+  "download.python_do_not_share": _.template(
+    "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
+  ),
+  "download.export_as_tiff": _.template(
+    "Export this <%- typeName %> as TIFF image(s). This may take a few moments depending on the size of your configured export.",
+  ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
     "You just enabled the option to render missing data black. All layers will now be reloaded.",
@@ -317,6 +326,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.folder": "Please define a target folder for this dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
+  "dataset.name_length": "Dataset name must be at least 3 characters",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":
@@ -340,12 +350,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.shared_teams_edited_failed":
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
   "annotation.download": "The following annotation data is available for download immediately.",
-  "annotation.export":
-    "Export this annotation as TIFF image(s). This may take a few moments depending on the size of your configured export.",
   "annotation.export_no_worker":
     "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
-  "annotation.python_do_not_share":
-    "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":

@@ -233,7 +233,9 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
               getUnobtrusivelyUpdatedDatasets(newDatasets, oldDatasets),
             );
 
-            scheduleNextPoll();
+            if (!effectWasCancelled) {
+              scheduleNextPoll();
+            }
           }, DATASET_POLLING_INTERVAL);
         }
 

@@ -20,7 +20,8 @@ import javax.inject.Inject
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         agglomerateService: AgglomerateService,
                                         applicationHealthService: ApplicationHealthService,
-                                        dataVaultService: DataVaultService) {
+                                        dataVaultService: DataVaultService,
+                                        datasetErrorLoggingService: DatasetErrorLoggingService) {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
     // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
@@ -42,7 +43,8 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
     Some(agglomerateService),
     Some(dataVaultService),
     Some(applicationHealthService),
-    Some(sharedChunkContentsCache)
+    Some(sharedChunkContentsCache),
+    Some(datasetErrorLoggingService)
   )
 
 }

@@ -1,5 +1,4 @@
 import {
-  Alert,
   List,
   Input,
   Form,
@@ -65,7 +64,6 @@ export const syncDataSourceFields = (
 
 export default function DatasetSettingsDataTab({
   allowRenamingDataset,
-  isReadOnlyDataset,
   form,
   activeDataSourceEditMode,
   onChange,
@@ -73,7 +71,6 @@ export default function DatasetSettingsDataTab({
   datasetId,
 }: {
   allowRenamingDataset: boolean;
-  isReadOnlyDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
@@ -107,7 +104,7 @@ export default function DatasetSettingsDataTab({
             checkedChildren="Advanced"
             unCheckedChildren="Simple"
             checked={activeDataSourceEditMode === "advanced"}
-            disabled={isReadOnlyDataset || !isJSONValid}
+            disabled={!isJSONValid}
             style={{
               marginBottom: 6,
             }}
@@ -119,14 +116,6 @@ export default function DatasetSettingsDataTab({
         </Tooltip>
       </div>
 
-      {isReadOnlyDataset ? (
-        <Alert
-          message="This dataset is read-only, therefore certain options are disabled."
-          type="warning"
-          showIcon
-        />
-      ) : null}
-
       {additionalAlert}
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
@@ -134,7 +123,6 @@ export default function DatasetSettingsDataTab({
           <SimpleDatasetForm
             datasetId={datasetId}
             allowRenamingDataset={allowRenamingDataset}
-            isReadOnlyDataset={isReadOnlyDataset}
             form={form}
             dataSource={dataSource}
           />
@@ -165,13 +153,11 @@ export default function DatasetSettingsDataTab({
 
 function SimpleDatasetForm({
   allowRenamingDataset,
-  isReadOnlyDataset,
   dataSource,
   form,
   datasetId,
 }: {
   allowRenamingDataset: boolean;
-  isReadOnlyDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
   datasetId?: APIDatasetId | undefined;
@@ -219,7 +205,7 @@ function SimpleDatasetForm({
               >
                 <Input
                   // Renaming an existing DS is not supported right now
-                  disabled={isReadOnlyDataset || !allowRenamingDataset}
+                  disabled={!allowRenamingDataset}
                   style={{
                     width: 400,
                   }}
@@ -245,7 +231,6 @@ function SimpleDatasetForm({
                 ]}
               >
                 <Vector3Input
-                  disabled={isReadOnlyDataset}
                   style={{
                     width: 400,
                   }}
@@ -274,7 +259,6 @@ function SimpleDatasetForm({
           <List.Item key={`layer-${idx}`}>
             <SimpleLayerForm
               datasetId={datasetId}
-              isReadOnlyDataset={isReadOnlyDataset}
               layer={layer}
               index={idx}
               onRemoveLayer={onRemoveLayer}
@@ -296,14 +280,12 @@ function getMags(layer: DataLayer) {
 }
 
 function SimpleLayerForm({
-  isReadOnlyDataset,
   layer,
   index,
   onRemoveLayer,
   form,
   datasetId,
 }: {
-  isReadOnlyDataset: boolean;
   layer: DataLayer;
   index: number;
   onRemoveLayer: (layer: DataLayer) => void;
@@ -315,7 +297,7 @@ function SimpleLayerForm({
   const isSegmentation = category === "segmentation";
   const bitDepth = getBitDepth(layer);
 
-  const mayLayerBeRemoved = !isReadOnlyDataset && dataLayers?.length > 1;
+  const mayLayerBeRemoved = dataLayers?.length > 1;
 
   React.useEffect(() => {
     // Always validate all fields so that in the case of duplicate layer
@@ -399,7 +381,7 @@ function SimpleLayerForm({
             <Input
               // the name of a layer depends on the folder name in wkw. Therefore, don't allow
               // editing the layer name for wkw.
-              disabled={isReadOnlyDataset || layer.dataFormat === "wkw"}
+              disabled={layer.dataFormat === "wkw"}
               style={{
                 width: 300,
               }}
@@ -500,7 +482,6 @@ function SimpleLayerForm({
             ]}
           >
             <BoundingBoxInput
-              disabled={isReadOnlyDataset}
               style={{
                 width: 300,
               }}
@@ -561,7 +542,6 @@ function SimpleLayerForm({
                 >
                   <DelegatePropsToFirstChild>
                     <InputNumber
-                      disabled={isReadOnlyDataset}
                       // @ts-ignore returning undefined does work without problems
                       parser={(value: string | undefined) => {
                         if (value == null || value === "") {
@@ -570,7 +550,7 @@ function SimpleLayerForm({
                         return parseInt(value, 10);
                       }}
                     />
-                    {!isReadOnlyDataset && datasetId && features().jobsEnabled && (
+                    {datasetId && features().jobsEnabled && (
                       <Button
                         type={mostRecentSuccessfulJob == null ? "primary" : "default"}
                         title={`${

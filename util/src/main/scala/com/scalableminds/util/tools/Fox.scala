@@ -221,6 +221,22 @@ object Fox extends FoxImplicits {
     t =>
       runNext(functions, t)
   }
+
+  def failureChainAsString(failure: Failure, includeStackTraces: Boolean = false): String = {
+    def formatStackTrace(failure: Failure) =
+      failure.exception match {
+        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
+        case _                                     => ""
+      }
+
+    def formatChain(chain: Box[Failure]): String = chain match {
+      case Full(failure) =>
+        " <~ " + failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
+      case _ => ""
+    }
+
+    failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
+  }
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

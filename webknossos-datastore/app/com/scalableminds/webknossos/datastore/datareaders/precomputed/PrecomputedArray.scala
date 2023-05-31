@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetPath}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
@@ -22,8 +22,7 @@ object PrecomputedArray extends LazyLogging {
   def open(magPath: VaultPath,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray]): PrecomputedArray = {
-
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): PrecomputedArray = {
     val basePath = magPath.parent
     val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
     val headerBytes = (basePath / headerPath).readBytes()
@@ -63,8 +62,9 @@ class PrecomputedArray(relativePath: DatasetPath,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int],
-                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
+                       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext)
     extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex, sharedChunkContentsCache)
+    with FoxImplicits
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =
@@ -244,10 +244,11 @@ class PrecomputedArray(relativePath: DatasetPath,
     } yield minishardIndex
   }
 
-  private def getChunkRange(chunkId: Long,
-                            minishardIndex: Seq[(Long, Long, Long)]): Option[NumericRange.Exclusive[Long]] =
+  private def getChunkRange(chunkId: Long, minishardIndex: Seq[(Long, Long, Long)]): Fox[NumericRange.Exclusive[Long]] =
     for {
-      chunkSpecification <- minishardIndex.find(_._1 == chunkId)
+      chunkSpecification <- minishardIndex
+        .find(_._1 == chunkId)
+        .toFox ?~> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)
@@ -260,7 +261,7 @@ class PrecomputedArray(relativePath: DatasetPath,
     for {
       minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex
         .mkString(",")}"
-      chunkRange: NumericRange.Exclusive[Long] <- Fox.option2Fox(getChunkRange(chunkIdentifier, minishardIndex)) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
+      chunkRange: NumericRange.Exclusive[Long] <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
         .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
     } yield (shardPath, chunkRange)
   }

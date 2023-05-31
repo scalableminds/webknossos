@@ -104,7 +104,12 @@ const getMaybeFilteredColor: ShaderModule = {
 export const getMaybeFilteredColorOrFallback: ShaderModule = {
   requirements: [getMaybeFilteredColor],
   code: `
-    vec4 getMaybeFilteredColorOrFallback(
+    struct MaybeFilteredColor {
+      vec4 color;
+      bool used_fallback_color;
+    };
+
+    MaybeFilteredColor getMaybeFilteredColorOrFallback(
       float layerIndex,
       float d_texture_width,
       float packingDegree,
@@ -113,14 +118,16 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       vec4 fallbackColor,
       bool supportsPrecomputedBucketAddress
     ) {
-      vec4 color = getMaybeFilteredColor(layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering, supportsPrecomputedBucketAddress);
+      MaybeFilteredColor maybe_filtered_color;
+      maybe_filtered_color.used_fallback_color = false;
+      maybe_filtered_color.color = getMaybeFilteredColor(layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering, supportsPrecomputedBucketAddress);
 
-      if (color.a < 0.0) {
+      if (maybe_filtered_color.color.a < 0.0) {
         // Render gray for not-yet-existing data
-        color = fallbackColor;
+        maybe_filtered_color.color = fallbackColor;
+        maybe_filtered_color.used_fallback_color = true;
       }
-
-      return color;
+      return maybe_filtered_color;
     }
 
     vec4[2] getSegmentIdOrFallback(

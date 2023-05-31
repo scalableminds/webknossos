@@ -40,6 +40,23 @@ object ElementClass extends ExtendedEnumeration {
 
   def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64)
 
+  def encodeAsByte(elementClass: ElementClass.Value): Byte = {
+    val asInt = elementClass match {
+      case ElementClass.uint8  => 0
+      case ElementClass.uint16 => 1
+      case ElementClass.uint24 => 2
+      case ElementClass.uint32 => 3
+      case ElementClass.uint64 => 4
+      case ElementClass.float  => 5
+      case ElementClass.double => 6
+      case ElementClass.int8   => 7
+      case ElementClass.int16  => 8
+      case ElementClass.int32  => 9
+      case ElementClass.int64  => 10
+    }
+    asInt.toByte
+  }
+
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
     case ElementClass.uint16 => 2

@@ -39,7 +39,7 @@ import {
   computeBoundingBoxFromBoundingBoxObject,
   computeShapeFromBoundingBox,
 } from "libs/utils";
-import { formatBytes, formatScale } from "libs/format_utils";
+import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 const CheckboxGroup = Checkbox.Group;
@@ -51,6 +51,7 @@ type TabKeys = "download" | "export" | "python";
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  isAnnotation: boolean;
   initialTab?: TabKeys;
   initialBoundingBoxId?: number;
 };
@@ -151,7 +152,7 @@ function estimateFileSize(
   const shape = computeShapeFromBoundingBox(boundingBox);
   const volume =
     Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
-  return formatBytes(
+  return formatCountToDataAmountUnit(
     volume *
       getByteCountFromLayer(selectedLayer) *
       (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1),
@@ -180,26 +181,6 @@ async function copyToClipboard(code: string) {
   Toast.success("Snippet copied to clipboard.");
 }
 
-export function MoreInfoHint() {
-  return (
-    <Hint
-      style={{
-        margin: "0px 12px 0px 12px",
-      }}
-    >
-      For more information on how to work with annotation files visit the{" "}
-      <a
-        href="https://docs.webknossos.org/webknossos/tooling.html"
-        target="_blank"
-        rel="noreferrer"
-      >
-        user documentation
-      </a>
-      .
-    </Hint>
-  );
-}
-
 export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
@@ -224,6 +205,42 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
   );
 }
 
+function getPythonAnnotationDownloadSnippet(authToken: string | null, tracing: HybridTracing) {
+  return `import webknossos as wk
+
+with wk.webknossos_context(
+    token="${authToken || "<insert token here>"}",
+    url="${window.location.origin}"
+):
+    annotation = wk.Annotation.download("${tracing.annotationId}")
+`;
+}
+
+function getPythonDatasetDownloadSnippet(authToken: string | null, dataset: APIDataset) {
+  const nonDefaultHost = !document.location.host.endsWith("webknossos.org");
+  const indentation = "\n        ";
+  const contextUrlAddendum = nonDefaultHost ? `, url="${window.location.origin}"` : "";
+  const maybeUrlParameter = nonDefaultHost
+    ? `${indentation}webknossos_url="${window.location.origin}"`
+    : "";
+
+  return `import webknossos as wk
+
+with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contextUrlAddendum}):
+    # Download the dataset.
+    dataset = wk.Dataset.download(
+        dataset_name_or_url="${dataset.name}",
+        organization_id="${dataset.owningOrganization}",${maybeUrlParameter}
+    )
+    # Alternatively, directly open the dataset. Image data will be
+    # streamed when being accessed.
+    remote_dataset = wk.Dataset.open_remote(
+        dataset_name_or_url="${dataset.name}",
+        organization_id="${dataset.owningOrganization}",${maybeUrlParameter}
+    )
+`;
+}
+
 const okTextForTab = new Map<TabKeys, string | null>([
   ["download", "Download"],
   ["export", "Export"],
@@ -233,6 +250,7 @@ const okTextForTab = new Map<TabKeys, string | null>([
 function _DownloadModalView({
   isOpen,
   onClose,
+  isAnnotation,
   initialTab,
   initialBoundingBoxId,
 }: Props): JSX.Element {
@@ -242,6 +260,7 @@ function _DownloadModalView({
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
+  const typeName = isAnnotation ? "annotation" : "dataset";
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
@@ -355,7 +374,7 @@ function _DownloadModalView({
             type="warning"
           >
             {activeUser != null
-              ? messages["annotation.python_do_not_share"]
+              ? messages["download.python_do_not_share"]({ typeName })
               : messages["annotation.register_for_token"]}
           </Text>
         </Row>
@@ -375,6 +394,25 @@ function _DownloadModalView({
   const handleKeepWindowOpenChecked = (e: any) => {
     setKeepWindowOpen(e.target.checked);
   };
+
+  const typeDependentFileName = isAnnotation ? "annotation files" : "datasets";
+  const moreInfoHint = (
+    <Hint
+      style={{
+        margin: "0px 12px 0px 12px",
+      }}
+    >
+      For more information on how to work with {typeDependentFileName} visit the{" "}
+      <a
+        href="https://docs.webknossos.org/webknossos/tooling.html"
+        target="_blank"
+        rel="noreferrer"
+      >
+        user documentation
+      </a>
+      .
+    </Hint>
+  );
 
   const workerInfo = (
     <Row>
@@ -410,14 +448,10 @@ function _DownloadModalView({
     "loading...",
     [activeUser],
   );
-  const wkInitSnippet = `import webknossos as wk
 
-with wk.webknossos_context(
-    token="${authToken || "<insert token here>"}",
-    url="${window.location.origin}"
-):
-    annotation = wk.Annotation.download("${tracing.annotationId}")
-`;
+  const wkInitSnippet = isAnnotation
+    ? getPythonAnnotationDownloadSnippet(authToken, tracing)
+    : getPythonDatasetDownloadSnippet(authToken, dataset);
 
   const alertTokenIsPrivate = () => {
     if (authToken) {
@@ -441,7 +475,7 @@ with wk.webknossos_context(
 
   return (
     <Modal
-      title="Download this annotation"
+      title={`Download this ${typeName}`}
       open={isOpen}
       width={600}
       footer={
@@ -461,82 +495,86 @@ with wk.webknossos_context(
       style={{ overflow: "visible" }}
     >
       <Tabs activeKey={activeTabKey} onChange={handleTabChange} type="card">
-        <TabPane tab="Download" key="download">
-          <Row>
-            {maybeShowWarning()}
-            <Text
+        {isAnnotation ? (
+          <TabPane tab="Download" key="download">
+            <Row>
+              {maybeShowWarning()}
+              <Text
+                style={{
+                  margin: "0 6px 12px",
+                }}
+              >
+                {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
+                {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
+                {messages["annotation.download"]}
+              </Text>
+            </Row>
+            <Divider
               style={{
-                margin: "0 6px 12px",
+                margin: "18px 0",
               }}
             >
-              {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
-              {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
-              {messages["annotation.download"]}
-            </Text>
-          </Row>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Options
-          </Divider>
-          <Row>
-            <Col
-              span={9}
-              style={{
-                lineHeight: "20px",
-                padding: "5px 12px",
-              }}
-            >
-              Select the data you would like to download.
-            </Col>
-            <Col span={15}>
-              <CheckboxGroup onChange={handleCheckboxChange} defaultValue={["Volume", "Skeleton"]}>
-                {hasVolumes ? (
-                  <div>
-                    <Checkbox
-                      style={checkboxStyle}
-                      value="Volume"
-                      // If no skeleton is available, volume is always selected
-                      checked={!hasSkeleton ? true : includeVolumeData}
-                      disabled={!hasSkeleton}
-                    >
-                      Volume annotations as WKW
-                    </Checkbox>
-                    <Hint
-                      style={{
-                        marginLeft: 24,
-                        marginBottom: 12,
-                      }}
-                    >
-                      Download a zip folder containing WKW files.
-                    </Hint>
-                  </div>
-                ) : null}
-
-                <Checkbox style={checkboxStyle} value="Skeleton" checked disabled>
-                  {hasSkeleton ? "Skeleton annotations" : "Meta data"} as NML
-                </Checkbox>
-                <Hint
-                  style={{
-                    marginLeft: 24,
-                    marginBottom: 12,
-                  }}
+              Options
+            </Divider>
+            <Row>
+              <Col
+                span={9}
+                style={{
+                  lineHeight: "20px",
+                  padding: "5px 12px",
+                }}
+              >
+                Select the data you would like to download.
+              </Col>
+              <Col span={15}>
+                <CheckboxGroup
+                  onChange={handleCheckboxChange}
+                  defaultValue={["Volume", "Skeleton"]}
                 >
-                  An NML file will always be included with any download.
-                </Hint>
-              </CheckboxGroup>
-            </Col>
-          </Row>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          />
-          <MoreInfoHint />
-        </TabPane>
+                  {hasVolumes ? (
+                    <div>
+                      <Checkbox
+                        style={checkboxStyle}
+                        value="Volume"
+                        // If no skeleton is available, volume is always selected
+                        checked={!hasSkeleton ? true : includeVolumeData}
+                        disabled={!hasSkeleton}
+                      >
+                        Volume annotations as WKW
+                      </Checkbox>
+                      <Hint
+                        style={{
+                          marginLeft: 24,
+                          marginBottom: 12,
+                        }}
+                      >
+                        Download a zip folder containing WKW files.
+                      </Hint>
+                    </div>
+                  ) : null}
 
+                  <Checkbox style={checkboxStyle} value="Skeleton" checked disabled>
+                    {hasSkeleton ? "Skeleton annotations" : "Meta data"} as NML
+                  </Checkbox>
+                  <Hint
+                    style={{
+                      marginLeft: 24,
+                      marginBottom: 12,
+                    }}
+                  >
+                    An NML file will always be included with any download.
+                  </Hint>
+                </CheckboxGroup>
+              </Col>
+            </Row>
+            <Divider
+              style={{
+                margin: "18px 0",
+              }}
+            />
+            {moreInfoHint}
+          </TabPane>
+        ) : null}
         <TabPane tab="TIFF Export" key="export">
           <Row>
             <Text
@@ -544,7 +582,7 @@ with wk.webknossos_context(
                 margin: "0 6px 12px",
               }}
             >
-              {messages["annotation.export"]}
+              {messages["download.export_as_tiff"]({ typeName })}
             </Text>
           </Row>
           {activeTabKey === "export" && !features().jobsEnabled ? (
@@ -656,7 +694,7 @@ with wk.webknossos_context(
               margin: "18px 0",
             }}
           />
-          <MoreInfoHint />
+          {moreInfoHint}
           <Checkbox
             style={{ position: "absolute", bottom: -62 }}
             checked={keepWindowOpen}
@@ -678,7 +716,7 @@ with wk.webknossos_context(
               <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
                 WEBKNOSSOS Python API
               </a>
-              . To download and use this annotation in your Python project, simply copy and paste
+              . To download and use this {typeName} in your Python project, simply copy and paste
               the code snippets to your script.
             </Text>
           </Row>
@@ -699,7 +737,7 @@ with wk.webknossos_context(
               margin: "18px 0",
             }}
           />
-          <MoreInfoHint />
+          {moreInfoHint}
         </TabPane>
       </Tabs>
     </Modal>

@@ -86,7 +86,7 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   private val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
@@ -128,10 +128,11 @@ class EditableMappingService @Inject()(
 
   def duplicate(editableMappingIdOpt: Option[String],
                 version: Option[Long],
-                remoteFallbackLayer: RemoteFallbackLayer,
+                remoteFallbackLayerOpt: Option[RemoteFallbackLayer],
                 userToken: Option[String]): Fox[String] =
     for {
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
+      remoteFallbackLayer <- remoteFallbackLayerOpt ?~> "duplicate on editable mapping without remote fallback layer"
       editableMappingInfoAndVersion <- getInfoAndActualVersion(editableMappingId,
                                                                version,
                                                                remoteFallbackLayer,
@@ -634,7 +635,7 @@ class EditableMappingService @Inject()(
     for {
       firstMappingId <- editableMappingIds.headOption.toFox
       before = Instant.now
-      newMappingId <- duplicate(Some(firstMappingId), version = None, remoteFallbackLayer, userToken)
+      newMappingId <- duplicate(Some(firstMappingId), version = None, Some(remoteFallbackLayer), userToken)
       _ <- Fox.serialCombined(editableMappingIds.tail)(editableMappingId =>
         mergeInto(newMappingId, editableMappingId, remoteFallbackLayer, userToken))
       _ = logger.info(s"Merging ${editableMappingIds.length} editable mappings took ${Instant.since(before)}")

@@ -604,7 +604,7 @@ export default function TaskListView({
           <Search
             placeholder="Filter workflows"
             onSearch={handleOnSearch}
-            style={{ width: 350 }}
+            style={{ minWidth: 150 }}
             allowClear
           />
           <div style={{ flex: 1 }} />
@@ -620,7 +620,7 @@ export default function TaskListView({
                   : addUrlParam(history.location, "runId", value),
               )
             }
-            style={{ maxWidth: 300 }}
+            style={{ maxWidth: "70%" }}
           >
             <Select.Option value="">Consolidated</Select.Option>
             {report.runs.map((run) => (
@@ -666,7 +666,13 @@ function aggregateTaskInfos(
         taskName: task.key,
         state: VoxelyticsRunState.SKIPPED,
         currentExecutionId: null,
-        chunkCounts: { total: 0, failed: 0, skipped: 0, complete: 0, cancelled: 0 },
+        chunkCounts: {
+          total: 0,
+          failed: 0,
+          skipped: 0,
+          complete: 0,
+          cancelled: 0,
+        },
         beginTime: null,
         endTime: null,
         runs: [],

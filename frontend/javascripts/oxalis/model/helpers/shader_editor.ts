@@ -1,5 +1,6 @@
 // @ts-nocheck
 import window, { document } from "libs/window";
+import app from "app";
 
 export default {
   addBucketManagers(textureBucketManager) {
@@ -24,7 +25,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   function overrideShader() {
     window.materials[identifier][shaderType] = input.value;
     window.materials[identifier].needsUpdate = true;
-    window.needsRerender = true;
+    app.vent.emit("rerender");
   }
 
   button.addEventListener("click", () => overrideShader());

@@ -137,7 +137,7 @@ class ArbitraryView {
 
     TWEEN.update();
 
-    if (this.needsRerender || window.needsRerender) {
+    if (this.needsRerender) {
       const { camera, geometries } = this;
       const { renderer, scene } = getSceneController();
 
@@ -200,8 +200,6 @@ class ArbitraryView {
       }
 
       this.needsRerender = false;
-      // @ts-ignore
-      window.needsRerender = false;
     }
 
     this.animationRequestId = window.requestAnimationFrame(this.animate);

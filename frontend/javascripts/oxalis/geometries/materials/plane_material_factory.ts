@@ -832,8 +832,7 @@ class PlaneMaterialFactory {
     this.oldShaderCode = newShaderCode;
     this.material.fragmentShader = newShaderCode;
     this.material.needsUpdate = true;
-    // @ts-ignore
-    window.needsRerender = true;
+    app.vent.emit("rerender");
   }, RECOMPILATION_THROTTLE_TIME);
 
   getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {

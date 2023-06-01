@@ -104,8 +104,7 @@ class PlaneView {
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
-    if (forceRender || this.needsRerender || window.needsRerender) {
-      window.needsRerender = false;
+    if (forceRender || this.needsRerender) {
       const { renderer, scene } = SceneController;
       this.emitter.emit("render");
       const storeState = Store.getState();

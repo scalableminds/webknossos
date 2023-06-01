@@ -264,8 +264,6 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
             await api.data.reloadBuckets(oldVolumeTracing.tracingId);
-            // @ts-ignore
-            window.needsRerender = true;
           }
         }
 

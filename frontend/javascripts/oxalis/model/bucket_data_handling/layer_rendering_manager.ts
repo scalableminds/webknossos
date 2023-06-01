@@ -23,7 +23,6 @@ import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_buck
 import UpdatableTexture from "libs/UpdatableTexture";
 import type { ViewMode, Vector3, Vector4 } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import window from "libs/window";
 import DiffableMap from "libs/diffable_map";
 import { CuckooTable } from "./cuckoo_table";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
@@ -31,6 +30,7 @@ import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import app from "app";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
@@ -143,8 +143,7 @@ export default class LayerRenderingManager {
 
   refresh() {
     this.needsRefresh = true;
-    // @ts-ignore
-    window.needsRerender = true;
+    app.vent.emit("rerender");
   }
 
   setupDataTextures(): void {

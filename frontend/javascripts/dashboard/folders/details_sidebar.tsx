@@ -11,6 +11,7 @@ import { pluralize } from "libs/utils";
 import _ from "lodash";
 import {
   DatasetExtentRow,
+  OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
@@ -18,25 +19,32 @@ import { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { getOrganization } from "admin/admin_rest_api";
+import { useQuery } from "@tanstack/react-query";
 
 export function DetailsSidebar({
   selectedDatasets,
   setSelectedDataset,
   datasetCount,
   searchQuery,
-  activeFolderId,
+  // The folder ID to display details for. This can be the active folder selected in the tree view
+  // or a selected subfolder in the dataset table.
+  folderId,
   setFolderIdForEditModal,
+  displayedFolderEqualsActiveFolder,
 }: {
   selectedDatasets: APIDatasetCompact[];
   setSelectedDataset: (ds: APIDatasetCompact | null) => void;
+  folderId: string | null;
   datasetCount: number;
   searchQuery: string | null;
-  activeFolderId: string | null;
   setFolderIdForEditModal: (value: string | null) => void;
+  displayedFolderEqualsActiveFolder: boolean;
 }) {
   const context = useDatasetCollectionContext();
-  const { data: folder, error } = useFolderQuery(activeFolderId);
-
+  const { data: folder, error } = useFolderQuery(folderId);
   useEffect(() => {
     if (
       selectedDatasets.some((ds) => ds.folderId !== context.activeFolderId) &&
@@ -61,11 +69,12 @@ export function DetailsSidebar({
         <SearchDetails datasetCount={datasetCount} />
       ) : (
         <FolderDetails
-          activeFolderId={activeFolderId}
+          folderId={folderId}
           folder={folder}
           datasetCount={datasetCount}
           setFolderIdForEditModal={setFolderIdForEditModal}
           error={error}
+          displayedFolderEqualsActiveFolder={displayedFolderEqualsActiveFolder}
         />
       )}
     </div>
@@ -79,6 +88,30 @@ function getMaybeSelectMessage(datasetCount: number) {
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const { data: owningOrganization } = useQuery(
+    ["organizations", selectedDataset.owningOrganization],
+    () => getOrganization(selectedDataset.owningOrganization),
+    {
+      refetchOnWindowFocus: false,
+    },
+  );
+  const owningOrganizationDisplayName = owningOrganization?.displayName;
+
+  const renderOrganization = () => {
+    if (activeUser?.organization === selectedDataset.owningOrganization) return;
+    return (
+      <table>
+        <tbody>
+          <OwningOrganizationRow
+            organizationName={
+              owningOrganizationDisplayName != null ? owningOrganizationDisplayName : ""
+            }
+          />
+        </tbody>
+      </table>
+    );
+  };
 
   return (
     <>
@@ -90,6 +123,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         )}{" "}
         {selectedDataset.displayName || selectedDataset.name}
       </h4>
+      {renderOrganization()}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>
@@ -184,19 +218,30 @@ function SearchDetails({ datasetCount }: { datasetCount: number }) {
 }
 
 function FolderDetails({
-  activeFolderId,
+  folderId,
   folder,
   datasetCount,
   setFolderIdForEditModal,
   error,
+  displayedFolderEqualsActiveFolder,
 }: {
-  activeFolderId: string | null;
+  folderId: string | null;
   folder: Folder | undefined;
   datasetCount: number;
   setFolderIdForEditModal: (id: string | null) => void;
   error: unknown;
+  displayedFolderEqualsActiveFolder: boolean;
 }) {
-  const maybeSelectMsg = getMaybeSelectMessage(datasetCount);
+  let message = getMaybeSelectMessage(datasetCount);
+  if (!displayedFolderEqualsActiveFolder) {
+    message =
+      datasetCount > 0
+        ? `Double-click the folder to list ${pluralize("this", datasetCount, "these")} ${pluralize(
+            "dataset",
+            datasetCount,
+          )}.`
+        : "";
+  }
   return (
     <>
       {folder ? (
@@ -221,14 +266,14 @@ function FolderDetails({
             <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
               {datasetCount} {pluralize("dataset", datasetCount)}*
             </Tooltip>
-            . {maybeSelectMsg}
+            . {message}
           </p>
           <div className="sidebar-label">Access Permissions</div>
           <FolderTeamTags folder={folder} />
         </div>
       ) : error ? (
         "Could not load folder."
-      ) : activeFolderId != null ? (
+      ) : folderId != null ? (
         <Spin spinning />
       ) : null}
     </>

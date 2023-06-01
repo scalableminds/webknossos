@@ -209,12 +209,6 @@ services:
       - ".:/home/pptruser/webknossos"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
-  # webKnossos-connect
-  webknossos-connect:
-    image: scalableminds/webknossos-connect:master__205
-    volumes:
-      - "./conf/connect:/app/data"
-
   # Postgres
   postgres:
     image: postgres:10-alpine

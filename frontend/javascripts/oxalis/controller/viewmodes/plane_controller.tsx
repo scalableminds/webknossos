@@ -1,6 +1,4 @@
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
 import dimensions from "oxalis/model/dimensions";
@@ -233,23 +231,10 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop;
     keyboardLoopDelayed?: InputKeyboard;
   };
+  unbind: (() => void) | null = null;
 
-  storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
   isStarted: boolean = false;
-  // Copied from backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
-  listenTo: (...args: Array<any>) => any;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'stopListening' has no initializer and is... Remove this comment to see the full error message
-  stopListening: (...args: Array<any>) => any;
-
-  constructor(...args: any) {
-    // @ts-expect-error ts-migrate(2556) FIXME: Expected 1-2 arguments, but got 0 or more.
-    super(...args);
-
-    _.extend(this, BackboneEvents);
-
-    this.storePropertyUnsubscribers = [];
-  }
 
   componentDidMount() {
     this.input = {
@@ -516,7 +501,14 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   bindToEvents(): void {
-    this.listenTo(this.planeView, "render", this.onPlaneViewRender);
+    this.unbind = this.planeView.emitter.on("render", this.onPlaneViewRender);
+  }
+
+  stopListening(): void {
+    if (this.unbind != null) {
+      this.unbind();
+      this.unbind = null;
+    }
   }
 
   onPlaneViewRender(): void {

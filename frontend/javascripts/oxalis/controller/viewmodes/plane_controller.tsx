@@ -140,6 +140,10 @@ class SkeletonKeybindings {
       "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
     };
   }
+
+  static getExtendedKeyboardControls() {
+    return { s: () => setTool(AnnotationToolEnum.SKELETON) };
+  }
 }
 
 class VolumeKeybindings {
@@ -163,6 +167,18 @@ class VolumeKeybindings {
       },
     };
   }
+
+  static getExtendedKeyboardControls() {
+    return {
+      b: () => setTool(AnnotationToolEnum.BRUSH),
+      e: () => setTool(AnnotationToolEnum.ERASE_BRUSH),
+      l: () => setTool(AnnotationToolEnum.TRACE),
+      r: () => setTool(AnnotationToolEnum.ERASE_TRACE),
+      f: () => setTool(AnnotationToolEnum.FILL_CELL),
+      p: () => setTool(AnnotationToolEnum.PICK_CELL),
+      q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
+    };
+  }
 }
 
 class BoundingBoxKeybindings {
@@ -170,6 +186,10 @@ class BoundingBoxKeybindings {
     return {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
     };
+  }
+
+  static getExtendedKeyboardControls() {
+    return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
   }
 }
 
@@ -470,17 +490,9 @@ class PlaneController extends React.PureComponent<Props> {
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
     };
-    const extendedControls = {
+    let extendedControls = {
       m: () => setTool(AnnotationToolEnum.MOVE),
-      s: () => setTool(AnnotationToolEnum.SKELETON),
-      b: () => setTool(AnnotationToolEnum.BRUSH),
-      e: () => setTool(AnnotationToolEnum.ERASE_BRUSH),
-      l: () => setTool(AnnotationToolEnum.TRACE),
-      r: () => setTool(AnnotationToolEnum.ERASE_TRACE),
-      f: () => setTool(AnnotationToolEnum.FILL_CELL),
-      p: () => setTool(AnnotationToolEnum.PICK_CELL),
-      q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
-      x: () => setTool(AnnotationToolEnum.BOUNDING_BOX),
+      ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
@@ -497,6 +509,16 @@ class PlaneController extends React.PureComponent<Props> {
         : emptyDefaultHandler;
     const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
+    const extendedSkeletonControls =
+      this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
+    const extendedVolumeControls =
+      this.props.tracing.volumes.length > 0 != null
+        ? VolumeKeybindings.getExtendedKeyboardControls()
+        : {};
+    ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
+    const extendedAnnotationControls = { ...extendedSkeletonControls, ...extendedVolumeControls };
+    ensureNonConflictingHandlers(extendedAnnotationControls, extendedControls);
+    extendedControls = { ...extendedControls, ...extendedAnnotationControls };
 
     return {
       baseControls: {

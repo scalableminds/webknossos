@@ -75,7 +75,6 @@ export class InputKeyboardNoLoop {
   supportInputElements: boolean = false;
   supportExtendedCommands: boolean = false;
   extendedBindings: Array<KeyboardBindingPress> = [];
-  isInExtendedMode: boolean = false;
   cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -100,6 +99,8 @@ export class InputKeyboardNoLoop {
 
     if (extendedCommands) {
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
+      // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
+      this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
         this.attach(key, callback, true);
@@ -146,14 +147,7 @@ export class InputKeyboardNoLoop {
           return;
         }
         const isInExtendedMode = KeyboardJS.getContext() === "extended";
-        if (
-          (isExtendedCommand && !isInExtendedMode) ||
-          (!isExtendedCommand && isInExtendedMode && key !== EXTENDED_COMMAND_KEYS)
-        ) {
-          // Skipping extended commands if not in extended mode
-          // Skipping normal commands if in extended mode.
-          return;
-        } else if (isExtendedCommand) {
+        if (isInExtendedMode) {
           this.cancelExtendedModeTimeout();
           KeyboardJS.setContext("default");
         }
@@ -190,7 +184,6 @@ export class InputKeyboardNoLoop {
 // This module is "main" keyboard handler.
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
-
 export class InputKeyboard {
   keyCallbackMap: Record<string, KeyboardLoopHandler> = {};
   keyPressedCount: number = 0;

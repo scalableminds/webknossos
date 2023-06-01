@@ -2351,11 +2351,15 @@ export async function getSamEmbedding(
   mag: Vector3,
   embeddingBoxMag1: BoundingBox,
   intensityRange?: Vector2 | null,
+  useSmallModel: boolean = false,
 ): Promise<Float32Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {
     params.append("intensityMin", `${intensityRange[0]}`);
     params.append("intensityMax", `${intensityRange[1]}`);
+  }
+  if (useSmallModel) {
+    params.append("useSmallModelOpt", `${useSmallModel}`);
   }
 
   const buffer = await Request.sendJSONReceiveArraybuffer(

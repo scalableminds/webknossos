@@ -66,7 +66,7 @@ export default function* listenToQuickSelect(): Saga<void> {
     if (isQuickSelectTool && features().segmentAnythingEnabled) {
       // Retrieve the inference session to prefetch it as soon as the tool
       // is selected. If the session is cached, this is basically a noop.
-      yield* call(getInferenceSession);
+      yield* call(getInferenceSession, (window as any).USE_SMALL_MODEL);
     }
   });
 

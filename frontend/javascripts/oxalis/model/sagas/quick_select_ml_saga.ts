@@ -20,12 +20,19 @@ import Dimensions from "../dimensions";
 import { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
-const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
+// /predictions/sam_vit_l_small
+
+(window as any).USE_SMALL_MODEL = true;
+(window as any).USE_LOW_RES_AS_REFINEMENT = true;
+
+const getEmbeddingSize = () =>
+  ((window as any).USE_SMALL_MODEL ? [512, 512, 0] : [1024, 1024, 0]) as Vector3;
 type CacheEntry = {
   embeddingPromise: Promise<Float32Array>;
   embeddingBoxMag1: BoundingBox;
   mag: Vector3;
   layerName: string;
+  useSmallModel: boolean;
 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
@@ -41,6 +48,7 @@ function getEmbedding(
   userBoxMag1: BoundingBox,
   mag: Vector3,
   activeViewport: OrthoView,
+  useSmallModel: boolean,
   intensityRange?: Vector2 | null,
 ): CacheEntry {
   if (userBoxMag1.getVolume() === 0) {
@@ -50,7 +58,8 @@ function getEmbedding(
     (entry) =>
       entry.embeddingBoxMag1.containsBoundingBox(userBoxMag1) &&
       V3.equals(entry.mag, mag) &&
-      entry.layerName === layerName,
+      entry.layerName === layerName &&
+      entry.useSmallModel === useSmallModel,
   );
   if (matchingCacheEntry) {
     // Move entry to the front.
@@ -62,7 +71,7 @@ function getEmbedding(
     return matchingCacheEntry;
   } else {
     const embeddingCenter = V3.round(userBoxMag1.getCenter());
-    const sizeInMag1 = V3.scale3(Dimensions.transDim(EMBEDDING_SIZE, activeViewport), mag);
+    const sizeInMag1 = V3.scale3(Dimensions.transDim(getEmbeddingSize(), activeViewport), mag);
     const embeddingTopLeft = V3.alignWithMag(
       V3.sub(embeddingCenter, V3.scale(sizeInMag1, 0.5)),
       mag,
@@ -88,22 +97,35 @@ function getEmbedding(
       mag,
       embeddingBoxMag1,
       intensityRange,
+      (window as any).USE_SMALL_MODEL,
     );
 
-    const newEntry = { embeddingPromise, embeddingBoxMag1, mag, layerName };
+    const newEntry = { embeddingPromise, embeddingBoxMag1, mag, layerName, useSmallModel };
     embeddingCache = [newEntry, ...embeddingCache.slice(0, MAXIMUM_CACHE_SIZE - 1)];
 
     return newEntry;
   }
 }
 
-let session: Promise<InferenceSession> | null;
+let sessionBig: Promise<InferenceSession> | null;
+let sessionSmall: Promise<InferenceSession> | null;
 
-export async function getInferenceSession() {
-  if (session == null) {
-    session = ort.InferenceSession.create("/assets/models/vit_l_0b3195_decoder_quantized.onnx");
+export async function getInferenceSession(useSmallModel: boolean) {
+  if (useSmallModel) {
+    if (sessionSmall == null) {
+      sessionSmall = ort.InferenceSession.create(
+        "/assets/models/vit_l_0b3195_small_decoder_quantized.onnx",
+      );
+    }
+    return sessionSmall;
+  } else {
+    if (sessionBig == null) {
+      sessionBig = ort.InferenceSession.create(
+        "/assets/models/vit_l_0b3195_decoder_quantized.onnx",
+      );
+    }
+    return sessionBig;
   }
-  return session;
 }
 
 async function inferFromEmbedding(
@@ -118,7 +140,7 @@ async function inferFromEmbedding(
 
   let ortSession;
   try {
-    ortSession = await getInferenceSession();
+    ortSession = await getInferenceSession((window as any).USE_SMALL_MODEL);
   } catch (exception) {
     console.error(exception);
     return null;
@@ -144,20 +166,61 @@ async function inferFromEmbedding(
         ]);
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
   const onnxLabel = new Float32Array([2, 3]);
-  const onnxMaskInput = new Float32Array(256 * 256);
+  const smallDivisor = (window as any).USE_SMALL_MODEL ? 2 : 1;
+  const onnxMaskInput = new Float32Array(((256 / smallDivisor) * 256) / smallDivisor);
   const onnxHasMaskInput = new Float32Array([0]);
-  const origImSize = new Float32Array([1024, 1024]);
-  const ortInputs = {
-    image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
+  const EMBEDDING_SIZE = getEmbeddingSize();
+  const origImSize = new Float32Array([EMBEDDING_SIZE[0], EMBEDDING_SIZE[1]]);
+
+  const getOrtInputs = (maskInput: ort.Tensor) => ({
+    image_embeddings: new ort.Tensor("float32", embedding, [
+      1,
+      256,
+      64 / smallDivisor,
+      64 / smallDivisor,
+    ]),
     point_coords: new ort.Tensor("float32", onnxCoord, [1, 2, 2]),
     point_labels: new ort.Tensor("float32", onnxLabel, [1, 2]),
-    mask_input: new ort.Tensor("float32", onnxMaskInput, [1, 1, 256, 256]),
+    mask_input: maskInput,
     has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
     orig_im_size: new ort.Tensor("float32", origImSize, [2]),
-  };
+  });
 
-  // Use intersection-over-union estimates to pick the best mask.
-  const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
+  const maskInput = new ort.Tensor("float32", onnxMaskInput, [
+    1,
+    1,
+    256 / smallDivisor,
+    256 / smallDivisor,
+  ]);
+
+  let masks;
+  let iouPredictions;
+
+  console.log(`Infer with ${(window as any).USE_SMALL_MODEL ? "small" : "default"} model.`);
+  console.time("Infer (first pass)");
+  // Get low resolution masks.
+  const {
+    masks: firstPassMasks,
+    iou_predictions: firstPassIouPredictions,
+    low_res_masks,
+  } = await ortSession.run(getOrtInputs(maskInput));
+  console.timeEnd("Infer (first pass)");
+
+  if ((window as any).USE_LOW_RES_AS_REFINEMENT) {
+    // Pass these into the decoder again
+    // Use intersection-over-union estimates to pick the best mask.
+    console.time("Infer (second pass)");
+    const { masks: secondPassMasks, iou_predictions: secondPassIouPredictions } =
+      await ortSession.run(getOrtInputs(low_res_masks));
+    console.timeEnd("Infer (second pass)");
+
+    masks = secondPassMasks;
+    iouPredictions = secondPassIouPredictions;
+  } else {
+    masks = firstPassMasks;
+    iouPredictions = firstPassIouPredictions;
+  }
+
   // @ts-ignore
   const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
@@ -224,11 +287,12 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
       alignedUserBoxMag1,
       labeledResolution,
       activeViewport,
+      (window as any).USE_SMALL_MODEL,
       colorLayer.elementClass === "uint8" ? null : intensityRange,
     );
     // Also prefetch session (will block). After the first time, it's basically
     // a noop.
-    yield* call(getInferenceSession);
+    yield* call(getInferenceSession, (window as any).USE_SMALL_MODEL);
 
     // Await the promise here so that the saga finishes once the embedding was loaded
     // (this simplifies debugging and time measurement).
@@ -284,6 +348,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     alignedUserBoxMag1,
     labeledResolution,
     activeViewport,
+    (window as any).USE_SMALL_MODEL,
     colorLayer.elementClass === "uint8" ? null : intensityRange,
   );
   let embedding;

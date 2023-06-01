@@ -40,6 +40,7 @@ class ArbitraryView {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: THREE.Object3D;
   cameraPosition: Array<number>;
+  unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
     this.animate = this.animateImpl.bind(this);
@@ -73,15 +74,6 @@ class ArbitraryView {
     };
     this.cameraPosition = [0, 0, this.camDistance];
     this.needsRerender = true;
-    app.vent.on("rerender", () => {
-      this.needsRerender = true;
-    });
-    Store.subscribe(() => {
-      // Render in the next frame after the change propagated everywhere
-      window.requestAnimationFrame(() => {
-        this.needsRerender = true;
-      });
-    });
   }
 
   getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
@@ -91,6 +83,21 @@ class ArbitraryView {
   start(): void {
     if (!this.isRunning) {
       this.isRunning = true;
+
+      this.unsubscribeFunctions.push(
+        app.vent.on("rerender", () => {
+          this.needsRerender = true;
+        }),
+      );
+      this.unsubscribeFunctions.push(
+        Store.subscribe(() => {
+          // Render in the next frame after the change propagated everywhere
+          window.requestAnimationFrame(() => {
+            this.needsRerender = true;
+          });
+        }),
+      );
+
       this.group = new THREE.Object3D();
       this.group.add(this.camera);
       getSceneController().rootGroup.add(this.group);
@@ -113,6 +120,11 @@ class ArbitraryView {
 
       getSceneController().rootGroup.remove(this.group);
       window.removeEventListener("resize", this.resizeThrottled);
+
+      for (const fn of this.unsubscribeFunctions) {
+        fn();
+      }
+      this.unsubscribeFunctions = [];
     }
   }
 

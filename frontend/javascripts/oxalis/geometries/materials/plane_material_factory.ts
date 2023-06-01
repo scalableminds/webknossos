@@ -635,8 +635,7 @@ class PlaneMaterialFactory {
           if (updatedLayerVisibility) {
             this.recomputeFragmentShader();
           }
-          // TODO: Needed?
-          app.vent.trigger("rerender");
+          app.vent.emit("rerender");
         },
         true,
       ),

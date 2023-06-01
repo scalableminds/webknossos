@@ -1,6 +1,6 @@
 // @ts-nocheck
+import { createNanoEvents } from "nanoevents";
 import { ExecutionContext } from "ava";
-import BackboneEvents from "backbone-events-standalone";
 import Maybe from "data.maybe";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
@@ -55,7 +55,7 @@ const ErrorHandling = {
   notify: _.noop,
 };
 const app = {
-  vent: Object.assign({}, BackboneEvents),
+  vent: createNanoEvents(),
 };
 const protoHelpers = {
   parseProtoTracing: sinon.stub(),
@@ -229,7 +229,7 @@ export function __setupOxalis(
   )
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
-      app.vent.trigger("webknossos:ready");
+      app.vent.emit("webknossos:ready");
       webknossos.apiReady(apiVersion).then((apiObject) => {
         t.context.api = apiObject;
       });

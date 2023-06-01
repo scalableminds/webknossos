@@ -397,14 +397,14 @@ class SceneController {
       plane.setDisplayCrosshair(value);
     }
 
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
     const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   setInterpolation(value: boolean): void {
@@ -412,7 +412,7 @@ class SceneController {
       plane.setLinearInterpolationEnabled(value);
     }
 
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   getRootNode(): THREE.Object3D {

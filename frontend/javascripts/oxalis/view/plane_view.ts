@@ -45,6 +45,7 @@ class PlaneView {
 
   running: boolean;
   needsRerender: boolean;
+  unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
     this.emitter = createNanoEvents();
@@ -82,15 +83,6 @@ class PlaneView {
     }
 
     this.needsRerender = true;
-    app.vent.on("rerender", () => {
-      this.needsRerender = true;
-    });
-    Store.subscribe(() => {
-      // Render in the next frame after the change propagated everywhere
-      window.requestAnimationFrame(() => {
-        this.needsRerender = true;
-      });
-    });
   }
 
   animate(): void {
@@ -208,7 +200,7 @@ class PlaneView {
   }
 
   draw(): void {
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   resizeThrottled = _.throttle((): void => {
@@ -234,9 +226,28 @@ class PlaneView {
     }
 
     window.removeEventListener("resize", this.resizeThrottled);
+
+    for (const fn of this.unsubscribeFunctions) {
+      fn();
+    }
+    this.unsubscribeFunctions = [];
   }
 
   start(): void {
+    this.unsubscribeFunctions.push(
+      app.vent.on("rerender", () => {
+        this.needsRerender = true;
+      }),
+    );
+    this.unsubscribeFunctions.push(
+      Store.subscribe(() => {
+        // Render in the next frame after the change propagated everywhere
+        window.requestAnimationFrame(() => {
+          this.needsRerender = true;
+        });
+      }),
+    );
+
     this.running = true;
     this.resize();
     this.animate();

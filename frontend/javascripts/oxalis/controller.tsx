@@ -176,7 +176,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     this.initTaskScript();
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type '(Win... Remove this comment to see the full error message
     window.webknossos = new ApiLoader(Model);
-    app.vent.trigger("webknossos:ready");
+    app.vent.emit("webknossos:ready");
     Store.dispatch(wkReadyAction());
     setTimeout(() => {
       // Give wk (sagas and bucket loading) a bit time to catch air before

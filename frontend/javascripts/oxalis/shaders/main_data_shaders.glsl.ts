@@ -20,6 +20,7 @@ import compileShader from "./shader_module_system";
 import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
 
 type Params = {
   globalLayerCount: number;
@@ -106,6 +107,7 @@ uniform vec3 globalPosition;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
 uniform bool useBilinearFiltering;
+uniform float blendMode;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
@@ -151,6 +153,8 @@ ${compileShader(
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
+  getBlendLayersAdditive,
+  getBlendLayersCover,
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentationId : null,
@@ -171,7 +175,7 @@ void main() {
     gl_FragColor = vec4(bucketPosition, activeMagIdx) / 255.;
     return;
   }
-  vec3 data_color = vec3(0.0);
+  vec4 data_color = vec4(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     vec4 <%= segmentationName%>_id_low = vec4(0.);
@@ -204,7 +208,7 @@ void main() {
       <% } %>
 
       if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
-        color_value =
+        MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
             <%= formatNumberAsGLSLFloat(layerIndex) %>,
             <%= name %>_data_texture_width,
@@ -213,8 +217,9 @@ void main() {
             false,
             fallbackGray,
             !<%= name %>_has_transform
-          ).xyz;
-
+          );
+        bool used_fallback = maybe_filtered_color.used_fallback_color;
+        color_value = maybe_filtered_color.color.rgb;
         <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
           // Workaround for 16-bit color layers
           color_value = vec3(color_value.g * 256.0 + color_value.r);
@@ -233,14 +238,23 @@ void main() {
         color_value = abs(color_value - <%= name %>_is_inverted);
         // Catch the case where max == min would causes a NaN value and use black as a fallback color.
         color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        // Multiply with color and alpha for <%= name %>
-        data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+        color_value = color_value * <%= name %>_alpha * <%= name %>_color;
+        // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
+        // so the fallback color does not cover other colors.
+        vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * <%= name %>_alpha);
+        // Calculating the cover color for the current layer in case blendMode == 1.0.
+        vec4 additive_color = blendLayersAdditive(data_color, layer_color);
+        // Calculating the cover color for the current layer in case blendMode == 0.0.
+        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback);
+        // Choose color depending on blendMode.
+        data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
       }
     }
   <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);
+  data_color.a = 1.0;
 
-  gl_FragColor = vec4(data_color, 1.0);
+  gl_FragColor = data_color;
 
   <% if (hasSegmentation) { %>
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
@@ -257,7 +271,7 @@ void main() {
       float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
       float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
       gl_FragColor = vec4(mix(
-        data_color,
+        data_color.rgb,
         convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low),
         <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
       ), 1.0);

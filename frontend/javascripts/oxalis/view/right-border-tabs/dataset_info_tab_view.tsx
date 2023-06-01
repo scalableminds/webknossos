@@ -33,6 +33,7 @@ import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_a
 import { mayUserEditDataset } from "libs/utils";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
+import { getOrganization } from "admin/admin_rest_api";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -55,6 +56,7 @@ type DispatchProps = {
 type Props = StateProps & DispatchProps;
 type State = {
   showJobsDetailsModal: StartableJobsEnum | null | undefined;
+  owningOrganizationDisplayName: string | null;
 };
 const shortcuts = [
   {
@@ -193,9 +195,27 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
   );
 }
 
-class DatasetInfoTabView extends React.PureComponent<Props, State> {
+export function OwningOrganizationRow({ organizationName }: { organizationName: string | null }) {
+  return (
+    <Tooltip title="Organization" placement="left">
+      <tr>
+        <td
+          style={{
+            paddingRight: 4,
+          }}
+        >
+          <i className="fas fa-building fa-xl" />
+        </td>
+        <td>{organizationName === null ? <i>loading...</i> : organizationName}</td>
+      </tr>
+    </Tooltip>
+  );
+}
+
+export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     showJobsDetailsModal: null,
+    owningOrganizationDisplayName: null,
   };
 
   setAnnotationName = (newName: string) => {
@@ -205,6 +225,18 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   setAnnotationDescription = (newDescription: string) => {
     this.props.setAnnotationDescription(newDescription);
   };
+
+  componentDidMount(): void {
+    this.fetchData();
+  }
+
+  async fetchData(): Promise<void> {
+    let organization = await getOrganization(this.props.dataset.owningOrganization);
+    this.setState({
+      owningOrganizationDisplayName: organization.displayName,
+    });
+    console.log(this.state.owningOrganizationDisplayName);
+  }
 
   getTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
@@ -527,6 +559,13 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
+  maybePrintOrganization = () => {
+    const { activeUser, dataset } = this.props;
+    const owningOrganization = dataset.owningOrganization;
+    if (activeUser?.organization === owningOrganization) return;
+    return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
+  };
+
   maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
     const { owner, contributors } = this.props.tracing;
@@ -646,6 +685,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <tbody>
+              {this.maybePrintOrganization()}
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
               {resolutionInfo}

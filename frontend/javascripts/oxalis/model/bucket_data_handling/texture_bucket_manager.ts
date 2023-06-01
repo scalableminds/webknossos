@@ -60,7 +60,7 @@ function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementCl
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = src[srcIdx++];
-    idx++;
+    tmpPaddingBuffer[idx++] = 255;
   }
 
   return tmpPaddingBuffer;

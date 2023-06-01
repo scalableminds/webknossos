@@ -38,20 +38,21 @@ If case you want to reload, hide or remove a 3D mesh during proofreading, you ca
 
 In addition to the handy shortcuts available from the right-click context menu, users can also directly modify the super-voxel graph like any other skeleton to manually add/remove nodes and edges for fine-grained control.
 
--- The proofreading tool requires a super-voxel graph representation of a segmentation to work. At this time, these can only be obtained from the [Voxelytics AI segmentation pipeline](https://voxelytics.com). We are actively working to make this available for more users, so please reach out to us to get you started and provide feedback: [hello@webknossos.org](mailto:hello@webknossos.org) -- 
+-- The proofreading tool requires a super-voxel graph representation of a segmentation to work. At this time, these can only be obtained from the [Voxelytics AI segmentation pipeline](https://voxelytics.com). We are actively working to make this available for more users, so please reach out to us to get you started and provide feedback: [hello@webknossos.org](mailto:hello@webknossos.org) --
 
 ## Merger Mode
 
-With the `Merger Mode` tool individual segments (e.g. from over-segmentation) can be combined ("merged") to refine the segmentation and fix split errors. 
+With the `Merger Mode` tool individual segments (e.g. from over-segmentation) can be combined ("merged") to refine the segmentation and fix split errors.
 
 To use the `Merger Mode`:
+
 1. From the toolbar, switch to the Skeleton Tool
 2. From the toolbar, enable the "Merger Mode" modifier (double arrow icon)
 3. Mark connected segments by left-clicking them and placing nodes in the corresponding segments. This process will create a skeleton annotation in the process. Segments connected through this skeleton annotation will be merged into one. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
 
 Note, the `Merger Mode` is a rather light-way tool. WEBKNOSSOS will not directly apply your changes to the underlying segmentation. Rather the `Merger Mode` corrections are applied in real-time based on the currently available skeleton annotations. Disabling the `Merger Mode` will reveal the previous state of the segmentation. Enabling the merge mode will re-apply your corrections.
 
-![Video: ProofReading Volume Annotations](https://www.youtube.com/watch?v=Sq4AuWanK14)
+![youtube-video](https://www.youtube.com/embed/Sq4AuWanK14)
 
 After finishing the proofreading, a [long-running job](./jobs.md) can be started to apply the merging of segments into a new dataset with the same layers. The job can be started by clicking the "Materialize" button next to the merger mode button in the toolbar.
 
@@ -59,9 +60,10 @@ After finishing the proofreading, a [long-running job](./jobs.md) can be started
 ![Modal to start the Merger mode long-running job](./images/start_merger_mode_job_modal.jpg)
 
 ## Proofreading with skeletons and scripting
+
 In our workflows, we make heavy use of skeleton annotations for proofreading and evaluation. In combination with custom Python scripting we use skeletons:
 
-- to mark error locations as determined by evaluation scripts, e.g. incorrect predictions 
+- to mark error locations as determined by evaluation scripts, e.g. incorrect predictions
 - to label locations for True Positives/False Positive examples, e.g. to debug classifications
 - we encode additional metadata for any given segment in the skeleton tree names, groups, and comments, i.e. the biological cell type for a segment
 - we manually annotate classification mistakes or interesting features in the data and download/bring them back into our Python workflows for correction and further processing

@@ -31,7 +31,12 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { cycleToolAction, enterAction, escapeAction } from "oxalis/model/actions/ui_actions";
+import {
+  cycleToolAction,
+  enterAction,
+  escapeAction,
+  setToolAction,
+} from "oxalis/model/actions/ui_actions";
 import {
   MoveTool,
   SkeletonTool,
@@ -91,6 +96,10 @@ const cycleTools = () => {
 
 const cycleToolsBackwards = () => {
   Store.dispatch(cycleToolAction(true));
+};
+
+const setTool = (tool: AnnotationTool) => {
+  Store.dispatch(setToolAction(tool));
 };
 
 type StateProps = {
@@ -376,7 +385,10 @@ class PlaneController extends React.PureComponent<Props> {
       up: (timeFactor) => MoveHandlers.moveV(-getMoveValue(timeFactor)),
       down: (timeFactor) => MoveHandlers.moveV(getMoveValue(timeFactor)),
     });
-    const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
+    const {
+      baseControls: notLoopedKeyboardControls,
+      extendedControls: extendedNotLoopedKeyboardControls,
+    } = this.getNotLoopedKeyboardControls();
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
     ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
     this.input.keyboardLoopDelayed = new InputKeyboard(
@@ -404,7 +416,11 @@ class PlaneController extends React.PureComponent<Props> {
         delay: Store.getState().userConfiguration.keyboardDelay,
       },
     );
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(notLoopedKeyboardControls);
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
+      notLoopedKeyboardControls,
+      {},
+      extendedNotLoopedKeyboardControls,
+    );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.userConfiguration.keyboardDelay,
@@ -454,6 +470,19 @@ class PlaneController extends React.PureComponent<Props> {
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
     };
+    const extendedControls = {
+      m: () => setTool(AnnotationToolEnum.MOVE),
+      s: () => setTool(AnnotationToolEnum.SKELETON),
+      b: () => setTool(AnnotationToolEnum.BRUSH),
+      e: () => setTool(AnnotationToolEnum.ERASE_BRUSH),
+      l: () => setTool(AnnotationToolEnum.TRACE),
+      r: () => setTool(AnnotationToolEnum.ERASE_TRACE),
+      f: () => setTool(AnnotationToolEnum.FILL_CELL),
+      p: () => setTool(AnnotationToolEnum.PICK_CELL),
+      q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
+      x: () => setTool(AnnotationToolEnum.BOUNDING_BOX),
+    };
+
     // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = {
       c: null,
@@ -470,14 +499,17 @@ class PlaneController extends React.PureComponent<Props> {
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
     return {
-      ...baseControls,
-      ...skeletonControls,
-      ...volumeControls,
-      c: this.createToolDependentKeyboardHandler(
-        skeletonCHandler,
-        volumeCHandler,
-        boundingBoxCHandler,
-      ),
+      baseControls: {
+        ...baseControls,
+        ...skeletonControls,
+        ...volumeControls,
+        c: this.createToolDependentKeyboardHandler(
+          skeletonCHandler,
+          volumeCHandler,
+          boundingBoxCHandler,
+        ),
+      },
+      extendedControls,
     };
   }
 

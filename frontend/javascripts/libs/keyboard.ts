@@ -257,6 +257,7 @@
               this._paused = false;
               this.setContext("global");
               this.watch(targetWindow, targetElement, platform, userAgent);
+              this.setContext("default");
             }
 
             Keyboard.prototype.setLocale = function (localeName, localeBuilder) {

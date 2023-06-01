@@ -67,19 +67,43 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 // This keyboard hook directly passes a keycombo and callback
 // to the underlying KeyboadJS library to do its dirty work.
 // Pressing a button will only fire an event once.
+const EXTENDED_COMMAND_KEYS = "ctrl + k";
+const EXTENDED_COMMAND_DURATION = 3000;
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
+  supportExtendedCommands: boolean = false;
+  extendedBindings: Array<KeyboardBindingPress> = [];
+  isInExtendedMode: boolean = false;
+  cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     initialBindings: BindingMap<KeyboardHandler>,
     options?: {
       supportInputElements?: boolean;
+      supportExtendedCommands?: boolean;
     },
+    extendedCommands?: BindingMap<KeyboardHandler>,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
+      this.supportExtendedCommands =
+        options.supportExtendedCommands || this.supportExtendedCommands;
+    }
+
+    if (this.supportExtendedCommands && initialBindings[EXTENDED_COMMAND_KEYS] != null) {
+      console.warn(
+        `Extended commands are enabled, but the keybinding for it is already in use. Please change the keybinding for '${EXTENDED_COMMAND_KEYS}'.`,
+      );
+    }
+
+    if (extendedCommands) {
+      this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
+      for (const key of Object.keys(extendedCommands)) {
+        const callback = extendedCommands[key];
+        this.attach(key, callback, true);
+      }
     }
 
     for (const key of Object.keys(initialBindings)) {
@@ -88,7 +112,25 @@ export class InputKeyboardNoLoop {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardHandler) {
+  toggleExtendedMode = (evt: KeyboardEvent) => {
+    evt.preventDefault();
+    const isInExtendedMode = KeyboardJS.getContext() === "extended";
+    if (isInExtendedMode) {
+      this.cancelExtendedModeTimeout();
+      KeyboardJS.setContext("default");
+      return;
+    }
+    KeyboardJS.setContext("extended");
+    this.cancelExtendedModeTimeoutId = setTimeout(() => {
+      KeyboardJS.setContext("default");
+    }, EXTENDED_COMMAND_DURATION);
+  };
+
+  cancelExtendedModeTimeout() {
+    this.cancelExtendedModeTimeoutId && clearTimeout(this.cancelExtendedModeTimeoutId);
+  }
+
+  attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
     const binding = [
       key,
       (event: KeyboardEvent) => {
@@ -103,6 +145,18 @@ export class InputKeyboardNoLoop {
         if (shouldIgnore(event, key)) {
           return;
         }
+        const isInExtendedMode = KeyboardJS.getContext() === "extended";
+        if (
+          (isExtendedCommand && !isInExtendedMode) ||
+          (!isExtendedCommand && isInExtendedMode && key !== EXTENDED_COMMAND_KEYS)
+        ) {
+          // Skipping extended commands if not in extended mode
+          // Skipping normal commands if in extended mode.
+          return;
+        } else if (isExtendedCommand) {
+          this.cancelExtendedModeTimeout();
+          KeyboardJS.setContext("default");
+        }
 
         if (!event.repeat) {
           callback(event);
@@ -113,7 +167,14 @@ export class InputKeyboardNoLoop {
       },
       _.noop,
     ];
-    KeyboardJS.bind(...binding);
+    if (isExtendedCommand) {
+      KeyboardJS.withContext("extended", () => {
+        KeyboardJS.bind(...binding);
+      });
+    }
+    KeyboardJS.withContext("default", () => {
+      KeyboardJS.bind(...binding);
+    });
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((...args: any[]) => v... Remove this comment to see the full error message
     return this.bindings.push(binding);
   }
@@ -129,6 +190,7 @@ export class InputKeyboardNoLoop {
 // This module is "main" keyboard handler.
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
+
 export class InputKeyboard {
   keyCallbackMap: Record<string, KeyboardLoopHandler> = {};
   keyPressedCount: number = 0;
@@ -221,7 +283,9 @@ export class InputKeyboard {
         }
       },
     ];
-    KeyboardJS.bind(...binding);
+    KeyboardJS.withContext("default", () => {
+      KeyboardJS.bind(...binding);
+    });
     this.bindings.push(binding);
   }
 

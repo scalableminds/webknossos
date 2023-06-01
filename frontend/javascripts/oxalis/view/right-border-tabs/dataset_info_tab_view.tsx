@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Tooltip, Button, Dropdown } from "antd";
+import { Tooltip, Button, Dropdown, Typography, Tag } from "antd";
 import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
@@ -42,7 +42,7 @@ const enum StartableJobsEnum {
 }
 
 type StateProps = {
-  tracing: Tracing;
+  annotation: Tracing;
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
@@ -170,8 +170,10 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
             paddingTop: 10,
           }}
         >
-          {extentInVoxel}
-          <br /> {extentInLength}
+          <Typography.Text type="secondary">
+            {extentInVoxel}
+            <br /> {extentInLength}
+          </Typography.Text>
         </td>
       </tr>
     </Tooltip>
@@ -190,7 +192,11 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
         >
           <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
         </td>
-        <td>{formatScale(dataset.dataSource.scale)}</td>
+        <td>
+          <Typography.Text type="secondary">
+            {formatScale(dataset.dataSource.scale)}
+          </Typography.Text>{" "}
+        </td>
       </tr>
     </Tooltip>
   );
@@ -207,7 +213,11 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
         >
           <i className="fas fa-building fa-xl" />
         </td>
-        <td>{organizationName === null ? <i>loading...</i> : organizationName}</td>
+        <td>
+          <Typography.Text type="secondary">
+            {organizationName === null ? <i>loading...</i> : organizationName}
+          </Typography.Text>
+        </td>
       </tr>
     </Tooltip>
   );
@@ -239,28 +249,46 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     console.log(this.state.owningOrganizationDisplayName);
   }
 
-  getTracingStatistics() {
-    const statsMaybe = getStats(this.props.tracing);
-    return this.props.tracing.skeleton != null ? (
-      <div>
-        <p>Number of Trees: {statsMaybe.map((stats) => stats.treeCount).getOrElse(null)}</p>
-        <p>Number of Nodes: {statsMaybe.map((stats) => stats.nodeCount).getOrElse(null)}</p>
-        <p>Number of Edges: {statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</p>
-        <p>
-          Number of Branch Points:{" "}
-          {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
-        </p>
+  getAnnotationStatistics() {
+    const statsMaybe = getStats(this.props.annotation);
+    return this.props.annotation.skeleton != null ? (
+      <div className="info-tab-block">
+        <p className="sidebar-label">Statistics</p>
+        <table className="annotation-stats-table">
+          <tbody>
+            <tr>
+              <td>
+                <Typography.Text type="secondary">Trees</Typography.Text>
+              </td>
+              <td>{statsMaybe.map((stats) => stats.treeCount).getOrElse(null)}</td>
+            </tr>
+            <tr>
+              <td>
+                <Typography.Text type="secondary">Nodes</Typography.Text>
+              </td>
+              <td>{statsMaybe.map((stats) => stats.nodeCount).getOrElse(null)}</td>
+            </tr>
+            <tr>
+              <td>
+                <Typography.Text type="secondary">Edges</Typography.Text>
+              </td>
+              <td>{statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</td>
+            </tr>
+            <tr>
+              <td>
+                <Typography.Text type="secondary">Branch Points</Typography.Text>
+              </td>
+              <td>{statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     ) : null;
   }
 
   getKeyboardShortcuts() {
     return this.props.isDatasetViewMode ? (
-      <div
-        style={{
-          marginTop: 40,
-        }}
-      >
+      <div className="info-tab-block">
         <Title level={5}>Keyboard Shortcuts</Title>
         <p>
           Find the complete list of shortcuts in the{" "}
@@ -279,12 +307,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               <tr key={shortcut.key}>
                 <td
                   style={{
-                    width: 200,
+                    width: 170,
                   }}
                 >
                   {shortcut.keybinding}
                 </td>
-                <td>{shortcut.action}</td>
+                <td>
+                  <Typography.Text type="secondary">{shortcut.action}</Typography.Text>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -404,19 +434,20 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <Tooltip title="Edit dataset settings">
-          <Button
-            type="text"
-            icon={<SettingOutlined />}
-            href={`/datasets/${owningOrganization}/${datasetName}/edit`}
-            className="transparent-background-on-hover"
-            target="_blank"
-          />
+          <Link
+            to={`/datasets/${owningOrganization}/${datasetName}/edit`}
+            style={{ paddingLeft: 3 }}
+          >
+            <Typography.Text type="secondary">
+              <SettingOutlined />
+            </Typography.Text>
+          </Link>
         </Tooltip>
       ) : null;
 
     if (this.props.isDatasetViewMode) {
       return (
-        <div>
+        <div className="info-tab-block">
           <p
             style={{
               wordWrap: "break-word",
@@ -448,8 +479,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <p>
-        Dataset:{" "}
+      <div className="info-tab-block">
+        <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
           to={`/datasets/${owningOrganization}/${datasetName}/view`}
           title={`Click to view dataset ${datasetName} without annotation`}
@@ -459,89 +490,74 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         >
           {datasetName}
         </Link>
-        {getEditSettingsIcon()}
-      </p>
+      </div>
     );
   }
 
-  getTracingName() {
+  getAnnotationName() {
     if (this.props.isDatasetViewMode) return null;
-    let annotationTypeLabel;
-    const { annotationType, name } = this.props.tracing;
-    const tracingName = name || "[unnamed]";
+
+    const annotationName = this.props.annotation.name || "[unnamed]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
-      annotationTypeLabel = (
-        <span>
-          {annotationType} : {this.props.task.id}
-        </span>
-      );
-    } else if (!this.props.mayEditAnnotation) {
-      // For readonly tracings display the non-editable explorative tracing name
-      annotationTypeLabel = <span>Annotation: {tracingName}</span>;
-    } else {
-      // Or display the editable explorative tracing name
-      annotationTypeLabel = (
-        <span
-          style={{
-            display: "inline-flex",
-          }}
-        >
-          Annotation:
-          <EditableTextLabel
-            value={tracingName}
-            onChange={this.setAnnotationName}
-            label="Annotation Name"
-          />
-        </span>
+      return (
+        <div className="info-tab-block">
+          <p className="sidebar-label">Task ID</p>
+          {this.props.task.id}
+        </div>
       );
     }
 
-    const tracingDescription = this.props.tracing.description || "[no description]";
-    let descriptionEditField;
+    if (!this.props.mayEditAnnotation) {
+      // For readonly annotations display the non-editable annotation name
+      return (
+        <div className="info-tab-block">
+          <p className="sidebar-label">Annotation Name</p>
+          {annotationName}
+        </div>
+      );
+    }
+
+    // Or display the editable annotation name
+    return (
+      <div className="info-tab-block">
+        <p className="sidebar-label">Annotation Name</p>
+        <Typography.Text editable={{ onChange: this.setAnnotationName }}>
+          {annotationName}
+        </Typography.Text>
+      </div>
+    );
+  }
+  getAnnotationDescription() {
+    if (this.props.isDatasetViewMode) return null;
+
+    const annotationDescription = this.props.annotation.description || "[no description]";
 
     if (this.props.mayEditAnnotation) {
-      descriptionEditField = (
-        <span
-          style={{
-            display: "inline-flex",
-          }}
-        >
-          Description:
-          <EditableTextLabel
-            value={tracingDescription}
-            onChange={this.setAnnotationDescription}
-            rows={4}
-            markdown
-            label="Annotation Description"
-          />
-        </span>
-      );
-    } else {
-      descriptionEditField = (
-        <span
-          style={{
-            verticalAlign: "top",
-          }}
-        >
-          Description:
-          <Markdown
-            source={tracingDescription}
-            options={{
-              html: false,
-              breaks: true,
-              linkify: true,
-            }}
-          />
-        </span>
+      return (
+        <div className="info-tab-block">
+          <p className="sidebar-label">Description</p>
+          <Typography.Text
+            editable={{ onChange: this.setAnnotationDescription, autoSize: { minRows: 3 } }}
+          >
+            {annotationDescription}
+          </Typography.Text>
+        </div>
       );
     }
 
     return (
-      <div>
-        <div>{annotationTypeLabel}</div>
-        <div>{descriptionEditField}</div>
+      <div className="info-tab-block">
+        <p className="sidebar-label">Description</p>
+        <Markdown
+          source={annotationDescription}
+          options={{
+            html: false,
+            breaks: true,
+            linkify: true,
+          }}
+        />
       </div>
     );
   }
@@ -555,31 +571,39 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
-    const { owner, contributors } = this.props.tracing;
+    const { owner, contributors } = this.props.annotation;
 
     if (!owner) {
       return null;
     }
 
-    const contributorsString =
+    const contributorTags =
       contributors.length > 0
-        ? contributors.map((user) => formatUserName(activeUser, user)).join(", ")
-        : "none";
+        ? contributors.map((user) => <Tag>{formatUserName(activeUser, user)}</Tag>)
+        : [<Tag>None</Tag>];
 
     return (
-      <div>
-        <div>Owner: {formatUserName(activeUser, owner)}</div>
-        <div>
-          Contributors: {contributorsString}
-          <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
-            <InfoCircleOutlined
-              style={{
-                marginLeft: 6,
-              }}
-            />
-          </Tooltip>
+      <>
+        <div className="info-tab-block">
+          <p className="sidebar-label">Owner</p>
+          <p>
+            <Tag>{formatUserName(activeUser, owner)}</Tag>
+          </p>
         </div>
-      </div>
+        <div className="info-tab-block">
+          <p className="sidebar-label">
+            Contributors
+            <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
+              <InfoCircleOutlined
+                style={{
+                  marginLeft: 6,
+                }}
+              />
+            </Tooltip>
+          </p>
+          <p>{contributorTags}</p>
+        </div>
+      </>
     );
   }
 
@@ -598,77 +622,84 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     return null;
   }
 
-  render() {
-    const { dataset, tracing, activeResolutionInfo, activeUser } = this.props;
+  getResolutionInfo() {
+    const { dataset, annotation, activeResolutionInfo } = this.props;
     const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
       activeResolutionInfo;
-    const resolutionUnion = getResolutionUnion(dataset);
-    const resolutionInfo =
-      representativeResolution != null ? (
-        <Tooltip
-          title={
-            <div>
-              Rendered magnification per layer:
-              <ul>
-                {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-                  const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
 
-                  return (
-                    <li key={layerName}>
-                      {readableName}: {mag ? mag.join("-") : "none"}
-                    </li>
-                  );
-                })}
-              </ul>
-              Available resolutions:
-              <ul>
-                {resolutionUnion.map((mags) => (
-                  <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
-                ))}
-              </ul>
-            </div>
-          }
-          placement="left"
-        >
-          <tr>
-            <td
-              style={{
-                paddingRight: 4,
-                paddingTop: 10,
-                verticalAlign: "top",
-              }}
-            >
-              <img
-                className="info-tab-icon"
-                src="/assets/images/icon-downsampling.svg"
-                alt="Resolution"
-              />
-            </td>
-            <td
-              style={{
-                paddingRight: 4,
-                paddingTop: 10,
-                verticalAlign: "top",
-              }}
-            >
+    const resolutionUnion = getResolutionUnion(dataset);
+    return representativeResolution != null ? (
+      <Tooltip
+        title={
+          <div>
+            Rendered magnification per layer:
+            <ul>
+              {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+                const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
+
+                return (
+                  <li key={layerName}>
+                    {readableName}: {mag ? mag.join("-") : "none"}
+                  </li>
+                );
+              })}
+            </ul>
+            Available resolutions:
+            <ul>
+              {resolutionUnion.map((mags) => (
+                <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
+              ))}
+            </ul>
+          </div>
+        }
+        placement="left"
+      >
+        <tr>
+          <td
+            style={{
+              paddingRight: 4,
+              paddingTop: 8,
+              verticalAlign: "top",
+            }}
+          >
+            <img
+              className="info-tab-icon"
+              src="/assets/images/icon-downsampling.svg"
+              alt="Resolution"
+            />
+          </td>
+          <td
+            style={{
+              paddingRight: 4,
+              paddingTop: 8,
+              verticalAlign: "top",
+            }}
+          >
+            <Typography.Text type="secondary">
               {representativeResolution.join("-")}
               {isActiveResolutionGlobal ? "" : "*"}{" "}
-            </td>
-          </tr>
-        </Tooltip>
-      ) : null;
+            </Typography.Text>
+          </td>
+        </tr>
+      </Tooltip>
+    ) : null;
+  }
+
+  render() {
+    const { dataset, activeUser } = this.props;
+
     return (
       <div
         className="flex-overflow padded-tab-content"
         style={{ paddingLeft: 20, paddingRight: 20 }}
       >
-        <div className="info-tab-block">
-          {this.getTracingName()}
-          {this.getDatasetName()}
-          {this.maybePrintOwnerAndContributors()}
-        </div>
+        {this.getAnnotationName()}
+        {this.getAnnotationDescription()}
+        {this.getDatasetName()}
+        {this.maybePrintOwnerAndContributors()}
 
         <div className="info-tab-block">
+          <p className="sidebar-label">Voxel Size & Extent</p>
           <table
             style={{
               fontSize: 14,
@@ -678,19 +709,20 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               {this.maybePrintOrganization()}
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
-              {resolutionInfo}
-
-              {features().jobsEnabled &&
-              activeUser != null &&
-              (activeUser.isDatasetManager || activeUser.isAdmin)
-                ? this.getProcessingJobsMenu()
-                : null}
+              {this.getResolutionInfo()}
             </tbody>
           </table>
+          <div className="info-tab-block">
+            {features().jobsEnabled &&
+            activeUser != null &&
+            (activeUser.isDatasetManager || activeUser.isAdmin)
+              ? this.getProcessingJobsMenu()
+              : null}
+          </div>
           {this.renderSelectedStartingJobsModal()}
         </div>
 
-        <div className="info-tab-block">{this.getTracingStatistics()}</div>
+        {this.getAnnotationStatistics()}
         {this.getKeyboardShortcuts()}
       </div>
     );
@@ -698,7 +730,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  tracing: state.tracing,
+  annotation: state.tracing,
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
@@ -708,8 +740,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  setAnnotationName(tracingName: string) {
-    dispatch(setAnnotationNameAction(tracingName));
+  setAnnotationName(annotationName: string) {
+    dispatch(setAnnotationNameAction(annotationName));
   },
 
   setAnnotationDescription(comment: string) {

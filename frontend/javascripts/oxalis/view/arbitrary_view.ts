@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
@@ -24,9 +22,6 @@ type GeometryLike = {
 };
 
 class ArbitraryView {
-  // Copied form backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  trigger: (...args: Array<any>) => any;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
@@ -49,8 +44,6 @@ class ArbitraryView {
   constructor() {
     this.animate = this.animateImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
-
-    _.extend(this, BackboneEvents);
 
     const { scene } = getSceneController();
     // camDistance has to be calculated such that with cam
@@ -133,7 +126,6 @@ class ArbitraryView {
     TWEEN.update();
 
     if (this.needsRerender || window.needsRerender) {
-      this.trigger("render");
       const { camera, geometries } = this;
       const { renderer, scene } = getSceneController();
 

@@ -239,7 +239,6 @@ const DraggableDatasetRow = ({
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
 
   const { canDrop, isOver } = collectedProps;
-  console.log("canDrop", canDrop, "isOver", isOver);
   drop(drag(ref));
   const fileIcon = DragPreviewProvider.getProvider().getIcon(theme);
   const styleWithMaybeMoveCursor = isADataset

@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
@@ -101,8 +99,6 @@ class DataCube {
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
-
-    _.extend(this, BackboneEvents);
 
     this.cubes = [];
     this.buckets = [];

@@ -100,8 +100,6 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |
 | Alt + Mouse Move                  | Move                                                        |
 | C                                 | Create New Segment                                             |
-| W                                 | Cycle Through Tools (Move / Skeleton / Trace / Brush / ...)    |
-| SHIFT + W                         | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / Pick Cell / ...) |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
 | V                                 | Interpolate current segment between last labeled and current slice |
 
@@ -112,12 +110,31 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 | Right Mouse Drag                  | Remove Voxels                                               |
 | CTRL + Right Mouse Drag           | Remove Voxels while inverting the overwrite-mode (see toolbar for overwrite-mode) |
 
+## Tool Switching Shortcuts
+
+To be able to switch to a specific tool first press CTRL + K and then the key that was assigned to that tool.
+
+| Key Binding                       | Operation                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------- |
+| W                                 | Cycle Through Tools (Move / Skeleton / Trace / Brush / ...)                       |
+| SHIFT + W                         | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / Pick Cell / ...) |
+| CTRL + K, **M**                       | Move Tool                                                                         |
+| CTRL + K, **S**                       | Skeleton Tool                                                                     |
+| CTRL + K, **B**                       | Brush Tool                                                                        |
+| CTRL + K, **E**                       | Brush Erase Tool                                                                  |
+| CTRL + K, **L**                       | Lasso Tool                                                                        |
+| CTRL + K, **R**                       | Lasso lErase Too                                                                  |
+| CTRL + K, **P**                       | Segment Picker Tool                                                               |
+| CTRL + K, **Q**                       | Quick Select Tool                                                                 |
+| CTRL + K, **X**                       | Bounding Box Tool                                                                 |
+| CTRL + K, **O**                       | Proofreading Tool                                                                 |
+
 ## Mesh Related Shortcuts
 
 | Key Binding                                            | Operation                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------- |
 | Shift + Click on a mesh in the 3D viewport          | Move the camera to the clicked position          |
-| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from WEBKNOSSOS
+| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from WEBKNOSSOS    |
 
 ## Agglomerate File Mapping Skeleton
 

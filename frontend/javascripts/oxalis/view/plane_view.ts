@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
@@ -38,11 +36,6 @@ let oldRaycasterHit: THREE.Object3D | null = null;
 const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
-  // Copied form backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  trigger: (...args: Array<any>) => any;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
-  listenTo: (...args: Array<any>) => any;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: (
     arg0: [number, number],
@@ -52,8 +45,6 @@ class PlaneView {
   needsRerender: boolean;
 
   constructor() {
-    _.extend(this, BackboneEvents);
-
     this.throttledPerformIsosurfaceHitTest = _.throttle(
       this.performIsosurfaceHitTest,
       ISOSURFACE_HOVER_THROTTLING_DELAY,
@@ -121,7 +112,6 @@ class PlaneView {
     if (forceRender || this.needsRerender || window.needsRerender) {
       window.needsRerender = false;
       const { renderer, scene } = SceneController;
-      this.trigger("render");
       const storeState = Store.getState();
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),

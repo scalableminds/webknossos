@@ -177,6 +177,7 @@ class VolumeKeybindings {
       f: () => setTool(AnnotationToolEnum.FILL_CELL),
       p: () => setTool(AnnotationToolEnum.PICK_CELL),
       q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
+      o: () => setTool(AnnotationToolEnum.PROOFREAD),
     };
   }
 }

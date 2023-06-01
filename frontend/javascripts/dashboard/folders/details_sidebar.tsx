@@ -11,6 +11,7 @@ import { pluralize } from "libs/utils";
 import _ from "lodash";
 import {
   DatasetExtentRow,
+  OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
@@ -18,6 +19,10 @@ import { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { getOrganization } from "admin/admin_rest_api";
+import { useQuery } from "@tanstack/react-query";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -83,6 +88,30 @@ function getMaybeSelectMessage(datasetCount: number) {
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const { data: owningOrganization } = useQuery(
+    ["organizations", selectedDataset.owningOrganization],
+    () => getOrganization(selectedDataset.owningOrganization),
+    {
+      refetchOnWindowFocus: false,
+    },
+  );
+  const owningOrganizationDisplayName = owningOrganization?.displayName;
+
+  const renderOrganization = () => {
+    if (activeUser?.organization === selectedDataset.owningOrganization) return;
+    return (
+      <table>
+        <tbody>
+          <OwningOrganizationRow
+            organizationName={
+              owningOrganizationDisplayName != null ? owningOrganizationDisplayName : ""
+            }
+          />
+        </tbody>
+      </table>
+    );
+  };
 
   return (
     <>
@@ -94,6 +123,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         )}{" "}
         {selectedDataset.displayName || selectedDataset.name}
       </h4>
+      {renderOrganization()}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>

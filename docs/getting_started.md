@@ -6,7 +6,7 @@ Since it is a web-based tool, [collaboration](./sharing.md), [crowdsourcing](./t
 
 Feel free to [contact us](mailto:hello@webknossos.org) or [create a Pull Request](https://github.com/scalableminds/webknossos/pulls) if you have any suggestions for improving the documentation.
 
-![type:video](https://www.youtube.com/watch?v=jsz0tc3tuKI)
+![youtube-video](https://www.youtube.com/embed/jsz0tc3tuKI)
 
 ## Create a webknossos.org Account
 

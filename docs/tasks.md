@@ -14,7 +14,7 @@ The task systems is designed for automated task distribution to a (large) group 
 
 It is possible to download all annotations that belong to either a _Project_ or a _Task Type_ for further processing.
 
-![type:video](https://www.youtube.com/watch?v=YC4vaia6MkY)
+![youtube-video](https://www.youtube.com/embed/YC4vaia6MkY)
 
 ## How To Create Tasks
 
@@ -65,7 +65,7 @@ Finally, you can collect and review the completed data of all annotations within
 
 ![Download all Tasks of a Project](./images/tasks_download.jpeg)
 
-![type:video](https://www.youtube.com/watch?v=2A3en7Kxl3M)
+![youtube-video](https://www.youtube.com/embed/2A3en7Kxl3M)
 
 ## Task Assignment Criteria
 

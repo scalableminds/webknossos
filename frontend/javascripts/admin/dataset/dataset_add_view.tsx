@@ -1,15 +1,13 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Tabs, Modal, Button, Layout } from "antd";
-import { DatabaseOutlined, GoogleOutlined, UploadOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import type { APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import DatasetAddNeuroglancerView from "admin/dataset/dataset_add_neuroglancer_view";
-import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
-import DatasetAddZarrView from "admin/dataset/dataset_add_zarr_view";
+import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
@@ -18,33 +16,13 @@ import { useFetch } from "libs/react_helpers";
 const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
 
-const fetchCategorizedDatastores = async (): Promise<{
-  own: Array<APIDataStore>;
-  wkConnect: Array<APIDataStore>;
-}> => {
-  const fetchedDatastores = await getDatastores();
-  return {
-    own: fetchedDatastores.filter((ds) => !ds.isConnector),
-    wkConnect: fetchedDatastores.filter((ds) => ds.isConnector),
-  };
-};
-
 enum DatasetAddViewTabs {
   UPLOAD = "upload",
   REMOTE = "remote",
-  NEUROGLANCER = "neuroglancer",
-  BOSSDB = "bossdb",
 }
 
 function DatasetAddView({ history }: RouteComponentProps) {
-  const datastores = useFetch(
-    fetchCategorizedDatastores,
-    {
-      own: [],
-      wkConnect: [],
-    },
-    [],
-  );
+  const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
   const [datasetName, setDatasetName] = useState("");
   const [organization, setOrganization] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
@@ -143,7 +121,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
               }
               key={DatasetAddViewTabs.UPLOAD}
             >
-              <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
+              <DatasetUploadView datastores={datastores} onUploaded={handleDatasetAdded} />
             </TabPane>
             <TabPane
               tab={
@@ -154,46 +132,8 @@ function DatasetAddView({ history }: RouteComponentProps) {
               }
               key={DatasetAddViewTabs.REMOTE}
             >
-              <DatasetAddZarrView
-                datastores={datastores.own}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
-                onAdded={handleDatasetAdded}
-              />
+              <DatasetAddRemoteView datastores={datastores} onAdded={handleDatasetAdded} />
             </TabPane>
-            {datastores.wkConnect.length > 0 && (
-              <TabPane
-                tab={
-                  <span>
-                    <GoogleOutlined />
-                    Add Remote Neuroglancer Dataset
-                  </span>
-                }
-                key={DatasetAddViewTabs.NEUROGLANCER}
-              >
-                <DatasetAddNeuroglancerView
-                  datastores={datastores.wkConnect}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
-                  onAdded={handleDatasetAdded}
-                />
-              </TabPane>
-            )}
-            {datastores.wkConnect.length > 0 && (
-              <TabPane
-                tab={
-                  <span>
-                    <DatabaseOutlined />
-                    Add Remote BossDB Dataset
-                  </span>
-                }
-                key={DatasetAddViewTabs.BOSSDB}
-              >
-                <DatasetAddBossView
-                  datastores={datastores.wkConnect}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
-                  onAdded={handleDatasetAdded}
-                />
-              </TabPane>
-            )}
           </Tabs>
         </Content>
         <VoxelyticsBanner />

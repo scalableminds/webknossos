@@ -53,8 +53,10 @@ import { ItemType } from "antd/lib/menu/hooks/useItems";
 type Props = {
   user: APIUser;
   context: DatasetCollectionContextValue;
-  onSelectDataset: (dataset: APIDatasetCompact | null) => void;
+  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
+  setFolderIdForEditModal: (arg0: string | null) => void;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -146,21 +148,24 @@ function DatasetView(props: Props) {
     setSearchQuery(value);
   }
 
-  function renderTable(filteredDatasets: APIDatasetCompact[]) {
+  function renderTable(filteredDatasets: APIDatasetCompact[], subfolders: FolderItem[]) {
     return (
       <DatasetTable
         context={props.context}
         datasets={filteredDatasets}
+        subfolders={subfolders}
         onSelectDataset={props.onSelectDataset}
         selectedDatasets={props.selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
+        onSelectFolder={props.onSelectFolder}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
+        setFolderIdForEditModal={props.setFolderIdForEditModal}
       />
     );
   }
@@ -285,12 +290,16 @@ function DatasetView(props: Props) {
   );
 
   const datasets = context.datasets;
+  const subfolders = context.getActiveSubfolders();
   const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
 
-  const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
+  const isEmpty =
+    datasets.length === 0 &&
+    datasetFilteringMode !== "onlyShowUnreported" &&
+    subfolders.length === 0;
   const content = isEmpty
     ? renderPlaceholder(context, user, searchQuery)
-    : renderTable(filteredDatasets);
+    : renderTable(filteredDatasets, subfolders);
 
   return (
     <div>

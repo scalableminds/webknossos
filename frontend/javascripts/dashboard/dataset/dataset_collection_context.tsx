@@ -3,6 +3,7 @@ import type {
   APIDatasetId,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatus,
+  FolderItem,
 } from "types/api_flow_types";
 import { DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
@@ -37,12 +38,15 @@ export type DatasetCollectionContextValue = {
   mostRecentlyUsedActiveFolderId: string | null;
   supportsFolders: true;
   selectedDatasets: APIDatasetCompact[];
+  selectedFolder: FolderItem | null;
+  setSelectedFolder: (arg0: FolderItem | null) => void;
   setSelectedDatasets: React.Dispatch<React.SetStateAction<APIDatasetCompact[]>>;
   globalSearchQuery: string | null;
   setGlobalSearchQuery: (val: string | null) => void;
   searchRecursively: boolean;
   setSearchRecursively: (val: boolean) => void;
   getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatus) => string[] | null;
+  getActiveSubfolders: () => FolderItem[];
   showCreateFolderPrompt: (parentFolderId: string) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
@@ -85,6 +89,7 @@ export default function DatasetCollectionContextProvider({
   const { data: folder } = useFolderQuery(activeFolderId);
 
   const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback(
     (value: string | null) => {
@@ -179,6 +184,10 @@ export default function DatasetCollectionContextProvider({
     return breadcrumbs;
   };
 
+  const getActiveSubfolders = () => {
+    return folderHierarchyQuery.data?.itemById[activeFolderId ?? ""]?.children || [];
+  };
+
   const isLoading =
     (globalSearchQuery
       ? datasetSearchQuery.isFetching
@@ -196,10 +205,13 @@ export default function DatasetCollectionContextProvider({
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
+      selectedFolder,
+      setSelectedFolder,
       mostRecentlyUsedActiveFolderId,
       showCreateFolderPrompt,
       isChecking,
       getBreadcrumbs,
+      getActiveSubfolders,
       checkDatasets: async () => {
         if (isChecking) {
           console.warn("Ignore second rechecking request, since a recheck is already in progress");

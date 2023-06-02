@@ -123,7 +123,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>
-            <div className="sidebar-label">Voxel Size & Extent</div>
+            <div className="sidebar-label">Dimensions</div>
             {fullDataset && (
               <div className="info-tab-block" style={{ marginTop: -3 }}>
                 <table

@@ -4,7 +4,7 @@ import { SettingOutlined, InfoCircleOutlined, StarOutlined, EditOutlined } from 
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import React, { ChangeEvent } from "react";
+import React, { CSSProperties, ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -160,7 +160,6 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
           style={{
             paddingRight: 20,
             paddingTop: 10,
-            verticalAlign: "top",
           }}
         >
           <img
@@ -191,7 +190,6 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
         <td
           style={{
             paddingRight: 20,
-            verticalAlign: "top",
           }}
         >
           <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
@@ -271,7 +269,15 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <tbody>
             <tr>
               <td>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-skeletons.svg"
+                  alt="Skeletons"
+                />
+              </td>
+              <td>
                 <Tooltip
+                  placement="left"
                   title={
                     <>
                       <p>Nodes: {nodeCount}</p>
@@ -280,15 +286,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                     </>
                   }
                 >
-                  <img
-                    className="info-tab-icon"
-                    src="/assets/images/icon-skeletons.svg"
-                    alt="Skeletons"
-                  />
+                  <Typography.Text type="secondary">{treeCount} Skeletons</Typography.Text>
                 </Tooltip>
-              </td>
-              <td>
-                <Typography.Text type="secondary">{treeCount} Skeletons</Typography.Text>
               </td>
             </tr>
             <tr>
@@ -356,7 +355,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             style={{
               paddingRight: 4,
               paddingTop: 10,
-              verticalAlign: "top",
             }}
           >
             <StarOutlined className="info-tab-icon" width={24} height={24} />
@@ -414,7 +412,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           style={{
             paddingRight: 4,
             paddingTop: 10,
-            verticalAlign: "top",
           }}
         >
           <StarOutlined
@@ -555,39 +552,55 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationDescription() {
     if (this.props.isDatasetViewMode) return null;
 
-    const annotationDescription = this.props.annotation.description || "[no description]";
+    const annotationDescription = this.props.annotation.description;
+    const isDescriptionEmpty = annotationDescription == "";
+    const description = isDescriptionEmpty ? (
+      "[no description]"
+    ) : (
+      <Markdown
+        source={annotationDescription}
+        container={"span"}
+        options={{
+          html: false,
+          breaks: true,
+          linkify: true,
+        }}
+      />
+    );
+    const buttonStylesForMarkdownRendering: CSSProperties = isDescriptionEmpty
+      ? {}
+      : {
+          position: "absolute",
+          right: 10,
+          bottom: 0,
+        };
 
     if (this.props.mayEditAnnotation) {
       return (
         <div className="info-tab-block">
           <p className="sidebar-label">Description</p>
-          <Typography.Text>
-            <Markdown
-              source={annotationDescription}
-              container={"span"}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-            />
-            <Button
-              className="ant-typography-edit"
-              style={{
-                border: 0,
-                background: "transparent",
-                padding: 0,
-                lineHeight: "inherit",
-                display: "inline-block",
-              }}
-              type="text"
-              onClick={() =>
-                this.setState({
-                  isMarkdownModalOpen: true,
-                })
-              }
-              icon={<EditOutlined />}
-            />
+          <Typography.Text style={{ position: "relative" }}>
+            {description}
+            <Tooltip title="Edit">
+              <Button
+                className="ant-typography-edit"
+                style={{
+                  border: 0,
+                  padding: 0,
+                  background: "transparent",
+                  lineHeight: "inherit",
+                  display: "inline-block",
+                  ...buttonStylesForMarkdownRendering,
+                }}
+                type="text"
+                onClick={() =>
+                  this.setState({
+                    isMarkdownModalOpen: true,
+                  })
+                }
+                icon={<EditOutlined />}
+              />
+            </Tooltip>
           </Typography.Text>
           <MarkdownModal
             label="Annotation Description"
@@ -712,7 +725,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             style={{
               paddingRight: 4,
               paddingTop: 8,
-              verticalAlign: "top",
             }}
           >
             <img
@@ -725,7 +737,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             style={{
               paddingRight: 4,
               paddingTop: 8,
-              verticalAlign: "top",
             }}
           >
             <Typography.Text type="secondary">
@@ -752,7 +763,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         {this.maybePrintOwnerAndContributors()}
 
         <div className="info-tab-block">
-          <p className="sidebar-label">Voxel Size & Extent</p>
+          <p className="sidebar-label">Dimensions</p>
           <table
             style={{
               fontSize: 14,

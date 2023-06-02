@@ -69,6 +69,8 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   def sorted: Vec3Int = Vec3Int.fromList(toList.sorted).get
 
+  def hasNegativeComponent: Boolean = x < 0 || y < 0 || z < 0
+
 }
 
 object Vec3Int {

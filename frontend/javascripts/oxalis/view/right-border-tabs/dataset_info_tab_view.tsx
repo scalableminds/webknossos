@@ -1,10 +1,10 @@
 import type { Dispatch } from "redux";
 import { Tooltip, Button, Dropdown, Typography, Tag } from "antd";
-import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
+import { SettingOutlined, InfoCircleOutlined, StarOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import React from "react";
+import React, { ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -20,7 +20,7 @@ import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
+
 import features from "features";
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
@@ -35,6 +35,7 @@ import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
 import Title from "antd/lib/typography/Title";
+import { MarkdownModal } from "../components/markdown_modal";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -58,6 +59,7 @@ type Props = StateProps & DispatchProps;
 type State = {
   showJobsDetailsModal: StartableJobsEnum | null | undefined;
   owningOrganizationDisplayName: string | null;
+  isMarkdownModalOpen: boolean;
 };
 const shortcuts = [
   {
@@ -130,6 +132,7 @@ const shortcuts = [
     action: "Rotate 3D View",
   },
 ];
+
 export function convertPixelsToNm(
   lengthInPixel: number,
   zoomValue: number,
@@ -137,6 +140,7 @@ export function convertPixelsToNm(
 ): number {
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
+
 export function convertNmToPixels(
   lengthInNm: number,
   zoomValue: number,
@@ -225,6 +229,7 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
 
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
+    isMarkdownModalOpen: false,
     showJobsDetailsModal: null,
     owningOrganizationDisplayName: null,
   };
@@ -233,8 +238,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     this.props.setAnnotationName(newName);
   };
 
-  setAnnotationDescription = (newDescription: string) => {
-    this.props.setAnnotationDescription(newDescription);
+  setAnnotationDescription = (evt: ChangeEvent<HTMLTextAreaElement>) => {
+    this.props.setAnnotationDescription(evt.target.value);
   };
 
   componentDidMount(): void {
@@ -250,40 +255,58 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getAnnotationStatistics() {
+    if (this.props.isDatasetViewMode) return null;
+
     const statsMaybe = getStats(this.props.annotation);
-    return this.props.annotation.skeleton != null ? (
+    const treeCount = statsMaybe.map((stats) => stats.treeCount).getOrElse(null);
+    const nodeCount = statsMaybe.map((stats) => stats.nodeCount).getOrElse(null);
+    const edgeCount = statsMaybe.map((stats) => stats.edgeCount).getOrElse(null);
+    const branchpointCount = statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null);
+    const segmentCount = 0; // TODO read value from actual stats data
+
+    return (
       <div className="info-tab-block">
         <p className="sidebar-label">Statistics</p>
         <table className="annotation-stats-table">
           <tbody>
             <tr>
               <td>
-                <Typography.Text type="secondary">Trees</Typography.Text>
+                <Tooltip
+                  title={
+                    <>
+                      <p>Nodes: {nodeCount}</p>
+                      <p>Edges: {edgeCount}</p>
+                      <p>Branchpoints: {branchpointCount}</p>
+                    </>
+                  }
+                >
+                  <img
+                    className="info-tab-icon"
+                    src="/assets/images/icon-skeletons.svg"
+                    alt="Skeletons"
+                  />
+                </Tooltip>
               </td>
-              <td>{statsMaybe.map((stats) => stats.treeCount).getOrElse(null)}</td>
+              <td>
+                <Typography.Text type="secondary">{treeCount} Skeletons</Typography.Text>
+              </td>
             </tr>
             <tr>
               <td>
-                <Typography.Text type="secondary">Nodes</Typography.Text>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-segments.svg"
+                  alt="Segments"
+                />
               </td>
-              <td>{statsMaybe.map((stats) => stats.nodeCount).getOrElse(null)}</td>
-            </tr>
-            <tr>
               <td>
-                <Typography.Text type="secondary">Edges</Typography.Text>
+                <Typography.Text type="secondary">{segmentCount} Segments</Typography.Text>
               </td>
-              <td>{statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</td>
-            </tr>
-            <tr>
-              <td>
-                <Typography.Text type="secondary">Branch Points</Typography.Text>
-              </td>
-              <td>{statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}</td>
             </tr>
           </tbody>
         </table>
       </div>
-    ) : null;
+    );
   }
 
   getKeyboardShortcuts() {
@@ -538,11 +561,41 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       return (
         <div className="info-tab-block">
           <p className="sidebar-label">Description</p>
-          <Typography.Text
-            editable={{ onChange: this.setAnnotationDescription, autoSize: { minRows: 3 } }}
-          >
-            {annotationDescription}
+          <Typography.Text>
+            <Markdown
+              source={annotationDescription}
+              container={"span"}
+              options={{
+                html: false,
+                breaks: true,
+                linkify: true,
+              }}
+            />
+            <Button
+              className="ant-typography-edit"
+              style={{
+                border: 0,
+                background: "transparent",
+                padding: 0,
+                lineHeight: "inherit",
+                display: "inline-block",
+              }}
+              type="text"
+              onClick={() =>
+                this.setState({
+                  isMarkdownModalOpen: true,
+                })
+              }
+              icon={<EditOutlined />}
+            />
           </Typography.Text>
+          <MarkdownModal
+            label="Annotation Description"
+            source={annotationDescription}
+            isOpen={this.state.isMarkdownModalOpen}
+            onOk={() => this.setState({ isMarkdownModalOpen: false })}
+            onChange={this.setAnnotationDescription}
+          />
         </div>
       );
     }
@@ -579,15 +632,15 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
     const contributorTags =
       contributors.length > 0
-        ? contributors.map((user) => <Tag>{formatUserName(activeUser, user)}</Tag>)
-        : [<Tag>None</Tag>];
+        ? contributors.map((user) => <Tag color="blue">{formatUserName(activeUser, user)}</Tag>)
+        : [<Tag color="blue">None</Tag>];
 
     return (
       <>
         <div className="info-tab-block">
           <p className="sidebar-label">Owner</p>
           <p>
-            <Tag>{formatUserName(activeUser, owner)}</Tag>
+            <Tag color="blue">{formatUserName(activeUser, owner)}</Tag>
           </p>
         </div>
         <div className="info-tab-block">
@@ -703,6 +756,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <table
             style={{
               fontSize: 14,
+              marginLeft: 4,
             }}
           >
             <tbody>

@@ -60,6 +60,7 @@ type StartingJobModalProps = Props & {
   suggestedDatasetSuffix: string;
   fixedSelectedLayer?: APIDataLayer | null | undefined;
   title: string;
+  buttonLabel?: string | null;
 };
 
 type LayerSelectionProps = {
@@ -468,7 +469,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         />
         <div style={{ textAlign: "center" }}>
           <Button type="primary" size="large" htmlType="submit">
-            {title}
+            {props.buttonLabel ? props.buttonLabel : title}
           </Button>
         </div>
       </Form>
@@ -476,13 +477,14 @@ function StartingJobModal(props: StartingJobModalProps) {
   );
 }
 
-export function NucleiInferralModal({ handleClose }: Props) {
+export function NucleiSegmentationModal({ handleClose }: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobModal
       handleClose={handleClose}
+      buttonLabel="Start AI Segmentation"
       jobName={JobNames.NUCLEI_INFERRAL}
-      title="Start a Nuclei Inferral"
+      title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
         startNucleiInferralJob(
@@ -495,16 +497,16 @@ export function NucleiInferralModal({ handleClose }: Props) {
       description={
         <>
           <p>
-            Start a job that automatically detects nuclei for this dataset. This job creates a copy
-            of this dataset once it has finished. The new dataset will contain the detected nuclei
-            as a segmentation layer.
+            Start an AI background job to automatically detect and segments all nuclei in this
+            dataset. This AI will create a copy of this dataset containing all the detected nuclei
+            as a new segmentation layer.
           </p>
           <p>
             <b>
-              Note that this feature is still experimental. Nuclei detection currently works best
+              Note that this feature is still experimental. Nuclei detection currently only works
               with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
-              inferral process will automatically use the magnification that matches that resolution
-              best.
+              segmentation process will automatically use the magnification that matches that
+              resolution best.
             </b>
           </p>
         </>
@@ -512,13 +514,14 @@ export function NucleiInferralModal({ handleClose }: Props) {
     />
   );
 }
-export function NeuronInferralModal({ handleClose }: Props) {
+export function NeuronSegmentationModal({ handleClose }: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobModal
       handleClose={handleClose}
       jobName={JobNames.NEURON_INFERRAL}
-      title="Start a Neuron Inferral"
+      buttonLabel="Start AI Segmentation"
+      title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
@@ -538,16 +541,16 @@ export function NeuronInferralModal({ handleClose }: Props) {
       description={
         <>
           <p>
-            Start a job that automatically detects the neurons for this dataset. This job creates a
-            copy of this dataset once it has finished. The new dataset will contain the new
-            segmentation which segments the neurons of the dataset.
+            Start an AI background job that automatically detects and segments all neurons in this
+            dataset. The AI will create a copy of this dataset containing the new neuron
+            segmentation.
           </p>
           <p>
             <b>
-              Note that this feature is still experimental and can take a long time. Thus we suggest
-              to use a small bounding box and not the full dataset extent. The neuron detection
-              currently works best with EM data. The best resolution for the process will be chosen
-              automatically.
+              Note that this feature is still experimental and processing can take a long time. Thus
+              we suggest to use a small bounding box and not the full dataset extent. The neuron
+              detection currently only works with EM data. The best resolution for the process will
+              be chosen automatically.
             </b>
           </p>
         </>

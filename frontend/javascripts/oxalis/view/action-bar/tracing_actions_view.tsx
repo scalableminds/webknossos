@@ -70,7 +70,10 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import { NeuronInferralModal, NucleiInferralModal } from "../right-border-tabs/starting_job_modals";
+import {
+  NeuronSegmentationModal,
+  NucleiSegmentationModal,
+} from "../right-border-tabs/starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -668,14 +671,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       });
       if (this.state.isAINucleiSegmentationModalOpen)
         modals.push(
-          <NucleiInferralModal
+          <NucleiSegmentationModal
             key="ai-nuclei-segmentation-modal"
             handleClose={this.handleModalClose}
           />,
         );
       if (this.state.isAINeuronSegmentationModalOpen)
         modals.push(
-          <NeuronInferralModal
+          <NeuronSegmentationModal
             key="ai-neuron-segmentation-modal"
             handleClose={this.handleModalClose}
           />,

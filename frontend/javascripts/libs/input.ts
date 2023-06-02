@@ -73,7 +73,6 @@ export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
-  supportExtendedCommands: boolean = false;
   extendedBindings: Array<KeyboardBindingPress> = [];
   cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -81,17 +80,14 @@ export class InputKeyboardNoLoop {
     initialBindings: BindingMap<KeyboardHandler>,
     options?: {
       supportInputElements?: boolean;
-      supportExtendedCommands?: boolean;
     },
     extendedCommands?: BindingMap<KeyboardHandler>,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
-      this.supportExtendedCommands =
-        options.supportExtendedCommands || this.supportExtendedCommands;
     }
 
-    if (this.supportExtendedCommands && initialBindings[EXTENDED_COMMAND_KEYS] != null) {
+    if (extendedCommands != null && initialBindings[EXTENDED_COMMAND_KEYS] != null) {
       console.warn(
         `Extended commands are enabled, but the keybinding for it is already in use. Please change the keybinding for '${EXTENDED_COMMAND_KEYS}'.`,
       );

@@ -212,8 +212,10 @@ class AnnotationController @Inject()(
   def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
+        newLayerName = request.body.name.getOrElse(AnnotationLayer.defaultNameForType(request.body.typ))
+        _ <- bool2Fox(!annotation.annotationLayers.exists(_.name == newLayerName)) ?~> "annotation.addLayer.nameInUse"
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.addAnnotationLayer(annotation, organization.name, request.body)
         updated <- provider.provideAnnotation(typ, id, request.identity)
@@ -312,7 +314,7 @@ class AnnotationController @Inject()(
   def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"

@@ -1,5 +1,4 @@
 import _ from "lodash";
-import * as ort from "onnxruntime-web";
 import { OrthoView, Vector2, Vector3 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call } from "typed-redux-saga";
@@ -17,7 +16,7 @@ import { map3 } from "libs/utils";
 import { APIDataset } from "types/api_flow_types";
 import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
-import { InferenceSession } from "onnxruntime-web";
+import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
 // /predictions/sam_vit_l_small
@@ -111,6 +110,7 @@ let sessionBig: Promise<InferenceSession> | null;
 let sessionSmall: Promise<InferenceSession> | null;
 
 export async function getInferenceSession(useSmallModel: boolean) {
+  const ort = await import("onnxruntime-web");
   if (useSmallModel) {
     if (sessionSmall == null) {
       sessionSmall = ort.InferenceSession.create(
@@ -137,6 +137,7 @@ async function inferFromEmbedding(
   const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
+  const ort = await import("onnxruntime-web");
 
   let ortSession;
   try {

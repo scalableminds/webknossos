@@ -3,7 +3,11 @@ package models.binary.explore
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.v3.{ZarrV3DataLayer, ZarrV3Layer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.v3.{
+  ZarrV3DataLayer,
+  ZarrV3Layer,
+  ZarrV3SegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.ZarrArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -30,9 +34,9 @@ class ZarrV3ArrayExplorer extends RemoteLayerExplorer {
                               Some(guessedAxisOrder),
                               None,
                               credentialId)
-      layer: ZarrV3Layer = ZarrV3DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator)) /*if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
-      } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))*/
+      layer: ZarrV3Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
+        ZarrV3SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
+      } else ZarrV3DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
     } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
 
 }

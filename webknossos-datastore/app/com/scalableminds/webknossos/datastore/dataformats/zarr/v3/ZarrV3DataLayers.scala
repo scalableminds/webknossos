@@ -7,7 +7,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   DataFormat,
   DataLayer,
-  ElementClass
+  ElementClass,
+  SegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
@@ -44,4 +45,22 @@ case class ZarrV3DataLayer(
 
 object ZarrV3DataLayer {
   implicit val jsonFormat: OFormat[ZarrV3DataLayer] = Json.format[ZarrV3DataLayer]
+}
+
+case class ZarrV3SegmentationLayer(
+    name: String,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: List[MagLocator],
+    largestSegmentId: Option[Long] = None,
+    mappings: Option[Set[String]] = None,
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    override val numChannels: Option[Int] = Some(1)
+) extends SegmentationLayer
+    with ZarrV3Layer
+
+object ZarrV3SegmentationLayer {
+  implicit val jsonFormat: OFormat[ZarrV3SegmentationLayer] = Json.format[ZarrV3SegmentationLayer]
 }

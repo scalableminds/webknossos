@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedSegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
-import com.scalableminds.webknossos.datastore.dataformats.zarr.v3.ZarrV3DataLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr.v3.{ZarrV3DataLayer, ZarrV3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -144,6 +144,9 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
             l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
                    boundingBox = l.boundingBox * magFactors)
           case l: ZarrV3DataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: ZarrV3SegmentationLayer =>
             l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
                    boundingBox = l.boundingBox * magFactors)
           case _ => throw new Exception("Encountered unsupported layer format during explore remote")

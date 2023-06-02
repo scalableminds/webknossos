@@ -1,6 +1,6 @@
 import type { Dispatch } from "redux";
-import { Tooltip, Button, Dropdown, Typography, Tag } from "antd";
-import { SettingOutlined, InfoCircleOutlined, StarOutlined, EditOutlined } from "@ant-design/icons";
+import { Tooltip, Button, Typography, Tag } from "antd";
+import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
@@ -21,22 +21,15 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 
-import features from "features";
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
 import { mayUserEditDataset } from "libs/utils";
-import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
 import Title from "antd/lib/typography/Title";
 import { MarkdownModal } from "../components/markdown_modal";
-
-const enum StartableJobsEnum {
-  NUCLEI_INFERRAL = "nuclei inferral",
-  NEURON_INFERRAL = "neuron inferral",
-}
 
 type StateProps = {
   annotation: Tracing;
@@ -208,7 +201,7 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
             paddingRight: 20,
           }}
         >
-          <i className="fas fa-building fa-xl" />
+          <i className="fas fa-building fa-xl" style={{ color: "var(--ant-primary)" }} />
         </td>
         <td>
           <Typography.Text type="secondary">
@@ -449,10 +442,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationDescription() {
     if (this.props.isDatasetViewMode) return null;
 
-    const annotationDescription = this.props.annotation.description;
-    const isDescriptionEmpty = annotationDescription == "";
+    const annotationDescription = this.props.annotation.description || "[no description]";
+    const isDescriptionEmpty = this.props.annotation.description === "";
     const description = isDescriptionEmpty ? (
-      "[no description]"
+      annotationDescription
     ) : (
       <Markdown
         source={annotationDescription}
@@ -632,7 +625,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { dataset, activeUser } = this.props;
+    const { dataset } = this.props;
 
     return (
       <div

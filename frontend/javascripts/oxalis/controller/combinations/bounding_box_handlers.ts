@@ -8,10 +8,14 @@ import Store from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { DimensionMap, DimensionIndices } from "oxalis/model/dimensions";
 import Dimension from "oxalis/model/dimensions";
-import { changeUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import {
+  addUserBoundingBoxAction,
+  changeUserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { document } from "libs/window";
+import { V3 } from "libs/mjs";
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 const getNeighbourEdgeIndexByEdgeIndex = {
   // The edges are indexed within the plane like this:
@@ -189,7 +193,7 @@ export function getClosestHoveredBoundingBox(
   const nearestBoundingBox = currentNearestBoundingBox;
 
   const getEdgeInfoFromId = (edgeId: number) => {
-    const direction = edgeId < 2 ? "horizontal" : "vertical";
+    const direction: SelectedEdge["direction"] = edgeId < 2 ? "horizontal" : "vertical";
     const isMaxEdge = edgeId % 2 === 1;
     const resizableDimension = direction === "horizontal" ? indices[1] : indices[0];
     return {
@@ -221,9 +225,57 @@ export function getClosestHoveredBoundingBox(
     secondaryEdge = getEdgeInfoFromId(secondNeighbourId);
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boxId: number; direction: string; isMaxEdg... Remove this comment to see the full error message
   return [primaryEdge, secondaryEdge];
 }
+
+export function createBoundingBoxAndGetEdges(
+  pos: Point2,
+  plane: OrthoView,
+): [SelectedEdge, SelectedEdge | null | undefined] | null {
+  const state = Store.getState();
+  const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
+
+  if (globalPosition == null) return null;
+
+  Store.dispatch(
+    addUserBoundingBoxAction({
+      boundingBox: {
+        min: globalPosition,
+        max: V3.add(globalPosition, [1, 1, 1], [0, 0, 0]),
+      },
+    }),
+  );
+  const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
+
+  const indices = Dimension.getIndices(plane);
+  let newestBoundingBox =
+    userBoundingBoxes.length > 0 ? userBoundingBoxes[userBoundingBoxes.length - 1] : null;
+
+  if (newestBoundingBox == null) {
+    return null;
+  }
+
+  const nearestBoundingBox = newestBoundingBox;
+
+  const getEdgeInfoFromId = (edgeId: number) => {
+    const direction: SelectedEdge["direction"] = edgeId < 2 ? "horizontal" : "vertical";
+    const isMaxEdge = edgeId % 2 === 1;
+    const resizableDimension = direction === "horizontal" ? indices[1] : indices[0];
+    return {
+      boxId: nearestBoundingBox.id,
+      direction,
+      isMaxEdge,
+      edgeId,
+      resizableDimension,
+    };
+  };
+
+  const primaryEdge = getEdgeInfoFromId(1);
+  const secondaryEdge = getEdgeInfoFromId(3);
+
+  return [primaryEdge, secondaryEdge];
+}
+
 export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
   (_delta: Point2, position: Point2, planeId: OrthoView) => {
     const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);

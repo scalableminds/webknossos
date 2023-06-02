@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -13,9 +15,12 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
-case class ZarrArrayHeader(
+import scala.concurrent.ExecutionContext
+
+case class ZarrV3ArrayHeader(
     zarr_format: Int, // must be 3
     node_type: String, // must be "array"
     shape: Array[Int],
@@ -53,13 +58,18 @@ case class ZarrArrayHeader(
       case _                             => false
     }
 
-  def isValid: Boolean = zarr_format == 3 && node_type == "array"
+  def assertValid(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- bool2Fox(zarr_format == 3) ?~> s"Expected zarr_format 3, got $zarr_format"
+      _ <- bool2Fox(node_type == "array") ?~> s"Expected node_type 'array', got $node_type"
+      _ <- Fox.box2Fox(tryo(resolvedDataType)) ?~> "Data type is not supported"
+    } yield ()
 
   def elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 
   def outerChunkSize: Array[Int] = chunk_grid match {
-    case Left(cgs) => cgs.configuration.chunk_shape
-    case Right(_)  => ???
+    case Left(chunkGridSpecification) => chunkGridSpecification.configuration.chunk_shape
+    case Right(_)                     => ???
   }
 
   private def getChunkSize: Array[Int] = {
@@ -141,11 +151,11 @@ object StorageTransformerSpecification extends JsonImplicits {
     Json.format[StorageTransformerSpecification]
 }
 
-object ZarrArrayHeader extends JsonImplicits {
+object ZarrV3ArrayHeader extends JsonImplicits {
 
   def ZARR_JSON = "zarr.json"
-  implicit object ZarrArrayHeaderFormat extends Format[ZarrArrayHeader] {
-    override def reads(json: JsValue): JsResult[ZarrArrayHeader] =
+  implicit object ZarrArrayHeaderFormat extends Format[ZarrV3ArrayHeader] {
+    override def reads(json: JsValue): JsResult[ZarrV3ArrayHeader] =
       for {
         zarr_format <- json("zarr_format").validate[Int]
         node_type <- json("node_type").validate[String]
@@ -158,7 +168,7 @@ object ZarrArrayHeader extends JsonImplicits {
         codecs = readCodecs(json("codecs"))
         dimension_names <- json("dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
       } yield
-        ZarrArrayHeader(
+        ZarrV3ArrayHeader(
           zarr_format,
           node_type,
           shape,
@@ -201,7 +211,7 @@ object ZarrArrayHeader extends JsonImplicits {
         possibleCodecSpec.map((s: CodecConfiguration) => Seq(s)).getOrElse(Seq[CodecConfiguration]()))
     }
 
-    override def writes(zarrArrayHeader: ZarrArrayHeader): JsValue =
+    override def writes(zarrArrayHeader: ZarrV3ArrayHeader): JsValue =
       Json.obj(
         "zarr_format" -> zarrArrayHeader.zarr_format,
         "node_type" -> zarrArrayHeader.node_type,

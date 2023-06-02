@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   ChunkReader,
   ChunkUtils,
   DatasetArray,
-  DatasetHeader,
   DatasetPath
 }
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -23,13 +22,13 @@ object ZarrV3Array extends LazyLogging {
   @throws[IOException]
   def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): ZarrV3Array = {
     val rootPath = new DatasetPath("")
-    val headerPath = rootPath.resolve(ZarrArrayHeader.ZARR_JSON)
+    val headerPath = rootPath.resolve(ZarrV3ArrayHeader.ZARR_JSON)
     val headerBytes = (path / headerPath.storeKey).readBytes()
     if (headerBytes.isEmpty)
-      throw new IOException("'" + ZarrArrayHeader.ZARR_JSON + "' expected but is not readable or missing in store.")
+      throw new IOException("'" + ZarrV3ArrayHeader.ZARR_JSON + "' expected but is not readable or missing in store.")
     val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val header: ZarrArrayHeader =
-      Json.parse(headerString).validate[ZarrArrayHeader] match {
+    val header: ZarrV3ArrayHeader =
+      Json.parse(headerString).validate[ZarrV3ArrayHeader] match {
         case JsSuccess(parsedHeader, _) =>
           parsedHeader
         case errors: JsError =>
@@ -42,7 +41,7 @@ object ZarrV3Array extends LazyLogging {
 
 class ZarrV3Array(relativePath: DatasetPath,
                   vaultPath: VaultPath,
-                  header: DatasetHeader,
+                  header: ZarrV3ArrayHeader,
                   axisOrder: AxisOrder,
                   channelIndex: Option[Int])
     extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex)
@@ -51,9 +50,7 @@ class ZarrV3Array(relativePath: DatasetPath,
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
     s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
 
-  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec]) = initializeCodecs(specificHeader.codecs)
-
-  private def specificHeader: ZarrArrayHeader = header.asInstanceOf[ZarrArrayHeader]
+  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec]) = initializeCodecs(header.codecs)
 
   private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {
@@ -77,13 +74,13 @@ class ZarrV3Array(relativePath: DatasetPath,
   }
 
   override protected val chunkReader: ChunkReader =
-    ZarrV3ChunkReader.create(vaultPath, specificHeader, this)
+    ZarrV3ChunkReader.create(vaultPath, header, this)
 
   private val shardIndexCache: AlfuFoxCache[VaultPath, Array[Byte]] =
     AlfuFoxCache()
 
   private def shardShape =
-    specificHeader.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
+    header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
   private def innerChunkShape =
     header.chunkSize // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
   private def indexShape =
@@ -115,10 +112,11 @@ class ZarrV3Array(relativePath: DatasetPath,
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
       axisOrder.permuteIndicesReverse(header.datasetShape),
-      axisOrder.permuteIndicesReverse(specificHeader.outerChunkSize),
+      axisOrder.permuteIndicesReverse(header.outerChunkSize),
       header.chunkSize,
       (chunkIndex, header.chunkSize).zipped.map(_ * _)
     )
+
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
     for {

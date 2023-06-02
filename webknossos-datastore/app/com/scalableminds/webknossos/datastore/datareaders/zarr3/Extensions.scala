@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import play.api.libs.json.{Json, OFormat}
 
 case class ExtensionDataTypeFallback(
@@ -8,8 +7,8 @@ case class ExtensionDataTypeFallback(
     configuration: Option[Map[String, String]]
 )
 
-object ExtensionDataTypeFallback extends JsonImplicits {
-  implicit val extensionDataTypeFallbackFormat: OFormat[ExtensionDataTypeFallback] =
+object ExtensionDataTypeFallback {
+  implicit val jsonFormat: OFormat[ExtensionDataTypeFallback] =
     Json.format[ExtensionDataTypeFallback]
 }
 
@@ -19,8 +18,8 @@ case class ExtensionDataType(
     fallback: Option[Seq[ExtensionDataTypeFallback]]
 )
 
-object ExtensionDataType extends JsonImplicits {
-  implicit val extensionDataTypeFormat: OFormat[ExtensionDataType] =
+object ExtensionDataType {
+  implicit val jsonFormat: OFormat[ExtensionDataType] =
     Json.format[ExtensionDataType]
 }
 
@@ -30,7 +29,7 @@ case class ExtensionChunkGridSpecification(
     configuration: Option[Map[String, String]]
 )
 
-object ExtensionChunkGridSpecification extends JsonImplicits {
-  implicit val extensionChunkGridSpecificationFormat: OFormat[ExtensionChunkGridSpecification] =
+object ExtensionChunkGridSpecification {
+  implicit val jsonFormat: OFormat[ExtensionChunkGridSpecification] =
     Json.format[ExtensionChunkGridSpecification]
 }

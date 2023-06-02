@@ -18,7 +18,7 @@ object ZarrV3DataType extends ExtendedEnumeration {
       .fromString(s)
       .orElse(s match {
         case rawPattern(_) => Some(ZarrV3DataType.raw)
-        case _             => ???
+        case _             => None
       })
   }
 

@@ -37,19 +37,25 @@ import DatasetSettingsDataTab, {
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import {
-  GoogleAuthFormItem,
-  parseCredentials,
-  type FileList,
-} from "./dataset_add_neuroglancer_view";
-import { UploadChangeParam, UploadFile } from "antd/lib/upload";
+import Upload, { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
+import { UnlockOutlined } from "@ant-design/icons";
+import { Unicode } from "oxalis/constants";
+import { readFileAsText } from "libs/read_file";
+
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
+type FileList = UploadFile<any>[];
+
 type OwnProps = {
-  onAdded: (arg0: string, arg1: string, arg2: boolean) => Promise<void>;
-  datastores: Array<APIDataStore>;
+  onAdded: (
+    datasetOrganization: string,
+    uploadedDatasetName: string,
+    isRemoteDataset: boolean,
+    needsConversion?: boolean | null | undefined,
+  ) => Promise<void>;
+  datastores: APIDataStore[];
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -102,7 +108,72 @@ function mergeNewLayers(
   };
 }
 
-function DatasetAddZarrView(props: Props) {
+export const parseCredentials = async (file: RcFile | undefined): Promise<Object | null> => {
+  if (!file) {
+    return null;
+  }
+  const jsonString = await readFileAsText(file);
+  try {
+    return JSON.parse(jsonString);
+  } catch (_exception) {
+    Toast.error("Cannot parse credentials as valid JSON. Ignoring credentials file.");
+    return null;
+  }
+};
+
+export function GoogleAuthFormItem({
+  fileList,
+  handleChange,
+  showOptionalHint,
+}: {
+  fileList: FileList;
+  handleChange: (arg: UploadChangeParam<UploadFile<any>>) => void;
+  showOptionalHint?: boolean;
+}) {
+  return (
+    <FormItem
+      name="authFile"
+      label={
+        <React.Fragment>
+          Google{Unicode.NonBreakingSpace}
+          <a
+            href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Service Account
+          </a>
+          {Unicode.NonBreakingSpace}Key {showOptionalHint && "(Optional)"}
+        </React.Fragment>
+      }
+      hasFeedback
+    >
+      <Upload.Dragger
+        name="files"
+        fileList={fileList}
+        onChange={handleChange}
+        beforeUpload={() => false}
+      >
+        <p className="ant-upload-drag-icon">
+          <UnlockOutlined
+            style={{
+              margin: 0,
+              fontSize: 35,
+            }}
+          />
+        </p>
+        <p className="ant-upload-text">
+          Click or Drag your Google Cloud Authentication File to this Area to Upload
+        </p>
+        <p className="ant-upload-text-hint">
+          This is only needed if the dataset is located in a non-public Google Cloud Storage bucket
+        </p>
+      </Upload.Dragger>
+    </FormItem>
+  );
+}
+
+function DatasetAddRemoteView(props: Props) {
   const { activeUser, onAdded } = props;
 
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
@@ -230,7 +301,6 @@ function DatasetAddZarrView(props: Props) {
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
-              isReadOnlyDataset={false}
               allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
@@ -515,4 +585,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(DatasetAddZarrView);
+export default connector(DatasetAddRemoteView);

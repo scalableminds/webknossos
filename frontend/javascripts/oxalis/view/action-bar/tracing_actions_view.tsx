@@ -70,6 +70,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { NeuronInferralModal, NucleiInferralModal } from "../right-border-tabs/starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -93,6 +94,8 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 type State = {
+  isAINucleiSegmentationModalOpen: boolean;
+  isAINeuronSegmentationModalOpen: boolean;
   isMergeModalOpen: boolean;
   isUserScriptsModalOpen: boolean;
   isZarrPrivateLinksModalOpen: boolean;
@@ -252,6 +255,8 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 
 class TracingActionsView extends React.PureComponent<Props, State> {
   state: State = {
+    isAINeuronSegmentationModalOpen: false,
+    isAINucleiSegmentationModalOpen: false,
     isMergeModalOpen: false,
     isZarrPrivateLinksModalOpen: false,
     isUserScriptsModalOpen: false,
@@ -430,21 +435,30 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleMergeClose = () => {
-    this.setState({
-      isMergeModalOpen: false,
-    });
-  };
-
   handleUserScriptsOpen = () => {
     this.setState({
       isUserScriptsModalOpen: true,
     });
   };
 
-  handleUserScriptsClose = () => {
+  handleAINucleiSegmentationModalOpen = () => {
     this.setState({
+      isAINucleiSegmentationModalOpen: true,
+    });
+  };
+
+  handleAINeuronSegmentationModalOpen = () => {
+    this.setState({
+      isAINeuronSegmentationModalOpen: true,
+    });
+  };
+
+  handleModalClose = () => {
+    this.setState({
+      isMergeModalOpen: false,
       isUserScriptsModalOpen: false,
+      isAINeuronSegmentationModalOpen: false,
+      isAINucleiSegmentationModalOpen: false,
     });
   };
 
@@ -633,6 +647,41 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         label: "Duplicate",
       });
     }
+
+    if (features().jobsEnabled) {
+      menuItems.push({
+        key: "ai-segmentation-menu",
+        icon: <SettingOutlined />,
+        label: "AI Segementation",
+        children: [
+          {
+            key: "ai-nuclei-segmentation",
+            label: "AI Nuclei Segmentation",
+            onClick: this.handleAINucleiSegmentationModalOpen,
+          },
+          {
+            key: "ai-neuron-segmentation",
+            label: "AI Neuron Segmentation",
+            onClick: this.handleAINeuronSegmentationModalOpen,
+          },
+        ],
+      });
+      if (this.state.isAINucleiSegmentationModalOpen)
+        modals.push(
+          <NucleiInferralModal
+            key="ai-nuclei-segmentation-modal"
+            handleClose={this.handleModalClose}
+          />,
+        );
+      if (this.state.isAINeuronSegmentationModalOpen)
+        modals.push(
+          <NeuronInferralModal
+            key="ai-neuron-segmentation-modal"
+            handleClose={this.handleModalClose}
+          />,
+        );
+    }
+
     menuItems.push(screenshotMenuItem);
     menuItems.push({
       key: "user-scripts-button",
@@ -644,7 +693,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       <UserScriptsModalView
         key="user-scripts-modal"
         isOpen={this.state.isUserScriptsModalOpen}
-        onOK={this.handleUserScriptsClose}
+        onOK={this.handleModalClose}
       />,
     );
 
@@ -659,7 +708,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         <MergeModalView
           key="merge-modal"
           isOpen={this.state.isMergeModalOpen}
-          onOk={this.handleMergeClose}
+          onOk={this.handleModalClose}
         />,
       );
     }

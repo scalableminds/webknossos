@@ -24,10 +24,6 @@ import {
 import features from "features";
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
-import {
-  NucleiInferralModal,
-  NeuronInferralModal,
-} from "oxalis/view/right-border-tabs/starting_job_modals";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
 import { mayUserEditDataset } from "libs/utils";
@@ -57,7 +53,6 @@ type DispatchProps = {
 };
 type Props = StateProps & DispatchProps;
 type State = {
-  showJobsDetailsModal: StartableJobsEnum | null | undefined;
   owningOrganizationDisplayName: string | null;
   isMarkdownModalOpen: boolean;
 };
@@ -228,7 +223,6 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
-    showJobsDetailsModal: null,
     owningOrganizationDisplayName: null,
   };
 
@@ -344,103 +338,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       </div>
     ) : null;
   }
-
-  getProcessingJobsMenu = () => {
-    const { dataset } = this.props;
-
-    if (!dataset.jobsEnabled) {
-      return (
-        <tr>
-          <td
-            style={{
-              paddingRight: 4,
-              paddingTop: 10,
-            }}
-          >
-            <StarOutlined className="info-tab-icon" width={24} height={24} />
-          </td>
-          <td>
-            <Tooltip title="Dataset Processing features are only available for datasets hosted natively and not on other datastores.">
-              <Button
-                disabled
-                type="link"
-                style={{
-                  padding: 0,
-                }}
-              >
-                Process Dataset
-              </Button>
-            </Tooltip>
-          </td>
-        </tr>
-      );
-    }
-
-    const jobMenuItems: MenuItemType[] = [
-      {
-        key: "start_nuclei_inferal",
-        onClick: () =>
-          this.setState({
-            showJobsDetailsModal: StartableJobsEnum.NUCLEI_INFERRAL,
-          }),
-        label: (
-          <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
-            Start Nuclei Inferral
-          </Tooltip>
-        ),
-      },
-    ];
-
-    if (this.props.activeUser?.isSuperUser) {
-      jobMenuItems.push({
-        key: "start_neuron_inferral",
-        onClick: () =>
-          this.setState({
-            showJobsDetailsModal: StartableJobsEnum.NEURON_INFERRAL,
-          }),
-        label: (
-          <Tooltip title="Start a job that automatically reconstructs neurons for this dataset.">
-            Start Neuron Inferral
-          </Tooltip>
-        ),
-      });
-    }
-
-    return (
-      <tr>
-        <td
-          style={{
-            paddingRight: 4,
-            paddingTop: 10,
-          }}
-        >
-          <StarOutlined
-            className="info-tab-icon"
-            style={{
-              fontSize: 18,
-            }}
-          />
-        </td>
-        <Dropdown
-          menu={{ items: jobMenuItems }}
-          overlayStyle={{
-            minWidth: "unset",
-          }}
-        >
-          <td>
-            <Button
-              type="link"
-              style={{
-                padding: 0,
-              }}
-            >
-              Process Dataset
-            </Button>
-          </td>
-        </Dropdown>
-      </tr>
-    );
-  };
 
   getDatasetName() {
     const {
@@ -673,21 +570,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderSelectedStartingJobsModal() {
-    const handleClose = () =>
-      this.setState({
-        showJobsDetailsModal: null,
-      });
-
-    if (this.state.showJobsDetailsModal === StartableJobsEnum.NUCLEI_INFERRAL) {
-      return <NucleiInferralModal handleClose={handleClose} />;
-    } else if (this.state.showJobsDetailsModal === StartableJobsEnum.NEURON_INFERRAL) {
-      return <NeuronInferralModal handleClose={handleClose} />;
-    }
-
-    return null;
-  }
-
   getResolutionInfo() {
     const { dataset, annotation, activeResolutionInfo } = this.props;
     const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
@@ -777,14 +659,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               {this.getResolutionInfo()}
             </tbody>
           </table>
-          <div className="info-tab-block">
-            {features().jobsEnabled &&
-            activeUser != null &&
-            (activeUser.isDatasetManager || activeUser.isAdmin)
-              ? this.getProcessingJobsMenu()
-              : null}
-          </div>
-          {this.renderSelectedStartingJobsModal()}
         </div>
 
         {this.getAnnotationStatistics()}

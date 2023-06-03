@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.06.0...HEAD)
 
 ### Added
-- Added new shortcuts for fast tool switching. Look at the updated [Keyboard Shortcut documentation](https://docs.webknossos.org/webknossos/keyboard_shortcuts.html#tool-switching-shortcuts) to the new shortcuts. [#7112](https://github.com/scalableminds/webknossos/pull/7112)
+- Added new shortcuts for fast tool switching. Look at the updated [Keyboard Shortcuts documentation](https://docs.webknossos.org/webknossos/keyboard_shortcuts.html#tool-switching-shortcuts) to see the new shortcuts. [#7112](https://github.com/scalableminds/webknossos/pull/7112)
 - Subfolders of the currently active folder are now also rendered in the dataset table in the dashboard. [#6996](https://github.com/scalableminds/webknossos/pull/6996)
 
 ### Changed

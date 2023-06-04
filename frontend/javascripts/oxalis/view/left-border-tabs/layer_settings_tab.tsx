@@ -1,15 +1,4 @@
-import {
-  Button,
-  Col,
-  Divider,
-  Dropdown,
-  Menu,
-  MenuProps,
-  Popover,
-  Row,
-  Switch,
-  Tooltip,
-} from "antd";
+import { Button, Col, Divider, Dropdown, MenuProps, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -21,7 +10,7 @@ import {
   VerticalAlignMiddleOutlined,
   LockOutlined,
   UnlockOutlined,
-  MoreOutlined,
+  EllipsisOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -248,17 +237,31 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Tooltip>
   );
 
+  getDeleteAnnotationLayerIcon = (readableName: string, layer?: APIDataLayer) => (
+    <i
+      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+      className="fas fa-trash"
+      style={{
+        cursor: "pointer",
+        opacity: 0.7,
+      }}
+    />
+  );
+
   getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
     <Tooltip title="Delete this annotation layer.">
-      <i
-        onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-        className="fas fa-trash"
-        style={{
-          cursor: "pointer",
-          opacity: 0.7,
-        }}
-      />
+      {this.getDeleteAnnotationLayerIcon(readableName, layer)}
     </Tooltip>
+  );
+
+  getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
+    <>
+      {
+        this.getDeleteAnnotationLayerIcon(readableName, layer)
+        //TODO merge with icon method because whole option needs to be clickable
+      }
+      Delete this annotation layer
+    </>
   );
 
   deleteAnnotationLayerIfConfirmed = async (
@@ -426,23 +429,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       allReadableLayerNames,
       readableName,
     );
-    const layerActions = [
+    const items: MenuProps["items"] = [
       {
         label: (
           <div className="flex-item">
             {isAnnotationLayer && !isOnlyAnnotationLayer
-              ? this.getDeleteAnnotationLayerButton(readableName, layer)
+              ? this.getDeleteAnnotationLayerDropdownOption(readableName, layer)
               : null}
           </div>
         ),
         key: "deleteAnnotationLayer",
       },
     ];
-    const items = [
-      { label: "item 1", key: "item-1" }, // remember to pass the key prop
-      { label: "item 2", key: "item-2" },
-    ];
-    const getOverflowLayerActions = <Menu items={layerActions} />;
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -619,9 +617,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </div>
           <div className="flex-item">{this.getReloadDataButton(layerName)}</div>
           <div className="flex-item">
-            <Dropdown menu={{ items }} trigger={["click"]}>
-              <MoreOutlined />
-            </Dropdown>
+            <Tooltip title="More actions">
+              <Dropdown menu={{ items }} trigger={["click", "contextMenu"]} placement="bottomRight">
+                <EllipsisOutlined />
+              </Dropdown>
+            </Tooltip>
           </div>
         </div>
       </div>

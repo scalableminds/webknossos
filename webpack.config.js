@@ -193,9 +193,9 @@ module.exports = function (env = {}) {
             chunks: "all",
             // Use a consistent name for the vendors chunk
             name: "vendors~onnx",
-            priority: 0,
-            minChunks: 1,
-            minSize: 1,
+            // priority: 0,
+            // minChunks: 1,
+            // minSize: 1,
             reuseExistingChunk: false,
           },
         },

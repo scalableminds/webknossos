@@ -176,6 +176,11 @@ module.exports = function (env = {}) {
             chunks: "all",
             name: "vendors~onnx",
           },
+          html2canvas: {
+            test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
+            chunks: "all",
+            name: "vendors~html2canvas",
+          },
         },
       },
     },

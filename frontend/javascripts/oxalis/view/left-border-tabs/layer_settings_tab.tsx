@@ -171,7 +171,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "WEBKNOSSOS will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
 
-    // TODO used to be AsyncIconButton
     return (
       <Tooltip title={tooltipText}>
         <div
@@ -196,7 +195,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       return null;
     }
     const tooltipText = "Use this when the data on the server changed.";
-    // TODO used to be AsyncIconButton
     return (
       <Tooltip title={tooltipText}>
         <div onClick={() => this.reloadLayerData(layerName)}>

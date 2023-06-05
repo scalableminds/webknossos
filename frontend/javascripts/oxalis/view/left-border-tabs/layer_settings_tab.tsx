@@ -180,12 +180,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
               : () => Promise.resolve()
           }
+          style={{
+            cursor: !isDisabled ? "pointer" : "not-allowed",
+          }}
         >
-          <ScanOutlined
-            style={{
-              cursor: !isDisabled ? "pointer" : "not-allowed",
-            }}
-          />
+          <ScanOutlined />
           Jump to data
         </div>
       </Tooltip>
@@ -201,11 +200,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <div onClick={() => this.reloadLayerData(layerName)}>
-          <ReloadOutlined
-            style={{
-              cursor: "pointer",
-            }}
-          />
+          <ReloadOutlined />
           Reload data from server
         </div>
       </Tooltip>
@@ -234,7 +229,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <i
         className="fas fa-object-ungroup"
         style={{
-          cursor: "pointer",
           opacity: 0.7,
         }}
       />
@@ -248,7 +242,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
         className="fas fa-trash"
         style={{
-          cursor: "pointer",
           opacity: 0.7,
         }}
       />
@@ -256,14 +249,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   );
 
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
-    <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
-      <i
-        className="fas fa-trash"
-        style={{
-          cursor: "pointer",
-          opacity: 0.7,
-        }}
-      />
+    <div
+      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+      style={{
+        opacity: 0.7,
+      }}
+    >
+      <i className="fas fa-trash" />
       Delete this annotation layer
     </div>
   );
@@ -435,6 +427,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
     const items: MenuProps["items"] = [
       {
+        label:
+          isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+            ? this.getMergeWithFallbackLayerButton(layer)
+            : null,
+        key: "mergeWithFallbackLayerButton",
+      },
+      { label: this.getReloadDataButton(layerName), key: "reloadDataButton" },
+      {
+        label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
+        key: "findDataButton",
+      },
+      {
         label: (
           <div className="flex-item">
             {isAnnotationLayer && !isOnlyAnnotationLayer
@@ -443,18 +447,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </div>
         ),
         key: "deleteAnnotationLayer",
-      },
-      {
-        label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
-        key: "findDataButton",
-      },
-      { label: this.getReloadDataButton(layerName), key: "reloadDataButton" },
-      {
-        label:
-          isVolumeTracing && !isDisabled && maybeFallbackLayer != null
-            ? this.getMergeWithFallbackLayerButton(layer)
-            : null,
-        key: "mergeWithFallbackLayerButton",
       },
     ];
     return (

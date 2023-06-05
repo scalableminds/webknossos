@@ -5,6 +5,7 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -88,9 +89,9 @@ export class QuickSelectGeometry {
       opacity: 0.5,
     });
     this.rectangle = new THREE.Mesh(geometry, material);
-    this.rectangle.visible = false;
 
-    const centerGeometry = new THREE.PlaneGeometry(2, 2);
+    const baseWidth = getBaseVoxel(Store.getState().dataset.dataSource.scale);
+    const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: this.centerMarkerColor,
       side: THREE.DoubleSide,
@@ -98,11 +99,25 @@ export class QuickSelectGeometry {
       opacity: 0.9,
     });
     this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
-    this.centerMarker.visible = false;
 
     this.meshGroup = new THREE.Group();
     this.meshGroup.add(this.rectangle);
     this.meshGroup.add(this.centerMarker);
+
+    // There are three `visible` properties that are used for different
+    // purposes:
+    // - The mesh group visibility effectively controls both the actual
+    //   rectangle and the center marker geometry. It is set in
+    //   adaptVisibilityForRendering.
+    // - The visibility property of the rectangle marks whether
+    //   the rectangle does have a size > 0.
+    // - The visibility of the center marker is set depending on
+    //   whether the quick-select tool is used with or without
+    //   the heuristic approach (only in that case, the center
+    //   has a meaning).
+    this.meshGroup.visible = false;
+    this.rectangle.visible = false;
+    this.centerMarker.visible = false;
 
     this.reset();
   }
@@ -112,8 +127,13 @@ export class QuickSelectGeometry {
     this.centerMarker.material.color = this.centerMarkerColor;
   }
 
+  setCenterMarkerVisibility(visible: boolean) {
+    this.centerMarker.visible = visible;
+  }
+
   rotateToViewport() {
     const { activeViewport } = Store.getState().viewModeData.plane;
+    const { scale } = Store.getState().dataset.dataSource;
     const rotation = rotations[activeViewport];
     if (!rotation) {
       return;
@@ -121,6 +141,11 @@ export class QuickSelectGeometry {
 
     this.rectangle.setRotationFromEuler(rotation);
     this.centerMarker.setRotationFromEuler(rotation);
+    this.centerMarker.scale.copy(
+      new THREE.Vector3(
+        ...Dimensions.transDim(scale.map((el) => 1 / el) as Vector3, activeViewport),
+      ),
+    );
   }
 
   setColor(color: THREE.Color) {
@@ -133,13 +158,22 @@ export class QuickSelectGeometry {
   }
 
   setCoordinates(startPosition: Vector3, endPosition: Vector3) {
-    const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
-    const extentXYZ = V3.abs(V3.sub(endPosition, startPosition));
     const { activeViewport } = Store.getState().viewModeData.plane;
-    const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
-    // Set the depth-component of the rectangle to 1
-    extentUVW[2] = 1;
+    // Add a depth to the endPosition so that the extent of the geometry
+    // will have a depth of 1. Note that the extent is only used to scale
+    // the geometry. Since it is a plane, a depth scale factor of > 1 won't
+    // extrude it.
+    const endPositionWithDepth = V3.add(
+      endPosition,
+      Dimensions.transDim([0, 0, 1], activeViewport),
+    );
 
+    const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
+    const extentXYZ = V3.abs(V3.sub(endPositionWithDepth, startPosition));
+    const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
+
+    // Note that the third dimension's value will be adapted again
+    // in adaptVisibilityForRendering.
     this.rectangle.position.set(...centerPosition);
     this.rectangle.scale.set(...extentUVW);
     this.rectangle.geometry.computeBoundingSphere();
@@ -148,13 +182,7 @@ export class QuickSelectGeometry {
 
     // Hide the objects if the rectangle has size zero, so whenever
     // the quick select tool is not currently used to draw a rectangle.
-    if (V3.isEqual(endPosition, startPosition)) {
-      this.centerMarker.visible = false;
-      this.rectangle.visible = false;
-    } else {
-      this.centerMarker.visible = true;
-      this.rectangle.visible = true;
-    }
+    this.rectangle.visible = !V3.isEqual(endPosition, startPosition);
 
     app.vent.trigger("rerender");
   }
@@ -163,8 +191,20 @@ export class QuickSelectGeometry {
     // Only show this geometry when the current viewport is exactly at the
     // right position (third dimension).
     this.meshGroup.visible =
+      this.rectangle.visible &&
       Math.trunc(flycamPosition[thirdDim]) ===
-      Math.trunc(this.rectangle.position.toArray()[thirdDim]);
+        Math.trunc(this.rectangle.position.toArray()[thirdDim]);
+
+    if (this.meshGroup.visible) {
+      // If the group is visible, adapt the position's third dimension to
+      // be exactly at the third dimension of the flycam. Otherwise,
+      // the geometry might be invisible when the current position is
+      // fractional.
+      const pos = this.rectangle.position.toArray();
+      pos[thirdDim] = flycamPosition[thirdDim];
+      this.rectangle.position.set(...pos);
+      this.centerMarker.position.set(...pos);
+    }
   }
 
   getMeshGroup() {

@@ -52,7 +52,6 @@ import type {
   ExperienceDomainList,
   ServerTracing,
   TracingType,
-  WkConnectDatasetConfig,
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
@@ -66,7 +65,7 @@ import type {
   APIDatasetCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { LOG_LEVELS, Vector3, Vector6 } from "oxalis/constants";
+import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
@@ -93,6 +92,7 @@ import window, { location } from "libs/window";
 import { SaveQueueType } from "oxalis/model/actions/save_actions";
 import { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -1536,19 +1536,6 @@ export function cancelDatasetUpload(
   );
 }
 
-export function addWkConnectDataset(
-  datastoreHost: string,
-  datasetConfig: WkConnectDatasetConfig,
-): Promise<void> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets?token=${token}`, {
-      data: datasetConfig,
-      host: datastoreHost,
-      method: "POST",
-    }),
-  );
-}
-
 type ExplorationResult = {
   dataSource: DatasourceConfiguration | undefined;
   report: string;
@@ -1846,7 +1833,7 @@ export async function getPublication(id: string): Promise<APIPublication> {
 }
 
 // #### Datastores
-export async function getDatastores(): Promise<Array<APIDataStore>> {
+export async function getDatastores(): Promise<APIDataStore[]> {
   const datastores = await Request.receiveJSON("/api/datastores");
   assertResponseLimit(datastores);
   return datastores;
@@ -2354,6 +2341,31 @@ export async function getEdgesForAgglomerateMinCut(
       },
     ),
   );
+}
+
+// ### Smart Select
+
+export async function getSamEmbedding(
+  dataset: APIDataset,
+  layerName: string,
+  mag: Vector3,
+  embeddingBoxMag1: BoundingBox,
+  intensityRange?: Vector2 | null,
+): Promise<Float32Array> {
+  const params = new URLSearchParams();
+  if (intensityRange != null) {
+    params.append("intensityMin", `${intensityRange[0]}`);
+    params.append("intensityMax", `${intensityRange[1]}`);
+  }
+
+  const buffer = await Request.sendJSONReceiveArraybuffer(
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
+    {
+      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
+      showErrorToast: false,
+    },
+  );
+  return new Float32Array(buffer);
 }
 
 // ### Short links

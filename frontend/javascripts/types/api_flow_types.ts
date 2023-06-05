@@ -80,7 +80,6 @@ export type APIDataStore = {
   readonly name: string;
   readonly url: string;
   readonly isScratch: boolean;
-  readonly isConnector: boolean;
   readonly allowsUpload: boolean;
 };
 export type APITracingStore = {
@@ -476,38 +475,6 @@ export type APIAnnotationWithTask = APIAnnotationBase & {
 export type APITaskWithAnnotation = APITask & {
   readonly annotation: APIAnnotation;
 };
-type NeuroglancerLayer = {
-  // This is the source URL of the layer, should start with gs://, http:// or https://
-  source: string;
-  type: "image" | "segmentation";
-};
-type NeuroglancerDatasetConfig = Record<
-  string,
-  Record<
-    string,
-    {
-      layers: Record<string, NeuroglancerLayer>;
-      credentials?: Record<string, any>;
-    }
-  >
->;
-type BossDatasetConfig = Record<
-  string,
-  Record<
-    string,
-    {
-      domain: string;
-      collection: string;
-      experiment: string;
-      username: string;
-      password: string;
-    }
-  >
->;
-export type WkConnectDatasetConfig = {
-  neuroglancer?: NeuroglancerDatasetConfig;
-  boss?: BossDatasetConfig;
-};
 export type APITimeTracking = {
   time: string;
   timestamp: number;
@@ -605,6 +572,7 @@ export type APIFeatureToggles = {
   readonly defaultToLegacyBindings: boolean;
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
+  readonly segmentAnythingEnabled?: boolean;
 };
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
@@ -875,12 +843,12 @@ type StatePartial =
 export type VoxelyticsTaskInfo = {
   taskName: string;
   currentExecutionId: string | null;
-  chunkCounts: ChunkOrTaskCounts;
+  chunkCounts: ChunkCounts;
   runs: Array<
     {
       runId: string;
       currentExecutionId: string | null;
-      chunkCounts: ChunkOrTaskCounts;
+      chunkCounts: ChunkCounts;
     } & StatePartial
   >;
 } & StatePartial;
@@ -933,7 +901,7 @@ export type VoxelyticsWorkflowListingRun = (
   username: string;
   hostname: string;
   voxelyticsVersion: string;
-  taskCounts: ChunkOrTaskCounts;
+  taskCounts: TaskCounts;
 };
 
 export type VoxelyticsWorkflowListing = {
@@ -942,7 +910,7 @@ export type VoxelyticsWorkflowListing = {
   beginTime: number;
   endTime: number | null;
   state: VoxelyticsRunState;
-  taskCounts: ChunkOrTaskCounts;
+  taskCounts: TaskCounts;
   runs: Array<VoxelyticsWorkflowListingRun>;
 };
 
@@ -953,17 +921,21 @@ type Statistics = {
   sum?: number;
 };
 
-type ChunkOrTaskCounts = {
+type ChunkCounts = {
   total: number;
   failed: number;
   skipped: number;
   complete: number;
   cancelled: number;
 };
+type TaskCounts = ChunkCounts & {
+  fileSize: number;
+  inodeCount: number;
+};
 
 export type VoxelyticsChunkStatistics = {
   executionId: string;
-  chunkCounts: ChunkOrTaskCounts;
+  chunkCounts: ChunkCounts;
   beginTime: number | null;
   endTime: number | null;
   wallTime: number | null;

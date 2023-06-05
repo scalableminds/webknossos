@@ -18,7 +18,6 @@ import scala.concurrent.duration._
 class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
                                 val system: ActorSystem,
                                 multiUserDAO: MultiUserDAO,
-                                userDAO: MultiUserDAO,
                                 mailchimpClient: MailchimpClient)(implicit ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging {

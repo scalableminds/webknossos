@@ -192,6 +192,7 @@ export default function BoundingBoxTab() {
       {selectedBoundingBoxForExport != null ? (
         <DownloadModalView
           isOpen
+          isAnnotation
           onClose={() => setSelectedBoundingBoxForExport(null)}
           initialBoundingBoxId={selectedBoundingBoxForExport.id}
           initialTab="export"

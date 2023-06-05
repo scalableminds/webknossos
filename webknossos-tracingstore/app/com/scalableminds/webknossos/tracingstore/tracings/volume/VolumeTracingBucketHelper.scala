@@ -236,7 +236,7 @@ class VersionedBucketIterator(prefix: String,
     if (currentBatchIterator.hasNext) {
       val bucket = currentBatchIterator.next
       currentStartAfterKey = Some(bucket.key)
-      if (isRevertedBucket(bucket)) {
+      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key).isEmpty) {
         getNextNonRevertedBucket
       } else {
         Some(bucket)

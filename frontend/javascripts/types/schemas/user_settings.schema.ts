@@ -122,6 +122,9 @@ export const userSettings = {
   autoSaveLayouts: {
     type: "boolean",
   },
+  autoRenderMeshInProofreading: {
+    type: "boolean",
+  },
   gpuMemoryFactor: {
     type: "number",
   },

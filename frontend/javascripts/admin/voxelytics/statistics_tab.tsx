@@ -4,7 +4,7 @@ import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
 import { usePolling } from "libs/react_hooks";
 import {
-  formatBytes,
+  formatCountToDataAmountUnit,
   formatCPU,
   formatDistanceStrict,
   formatDurationStrict,
@@ -127,21 +127,21 @@ export default function StatisticsTab({
                   {row.memory?.max != null && (
                     <>
                       <span className="stats-label">Max</span>{" "}
-                      {formatBytes(row.memory.max * 1024 * 1024)}
+                      {formatCountToDataAmountUnit(row.memory.max * 1024 * 1024)}
                     </>
                   )}
                   <br />
                   {row.memory?.median != null && (
                     <>
                       <span className="stats-label">Median</span>{" "}
-                      {formatBytes(row.memory.median * 1024 * 1024)}
+                      {formatCountToDataAmountUnit(row.memory.median * 1024 * 1024)}
                     </>
                   )}
                   <br />
                   {row.memory?.stddev != null && (
                     <>
                       <span className="stats-label">Stddev</span>{" "}
-                      {formatBytes(row.memory.stddev * 1024 * 1024)}
+                      {formatCountToDataAmountUnit(row.memory.stddev * 1024 * 1024)}
                     </>
                   )}
                 </td>

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import type { OrthoView, Vector3 } from "oxalis/constants";
+import { BLEND_MODES, OrthoView, Vector3 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -216,6 +216,7 @@ class PlaneMaterialFactory {
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
+      blendMode: { value: 1.0 },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -424,15 +425,20 @@ class PlaneMaterialFactory {
           let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(Store.getState().dataset, layerName);
-            const activeMag = getResolutionInfo(layer.resolutions).getResolutionByIndex(
-              activeMagIndex,
-            );
+            const resolutionInfo = getResolutionInfo(layer.resolutions);
+            // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
+            // to determine a representative mag.
+            const suitableMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(activeMagIndex);
+            const suitableMag =
+              suitableMagIndex != null
+                ? resolutionInfo.getResolutionByIndex(suitableMagIndex)
+                : null;
 
             const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
-            if (!hasTransform && activeMag) {
+            if (!hasTransform && suitableMag) {
               representativeMagForVertexAlignment = V3.min(
                 representativeMagForVertexAlignment,
-                activeMag,
+                suitableMag,
               );
             }
           }
@@ -563,6 +569,15 @@ class PlaneMaterialFactory {
           const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
           this.uniforms.bboxMin.value.set(...lowerBoundary);
           this.uniforms.bboxMax.value.set(...upperBoundary);
+        },
+        true,
+      ),
+    );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.datasetConfiguration.blendMode,
+        (blendMode) => {
+          this.uniforms.blendMode.value = blendMode === BLEND_MODES.Additive ? 1.0 : 0.0;
         },
         true,
       ),

@@ -188,9 +188,10 @@ class VolumeTracingController @Inject()(
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            remoteFallbackLayerOpt <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+              tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
             newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
-              editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayer, userToken))
+              editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayerOpt, userToken))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
               tracing,

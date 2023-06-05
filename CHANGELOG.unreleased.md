@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- Creating bounding boxes can now be done by dragging the left mouse button (when the bounding box tool is selected). To move around in the dataset while this tool is active, keep ALT pressed. [#7118](https://github.com/scalableminds/webknossos/pull/7118)
 
 ### Fixed
 

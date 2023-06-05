@@ -12,8 +12,7 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
   def getEmbedding(imageData: Array[Byte],
                    elementClass: ElementClass.Value,
                    intensityMin: Option[Float],
-                   intensityMax: Option[Float],
-                   useSmallModel: Boolean): Fox[Array[Byte]] = {
+                   intensityMax: Option[Float]): Fox[Array[Byte]] = {
     val metadataLengthInBytes = 1 + 1 + 4 + 4
     val buffer = ByteBuffer.allocate(metadataLengthInBytes + imageData.length)
     buffer.put(ElementClass.encodeAsByte(elementClass))
@@ -22,8 +21,7 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
     buffer.order(ByteOrder.LITTLE_ENDIAN).putFloat(intensityMax.getOrElse(0.0f))
     val imageWithMetadata = buffer.array()
     System.arraycopy(imageData, 0, imageWithMetadata, metadataLengthInBytes, imageData.length)
-    val modelSuffix = if (useSmallModel) "_small" else ""
-    rpc(s"${conf.SegmentAnything.uri}/predictions/sam_vit_l${modelSuffix}")
+    rpc(s"${conf.SegmentAnything.uri}/predictions/sam_vit_l")
       .addQueryString("elementClass" -> elementClass.toString)
       .postBytesWithBytesResponse(imageWithMetadata)
   }

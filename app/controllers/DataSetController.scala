@@ -540,8 +540,7 @@ Expects:
                                dataSetName: String,
                                dataLayerName: String,
                                intensityMin: Option[Float],
-                               intensityMax: Option[Float],
-                               useSmallModelOpt: Option[Boolean]): Action[SegmentAnythingEmbeddingParameters] =
+                               intensityMax: Option[Float]): Action[SegmentAnythingEmbeddingParameters] =
     sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
       log() {
         for {
@@ -554,9 +553,7 @@ Expects:
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
           datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
           targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
-          useSmallModel = useSmallModelOpt.getOrElse(false)
-          dimensionValue = if (useSmallModel) 512 else 1024
-          _ <- bool2Fox(targetMagBbox.dimensions.sorted == Vec3Int(1, dimensionValue, dimensionValue)) ?~> s"Target-mag bbox must be sized ${dimensionValue}×${dimensionValue}×1 (or transposed), got ${targetMagBbox.dimensions}"
+          _ <- bool2Fox(targetMagBbox.dimensions.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.dimensions}"
           data <- datastoreClient.getLayerData(organizationName,
                                                dataset,
                                                dataLayer.name,
@@ -570,8 +567,7 @@ Expects:
             data,
             dataLayer.elementClass,
             intensityMin,
-            intensityMax,
-            useSmallModel) ?~> "segmentAnything.getEmbedding.failed"
+            intensityMax) ?~> "segmentAnything.getEmbedding.failed"
           _ = logger.debug(
             s"Received ${embedding.length} bytes of embedding from SAM server, forwarding to front-end...")
         } yield Ok(embedding)

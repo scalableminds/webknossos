@@ -88,7 +88,9 @@ class Zarr3Array(relativePath: DatasetPath,
 
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
-  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard
+
+  private def checkSumLength = 4 // 32-bit checksum
+  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]) = {
     val shardOffset = (shardCoordinates, indexShape).zipped.map(_ * _)
@@ -101,13 +103,17 @@ class Zarr3Array(relativePath: DatasetPath,
 
   private def readShardIndex(shardPath: VaultPath) = shardPath.readLastBytes(getShardIndexSize)
 
-  private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
-    index
+  private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] = {
+    val checksum = index.takeRight(4) // not checked for now
+    val indexProper = index.dropRight(4)
+    indexProper
       .grouped(shardIndexEntryLength)
       .map((bytes: Array[Byte]) => {
+        // BigInt constructor is big endian, sharding index stores values little endian, thus reverse is used.
         (BigInt(bytes.take(8).reverse).toLong, BigInt(bytes.slice(8, 16).reverse).toLong)
       })
       .toSeq
+  }
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
@@ -126,6 +132,7 @@ class Zarr3Array(relativePath: DatasetPath,
       shardIndex <- shardIndexCache.getOrLoad(shardPath, readShardIndex)
       chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
       (chunkOffset, chunkLength) = parseShardIndex(shardIndex)(chunkIndexInShardIndex)
+      _ <- Fox.bool2Fox(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
       range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
     } yield (shardPath, range)
 }

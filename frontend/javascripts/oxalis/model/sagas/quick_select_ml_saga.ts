@@ -16,7 +16,7 @@ import { map3 } from "libs/utils";
 import { APIDataset } from "types/api_flow_types";
 import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
-import type { InferenceSession, Tensor } from "onnxruntime-web";
+import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
 const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;

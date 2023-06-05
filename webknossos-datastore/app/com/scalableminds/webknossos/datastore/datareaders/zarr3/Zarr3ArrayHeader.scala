@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.util.Helpers.tryo
-import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
+import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
 import scala.concurrent.ExecutionContext
@@ -158,19 +158,20 @@ object StorageTransformerSpecification {
 object Zarr3ArrayHeader extends JsonImplicits {
 
   def ZARR_JSON = "zarr.json"
-  implicit object ZarrArrayHeaderFormat extends Format[Zarr3ArrayHeader] {
+  implicit object Zarr3ArrayHeaderFormat extends Format[Zarr3ArrayHeader] {
     override def reads(json: JsValue): JsResult[Zarr3ArrayHeader] =
       for {
-        zarr_format <- json("zarr_format").validate[Int]
-        node_type <- json("node_type").validate[String]
-        shape <- json("shape").validate[Array[Int]]
-        data_type <- json("data_type").validate[String]
-        chunk_grid <- json("chunk_grid").validate[ChunkGridSpecification]
-        chunk_key_encoding <- json("chunk_key_encoding").validate[ChunkKeyEncoding]
-        fill_value <- json("fill_value").validate[Either[String, Number]]
-        attributes = json("attributes").validate[Map[String, String]].asOpt
-        codecs = readCodecs(json("codecs"))
-        dimension_names <- json("dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
+        zarr_format <- (json \ "zarr_format").validate[Int]
+        node_type <- (json \ "node_type").validate[String]
+        shape <- (json \ "shape").validate[Array[Int]]
+        data_type <- (json \ "data_type").validate[String]
+        chunk_grid <- (json \ "chunk_grid").validate[ChunkGridSpecification]
+        chunk_key_encoding <- (json \ "chunk_key_encoding").validate[ChunkKeyEncoding]
+        fill_value <- (json \ "fill_value").validate[Either[String, Number]]
+        attributes = (json \ "attributes").validate[Map[String, String]].asOpt
+        codecsJsValue <- (json \ "codecs").validate[JsValue]
+        codecs = readCodecs(codecsJsValue)
+        dimension_names <- (json \ "dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
       } yield
         Zarr3ArrayHeader(
           zarr_format,

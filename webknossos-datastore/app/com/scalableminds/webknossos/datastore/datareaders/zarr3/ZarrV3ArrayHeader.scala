@@ -80,7 +80,8 @@ case class ZarrV3ArrayHeader(
     shardingCodecInnerChunkSize.getOrElse(outerChunkSize)
   }
 
-  // TODO: rework this, doesn't work for arbitrary transforms (only F and default C)
+  // Note: this currently works only for F and C as transformation inputs
+  // compare https://github.com/scalableminds/webknossos/issues/7116
   private def getOrder: ArrayOrder.Value =
     CodecTreeExplorer.find {
       case TransposeCodecConfiguration(order) => order == "F"

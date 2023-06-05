@@ -535,9 +535,19 @@ function ChangeBrushSizeButton() {
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
-  const maximumButtonBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
-  const mediumButtonBrushSize = calculateMediumBrushSize(maximumButtonBrushSize);
-  const minimumButtonBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
+  const presetBrushSizes = useSelector(
+    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
+  );
+
+  const brushSizesArePreset = presetBrushSizes[0] === -1;
+  let maximumButtonBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  let mediumButtonBrushSize = calculateMediumBrushSize(maximumButtonBrushSize);
+  let minimumButtonBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
+  //TODO put into default state
+
+  if (brushSizesArePreset) {
+    [minimumButtonBrushSize, mediumButtonBrushSize, maximumButtonBrushSize] = presetBrushSizes;
+  }
 
   const centerBrushInViewport = () => {
     const position = getViewportExtents(Store.getState());

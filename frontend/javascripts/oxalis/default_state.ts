@@ -68,6 +68,7 @@ const defaultState: OxalisState = {
     centerNewNode: true,
     overrideNodeRadius: true,
     particleSize: 5,
+    presetBrushSizes: [-1, -1, -1],
     rotateValue: 0.01,
     sortCommentsAsc: true,
     sortTreesByName: false,

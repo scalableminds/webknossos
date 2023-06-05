@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
   Encoding,
   GoogleCloudDataVault,
   HttpsDataVault,
+  RangeSpecifier,
   VaultPath
 }
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
@@ -73,7 +74,7 @@ class DataVaultTestSuite extends PlaySpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = ???
+        override def readBytes(path: VaultPath, range: RangeSpecifier): (Array[Byte], Encoding.Value) = ???
       }
 
       "Uri has no trailing slash" should {

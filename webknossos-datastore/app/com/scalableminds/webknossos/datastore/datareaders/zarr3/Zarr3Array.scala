@@ -104,7 +104,7 @@ class Zarr3Array(relativePath: DatasetPath,
   private def readShardIndex(shardPath: VaultPath) = shardPath.readLastBytes(getShardIndexSize)
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] = {
-    val checksum = index.takeRight(4) // not checked for now
+    val _ = index.takeRight(4) // checksum: not checked for now
     val indexProper = index.dropRight(4)
     indexProper
       .grouped(shardIndexEntryLength)

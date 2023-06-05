@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
+import java.nio.ByteOrder
 import scala.concurrent.ExecutionContext
 
 case class Zarr3ArrayHeader(
@@ -43,6 +44,8 @@ case class Zarr3ArrayHeader(
   override def dataType: String = data_type.left.getOrElse("extension")
 
   override lazy val order: ArrayOrder = getOrder
+
+  override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
 
   private def zarr3DataType: Zarr3DataType = Zarr3DataType.fromString(dataType).getOrElse(raw)
 
@@ -96,8 +99,8 @@ case class ChunkGridConfiguration(
     chunk_shape: Array[Int]
 )
 
-object ChunkGridConfiguration extends JsonImplicits {
-  implicit val chunkGridConfigurationFormat: OFormat[ChunkGridConfiguration] =
+object ChunkGridConfiguration {
+  implicit val jsonFormat: OFormat[ChunkGridConfiguration] =
     Json.format[ChunkGridConfiguration]
 }
 
@@ -106,8 +109,8 @@ case class ChunkGridSpecification(
     configuration: ChunkGridConfiguration
 )
 
-object ChunkGridSpecification extends JsonImplicits {
-  implicit val chunkGridSpecificationFormat: OFormat[ChunkGridSpecification] =
+object ChunkGridSpecification {
+  implicit val jsonFormat: OFormat[ChunkGridSpecification] =
     Json.format[ChunkGridSpecification]
 }
 
@@ -115,8 +118,8 @@ case class ChunkKeyEncodingConfiguration(
     separator: Option[String]
 )
 
-object ChunkKeyEncodingConfiguration extends JsonImplicits {
-  implicit val chunkKeyEncodingConfigurationFormat: OFormat[ChunkKeyEncodingConfiguration] =
+object ChunkKeyEncodingConfiguration {
+  implicit val jsonFormat: OFormat[ChunkKeyEncodingConfiguration] =
     Json.format[ChunkKeyEncodingConfiguration]
 }
 
@@ -137,8 +140,8 @@ case class ChunkKeyEncoding(
     }
 }
 
-object ChunkKeyEncoding extends JsonImplicits {
-  implicit val chunkKeyEncodingFormat: OFormat[ChunkKeyEncoding] =
+object ChunkKeyEncoding {
+  implicit val jsonFormat: OFormat[ChunkKeyEncoding] =
     Json.format[ChunkKeyEncoding]
 }
 
@@ -147,8 +150,8 @@ case class StorageTransformerSpecification(
     configuration: Option[Map[String, String]] // Should be specified once storage transformers are implemented
 )
 
-object StorageTransformerSpecification extends JsonImplicits {
-  implicit val storageTransformerSpecificationFormat: OFormat[StorageTransformerSpecification] =
+object StorageTransformerSpecification {
+  implicit val jsonFormat: OFormat[StorageTransformerSpecification] =
     Json.format[StorageTransformerSpecification]
 }
 

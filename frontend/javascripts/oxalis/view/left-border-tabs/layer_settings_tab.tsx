@@ -171,19 +171,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "WEBKNOSSOS will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
 
+    // TODO used to be AsyncIconButton
     return (
       <Tooltip title={tooltipText}>
-        <AsyncIconButton
-          icon={<ScanOutlined />}
+        <div
           onClick={
             !isDisabled
               ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
               : () => Promise.resolve()
           }
-          style={{
-            cursor: !isDisabled ? "pointer" : "not-allowed",
-          }}
-        />
+        >
+          <ScanOutlined
+            style={{
+              cursor: !isDisabled ? "pointer" : "not-allowed",
+            }}
+          />
+          Jump to data
+        </div>
       </Tooltip>
     );
   };
@@ -192,17 +196,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (!this.props.dataset.isEditable) {
       return null;
     }
-    const tooltipText =
-      "Reload the data from the server. Use this when the data on the server changed.";
+    const tooltipText = "Use this when the data on the server changed.";
+    // TODO used to be AsyncIconButton
     return (
       <Tooltip title={tooltipText}>
-        <AsyncIconButton
-          icon={<ReloadOutlined />}
-          onClick={() => this.reloadLayerData(layerName)}
-          style={{
-            cursor: "pointer",
-          }}
-        />
+        <div onClick={() => this.reloadLayerData(layerName)}>
+          <ReloadOutlined
+            style={{
+              cursor: "pointer",
+            }}
+          />
+          Reload data from server
+        </div>
       </Tooltip>
     );
   };
@@ -225,10 +230,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
-    <Tooltip title="Merge this volume annotation with its fallback layer.">
+    <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
       <i
-        onClick={() => this.setState({ layerToMergeWithFallback: layer })}
         className="fas fa-object-ungroup"
+        style={{
+          cursor: "pointer",
+          opacity: 0.7,
+        }}
+      />
+      Merge this volume annotation with its fallback layer
+    </div>
+  );
+
+  getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
+    <Tooltip title="Delete this annotation layer.">
+      <i
+        onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+        className="fas fa-trash"
         style={{
           cursor: "pointer",
           opacity: 0.7,
@@ -237,31 +255,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Tooltip>
   );
 
-  getDeleteAnnotationLayerIcon = (readableName: string, layer?: APIDataLayer) => (
-    <i
-      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-      className="fas fa-trash"
-      style={{
-        cursor: "pointer",
-        opacity: 0.7,
-      }}
-    />
-  );
-
-  getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
-    <Tooltip title="Delete this annotation layer.">
-      {this.getDeleteAnnotationLayerIcon(readableName, layer)}
-    </Tooltip>
-  );
-
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
-    <>
-      {
-        this.getDeleteAnnotationLayerIcon(readableName, layer)
-        //TODO merge with icon method because whole option needs to be clickable
-      }
+    <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
+      <i
+        className="fas fa-trash"
+        style={{
+          cursor: "pointer",
+          opacity: 0.7,
+        }}
+      />
       Delete this annotation layer
-    </>
+    </div>
   );
 
   deleteAnnotationLayerIfConfirmed = async (
@@ -440,6 +444,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ),
         key: "deleteAnnotationLayer",
       },
+      {
+        label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
+        key: "findDataButton",
+      },
+      { label: this.getReloadDataButton(layerName), key: "reloadDataButton" },
+      {
+        label:
+          isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+            ? this.getMergeWithFallbackLayerButton(layer)
+            : null,
+        key: "mergeWithFallbackLayerButton",
+      },
     ];
     return (
       <div className="flex-container">
@@ -607,15 +623,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <div className="flex-item">
             {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           </div>
-          <div className="flex-item">
-            {isVolumeTracing && !isDisabled && maybeFallbackLayer != null
-              ? this.getMergeWithFallbackLayerButton(layer)
-              : null}
-          </div>
-          <div className="flex-item">
-            {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
-          </div>
-          <div className="flex-item">{this.getReloadDataButton(layerName)}</div>
           <div className="flex-item">
             <Tooltip title="More actions">
               <Dropdown menu={{ items }} trigger={["click", "contextMenu"]} placement="bottomRight">

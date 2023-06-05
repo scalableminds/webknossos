@@ -114,12 +114,11 @@ class DataCube {
     ];
 
     for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
-      const zoomedCubeBoundary = [
+      const zoomedCubeBoundary: Vector3 = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
         Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
       ];
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.cubes[resolutionIndex] = new CubeEntry(zoomedCubeBoundary);
     }
 
@@ -129,19 +128,17 @@ class DataCube {
       return !isVolumeTask;
     };
 
-    this.boundingBox = new BoundingBox(
-      shouldBeRestrictedByTracingBoundingBox()
-        ? getSomeTracing(Store.getState().tracing).boundingBox
-        : null,
-      this.upperBoundary,
-    );
+    // Satisfy TS. The actual initialization is done by listenToStoreProperty
+    // (the second parameter ensures that the callback is called immediately).
+    this.boundingBox = new BoundingBox(null);
     listenToStoreProperty(
       (state) => getSomeTracing(state.tracing).boundingBox,
       (boundingBox) => {
-        if (shouldBeRestrictedByTracingBoundingBox()) {
-          this.boundingBox = new BoundingBox(boundingBox, this.upperBoundary);
-        }
+        this.boundingBox = new BoundingBox(
+          shouldBeRestrictedByTracingBoundingBox() ? boundingBox : null,
+        ).intersectedWith(new BoundingBox({ min: [0, 0, 0], max: this.upperBoundary }));
       },
+      true,
     );
   }
 
@@ -809,14 +806,13 @@ class DataCube {
    */
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
-    const voxelOffset = [0, 0, 0];
+    const voxelOffset: Vector3 = [0, 0, 0];
     const resolution = this.resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
 
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     return voxelOffset;
   }
 

@@ -355,7 +355,9 @@ class TaskListView extends React.PureComponent<Props, State> {
               marginTop: 30,
               marginBottom: 30,
             }}
-            expandedRowRender={(task) => <TaskAnnotationView task={task} />}
+            expandable={{
+              expandedRowRender: (task) => <TaskAnnotationView task={task} />,
+            }}
             locale={{
               emptyText: this.renderPlaceholder(),
             }}

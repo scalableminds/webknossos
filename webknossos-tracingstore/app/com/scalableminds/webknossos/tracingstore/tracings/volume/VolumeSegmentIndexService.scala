@@ -65,9 +65,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                                                          Some(updateGroupVersion))
       bucketPositionProto = bucketPositionVec3IntProto(bucketPosition)
       newBucketList = ListOfVec3IntProto(previousBucketList.values.filterNot(_ == bucketPositionProto))
-      _ = logger.info(
+      /* _ = logger.info(
         s"Removing bucket ${vec3IntFromProto(bucketPositionVec3IntProto(bucketPosition))} from segment $segmentId, new mag-${bucketPosition.mag
-          .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}")
+          .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}") */
       _ <- updateSegmentToBucketIndex(tracingId, segmentId, bucketPosition.mag, newBucketList, updateGroupVersion)
     } yield ()
 
@@ -82,9 +82,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                                      Some(updateGroupVersion))
       newBucketList = ListOfVec3IntProto(
         (bucketPositionVec3IntProto(bucketPosition) +: previousBucketList.values).distinct)
-      _ = logger.info(
+      /* _ = logger.info(
         s"Adding bucket ${vec3IntFromProto(bucketPositionVec3IntProto(bucketPosition))} to segment $segmentId, new mag-${bucketPosition.mag
-          .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}")
+          .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}") */
       _ <- updateSegmentToBucketIndex(tracingId, segmentId, bucketPosition.mag, newBucketList, updateGroupVersion)
     } yield ()
 

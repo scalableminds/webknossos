@@ -16,7 +16,7 @@ import { map3 } from "libs/utils";
 import { APIDataset } from "types/api_flow_types";
 import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
-import type { InferenceSession } from "onnxruntime-web";
+import type { InferenceSession, Tensor } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
 // /predictions/sam_vit_l_small
@@ -174,7 +174,7 @@ async function inferFromEmbedding(
   const EMBEDDING_SIZE = getEmbeddingSize();
   const origImSize = new Float32Array([EMBEDDING_SIZE[0], EMBEDDING_SIZE[1]]);
 
-  const getOrtInputs = (maskInput: ort.Tensor) => ({
+  const getOrtInputs = (maskInput: Tensor) => ({
     image_embeddings: new ort.Tensor("float32", embedding, [
       1,
       256,

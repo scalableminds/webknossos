@@ -225,13 +225,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
-    <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
-      <i
-        className="fas fa-object-ungroup"
-        style={{
-          opacity: 0.7,
-        }}
-      />
+    <div
+      onClick={() => this.setState({ layerToMergeWithFallback: layer })}
+      style={{
+        opacity: 0.7,
+      }}
+    >
+      <i className="fas fa-object-ungroup" />
       Merge this volume annotation with its fallback layer
     </div>
   );

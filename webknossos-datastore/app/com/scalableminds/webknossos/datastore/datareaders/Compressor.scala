@@ -162,7 +162,7 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
   override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
-    val iis = new GzipCompressorInputStream(is, true)
+    val iis = new GzipCompressorInputStream(is, false)
     try passThrough(iis, os)
     finally if (iis != null) iis.close()
     os.toByteArray

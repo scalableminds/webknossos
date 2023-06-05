@@ -256,7 +256,6 @@ Create a new datastore
     - `"key"` `[STRING]` key used to identify the datastore
     - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
     - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
-    - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
     - `"allowsUpload"` `[BOOLEAN]` (optional, default: `true`) whether or not the datastore supports dataset upload via browser
 
 
@@ -290,7 +289,6 @@ Update an existing datastore
     - `"publicUrl"` `[STRING]` publicly accessible url from the datastore, used for user facing links
     - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
     - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
-    - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
     - `"allowsUpload"` `[BOOLEAN]` (optional, default: `true`) whether or not the datastore supports dataset upload via browser
 
 

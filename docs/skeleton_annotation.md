@@ -12,7 +12,7 @@ This article outlines commonly used features and operations for viewing, editing
 
 ![An example of a complex WEBKNOSSOS skeleton annotation](images/tracing_ui_skeletontracing.jpeg)
 
-![type:video](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=115s)
+![youtube-video](https://www.youtube.com/embed/jsz0tc3tuKI?start=115)
 
 ### Annotation Modes
 
@@ -93,7 +93,7 @@ Any node can be marked as a branch point using the keyboard shortcut "B" or thro
 Branch points are highlighted using a slightly different color.
 All branch points are stored as a first-in, first-out (FIFO) stack. Press "J" to jump to the latest branch point in FIFO-order to continue working from there and remove it from the stack.
 
-## Controls & Keyboard Shortcuts for Skeleton Annotations
+### Controls & Keyboard Shortcuts for Skeleton Annotations
 
 While most operations for working with skeleton annotations are either available through the UI or the context-sensitive right-click menu, some users prefer to use keyboard shortcuts to work very efficiently.
 

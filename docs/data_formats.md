@@ -10,7 +10,7 @@ WEBKNOSSOS natively supports loading and streaming data in the following formats
 
 - webKnossos-wrap (WKW)
 - Zarr ([OME NGFF v0.4+ spec](https://ngff.openmicroscopy.org/latest/))
-- Neuroglancer `precomputed` stored on Google Cloud
+- Neuroglancer `precomputed`
 - N5
 
 See the page on [datasets](./datasets.md) for uploading and configuring datasets.

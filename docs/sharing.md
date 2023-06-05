@@ -21,7 +21,7 @@ In many ways, sharing by web link works similarly to products like Google Drive 
 
 WEBKNOSSOS sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
 
-![type:video](https://www.youtube.com/watch?v=hcm8Jx22DG8)
+![youtube-video](https://www.youtube.com/embed/hcm8Jx22DG8)
 
 ## Dataset Sharing
 

@@ -22,7 +22,6 @@ case class DataStore(
     key: String,
     isScratch: Boolean = false,
     isDeleted: Boolean = false,
-    isConnector: Boolean = false,
     allowsUpload: Boolean = true,
     reportUsedStorageEnabled: Boolean = false,
     onlyAllowedOrganization: Option[ObjectId] = None
@@ -36,7 +35,6 @@ object DataStore {
                publicUrl: String,
                key: String,
                isScratch: Option[Boolean],
-               isConnector: Option[Boolean],
                allowsUpload: Option[Boolean]): DataStore =
     DataStore(
       name,
@@ -45,7 +43,6 @@ object DataStore {
       key,
       isScratch.getOrElse(false),
       isDeleted = false,
-      isConnector.getOrElse(false),
       allowsUpload.getOrElse(true),
       reportUsedStorageEnabled = false,
       None
@@ -55,9 +52,8 @@ object DataStore {
                      url: String,
                      publicUrl: String,
                      isScratch: Option[Boolean],
-                     isConnector: Option[Boolean],
                      allowsUpload: Option[Boolean]): DataStore =
-    fromForm(name, url, publicUrl, "", isScratch, isConnector, allowsUpload)
+    fromForm(name, url, publicUrl, "", isScratch, allowsUpload)
 }
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
@@ -70,11 +66,10 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
         "name" -> dataStore.name,
         "url" -> dataStore.publicUrl,
         "isScratch" -> dataStore.isScratch,
-        "isConnector" -> dataStore.isConnector,
         "allowsUpload" -> dataStore.allowsUpload
       ))
 
-  def validateAccess[A](name: String, key: String)(block: DataStore => Future[Result])(
+  def validateAccess(name: String, key: String)(block: DataStore => Future[Result])(
       implicit m: MessagesProvider): Fox[Result] =
     (for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
@@ -103,7 +98,6 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.key,
         r.isscratch,
         r.isdeleted,
-        r.isconnector,
         r.allowsupload,
         r.reportusedstorageenabled,
         r.onlyallowedorganization.map(ObjectId(_))
@@ -150,8 +144,8 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        q"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isConnector, allowsUpload, reportUsedStorageEnabled)
-            values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isConnector}, ${d.allowsUpload}, ${d.reportUsedStorageEnabled})""".asUpdate)
+        q"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, allowsUpload, reportUsedStorageEnabled)
+            values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.allowsUpload}, ${d.reportUsedStorageEnabled})""".asUpdate)
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =
@@ -163,7 +157,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       _ <- run(q"""update webknossos.dataStores
                    set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch},
-                     isConnector = ${d.isConnector}, allowsUpload = ${d.allowsUpload}
+                   allowsUpload = ${d.allowsUpload}
                    where name = ${d.name}""".asUpdate)
     } yield ()
 

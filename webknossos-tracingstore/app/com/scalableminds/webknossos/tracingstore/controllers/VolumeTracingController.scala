@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
   UpdateMappingNameAction,
+  VolumeSegmentStatisticsService,
   VolumeTracingService
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
@@ -50,6 +51,7 @@ class VolumeTracingController @Inject()(
     editableMappingService: EditableMappingService,
     val slackNotificationService: TSSlackNotificationService,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    volumeSegmentStatisticsService: VolumeSegmentStatisticsService,
     val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings]
     with ProtoGeometryImplicits
@@ -426,8 +428,12 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          _ <- Fox.successful(logger.info(s"computing segment volume for segment $segmentId"))
-        } yield Ok(Json.toJson(5L))
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
+          segmentVolume <- volumeSegmentStatisticsService.getSegmentVolume(tracingId,
+                                                                           segmentId,
+                                                                           magParsed,
+                                                                           urlOrHeaderToken(token, request))
+        } yield Ok(Json.toJson(segmentVolume))
       }
     }
 

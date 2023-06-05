@@ -112,11 +112,11 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     volumeSegmentIndexClient.put(key, version, positions)
   }
 
-  private def getSegmentToBucketIndexWithEmptyFallback(
+  def getSegmentToBucketIndexWithEmptyFallback(
       tracingId: String,
       segmentId: Long,
       mag: Vec3Int,
-      version: Option[Long])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+      version: Option[Long] = None)(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
       bucketListBox <- getSegmentToBucketIndex(tracingId, segmentId, mag, version).futureBox
       bucketList <- bucketListBox match {

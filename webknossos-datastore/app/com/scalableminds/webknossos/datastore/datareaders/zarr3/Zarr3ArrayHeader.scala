@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.ZarrV3DataType.{ZarrV3DataType, raw}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType.{Zarr3DataType, raw}
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayOrder,
   Compressor,
@@ -20,7 +20,7 @@ import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsVal
 
 import scala.concurrent.ExecutionContext
 
-case class ZarrV3ArrayHeader(
+case class Zarr3ArrayHeader(
     zarr_format: Int, // must be 3
     node_type: String, // must be "array"
     shape: Array[Int],
@@ -44,9 +44,9 @@ case class ZarrV3ArrayHeader(
 
   override lazy val order: ArrayOrder = getOrder
 
-  private def zarrV3DataType: ZarrV3DataType = ZarrV3DataType.fromString(dataType).getOrElse(raw)
+  private def zarr3DataType: Zarr3DataType = Zarr3DataType.fromString(dataType).getOrElse(raw)
 
-  override def resolvedDataType: ArrayDataType = ZarrV3DataType.toArrayDataType(zarrV3DataType)
+  override def resolvedDataType: ArrayDataType = Zarr3DataType.toArrayDataType(zarr3DataType)
 
   override def compressorImpl: Compressor = new NullCompressor // Not used, since specific chunk reader is used
 
@@ -152,11 +152,11 @@ object StorageTransformerSpecification extends JsonImplicits {
     Json.format[StorageTransformerSpecification]
 }
 
-object ZarrV3ArrayHeader extends JsonImplicits {
+object Zarr3ArrayHeader extends JsonImplicits {
 
   def ZARR_JSON = "zarr.json"
-  implicit object ZarrArrayHeaderFormat extends Format[ZarrV3ArrayHeader] {
-    override def reads(json: JsValue): JsResult[ZarrV3ArrayHeader] =
+  implicit object ZarrArrayHeaderFormat extends Format[Zarr3ArrayHeader] {
+    override def reads(json: JsValue): JsResult[Zarr3ArrayHeader] =
       for {
         zarr_format <- json("zarr_format").validate[Int]
         node_type <- json("node_type").validate[String]
@@ -169,7 +169,7 @@ object ZarrV3ArrayHeader extends JsonImplicits {
         codecs = readCodecs(json("codecs"))
         dimension_names <- json("dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
       } yield
-        ZarrV3ArrayHeader(
+        Zarr3ArrayHeader(
           zarr_format,
           node_type,
           shape,
@@ -212,7 +212,7 @@ object ZarrV3ArrayHeader extends JsonImplicits {
         possibleCodecSpec.map((s: CodecConfiguration) => Seq(s)).getOrElse(Seq[CodecConfiguration]()))
     }
 
-    override def writes(zarrArrayHeader: ZarrV3ArrayHeader): JsValue =
+    override def writes(zarrArrayHeader: Zarr3ArrayHeader): JsValue =
       Json.obj(
         "zarr_format" -> zarrArrayHeader.zarr_format,
         "node_type" -> zarrArrayHeader.node_type,

@@ -106,7 +106,7 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
 class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecConfiguration]) extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
-  // encode, decode not implemented as sharding is done in ZarrV3Array
+  // encode, decode not implemented as sharding is done in Zarr3Array
   override def encode(array: MultiArray): Array[Byte] = ???
 
   override def decode(bytes: Array[Byte]): MultiArray = ???

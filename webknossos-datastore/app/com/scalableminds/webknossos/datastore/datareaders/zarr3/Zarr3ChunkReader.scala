@@ -8,12 +8,12 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-object ZarrV3ChunkReader {
-  def create(vaultPath: VaultPath, header: ZarrV3ArrayHeader, array: ZarrV3Array): ChunkReader =
-    new ZarrV3ChunkReader(header, vaultPath, ChunkReader.createChunkTyper(header), array)
+object Zarr3ChunkReader {
+  def create(vaultPath: VaultPath, header: Zarr3ArrayHeader, array: Zarr3Array): ChunkReader =
+    new Zarr3ChunkReader(header, vaultPath, ChunkReader.createChunkTyper(header), array)
 }
 
-class ZarrV3ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReader: ChunkTyper, array: ZarrV3Array)
+class Zarr3ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReader: ChunkTyper, array: Zarr3Array)
     extends ChunkReader(header, vaultPath, typedChunkReader)
     with LazyLogging {
 

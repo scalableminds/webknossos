@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.dataformats.zarr.v3
+package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -14,12 +14,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
 
-trait ZarrV3Layer extends DataLayer {
+trait Zarr3Layer extends DataLayer {
 
-  val dataFormat: DataFormat.Value = DataFormat.zarrV3
+  val dataFormat: DataFormat.Value = DataFormat.zarr3
 
   def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]) =
-    new ZarrV3BucketProvider(this, dataVaultServiceOpt)
+    new Zarr3BucketProvider(this, dataVaultServiceOpt)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
@@ -31,7 +31,7 @@ trait ZarrV3Layer extends DataLayer {
 
 }
 
-case class ZarrV3DataLayer(
+case class Zarr3DataLayer(
     name: String,
     category: Category.Value,
     boundingBox: BoundingBox,
@@ -41,13 +41,13 @@ case class ZarrV3DataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
-) extends ZarrV3Layer
+) extends Zarr3Layer
 
-object ZarrV3DataLayer {
-  implicit val jsonFormat: OFormat[ZarrV3DataLayer] = Json.format[ZarrV3DataLayer]
+object Zarr3DataLayer {
+  implicit val jsonFormat: OFormat[Zarr3DataLayer] = Json.format[Zarr3DataLayer]
 }
 
-case class ZarrV3SegmentationLayer(
+case class Zarr3SegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
@@ -59,8 +59,8 @@ case class ZarrV3SegmentationLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends SegmentationLayer
-    with ZarrV3Layer
+    with Zarr3Layer
 
-object ZarrV3SegmentationLayer {
-  implicit val jsonFormat: OFormat[ZarrV3SegmentationLayer] = Json.format[ZarrV3SegmentationLayer]
+object Zarr3SegmentationLayer {
+  implicit val jsonFormat: OFormat[Zarr3SegmentationLayer] = Json.format[Zarr3SegmentationLayer]
 }

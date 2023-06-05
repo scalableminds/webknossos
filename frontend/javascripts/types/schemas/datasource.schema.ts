@@ -215,12 +215,12 @@ export default {
       },
       required: ["dataFormat", "mags"],
     },
-    "types::DataLayerZarrV3Partial": {
-      title: "DataLayerZarrV3",
+    "types::DataLayerZarr3Partial": {
+      title: "DataLayerZarr3",
       type: "object",
       properties: {
         dataFormat: {
-          const: "zarrV3",
+          const: "zarr3",
         },
         boundingBox: {
           $ref: "#/definitions/types::BoundingBox",
@@ -350,7 +350,7 @@ export default {
               $ref: "#/definitions/types::DataLayerPrecomputedPartial",
             },
             {
-              $ref: "#/definitions/types::DataLayerZarrV3Partial",
+              $ref: "#/definitions/types::DataLayerZarr3Partial",
             },
           ],
         },

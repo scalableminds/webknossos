@@ -1,9 +1,9 @@
-package com.scalableminds.webknossos.datastore.dataformats.zarr.v3
+package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.ZarrV3Array
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
@@ -14,7 +14,7 @@ import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
 
-class ZarrCubeHandle(zarrArray: ZarrV3Array) extends DataCubeHandle with LazyLogging {
+class ZarrCubeHandle(zarrArray: Zarr3Array) extends DataCubeHandle with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
@@ -26,7 +26,7 @@ class ZarrCubeHandle(zarrArray: ZarrV3Array) extends DataCubeHandle with LazyLog
 
 }
 
-class ZarrV3BucketProvider(layer: ZarrV3Layer, val dataVaultServiceOpt: Option[DataVaultService])
+class Zarr3BucketProvider(layer: Zarr3Layer, val dataVaultServiceOpt: Option[DataVaultService])
     extends BucketProvider
     with LazyLogging {
 
@@ -45,7 +45,7 @@ class ZarrV3BucketProvider(layer: ZarrV3Layer, val dataVaultServiceOpt: Option[D
                 dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
               cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                ZarrV3Array.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))
+                Zarr3Array.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

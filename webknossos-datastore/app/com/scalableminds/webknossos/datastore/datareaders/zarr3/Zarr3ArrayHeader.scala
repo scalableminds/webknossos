@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.util.Helpers.tryo
-import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
+import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
 import scala.concurrent.ExecutionContext

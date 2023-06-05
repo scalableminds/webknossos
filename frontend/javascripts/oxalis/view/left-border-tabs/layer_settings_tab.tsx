@@ -225,12 +225,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
-    <div
-      onClick={() => this.setState({ layerToMergeWithFallback: layer })}
-      style={{
-        opacity: 0.7,
-      }}
-    >
+    <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
       <i className="fas fa-object-ungroup" />
       Merge this volume annotation with its fallback layer
     </div>
@@ -249,12 +244,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   );
 
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
-    <div
-      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-      style={{
-        opacity: 0.7,
-      }}
-    >
+    <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
       <i className="fas fa-trash" />
       Delete this annotation layer
     </div>

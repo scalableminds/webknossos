@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Subfolders of the currently active folder are now also rendered in the dataset table in the dashboard. [#6996](https://github.com/scalableminds/webknossos/pull/6996)
+- Instead of showing all possible action items next to each other, there is now an overflow menu for layer actions. [#7123](https://github.com/scalableminds/webknossos/pull/7123) 
 
 ### Changed
 

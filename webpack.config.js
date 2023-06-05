@@ -168,21 +168,35 @@ module.exports = function (env = {}) {
       minimize: env.production,
       splitChunks: {
         chunks: "all",
+        // Use a consistent name for the vendors chunk
+        name: "vendors~main",
         cacheGroups: {
-          fallbackCacheGroup: {
-            chunks: "all",
-          },
-          vendor: {
-            // test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-            chunks: "all",
-            // Use a consistent name for the vendors chunk
+          defaultVendors: {
+            test: /[\\/]node_modules[\\/]/,
+            priority: -10,
+            reuseExistingChunk: true,
             name: "vendors~main",
           },
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+          },
+          // vendor: {
+          //   // test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+          //   // chunks: "all",
+          //   // Use a consistent name for the vendors chunk
+          //   name: "vendors~main",
+          // },
           onnx: {
-            test: /[\\/]node_modules[\\/](onnx-*)[\\/]/,
+            test: /[\\/]node_modules[\\/](onnx.*)[\\/]/,
             chunks: "all",
             // Use a consistent name for the vendors chunk
             name: "vendors~onnx",
+            priority: 0,
+            minChunks: 1,
+            minSize: 1,
+            reuseExistingChunk: false,
           },
         },
       },

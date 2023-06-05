@@ -110,7 +110,7 @@ let sessionBig: Promise<InferenceSession> | null;
 let sessionSmall: Promise<InferenceSession> | null;
 
 export async function getInferenceSession(useSmallModel: boolean) {
-  const ort = await import("onnxruntime-web");
+  const ort = await import(/* webpackChunkName: "async-onnx" */ "onnxruntime-web");
   if (useSmallModel) {
     if (sessionSmall == null) {
       sessionSmall = ort.InferenceSession.create(
@@ -141,6 +141,7 @@ async function inferFromEmbedding(
 
   let ortSession;
   try {
+    console.log("getInferenceSession", getInferenceSession);
     ortSession = await getInferenceSession((window as any).USE_SMALL_MODEL);
   } catch (exception) {
     console.error(exception);

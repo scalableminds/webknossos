@@ -820,7 +820,6 @@ function serverBranchPointToMutableBranchPoint(b: ServerBranchPoint): MutableBra
 
 export function createMutableTreeMapFromTreeArray(
   trees: Array<ServerSkeletonTracingTree>,
-  type: TreeType = TreeTypeEnum.DEFAULT,
 ): MutableTreeMap {
   return _.keyBy(
     trees.map(
@@ -840,7 +839,7 @@ export function createMutableTreeMapFromTreeArray(
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
-        type,
+        type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
       }),
     ),
     "treeId",

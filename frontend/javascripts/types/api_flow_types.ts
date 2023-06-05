@@ -8,7 +8,15 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3, ColorObject, LOG_LEVELS, Vector4 } from "oxalis/constants";
+import type {
+  Vector3,
+  Vector6,
+  Point3,
+  ColorObject,
+  LOG_LEVELS,
+  Vector4,
+  TreeType,
+} from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
@@ -659,6 +667,7 @@ export type ServerSkeletonTracingTree = {
   createdTimestamp: number;
   groupId?: number | null | undefined;
   isVisible?: boolean;
+  type?: TreeType;
 };
 type ServerSegment = {
   segmentId: number;

@@ -123,6 +123,10 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
+const handleUpdatePresetBrushSize = (brushSizes: [number, number, number]) => {
+  Store.dispatch(updateUserSettingAction("presetBrushSizes", brushSizes));
+};
+
 const handleToggleAutomaticMeshRendering = (value: boolean) => {
   Store.dispatch(updateUserSettingAction("autoRenderMeshInProofreading", value));
 };
@@ -538,15 +542,18 @@ function ChangeBrushSizeButton() {
   const presetBrushSizes = useSelector(
     (state: OxalisState) => state.userConfiguration.presetBrushSizes,
   );
+  console.log(presetBrushSizes);
 
-  const brushSizesArePreset = presetBrushSizes[0] === -1;
   let maximumButtonBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
   let mediumButtonBrushSize = calculateMediumBrushSize(maximumButtonBrushSize);
   let minimumButtonBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
-  //TODO put into default state
 
-  if (brushSizesArePreset) {
-    [minimumButtonBrushSize, mediumButtonBrushSize, maximumButtonBrushSize] = presetBrushSizes;
+  if (presetBrushSizes.length === 0) {
+    handleUpdatePresetBrushSize([
+      minimumButtonBrushSize,
+      mediumButtonBrushSize,
+      maximumButtonBrushSize,
+    ]);
   }
 
   const centerBrushInViewport = () => {

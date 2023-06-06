@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{Eleme
 import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBClient,
   KeyValueStoreImplicits,
   TracingDataStore,
   VersionedKeyValuePair
@@ -61,12 +62,14 @@ trait VolumeTracingDownsampling
                            version: Long,
                            toCache: Boolean = false): Fox[Unit]
 
-  protected def updateSegmentIndex(tracingId: String,
+  protected def updateSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                                    bucketPosition: BucketPosition,
                                    bucketBytes: Array[Byte],
                                    previousBucketBytesBox: Box[Array[Byte]],
                                    updateGroupVersion: Long,
                                    elementClass: ElementClassProto): Fox[Unit]
+
+  protected def volumeSegmentIndexClient: FossilDBClient
 
   protected def downsampleWithLayer(
       tracingId: String,
@@ -97,10 +100,11 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
-          _ <- updateSegmentIndex(tracingId,
+          _ <- updateSegmentIndex(segmentIndexBuffer,
                                   bucketPosition,
                                   bucketDataMapMutable(bucketPosition),
                                   Empty,
@@ -108,6 +112,7 @@ trait VolumeTracingDownsampling
                                   tracing.elementClass)
         } yield ()
       }
+      _ <- segmentIndexBuffer.flush()
       _ = logger.debug(s"Downsampled mags $magsToCreate from $sourceMag for volume tracing $tracingId.")
     } yield sourceMag :: magsToCreate
   }

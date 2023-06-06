@@ -1,10 +1,11 @@
 package com.scalableminds.webknossos.datastore.models
 
 import java.nio._
-
 import com.scalableminds.webknossos.datastore.models.UnsignedInteger.wrongElementClass
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
+import java.util
+import java.util.stream.IntStream
 import scala.reflect.ClassTag
 
 /* Wrapper for unsigned integral data types. Currently not a lot of algebra implemented, add functionality as needed */
@@ -162,7 +163,9 @@ object UnsignedIntegerArray {
         fromByteArrayImpl(byteBuffer, DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_))).toSet
           .map(UInt16(_))
       case ElementClass.uint32 =>
-        fromByteArrayImpl(byteBuffer, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_))).toSet.map(UInt32(_))
+        val intArray = fromByteArrayImpl(byteBuffer, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_)))
+        val setStream: IntStream = util.Arrays.stream(intArray).distinct()
+        setStream.toArray.toSet.map(UInt32(_))
       case ElementClass.uint64 =>
         fromByteArrayImpl(byteBuffer, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_))).toSet.map(UInt64(_))
       case _ =>

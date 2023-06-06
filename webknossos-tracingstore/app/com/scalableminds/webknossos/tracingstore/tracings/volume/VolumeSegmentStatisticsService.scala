@@ -23,10 +23,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       implicit ec: ExecutionContext): Fox[Long] =
     for {
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
-      bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallback(
-        tracingId,
-        segmentId,
-        mag)
+      bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
       volumeData <- data(tracing, tracingId, mag, bucketPositions, userToken) // TODO also load fallback layer data (with pinned agglomerate mapping)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
       volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)

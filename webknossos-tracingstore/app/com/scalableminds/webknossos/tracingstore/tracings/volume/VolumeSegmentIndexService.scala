@@ -21,10 +21,12 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
     with VolumeBucketCompression
+    with SegmentIndexKeyHelper
     with LazyLogging {
+
   private val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex
 
-  def updateFromBucket(tracingId: String,
+  def updateFromBucket(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                        bucketPosition: BucketPosition,
                        bucketBytes: Array[Byte],
                        previousBucketBytesBox: Box[Array[Byte]],
@@ -35,25 +37,22 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       bucketBytesDecompressed <- tryo(
         decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
       previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.udpate.getPreviousBucket.failed"
-      _ = logger.info(s"Decompress, get previous: ${Instant.since(before)}")
       beforeCollect = Instant.now
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.udpate.collectSegmentIds.failed"
       _ = logger.info(s"collect segment ids: ${Instant.since(beforeCollect)}")
-      beforeDiff = Instant.now
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ = logger.info(s"diff: ${Instant.since(beforeDiff)}")
       /*_ = if (additions.nonEmpty || removals.nonEmpty) {
         logger.info(s"Mag${bucketPosition.mag.toMagLiteral(true)} bucket additions: $additions and removals $removals")
       }*/
       beforeRemove = Instant.now
       _ <- Fox.serialCombined(removals.toList)(segmentId =>
-        removeBucketFromSegmentIndex(tracingId, segmentId, bucketPosition, updateGroupVersion)) ?~> "volumeSegmentIndex.udpate.removeBucket.failed"
+        removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, updateGroupVersion)) ?~> "volumeSegmentIndex.udpate.removeBucket.failed"
       _ <- Fox.serialCombined(additions.toList)(segmentId =>
-        addBucketToSegmentIndex(tracingId, segmentId, bucketPosition, updateGroupVersion)) ?~> "volumeSegmentIndex.udpate.addBucket.failed"
+        addBucketToSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, updateGroupVersion)) ?~> "volumeSegmentIndex.udpate.addBucket.failed"
       _ = logger.info(s"remove + add index entries: ${Instant.since(beforeRemove)}")
-      _ = logger.info(s"updateFromBucket total: ${Instant.since(before)}")
+      _ = logger.info(s"# updateFromBucket total: ${Instant.since(before)}")
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(
@@ -64,38 +63,34 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       case f: Failure  => f.toFox
     }
 
-  private def removeBucketFromSegmentIndex(tracingId: String,
+  private def removeBucketFromSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                                            segmentId: Long,
                                            bucketPosition: BucketPosition,
                                            updateGroupVersion: Long)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      previousBucketList: ListOfVec3IntProto <- getSegmentToBucketIndexWithEmptyFallback(tracingId,
+      previousBucketList: ListOfVec3IntProto <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer,
                                                                                          segmentId,
-                                                                                         bucketPosition.mag,
-                                                                                         Some(updateGroupVersion))
+                                                                                         bucketPosition.mag)
       bucketPositionProto = bucketPositionVec3IntProto(bucketPosition)
       newBucketList = ListOfVec3IntProto(previousBucketList.values.filterNot(_ == bucketPositionProto))
       /* _ = logger.info(
         s"Removing bucket ${vec3IntFromProto(bucketPositionVec3IntProto(bucketPosition))} from segment $segmentId, new mag-${bucketPosition.mag
           .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}") */
-      _ <- updateSegmentToBucketIndex(tracingId, segmentId, bucketPosition.mag, newBucketList, updateGroupVersion)
+      _ = segmentIndexBuffer.put(segmentId, bucketPosition.mag, newBucketList)
     } yield ()
 
-  private def addBucketToSegmentIndex(tracingId: String,
+  private def addBucketToSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                                       segmentId: Long,
                                       bucketPosition: BucketPosition,
                                       updateGroupVersion: Long)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      previousBucketList <- getSegmentToBucketIndexWithEmptyFallback(tracingId,
-                                                                     segmentId,
-                                                                     bucketPosition.mag,
-                                                                     Some(updateGroupVersion))
+      previousBucketList <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer, segmentId, bucketPosition.mag)
       newBucketList = ListOfVec3IntProto(
         (bucketPositionVec3IntProto(bucketPosition) +: previousBucketList.values).distinct)
       /* _ = logger.info(
         s"Adding bucket ${vec3IntFromProto(bucketPositionVec3IntProto(bucketPosition))} to segment $segmentId, new mag-${bucketPosition.mag
           .toMagLiteral(true)} list: ${newBucketList.values.map(vec3IntFromProto)}") */
-      _ <- updateSegmentToBucketIndex(tracingId, segmentId, bucketPosition.mag, newBucketList, updateGroupVersion)
+      _ <- segmentIndexBuffer.put(segmentId, bucketPosition.mag, newBucketList)
     } yield ()
 
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto)(
@@ -107,34 +102,35 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         u.toPositiveLong
       }
 
-  private def segmentIndexKey(tracingId: String, segmentId: Long, mag: Vec3Int) =
-    s"$tracingId/$segmentId/${mag.toMagLiteral()}"
-
   private def bucketPositionVec3IntProto(bucketPosition: BucketPosition) =
     Vec3IntProto(bucketPosition.bucketX, bucketPosition.bucketY, bucketPosition.bucketZ)
 
-  private def updateSegmentToBucketIndex(tracingId: String,
-                                         segmentId: Long,
-                                         mag: Vec3Int,
-                                         positions: ListOfVec3IntProto,
-                                         version: Long): Fox[Unit] = {
-    val key = segmentIndexKey(tracingId, segmentId, mag)
-    volumeSegmentIndexClient.put(key, version, positions)
-  }
+  private def getSegmentToBucketIndexWithEmptyFallback(
+      segmentIndexBuffer: VolumeSegmentIndexBuffer,
+      segmentId: Long,
+      mag: Vec3Int)(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+    for {
+      bucketListBox <- segmentIndexBuffer.getWithFallback(segmentId, mag).futureBox
+      bucketList <- addEmptyFallback(bucketListBox)
+    } yield bucketList
 
-  def getSegmentToBucketIndexWithEmptyFallback(
+  def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
       tracingId: String,
       segmentId: Long,
       mag: Vec3Int,
       version: Option[Long] = None)(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
       bucketListBox <- getSegmentToBucketIndex(tracingId, segmentId, mag, version).futureBox
-      bucketList <- bucketListBox match {
-        case Full(list) => Fox.successful(list)
-        case f: Failure => f.toFox
-        case Empty      => Fox.successful(ListOfVec3IntProto(Seq.empty))
-      }
+      bucketList <- addEmptyFallback(bucketListBox)
     } yield bucketList
+
+  private def addEmptyFallback(positionsBox: Box[ListOfVec3IntProto])(
+      implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+    positionsBox match {
+      case Full(list) => Fox.successful(list)
+      case f: Failure => f.toFox
+      case Empty      => Fox.successful(ListOfVec3IntProto(Seq.empty))
+    }
 
   private def getSegmentToBucketIndex(tracingId: String,
                                       segmentId: Long,

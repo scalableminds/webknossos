@@ -29,7 +29,7 @@ trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTrac
 class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
-  val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
+  val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
@@ -45,7 +45,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
 class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
-  val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
+  val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
   val temporaryTracingStore: TemporaryTracingStore[VolumeTracing] = layer.temporaryTracingStore
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
@@ -61,7 +61,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends Ab
     } yield ()
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
-    bucketStreamFromCache(layer)
+    bucketStreamFromTemporaryStore(layer)
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
     throw new NotImplementedException // Temporary Volume Tracings do not support versioning

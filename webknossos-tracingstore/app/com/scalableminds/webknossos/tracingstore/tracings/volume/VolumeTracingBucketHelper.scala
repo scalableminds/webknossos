@@ -45,6 +45,7 @@ trait VolumeBucketCompression extends LazyLogging {
       data
     } else {
       try {
+        logger.info("decompressing...")
         decompressor.decompress(data, expectedUncompressedBucketSize)
       } catch {
         case e: Exception =>
@@ -107,20 +108,21 @@ trait VolumeTracingBucketHelper
     with BucketKeys
     with VolumeBucketReversionHelper {
 
-  protected val cacheTimeout: FiniteDuration = 70 minutes
+  // used to store compound annotations
+  private val temporaryVolumeDataTimeout: FiniteDuration = 70 minutes
 
   implicit def volumeDataStore: FossilDBClient
-  implicit def volumeDataCache: TemporaryVolumeDataStore
+  implicit def temporaryVolumeDataStore: TemporaryVolumeDataStore
 
-  private def loadBucketFromCache(key: String) =
-    volumeDataCache.find(key).map(VersionedKeyValuePair(VersionedKey(key, 0), _))
+  private def loadBucketFromTemporaryStore(key: String) =
+    temporaryVolumeDataStore.find(key).map(VersionedKeyValuePair(VersionedKey(key, 0), _))
 
   def loadBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  version: Option[Long] = None): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
 
-    val dataFox = loadBucketFromCache(key) match {
+    val dataFox = loadBucketFromTemporaryStore(key) match {
       case Some(data) => Fox.successful(data)
       case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
     }
@@ -166,21 +168,21 @@ trait VolumeTracingBucketHelper
                            bucket: BucketPosition,
                            data: Array[Byte],
                            version: Long,
-                           toCache: Boolean = false): Fox[Unit] =
-    saveBucket(dataLayer.name, dataLayer.elementClass, bucket, data, version, toCache)
+                           toTemporaryStore: Boolean = false): Fox[Unit] =
+    saveBucket(dataLayer.name, dataLayer.elementClass, bucket, data, version, toTemporaryStore)
 
   protected def saveBucket(tracingId: String,
                            elementClass: ElementClass.Value,
                            bucket: BucketPosition,
                            data: Array[Byte],
                            version: Long,
-                           toCache: Boolean): Fox[Unit] = {
+                           toTemporaryStore: Boolean): Fox[Unit] = {
     val key = buildBucketKey(tracingId, bucket)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
-    if (toCache) {
-      // Note that this cache is for temporary volumes only (e.g. compound projects)
+    if (toTemporaryStore) {
+      // Note that this temporary store is for temporary volumes only (e.g. compound projects)
       // and cannot be used for download or versioning
-      Fox.successful(volumeDataCache.insert(key, compressedBucket, Some(cacheTimeout)))
+      Fox.successful(temporaryVolumeDataStore.insert(key, compressedBucket, Some(temporaryVolumeDataTimeout)))
     } else {
       volumeDataStore.put(key, version, compressedBucket)
     }
@@ -197,9 +199,9 @@ trait VolumeTracingBucketHelper
     new VersionedBucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version)
   }
 
-  def bucketStreamFromCache(dataLayer: VolumeTracingLayer): Iterator[(BucketPosition, Array[Byte])] = {
+  def bucketStreamFromTemporaryStore(dataLayer: VolumeTracingLayer): Iterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(dataLayer.name)
-    val keyValuePairs = volumeDataCache.findAllConditionalWithKey(key => key.startsWith(keyPrefix))
+    val keyValuePairs = temporaryVolumeDataStore.findAllConditionalWithKey(key => key.startsWith(keyPrefix))
     keyValuePairs.flatMap {
       case (bucketKey, data) =>
         parseBucketKey(bucketKey).map(tuple => (tuple._2, data))

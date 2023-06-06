@@ -9,7 +9,15 @@ import {
   MenuProps,
   Button,
 } from "antd";
-import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  ClearOutlined,
+  DownOutlined,
+  EditOutlined,
+  ExportOutlined,
+  SaveOutlined,
+  SelectOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
@@ -58,6 +66,7 @@ import {
   ToolsWithInterpolationCapabilities,
   InterpolationModeEnum,
   InterpolationMode,
+  Unicode,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import Store, { OxalisState } from "oxalis/store";
@@ -546,6 +555,7 @@ function CreateTreeButton() {
 }
 
 function ChangeBrushSizeButton() {
+  const { ThinSpace } = Unicode;
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
@@ -574,9 +584,12 @@ function ChangeBrushSizeButton() {
     );
   };
 
+  const textToAssignBrushSize = "Assign current brush size"; //TODO maybe find string constants
+
   return (
     <Tooltip title="Change the brush size">
       <Popover
+        title="Brush Size"
         content={
           <div
             style={{
@@ -602,7 +615,7 @@ function ChangeBrushSizeButton() {
               onChange={handleUpdateBrushSize}
             />
             <table style={{ width: "100%", tableLayout: "fixed" }}>
-              <tbody style={{ textAlign: "center", lineHeight: "80%" }}>
+              <tbody style={{ textAlign: "center" }}>
                 <tr>
                   <td>
                     <ButtonComponent
@@ -634,42 +647,51 @@ function ChangeBrushSizeButton() {
                   <td>Medium</td>
                   <td>Large</td>
                 </tr>
-                <tr>
-                  <td>({smallBrushSize}vx)</td>
-                  <td>({mediumBrushSize}vx)</td>
-                  <td>({maximumBrushSize}vx)</td>
-                </tr>
-                <tr>
+                <tr style={{ textAlign: "center", lineHeight: "50%", opacity: 0.6 }}>
                   <td>
-                    <Button
-                      onClick={() =>
-                        handleUpdatePresetBrushSize([brushSize, mediumBrushSize, maximumBrushSize])
-                      }
-                    >
-                      Set current size
-                    </Button>
+                    {Math.round(smallBrushSize)}
+                    {ThinSpace}vx
                   </td>
                   <td>
-                    <Button
-                      onClick={() =>
-                        handleUpdatePresetBrushSize([smallBrushSize, brushSize, maximumBrushSize])
-                      }
-                    >
-                      Set current size
-                    </Button>
+                    {Math.round(mediumBrushSize)}
+                    {ThinSpace}vx
                   </td>
                   <td>
-                    <Button
-                      onClick={() =>
-                        handleUpdatePresetBrushSize([smallBrushSize, mediumBrushSize, brushSize])
-                      }
-                    >
-                      Set current size
-                    </Button>
+                    {Math.round(maximumBrushSize)}
+                    {ThinSpace}vx
                   </td>
                 </tr>
               </tbody>
             </table>
+            <div style={{ marginTop: 15 }}>
+              <Tooltip title={textToAssignBrushSize} placement="bottom">
+                <Button
+                  onClick={() =>
+                    handleUpdatePresetBrushSize([brushSize, mediumBrushSize, maximumBrushSize])
+                  }
+                >
+                  Assign
+                </Button>
+              </Tooltip>
+              <Tooltip title={textToAssignBrushSize} placement="bottom">
+                <Button
+                  onClick={() =>
+                    handleUpdatePresetBrushSize([smallBrushSize, brushSize, maximumBrushSize])
+                  }
+                >
+                  Assign
+                </Button>
+              </Tooltip>
+              <Tooltip title={textToAssignBrushSize} placement="bottom">
+                <Button
+                  onClick={() =>
+                    handleUpdatePresetBrushSize([smallBrushSize, mediumBrushSize, brushSize])
+                  }
+                >
+                  Assign
+                </Button>
+              </Tooltip>
+            </div>
           </div>
         }
         trigger="click"

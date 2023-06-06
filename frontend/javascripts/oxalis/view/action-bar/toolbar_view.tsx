@@ -1,4 +1,14 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
+import {
+  Radio,
+  Tooltip,
+  Badge,
+  Space,
+  Popover,
+  RadioChangeEvent,
+  Dropdown,
+  MenuProps,
+  Button,
+} from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -544,16 +554,16 @@ function ChangeBrushSizeButton() {
   );
   console.log(presetBrushSizes);
 
-  let maximumButtonBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
-  let mediumButtonBrushSize = calculateMediumBrushSize(maximumButtonBrushSize);
-  let minimumButtonBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
+  let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
 
+  let smallBrushSize: number, mediumBrushSize: number, largeBrushSize: number;
   if (presetBrushSizes.length === 0) {
-    handleUpdatePresetBrushSize([
-      minimumButtonBrushSize,
-      mediumButtonBrushSize,
-      maximumButtonBrushSize,
-    ]);
+    largeBrushSize = maximumBrushSize;
+    mediumBrushSize = calculateMediumBrushSize(largeBrushSize);
+    smallBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
+    handleUpdatePresetBrushSize([smallBrushSize, mediumBrushSize, largeBrushSize]);
+  } else {
+    [smallBrushSize, mediumBrushSize, largeBrushSize] = presetBrushSizes;
   }
 
   const centerBrushInViewport = () => {
@@ -585,7 +595,7 @@ function ChangeBrushSizeButton() {
               label=""
               roundTo={0}
               min={userSettings.brushSize.minimum}
-              max={maximumButtonBrushSize}
+              max={maximumBrushSize}
               precision={0}
               spans={[0, 16, 8]}
               value={brushSize}
@@ -597,7 +607,7 @@ function ChangeBrushSizeButton() {
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(minimumButtonBrushSize)}
+                      onClick={() => handleUpdateBrushSize(smallBrushSize)}
                     >
                       <i className="fas fa-circle fa-xs" />
                     </ButtonComponent>
@@ -605,7 +615,7 @@ function ChangeBrushSizeButton() {
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(mediumButtonBrushSize)}
+                      onClick={() => handleUpdateBrushSize(mediumBrushSize)}
                     >
                       <i className="fas fa-circle fa-sm" />
                     </ButtonComponent>
@@ -613,7 +623,7 @@ function ChangeBrushSizeButton() {
                   <td>
                     <ButtonComponent
                       className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(maximumButtonBrushSize)}
+                      onClick={() => handleUpdateBrushSize(largeBrushSize)}
                     >
                       <i className="fas fa-circle fa-lg" />
                     </ButtonComponent>
@@ -625,9 +635,38 @@ function ChangeBrushSizeButton() {
                   <td>Large</td>
                 </tr>
                 <tr>
-                  <td>({minimumButtonBrushSize}vx)</td>
-                  <td>({mediumButtonBrushSize}vx)</td>
-                  <td>({maximumButtonBrushSize}vx)</td>
+                  <td>({smallBrushSize}vx)</td>
+                  <td>({mediumBrushSize}vx)</td>
+                  <td>({maximumBrushSize}vx)</td>
+                </tr>
+                <tr>
+                  <td>
+                    <Button
+                      onClick={() =>
+                        handleUpdatePresetBrushSize([brushSize, mediumBrushSize, maximumBrushSize])
+                      }
+                    >
+                      Set current size
+                    </Button>
+                  </td>
+                  <td>
+                    <Button
+                      onClick={() =>
+                        handleUpdatePresetBrushSize([smallBrushSize, brushSize, maximumBrushSize])
+                      }
+                    >
+                      Set current size
+                    </Button>
+                  </td>
+                  <td>
+                    <Button
+                      onClick={() =>
+                        handleUpdatePresetBrushSize([smallBrushSize, mediumBrushSize, brushSize])
+                      }
+                    >
+                      Set current size
+                    </Button>
+                  </td>
                 </tr>
               </tbody>
             </table>

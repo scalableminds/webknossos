@@ -5,7 +5,6 @@ import com.scalableminds.webknossos.datastore.models.UnsignedInteger.wrongElemen
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
 import java.util
-import java.util.stream.IntStream
 import scala.reflect.ClassTag
 
 /* Wrapper for unsigned integral data types. Currently not a lot of algebra implemented, add functionality as needed */

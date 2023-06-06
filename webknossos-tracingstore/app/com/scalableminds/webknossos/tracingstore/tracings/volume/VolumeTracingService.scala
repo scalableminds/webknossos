@@ -39,19 +39,19 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
-                                      val tracingDataStore: TracingDataStore,
-                                      val tracingStoreWkRpcClient: TSRemoteWebKnossosClient,
-                                      val isosurfaceServiceHolder: IsosurfaceServiceHolder,
-                                      implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
-                                      implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
-                                      val handledGroupIdStore: TracingStoreRedisStore,
-                                      val uncommittedUpdatesStore: TracingStoreRedisStore,
-                                      editableMappingService: EditableMappingService,
-                                      val temporaryTracingIdStore: TracingStoreRedisStore,
-                                      val remoteDatastoreClient: TSRemoteDatastoreClient,
-                                      val remoteWebKnossosClient: TSRemoteWebKnossosClient,
-                                      val temporaryFileCreator: TemporaryFileCreator,
-                                      volumeSegmentIndexService: VolumeSegmentIndexService
+    val tracingDataStore: TracingDataStore,
+    val tracingStoreWkRpcClient: TSRemoteWebKnossosClient,
+    val isosurfaceServiceHolder: IsosurfaceServiceHolder,
+    implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
+    implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
+    val handledGroupIdStore: TracingStoreRedisStore,
+    val uncommittedUpdatesStore: TracingStoreRedisStore,
+    editableMappingService: EditableMappingService,
+    val temporaryTracingIdStore: TracingStoreRedisStore,
+    val remoteDatastoreClient: TSRemoteDatastoreClient,
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val temporaryFileCreator: TemporaryFileCreator,
+    volumeSegmentIndexService: VolumeSegmentIndexService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with VolumeTracingDownsampling
@@ -189,20 +189,44 @@ class VolumeTracingService @Inject()(
                                     sourceVersion: Long,
                                     newVersion: Long,
                                     tracing: VolumeTracing): Fox[VolumeTracing] = {
-    val sourceTracing = find(tracingId, Some(sourceVersion))
+
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion()
+    val segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, newVersion)
 
-    bucketStream.foreach {
-      case (bucketPosition, _, version) =>
-        if (version > sourceVersion)
-          loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
-            case Full(bucket)           => saveBucket(dataLayer, bucketPosition, bucket, newVersion)
-            case Empty                  => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
-            case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
-          }
-    }
-    sourceTracing
+    for {
+      sourceTracing <- find(tracingId, Some(sourceVersion))
+      _ <- Fox.serialCombined(bucketStream) {
+        case (bucketPosition, dataBeforeRevert, version) =>
+          if (version > sourceVersion) {
+            loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
+              case Full(dataAfterRevert) =>
+                for {
+                  _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
+                  _ <- updateSegmentIndex(segmentIndexBuffer,
+                                          bucketPosition,
+                                          dataAfterRevert,
+                                          Full(dataBeforeRevert),
+                                          newVersion,
+                                          sourceTracing.elementClass)
+                } yield ()
+              case Empty =>
+                for {
+                  dataAfterRevert <- Fox.successful(Array[Byte](0))
+                  _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
+                  _ <- updateSegmentIndex(segmentIndexBuffer,
+                                          bucketPosition,
+                                          dataAfterRevert,
+                                          Full(dataBeforeRevert),
+                                          newVersion,
+                                          sourceTracing.elementClass)
+                } yield ()
+              case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
+            }
+          } else Fox.successful(())
+      }
+      _ <- segmentIndexBuffer.flush()
+    } yield sourceTracing
   }
 
   def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Vec3Int]] =
@@ -365,7 +389,7 @@ class VolumeTracingService @Inject()(
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(destinationId,
                                                         volumeSegmentIndexClient,
                                                         destinationTracing.version)
-      _ <- Fox.combined(buckets.map { // TODO enforce serial? may need Fox.serialCombined for iterators
+      _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
           if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
@@ -378,7 +402,7 @@ class VolumeTracingService @Inject()(
                                       sourceTracing.elementClass)
             } yield ()
           } else Fox.successful(())
-      }.toList)
+      }
       _ <- segmentIndexBuffer.flush()
     } yield ()
 

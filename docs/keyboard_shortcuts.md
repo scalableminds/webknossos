@@ -112,7 +112,8 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 
 ## Tool Switching Shortcuts
 
-To be able to switch to a specific tool first press CTRL + K and then the key that was assigned to that tool.
+Note that you need to first press CTRL + K, release these keys and then the letter that was assigned to a specific tool in order to switch to it.  
+CTRL + K is not needed for cyclic tool switching via W / SHIFT + W.
 
 | Key Binding                       | Operation                                                                         |
 | --------------------------------- | --------------------------------------------------------------------------------- |
@@ -123,7 +124,7 @@ To be able to switch to a specific tool first press CTRL + K and then the key th
 | CTRL + K, **B**                       | Brush Tool                                                                        |
 | CTRL + K, **E**                       | Brush Erase Tool                                                                  |
 | CTRL + K, **L**                       | Lasso Tool                                                                        |
-| CTRL + K, **R**                       | Lasso lErase Too                                                                  |
+| CTRL + K, **R**                       | Lasso Erase Too                                                                  |
 | CTRL + K, **P**                       | Segment Picker Tool                                                               |
 | CTRL + K, **Q**                       | Quick Select Tool                                                                 |
 | CTRL + K, **X**                       | Bounding Box Tool                                                                 |

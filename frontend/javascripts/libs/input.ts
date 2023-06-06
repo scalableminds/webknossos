@@ -124,7 +124,10 @@ export class InputKeyboardNoLoop {
   };
 
   cancelExtendedModeTimeout() {
-    this.cancelExtendedModeTimeoutId && clearTimeout(this.cancelExtendedModeTimeoutId);
+    if (this.cancelExtendedModeTimeoutId != null) {
+      clearTimeout(this.cancelExtendedModeTimeoutId);
+      this.cancelExtendedModeTimeoutId = null;
+    }
   }
 
   attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
@@ -161,10 +164,11 @@ export class InputKeyboardNoLoop {
       KeyboardJS.withContext("extended", () => {
         KeyboardJS.bind(...binding);
       });
+    } else {
+      KeyboardJS.withContext("default", () => {
+        KeyboardJS.bind(...binding);
+      });
     }
-    KeyboardJS.withContext("default", () => {
-      KeyboardJS.bind(...binding);
-    });
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((...args: any[]) => v... Remove this comment to see the full error message
     return this.bindings.push(binding);
   }

@@ -154,7 +154,9 @@ object UnsignedIntegerArray {
   def filterNonZero(typedArray: Array[UnsignedInteger]): Array[UnsignedInteger] =
     typedArray.filter(!_.isZero)
 
-  // toSet is performed on the signed arrays, so UnsignedInteger objects are only allocated on the (fewer) elements of the set
+  // UnsignedInteger objects are only allocated on the (fewer) elements of the set
+  // for Int and Long, primitive Streams are provided by java.util.stream, which are faster than toSet
+  // Most volume annotations are Int or Long anyway
   def toSetFromByteArray(byteArray: Array[Byte], elementClass: ElementClass.Value): Set[UnsignedInteger] = {
     lazy val byteBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN)
     elementClass match {
@@ -163,11 +165,11 @@ object UnsignedIntegerArray {
         fromByteArrayImpl(byteBuffer, DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_))).toSet
           .map(UInt16(_))
       case ElementClass.uint32 =>
-        val intArray = fromByteArrayImpl(byteBuffer, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_)))
-        val setStream: IntStream = util.Arrays.stream(intArray).distinct()
-        setStream.toArray.toSet.map(UInt32(_))
+        val signedArray = fromByteArrayImpl(byteBuffer, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_)))
+        util.Arrays.stream(signedArray).distinct().toArray.toSet.map(UInt32(_))
       case ElementClass.uint64 =>
-        fromByteArrayImpl(byteBuffer, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_))).toSet.map(UInt64(_))
+        val signedArray = fromByteArrayImpl(byteBuffer, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_)))
+        util.Arrays.stream(signedArray).distinct().toArray.toSet.map(UInt64(_))
       case _ =>
         wrongElementClass(elementClass)
         Set()

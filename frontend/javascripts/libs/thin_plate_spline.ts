@@ -2,7 +2,13 @@ import _ from "lodash";
 import { Matrix, solve } from "ml-matrix";
 import { Vector3 } from "oxalis/constants";
 
-class TPS3d {
+class TPS1d {
+  // This class accepts 3-dimensional control points
+  // with a 1-dimensional offset. Thus, this class needs
+  // to be instantiated three times to get X, Y and Z offsets
+  // for 3D coordinates.
+  // See TPS3D for that.
+
   /*
   Note: Variable notaton is the same as that in the Principal Warps
   paper and https://profs.etsmtl.ca/hlombaert/thinplates/
@@ -83,7 +89,7 @@ class TPS3d {
     this.a = Wa1D.slice(-4);
   }
 
-  simple(x: number, y: number, z: number) {
+  transform1D(x: number, y: number, z: number) {
     const linear_part = this.a[0] + x * this.a[1] + y * this.a[2] + z * this.a[3];
 
     // Calculate distance to each control point
@@ -112,56 +118,56 @@ class TPS3d {
   }
 }
 
-function getControlPointsWithDiff(
-  source_points: Vector3[],
-  target_points: Vector3[],
-  invert: boolean = false,
-): [Vector3[], number[], number[], number[]] {
-  // _retval, affine, inliers = cv2.estimateAffine3D(
-  //     target.reshape(1, -1, 3), source.reshape(1, -1, 3)
-  // )
-  // affine = np.vstack([affine, (0, 0, 0, 1)])
+export default class TPS3D {
+  tps_x = new TPS1d();
+  tps_y = new TPS1d();
+  tps_z = new TPS1d();
 
-  // # source[:, 2] *= 100
-  // # target[:, 2] *= 100
+  constructor(source_points: Vector3[], target_points: Vector3[]) {
+    const [cps, v_x, v_y, v_z] = this.getControlPointsWithDiff(source_points, target_points, true);
 
-  if (invert) {
-    let tmp = source_points;
-    source_points = target_points;
-    target_points = tmp;
+    this.tps_x.fit(v_x, cps);
+    this.tps_y.fit(v_y, cps);
+    this.tps_z.fit(v_z, cps);
   }
 
-  const cps: Vector3[] = [];
-  const v_x: number[] = [];
-  const v_y: number[] = [];
-  const v_z: number[] = [];
-  for (const idx of _.range(0, source_points.length)) {
-    cps.push(source_points[idx]);
-    v_x.push(target_points[idx][0] - source_points[idx][0]);
-    v_y.push(target_points[idx][1] - source_points[idx][1]);
-    v_z.push(target_points[idx][2] - source_points[idx][2]);
-  }
-
-  return [cps, v_x, v_y, v_z]; //, affine
-}
-
-export const tps = (source_points: Vector3[], target_points: Vector3[]) => {
-  const [cps, v_x, v_y, v_z] = getControlPointsWithDiff(source_points, target_points, true);
-
-  const tps_x = new TPS3d();
-  const tps_y = new TPS3d();
-  const tps_z = new TPS3d();
-
-  tps_x.fit(v_x, cps);
-  tps_y.fit(v_y, cps);
-  tps_z.fit(v_z, cps);
-
-  const transform = (x: number, y: number, z: number): Vector3 => {
-    const dx = tps_x.simple(x, y, z);
-    const dy = tps_y.simple(x, y, z);
-    const dz = tps_z.simple(x, y, z);
+  transform(x: number, y: number, z: number): Vector3 {
+    const dx = this.tps_x.transform1D(x, y, z);
+    const dy = this.tps_y.transform1D(x, y, z);
+    const dz = this.tps_z.transform1D(x, y, z);
     return [x + dx, y + dy, z + dz];
-  };
+  }
 
-  return transform;
-};
+  getControlPointsWithDiff(
+    source_points: Vector3[],
+    target_points: Vector3[],
+    invert: boolean = false,
+  ): [Vector3[], number[], number[], number[]] {
+    // _retval, affine, inliers = cv2.estimateAffine3D(
+    //     target.reshape(1, -1, 3), source.reshape(1, -1, 3)
+    // )
+    // affine = np.vstack([affine, (0, 0, 0, 1)])
+
+    // # source[:, 2] *= 100
+    // # target[:, 2] *= 100
+
+    if (invert) {
+      let tmp = source_points;
+      source_points = target_points;
+      target_points = tmp;
+    }
+
+    const cps: Vector3[] = [];
+    const v_x: number[] = [];
+    const v_y: number[] = [];
+    const v_z: number[] = [];
+    for (const idx of _.range(0, source_points.length)) {
+      cps.push(source_points[idx]);
+      v_x.push(target_points[idx][0] - source_points[idx][0]);
+      v_y.push(target_points[idx][1] - source_points[idx][1]);
+      v_z.push(target_points[idx][2] - source_points[idx][2]);
+    }
+
+    return [cps, v_x, v_y, v_z]; //, affine
+  }
+}

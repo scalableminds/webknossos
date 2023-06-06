@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import _ from "lodash";
 import test, { ExecutionContext } from "ava";
-import { tps } from "libs/thin_plate_spline";
+import TPS3D, { tps } from "libs/thin_plate_spline";
 import { Vector3 } from "oxalis/constants";
 
 function almostEqual(t: ExecutionContext, vec1: Vector3, vec2: Vector3) {
@@ -72,17 +72,17 @@ function getPointsC555() {
 test("Basic TPS calculation", async (t) => {
   const [source_points, target_points] = getPointsC555();
 
-  const transform = tps(source_points, target_points);
+  const tps = new TPS3D(source_points, target_points);
 
   almostEqual(
     t,
     [568.1202797015036, 528.013612246682, 1622.1124501555569],
-    transform(570.3021, 404.5549, 502.22482),
+    tps.transform(570.3021, 404.5549, 502.22482),
   );
 
   almostEqual(
     t,
     [1574.679455809381, 1607.1773268624395, 1791.5425120096843],
-    transform(500, 501, 502),
+    tps.transform(500, 501, 502),
   );
 });

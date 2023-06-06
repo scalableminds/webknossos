@@ -346,7 +346,7 @@ ${compileShader(
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
-float REGULARIZATION = 1.;
+float REGULARIZATION = 0.;
 
 const int CPS_LENGTH = 25;
 vec3 W[CPS_LENGTH];
@@ -512,18 +512,18 @@ void initializeArrays() {
 
   for (int cpIdx = 0; cpIdx < CPS_LENGTH; cpIdx++) {
     // Calculate distance to each control point
-    float el = sqrt(
+    float dist = sqrt(
       pow(x - cps[cpIdx].x, 2.0) +
       pow(y - cps[cpIdx].y, 2.0) +
       pow(z - cps[cpIdx].z, 2.0)
     );
 
-    if (el != 0.0) {
-      el = pow(el, 2.0) * log2(pow(el, 2.0)) / log2(2.718281828459045);
+    if (dist != 0.0) {
+      dist = pow(dist, 2.0) * log2(pow(dist, 2.0)) / log2(2.718281828459045);
     } else {
-      el = REGULARIZATION;
+      dist = REGULARIZATION;
     }
-    bending_part += el * W[cpIdx];
+    bending_part += dist * W[cpIdx];
   }
 
   tpsOffsetXYZ = linear_part + bending_part;

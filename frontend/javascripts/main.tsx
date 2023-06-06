@@ -25,6 +25,9 @@ import { setStore, setModel } from "oxalis/singletons";
 import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { tps } from "libs/thin_plate_spline";
+
+tps();
 
 setModel(Model);
 setStore(UnthrottledStore);

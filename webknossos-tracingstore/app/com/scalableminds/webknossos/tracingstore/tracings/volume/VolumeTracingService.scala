@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
@@ -105,6 +106,7 @@ class VolumeTracingService @Inject()(
                         previousVersion: Long,
                         userToken: Option[String]): Fox[Unit] =
     for {
+      before <- Fox.successful(Instant.now)
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
@@ -114,7 +116,7 @@ class VolumeTracingService @Inject()(
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
                 } else
                   updateBucket(tracingId, tracing, a, updateGroup.version, userToken) ?~> "Failed to save volume data."
-              case a: UpdateTracingVolumeAction =>
+              /*case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   tracing.copy(
                     activeSegmentId = Some(a.activeSegmentId),
@@ -128,6 +130,9 @@ class VolumeTracingService @Inject()(
               case _: UpdateTdCamera        => Fox.successful(tracing)
               case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
               case _                        => Fox.failure("Unknown action.")
+
+               */
+              case _ => Fox.successful(tracing)
             }
           case Empty =>
             Fox.empty
@@ -135,6 +140,10 @@ class VolumeTracingService @Inject()(
             f.toFox
         }
       }
+      _ = logger.info(s"Save took ${Instant.since(before)} with segmentIndex for ${updateGroup.actions.count {
+        case _: UpdateBucketVolumeAction => true
+        case _                           => false
+      }} bucket updates.")
       _ <- save(updatedTracing.copy(version = updateGroup.version), Some(tracingId), updateGroup.version)
       _ <- tracingDataStore.volumeUpdates.put(
         tracingId,

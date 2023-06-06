@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
@@ -30,20 +31,29 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                        updateGroupVersion: Long,
                        elementClass: ElementClassProto)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
+      before <- Fox.successful(Instant.now)
       bucketBytesDecompressed <- tryo(
         decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
-      segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
       previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.udpate.getPreviousBucket.failed"
+      _ = logger.info(s"Decompress, get previous: ${Instant.since(before)}")
+      beforeCollect = Instant.now
+      segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.udpate.collectSegmentIds.failed"
+      _ = logger.info(s"collect segment ids: ${Instant.since(beforeCollect)}")
+      beforeDiff = Instant.now
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
+      _ = logger.info(s"diff: ${Instant.since(beforeDiff)}")
       /*_ = if (additions.nonEmpty || removals.nonEmpty) {
         logger.info(s"Mag${bucketPosition.mag.toMagLiteral(true)} bucket additions: $additions and removals $removals")
       }*/
+      beforeRemove = Instant.now
       _ <- Fox.serialCombined(removals.toList)(segmentId =>
         removeBucketFromSegmentIndex(tracingId, segmentId, bucketPosition, updateGroupVersion)) ?~> "volumeSegmentIndex.udpate.removeBucket.failed"
       _ <- Fox.serialCombined(additions.toList)(segmentId =>
         addBucketToSegmentIndex(tracingId, segmentId, bucketPosition, updateGroupVersion)) ?~> "volumeSegmentIndex.udpate.addBucket.failed"
+      _ = logger.info(s"remove + add index entries: ${Instant.since(beforeRemove)}")
+      _ = logger.info(s"updateFromBucket total: ${Instant.since(before)}")
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(
@@ -91,9 +101,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto)(
       implicit ec: ExecutionContext): Fox[Set[Long]] =
     for {
-      unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
+      set <- tryo(UnsignedIntegerArray.toSetFromByteArray(bytes, elementClass)).toFox
     } yield
-      unsignedIntArray.toSet.filter(!_.isZero).map { u: UnsignedInteger =>
+      set.filter(!_.isZero).map { u: UnsignedInteger =>
         u.toPositiveLong
       }
 

@@ -152,4 +152,23 @@ object UnsignedIntegerArray {
 
   def filterNonZero(typedArray: Array[UnsignedInteger]): Array[UnsignedInteger] =
     typedArray.filter(!_.isZero)
+
+  // toSet is performed on the signed arrays, so UnsignedInteger objects are only allocated on the (fewer) elements of the set
+  def toSetFromByteArray(byteArray: Array[Byte], elementClass: ElementClass.Value): Set[UnsignedInteger] = {
+    lazy val byteBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN)
+    elementClass match {
+      case ElementClass.uint8 => byteArray.toSet.map(UInt8(_))
+      case ElementClass.uint16 =>
+        fromByteArrayImpl(byteBuffer, DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_))).toSet
+          .map(UInt16(_))
+      case ElementClass.uint32 =>
+        fromByteArrayImpl(byteBuffer, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_))).toSet.map(UInt32(_))
+      case ElementClass.uint64 =>
+        fromByteArrayImpl(byteBuffer, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_))).toSet.map(UInt64(_))
+      case _ =>
+        wrongElementClass(elementClass)
+        Set()
+    }
+  }
+
 }

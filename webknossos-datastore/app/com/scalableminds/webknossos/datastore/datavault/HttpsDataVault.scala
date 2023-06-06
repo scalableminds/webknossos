@@ -18,7 +18,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
 
   private val connectionTimeout = 1 minute
   private val readTimeout = 10 minutes
-  private lazy val backend = HttpClientSyncBackend(options = SttpBackendOptions.connectionTimeout(connectionTimeout))
+  private lazy val backend = HttpURLConnectionBackend(options = SttpBackendOptions.connectionTimeout(connectionTimeout))
 
   private def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
     credential.flatMap { c =>

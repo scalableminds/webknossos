@@ -27,16 +27,26 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
   private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
     new GetObjectRequest(bucketName, key).withRange(range.start, range.end)
 
+  private def getSuffixRangeRequest(bucketName: String, key: String, length: Long): GetObjectRequest = {
+    val req = new GetObjectRequest(bucketName, key)
+    // Suffix length range request is not supported by aws sdk
+    // see https://github.com/aws/aws-sdk-java/issues/1551#issuecomment-382540551 for this workaround
+    req.setRange(0) // Disable MD5 checksum, which fails on partial reads
+    req.putCustomRequestHeader("Range", s"bytes=-$length")
+    req
+  }
+
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
+  override def readBytes(path: VaultPath, range: RangeSpecifier): (Array[Byte], Encoding.Value) = {
     val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
       case Some(value) => value
       case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
     }
     val getObjectRequest = range match {
-      case Some(r) => getRangeRequest(bucketName, objectKey, r)
-      case None    => getRequest(bucketName, objectKey)
+      case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
+      case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
+      case Complete()      => getRequest(bucketName, objectKey)
     }
 
     val obj = client.getObject(getObjectRequest)

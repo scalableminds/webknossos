@@ -7,9 +7,12 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.{DataVaultsHolder, RemoteSourceDescriptor}
@@ -142,6 +145,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
           case l: PrecomputedSegmentationLayer =>
             l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
                    boundingBox = l.boundingBox * magFactors)
+          case l: Zarr3DataLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
+          case l: Zarr3SegmentationLayer =>
+            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
+                   boundingBox = l.boundingBox * magFactors)
           case _ => throw new Exception("Encountered unsupported layer format during explore remote")
         }
       })
@@ -168,12 +177,15 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
         remotePath,
         credentialId.map(_.toString),
         reportMutable,
-        List(new ZarrArrayExplorer,
-             new NgffExplorer,
-             new WebknossosZarrExplorer,
-             new N5ArrayExplorer,
-             new N5MultiscalesExplorer,
-             new PrecomputedExplorer)
+        List(
+          new ZarrArrayExplorer,
+          new NgffExplorer,
+          new WebknossosZarrExplorer,
+          new N5ArrayExplorer,
+          new N5MultiscalesExplorer,
+          new PrecomputedExplorer,
+          new Zarr3ArrayExplorer
+        )
       )
     } yield layersWithVoxelSizes
 
@@ -183,6 +195,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) 
     else if (uri.endsWith(NgffMetadata.FILENAME_DOT_ZATTRS)) uri.dropRight(NgffMetadata.FILENAME_DOT_ZATTRS.length)
     else if (uri.endsWith(NgffGroupHeader.FILENAME_DOT_ZGROUP))
       uri.dropRight(NgffGroupHeader.FILENAME_DOT_ZGROUP.length)
+    else if (uri.endsWith(PrecomputedHeader.FILENAME_INFO)) uri.dropRight(PrecomputedHeader.FILENAME_INFO.length)
+    else if (uri.endsWith(Zarr3ArrayHeader.ZARR_JSON)) uri.dropRight(Zarr3ArrayHeader.ZARR_JSON.length)
     else uri
 
   private def exploreRemoteLayersForRemotePath(

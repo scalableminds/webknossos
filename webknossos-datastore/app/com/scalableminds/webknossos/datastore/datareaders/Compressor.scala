@@ -184,6 +184,8 @@ object BloscCompressor {
   val defaultBlocksize = 0
   val supportedShuffle: List[Int] = List(NOSHUFFLE, BYTESHUFFLE, BITSHUFFLE)
   val supportedCnames: List[String] = List("zstd", "blosclz", defaultCname, "lz4hc", "zlib")
+  val keyTypesize = "typesize"
+  val defaultTypesize = 1
 }
 
 class BloscCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
@@ -218,7 +220,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                          => BloscCompressor.defaultShuffle
     case Some(StringCompressionSetting(shuffleString)) => validateShuffle(shuffleString.toInt)
     case Some(IntCompressionSetting(shuffleInt))       => validateShuffle(shuffleInt)
-    case _                                             => throw new IllegalArgumentException("Blosc keyShuffle must be int or string")
+    case _                                             => throw new IllegalArgumentException("Blosc shuffle must be int or string")
   }
 
   private def validateShuffle(shuffle: Int): Int = {
@@ -235,13 +237,20 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                            => BloscCompressor.defaultBlocksize
     case Some(StringCompressionSetting(blockSizeString)) => blockSizeString.toInt
     case Some(IntCompressionSetting(blockSizeInt))       => blockSizeInt
-    case _                                               => throw new IllegalArgumentException("Blosc keyBlocksize must be int or string")
+    case _                                               => throw new IllegalArgumentException("Blosc blocksize must be int or string")
+  }
+
+  val typesize: Int = properties.get(BloscCompressor.keyTypesize) match {
+    case None                                           => BloscCompressor.defaultTypesize
+    case Some(StringCompressionSetting(typeSizeString)) => typeSizeString.toInt
+    case Some(IntCompressionSetting(typeSizeInt))       => typeSizeInt
+    case _                                              => throw new IllegalArgumentException("Blosc typesize must be int or string")
   }
 
   override def getId = "blosc"
 
   override def toString: String =
-    "compressor=" + getId + "/cname=" + cname + "/clevel=" + clevel.toString + "/blocksize=" + blocksize + "/shuffle=" + shuffle
+    "compressor=" + getId + "/cname=" + cname + "/clevel=" + clevel.toString + "/blocksize=" + blocksize + "/shuffle=" + shuffle + "/typesize=" + typesize
 
   @throws[IOException]
   override def compress(input: Array[Byte]): Array[Byte] = {
@@ -254,7 +263,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     val outputSize = inputSize + JBlosc.OVERHEAD
     val inputBuffer = ByteBuffer.wrap(inputBytes)
     val outBuffer = ByteBuffer.allocate(outputSize)
-    JBlosc.compressCtx(clevel, shuffle, 1, inputBuffer, inputSize, outBuffer, outputSize, cname, blocksize, 1)
+    JBlosc.compressCtx(clevel, shuffle, typesize, inputBuffer, inputSize, outBuffer, outputSize, cname, blocksize, 1)
     val bs = cbufferSizes(outBuffer)
     val compressedChunk = util.Arrays.copyOfRange(outBuffer.array, 0, bs.getCbytes.toInt)
     compressedChunk

@@ -20,6 +20,7 @@ import {
   findGroup,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type { TreeType } from "oxalis/constants";
 
 export type SkeletonTracingStats = {
   treeCount: number;
@@ -105,18 +106,29 @@ export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefin
 export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
   return _.values(trees).find((tree: Tree) => tree.name === treeName);
 }
+export function getTreesWithType(
+  skeletonTracing: SkeletonTracing,
+  type?: TreeType | null | undefined,
+): TreeMap {
+  return type != null
+    ? _.pickBy(skeletonTracing.trees, (tree) => tree.type === type)
+    : skeletonTracing.trees;
+}
 export function getTree(
   skeletonTracing: SkeletonTracing,
   treeId?: number | null | undefined,
+  type?: TreeType | null | undefined,
 ): Maybe<Tree> {
+  const trees = getTreesWithType(skeletonTracing, type);
+
   if (treeId != null) {
-    return Maybe.fromNullable(skeletonTracing.trees[treeId]);
+    return Maybe.fromNullable(trees[treeId]);
   }
 
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return Maybe.fromNullable(skeletonTracing.trees[activeTreeId]);
+    return Maybe.fromNullable(trees[activeTreeId]);
   }
 
   return Maybe.Nothing();
@@ -125,18 +137,21 @@ export function getNodeAndTree(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,
   treeId?: number | null | undefined,
+  type?: TreeType | null | undefined,
 ): Maybe<[Tree, Node]> {
   let tree;
 
+  const trees = getTreesWithType(skeletonTracing, type);
+
   if (treeId != null) {
-    tree = skeletonTracing.trees[treeId];
+    tree = trees[treeId];
   } else if (nodeId != null) {
-    tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
+    tree = _.values(trees).find((__) => __.nodes.has(nodeId));
   } else {
     const { activeTreeId } = skeletonTracing;
 
     if (activeTreeId != null) {
-      tree = skeletonTracing.trees[activeTreeId];
+      tree = trees[activeTreeId];
     }
   }
 

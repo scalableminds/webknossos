@@ -213,6 +213,7 @@ export class SkeletonTool {
     };
 
     let draggingNodeId: number | null | undefined = null;
+    let didDragNode: boolean = false;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
@@ -230,10 +231,11 @@ export class SkeletonTool {
         );
       },
       leftMouseUp: () => {
-        if (draggingNodeId != null) {
+        if (draggingNodeId != null && didDragNode) {
           SkeletonHandlers.finishNodeMovement(draggingNodeId);
         }
         draggingNodeId = null;
+        didDragNode = false;
       },
       leftDownMove: (
         delta: Point2,
@@ -248,6 +250,7 @@ export class SkeletonTool {
           tracing.skeleton != null &&
           (draggingNodeId != null || (useLegacyBindings && event.ctrlKey))
         ) {
+          didDragNode = true;
           SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId, true);
         } else {
           MoveHandlers.handleMovePlane(delta);

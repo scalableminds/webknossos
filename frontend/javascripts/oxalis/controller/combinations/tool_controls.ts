@@ -30,7 +30,10 @@ import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/anno
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import type { SelectedEdge } from "oxalis/controller/combinations/bounding_box_handlers";
+import {
+  createBoundingBoxAndGetEdges,
+  SelectedEdge,
+} from "oxalis/controller/combinations/bounding_box_handlers";
 import {
   getClosestHoveredBoundingBox,
   handleResizingBoundingBox,
@@ -588,10 +591,17 @@ export class BoundingBoxTool {
         }
       },
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        const hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
+        let hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
 
         if (hoveredEdgesInfo) {
           [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+        } else {
+          hoveredEdgesInfo = createBoundingBoxAndGetEdges(pos, planeId);
+          if (hoveredEdgesInfo) {
+            [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+          }
+        }
+        if (primarySelectedEdge) {
           getSceneController().highlightUserBoundingBox(primarySelectedEdge.boxId);
         }
       },
@@ -607,7 +617,7 @@ export class BoundingBoxTool {
       mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
-          highlightAndSetCursorOnHoveredBoundingBox(delta, position, planeId);
+          highlightAndSetCursorOnHoveredBoundingBox(position, planeId);
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -631,7 +641,7 @@ export class BoundingBoxTool {
     _altKey: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Resize Bounding Boxes",
+      leftDrag: "Create/Resize Bounding Boxes",
       rightClick: "Context Menu",
     };
   }

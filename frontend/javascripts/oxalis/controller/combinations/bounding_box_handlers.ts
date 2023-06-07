@@ -3,7 +3,7 @@ import {
   calculateMaybeGlobalPos,
 } from "oxalis/model/accessors/view_mode_accessor";
 import _ from "lodash";
-import type { OrthoView, Point2, Vector3, BoundingBoxType } from "oxalis/constants";
+import type { OrthoView, Point2, Vector3, BoundingBoxType, Vector2 } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { DimensionMap, DimensionIndices } from "oxalis/model/dimensions";
@@ -16,8 +16,9 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { document } from "libs/window";
 import { V3 } from "libs/mjs";
+
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
-const getNeighbourEdgeIndexByEdgeIndex = {
+const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {
   // The edges are indexed within the plane like this:
   // See the distanceArray calculation as a reference.
   //  +---0---+
@@ -137,6 +138,19 @@ function computeDistanceArray(
   return distanceArray as any as DistanceArray;
 }
 
+const _getEdgeInfoFromId = (boxId: number, indices: DimensionMap, edgeId: number): SelectedEdge => {
+  const direction: SelectedEdge["direction"] = edgeId < 2 ? "horizontal" : "vertical";
+  const isMaxEdge = edgeId % 2 === 1;
+  const resizableDimension = direction === "horizontal" ? indices[1] : indices[0];
+  return {
+    boxId,
+    direction,
+    isMaxEdge,
+    edgeId,
+    resizableDimension,
+  };
+};
+
 // Return the edge or edges of the bounding box closest to the mouse position if their distance is below a certain threshold.
 // If no edge is close to the mouse null is returned instead. Otherwise the first entry is always the closest edge.
 // If the mouse is near a corner, there is always an additional edge that is close to the mouse.
@@ -192,23 +206,9 @@ export function getClosestHoveredBoundingBox(
 
   const nearestBoundingBox = currentNearestBoundingBox;
 
-  const getEdgeInfoFromId = (edgeId: number) => {
-    const direction: SelectedEdge["direction"] = edgeId < 2 ? "horizontal" : "vertical";
-    const isMaxEdge = edgeId % 2 === 1;
-    const resizableDimension = direction === "horizontal" ? indices[1] : indices[0];
-    return {
-      boxId: nearestBoundingBox.id,
-      direction,
-      isMaxEdge,
-      edgeId,
-      resizableDimension,
-    };
-  };
-
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
-  const primaryEdge = getEdgeInfoFromId(nearestEdgeIndex);
+  const primaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, nearestEdgeIndex);
   let secondaryEdge = null;
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const [firstNeighbourId, secondNeighbourId] = getNeighbourEdgeIndexByEdgeIndex[nearestEdgeIndex];
   const firstNeighbourEdgeDistance = currentNearestDistanceArray[firstNeighbourId];
   const secondNeighbourEdgeDistance = currentNearestDistanceArray[secondNeighbourId];
@@ -217,12 +217,12 @@ export function getClosestHoveredBoundingBox(
     firstNeighbourEdgeDistance < secondNeighbourEdgeDistance &&
     firstNeighbourEdgeDistance < zoomedMaxDistanceToSelection
   ) {
-    secondaryEdge = getEdgeInfoFromId(firstNeighbourId);
+    secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, firstNeighbourId);
   } else if (
     secondNeighbourEdgeDistance < firstNeighbourEdgeDistance &&
     secondNeighbourEdgeDistance < zoomedMaxDistanceToSelection
   ) {
-    secondaryEdge = getEdgeInfoFromId(secondNeighbourId);
+    secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, secondNeighbourId);
   }
 
   return [primaryEdge, secondaryEdge];
@@ -257,21 +257,8 @@ export function createBoundingBoxAndGetEdges(
 
   const nearestBoundingBox = newestBoundingBox;
 
-  const getEdgeInfoFromId = (edgeId: number) => {
-    const direction: SelectedEdge["direction"] = edgeId < 2 ? "horizontal" : "vertical";
-    const isMaxEdge = edgeId % 2 === 1;
-    const resizableDimension = direction === "horizontal" ? indices[1] : indices[0];
-    return {
-      boxId: nearestBoundingBox.id,
-      direction,
-      isMaxEdge,
-      edgeId,
-      resizableDimension,
-    };
-  };
-
-  const primaryEdge = getEdgeInfoFromId(1);
-  const secondaryEdge = getEdgeInfoFromId(3);
+  const primaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, 1);
+  const secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, 3);
 
   return [primaryEdge, secondaryEdge];
 }
@@ -324,8 +311,8 @@ export function handleResizingBoundingBox(
   }
 
   const updatedBounds = {
-    min: [...bboxToResize.boundingBox.min],
-    max: [...bboxToResize.boundingBox.max],
+    min: [...bboxToResize.boundingBox.min] as Vector3,
+    max: [...bboxToResize.boundingBox.max] as Vector3,
   };
 
   function updateBoundsAccordingToEdge(edge: SelectedEdge): boolean {
@@ -373,7 +360,6 @@ export function handleResizingBoundingBox(
 
   Store.dispatch(
     changeUserBoundingBoxAction(primaryEdge.boxId, {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ min: number[]; max: number[]; }' is not as... Remove this comment to see the full error message
       boundingBox: updatedBounds,
     }),
   );

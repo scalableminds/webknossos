@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundin
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
@@ -162,7 +163,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       }
     )
 
-  def extractSegmentGroups(segmentGroupContainerNodes: NodeSeq)(
+  private def extractSegmentGroups(segmentGroupContainerNodes: NodeSeq)(
       implicit m: MessagesProvider): Box[List[SegmentGroup]] = {
     val segmentGroupNodes = segmentGroupContainerNodes.flatMap(_ \ "group")
     segmentGroupNodes.map(parseSegmentGroup).toList.toSingleBox(Messages("nml.element.invalid", "segment groups"))
@@ -321,6 +322,13 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseName(node: XMLNode) =
     getSingleAttribute(node, "name")
 
+  private def parseType(node: XMLNode): Option[TreeTypeProto] =
+    for {
+      asString <- getSingleAttributeOpt(node, "type")
+      asScalaEnum <- TreeType.fromString(asString)
+      asProtoEnum = TreeType.toProto(asScalaEnum)
+    } yield asProtoEnum
+
   private def parseGroupId(node: XMLNode) =
     getSingleAttribute(node, "groupId").toIntOpt
 
@@ -337,6 +345,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       id <- treeIdText.toIntOpt ?~ Messages("nml.tree.id.invalid", treeIdText)
       color = parseColorOpt(tree)
       name = parseName(tree)
+      treeType = parseType(tree)
       groupId = parseGroupId(tree)
       isVisible = parseVisibility(tree, color)
       nodes <- (tree \ "nodes" \ "node")
@@ -352,7 +361,18 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       treeComments = nodeIds.flatMap(nodeId => comments.getOrElse(nodeId, List()))
       createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis()
       else nodes.minBy(_.createdTimestamp).createdTimestamp
-    } yield Tree(id, nodes, edges, color, treeBranchPoints, treeComments, name, createdTimestamp, groupId, isVisible)
+    } yield
+      Tree(id,
+           nodes,
+           edges,
+           color,
+           treeBranchPoints,
+           treeComments,
+           name,
+           createdTimestamp,
+           groupId,
+           isVisible,
+           treeType)
   }
 
   private def parseComments(comments: NodeSeq)(implicit m: MessagesProvider): Box[List[Comment]] =

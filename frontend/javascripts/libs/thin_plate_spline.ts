@@ -142,14 +142,6 @@ export default class TPS3D {
     target_points: Vector3[],
     invert: boolean = false,
   ): [Vector3[], number[], number[], number[]] {
-    // _retval, affine, inliers = cv2.estimateAffine3D(
-    //     target.reshape(1, -1, 3), source.reshape(1, -1, 3)
-    // )
-    // affine = np.vstack([affine, (0, 0, 0, 1)])
-
-    // # source[:, 2] *= 100
-    // # target[:, 2] *= 100
-
     if (invert) {
       let tmp = source_points;
       source_points = target_points;
@@ -167,6 +159,6 @@ export default class TPS3D {
       v_z.push(target_points[idx][2] - source_points[idx][2]);
     }
 
-    return [cps, v_x, v_y, v_z]; //, affine
+    return [cps, v_x, v_y, v_z];
   }
 }

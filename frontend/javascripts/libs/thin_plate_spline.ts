@@ -41,7 +41,7 @@ class TPS1d {
             (cps[x][2] - cps[y][2]) ** 2,
         );
 
-        if (d != 0.0) {
+        if (d !== 0.0) {
           d = (d ** 2.0 * Math.log2(d ** 2.0)) / Math.log2(2.718281828459045);
         } else {
           d = 0;
@@ -102,7 +102,7 @@ class TPS1d {
     let bending_part = 0;
     for (const i of _.range(dist.length)) {
       let el = dist[i];
-      if (el != 0) {
+      if (el !== 0) {
         el = el ** 2 * Math.log(el ** 2);
       }
       bending_part += el * this.W[i];

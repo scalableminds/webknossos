@@ -57,7 +57,6 @@ const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
-  upperBoundary: Vector3;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   cubes: Array<CubeEntry>;
@@ -90,13 +89,12 @@ class DataCube {
   // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
   // access-queue and is least recently used. It is then removed from the cube.
   constructor(
-    upperBoundary: Vector3,
+    layerBBox: BoundingBox,
     resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
   ) {
-    this.upperBoundary = upperBoundary;
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
@@ -108,9 +106,9 @@ class DataCube {
     this.buckets = [];
     // Initializing the cube-arrays with boundaries
     const cubeBoundary = [
-      Math.ceil(this.upperBoundary[0] / constants.BUCKET_WIDTH),
-      Math.ceil(this.upperBoundary[1] / constants.BUCKET_WIDTH),
-      Math.ceil(this.upperBoundary[2] / constants.BUCKET_WIDTH),
+      Math.ceil(layerBBox.max[0] / constants.BUCKET_WIDTH),
+      Math.ceil(layerBBox.max[1] / constants.BUCKET_WIDTH),
+      Math.ceil(layerBBox.max[2] / constants.BUCKET_WIDTH),
     ];
 
     for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
@@ -136,7 +134,7 @@ class DataCube {
       (boundingBox) => {
         this.boundingBox = new BoundingBox(
           shouldBeRestrictedByTracingBoundingBox() ? boundingBox : null,
-        ).intersectedWith(new BoundingBox({ min: [0, 0, 0], max: this.upperBoundary }));
+        ).intersectedWith(layerBBox);
       },
       true,
     );
@@ -380,11 +378,7 @@ class DataCube {
     zoomStep: number,
     activeSegmentId: number | null | undefined,
   ): Promise<void> {
-    let voxelInCube = true;
-
-    for (let i = 0; i <= 2; i++) {
-      voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
-    }
+    let voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {
       const address = this.positionToZoomedAddress(voxel, zoomStep);

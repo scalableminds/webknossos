@@ -22,7 +22,6 @@ import {
   getActiveTree,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
@@ -57,6 +56,7 @@ import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
 
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
+import { getLayerBoundingBox } from "oxalis/model/accessors/dataset_accessor";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
@@ -573,11 +573,8 @@ class DataApi {
      included in the bounding box.
    */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
-    const { lowerBoundary, upperBoundary } = getLayerBoundaries(
-      Store.getState().dataset,
-      layerName,
-    );
-    return [lowerBoundary, upperBoundary];
+    const { min, max } = getLayerBoundingBox(Store.getState().dataset, layerName);
+    return [min, max];
   }
 
   /**

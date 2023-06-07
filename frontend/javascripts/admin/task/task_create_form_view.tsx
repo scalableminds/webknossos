@@ -782,7 +782,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   value={this.state.specificationType}
                   onChange={(evt: RadioChangeEvent) =>
                     this.setState({
-                      specificationType: coalesce(SpecificationEnum, evt.target.value),
+                      specificationType:
+                        coalesce(SpecificationEnum, evt.target.value) ||
+                        this.state.specificationType,
                     })
                   }
                 >

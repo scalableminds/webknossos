@@ -9,28 +9,16 @@ class TPS1d {
   // for 3D coordinates.
   // See TPS3D for that.
 
-  /*
-  Note: Variable notaton is the same as that in the Principal Warps
-  paper and https://profs.etsmtl.ca/hlombaert/thinplates/
-  */
+  // The class is roughly inspired by
+  // https://github.com/sarathknv/tps/blob/master/tps.py#L24
   a: number[] = []; // variables of the linear part of the TPS equation
   W: number[] = []; // variables of the non-linear part of the TPS equation
   cps: Vector3[] = []; // control point locations [(x1, y1), (x2, y2), ...]
 
-  fit(vNumbers: number[], cps: Vector3[]) {
-    /*
-    Solves the TPS variables (W and a) for a given set of control points
-    cps: control point locations of the form [(x1, y1), (x2, y2), ...]
-    v: height at the control points [v1, v2, ...]
-
-    Solves the equation and updates the self.a and self.W variables
-
-    Code is borrowed from https://github.com/mdedonno1337/TPS/blob/master/TPS/TPSpy/__init__.py
-    */
-
+  fit(offsetValues: number[], cps: Vector3[]) {
     this.cps = cps;
-    const n = vNumbers.length;
-    const v = Matrix.columnVector(vNumbers);
+    const n = offsetValues.length;
+    const v = Matrix.columnVector(offsetValues);
 
     const K = Matrix.zeros(cps.length, cps.length);
     for (let x = 0; x < cps.length; x++) {
@@ -42,7 +30,7 @@ class TPS1d {
         );
 
         if (d !== 0.0) {
-          d = (d ** 2.0 * Math.log2(d ** 2.0)) / Math.log2(2.718281828459045);
+          d = d ** 2.0 * Math.log(d ** 2.0);
         } else {
           d = 0;
         }
@@ -90,7 +78,7 @@ class TPS1d {
   }
 
   transform1D(x: number, y: number, z: number) {
-    const linear_part = this.a[0] + x * this.a[1] + y * this.a[2] + z * this.a[3];
+    const linearPart = this.a[0] + x * this.a[1] + y * this.a[2] + z * this.a[3];
 
     // Calculate distance to each control point
     const dist: number[] = [];
@@ -99,16 +87,16 @@ class TPS1d {
       dist.push(d);
     }
 
-    let bending_part = 0;
+    let bendingPart = 0;
     for (const i of _.range(dist.length)) {
       let el = dist[i];
       if (el !== 0) {
         el = el ** 2 * Math.log(el ** 2);
       }
-      bending_part += el * this.W[i];
+      bendingPart += el * this.W[i];
     }
 
-    return linear_part + bending_part;
+    return linearPart + bendingPart;
   }
 
   _U(r: number) {
@@ -118,47 +106,51 @@ class TPS1d {
 }
 
 export default class TPS3D {
-  tps_x = new TPS1d();
-  tps_y = new TPS1d();
-  tps_z = new TPS1d();
+  tpsX = new TPS1d();
+  tpsY = new TPS1d();
+  tpsZ = new TPS1d();
 
-  constructor(source_points: Vector3[], target_points: Vector3[]) {
-    const [cps, v_x, v_y, v_z] = this.getControlPointsWithDiff(source_points, target_points, true);
+  constructor(sourcePoints: Vector3[], targetPoints: Vector3[]) {
+    const [cps, offsetX, offsetY, offsetZ] = this.getControlPointsWithOffsets(
+      sourcePoints,
+      targetPoints,
+      true,
+    );
 
-    this.tps_x.fit(v_x, cps);
-    this.tps_y.fit(v_y, cps);
-    this.tps_z.fit(v_z, cps);
+    this.tpsX.fit(offsetX, cps);
+    this.tpsY.fit(offsetY, cps);
+    this.tpsZ.fit(offsetZ, cps);
   }
 
   transform(x: number, y: number, z: number): Vector3 {
-    const dx = this.tps_x.transform1D(x, y, z);
-    const dy = this.tps_y.transform1D(x, y, z);
-    const dz = this.tps_z.transform1D(x, y, z);
+    const dx = this.tpsX.transform1D(x, y, z);
+    const dy = this.tpsY.transform1D(x, y, z);
+    const dz = this.tpsZ.transform1D(x, y, z);
     return [x + dx, y + dy, z + dz];
   }
 
-  getControlPointsWithDiff(
-    source_points: Vector3[],
-    target_points: Vector3[],
+  getControlPointsWithOffsets(
+    sourcePoints: Vector3[],
+    targetPoints: Vector3[],
     invert: boolean = false,
   ): [Vector3[], number[], number[], number[]] {
     if (invert) {
-      let tmp = source_points;
-      source_points = target_points;
-      target_points = tmp;
+      let tmp = sourcePoints;
+      sourcePoints = targetPoints;
+      targetPoints = tmp;
     }
 
     const cps: Vector3[] = [];
-    const v_x: number[] = [];
-    const v_y: number[] = [];
-    const v_z: number[] = [];
-    for (const idx of _.range(0, source_points.length)) {
-      cps.push(source_points[idx]);
-      v_x.push(target_points[idx][0] - source_points[idx][0]);
-      v_y.push(target_points[idx][1] - source_points[idx][1]);
-      v_z.push(target_points[idx][2] - source_points[idx][2]);
+    const offsetX: number[] = [];
+    const offsetY: number[] = [];
+    const offsetZ: number[] = [];
+    for (const idx of _.range(0, sourcePoints.length)) {
+      cps.push(sourcePoints[idx]);
+      offsetX.push(targetPoints[idx][0] - sourcePoints[idx][0]);
+      offsetY.push(targetPoints[idx][1] - sourcePoints[idx][1]);
+      offsetZ.push(targetPoints[idx][2] - sourcePoints[idx][2]);
     }
 
-    return [cps, v_x, v_y, v_z];
+    return [cps, offsetX, offsetY, offsetZ];
   }
 }

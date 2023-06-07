@@ -21,6 +21,8 @@ import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
+import { getPointsC555 } from "test/libs/transform_spec_helpers";
+import TPS3D from "libs/thin_plate_spline";
 
 type Params = {
   globalLayerCount: number;
@@ -33,12 +35,12 @@ type Params = {
 };
 
 export function formatNumberAsGLSLFloat(aNumber: number): string {
-  if (aNumber % 1 > 0) {
-    // If it is already a floating point number, we can use toString
-    return aNumber.toString();
-  } else {
-    // Otherwise, append ".0" via toFixed
+  if (aNumber % 1 === 0) {
+    // Append ".0" via toFixed
     return aNumber.toFixed(1);
+  } else {
+    // It is already a floating point number, so we can use toString.
+    return aNumber.toString();
   }
 }
 
@@ -124,6 +126,21 @@ const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
+
+bool almostEq(vec3 x, vec3 y, float thresh) {
+  vec3 diff = abs(x - y);
+  return diff.x <= thresh && diff.y <= thresh && diff.z <= thresh;
+}
+
+bool almostEq(vec3 x, vec3 y, vec3 thresh) {
+  vec3 diff = abs(x - y);
+  return diff.x <= thresh.x && diff.y <= thresh.y && diff.z <= thresh.z;
+}
+
+bool almostEq(float x, float y, float thresh) {
+  float diff = abs(x - y);
+  return diff <= thresh;
+}
 `;
 
 export default function getMainFragmentShader(params: Params) {
@@ -307,6 +324,51 @@ void main() {
   });
 }
 
+function generateTpsVars() {
+  const ff = formatNumberAsGLSLFloat;
+
+  const [sourcePoints, targetPoints] = getPointsC555();
+  const tps = new TPS3D(sourcePoints, targetPoints);
+
+  let weightLines = [];
+  for (let idx = 0; idx < tps.tpsX.cps.length; idx++) {
+    weightLines.push(
+      `          W[${idx}] = vec3(${ff(tps.tpsX.W[idx])}, ${ff(tps.tpsY.W[idx])}, ${ff(
+        tps.tpsZ.W[idx],
+      )});`,
+    );
+  }
+
+  let cpsLines = [];
+  for (let idx = 0; idx < tps.tpsX.cps.length; idx++) {
+    let coords = tps.tpsX.cps[idx].map((num) => ff(num)).join(", ");
+    cpsLines.push(`          cps[${idx}] = vec3(${coords});`);
+  }
+
+  let aLines = [];
+  for (let idx = 0; idx < 4; idx++) {
+    aLines.push(
+      `          a[${idx}] = vec3(${ff(tps.tpsX.a[idx])}, ${ff(tps.tpsY.a[idx])}, ${ff(
+        tps.tpsZ.a[idx],
+      )});`,
+    );
+  }
+
+  const code = `
+const int CPS_LENGTH = ${tps.tpsX.cps.length};
+vec3 W[CPS_LENGTH];
+vec3 a[4];
+vec3 cps[CPS_LENGTH];
+
+void initializeArrays() {
+${weightLines.join("\n")}
+${cpsLines.join("\n")}
+${aLines.join("\n")}
+}
+`;
+  return code;
+}
+
 export function getMainVertexShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
   return _.template(`
@@ -348,81 +410,9 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
 float REGULARIZATION = 0.;
 
-const int CPS_LENGTH = 25;
-vec3 W[CPS_LENGTH];
-vec3 a[4];
-vec3 cps[CPS_LENGTH];
+${generateTpsVars()}
 
-void initializeArrays() {
-  W[0] = vec3(-8.998658089073851e-05, -0.00015758524981576523, 0.00021841113415825152);
-  W[1] = vec3(0.0005064263081459104, -0.00015328635076332367, -0.0009228703705533617);
-  W[2] = vec3(-0.0005558847323333129, -0.00039761371579486056, 0.000555885624092427);
-  W[3] = vec3(-0.000561612470923323, 0.0011376217766549015, -0.0010576816956660243);
-  W[4] = vec3(-0.00014119132630760746, -0.0005372864332097236, 0.0001050268480774306);
-  W[5] = vec3(-0.00016896987042403828, -3.605975747897271e-07, 0.00037769476775858255);
-  W[6] = vec3(1.962423038209959e-05, 0.0005764729343091493, -0.0001117907017340755);
-  W[7] = vec3(-1.4983989702070715e-05, -0.0002443712111554874, -9.988538630671101e-05);
-  W[8] = vec3(0.000515632541810365, 0.00046987179732420445, -0.0006461927369505236);
-  W[9] = vec3(-0.0008079916595018829, -0.0007994776207322017, 0.00011098542526017557);
-  W[10] = vec3(-0.0009671999352523547, 2.829036403487725e-05, -0.0014190080339598517);
-  W[11] = vec3(0.0007810388987982691, 8.474729405950904e-05, 0.0010312734320473);
-  W[12] = vec3(0.001117804644442454, -0.0006856320990004658, 0.0015333863922644482);
-  W[13] = vec3(0.0004343572056641483, 0.0006159294810164234, -0.0002963230330562254);
-  W[14] = vec3(8.337713752338076e-05, 4.2739229264405195e-05, 0.0001417629613844372);
-  W[15] = vec3(-0.00015970592920291362, -0.0008594063767764274, 0.0008275876527462828);
-  W[16] = vec3(4.4542125646770664e-07, 0.0006834232559866387, -0.0004523927379710949);
-  W[17] = vec3(-0.000877423334890741, -0.000629163386976586, -4.091976068813416e-05);
-  W[18] = vec3(-0.00036239077928659855, -1.6860094473026683e-05, -0.00012335013049659708);
-  W[19] = vec3(0.0011445439422526592, -0.00015481172687391976, 0.0007156735115566256);
-  W[20] = vec3(0.0003059845585018402, 0.00012220036328674982, -0.0001770363893940523);
-  W[21] = vec3(5.254902805105488e-05, 6.0111861109343954e-05, -0.0008263649809394509);
-  W[22] = vec3(0.0008566755383619621, 0.0006035062081220003, 0.00020980916410153733);
-  W[23] = vec3(0.00011705426704679713, 0.00010533605578980176, 0.00016859940084579692);
-  W[24] = vec3(-0.0012281731135218273, 0.00010560424218857415, 0.00017771964342280742);
-  cps[0] = vec3(570.3021, 404.5549, 502.22482);
-  cps[1] = vec3(590.14484, 420.83395, 381.38028);
-  cps[2] = vec3(568.84625, 435.02493, 325.98584);
-  cps[3] = vec3(466.42474, 536.3788, 49.825325);
-  cps[4] = vec3(489.5162, 587.5367, 77.7456);
-  cps[5] = vec3(542.19104, 386.539, 370.47348);
-  cps[6] = vec3(606.9088, 538.70386, 391.91803);
-  cps[7] = vec3(469.87357, 503.2733, 550.86304);
-  cps[8] = vec3(498.81058, 498.73495, 303.2482);
-  cps[9] = vec3(459.70792, 531.0153, 237.093);
-  cps[10] = vec3(355.25748, 483.12823, 193.33702);
-  cps[11] = vec3(357.17856, 463.15057, 252.12674);
-  cps[12] = vec3(444.25632, 527.81744, 80.380684);
-  cps[13] = vec3(512.92175, 551.4335, 242.68991);
-  cps[14] = vec3(430.49844, 455.07974, 213.30023);
-  cps[15] = vec3(540.8051, 547.6318, 372.91214);
-  cps[16] = vec3(501.69583, 485.92743, 412.7299);
-  cps[17] = vec3(591.9243, 387.41516, 596.0109);
-  cps[18] = vec3(584.1567, 504.25836, 535.5068);
-  cps[19] = vec3(504.58694, 491.88492, 617.18726);
-  cps[20] = vec3(542.1311, 558.4877, 636.365);
-  cps[21] = vec3(515.8947, 450.044, 635.66614);
-  cps[22] = vec3(553.48193, 372.3438, 584.3894);
-  cps[23] = vec3(638.3767, 514.9311, 572.287);
-  cps[24] = vec3(482.11002, 492.8521, 633.5717);
-  a[0] = vec3(-5953.330171551693, 5813.318821780407, 8238.949423385715);
-  a[1] = vec3(1.4351040831840678, -12.151744434539987, -1.195893460531354);
-  a[2] = vec3(12.141764446272159, 1.1890762619351827, 0.8374945621633504);
-  a[3] = vec3(0.613406767362934, 1.2490487526375056, -13.349651833018369);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
- void main() {
+void main() {
   initializeArrays();
 
   vUv = uv;
@@ -529,7 +519,6 @@ void initializeArrays() {
   tpsOffsetXYZ = linear_part + bending_part;
   // Adapt to z scaling if necessary
   // tpsOffsetXYZ.z /= 100.;
-
 
   // Offset the bucket calculation for the current vertex by a voxel to ensure
   // that the provoking vertex (the one that is used by the flat varyings in

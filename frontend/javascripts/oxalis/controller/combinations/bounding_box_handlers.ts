@@ -277,7 +277,7 @@ export function createBoundingBoxAndGetEdges(
 }
 
 export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
-  (_delta: Point2, position: Point2, planeId: OrthoView) => {
+  (position: Point2, planeId: OrthoView) => {
     const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
     // Access the parent element as that is where the cursor style property is set
     const inputCatcher = document.getElementById(`inputcatcher_${planeId}`)?.parentElement;
@@ -302,7 +302,7 @@ export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
       getSceneController().highlightUserBoundingBox(null);
 
       if (inputCatcher != null) {
-        inputCatcher.style.cursor = "move";
+        inputCatcher.style.cursor = "copy";
       }
     }
   },

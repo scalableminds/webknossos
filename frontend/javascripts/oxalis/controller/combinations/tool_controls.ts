@@ -614,7 +614,7 @@ export class BoundingBoxTool {
       mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
-          highlightAndSetCursorOnHoveredBoundingBox(delta, position, planeId);
+          highlightAndSetCursorOnHoveredBoundingBox(position, planeId);
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -638,7 +638,7 @@ export class BoundingBoxTool {
     _altKey: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Resize Bounding Boxes",
+      leftDrag: "Create/Resize Bounding Boxes",
       rightClick: "Context Menu",
     };
   }

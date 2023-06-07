@@ -43,7 +43,9 @@ class CubeEntry {
     this.data = new Map();
     this.boundary = boundary;
   }
-} // Instead of using blank, constant thresholds for the bounding box which
+}
+
+// Instead of using blank, constant thresholds for the bounding box which
 // limits a floodfill operation, the bounding box can also be increased dynamically
 // so that long, thin processes get a larger bounding box limit.
 // If USE_FLOODFILL_VOXEL_THRESHOLD is true, the amount of labeled voxels is taken into account

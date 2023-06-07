@@ -239,8 +239,8 @@ export function getDefaultIntensityRangeOfLayer(
 
 export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {
   /*
-     The returned Boundary denotes a half-open interval. This means that the lowerBoundary
-     is included in the bounding box and the upper boundary is *not* included.
+     The returned bounding box denotes a half-open interval. This means that min
+     is included in the bounding box and max is *not* included.
   */
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
   const min = topLeft;

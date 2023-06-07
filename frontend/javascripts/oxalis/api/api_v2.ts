@@ -569,7 +569,7 @@ class DataApi {
 
   /**
    * Returns the bounding box for a given layer name. Note that the described interval
-     is half-open, meaning that the lowerBoundary is included and the upperBoundary is not
+     is half-open, meaning that the lower boundary is included and the upper boundary is not
      included in the bounding box.
    */
   getBoundingBox(layerName: string): [Vector3, Vector3] {

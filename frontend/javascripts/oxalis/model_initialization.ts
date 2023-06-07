@@ -16,11 +16,10 @@ import {
   getSupportedTextureSpecs,
   validateMinimumRequirements,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { convertBoundariesToBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
   determineAllowedModes,
   getBitDepth,
-  getBoundaries,
+  getDatasetBoundingBox,
   getDataLayers,
   getDatasetCenter,
   hasSegmentation,
@@ -488,7 +487,7 @@ function setupLayerForVolumeTracing(
     );
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
-    const boundaries = getBoundaries(dataset);
+    const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const resolutions = tracing.resolutions || [];
     const tracingHasResolutionList = resolutions.length > 0;
     // Legacy tracings don't have the `tracing.resolutions` property
@@ -504,7 +503,7 @@ function setupLayerForVolumeTracing(
       elementClass: tracing.elementClass,
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
-      boundingBox: convertBoundariesToBoundingBox(boundaries),
+      boundingBox,
       resolutions: tracingResolutions,
       mappings: fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : [],
       // Remember the name of the original layer (e.g., used to request mappings)

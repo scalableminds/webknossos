@@ -113,7 +113,6 @@ class TPS1d {
 
   _U(r: number) {
     if (r === 0.0) return 0;
-    // todo:
     else return r ** 2 * Math.log(r ** 2);
   }
 }

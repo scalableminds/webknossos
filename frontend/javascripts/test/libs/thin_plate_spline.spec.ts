@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import _ from "lodash";
 import test, { ExecutionContext } from "ava";
-import TPS3D, { tps } from "libs/thin_plate_spline";
+import TPS3D from "libs/thin_plate_spline";
 import { Vector3 } from "oxalis/constants";
 
 function almostEqual(t: ExecutionContext, vec1: Vector3, vec2: Vector3) {

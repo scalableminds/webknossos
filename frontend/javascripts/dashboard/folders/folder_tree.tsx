@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { DropTargetMonitor, useDrop } from "react-dnd";
+import { ConnectDropTarget, DropTargetMonitor, useDrop } from "react-dnd";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
   DatasetCollectionContextValue,
@@ -201,6 +201,57 @@ export function FolderTreeSidebar({
   );
 }
 
+export function generateSettingsForFolder(
+  folder: FolderItem,
+  context: DatasetCollectionContextValue,
+  editFolder: () => void,
+  isSubfolder: boolean = false,
+) {
+  const { key: id, isEditable } = folder;
+  function deleteFolder(): void {
+    context.queries.deleteFolderMutation.mutateAsync(id);
+  }
+
+  function createFolder(): void {
+    context.showCreateFolderPrompt(id);
+  }
+
+  const newFolderText = isSubfolder ? "New Subfolder" : "New Folder";
+  return {
+    items: [
+      {
+        key: "create",
+        disabled: !isEditable,
+        onClick: createFolder,
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <PlusOutlined />
+            {newFolderText}
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "edit",
+        disabled: !isEditable,
+        onClick: editFolder,
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <EditOutlined />
+            Edit Folder
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "delete",
+        onClick: deleteFolder,
+        disabled: !isEditable,
+        icon: <DeleteOutlined />,
+        label: <span>Delete Folder</span>,
+      },
+    ],
+  };
+}
+
 function generateTitle(
   context: DatasetCollectionContextValue,
   folder: FolderItem,
@@ -208,53 +259,15 @@ function generateTitle(
 ) {
   const { key: id, title, isEditable } = folder;
 
-  function deleteFolder(): void {
-    context.queries.deleteFolderMutation.mutateAsync(id);
-  }
-
   function editFolder(): void {
     setFolderIdForEditModal(id);
   }
 
-  const createMenu = () => {
-    return {
-      items: [
-        {
-          key: "create",
-          disabled: !folder.isEditable,
-          onClick: () => context.showCreateFolderPrompt(id),
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <PlusOutlined />
-              New Folder
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "edit",
-          disabled: !folder.isEditable,
-          onClick: editFolder,
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <EditOutlined />
-              Edit Folder
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "delete",
-          onClick: deleteFolder,
-          disabled: !folder.isEditable,
-          icon: <DeleteOutlined />,
-          label: <span>Delete Folder</span>,
-        },
-      ],
-    };
-  };
+  const menu = generateSettingsForFolder(folder, context, editFolder);
 
   return (
     <Dropdown
-      menu={createMenu()}
+      menu={menu}
       placement="bottom"
       // AutoDestroy is used to remove the menu from DOM and keep up the performance.
       // destroyPopupOnHide should also be an option according to the docs, but
@@ -269,18 +282,28 @@ function generateTitle(
     </Dropdown>
   );
 }
-
-function FolderItemAsDropTarget(props: {
-  folderId: string;
-  children: React.ReactNode;
-  className?: string;
-  isEditable: boolean;
-}) {
+export function useDatasetDrop(
+  folderId: string,
+  canDrop: boolean,
+): [
+  {
+    canDrop: boolean;
+    isOver: boolean;
+  },
+  ConnectDropTarget,
+] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
-  const { folderId, className, isEditable, ...restProps } = props;
-
-  const [collectedProps, drop] = useDrop({
+  const [collectedProps, drop] = useDrop<
+    DragObjectWithType & {
+      datasetName: string;
+    },
+    void,
+    {
+      canDrop: boolean;
+      isOver: boolean;
+    }
+  >({
     accept: DraggableDatasetType,
     drop: (item: DragObjectWithType & { datasetName: string }) => {
       if (selectedDatasets.length > 1) {
@@ -336,12 +359,24 @@ function FolderItemAsDropTarget(props: {
         }
       }
     },
-    canDrop: () => isEditable,
+    canDrop: () => canDrop,
     collect: (monitor: DropTargetMonitor) => ({
       canDrop: monitor.canDrop(),
       isOver: monitor.isOver(),
     }),
   });
+  return [collectedProps, drop];
+}
+
+function FolderItemAsDropTarget(props: {
+  folderId: string;
+  children: React.ReactNode;
+  className?: string;
+  isEditable: boolean;
+}) {
+  const { folderId, className, isEditable, ...restProps } = props;
+  const [collectedProps, drop] = useDatasetDrop(folderId, isEditable);
+
   const { canDrop, isOver } = collectedProps;
   return (
     <div

@@ -651,7 +651,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       });
     }
 
-    if (features().jobsEnabled) {
+    if (features().jobsEnabled && activeUser != null && activeUser.isSuperUser) {
       menuItems.push({
         key: "ai-segmentation-menu",
         icon: <SettingOutlined />,

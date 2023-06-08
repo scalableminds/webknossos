@@ -249,8 +249,13 @@ class VolumeTracingService @Inject()(
               mergedVolume.largestSegmentId.toLong,
               tracing.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
             destinationDataLayer = volumeTracingLayer(tracingId, tracing)
+            segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
             _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
-              saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
+              for {
+                _ <- saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
+                _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                  updateSegmentIndex(segmentIndexBuffer, bucketPosition, bytes, Empty, tracing.elementClass))
+              } yield ()
             }
           } yield mergedVolume.presentResolutions
         }
@@ -267,13 +272,18 @@ class VolumeTracingService @Inject()(
 
       val dataLayer = volumeTracingLayer(tracingId, tracing)
       val savedResolutions = new mutable.HashSet[Vec3Int]()
+      val segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
 
       val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
         if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
           Fox.successful(())
         } else {
           savedResolutions.add(bucketPosition.mag)
-          saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
+          for {
+            _ <- saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
+            _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+              updateSegmentIndex(segmentIndexBuffer, bucketPosition, bytes, Empty, tracing.elementClass))
+          } yield ()
         }
       }
       if (savedResolutions.isEmpty) {
@@ -586,6 +596,10 @@ class VolumeTracingService @Inject()(
           acc.intersect(element)
         }
       }.getOrElse(Set.empty)
+
+      val shouldAddSegmentIndex = tracings.count(t => t.hasSegmentIndex.getOrElse(false)) == tracings.length
+
+      // TODO
 
       val mergedVolume = new MergedVolume(elementClass)
 

@@ -104,12 +104,13 @@ trait VolumeTracingDownsampling
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
-          _ <- updateSegmentIndex(segmentIndexBuffer,
-                                  bucketPosition,
-                                  bucketDataMapMutable(bucketPosition),
-                                  Empty,
-                                  tracing.version,
-                                  tracing.elementClass)
+          _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+            updateSegmentIndex(segmentIndexBuffer,
+                               bucketPosition,
+                               bucketDataMapMutable(bucketPosition),
+                               Empty,
+                               tracing.version,
+                               tracing.elementClass))
         } yield ()
       }
       _ <- segmentIndexBuffer.flush()

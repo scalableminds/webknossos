@@ -169,13 +169,17 @@ class VolumeTracingService @Inject()(
                                      includeFallbackDataIfAvailable = true,
                                      userToken = userToken)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion)
-      previousBucketBytesBox <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
-      _ <- updateSegmentIndex(segmentIndexBuffer,
-                              bucketPosition,
-                              action.data,
-                              previousBucketBytesBox,
-                              updateGroupVersion,
-                              volumeTracing.elementClass)
+      _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
+        for {
+          previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L))
+          _ <- updateSegmentIndex(segmentIndexBuffer,
+                                  bucketPosition,
+                                  action.data,
+                                  previousBucketBytes,
+                                  updateGroupVersion,
+                                  volumeTracing.elementClass)
+        } yield ()
+      }
     } yield volumeTracing
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
@@ -203,23 +207,25 @@ class VolumeTracingService @Inject()(
               case Full(dataAfterRevert) =>
                 for {
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
-                  _ <- updateSegmentIndex(segmentIndexBuffer,
-                                          bucketPosition,
-                                          dataAfterRevert,
-                                          Full(dataBeforeRevert),
-                                          newVersion,
-                                          sourceTracing.elementClass)
+                  _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                    updateSegmentIndex(segmentIndexBuffer,
+                                       bucketPosition,
+                                       dataAfterRevert,
+                                       Full(dataBeforeRevert),
+                                       newVersion,
+                                       sourceTracing.elementClass))
                 } yield ()
               case Empty =>
                 for {
                   dataAfterRevert <- Fox.successful(Array[Byte](0))
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
-                  _ <- updateSegmentIndex(segmentIndexBuffer,
-                                          bucketPosition,
-                                          dataAfterRevert,
-                                          Full(dataBeforeRevert),
-                                          newVersion,
-                                          sourceTracing.elementClass)
+                  _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                    updateSegmentIndex(segmentIndexBuffer,
+                                       bucketPosition,
+                                       dataAfterRevert,
+                                       Full(dataBeforeRevert),
+                                       newVersion,
+                                       sourceTracing.elementClass))
                 } yield ()
               case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
             }
@@ -352,7 +358,8 @@ class VolumeTracingService @Inject()(
       editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
       boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
       mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
-      version = 0
+      version = 0,
+      hasSegmentIndex = Some(tracingWithResolutionRestrictions.fallbackLayer.isEmpty) // add segment index if possible
     )
     for {
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
@@ -394,12 +401,13 @@ class VolumeTracingService @Inject()(
           if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
               _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
-              _ <- updateSegmentIndex(segmentIndexBuffer,
-                                      bucketPosition,
-                                      bucketData,
-                                      Empty,
-                                      destinationTracing.version,
-                                      sourceTracing.elementClass)
+              _ <- Fox.runIfOptionTrue(destinationTracing.hasSegmentIndex)(
+                updateSegmentIndex(segmentIndexBuffer,
+                                   bucketPosition,
+                                   bucketData,
+                                   Empty,
+                                   destinationTracing.version,
+                                   sourceTracing.elementClass))
             } yield ()
           } else Fox.successful(())
       }

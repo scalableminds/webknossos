@@ -162,7 +162,8 @@ class AnnotationService @Inject()(
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(datasetOrganizationName),
         mappingName = mappingName,
-        resolutions = resolutionsRestricted.map(vec3IntToProto)
+        resolutions = resolutionsRestricted.map(vec3IntToProto),
+        hasSegmentIndex = Some(fallbackLayer.isEmpty)
       )
   }
 

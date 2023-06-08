@@ -89,7 +89,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 userBoundingBoxes,
                 organizationName,
                 segments = v.segments,
-                segmentGroups = v.segmentGroups
+                segmentGroups = v.segmentGroups,
+                hasSegmentIndex = Some(v.fallbackLayerName.isEmpty)
               ),
               basePath.getOrElse("") + v.dataZipPath,
               v.name,

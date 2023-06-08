@@ -195,7 +195,7 @@ function SimpleDatasetForm({
               width: "100%",
             }}
           >
-            <Col span={10}>
+            <Col span={24} xl={12}>
               <FormItemWithInfo
                 name={["dataSource", "id", "name"]}
                 label="Name"
@@ -212,7 +212,7 @@ function SimpleDatasetForm({
                 />
               </FormItemWithInfo>
             </Col>
-            <Col span={12}>
+            <Col span={24} xl={12}>
               <FormItemWithInfo
                 name={["dataSource", "scale"]}
                 label="Voxel Size"
@@ -346,15 +346,13 @@ function SimpleLayerForm({
         width: "100%",
       }}
     >
-      {mayLayerBeRemoved && (
-        <div style={{ float: "right" }}>
-          <Tooltip title="Remove Layer">
-            <Button shape="circle" icon={<DeleteOutlined />} onClick={() => onRemoveLayer(layer)} />
-          </Tooltip>
-        </div>
-      )}
+      <div style={{ float: "right", visibility: mayLayerBeRemoved ? "visible" : "hidden" }}>
+        <Tooltip title="Remove Layer">
+          <Button shape="circle" icon={<DeleteOutlined />} onClick={() => onRemoveLayer(layer)} />
+        </Tooltip>
+      </div>
       <Row gutter={48}>
-        <Col span={10}>
+        <Col span={24} xl={12}>
           <FormItemWithInfo
             name={["dataSource", "dataLayers", index, "name"]}
             label="Name"
@@ -448,7 +446,7 @@ function SimpleLayerForm({
             </Select>
           </FormItemWithInfo>
         </Col>
-        <Col span={12}>
+        <Col span={24} xl={12}>
           <FormItemWithInfo
             name={["dataSource", "dataLayers", index, "boundingBox"]}
             label="Bounding box"

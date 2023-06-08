@@ -217,7 +217,7 @@ export const getBrushOverlay: ShaderModule = {
 
       float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);
 
-      float radius = round(brushSizeInPixel / 2.0);
+      float radius = ceil(brushSizeInPixel / 2.0);
       if (radius > dist) {
         brushOverlayColor = vec4(vec3(1.0), 0.5);
       }

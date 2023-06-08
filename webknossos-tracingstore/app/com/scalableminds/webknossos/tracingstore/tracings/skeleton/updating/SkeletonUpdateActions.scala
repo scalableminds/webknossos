@@ -2,8 +2,9 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
 case class CreateTreeSkeletonAction(id: Int,
@@ -16,20 +17,24 @@ case class CreateTreeSkeletonAction(id: Int,
                                     isVisible: Option[Boolean],
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    `type`: Option[TreeType] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
-    val newTree = Tree(id,
-                       Nil,
-                       Nil,
-                       colorOptToProto(color),
-                       branchPoints.map(convertBranchPoint),
-                       comments.map(convertComment),
-                       name,
-                       timestamp,
-                       groupId,
-                       isVisible)
+    val newTree = Tree(
+      id,
+      Nil,
+      Nil,
+      colorOptToProto(color),
+      branchPoints.map(convertBranchPoint),
+      comments.map(convertComment),
+      name,
+      timestamp,
+      groupId,
+      isVisible,
+      `type`.map(TreeType.toProto)
+    )
     tracing.withTrees(newTree +: tracing.trees)
   }
 
@@ -64,7 +69,8 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     groupId: Option[Int],
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    `type`: Option[TreeType] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -76,6 +82,7 @@ case class UpdateTreeSkeletonAction(id: Int,
         comments = comments.map(convertComment),
         name = name,
         groupId = groupId,
+        `type` = `type`.map(TreeType.toProto)
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))

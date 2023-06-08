@@ -9,6 +9,7 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const StoreMock = {
   getState: () => ({
@@ -30,14 +31,14 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
 });
 type LabeledVoxelsMapAsArray = Array<[Vector4, Uint8Array]>;
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
+const DataCube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
 const { default: sampleVoxelMapToResolution, applyVoxelMap } = mockRequire.reRequire(
   "oxalis/model/volumetracing/volume_annotation_sampling",
 );
 // Ava's recommendation for Flow types
 // https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
 const test: TestInterface<{
-  cube: typeof Cube;
+  cube: typeof DataCube;
 }> = anyTest as any;
 test.beforeEach((t) => {
   const mockedLayer = {
@@ -51,7 +52,12 @@ test.beforeEach((t) => {
     ] as Vector3[],
   };
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
-  const cube = new Cube([1024, 1024, 1024], resolutionInfo, "uint32", false);
+  const cube = new DataCube(
+    new BoundingBox({ min: [0, 0, 0], max: [1024, 1024, 1024] }),
+    resolutionInfo,
+    "uint32",
+    false,
+  );
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),

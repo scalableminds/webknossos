@@ -35,21 +35,19 @@ class TemporalBucketManager {
   }
 
   makeLoadedPromise(bucket: DataBucket): Promise<void> {
-    const loadedPromise = new Promise((resolve, _reject) => {
+    const loadedPromise: Promise<void> = new Promise((resolve, _reject) => {
       const onLoadedOrMissingHandler = () => {
         if (bucket.dirty) {
           this.pushQueue.insert(bucket);
         }
 
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>[]' is not assignable to typ... Remove this comment to see the full error message
         this.loadedPromises = _.without(this.loadedPromises, loadedPromise);
-        return resolve(null);
+        return resolve();
       };
 
       bucket.on("bucketLoaded", onLoadedOrMissingHandler);
       bucket.on("bucketMissing", onLoadedOrMissingHandler);
     });
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>' is not assignable to type ... Remove this comment to see the full error message
     return loadedPromise;
   }
 

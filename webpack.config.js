@@ -170,6 +170,18 @@ module.exports = function (env = {}) {
         chunks: "all",
         // Use a consistent name for the vendors chunk
         name: "vendors~main",
+        cacheGroups: {
+          onnx: {
+            test: /[\\/]node_modules[\\/](onnx.*)[\\/]/,
+            chunks: "all",
+            name: "vendors~onnx",
+          },
+          html2canvas: {
+            test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
+            chunks: "all",
+            name: "vendors~html2canvas",
+          },
+        },
       },
     },
     // See https://webpack.js.org/configuration/devtool/

@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits}
@@ -20,7 +19,7 @@ class VolumeSegmentIndexBuffer(tracingId: String, volumeSegmentIndexClient: Foss
     with SegmentIndexKeyHelper
     with LazyLogging {
 
-  private val segmentIndexBuffer: mutable.Map[String, ListOfVec3IntProto] =
+  private lazy val segmentIndexBuffer: mutable.Map[String, ListOfVec3IntProto] =
     new mutable.HashMap[String, ListOfVec3IntProto]()
 
   def put(segmentId: Long, mag: Vec3Int, segmentPositions: ListOfVec3IntProto): Unit =
@@ -39,11 +38,9 @@ class VolumeSegmentIndexBuffer(tracingId: String, volumeSegmentIndexClient: Foss
 
   def flush()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      before <- Fox.successful(Instant.now)
       _ <- Fox.serialCombined(segmentIndexBuffer.keys.toList) { key =>
         volumeSegmentIndexClient.put(key, newVersion, segmentIndexBuffer(key))
       }
-      _ = logger.info(s"flush took ${Instant.since(before)}")
     } yield ()
 
 }

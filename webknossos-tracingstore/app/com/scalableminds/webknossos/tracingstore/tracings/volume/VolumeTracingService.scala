@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
@@ -94,13 +93,11 @@ class VolumeTracingService @Inject()(
                                             bucketPosition: BucketPosition,
                                             bucketBytes: Array[Byte],
                                             previousBucketBytesBox: Box[Array[Byte]],
-                                            updateGroupVersion: Long,
                                             elementClass: ElementClassProto): Fox[Unit] =
     volumeSegmentIndexService.updateFromBucket(segmentIndexBuffer,
                                                bucketPosition,
                                                bucketBytes,
                                                previousBucketBytesBox,
-                                               updateGroupVersion,
                                                elementClass) ?~> "volumeSegmentIndex.update.failed"
 
   def handleUpdateGroup(tracingId: String,
@@ -108,8 +105,8 @@ class VolumeTracingService @Inject()(
                         previousVersion: Long,
                         userToken: Option[String]): Fox[Unit] =
     for {
-      before <- Fox.successful(Instant.now)
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, updateGroup.version)
+      segmentIndexBuffer <- Fox.successful(
+        new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, updateGroup.version))
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
@@ -119,7 +116,7 @@ class VolumeTracingService @Inject()(
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
                 } else
                   updateBucket(tracingId, tracing, action, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to save volume data."
-              /*case a: UpdateTracingVolumeAction =>
+              case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   tracing.copy(
                     activeSegmentId = Some(a.activeSegmentId),
@@ -133,9 +130,6 @@ class VolumeTracingService @Inject()(
               case _: UpdateTdCamera        => Fox.successful(tracing)
               case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
               case _                        => Fox.failure("Unknown action.")
-
-               */
-              case _ => Fox.successful(tracing)
             }
           case Empty =>
             Fox.empty
@@ -144,10 +138,6 @@ class VolumeTracingService @Inject()(
         }
       }
       _ <- segmentIndexBuffer.flush()
-      _ = logger.info(s"Save took ${Instant.since(before)} with segmentIndex for ${updateGroup.actions.count {
-        case _: UpdateBucketVolumeAction => true
-        case _                           => false
-      }} bucket updates.")
       _ <- save(updatedTracing.copy(version = updateGroup.version), Some(tracingId), updateGroup.version)
       _ <- tracingDataStore.volumeUpdates.put(
         tracingId,
@@ -168,16 +158,15 @@ class VolumeTracingService @Inject()(
                                      volumeTracing,
                                      includeFallbackDataIfAvailable = true,
                                      userToken = userToken)
-      _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion)
+      _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
-          previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L))
+          previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
           _ <- updateSegmentIndex(segmentIndexBuffer,
                                   bucketPosition,
                                   action.data,
                                   previousBucketBytes,
-                                  updateGroupVersion,
-                                  volumeTracing.elementClass)
+                                  volumeTracing.elementClass) ?~> "failed to update segment index"
         } yield ()
       }
     } yield volumeTracing
@@ -212,7 +201,6 @@ class VolumeTracingService @Inject()(
                                        bucketPosition,
                                        dataAfterRevert,
                                        Full(dataBeforeRevert),
-                                       newVersion,
                                        sourceTracing.elementClass))
                 } yield ()
               case Empty =>
@@ -224,7 +212,6 @@ class VolumeTracingService @Inject()(
                                        bucketPosition,
                                        dataAfterRevert,
                                        Full(dataBeforeRevert),
-                                       newVersion,
                                        sourceTracing.elementClass))
                 } yield ()
               case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
@@ -402,12 +389,7 @@ class VolumeTracingService @Inject()(
             for {
               _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
               _ <- Fox.runIfOptionTrue(destinationTracing.hasSegmentIndex)(
-                updateSegmentIndex(segmentIndexBuffer,
-                                   bucketPosition,
-                                   bucketData,
-                                   Empty,
-                                   destinationTracing.version,
-                                   sourceTracing.elementClass))
+                updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketData, Empty, sourceTracing.elementClass))
             } yield ()
           } else Fox.successful(())
       }

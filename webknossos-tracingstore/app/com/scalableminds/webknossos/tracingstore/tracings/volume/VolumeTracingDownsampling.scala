@@ -66,7 +66,6 @@ trait VolumeTracingDownsampling
                                    bucketPosition: BucketPosition,
                                    bucketBytes: Array[Byte],
                                    previousBucketBytesBox: Box[Array[Byte]],
-                                   updateGroupVersion: Long,
                                    elementClass: ElementClassProto): Fox[Unit]
 
   protected def volumeSegmentIndexClient: FossilDBClient
@@ -109,7 +108,6 @@ trait VolumeTracingDownsampling
                                bucketPosition,
                                bucketDataMapMutable(bucketPosition),
                                Empty,
-                               tracing.version,
                                tracing.elementClass))
         } yield ()
       }

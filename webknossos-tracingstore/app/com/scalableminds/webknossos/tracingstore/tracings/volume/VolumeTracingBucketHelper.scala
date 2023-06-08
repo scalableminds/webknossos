@@ -45,7 +45,6 @@ trait VolumeBucketCompression extends LazyLogging {
       data
     } else {
       try {
-        logger.info("decompressing...")
         decompressor.decompress(data, expectedUncompressedBucketSize)
       } catch {
         case e: Exception =>

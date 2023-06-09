@@ -672,16 +672,17 @@ type Transform =
   | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; tpsInv: TPS3D };
 
 function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
-  if (!layer.coordinateTransformations) {
+  let coordinateTransformations = layer.coordinateTransformations || [{ type: "dummy" }];
+  if (!coordinateTransformations) {
     return null;
   }
-  if (layer.coordinateTransformations.length > 1) {
+  if (coordinateTransformations.length > 1) {
     console.error(
       "Data layer has defined multiple coordinate transforms. This is currently not supported and ignored",
     );
     return null;
   }
-  const transformation = layer.coordinateTransformations[0];
+  const transformation = coordinateTransformations[0];
   const { type } = transformation;
 
   if (type === "affine") {
@@ -690,6 +691,17 @@ function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
     //   return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
     // } else if (type === "thin_plate_spline") {
     const [sourcePoints, targetPoints] = getPointsC555();
+    const affineMatrix = estimateAffine(targetPoints, sourcePoints).to1DArray() as any as Matrix4x4;
+    return {
+      type: "thin_plate_spline",
+      affineMatrix,
+      tpsInv: new TPS3D(sourcePoints, targetPoints),
+    };
+  } else {
+    // prettier-ignore
+    const sourcePoints: Vector3[] = [[559, 656, 621], [359, 256, 601], [859, 956, 221], [59, 56, 21]];
+    // prettier-ignore
+    const targetPoints: Vector3[] = [[559 + 10, 656 + 80, 621], [359 + 10, 256 + 10 , 601], [859 + 10, 956 + 10, 221], [59+ 10 , 56 + 10, 21]]
     const affineMatrix = estimateAffine(targetPoints, sourcePoints).to1DArray() as any as Matrix4x4;
     return {
       type: "thin_plate_spline",

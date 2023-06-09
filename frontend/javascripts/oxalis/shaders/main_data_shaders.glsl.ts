@@ -327,7 +327,7 @@ function generateTpsInitialization(tpsTransformPerLayer: Record<string, TPS3D>, 
   let weightLines = [];
   for (let idx = 0; idx < tps.tpsX.cps.length; idx++) {
     weightLines.push(
-      `          W[${idx}] = vec3(${ff(tps.tpsX.W[idx])}, ${ff(tps.tpsY.W[idx])}, ${ff(
+      `          TPS_W_${name}[${idx}] = vec3(${ff(tps.tpsX.W[idx])}, ${ff(tps.tpsY.W[idx])}, ${ff(
         tps.tpsZ.W[idx],
       )});`,
     );
@@ -336,25 +336,25 @@ function generateTpsInitialization(tpsTransformPerLayer: Record<string, TPS3D>, 
   let cpsLines = [];
   for (let idx = 0; idx < tps.tpsX.cps.length; idx++) {
     let coords = tps.tpsX.cps[idx].map((num) => ff(num)).join(", ");
-    cpsLines.push(`          cps[${idx}] = vec3(${coords});`);
+    cpsLines.push(`          TPS_cps_${name}[${idx}] = vec3(${coords});`);
   }
 
   let aLines = [];
   for (let idx = 0; idx < 4; idx++) {
     aLines.push(
-      `          a[${idx}] = vec3(${ff(tps.tpsX.a[idx])}, ${ff(tps.tpsY.a[idx])}, ${ff(
+      `          TPS_a_${name}[${idx}] = vec3(${ff(tps.tpsX.a[idx])}, ${ff(tps.tpsY.a[idx])}, ${ff(
         tps.tpsZ.a[idx],
       )});`,
     );
   }
 
   const code = `
-const int CPS_LENGTH = ${tps.tpsX.cps.length};
-vec3 W[CPS_LENGTH];
-vec3 a[4];
-vec3 cps[CPS_LENGTH];
+const int TPS_CPS_LENGTH_${name} = ${tps.tpsX.cps.length};
+vec3 TPS_W_${name}[TPS_CPS_LENGTH_${name}];
+vec3 TPS_a_${name}[4];
+vec3 TPS_cps_${name}[TPS_CPS_LENGTH_${name}];
 
-void initializeArrays() {
+void initializeTPSArraysFor${name}() {
 ${weightLines.join("\n")}
 ${cpsLines.join("\n")}
 ${aLines.join("\n")}
@@ -403,7 +403,7 @@ float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
 <% _.each(layerNamesWithSegmentation, function(name) {
-   if (tpsTransformPerLayer[name] != null) { %>
+  if (tpsTransformPerLayer[name] != null) { %>
   <%= generateTpsInitialization(tpsTransformPerLayer, name) %>
 
   void calculateTpsOffsetFor<%= name %>(vec3 worldCoordUVW, vec3 transWorldCoord) {
@@ -413,17 +413,16 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
     float y = originalWorldCoord.y;
     float z = originalWorldCoord.z;
 
-    // transform the coord
-
+    vec3 a[4] = TPS_a_<%= name %>;
     vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
     vec3 bending_part = vec3(0.0);
 
-    for (int cpIdx = 0; cpIdx < CPS_LENGTH; cpIdx++) {
+    for (int cpIdx = 0; cpIdx < TPS_CPS_LENGTH_<%= name %>; cpIdx++) {
       // Calculate distance to each control point
       float dist = sqrt(
-        pow(x - cps[cpIdx].x, 2.0) +
-        pow(y - cps[cpIdx].y, 2.0) +
-        pow(z - cps[cpIdx].z, 2.0)
+        pow(x - TPS_cps_<%= name %>[cpIdx].x, 2.0) +
+        pow(y - TPS_cps_<%= name %>[cpIdx].y, 2.0) +
+        pow(z - TPS_cps_<%= name %>[cpIdx].z, 2.0)
       );
 
       if (dist != 0.0) {
@@ -431,7 +430,7 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
       } else {
         dist = 0.;
       }
-      bending_part += dist * W[cpIdx];
+      bending_part += dist * TPS_W_<%= name %>[cpIdx];
     }
 
     tpsOffsetXYZ = linear_part + bending_part;
@@ -444,7 +443,7 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 void main() {
   <% _.each(layerNamesWithSegmentation, function(name) {
     if (tpsTransformPerLayer[name] != null) { %>
-    initializeArrays();
+    initializeTPSArraysFor<%= name %>();
   <% }
   }) %>
 

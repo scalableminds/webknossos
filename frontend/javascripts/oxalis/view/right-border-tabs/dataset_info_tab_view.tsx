@@ -30,6 +30,7 @@ import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracin
 import { getOrganization } from "admin/admin_rest_api";
 import Title from "antd/lib/typography/Title";
 import { MarkdownModal } from "../components/markdown_modal";
+import { getVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 
 type StateProps = {
   annotation: Tracing;
@@ -237,7 +238,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const nodeCount = statsMaybe.map((stats) => stats.nodeCount).getOrElse(null);
     const edgeCount = statsMaybe.map((stats) => stats.edgeCount).getOrElse(null);
     const branchpointCount = statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null);
-    const segmentCount = 0; // TODO read value from actual stats data
+
+    const volumeAnnotations = getVolumeTracings(this.props.annotation);
+    const segmentCount = volumeAnnotations.reduce(
+      (count, volumeAnnotation) => count + volumeAnnotation.segments.entryCount,
+      0,
+    );
 
     return (
       <div className="info-tab-block">
@@ -275,7 +281,17 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                   alt="Segments"
                 />
               </td>
-              <td>{segmentCount} Segments</td>
+              <td>
+                <Tooltip
+                  placement="left"
+                  title="For technical reasons, only segments that were manually annotated or
+                      interacted with are counted towards this statistic. Segmentation layers
+                      created from automated workflows (aka fallback layers) are not currently
+                      considered."
+                >
+                  {segmentCount} Segments
+                </Tooltip>
+              </td>
             </tr>
           </tbody>
         </table>

@@ -32,10 +32,11 @@ madge("frontend/javascripts/main.tsx", {
   },
 }).then((res) => {
   const cyclicDependencies = res.circular({ tsx: { skipTypeImports: true } });
-  const knownCycleStrings = new Set(KNOWN_CYCLES.map((el) => el.toString()));
-  const newCycles = cyclicDependencies.filter((el) => !knownCycleStrings.has(el.toString()));
+  const knownCycleStringsSet = new Set(KNOWN_CYCLES.map((el) => el.toString()));
+  const knownCycleStrings = Array.from(knownCycleStringsSet);
 
   if (cyclicDependencies.length > knownCycleStrings.length) {
+    const newCycles = cyclicDependencies.filter((el) => !knownCycleStringsSet.has(el.toString()));
     throw new Error(
       `Too many cyclic dependencies (${
         cyclicDependencies.length - knownCycleStrings.length

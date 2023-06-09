@@ -154,7 +154,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
       bucketPosition = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
-      _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPos), must be positive"
+      _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
       dataLayer = volumeTracingLayer(tracingId,
                                      volumeTracing,
                                      includeFallbackDataIfAvailable = true,

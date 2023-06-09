@@ -158,7 +158,10 @@ flat in float outputAddress[<%= globalLayerCount %>];
 in vec4 worldCoord;
 in vec4 modelCoord;
 in mat4 savedModelMatrix;
-in vec3 tpsOffsetXYZ;
+
+<% _.each(layerNamesWithSegmentation, function(name) { %>
+  in vec3 tpsOffsetXYZ_<%= name %>;
+<% }) %>
 
 ${compileShader(
   inverse,
@@ -215,7 +218,7 @@ void main() {
       // Get grayscale value for <%= name %>
 
       <% if (layerIndex == 0) { %>
-        vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ);
+        vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
       <% } else { %>
         vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
       <% } %>
@@ -372,7 +375,9 @@ out vec4 worldCoord;
 out vec4 modelCoord;
 out vec2 vUv;
 out mat4 savedModelMatrix;
-out vec3 tpsOffsetXYZ;
+<% _.each(layerNamesWithSegmentation, function(name) { %>
+  out vec3 tpsOffsetXYZ_<%= name %>;
+<% }) %>
 
 flat out vec2 index;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
@@ -433,9 +438,9 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
       bending_part += dist * TPS_W_<%= name %>[cpIdx];
     }
 
-    tpsOffsetXYZ = linear_part + bending_part;
+    tpsOffsetXYZ_<%= name %> = linear_part + bending_part;
     // Adapt to z scaling if necessary
-    // tpsOffsetXYZ.z /= 100.;
+    // tpsOffsetXYZ_<%= name %>.z /= 100.;
   }
 <% }
 }) %>

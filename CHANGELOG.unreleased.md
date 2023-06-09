@@ -12,7 +12,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Subfolders of the currently active folder are now also rendered in the dataset table in the dashboard. [#6996](https://github.com/scalableminds/webknossos/pull/6996)
-- Add ability to view [zarr v3](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html) datasets. [#7079](https://github.com/scalableminds/webknossos/pull/7079)
+- Added ability to view [zarr v3](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html) datasets. [#7079](https://github.com/scalableminds/webknossos/pull/7079)
+- Added an index structure for volume annotation segments, in preparation for per-segment statistics. [#7063](https://github.com/scalableminds/webknossos/pull/7063)
 
 ### Changed
 

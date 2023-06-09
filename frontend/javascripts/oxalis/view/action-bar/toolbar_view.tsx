@@ -1,23 +1,5 @@
-import {
-  Radio,
-  Tooltip,
-  Badge,
-  Space,
-  Popover,
-  RadioChangeEvent,
-  Dropdown,
-  MenuProps,
-  Button,
-} from "antd";
-import {
-  ClearOutlined,
-  DownOutlined,
-  EditOutlined,
-  ExportOutlined,
-  SaveOutlined,
-  SelectOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
+import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
@@ -142,8 +124,8 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
-const handleUpdatePresetBrushSize = (brushSizes: [number, number, number]) => {
-  Store.dispatch(updateUserSettingAction("presetBrushSizes", brushSizes));
+const handleUpdatePresetBrushSizes = (brushSizes: [number, number, number]) => {
+  Store.dispatch(updateUserSettingAction("presetBrushSizesAsc", brushSizes));
 };
 
 const handleToggleAutomaticMeshRendering = (value: boolean) => {
@@ -560,18 +542,23 @@ function ChangeBrushSizeButton() {
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
   const presetBrushSizes = useSelector(
-    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
+    (state: OxalisState) => state.userConfiguration.presetBrushSizesAsc,
   );
   console.log(presetBrushSizes);
+
+  const getDefaultBrushSizes = (): [number, number, number] => {
+    largeBrushSize = maximumBrushSize;
+    mediumBrushSize = calculateMediumBrushSize(largeBrushSize);
+    smallBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board};
+    return [smallBrushSize, mediumBrushSize, largeBrushSize];
+  };
 
   let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
 
   let smallBrushSize: number, mediumBrushSize: number, largeBrushSize: number;
   if (presetBrushSizes.length === 0) {
-    largeBrushSize = maximumBrushSize;
-    mediumBrushSize = calculateMediumBrushSize(largeBrushSize);
-    smallBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board
-    handleUpdatePresetBrushSize([smallBrushSize, mediumBrushSize, largeBrushSize]);
+    [smallBrushSize, mediumBrushSize, largeBrushSize] = getDefaultBrushSizes();
+    handleUpdatePresetBrushSizes(getDefaultBrushSizes());
   } else {
     [smallBrushSize, mediumBrushSize, largeBrushSize] = presetBrushSizes;
   }
@@ -584,7 +571,46 @@ function ChangeBrushSizeButton() {
     );
   };
 
-  const textToAssignBrushSize = "Assign current brush size"; //TODO maybe find string constants
+  const items: MenuProps["items"] = [
+    {
+      label: (
+        <div
+          onClick={() =>
+            handleUpdatePresetBrushSizes([brushSize, mediumBrushSize, maximumBrushSize])
+          }
+        >
+          Assign current brush size to small brush
+        </div>
+      ),
+      key: "assignToSmall",
+    },
+    {
+      label: (
+        <div
+          onClick={() =>
+            handleUpdatePresetBrushSizes([smallBrushSize, brushSize, maximumBrushSize])
+          }
+        >
+          Assign current brush size to medium brush
+        </div>
+      ),
+      key: "assignToMedium",
+    },
+    {
+      label: (
+        <div
+          onClick={() => handleUpdatePresetBrushSizes([smallBrushSize, mediumBrushSize, brushSize])}
+        >
+          Assign current brush size to large brush
+        </div>
+      ),
+      key: "assignToLarge",
+    },
+    {
+      label: <div onClick={() => handleUpdatePresetBrushSizes(getDefaultBrushSizes())}>Reset</div>,
+      key: "reset",
+    },
+  ];
 
   return (
     <Tooltip title="Change the brush size">
@@ -604,25 +630,42 @@ function ChangeBrushSizeButton() {
             >
               Set the brush size:
             </div>
-            <LogSliderSetting
-              label=""
-              roundTo={0}
-              min={userSettings.brushSize.minimum}
-              max={maximumBrushSize}
-              precision={0}
-              spans={[0, 16, 8]}
-              value={brushSize}
-              onChange={handleUpdateBrushSize}
-            />
             <table style={{ width: "100%", tableLayout: "fixed" }}>
               <tbody style={{ textAlign: "center" }}>
                 <tr>
                   <td>
+                    <LogSliderSetting
+                      label=""
+                      roundTo={0}
+                      min={userSettings.brushSize.minimum}
+                      max={maximumBrushSize}
+                      precision={0}
+                      spans={[0, 18, 6]}
+                      value={brushSize}
+                      onChange={handleUpdateBrushSize}
+                    />
+                  </td>
+                  <td width="5%">
+                    <Dropdown
+                      menu={{ items }}
+                      trigger={["click", "contextMenu"]}
+                      placement="bottomLeft"
+                    >
+                      <SettingOutlined />
+                    </Dropdown>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table style={{ width: "100%", tableLayout: "fixed" }}>
+              <tbody style={{ textAlign: "center" }}>
+                <tr>
+                  <td style={{ textAlign: "left" }}>
                     <ButtonComponent
                       className="without-icon-margin"
                       onClick={() => handleUpdateBrushSize(smallBrushSize)}
                     >
-                      <i className="fas fa-circle fa-xs" />
+                      <i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
                     </ButtonComponent>
                   </td>
                   <td>
@@ -643,12 +686,12 @@ function ChangeBrushSizeButton() {
                   </td>
                 </tr>
                 <tr>
-                  <td>Small</td>
+                  <td style={{ textAlign: "left" }}>Small</td>
                   <td>Medium</td>
                   <td>Large</td>
                 </tr>
-                <tr style={{ textAlign: "center", lineHeight: "50%", opacity: 0.6 }}>
-                  <td>
+                <tr style={{ lineHeight: "50%", opacity: 0.6 }}>
+                  <td style={{ textAlign: "left" }}>
                     {Math.round(smallBrushSize)}
                     {ThinSpace}vx
                   </td>
@@ -657,41 +700,12 @@ function ChangeBrushSizeButton() {
                     {ThinSpace}vx
                   </td>
                   <td>
-                    {Math.round(maximumBrushSize)}
+                    {Math.round(largeBrushSize)}
                     {ThinSpace}vx
                   </td>
                 </tr>
               </tbody>
             </table>
-            <div style={{ marginTop: 15 }}>
-              <Tooltip title={textToAssignBrushSize} placement="bottom">
-                <Button
-                  onClick={() =>
-                    handleUpdatePresetBrushSize([brushSize, mediumBrushSize, maximumBrushSize])
-                  }
-                >
-                  Assign
-                </Button>
-              </Tooltip>
-              <Tooltip title={textToAssignBrushSize} placement="bottom">
-                <Button
-                  onClick={() =>
-                    handleUpdatePresetBrushSize([smallBrushSize, brushSize, maximumBrushSize])
-                  }
-                >
-                  Assign
-                </Button>
-              </Tooltip>
-              <Tooltip title={textToAssignBrushSize} placement="bottom">
-                <Button
-                  onClick={() =>
-                    handleUpdatePresetBrushSize([smallBrushSize, mediumBrushSize, brushSize])
-                  }
-                >
-                  Assign
-                </Button>
-              </Tooltip>
-            </div>
           </div>
         }
         trigger="click"

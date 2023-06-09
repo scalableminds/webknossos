@@ -630,82 +630,74 @@ function ChangeBrushSizeButton() {
             >
               Set the brush size:
             </div>
-            <table style={{ width: "100%", tableLayout: "fixed" }}>
-              <tbody style={{ textAlign: "center" }}>
-                <tr>
-                  <td>
-                    <LogSliderSetting
-                      label=""
-                      roundTo={0}
-                      min={userSettings.brushSize.minimum}
-                      max={maximumBrushSize}
-                      precision={0}
-                      spans={[0, 18, 6]}
-                      value={brushSize}
-                      onChange={handleUpdateBrushSize}
-                    />
-                  </td>
-                  <td width="5%">
-                    <Dropdown
-                      menu={{ items }}
-                      trigger={["click", "contextMenu"]}
-                      placement="bottomLeft"
-                    >
-                      <SettingOutlined />
-                    </Dropdown>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <table style={{ width: "100%", tableLayout: "fixed" }}>
-              <tbody style={{ textAlign: "center" }}>
-                <tr>
-                  <td style={{ textAlign: "left" }}>
-                    <ButtonComponent
-                      className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(smallBrushSize)}
-                    >
-                      <i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
-                    </ButtonComponent>
-                  </td>
-                  <td>
-                    <ButtonComponent
-                      className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(mediumBrushSize)}
-                    >
-                      <i className="fas fa-circle fa-sm" />
-                    </ButtonComponent>
-                  </td>
-                  <td>
-                    <ButtonComponent
-                      className="without-icon-margin"
-                      onClick={() => handleUpdateBrushSize(largeBrushSize)}
-                    >
-                      <i className="fas fa-circle fa-lg" />
-                    </ButtonComponent>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ textAlign: "left" }}>Small</td>
-                  <td>Medium</td>
-                  <td>Large</td>
-                </tr>
-                <tr style={{ lineHeight: "50%", opacity: 0.6 }}>
-                  <td style={{ textAlign: "left" }}>
-                    {Math.round(smallBrushSize)}
-                    {ThinSpace}vx
-                  </td>
-                  <td>
-                    {Math.round(mediumBrushSize)}
-                    {ThinSpace}vx
-                  </td>
-                  <td>
-                    {Math.round(largeBrushSize)}
-                    {ThinSpace}vx
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div>
+              <div>
+                <LogSliderSetting
+                  label=""
+                  roundTo={0}
+                  min={userSettings.brushSize.minimum}
+                  max={maximumBrushSize}
+                  precision={0}
+                  spans={[0, 18, 6]}
+                  value={brushSize}
+                  onChange={handleUpdateBrushSize}
+                />
+              </div>
+              <div>
+                <Dropdown
+                  menu={{ items }}
+                  trigger={["click", "contextMenu"]}
+                  placement="bottomLeft"
+                >
+                  <SettingOutlined />
+                </Dropdown>
+              </div>
+              <div style={{ paddingLeft: 20 }}>
+                <div>
+                  <ButtonComponent
+                    className="without-icon-margin"
+                    onClick={() => handleUpdateBrushSize(smallBrushSize)}
+                  >
+                    <i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
+                  </ButtonComponent>
+                </div>
+                <div>
+                  <ButtonComponent
+                    className="without-icon-margin"
+                    onClick={() => handleUpdateBrushSize(mediumBrushSize)}
+                  >
+                    <i className="fas fa-circle fa-sm" />
+                  </ButtonComponent>
+                </div>
+                <div>
+                  <ButtonComponent
+                    className="without-icon-margin"
+                    onClick={() => handleUpdateBrushSize(largeBrushSize)}
+                  >
+                    <i className="fas fa-circle fa-lg" />
+                  </ButtonComponent>
+                </div>
+              </div>
+              <div>
+                <div>Small</div>
+                <div>Medium</div>
+                <div>Large</div>
+              </div>
+              <div style={{ lineHeight: "50%", opacity: 0.6 }}>
+                <div>
+                  {Math.round(smallBrushSize)}
+                  {ThinSpace}vx
+                </div>
+                <div>
+                  {Math.round(mediumBrushSize)}
+                  {ThinSpace}vx
+                </div>
+                <div>
+                  {Math.round(largeBrushSize)}
+                  {ThinSpace}vx
+                </div>
+              </div>
+            </div>
           </div>
         }
         trigger="click"

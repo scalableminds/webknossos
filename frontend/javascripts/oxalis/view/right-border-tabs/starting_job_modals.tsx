@@ -547,10 +547,10 @@ export function NeuronSegmentationModal({ handleClose }: Props) {
           </p>
           <p>
             <b>
-              Note that this feature is still experimental and processing can take a long time. Thus,
-              we suggest to use a small bounding box and not the full dataset extent. The neuron
-              detection currently only works with EM data. The best resolution for the process will
-              be chosen automatically.
+              Note that this feature is still experimental and processing can take a long time.
+              Thus, we suggest to use a small bounding box and not the full dataset extent. The
+              neuron detection currently only works with EM data. The best resolution for the
+              process will be chosen automatically.
             </b>
           </p>
         </>

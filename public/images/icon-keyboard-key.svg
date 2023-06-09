@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 26 27" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-87.7369,-83.9337)">
-        <g transform="matrix(1,0,0,1,-1285.55,-571.041)">
-            <g transform="matrix(0.384939,0,0,0.443931,839.991,312.847)">
-                <path d="M1391.84,771.637L1386.51,776.924L1386.51,822.84C1386.51,824.303 1387.18,825.707 1388.38,826.742C1389.57,827.777 1391.19,828.359 1392.88,828.359L1445.51,828.359L1450.84,823.072" style="fill:rgb(238,239,255);stroke:rgb(86,96,255);stroke-width:2.05px;"/>
-            </g>
-            <g transform="matrix(0.384939,0,0,0.443931,839.991,312.847)">
-                <path d="M1450.84,779.266C1450.84,777.243 1449.91,775.302 1448.26,773.872C1446.61,772.441 1444.37,771.637 1442.04,771.637L1391.84,771.637L1391.84,816.38C1391.84,820.076 1395.3,823.072 1399.56,823.072L1450.84,823.072L1450.84,779.266Z" style="fill:white;stroke:rgb(86,96,255);stroke-width:2.05px;"/>
-            </g>
+    <g transform="matrix(1,0,0,1,-20.6039,-19.9077)">
+        <g transform="matrix(0.384939,0,0,0.443931,-512.692,-322.22)">
+            <path d="M1391.84,771.637L1386.51,776.924L1386.51,822.84C1386.51,824.303 1387.18,825.707 1388.38,826.742C1389.57,827.777 1391.19,828.359 1392.88,828.359L1445.51,828.359L1450.84,823.072" style="fill:none;stroke:rgb(86,96,255);stroke-width:2.05px;"/>
+        </g>
+        <g transform="matrix(0.384939,0,0,0.443931,-512.692,-322.22)">
+            <path d="M1450.84,779.266C1450.84,777.243 1449.91,775.302 1448.26,773.872C1446.61,772.441 1444.37,771.637 1442.04,771.637L1391.84,771.637L1391.84,816.38C1391.84,820.076 1395.3,823.072 1399.56,823.072L1450.84,823.072L1450.84,779.266Z" style="fill:none;stroke:rgb(86,96,255);stroke-width:2.05px;"/>
         </g>
     </g>
 </svg>

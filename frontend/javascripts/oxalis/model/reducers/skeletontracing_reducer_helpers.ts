@@ -35,7 +35,7 @@ import {
   mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
-import type { Vector3 } from "oxalis/constants";
+import { TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -355,9 +355,16 @@ function splitTreeByNodes(
             treeId: activeTree.treeId,
             isVisible: true,
             groupId: activeTree.groupId,
+            type: activeTree.type,
           };
         } else {
-          const immutableNewTree = createTree(intermediateState, timestamp).get();
+          const immutableNewTree = createTree(
+            intermediateState,
+            timestamp,
+            true,
+            undefined,
+            activeTree.type,
+          ).get();
           // Cast to mutable tree type since we want to mutably do the split
           // in this reducer for performance reasons.
           newTree = immutableNewTree as any as Tree;
@@ -470,6 +477,7 @@ export function createTree(
   timestamp: number,
   addToActiveGroup: boolean = true,
   name?: string,
+  type: TreeType = TreeTypeEnum.DEFAULT,
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -497,6 +505,7 @@ export function createTree(
       comments: [],
       isVisible: true,
       groupId,
+      type,
     };
     return Maybe.Just(tree);
   });
@@ -506,8 +515,9 @@ export function getOrCreateTree(
   skeletonTracing: SkeletonTracing,
   treeId: number | null | undefined,
   timestamp: number,
+  type?: TreeType | null | undefined,
 ): Maybe<Tree> {
-  return getTree(skeletonTracing, treeId).orElse(() => {
+  return getTree(skeletonTracing, treeId, type).orElse(() => {
     // Only create a new tree if there are no trees
     // Specifically, this means that no new tree is created just because
     // the activeTreeId is temporarily null
@@ -631,11 +641,10 @@ export function deleteTree(
   return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
 }
 export function mergeTrees(
-  skeletonTracing: SkeletonTracing,
+  trees: TreeMap,
   sourceNodeId: number,
   targetNodeId: number,
 ): Maybe<[TreeMap, number, number]> {
-  const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId);
   const targetTree = findTreeByNodeId(trees, targetNodeId); // should be activeTree
 
@@ -830,6 +839,7 @@ export function createMutableTreeMapFromTreeArray(
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
+        type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
       }),
     ),
     "treeId",

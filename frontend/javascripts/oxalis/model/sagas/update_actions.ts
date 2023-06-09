@@ -113,6 +113,7 @@ export function createTree(tree: Tree) {
       branchPoints: tree.branchPoints,
       groupId: tree.groupId,
       isVisible: tree.isVisible,
+      type: tree.type,
     },
   } as const;
 }
@@ -137,6 +138,7 @@ export function updateTree(tree: Tree) {
       branchPoints: tree.branchPoints,
       groupId: tree.groupId,
       isVisible: tree.isVisible,
+      type: tree.type,
     },
   } as const;
 }

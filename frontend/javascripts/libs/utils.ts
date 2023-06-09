@@ -1118,14 +1118,8 @@ export function diffObjects(
   return changes(object, base);
 }
 
-export function coalesce<T extends string | number | symbol>(
-  obj: { [key: string]: T },
-  field: T,
-): T | null {
-  if (obj && typeof obj === "object" && (field in obj || Object.values(obj).includes(field))) {
-    return field;
-  }
-  return null;
+export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
+  return Object.values(e).includes(token as T[keyof T]) ? token : null;
 }
 
 export function pluralize(str: string, count: number, optPluralForm: string | null = null): string {

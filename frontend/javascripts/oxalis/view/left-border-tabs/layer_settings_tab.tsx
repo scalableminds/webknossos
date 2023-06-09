@@ -50,11 +50,11 @@ import {
   getDefaultIntensityRangeOfLayer,
   getElementClass,
   isColorLayer as getIsColorLayer,
-  getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
   getTransformsForLayerOrNull,
   getWidestResolutions,
+  getLayerBoundingBox,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -780,10 +780,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         V3.mul4x4(matrix, foundPosition, foundPosition);
       }
     } else {
-      const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
-      const centerPosition = V3.add(lowerBoundary, upperBoundary).map(
-        (el: number) => el / 2,
-      ) as Vector3;
+      const centerPosition = getLayerBoundingBox(dataset, layerName).getCenter();
       Toast.warning(
         `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
       );

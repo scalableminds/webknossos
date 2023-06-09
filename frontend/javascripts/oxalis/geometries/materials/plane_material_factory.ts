@@ -21,7 +21,7 @@ import {
   getDataLayers,
   getByteCount,
   getElementClass,
-  getBoundaries,
+  getDatasetBoundingBox,
   getEnabledLayers,
   getSegmentationLayerWithMappingSupport,
   getMappingInfoForSupportedLayer,
@@ -575,9 +575,9 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.dataset,
         (dataset) => {
-          const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
-          this.uniforms.bboxMin.value.set(...lowerBoundary);
-          this.uniforms.bboxMax.value.set(...upperBoundary);
+          const { min, max } = getDatasetBoundingBox(dataset);
+          this.uniforms.bboxMin.value.set(...min);
+          this.uniforms.bboxMax.value.set(...max);
         },
         true,
       ),

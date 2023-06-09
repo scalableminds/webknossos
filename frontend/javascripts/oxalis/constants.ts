@@ -241,6 +241,11 @@ export const enum MappingStatusEnum {
   ENABLED = "ENABLED",
 }
 export type MappingStatus = keyof typeof MappingStatusEnum;
+export enum TreeTypeEnum {
+  DEFAULT = "DEFAULT",
+  AGGLOMERATE = "AGGLOMERATE",
+}
+export type TreeType = keyof typeof TreeTypeEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 // The plane in orthogonal mode is a little smaller than the viewport

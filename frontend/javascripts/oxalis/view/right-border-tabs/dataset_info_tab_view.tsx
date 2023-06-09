@@ -161,10 +161,8 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
             paddingTop: 10,
           }}
         >
-          <Typography.Text type="secondary">
-            {extentInVoxel}
-            <br /> {extentInLength}
-          </Typography.Text>
+          {extentInVoxel}
+          <br /> {extentInLength}
         </td>
       </tr>
     </Tooltip>
@@ -182,11 +180,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
         >
           <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
         </td>
-        <td>
-          <Typography.Text type="secondary">
-            {formatScale(dataset.dataSource.scale)}
-          </Typography.Text>{" "}
-        </td>
+        <td>{formatScale(dataset.dataSource.scale)}</td>
       </tr>
     </Tooltip>
   );
@@ -203,11 +197,7 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
         >
           <i className="fas fa-building fa-xl" style={{ color: "var(--ant-primary)" }} />
         </td>
-        <td>
-          <Typography.Text type="secondary">
-            {organizationName === null ? <i>loading...</i> : organizationName}
-          </Typography.Text>
-        </td>
+        <td>{organizationName === null ? <i>loading...</i> : organizationName}</td>
       </tr>
     </Tooltip>
   );
@@ -273,7 +263,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                     </>
                   }
                 >
-                  <Typography.Text type="secondary">{treeCount} Skeletons</Typography.Text>
+                  {treeCount} Skeletons
                 </Tooltip>
               </td>
             </tr>
@@ -285,9 +275,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                   alt="Segments"
                 />
               </td>
-              <td>
-                <Typography.Text type="secondary">{segmentCount} Segments</Typography.Text>
-              </td>
+              <td>{segmentCount} Segments</td>
             </tr>
           </tbody>
         </table>
@@ -321,9 +309,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                 >
                   {shortcut.keybinding}
                 </td>
-                <td>
-                  <Typography.Text type="secondary">{shortcut.action}</Typography.Text>
-                </td>
+                <td>{shortcut.action}</td>
               </tr>
             ))}
           </tbody>
@@ -363,7 +349,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               wordWrap: "break-word",
             }}
           >
-            <Title level={5} style={{ display: "inline-block" }}>
+            <Title level={5} style={{ display: "initial" }}>
               {displayName || datasetName}
             </Title>
             {getEditSettingsIcon()}
@@ -614,10 +600,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               paddingTop: 8,
             }}
           >
-            <Typography.Text type="secondary">
-              {representativeResolution.join("-")}
-              {isActiveResolutionGlobal ? "" : "*"}{" "}
-            </Typography.Text>
+            {representativeResolution.join("-")}
+            {isActiveResolutionGlobal ? "" : "*"}{" "}
           </td>
         </tr>
       </Tooltip>

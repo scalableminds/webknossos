@@ -31,7 +31,7 @@ type Params = {
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
-  tpsTransformPerLayer?: Record<string, TPS3D | null>;
+  tpsTransformPerLayer?: Record<string, TPS3D>;
 };
 
 export function formatNumberAsGLSLFloat(aNumber: number): string {
@@ -320,7 +320,8 @@ void main() {
   });
 }
 
-function generateTpsInitialization(tps: TPS3D) {
+function generateTpsInitialization(tpsTransformPerLayer: Record<string, TPS3D>, name: string) {
+  const tps = tpsTransformPerLayer[name];
   const ff = formatNumberAsGLSLFloat;
 
   let weightLines = [];
@@ -403,7 +404,40 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
 <% _.each(layerNamesWithSegmentation, function(name) {
    if (tpsTransformPerLayer[name] != null) { %>
-  <%= generateTpsInitialization(tpsTransformPerLayer[name]) %>
+  <%= generateTpsInitialization(tpsTransformPerLayer, name) %>
+
+  void calculateTpsOffsetFor<%= name %>(vec3 worldCoordUVW, vec3 transWorldCoord) {
+    vec3 originalWorldCoord = transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z));
+
+    float x = originalWorldCoord.x;
+    float y = originalWorldCoord.y;
+    float z = originalWorldCoord.z;
+
+    // transform the coord
+
+    vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
+    vec3 bending_part = vec3(0.0);
+
+    for (int cpIdx = 0; cpIdx < CPS_LENGTH; cpIdx++) {
+      // Calculate distance to each control point
+      float dist = sqrt(
+        pow(x - cps[cpIdx].x, 2.0) +
+        pow(y - cps[cpIdx].y, 2.0) +
+        pow(z - cps[cpIdx].z, 2.0)
+      );
+
+      if (dist != 0.0) {
+        dist = pow(dist, 2.0) * log2(pow(dist, 2.0)) / log2(2.718281828459045);
+      } else {
+        dist = 0.;
+      }
+      bending_part += dist * W[cpIdx];
+    }
+
+    tpsOffsetXYZ = linear_part + bending_part;
+    // Adapt to z scaling if necessary
+    // tpsOffsetXYZ.z /= 100.;
+  }
 <% }
 }) %>
 
@@ -492,41 +526,11 @@ void main() {
   _.each(layerNamesWithSegmentation, function(name) {
     if (tpsTransformPerLayer[name] != null) {
   %>
-    vec3 originalWorldCoord = transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z));
-
-    float x = originalWorldCoord.x;
-    float y = originalWorldCoord.y;
-    float z = originalWorldCoord.z;
-
-    // transform the coord
-
-    vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
-    vec3 bending_part = vec3(0.0);
-
-    for (int cpIdx = 0; cpIdx < CPS_LENGTH; cpIdx++) {
-      // Calculate distance to each control point
-      float dist = sqrt(
-        pow(x - cps[cpIdx].x, 2.0) +
-        pow(y - cps[cpIdx].y, 2.0) +
-        pow(z - cps[cpIdx].z, 2.0)
-      );
-
-      if (dist != 0.0) {
-        dist = pow(dist, 2.0) * log2(pow(dist, 2.0)) / log2(2.718281828459045);
-      } else {
-        dist = 0.;
-      }
-      bending_part += dist * W[cpIdx];
-    }
-
-    tpsOffsetXYZ = linear_part + bending_part;
-    // Adapt to z scaling if necessary
-    // tpsOffsetXYZ.z /= 100.;
+    calculateTpsOffsetFor<%= name %>(worldCoordUVW, transWorldCoord);
   <%
     }
   })
   %>
-
 
   // Offset the bucket calculation for the current vertex by a voxel to ensure
   // that the provoking vertex (the one that is used by the flat varyings in

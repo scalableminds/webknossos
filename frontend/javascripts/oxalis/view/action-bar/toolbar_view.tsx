@@ -1,4 +1,15 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
+import {
+  Radio,
+  Tooltip,
+  Badge,
+  Space,
+  Popover,
+  RadioChangeEvent,
+  Dropdown,
+  MenuProps,
+  Col,
+  Row,
+} from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -630,8 +641,8 @@ function ChangeBrushSizeButton() {
             >
               Set the brush size:
             </div>
-            <div>
-              <div>
+            <Row align="middle" style={{ textAlign: "center" }}>
+              <Col flex={10}>
                 <LogSliderSetting
                   label=""
                   roundTo={0}
@@ -642,8 +653,8 @@ function ChangeBrushSizeButton() {
                   value={brushSize}
                   onChange={handleUpdateBrushSize}
                 />
-              </div>
-              <div>
+              </Col>
+              <Col flex={1}>
                 <Dropdown
                   menu={{ items }}
                   trigger={["click", "contextMenu"]}
@@ -651,8 +662,10 @@ function ChangeBrushSizeButton() {
                 >
                   <SettingOutlined />
                 </Dropdown>
-              </div>
-              <div style={{ paddingLeft: 20 }}>
+              </Col>
+            </Row>
+            <Row justify="space-between" align="middle">
+              <Col>
                 <div>
                   <ButtonComponent
                     className="without-icon-margin"
@@ -661,6 +674,13 @@ function ChangeBrushSizeButton() {
                     <i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
                   </ButtonComponent>
                 </div>
+                <div style={{ textAlign: "center" }}>Small</div>
+                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center" }}>
+                  {Math.round(smallBrushSize)}
+                  {ThinSpace}vx
+                </div>
+              </Col>
+              <Col>
                 <div>
                   <ButtonComponent
                     className="without-icon-margin"
@@ -669,6 +689,13 @@ function ChangeBrushSizeButton() {
                     <i className="fas fa-circle fa-sm" />
                   </ButtonComponent>
                 </div>
+                <div style={{ textAlign: "center" }}>Medium</div>
+                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center" }}>
+                  {Math.round(mediumBrushSize)}
+                  {ThinSpace}vx
+                </div>
+              </Col>
+              <Col>
                 <div>
                   <ButtonComponent
                     className="without-icon-margin"
@@ -677,27 +704,13 @@ function ChangeBrushSizeButton() {
                     <i className="fas fa-circle fa-lg" />
                   </ButtonComponent>
                 </div>
-              </div>
-              <div>
-                <div>Small</div>
-                <div>Medium</div>
-                <div>Large</div>
-              </div>
-              <div style={{ lineHeight: "50%", opacity: 0.6 }}>
-                <div>
-                  {Math.round(smallBrushSize)}
-                  {ThinSpace}vx
-                </div>
-                <div>
-                  {Math.round(mediumBrushSize)}
-                  {ThinSpace}vx
-                </div>
-                <div>
+                <div style={{ textAlign: "center" }}>Large</div>
+                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center" }}>
                   {Math.round(largeBrushSize)}
                   {ThinSpace}vx
                 </div>
-              </div>
-            </div>
+              </Col>
+            </Row>
           </div>
         }
         trigger="click"

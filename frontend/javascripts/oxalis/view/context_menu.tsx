@@ -44,7 +44,7 @@ import {
 import {
   deleteEdgeAction,
   mergeTreesAction,
-  deleteNodeAction,
+  deleteNodeAsUserAction,
   setActiveNodeAction,
   createTreeAction,
   setTreeVisibilityAction,
@@ -56,6 +56,7 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
+  hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -316,10 +317,11 @@ function getMaybeMinCutItem(
   volumeTracing: VolumeTracing | null | undefined,
   userBoundingBoxes: Array<UserBoundingBox>,
   performMinCut: (treeId: number, boundingBoxId?: number | undefined) => void,
+  isVolumeModificationAllowed: boolean,
 ): SubMenuType | null {
   const seeds = Array.from(clickedTree.nodes.values());
 
-  if (volumeTracing == null || seeds.length !== 2) {
+  if (volumeTracing == null || !isVolumeModificationAllowed || seeds.length !== 2) {
     return null;
   }
 
@@ -429,6 +431,7 @@ function getNodeContextMenuOptions({
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+  const isVolumeModificationAllowed = !hasEditableMapping(state);
 
   if (skeletonTracing == null) {
     throw new Error(
@@ -474,7 +477,13 @@ function getNodeContextMenuOptions({
       onClick: () => setActiveNode(clickedNodeId),
       label: "Select this Node",
     },
-    getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, performMinCut),
+    getMaybeMinCutItem(
+      clickedTree,
+      volumeTracing,
+      userBoundingBoxes,
+      performMinCut,
+      isVolumeModificationAllowed,
+    ),
     ...(allowUpdate
       ? [
           {
@@ -1287,7 +1296,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   deleteNode(nodeId: number, treeId: number) {
-    dispatch(deleteNodeAction(nodeId, treeId));
+    dispatch(deleteNodeAsUserAction(Store.getState(), nodeId, treeId));
   },
 
   createBranchPoint(nodeId: number, treeId: number) {

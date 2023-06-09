@@ -30,24 +30,18 @@ const ErrorHandling = {
   notify: _.noop,
 };
 
-class DataLayer {
-  category = "color";
-  lowerBoundary = [1, 2, 3];
-  upperBoundary = [4, 5, 6];
-}
-
 mockRequire("libs/toast", {
   error: _.noop,
 });
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});
-mockRequire("oxalis/model/data_layer", DataLayer);
 mockRequire("oxalis/model/skeletontracing/skeletontracing", _.noop);
 mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 mockRequire("oxalis/model/user", User);
 mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", {});
+
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;
 const { HANDLED_ERROR } = mockRequire.reRequire("../../oxalis/model_initialization");

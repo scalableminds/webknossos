@@ -73,7 +73,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
-  getLayerBoundaries,
+  getLayerBoundingBox,
   getLayerByName,
   getResolutionInfo,
   getVisibleSegmentationLayer,
@@ -1363,11 +1363,8 @@ class DataApi {
    * Returns the bounding box for a given layer name.
    */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
-    const { lowerBoundary, upperBoundary } = getLayerBoundaries(
-      Store.getState().dataset,
-      layerName,
-    );
-    return [lowerBoundary, upperBoundary];
+    const { min, max } = getLayerBoundingBox(Store.getState().dataset, layerName);
+    return [min, max];
   }
 
   /**

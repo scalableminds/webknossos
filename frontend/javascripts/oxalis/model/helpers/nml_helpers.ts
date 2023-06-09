@@ -25,9 +25,10 @@ import type {
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
 import * as Utils from "libs/utils";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
+import { coalesce } from "libs/utils";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -272,6 +273,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
           ...mapColorToComponents(tree.color),
           name: tree.name,
           groupId: tree.groupId,
+          type: tree.type,
         },
         [
           "<nodes>",
@@ -376,7 +378,7 @@ export class NmlParseError extends Error {
   name = "NmlParseError";
 }
 
-function _parseInt(obj: Record<string, any>, key: string, defaultValue?: number): number {
+function _parseInt(obj: Record<string, string>, key: string, defaultValue?: number): number {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -388,7 +390,7 @@ function _parseInt(obj: Record<string, any>, key: string, defaultValue?: number)
   return Number.parseInt(obj[key], 10);
 }
 
-function _parseFloat(obj: Record<string, any>, key: string, defaultValue?: number): number {
+function _parseFloat(obj: Record<string, string>, key: string, defaultValue?: number): number {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -400,7 +402,7 @@ function _parseFloat(obj: Record<string, any>, key: string, defaultValue?: numbe
   return Number.parseFloat(obj[key]);
 }
 
-function _parseTimestamp(obj: Record<string, any>, key: string, defaultValue?: number): number {
+function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?: number): number {
   const timestamp = _parseInt(obj, key, defaultValue);
 
   const isValid = new Date(timestamp).getTime() > 0;
@@ -416,7 +418,7 @@ function _parseTimestamp(obj: Record<string, any>, key: string, defaultValue?: n
   return timestamp;
 }
 
-function _parseBool(obj: Record<string, any>, key: string, defaultValue?: boolean): boolean {
+function _parseBool(obj: Record<string, string>, key: string, defaultValue?: boolean): boolean {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -428,7 +430,7 @@ function _parseBool(obj: Record<string, any>, key: string, defaultValue?: boolea
   return obj[key] === "true";
 }
 
-function _parseColor(obj: Record<string, any>, defaultColor: Vector3): Vector3 {
+function _parseColor(obj: Record<string, string>, defaultColor: Vector3): Vector3 {
   const color = [
     _parseFloat(obj, "color.r", defaultColor[0]),
     _parseFloat(obj, "color.g", defaultColor[1]),
@@ -438,7 +440,29 @@ function _parseColor(obj: Record<string, any>, defaultColor: Vector3): Vector3 {
   return color;
 }
 
-function _parseEntities(obj: Record<string, any>, key: string, defaultValue?: string): string {
+function _parseTreeType(
+  obj: Record<string, string>,
+  key: string,
+  defaultValue?: TreeType,
+): TreeType {
+  if (obj[key] == null || obj[key].length === 0) {
+    if (defaultValue == null) {
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  const treeType = coalesce(TreeTypeEnum, obj[key]);
+
+  if (treeType != null) {
+    return treeType;
+  } else {
+    throw new NmlParseError(`${messages["nml.invalid_tree_type"]} ${key}`);
+  }
+}
+
+function _parseEntities(obj: Record<string, string>, key: string, defaultValue?: string): string {
   if (obj[key] == null) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -524,6 +548,7 @@ function splitTreeIntoComponents(
       edges: EdgeCollection.loadFromArray(edges),
       isVisible: tree.isVisible,
       groupId: newGroupId,
+      type: tree.type,
     };
     newTrees.push(newTree);
   }
@@ -651,6 +676,7 @@ export function parseNml(nmlString: string): Promise<{
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
+              type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);

@@ -136,32 +136,33 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const { userBoundingBoxes } = tracing;
       const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map((bb) => bb.id));
       const boundingBoxId = highestBoundingBoxId + 1;
-      let newBoundingBox: UserBoundingBox;
 
+      const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
+      const newBoundingBoxTemplate: UserBoundingBox = {
+        boundingBox: {
+          min,
+          max,
+        },
+        id: boundingBoxId,
+        name: `Bounding box ${boundingBoxId}`,
+        color: Utils.getRandomColor(),
+        isVisible: true,
+      };
+
+      if (action.center != null) {
+        newBoundingBoxTemplate.boundingBox = {
+          min: V3.toArray(V3.round(V3.sub(action.center, halfBoxExtent))),
+          max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
+        };
+      }
+      let newBoundingBox: UserBoundingBox;
       if (action.newBoundingBox != null) {
         newBoundingBox = {
-          id: boundingBoxId,
+          ...newBoundingBoxTemplate,
           ...action.newBoundingBox,
-        } as UserBoundingBox;
-      } else {
-        const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
-        newBoundingBox = {
-          boundingBox: {
-            min,
-            max,
-          },
-          id: boundingBoxId,
-          name: `Bounding box ${boundingBoxId}`,
-          color: Utils.getRandomColor(),
-          isVisible: true,
         };
-
-        if (action.center != null) {
-          newBoundingBox.boundingBox = {
-            min: V3.toArray(V3.round(V3.sub(action.center, halfBoxExtent))),
-            max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
-          };
-        }
+      } else {
+        newBoundingBox = newBoundingBoxTemplate;
       }
 
       const updatedUserBoundingBoxes = [...userBoundingBoxes, newBoundingBox];

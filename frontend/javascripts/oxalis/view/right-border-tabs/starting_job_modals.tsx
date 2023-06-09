@@ -497,7 +497,7 @@ export function NucleiSegmentationModal({ handleClose }: Props) {
       description={
         <>
           <p>
-            Start an AI background job to automatically detect and segments all nuclei in this
+            Start an AI background job to automatically detect and segment all nuclei in this
             dataset. This AI will create a copy of this dataset containing all the detected nuclei
             as a new segmentation layer.
           </p>
@@ -547,7 +547,7 @@ export function NeuronSegmentationModal({ handleClose }: Props) {
           </p>
           <p>
             <b>
-              Note that this feature is still experimental and processing can take a long time. Thus
+              Note that this feature is still experimental and processing can take a long time. Thus,
               we suggest to use a small bounding box and not the full dataset extent. The neuron
               detection currently only works with EM data. The best resolution for the process will
               be chosen automatically.

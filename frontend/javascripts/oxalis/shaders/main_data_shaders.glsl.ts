@@ -15,7 +15,7 @@ import {
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
 } from "./coords.glsl";
-import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
+import { inverse, div, isNan, transDim, isFlightMode, formatNumberAsGLSLFloat } from "./utils.glsl";
 import compileShader from "./shader_module_system";
 import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
@@ -37,16 +37,6 @@ type Params = {
   isOrthogonal: boolean;
   tpsTransformPerLayer?: Record<string, TPS3D>;
 };
-
-export function formatNumberAsGLSLFloat(aNumber: number): string {
-  if (aNumber % 1 === 0) {
-    // Append ".0" via toFixed
-    return aNumber.toFixed(1);
-  } else {
-    // It is already a floating point number, so we can use toString.
-    return aNumber.toString();
-  }
-}
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;

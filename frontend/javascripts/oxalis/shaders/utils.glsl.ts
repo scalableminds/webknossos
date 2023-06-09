@@ -344,3 +344,13 @@ export const isFlightMode: ShaderModule = {
     }
   `,
 };
+
+export function formatNumberAsGLSLFloat(aNumber: number): string {
+  if (aNumber % 1 === 0) {
+    // Append ".0" via toFixed
+    return aNumber.toFixed(1);
+  } else {
+    // It is already a floating point number, so we can use toString.
+    return aNumber.toString();
+  }
+}

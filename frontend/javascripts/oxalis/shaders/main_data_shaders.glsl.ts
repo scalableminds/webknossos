@@ -217,7 +217,7 @@ void main() {
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
 
-      <% if (layerIndex == 0) { %>
+      <% if (tpsTransformPerLayer[name] != null) { %>
         vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
       <% } else { %>
         vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);

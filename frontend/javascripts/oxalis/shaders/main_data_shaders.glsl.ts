@@ -31,7 +31,7 @@ type Params = {
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
-  tpsTransformPerLayer?: TPS3D | null;
+  tpsTransformPerLayer?: Record<string, TPS3D | null>;
 };
 
 export function formatNumberAsGLSLFloat(aNumber: number): string {
@@ -214,14 +214,10 @@ void main() {
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
 
-      vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
-
       <% if (layerIndex == 0) { %>
-      bool use_tps = true;
-      if (use_tps) {
-        transformedCoordUVW = worldCoordUVW;
-        transformedCoordUVW += transDim(tpsOffsetXYZ);
-      }
+        vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ);
+      <% } else { %>
+        vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
       <% } %>
 
       if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
@@ -407,12 +403,19 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
 float REGULARIZATION = 0.;
 
-${params.tpsTransformPerLayer != null ? generateTpsVars(params.tpsTransformPerLayer) : ""}
+
+<% _.each(layerNamesWithSegmentation, function(name) { %>
+<% if (tpsTransformPerLayer[name] != null) { %>
+  <%= generateTpsVars(tpsTransformPerLayer[name]) %>
+<% } %>
+<% }) %>
 
 void main() {
-  <% if (tpsTransformPerLayer != null) { %>
-  initializeArrays();
+  <% _.each(layerNamesWithSegmentation, function(name) { %>
+  <% if (tpsTransformPerLayer[name] != null) { %>
+    initializeArrays();
   <% } %>
+  <% }) %>
 
   vUv = uv;
   modelCoord = vec4(position, 1.0);
@@ -488,8 +491,8 @@ void main() {
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 
-  <% if (tpsTransformPerLayer != null) { %>
-
+  <% _.each(layerNamesWithSegmentation, function(name) { %>
+  <% if (tpsTransformPerLayer[name] != null) { %>
     vec3 originalWorldCoord = transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z));
 
     float x = originalWorldCoord.x;
@@ -521,6 +524,8 @@ void main() {
     // Adapt to z scaling if necessary
     // tpsOffsetXYZ.z /= 100.;
   <% } %>
+  <% }) %>
+
 
   // Offset the bucket calculation for the current vertex by a voxel to ensure
   // that the provoking vertex (the one that is used by the flat varyings in
@@ -570,5 +575,6 @@ void main() {
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
     isFragment: false,
+    generateTpsVars,
   });
 }

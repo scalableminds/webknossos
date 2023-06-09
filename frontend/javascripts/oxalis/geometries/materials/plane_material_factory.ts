@@ -113,7 +113,7 @@ class PlaneMaterialFactory {
   oldVertexShaderCode: string | null | undefined;
   unsubscribeSeedsFn: (() => void) | null = null;
 
-  tpsInvPerLayer: TPS3D[] = [];
+  tpsInvPerLayer: Record<string, TPS3D | null> = {};
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
@@ -595,7 +595,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.dataLayers,
         (layers) => {
-          this.tpsInvPerLayer = [];
+          this.tpsInvPerLayer = {};
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
@@ -604,7 +604,7 @@ class PlaneMaterialFactory {
             const tpsInv = transforms.type === "thin_plate_spline" ? transforms.tpsInv : null;
 
             if (tpsInv) {
-              this.tpsInvPerLayer[layerIdx] = tpsInv;
+              this.tpsInvPerLayer[name] = tpsInv;
             }
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
@@ -957,7 +957,7 @@ class PlaneMaterialFactory {
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
-      tpsTransformPerLayer: this.tpsInvPerLayer[0],
+      tpsTransformPerLayer: this.tpsInvPerLayer,
     });
     return [
       code,
@@ -991,7 +991,7 @@ class PlaneMaterialFactory {
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
-      tpsTransformPerLayer: this.tpsInvPerLayer[0],
+      tpsTransformPerLayer: this.tpsInvPerLayer,
     });
   }
 }

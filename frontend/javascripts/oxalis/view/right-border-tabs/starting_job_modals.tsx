@@ -497,7 +497,7 @@ export function NucleiSegmentationModal({ handleClose }: Props) {
       description={
         <>
           <p>
-            Start an AI background job to automatically detect and segments all nuclei in this
+            Start an AI background job to automatically detect and segment all nuclei in this
             dataset. This AI will create a copy of this dataset containing all the detected nuclei
             as a new segmentation layer.
           </p>

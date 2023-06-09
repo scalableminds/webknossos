@@ -320,7 +320,7 @@ void main() {
   });
 }
 
-function generateTpsVars(tps: TPS3D) {
+function generateTpsInitialization(tps: TPS3D) {
   const ff = formatNumberAsGLSLFloat;
 
   let weightLines = [];
@@ -401,21 +401,18 @@ ${compileShader(
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
-float REGULARIZATION = 0.;
-
-
-<% _.each(layerNamesWithSegmentation, function(name) { %>
-<% if (tpsTransformPerLayer[name] != null) { %>
-  <%= generateTpsVars(tpsTransformPerLayer[name]) %>
-<% } %>
-<% }) %>
+<% _.each(layerNamesWithSegmentation, function(name) {
+   if (tpsTransformPerLayer[name] != null) { %>
+  <%= generateTpsInitialization(tpsTransformPerLayer[name]) %>
+<% }
+}) %>
 
 void main() {
-  <% _.each(layerNamesWithSegmentation, function(name) { %>
-  <% if (tpsTransformPerLayer[name] != null) { %>
+  <% _.each(layerNamesWithSegmentation, function(name) {
+    if (tpsTransformPerLayer[name] != null) { %>
     initializeArrays();
-  <% } %>
-  <% }) %>
+  <% }
+  }) %>
 
   vUv = uv;
   modelCoord = vec4(position, 1.0);
@@ -491,8 +488,10 @@ void main() {
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 
-  <% _.each(layerNamesWithSegmentation, function(name) { %>
-  <% if (tpsTransformPerLayer[name] != null) { %>
+  <%
+  _.each(layerNamesWithSegmentation, function(name) {
+    if (tpsTransformPerLayer[name] != null) {
+  %>
     vec3 originalWorldCoord = transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z));
 
     float x = originalWorldCoord.x;
@@ -515,7 +514,7 @@ void main() {
       if (dist != 0.0) {
         dist = pow(dist, 2.0) * log2(pow(dist, 2.0)) / log2(2.718281828459045);
       } else {
-        dist = REGULARIZATION;
+        dist = 0.;
       }
       bending_part += dist * W[cpIdx];
     }
@@ -523,8 +522,10 @@ void main() {
     tpsOffsetXYZ = linear_part + bending_part;
     // Adapt to z scaling if necessary
     // tpsOffsetXYZ.z /= 100.;
-  <% } %>
-  <% }) %>
+  <%
+    }
+  })
+  %>
 
 
   // Offset the bucket calculation for the current vertex by a voxel to ensure
@@ -575,6 +576,6 @@ void main() {
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
     isFragment: false,
-    generateTpsVars,
+    generateTpsInitialization,
   });
 }

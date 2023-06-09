@@ -113,7 +113,7 @@ class PlaneMaterialFactory {
   oldVertexShaderCode: string | null | undefined;
   unsubscribeSeedsFn: (() => void) | null = null;
 
-  tpsInvPerLayer: Record<string, TPS3D | null> = {};
+  tpsInvPerLayer: Record<string, TPS3D> = {};
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;

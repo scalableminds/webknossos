@@ -672,7 +672,7 @@ type Transform =
   | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; tpsInv: TPS3D };
 
 function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
-  let coordinateTransformations = layer.coordinateTransformations || [{ type: "dummy" }];
+  let coordinateTransformations = layer.coordinateTransformations; // || [{ type: "dummy" }];
   if (!coordinateTransformations) {
     return null;
   }
@@ -709,10 +709,10 @@ function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
       tpsInv: new TPS3D(sourcePoints, targetPoints),
     };
   }
-  console.error(
-    "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
-  );
-  return null;
+  // console.error(
+  //   "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
+  // );
+  // return null;
 }
 
 export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);

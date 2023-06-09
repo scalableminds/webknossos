@@ -25,7 +25,7 @@ import Constants, {
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 
-import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
   getActiveMagIndexForLayer,
@@ -319,15 +319,10 @@ function* getBoundingBoxForFloodFill(
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
 
-  const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));
+  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
   const { min: clippedMin, max: clippedMax } = new BoundingBox(
     currentViewportBounding,
-  ).intersectedWith(
-    new BoundingBox({
-      min: lowerBoundary,
-      max: upperBoundary,
-    }),
-  );
+  ).intersectedWith(datasetBoundingBox);
   return {
     min: clippedMin,
     max: clippedMax,

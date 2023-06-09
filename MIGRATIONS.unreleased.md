@@ -10,3 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - FossilDB needs to be opened with new additional column family volumeSegmentIndex.
 
 ### Postgres Evolutions:
+- [102-no-more-wkconnect.sql](conf/evolutions/102-no-more-wkconnect.sql)

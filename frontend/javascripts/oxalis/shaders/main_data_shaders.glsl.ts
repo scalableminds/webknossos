@@ -426,7 +426,7 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
       );
 
       if (dist != 0.0) {
-        dist = pow(dist, 2.0) * log2(pow(dist, 2.0)) / log2(2.718281828459045);
+        dist = pow(dist, 2.0) * log(pow(dist, 2.0));
       } else {
         dist = 0.;
       }

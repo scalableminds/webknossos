@@ -188,7 +188,6 @@ export function _getMaximumZoomForAllResolutions(
 
   return maxZoomValueThresholds;
 }
-export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
 // todo: make this cleaner. since the maximum zoom depends on the layer name and the right matrix,
 // a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
@@ -207,7 +206,7 @@ function getMaximumZoomForAllResolutionsFromStore(
   const { viewMode } = state.temporaryConfiguration;
 
   const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = invertAndTranspose(getTransformsForLayer(layer));
+  const layerMatrix = invertAndTranspose(getTransformsForLayer(layer).affineMatrix);
 
   let fn = perLayerFnCache.get(layerName);
   if (fn == null) {

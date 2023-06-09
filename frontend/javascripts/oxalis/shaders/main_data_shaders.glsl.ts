@@ -21,7 +21,6 @@ import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
-import { getPointsC555 } from "test/libs/transform_spec_helpers";
 import TPS3D from "libs/thin_plate_spline";
 
 type Params = {
@@ -32,6 +31,7 @@ type Params = {
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
+  tpsTransformPerLayer?: TPS3D | null;
 };
 
 export function formatNumberAsGLSLFloat(aNumber: number): string {
@@ -324,11 +324,8 @@ void main() {
   });
 }
 
-function generateTpsVars() {
+function generateTpsVars(tps: TPS3D) {
   const ff = formatNumberAsGLSLFloat;
-
-  const [sourcePoints, targetPoints] = getPointsC555();
-  const tps = new TPS3D(sourcePoints, targetPoints);
 
   let weightLines = [];
   for (let idx = 0; idx < tps.tpsX.cps.length; idx++) {
@@ -410,10 +407,12 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
 float REGULARIZATION = 0.;
 
-${generateTpsVars()}
+${params.tpsTransformPerLayer != null ? generateTpsVars(params.tpsTransformPerLayer) : ""}
 
 void main() {
+  <% if (tpsTransformPerLayer != null) { %>
   initializeArrays();
+  <% } %>
 
   vUv = uv;
   modelCoord = vec4(position, 1.0);
@@ -489,36 +488,39 @@ void main() {
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 
-  vec3 originalWorldCoord = transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z));
+  <% if (tpsTransformPerLayer != null) { %>
 
-  float x = originalWorldCoord.x;
-  float y = originalWorldCoord.y;
-  float z = originalWorldCoord.z;
+    vec3 originalWorldCoord = transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z));
 
-  // transform the coord
+    float x = originalWorldCoord.x;
+    float y = originalWorldCoord.y;
+    float z = originalWorldCoord.z;
 
-  vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
-  vec3 bending_part = vec3(0.0);
+    // transform the coord
 
-  for (int cpIdx = 0; cpIdx < CPS_LENGTH; cpIdx++) {
-    // Calculate distance to each control point
-    float dist = sqrt(
-      pow(x - cps[cpIdx].x, 2.0) +
-      pow(y - cps[cpIdx].y, 2.0) +
-      pow(z - cps[cpIdx].z, 2.0)
-    );
+    vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
+    vec3 bending_part = vec3(0.0);
 
-    if (dist != 0.0) {
-      dist = pow(dist, 2.0) * log2(pow(dist, 2.0)) / log2(2.718281828459045);
-    } else {
-      dist = REGULARIZATION;
+    for (int cpIdx = 0; cpIdx < CPS_LENGTH; cpIdx++) {
+      // Calculate distance to each control point
+      float dist = sqrt(
+        pow(x - cps[cpIdx].x, 2.0) +
+        pow(y - cps[cpIdx].y, 2.0) +
+        pow(z - cps[cpIdx].z, 2.0)
+      );
+
+      if (dist != 0.0) {
+        dist = pow(dist, 2.0) * log2(pow(dist, 2.0)) / log2(2.718281828459045);
+      } else {
+        dist = REGULARIZATION;
+      }
+      bending_part += dist * W[cpIdx];
     }
-    bending_part += dist * W[cpIdx];
-  }
 
-  tpsOffsetXYZ = linear_part + bending_part;
-  // Adapt to z scaling if necessary
-  // tpsOffsetXYZ.z /= 100.;
+    tpsOffsetXYZ = linear_part + bending_part;
+    // Adapt to z scaling if necessary
+    // tpsOffsetXYZ.z /= 100.;
+  <% } %>
 
   // Offset the bucket calculation for the current vertex by a voxel to ensure
   // that the provoking vertex (the one that is used by the flat varyings in

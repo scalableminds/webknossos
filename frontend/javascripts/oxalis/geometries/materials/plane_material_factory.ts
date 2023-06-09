@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { BLEND_MODES, OrthoView, Vector3 } from "oxalis/constants";
+import { BLEND_MODES, Identity4x4, OrthoView, Vector3 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -36,7 +36,6 @@ import {
   getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
-  Identity4x4,
 } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Model } from "oxalis/singletons";
@@ -50,6 +49,7 @@ import type { ElementClass } from "types/api_flow_types";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
+import TPS3D from "libs/thin_plate_spline";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -109,8 +109,11 @@ class PlaneMaterialFactory {
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
-  oldShaderCode: string | null | undefined;
+  oldFragmentShaderCode: string | null | undefined;
+  oldVertexShaderCode: string | null | undefined;
   unsubscribeSeedsFn: (() => void) | null = null;
+
+  tpsInvPerLayer: TPS3D[] = [];
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
@@ -241,10 +244,10 @@ class PlaneMaterialFactory {
       const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
 
       this.uniforms[`${layerName}_transform`] = {
-        value: invertAndTranspose(getTransformsForLayer(layer)),
+        value: invertAndTranspose(getTransformsForLayer(layer).affineMatrix),
       };
       this.uniforms[`${layerName}_has_transform`] = {
-        value: !_.isEqual(getTransformsForLayer(layer), Identity4x4),
+        value: !_.isEqual(getTransformsForLayer(layer).affineMatrix, Identity4x4),
       };
     }
 
@@ -399,6 +402,12 @@ class PlaneMaterialFactory {
     };
 
     this.material.side = THREE.DoubleSide;
+    this.startListening();
+
+    this.recomputeShaders();
+  }
+
+  startListening() {
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getActiveMagIndicesForLayers(storeState),
@@ -434,7 +443,7 @@ class PlaneMaterialFactory {
                 ? resolutionInfo.getResolutionByIndex(suitableMagIndex)
                 : null;
 
-            const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
+            const hasTransform = !_.isEqual(getTransformsForLayer(layer).affineMatrix, Identity4x4);
             if (!hasTransform && suitableMag) {
               representativeMagForVertexAlignment = V3.min(
                 representativeMagForVertexAlignment,
@@ -586,13 +595,20 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.dataLayers,
         (layers) => {
+          this.tpsInvPerLayer = [];
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
-            this.uniforms[`${name}_transform`].value = invertAndTranspose(
-              getTransformsForLayer(layer),
-            );
-            const hasTransform = !_.isEqual(getTransformsForLayer(layer), Identity4x4);
+            const transforms = getTransformsForLayer(layer);
+            const { affineMatrix } = transforms;
+            const tpsInv = transforms.type === "thin_plate_spline" ? transforms.tpsInv : null;
+
+            if (tpsInv) {
+              this.tpsInvPerLayer[layerIdx] = tpsInv;
+            }
+
+            this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
+            const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
@@ -633,7 +649,7 @@ class PlaneMaterialFactory {
             }
           }
           if (updatedLayerVisibility) {
-            this.recomputeFragmentShader();
+            this.recomputeShaders();
           }
           // TODO: Needed?
           app.vent.trigger("rerender");
@@ -818,20 +834,29 @@ class PlaneMaterialFactory {
     return this.material;
   }
 
-  recomputeFragmentShader = _.throttle(() => {
-    const [newShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
+  recomputeShaders = _.throttle(() => {
+    const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;
     }
 
+    const newVertexShaderCode = this.getVertexShader();
+
     // Comparing to this.material.fragmentShader does not work. The code seems
     // to be modified by a third party.
-    if (this.oldShaderCode != null && this.oldShaderCode === newShaderCode) {
+    if (
+      this.oldFragmentShaderCode != null &&
+      this.oldFragmentShaderCode === newFragmentShaderCode &&
+      this.oldVertexShaderCode != null &&
+      this.oldVertexShaderCode === newVertexShaderCode
+    ) {
       return;
     }
 
-    this.oldShaderCode = newShaderCode;
-    this.material.fragmentShader = newShaderCode;
+    this.oldFragmentShaderCode = newFragmentShaderCode;
+    this.oldVertexShaderCode = newVertexShaderCode;
+    this.material.fragmentShader = newFragmentShaderCode;
+    this.material.vertexShader = newVertexShaderCode;
     this.material.needsUpdate = true;
     // @ts-ignore
     window.needsRerender = true;
@@ -932,6 +957,7 @@ class PlaneMaterialFactory {
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
+      tpsTransformPerLayer: this.tpsInvPerLayer[0],
     });
     return [
       code,
@@ -965,6 +991,7 @@ class PlaneMaterialFactory {
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
+      tpsTransformPerLayer: this.tpsInvPerLayer[0],
     });
   }
 }

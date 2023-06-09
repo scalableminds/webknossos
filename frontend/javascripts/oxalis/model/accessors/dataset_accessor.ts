@@ -17,7 +17,7 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
+import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
@@ -25,8 +25,10 @@ import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
-import { Identity4x4 } from "./flycam_accessor";
 import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
+import { getPointsC555 } from "test/libs/transform_spec_helpers";
+import estimateAffine from "libs/estimate_affine";
+import TPS3D from "libs/thin_plate_spline";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -665,7 +667,11 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
   );
 }
 
-function _getTransformsForLayerOrNull(layer: APIDataLayer): Matrix4x4 | null {
+type Transform =
+  | { type: "affine"; affineMatrix: Matrix4x4 }
+  | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; tpsInv: TPS3D };
+
+function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
   if (!layer.coordinateTransformations) {
     return null;
   }
@@ -675,26 +681,31 @@ function _getTransformsForLayerOrNull(layer: APIDataLayer): Matrix4x4 | null {
     );
     return null;
   }
-  if (layer.coordinateTransformations[0].type !== "affine") {
-    console.error(
-      "Data layer has defined a coordinate transform that is not affine. This is currently not supported and ignored",
-    );
-    return null;
+  const transformation = layer.coordinateTransformations[0];
+  const { type } = transformation;
+
+  if (type === "affine") {
+    // todo
+    //   const nestedMatrix = transformation.matrix;
+    //   return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
+    // } else if (type === "thin_plate_spline") {
+    const [sourcePoints, targetPoints] = getPointsC555();
+    const affineMatrix = estimateAffine(targetPoints, sourcePoints).to1DArray() as any as Matrix4x4;
+    return {
+      type: "thin_plate_spline",
+      affineMatrix,
+      tpsInv: new TPS3D(sourcePoints, targetPoints),
+    };
   }
-  const nestedMatrix = layer.coordinateTransformations[0].matrix;
-  return nestedToFlatMatrix(nestedMatrix);
+  console.error(
+    "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
+  );
+  return null;
 }
 
-// inverted matrix of the inverted TPS:
-const _mat = [
-  0.9912353168462398, -0.0031351870171087847, -42.298953744454636, -90.00926033846974,
-  -0.005112731839693669, 0.9981711409066866, -18.821073754097736, -94.3119467086129,
-  1.0807035492009403e-18, -0.0, 1.0, -9.84579953002015e-17, 0.0, -0.0, -0.0, 1.0,
-] as Matrix4x4;
-
 export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);
-export function getTransformsForLayer(layer: APIDataLayer): Matrix4x4 {
-  return getTransformsForLayerOrNull(layer) || Identity4x4;
+export function getTransformsForLayer(layer: APIDataLayer): Transform {
+  return getTransformsForLayerOrNull(layer) || IdentityTransform;
 }
 
 export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {

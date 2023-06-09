@@ -14,6 +14,10 @@ trait SegmentIndexKeyHelper {
     s"$tracingId/$segmentId/${mag.toMagLiteral()}"
 }
 
+// To introduce buffering for updating the segment-to-bucket index for a volume tracing
+// read provides fallback data from fossildb
+// while write is done only locally in-memory, until flush is called
+// This saves a lot of db interactions (since adjacent bucket updates usually touch the same segments)
 class VolumeSegmentIndexBuffer(tracingId: String, volumeSegmentIndexClient: FossilDBClient, newVersion: Long)
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper

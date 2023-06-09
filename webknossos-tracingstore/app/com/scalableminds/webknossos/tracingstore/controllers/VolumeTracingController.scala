@@ -95,9 +95,11 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[VolumeTracing]] = request.body
+          // Add segment index to merged tracing if all source tracings have a segment index
+          val shouldCreateSegmentIndex = tracings.flatten.count(t => t.hasSegmentIndex.getOrElse(false)) == tracings.flatten.length
           val mergedTracing =
             tracingService
-              .merge(tracings.flatten, MergedVolumeStats.empty, Empty)
+              .merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty)
               // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
               .copy(segments = List.empty)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>

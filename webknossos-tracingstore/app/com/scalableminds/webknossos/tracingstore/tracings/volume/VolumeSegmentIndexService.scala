@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
@@ -17,6 +16,9 @@ import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
 
+// Segment-to-Bucket index for volume tracings in FossilDB
+// key: tracing id, segment id, mag – value: list of buckets
+// used for calculating segment statistics
 class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
